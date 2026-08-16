@@ -16,7 +16,6 @@ const props = {
   reasonLabel: "Why are you taking it down?",
   reasonPlaceholder: "Choose a reason…",
   noteLabel: "What happened",
-  notePlaceholder: "Only if you chose Something else",
   hideLabel: "Hide this review",
   savingLabel: "Saving…",
 };
@@ -28,8 +27,10 @@ describe("ReviewHideForm", () => {
 
     expect(screen.queryByLabelText("What happened")).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Why are you taking it down?"), "other");
-    expect(screen.getByLabelText("What happened")).toBeInTheDocument();
-    expect(screen.getByLabelText("What happened")).toBeRequired();
+    const note = screen.getByLabelText("What happened");
+    expect(note).toBeInTheDocument();
+    expect(note).toBeRequired();
+    expect(note).not.toHaveAttribute("placeholder");
 
     await user.selectOptions(screen.getByLabelText("Why are you taking it down?"), "spam");
     expect(screen.queryByLabelText("What happened")).not.toBeInTheDocument();

@@ -88,9 +88,9 @@ describe("courseDepthFormat", () => {
         "courses.edit.depthMarkersHint",
         "courses.edit.errorDepthPlaceholder",
       ] as const) {
-        const message = t(key);
-        expect(message).toContain("{depth18}");
-        expect(message).toContain("{depth40}");
+        const message = t.rich(key, { marker: (chunks) => chunks });
+        expect(String(message)).toContain("{depth18}");
+        expect(String(message)).toContain("{depth40}");
       }
     }
   });

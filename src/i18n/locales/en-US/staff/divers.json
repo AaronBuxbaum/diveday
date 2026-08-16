@@ -248,6 +248,8 @@
     "heading": "Diver notes",
     "description": "Staff-only context about this diver, shared with crew on their boat manifest.",
     "empty": "No notes yet.",
+    "fromTrip": "From {trip} · {date}",
+    "appliesEverywhere": "Applies across this diver’s departures",
     "addLabel": "Add a note",
     "placeholder": "What should the next staff member know?",
     "adding": "Adding…",

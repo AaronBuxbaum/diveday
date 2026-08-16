@@ -133,6 +133,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     events: [
       "cron_reminders.tick_failed",
       "cron_reminders.scan_failed",
+      "cron_recaps.scan_failed",
       "cron_retention.prune_failed",
       "cron_usage.scan_failed",
       "cron_backup_export.pass_failed",

@@ -56,7 +56,6 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
-import { SettingsGroupAnchors } from "./_components/SettingsGroupAnchors";
 import { SettingsDoorRow, SettingsRow, SettingsRowList } from "./_components/SettingsRows";
 import { AddressSearch } from "./AddressSearch";
 import {
@@ -214,9 +213,8 @@ function StatusRow({
   );
 }
 
-// Re-exported (not just imported) so `SettingsPage.test.tsx`'s group-anchor
-// assertions keep reading the same list `SettingsGroupAnchors` derives from —
-// one registry, `settings-groups.ts`, not a copy per consumer.
+// Re-exported so the page test reads the same section registry the page uses,
+// rather than carrying a second list of settings groups.
 export { SETTINGS_GROUPS };
 
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
@@ -511,18 +509,6 @@ export default async function SettingsPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "saved"]} />
-      {/* The jump row stands above the `<h1>` because it is about the page as
-          a whole, and it renders only here — the sub-pages it used to sit on
-          get their way back from their own eyebrow instead. */}
-      <SettingsGroupAnchors
-        ariaLabel={t("settings.main.subNav.ariaLabel")}
-        groupLabels={
-          Object.fromEntries(
-            SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]),
-          ) as Record<SettingsGroupSpec["id"], string>
-        }
-        className="mb-4"
-      />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         title={t("settings.main.title")}

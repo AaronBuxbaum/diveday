@@ -19,7 +19,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Auth | Auth.js v5 credentials, JWT sessions, proxy gating | [0006](decisions/0006-auth.md) |
 | Transactional email | AWS SES (`@aws-sdk/client-sesv2`) behind `src/lib/notifications/` | [20260803 SES sole provider](decisions/20260803-ses-sole-email-provider.md) |
 | Offline manifests | Encrypted IndexedDB snapshot + data-free service-worker shell | [20260718 offline manifests](decisions/20260718-offline-manifest-snapshots.md) |
-| Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md) |
+| Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account. Imported payment/receipt history stays outside live orders and is explicitly labelled as unverified source evidence. | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md), [20260816 imported evidence](decisions/20260816-imported-payment-history-is-evidence.md) |
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library, MSW for real fetch boundaries | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md) |

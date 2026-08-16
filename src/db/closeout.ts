@@ -20,6 +20,7 @@ import {
   notificationDeliveries,
   people,
   recapPhotos,
+  tripRecapPhotos,
   trips,
 } from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
@@ -85,7 +86,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       ),
     );
   if (rows.length === 0) return [];
-  const [counts, photos] = await Promise.all([
+  const [counts, photos, crewPhotos] = await Promise.all([
     db
       .select({ tripId: bookings.tripId, booked: count() })
       .from(bookings)
@@ -122,6 +123,23 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
         ),
       )
       .orderBy(desc(recapPhotos.createdAt)),
+    db
+      .select({
+        id: tripRecapPhotos.id,
+        imageUrl: tripRecapPhotos.imageUrl,
+        tripId: tripRecapPhotos.tripId,
+      })
+      .from(tripRecapPhotos)
+      .where(
+        and(
+          eq(tripRecapPhotos.shopId, shopId),
+          inArray(
+            tripRecapPhotos.tripId,
+            rows.map((row) => row.id),
+          ),
+        ),
+      )
+      .orderBy(desc(tripRecapPhotos.createdAt)),
   ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
   const photosByTrip = new Map<string, typeof photos>();
@@ -129,6 +147,12 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     const list = photosByTrip.get(photo.tripId) ?? [];
     list.push(photo);
     photosByTrip.set(photo.tripId, list);
+  }
+  const crewPhotosByTrip = new Map<string, typeof crewPhotos>();
+  for (const photo of crewPhotos) {
+    const list = crewPhotosByTrip.get(photo.tripId) ?? [];
+    list.push(photo);
+    crewPhotosByTrip.set(photo.tripId, list);
   }
   return rows.map((row) => ({
     tripId: row.id,
@@ -138,6 +162,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     booked: bookedByTrip.get(row.id) ?? 0,
     recapShoutout: row.recapShoutout,
     photos: photosByTrip.get(row.id) ?? [],
+    crewPhotos: crewPhotosByTrip.get(row.id) ?? [],
   }));
 }
 

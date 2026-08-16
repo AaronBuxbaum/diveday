@@ -11,6 +11,7 @@ import {
   listPublishedShopReviews,
   listPublishedShopReviewsPage,
   listShopReviewsForStaff,
+  PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE,
   STAFF_REVIEW_PAGE_SIZE,
   setReviewPublished,
   setReviewStandout,
@@ -196,6 +197,7 @@ describe("public review reads", () => {
     ]);
     const archive = await listPublishedShopReviewsPage(db, shop.id);
     expect(archive.total).toBe(2);
+    expect(archive.pageSize).toBe(PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE);
     expect(archive.reviews.map((r) => [r.rating, r.comment])).toEqual([
       [5, null],
       [3, "Choppy day"],
@@ -667,6 +669,29 @@ describe("review moderation is recorded", () => {
       ["hidden", "spam"],
     ]);
     expect(trail.every((row) => row.recordedByPersonId === ownerId)).toBe(true);
+  });
+
+  it("shows staff the current hidden reason, including the words they supplied", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 2, comment: "A rough day" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    await setReviewPublished(db, shop.id, review.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "other",
+      reasonNote: "The review names a diver from another booking.",
+    });
+
+    expect((await listShopReviewsForStaff(db, shop.id)).reviews).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: review.id,
+          isHidden: true,
+          hiddenReason: "other",
+          hiddenReasonNote: "The review names a diver from another booking.",
+        }),
+      ]),
+    );
   });
 
   it("counts a hidden review as suppressed, and stops once it is republished", async () => {

@@ -2,7 +2,15 @@
   "title": "Cierre del día",
   "notice": {
     "closed": "Día cerrado. El registro está abajo — hasta mañana.",
-    "acknowledgeRequired": "Confirma el barco abierto o el recuento pendiente antes de cerrar el día."
+    "acknowledgeRequired": "Confirma el barco abierto o el recuento pendiente antes de cerrar el día.",
+    "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
+    "recapAttention": "Algunos resúmenes requieren atención. Revisa los informes posteriores a la inmersión abajo.",
+    "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
+    "crewPhotoAdded": "Foto del equipo añadida a este cierre.",
+    "crewPhotoRemoved": "Foto del equipo eliminada.",
+    "crewPhotoLimit": "Este cierre ya tiene el máximo de fotos del equipo.",
+    "crewPhotoUnsupported": "La carga de fotos todavía no está configurada para este centro.",
+    "crewPhotoFailed": "No se pudo añadir esa foto. Revisa el archivo e inténtalo de nuevo."
   },
   "headline": {
     "allClear": "Todos de vuelta",
@@ -53,6 +61,26 @@
       "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
       "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}"
     }
+  },
+  "recap": {
+    "waiting": "El envío automático estará disponible en {remaining}. Los resúmenes nunca se envían antes de cuatro horas tras el final de la salida.",
+    "ready": "Los resúmenes de esta salida ya se pueden enviar. El envío automático también los recogerá.",
+    "send": "Enviar resumen ahora",
+    "sending": "Enviando resumen…",
+    "lessThanMinute": "menos de un minuto"
+  },
+  "crewPhotos": {
+    "heading": "Fotos del equipo",
+    "description": "Guarda las fotos de los instructores con este cierre. Solo las ve el personal y no se añaden a los resúmenes de los buceadores.",
+    "photoAlt": "Foto del equipo de esta salida",
+    "add": "Añadir una foto del equipo",
+    "upload": "Subir foto",
+    "adding": "Subiendo foto…",
+    "remove": "Eliminar",
+    "confirmRemove": "¿Eliminar esta foto del equipo del cierre?",
+    "removeConfirmButton": "Eliminar foto",
+    "removeCancel": "Conservar foto",
+    "removing": "Eliminando foto…"
   },
   "leftovers": {
     "heading": "Lo que quedó de hoy",

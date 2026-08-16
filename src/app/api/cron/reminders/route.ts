@@ -5,7 +5,6 @@ import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
 import { retryPendingProcessorErasures } from "@/db/processor-erasure";
-import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
 import { DAY_MS } from "@/lib/clock";
@@ -14,7 +13,7 @@ import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 
 /**
- * Seven scans run one after another, several of which can send email/SMS through a
+ * Six scans run one after another, several of which can send email/SMS through a
  * third-party provider one recipient at a time. The platform default is a
  * moving target set by the hosting plan, not by what this endpoint actually
  * needs, so state it here: 300s is Vercel Pro's default function ceiling, an
@@ -110,13 +109,11 @@ function resultOf<T>(outcome: ScanOutcome<T>): T | undefined {
 }
 
 /**
- * The scheduled trip-notification entry point. The app holds no timer by design
- * (docs ADR 20260721-scheduled-reminder-cadence); an external scheduler
- * (Vercel Cron, see vercel.json) hits this daily and both scans do the
- * idempotent work — a reminder or recap already delivered is never re-sent.
- * One endpoint drives both the pre-trip reminders and the post-trip recap
- * (docs first-principles brainstorm C) so a single daily tick covers the whole
- * run-up-and-after of a booking.
+ * The scheduled pre-trip-notification entry point. The app holds no timer by
+ * design (docs ADR 20260721-scheduled-reminder-cadence); an external scheduler
+ * (Vercel Cron, see vercel.json) hits this daily and the scans do their
+ * idempotent work. Post-trip recaps have their own hourly route: a daily pass
+ * cannot keep the four-hour floor visible on Close-out meaningful.
  *
  * Fails closed: a `CRON_SECRET` must be configured and presented as a bearer
  * token. Without the secret set the endpoint is unavailable (503) rather than
@@ -175,7 +172,6 @@ export async function GET(request: Request) {
       drainNotificationRetries(db),
     );
     const reminders = await runScan("reminders", () => sendDueReminders(db));
-    const recaps = await runScan("recaps", () => sendDueRecaps(db));
     const checkoutRecoveries = await runScan("checkoutRecoveries", () =>
       sendDueCheckoutRecoveries(db),
     );
@@ -198,7 +194,6 @@ export async function GET(request: Request) {
     const scans = {
       notificationRetries,
       reminders,
-      recaps,
       checkoutRecoveries,
       mediaDeletions,
       processorErasures,
@@ -210,7 +205,6 @@ export async function GET(request: Request) {
 
     const notificationRetriesCounts = resultOf(notificationRetries);
     const remindersCounts = resultOf(reminders);
-    const recapsCounts = resultOf(recaps);
     const checkoutRecoveriesCounts = resultOf(checkoutRecoveries);
     const mediaDeletionsCounts = resultOf(mediaDeletions);
     const processorErasuresCounts = resultOf(processorErasures);
@@ -230,9 +224,6 @@ export async function GET(request: Request) {
       remindersScanned: remindersCounts?.scanned,
       remindersSent: remindersCounts?.sent,
       remindersFailed: remindersCounts?.failed,
-      recapsScanned: recapsCounts?.scanned,
-      recapsSent: recapsCounts?.sent,
-      recapsFailed: recapsCounts?.failed,
       checkoutRecoveriesScanned: checkoutRecoveriesCounts?.scanned,
       checkoutRecoveriesSent: checkoutRecoveriesCounts?.sent,
       mediaDeletionsAttempted: mediaDeletionsCounts?.attempted,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cloneElement, type ReactElement, type ReactNode, Suspense } from "react";
+import type { ReactNode } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { ScrollToHash } from "@/components/ScrollToHash";
@@ -372,22 +372,20 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
 /**
  * The import phase — identical on every guide because it is one importer.
  * `importerNote` is the single place a guide tailors it (a system that exports
- * certs separately, one that holds no cards at all); `importCta` is the
- * session-scoped deep link, kept behind its own Suspense so its per-visitor
- * content never enters the cached page body.
+ * certs separately, one that holds no cards at all); `children` is the
+ * session-scoped, pre-bound import CTA. It is rendered unchanged so it remains
+ * a pass-through slot when this component sits in a cached page body.
  */
 export function ImportPhase({
   locale,
   number,
-  source,
   importerNote,
-  importCta,
+  children,
 }: {
   locale: DiverLocale;
   number: number;
-  source: FunnelSource;
   importerNote?: ReactNode;
-  importCta: ReactElement<{ source?: FunnelSource }>;
+  children?: ReactNode;
 }) {
   const t = diverTranslator(locale);
   const steps = [
@@ -416,7 +414,7 @@ export function ImportPhase({
           {importerNote}
         </p>
       )}
-      <Suspense fallback={null}>{cloneElement(importCta, { source })}</Suspense>
+      {children}
     </MovePhase>
   );
 }

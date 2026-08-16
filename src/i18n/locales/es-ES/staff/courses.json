@@ -24,7 +24,7 @@
   "edit": {
     "backToCourses": "← Cursos",
     "description": "Todo lo que un buceador lee antes de reservar — el texto, las fotos y tu precio. La certificación y la edad mínima vienen de la agencia.",
-    "depthMarkersHint": "Marcas de profundidad: escribe '{depth18}' en cualquier parte de esta página y los buceadores leen «18 metros» o «60 pies», según la unidad que use tu centro. Las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'; añade una n para el número solo en un rango, como en «a '{depth30n}'–'{depth40}'». Borra una marca cuando prefieras escribir tú la profundidad.",
+    "depthMarkersHint": "<marker>'{depth18}'</marker> es una abreviatura del editor, no texto que vean los buceadores. Úsala donde quieras que la página del buceador diga «18 metros» o «60 pies», según la unidad de tu centro. Elige <marker>'{depth12}'</marker>, <marker>'{depth18}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> o <marker>'{depth40}'</marker>; añade <marker>n</marker> para un número sin unidad en un rango, como <marker>'{depth30n}'</marker>–<marker>'{depth40}'</marker>. Borra una marca cuando prefieras escribir tú la profundidad.",
     "liveAt": "Publicado en",
     "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
     "noticeSaved": "Página del curso guardada.",

@@ -239,7 +239,10 @@ export default async function RequestsPage({
                           {formatCalendarDate(group.date, locale)}
                         </h2>
                         <p className="mt-1 text-sm text-muted">
-                          {t("requests.groupCount", { count: group.groupCount })}
+                          {t("requests.groupPeopleCount", {
+                            groups: group.groupCount,
+                            divers: advice.estimatedDivers,
+                          })}
                         </p>
                       </div>
                       {/* The whole point of counting groups against a day: the

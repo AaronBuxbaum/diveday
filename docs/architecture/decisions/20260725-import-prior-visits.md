@@ -5,6 +5,9 @@
 - **Supersedes (in part):** [20260725-import-specialty-cards](20260725-import-specialty-cards.md)'s
   scope note that "booking/trip/service history needs a full-shop importer, not a row edit", and the
   `IMPORT_HONESTY_TABLE` row it left behind ("Booking, trip & service history" → *Stays behind*).
+- **Amended in part by:** [20260816-imported-payment-history-is-evidence](20260816-imported-payment-history-is-evidence.md),
+  which adds separately labelled, unverified payment/refund/receipt evidence. This ADR's prior
+  visits remain inert booking-history records and their amount labels remain display-only.
 
 ## Context
 

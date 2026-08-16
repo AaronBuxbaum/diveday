@@ -7,6 +7,18 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Imported payment and receipt history remains evidence, not a synthetic order (delivered 2026-08-16)
+
+The contact importer can now carry a prior system's payment, refund, receipt, and source Stripe
+reference rows without pretending the current shop issued or confirmed them. They render in their
+own unverified section of Orders, linked to the diver and any safely re-stored receipt rather than
+to a fictional order page. A monthly report may include only the clearly parsed, matching-currency
+payment/refund slice — it names the source contribution, shows the components, and links directly
+to those rows. Card numbers, CVCs, reusable payment methods, and tokens still never enter DiveDay;
+there is no automatic Stripe replication. The exported bundle carries the source history back out
+as its own CSV and includes safely stored receipt documents under `photos/`.
+[20260816-imported-payment-history-is-evidence](../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
+
 ## A diver can ask for a date, and the shop has somewhere to read it (delivered 2026-08-14)
 
 Asking a shop to run something on a day that is not on the board is an ordinary request, and DiveDay

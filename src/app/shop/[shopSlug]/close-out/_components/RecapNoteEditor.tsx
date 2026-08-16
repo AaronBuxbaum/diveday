@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -6,17 +7,19 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { RecapSendControl } from "./RecapSendControl";
 
 /**
  * The crew's post-trip note, written where the crew is standing when they still
  * remember the day: the close-out, on the row of the departure it belongs to.
  *
- * The note rides out on every diver's recap, which the nightly run sends once a
- * trip has ended (`sendDueRecaps`, src/db/recap.ts) — so the evening the boat
- * came back is both the last moment to add one and the only moment anyone can
- * still name the highlight. It used to live only on the trip's setup page and
- * only *before* the trip, which is to say it asked for the highlight of a day
- * that had not happened.
+ * The note rides out on every diver's recap, which the dedicated hourly scan
+ * sends no earlier than four hours after the trip ends (`sendDueRecaps`,
+ * src/db/recap.ts) — so the evening the boat came back is both the last moment
+ * to add one and the only moment anyone can still name the highlight. It used
+ * to live only on the trip's setup page and only *before* the trip, which is to
+ * say it asked for the highlight of a day that had not happened.
  *
  * Deliberately a `<details>` rather than an always-open box: the close-out's
  * departures list is a reconciliation ("did everyone come home?") and a row of
@@ -34,6 +37,13 @@ export function RecapNoteEditor({
   t,
   photos = [],
   deletePhotoAction,
+  crewPhotos = [],
+  crewPhotoInputId = "crew-recap-photo",
+  uploadCrewPhotoAction,
+  deleteCrewPhotoAction,
+  recapSendAction,
+  recapEligibleAt,
+  recapNowMs,
 }: {
   action: (formData: FormData) => void;
   shoutout: string | null;
@@ -48,6 +58,17 @@ export function RecapNoteEditor({
     bookingId: string;
   }[];
   deletePhotoAction?: (formData: FormData) => void;
+  crewPhotos?: {
+    id: string;
+    imageUrl: string;
+  }[];
+  /** Unique when several returned departures render their own upload form. */
+  crewPhotoInputId?: string;
+  uploadCrewPhotoAction?: (formData: FormData) => void;
+  deleteCrewPhotoAction?: (formData: FormData) => void;
+  recapSendAction?: (formData: FormData) => void;
+  recapEligibleAt?: Date;
+  recapNowMs?: number;
 }) {
   return (
     <details open={saved} className="group/recap mt-3 border-t border-border pt-3">
@@ -94,6 +115,21 @@ export function RecapNoteEditor({
           </FormStatus>
         </div>
       </form>
+
+      {recapSendAction && recapEligibleAt && recapNowMs !== undefined ? (
+        <RecapSendControl
+          action={recapSendAction}
+          eligibleAt={recapEligibleAt.toISOString()}
+          nowMs={recapNowMs}
+          copy={{
+            waiting: t("closeout.recap.waiting"),
+            ready: t("closeout.recap.ready"),
+            send: t("closeout.recap.send"),
+            sending: t("closeout.recap.sending"),
+            lessThanMinute: t("closeout.recap.lessThanMinute"),
+          }}
+        />
+      ) : null}
 
       {photos.length > 0 && deletePhotoAction ? (
         <div className="mt-4 border-t border-border pt-4">
@@ -151,6 +187,81 @@ export function RecapNoteEditor({
               </li>
             ))}
           </ul>
+        </div>
+      ) : null}
+
+      {uploadCrewPhotoAction && deleteCrewPhotoAction ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
+            {t("closeout.crewPhotos.heading")}{" "}
+            <span className="font-normal text-muted tabular-nums">{crewPhotos.length}</span>
+          </h4>
+          <p className="mt-1 text-sm text-muted">{t("closeout.crewPhotos.description")}</p>
+
+          {crewPhotos.length > 0 ? (
+            <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {crewPhotos.map((photo) => (
+                <li
+                  key={photo.id}
+                  className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}
+                >
+                  <div className="relative aspect-square w-full">
+                    <Image
+                      src={photo.imageUrl}
+                      alt={t("closeout.crewPhotos.photoAlt")}
+                      fill
+                      sizes="288px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex justify-end px-2 py-1.5">
+                    <form action={deleteCrewPhotoAction}>
+                      <input type="hidden" name="photoId" value={photo.id} />
+                      <InlineConfirm
+                        triggerLabel={t("closeout.crewPhotos.remove")}
+                        triggerClassName={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                        })}
+                        confirmClassName={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                          busy: true,
+                        })}
+                        message={t("closeout.crewPhotos.confirmRemove")}
+                        confirmLabel={t("closeout.crewPhotos.removeConfirmButton")}
+                        cancelLabel={t("closeout.crewPhotos.removeCancel")}
+                        pendingLabel={t("closeout.crewPhotos.removing")}
+                      />
+                    </form>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <form action={uploadCrewPhotoAction} className="mt-3 flex flex-col gap-3">
+            <label htmlFor={crewPhotoInputId} className="text-sm font-medium">
+              {t("closeout.crewPhotos.add")}
+            </label>
+            <ImageFileInput
+              id={crewPhotoInputId}
+              name="crewPhoto"
+              required
+              copy={{
+                wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+              }}
+            />
+            <div>
+              <SubmitButton
+                pendingLabel={t("closeout.crewPhotos.adding")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("closeout.crewPhotos.upload")}
+              </SubmitButton>
+            </div>
+          </form>
         </div>
       ) : null}
     </details>

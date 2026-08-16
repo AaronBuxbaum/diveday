@@ -232,7 +232,13 @@ export default async function EditCoursePage({
           typed into any prose box on this page, and it is the one piece of
           syntax this editor asks a shop to learn. */}
       <p className="mt-6 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
-        {t("courses.edit.depthMarkersHint")}
+        {t.rich("courses.edit.depthMarkersHint", {
+          marker: (chunks) => (
+            <code className="rounded bg-surface px-1 font-mono text-xs text-foreground">
+              {chunks}
+            </code>
+          ),
+        })}
       </p>
 
       <UnsavedChangesGuard>

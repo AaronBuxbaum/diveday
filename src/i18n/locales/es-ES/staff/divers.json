@@ -248,6 +248,8 @@
     "heading": "Notas del buceador",
     "description": "Contexto solo para el personal sobre este buceador, compartido con la tripulación en el manifiesto de su barco.",
     "empty": "Aún no hay notas.",
+    "fromTrip": "De {trip} · {date}",
+    "appliesEverywhere": "Se aplica a todas las salidas de este buceador",
     "addLabel": "Añadir una nota",
     "placeholder": "¿Qué debe saber la próxima persona del equipo?",
     "adding": "Añadiendo…",

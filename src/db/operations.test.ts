@@ -9,6 +9,7 @@ import {
   listBookingNotes,
   listDiverNotes,
   listDiverNotesForTrip,
+  listDiverRecordNotes,
   listTripActivity,
 } from "./operations";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -133,6 +134,7 @@ describe("staff-only operational context", () => {
       bookingId: null,
       body: "First boat dive since certification; keep the briefing unhurried.",
     });
+    if (!note) throw new Error("expected the diver note to be created");
 
     expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(1);
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
@@ -142,6 +144,31 @@ describe("staff-only operational context", () => {
         authorName: actor.person.fullName,
       }),
     ]);
+
+    const bookingNote = await addInternalNote(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: rosterEntry.booking.id,
+      actorPersonId: actor.person.id,
+      body: "Bring their preferred mask from the desk bin.",
+    });
+    if (!bookingNote) throw new Error("expected the booking note to be created");
+    const recordNotes = await listDiverRecordNotes(db, shop.id, rosterEntry.person.id);
+    expect(recordNotes).toHaveLength(2);
+    expect(recordNotes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          note: expect.objectContaining({ id: note.id, bookingId: null }),
+          tripId: null,
+          tripTitle: null,
+        }),
+        expect.objectContaining({
+          note: expect.objectContaining({ id: bookingNote.id, bookingId: rosterEntry.booking.id }),
+          tripId: trip.id,
+          tripTitle: trip.title,
+        }),
+      ]),
+    );
   });
 
   it("deletes a diver note without touching booking-scoped notes", async () => {

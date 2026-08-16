@@ -18,7 +18,6 @@
       "levelNone": "I'm not certified yet",
       "levelInfoLabel": "Why we ask about certification",
       "levelDescription": "Helps the shop pick which trips to tell you about. Nothing here is checked — they'll confirm what you can dive before you get in the water.",
-      "levelHint": "Using another agency's certification record? Pick the closest — CMAS 1★, RAID Open Water 20 and BSAC Ocean Diver line up with Open Water; CMAS 2★, RAID Advanced 35 and BSAC Sports Diver with Advanced Open Water; CMAS 3★ and BSAC Dive Leader with Divemaster. GUE records don't fit this list, so “Rather not say” is the right answer for one.",
       "nitrox": "I'm certified for nitrox (enriched air)"
     },
     "units": {
@@ -2302,16 +2301,20 @@
             "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
           },
           "cardOnFile": {
-            "what": "Card on file / payment",
-            "detail": "Stays with your payment processor — DiveDay never imports card or payment data."
+            "what": "Card on file / payment credential",
+            "detail": "Stays with your payment processor. DiveDay never imports card numbers, CVCs, payment methods, or reusable payment credentials."
           },
           "pastVisits": {
             "what": "Past visits (what they booked, when)",
             "detail": "One row per booking becomes visit history — not a dive, and it never appears on your schedule or counts toward capacity."
           },
-          "receiptsService": {
-            "what": "Receipts & service history",
-            "detail": "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs."
+          "paymentHistory": {
+            "what": "Payment & receipt history",
+            "detail": "Source payment, refund, and receipt rows come across as unverified history in Orders. A clearly parsed amount in your shop currency is called out in the revenue/refund aggregate; it never becomes a live Stripe order or booking payment."
+          },
+          "serviceHistory": {
+            "what": "Gear service history",
+            "detail": "Stays behind — DiveDay tracks rental sizes, not a specific rig's service record."
           }
         }
       },

@@ -41,6 +41,7 @@ type ImportWizardCopy = {
   unmappedColumns: string;
   waiverRowsNotice: string;
   visitRowsNotice: string;
+  paymentHistoryRowsNotice: string;
   stats: {
     diversInFile: string;
     extraCardRows: string;
@@ -50,6 +51,7 @@ type ImportWizardCopy = {
     nitroxCards: string;
     waivers: string;
     pastVisits: string;
+    paymentHistory: string;
   };
   table: {
     rowNumber: string;
@@ -98,6 +100,9 @@ type ImportWizardCopy = {
     waiverDocumentsFailedNote: string;
     visitsLine: string;
     visitsSkippedNote: string;
+    paymentHistoryLine: string;
+    paymentHistorySkippedNote: string;
+    receiptDocumentsFailedNote: string;
     seeRoster: string;
   };
 };
@@ -251,6 +256,13 @@ export function ImportWizard({
               {fill(copy.visitRowsNotice, { count: prepared.totals.withVisit })}
             </p>
           ) : null}
+          {prepared.totals.withPaymentHistory > 0 ? (
+            <p className="mt-3 text-sm text-warning">
+              {fill(copy.paymentHistoryRowsNotice, {
+                count: prepared.totals.withPaymentHistory,
+              })}
+            </p>
+          ) : null}
           {prepared.unmappedColumns.length > 0 ? (
             <p className="mt-1 text-xs text-muted">
               {fill(copy.unmappedColumns, { columns: prepared.unmappedColumns.join(", ") })}
@@ -275,6 +287,7 @@ export function ImportWizard({
               { label: copy.stats.nitroxCards, value: prepared.totals.withNitrox },
               { label: copy.stats.waivers, value: prepared.totals.withWaiver },
               { label: copy.stats.pastVisits, value: prepared.totals.withVisit },
+              { label: copy.stats.paymentHistory, value: prepared.totals.withPaymentHistory },
             ].map((stat) => (
               // `inset`: these tiles sit inside the wizard's own card, so they
               // take the sunken tile rather than stacking card on card.
@@ -505,6 +518,23 @@ export function ImportWizard({
                 {state.summary.visitsSkippedExisting > 0
                   ? fill(copy.result.visitsSkippedNote, {
                       count: state.summary.visitsSkippedExisting,
+                    })
+                  : ""}
+              </p>
+            ) : null}
+            {state.summary.paymentHistoryAdded + state.summary.paymentHistorySkippedExisting > 0 ? (
+              <p className="mt-1 text-sm">
+                {fill(copy.result.paymentHistoryLine, {
+                  count: state.summary.paymentHistoryAdded,
+                })}
+                {state.summary.paymentHistorySkippedExisting > 0
+                  ? fill(copy.result.paymentHistorySkippedNote, {
+                      count: state.summary.paymentHistorySkippedExisting,
+                    })
+                  : ""}
+                {state.summary.receiptDocumentsFailed > 0
+                  ? fill(copy.result.receiptDocumentsFailedNote, {
+                      count: state.summary.receiptDocumentsFailed,
                     })
                   : ""}
               </p>

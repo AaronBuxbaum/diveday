@@ -21,7 +21,16 @@ function trip(overrides: Partial<ReportTrip> = {}): ReportTrip {
 }
 
 function input(overrides: Partial<MonthlyReportInput> = {}): MonthlyReportInput {
-  return { trips: [trip()], revenueCents: 0, tipsCents: 0, tipCount: 0, ...overrides };
+  return {
+    trips: [trip()],
+    revenueCents: 0,
+    importedPaymentCents: 0,
+    importedRefundCents: 0,
+    importedFinancialRecordCount: 0,
+    tipsCents: 0,
+    tipCount: 0,
+    ...overrides,
+  };
 }
 
 describe("summarizeMonth", () => {
@@ -82,6 +91,25 @@ describe("summarizeMonth", () => {
 
   it("passes revenue through untouched", () => {
     expect(summarizeMonth(input({ revenueCents: 184_500 })).revenueCents).toBe(184_500);
+  });
+
+  it("carries the labelled imported payment and refund slice without turning it into trip activity", () => {
+    const report = summarizeMonth(
+      input({
+        trips: [],
+        revenueCents: 14_000,
+        importedPaymentCents: 16_500,
+        importedRefundCents: 2_500,
+        importedFinancialRecordCount: 2,
+      }),
+    );
+    expect(report.tripCount).toBe(0);
+    expect(report.revenueCents).toBe(14_000);
+    expect(report).toMatchObject({
+      importedPaymentCents: 16_500,
+      importedRefundCents: 2_500,
+      importedFinancialRecordCount: 2,
+    });
   });
 
   it("carries tips as their own figure and never folds them into revenue (PAY-M2)", () => {

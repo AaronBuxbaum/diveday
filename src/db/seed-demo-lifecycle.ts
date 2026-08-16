@@ -20,6 +20,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -58,6 +59,7 @@ import {
   tripDives,
   tripInvitations,
   tripLastMinutePromos,
+  tripRecapPhotos,
   tripRequirements,
   tripReviews,
   tripSeries,
@@ -130,6 +132,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // before both parents below (ADR 20260804-day-closeout).
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // Before the reviews it describes: the trail's review_id FK carries no
   // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
@@ -181,6 +184,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
+  await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit

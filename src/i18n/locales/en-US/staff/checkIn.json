@@ -58,7 +58,6 @@
     "title": "Walk-in",
     "description": "Pick today’s boat, then find the diver or add them fresh — no email required at the counter.",
     "backToQueue": "Back to check-in",
-    "backToPicker": "Not this one? Pick a different boat.",
     "tripLabel": "Which boat?",
     "tripEmpty": "No boats sail in the next day and a half — check the schedule instead.",
     "tripEmptyAction": "View the schedule",

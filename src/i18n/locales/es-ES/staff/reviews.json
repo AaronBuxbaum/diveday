@@ -59,7 +59,9 @@
   "hideReasonLabel": "¿Por qué la retiras?",
   "hideReasonPlaceholder": "Elige un motivo…",
   "hideNoteLabel": "Qué pasó",
-  "hideNotePlaceholder": "Solo si elegiste «Otro motivo»",
+  "hiddenReason": "Oculta porque: {reason}",
+  "hiddenReasonWithNote": "Oculta porque: {reason} — {note}",
+  "standoutWrittenOnly": "Solo las reseñas con texto pueden ser destacadas.",
   "hideReason": {
     "abusive": "Ofensiva o acosadora",
     "namesAPerson": "Nombra a alguien del equipo o a otro buceador",

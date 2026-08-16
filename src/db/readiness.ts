@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
@@ -11,6 +12,7 @@ import {
   unavailableReadiness,
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
+import { loadActiveStaffRoles } from "./authz";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
 import { paymentsByBooking } from "./payments";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
@@ -178,6 +180,21 @@ export type NewCertification = {
 };
 
 /**
+ * Resolve the person whose name a certification review may carry. A review is
+ * evidence that opens a safety gate, so its accountable name must be a live
+ * staff member of this same shop — never a stale session, deleted staff row,
+ * or arbitrary UUID supplied to a low-level caller.
+ */
+export async function activeCertificationReviewerId(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  return roles && isStaff(roles) ? personId : null;
+}
+
+/**
  * Evidence is captured pending; a separate, explicit review makes it usable for
  * readiness. Refuses (returns null) rather than throwing when a live card
  * already holds the same shop/agency/identifier in any case — the
@@ -239,12 +256,20 @@ export async function reviewCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    /** The active staffer who made this certification decision, if this is a live review. */
+    reviewedByPersonId?: string;
     /** Required for, and only meaningful on, a still-unsighted self-declaration. */
     sighting?: LevelCardSighting;
   },
 ): Promise<
   { ok: true; certification: Certification } | { ok: false; reason: CertificationReviewRefusal }
 > {
+  const reviewedByPersonId = input.reviewedByPersonId
+    ? await activeCertificationReviewerId(db, input.shopId, input.reviewedByPersonId)
+    : null;
+  if (input.reviewedByPersonId && !reviewedByPersonId) {
+    return { ok: false, reason: "staff_not_found" };
+  }
   // Read first: whether this row needs a sighting is a property of the row, and
   // an update that silently matched nothing is a different failure to report.
   const [existing] = await db
@@ -291,6 +316,7 @@ export async function reviewCertification(
         status: input.status,
         reviewNote: reviewNoteFor(input.reviewNote),
         reviewedAt: nowDate(),
+        ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
         // Only ever written on the sighting path: a normal review must not be
         // able to rewrite the agency, number or level already on a captured
         // card. `level` rides with the other two because all three are read off
@@ -436,7 +462,8 @@ export type ReviewRefusal = "not_found";
 export type CertificationReviewRefusal =
   | ReviewRefusal
   | "card_sighting_required"
-  | "duplicate_card";
+  | "duplicate_card"
+  | "staff_not_found";
 
 /**
  * Confirming a specialty card — the tap that opens a specialty gate, depth past
@@ -457,11 +484,19 @@ export async function reviewSpecialtyCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    /** The active staffer who made this certification decision, if this is a live review. */
+    reviewedByPersonId?: string;
   },
 ): Promise<
   | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
-  | { ok: false; reason: ReviewRefusal }
+  | { ok: false; reason: ReviewRefusal | "staff_not_found" }
 > {
+  const reviewedByPersonId = input.reviewedByPersonId
+    ? await activeCertificationReviewerId(db, input.shopId, input.reviewedByPersonId)
+    : null;
+  if (input.reviewedByPersonId && !reviewedByPersonId) {
+    return { ok: false, reason: "staff_not_found" };
+  }
   // Read first so a missing or archived card is a `not_found` refusal rather
   // than an update that silently matched no rows.
   const [existing] = await db
@@ -483,6 +518,7 @@ export async function reviewSpecialtyCertification(
       status: input.status,
       reviewNote: reviewNoteFor(input.reviewNote),
       reviewedAt: nowDate(),
+      ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
     })
     .where(
       and(

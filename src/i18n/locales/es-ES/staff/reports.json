@@ -18,8 +18,9 @@
   },
   "numbersLabel": "Los números de este mes",
   "metrics": {
-    "revenueLabel": "Ingresos cobrados",
+    "revenueLabel": "Ingresos netos",
     "revenueDetail": "Pagos y depósitos cobrados en las salidas de este mes",
+    "revenueDetailWithImported": "Pagos y depósitos de salidas actuales, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
     "bookingsLabel": "Reservas",
     "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
     "bookingsOther": "en {count, plural, one {# salida} other {# salidas}}",
@@ -34,6 +35,13 @@
   },
   "noTripsFuture": "Todavía no hay nada reservado para este mes — las reservas aparecerán aquí a medida que lleguen.",
   "noTripsPast": "Ninguna salida zarpó este mes. Elige otro mes para ver cómo fue.",
+  "noTripsWithImportedHistory": "No hubo salidas de DiveDay registradas este mes. El agregado financiero de arriba procede de historial importado del origen sin verificar.",
+  "importedHistory": {
+    "sectionLabel": "Historial importado sin verificar",
+    "heading": "Historial importado sin verificar",
+    "detail": "Los ingresos netos de este mes incluyen {payments} en pagos del origen y restan {refunds} en reembolsos del origen. Revisa cada fila del origen sin verificar en Pedidos; esto no es una conciliación de Stripe.",
+    "viewOrders": "Revisar historial importado en Pedidos"
+  },
   "tripsThisMonth": "Salidas de este mes",
   "table": {
     "trip": "Salida",

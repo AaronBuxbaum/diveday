@@ -82,6 +82,8 @@ export const EXPORT_FILE_NOTES = {
   "rental_fit.csv": "Each diver's rental kit and sizes.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say cancelled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
+  "imported_payment_history.csv":
+    "Unverified payment, refund, and receipt source history carried from a previous system. These rows are not DiveDay orders, booking payments, live Stripe charges, or reusable payment credentials. amount_cents and currency exist only where the source amount was clearly parsed; a matching-currency payment/refund can be included in a clearly labelled report aggregate, but every row remains source evidence that staff must review. receipt_document_url points to a re-stored document when one was available.",
   "internal_notes.csv":
     "The shop's own private notes about its divers and their bookings — what the front desk wrote down so the next person on the counter would know. Never shown to a diver, and never part of any gate: a note is context, not evidence, so nothing in readiness, boarding, or medical clearance has ever read one. They are here because they are the shop's own words about its own customers, and a shop that leaves without them arrives somewhere else having forgotten everything it knew.",
   "activity_events.csv":
@@ -101,6 +103,8 @@ export const EXPORT_FILE_NOTES = {
     "Staff-moderated diver moments attached to dive sites, published and unpublished.",
   "recap_photos.csv":
     "Photos divers attached to their post-trip recap pages, by booking and trip. Image links stay readable while the DiveDay account is active.",
+  "trip_recap_photos.csv":
+    "Staff-only close-out photos by departure, including the staff member who uploaded each one. They were never automatically shared with divers; sharing needs its own audience decision.",
   "trip_reviews.csv":
     "Ratings and words from divers who provably dived — each row was written through that booking's own post-trip recap link, so there are no unverified reviews here. Only is_published rows were shown publicly and only those were counted in the shop's displayed average; a review carrying a comment stayed unpublished until staff released it, while a bare rating published on arrival. One row per booking: a diver revising their review updated it in place.",
   "review_moderation_events.csv":
@@ -194,7 +198,7 @@ export type ExportBundleInput = {
   shopSlug: string;
   timezone: string;
   tables: ExportTable[];
-  /** Every DiveDay-stored image URL referenced anywhere in `tables`, deduped. */
+  /** Every DiveDay-stored image or import-document URL referenced in `tables`, deduped. */
   photoUrls: string[];
 };
 
@@ -224,7 +228,7 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
         `- ${table.file} (${table.rows.length} ${table.rows.length === 1 ? "row" : "rows"}): ${table.note}`,
     ),
     ``,
-    `Photos: any image_url / *_url column above whose link is`,
+    `Photos and imported documents: any image_url / *_url column above whose link is`,
     `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
     `path as the URL — for example an image_url of`,
     `https://xyz.public.blob.vercel-storage.com/recap/ab12-photo.jpg is also at`,

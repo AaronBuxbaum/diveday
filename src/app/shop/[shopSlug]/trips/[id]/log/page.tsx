@@ -507,9 +507,15 @@ function WaiverLine({
     const method =
       waiver.signatureMethod === "imported"
         ? ` ${t("incidentExport.waiverCompleteImported")}`
-        : waiver.signatureMethod === "in_person_attested" || waiver.signatureMethod === "in_person"
-          ? ` ${t("incidentExport.waiverCompleteAttested")}`
-          : "";
+        : waiver.signatureMethod === "in_person_attested"
+          ? ` ${
+              waiver.recordedByName
+                ? t("incidentExport.waiverPaperMarkedBy", { name: waiver.recordedByName })
+                : t("incidentExport.waiverCompleteAttested")
+            }`
+          : waiver.signatureMethod === "in_person"
+            ? ` ${t("incidentExport.waiverCompleteAttested")}`
+            : "";
     return (
       <>
         {t("incidentExport.waiverComplete", {
@@ -577,7 +583,14 @@ function CertificationLine({
   const status =
     card.status === "verified"
       ? card.reviewedAt
-        ? t("incidentExport.certStatusVerified", { date: dateTime(card.reviewedAt) })
+        ? card.reviewedByName
+          ? t("incidentExport.certStatusVerifiedBy", {
+              date: dateTime(card.reviewedAt),
+              name: card.reviewedByName,
+            })
+          : t("incidentExport.certStatusVerifiedUnknownReviewer", {
+              date: dateTime(card.reviewedAt),
+            })
         : t("incidentExport.certStatusVerifiedNoDate")
       : t("incidentExport.certStatusPending");
   return (

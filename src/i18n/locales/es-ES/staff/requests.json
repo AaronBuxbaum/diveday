@@ -5,6 +5,7 @@
   "emptyHeading": "Todavía no hay peticiones",
   "emptyDetail": "Los buceadores piden desde tu página de horarios y desde cualquier página de curso — “¿No hay ninguna fecha que te sirva?”. Lo que envían llega aquí.",
   "groupCount": "{count, plural, one {# grupo podría hacer este día} other {# grupos podrían hacer este día}}",
+  "groupPeopleCount": "{groups, plural, one {# grupo} other {# grupos}} · {divers, plural, one {# buceador podría hacer este día} other {# buceadores podrían hacer este día}}",
   "recommendationHeading": "Sugerencia para planificar",
   "recommendationDetail": "Aproximadamente {divers} buceadores en {requests} peticiones. Empieza con {capacity} plazas y ajústalo a la salida que realmente quieras organizar.",
   "addDeparture": "Programa una salida este día",

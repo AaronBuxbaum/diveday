@@ -1,9 +1,11 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
-import { shops } from "./schema";
+import { createCertification, reviewCertification } from "./readiness";
+import { shops, waiverRecords } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -136,6 +138,34 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     expect(serialized).not.toContain("medicalAnswers");
   });
 
+  it("attributes a paper waiver to the staff member who recorded it", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const [first] = await getTripRoster(db, shop.id, reef.id);
+    if (!first) throw new Error("demo booking missing");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: first.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    // Set up the same immutable shape `recordInPersonWaiver` writes. The
+    // production path is separately pinned in waivers.test.ts; this test pins
+    // the incident export's tenant-scoped recorder projection.
+    await db
+      .update(waiverRecords)
+      .set({ signatureMethod: "in_person_attested", recordedByPersonId: staff.id })
+      .where(eq(waiverRecords.bookingId, first.booking.id));
+
+    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    expect(doc?.roster.find((entry) => entry.bookingId === first.booking.id)?.waiver).toMatchObject(
+      {
+        signatureMethod: "in_person_attested",
+        recordedByName: staff.fullName,
+      },
+    );
+  });
+
   it("adversarial: another shop's trip id resolves to null, not to a document", async () => {
     const { db, shop, staff } = await exportContext();
     const [rival] = await db
@@ -178,5 +208,37 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     await expect(getIncidentExport(db, shop.id, reef.id, nonOwner.id)).resolves.toBeNull();
     // The owner still gets it, so this is a role gate and not a broken reader.
     await expect(getIncidentExport(db, shop.id, reef.id, staff.id)).resolves.not.toBeNull();
+  });
+
+  it("attributes a reviewed certification to the staff member who certified it", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const [first] = await getTripRoster(db, shop.id, reef.id);
+    if (!first) throw new Error("demo booking missing");
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId: first.person.id,
+      agency: "padi",
+      level: "rescue",
+      identifier: "INCIDENT-REVIEWER-1",
+    });
+    if (!card) throw new Error("expected certification to insert");
+    await expect(
+      reviewCertification(db, {
+        shopId: shop.id,
+        certificationId: card.id,
+        status: "verified",
+        reviewedByPersonId: staff.id,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    expect(
+      doc?.roster
+        .find((entry) => entry.bookingId === first.booking.id)
+        ?.certifications.find((entry) => entry.identifier === "INCIDENT-REVIEWER-1"),
+    ).toMatchObject({
+      status: "verified",
+      reviewedByName: staff.fullName,
+    });
   });
 });

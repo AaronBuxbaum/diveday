@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
+import { isStaff } from "@/lib/authz";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
@@ -17,7 +18,9 @@ import {
 } from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
+import { RECAP_MINIMUM_DELAY_HOURS, recapIsEligible } from "@/lib/recap-schedule";
 import type { TemperatureUnit } from "@/lib/temperature-units";
+import { loadActiveStaffRoles } from "./authz";
 import type { AppDb } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import {
@@ -25,7 +28,15 @@ import {
   recordNotificationDelivery,
   sendNotificationBatch,
 } from "./notifications";
-import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } from "./schema";
+import {
+  bookings,
+  notificationDeliveries,
+  people,
+  recapPhotos,
+  shops,
+  tripRecapPhotos,
+  trips,
+} from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
@@ -40,7 +51,8 @@ export type RecapPhotoView = { id: string; imageUrl: string; caption: string | n
  * surfaces use. This is brainstorm C's "word-of-mouth window, weaponized" — the
  * highest-leverage marketing moment a shop has is the hours after a great dive,
  * and today it's unused. The page (`/recap/[token]`) is public via a signed
- * booking token; `sendDueRecaps` delivers the link once the trip departs.
+ * booking token; `sendDueRecaps` delivers the link no earlier than four hours
+ * after the trip ends.
  */
 
 /** A site the trip dived, as the recap page names it. */
@@ -108,6 +120,9 @@ export type RecapPageData = {
 
 /** How many photos one booking may attach — a memory strip, not a media host. */
 export const MAX_RECAP_PHOTOS_PER_BOOKING = 12;
+
+/** A close-out album is a memory strip, not a general-purpose media library. */
+export const MAX_CREW_RECAP_PHOTOS_PER_TRIP = 24;
 
 /**
  * Server-side caption bound. The upload form caps at this length client-side, but
@@ -391,6 +406,124 @@ export async function deleteRecapPhoto(
   return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
 }
 
+/** Staff-only photos taken on a departure, newest first. They never reach a diver recap by default. */
+export type CrewRecapPhoto = { id: string; imageUrl: string };
+
+export type CrewRecapPhotoEligibility =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "not_ended" | "not_staff" | "limit" };
+
+async function canStaffUploadCrewRecapPhoto(db: AppDb, shopId: string, personId: string) {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  return Boolean(roles && isStaff(roles));
+}
+
+/**
+ * The pre-storage gate for a crew image. The upload action uses it before
+ * bytes reach Blob storage, and `addCrewRecapPhoto` repeats it under a trip
+ * lock to close the concurrent-upload race.
+ */
+export async function canAddCrewRecapPhoto(
+  db: AppDb,
+  input: { shopId: string; tripId: string; uploadedByPersonId: string; now?: Date },
+): Promise<CrewRecapPhotoEligibility> {
+  const now = input.now ?? nowDate();
+  if (!(await canStaffUploadCrewRecapPhoto(db, input.shopId, input.uploadedByPersonId))) {
+    return { ok: false, reason: "not_staff" };
+  }
+  const [trip] = await db
+    .select({ endsAt: trips.endsAt, status: trips.status })
+    .from(trips)
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .limit(1);
+  if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
+  if (trip.endsAt > now) return { ok: false, reason: "not_ended" };
+  const [{ count: existing } = { count: 0 }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tripRecapPhotos)
+    .where(and(eq(tripRecapPhotos.shopId, input.shopId), eq(tripRecapPhotos.tripId, input.tripId)));
+  return existing >= MAX_CREW_RECAP_PHOTOS_PER_TRIP ? { ok: false, reason: "limit" } : { ok: true };
+}
+
+export type AddCrewRecapPhotoResult =
+  | { ok: true; photo: CrewRecapPhoto }
+  | { ok: false; reason: "not_found" | "not_ended" | "not_staff" | "limit" };
+
+/**
+ * Attach a staff-owned image to one completed departure. The row has no
+ * booking by design: it stays on the close-out's staff-only album until a
+ * later, explicit sharing policy chooses an audience for it.
+ */
+export async function addCrewRecapPhoto(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    uploadedByPersonId: string;
+    imageUrl: string;
+    now?: Date;
+  },
+): Promise<AddCrewRecapPhotoResult> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx) => {
+    const roles = await loadActiveStaffRoles(tx, input.shopId, input.uploadedByPersonId);
+    if (!roles || !isStaff(roles)) return { ok: false, reason: "not_staff" } as const;
+    const [trip] = await tx
+      .select({ endsAt: trips.endsAt, status: trips.status })
+      .from(trips)
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" } as const;
+    if (trip.endsAt > now) return { ok: false, reason: "not_ended" } as const;
+    const [{ count: existing } = { count: 0 }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tripRecapPhotos)
+      .where(
+        and(eq(tripRecapPhotos.shopId, input.shopId), eq(tripRecapPhotos.tripId, input.tripId)),
+      );
+    if (existing >= MAX_CREW_RECAP_PHOTOS_PER_TRIP) return { ok: false, reason: "limit" } as const;
+    const [photo] = await tx
+      .insert(tripRecapPhotos)
+      .values({
+        shopId: input.shopId,
+        tripId: input.tripId,
+        imageUrl: input.imageUrl,
+        uploadedByPersonId: input.uploadedByPersonId,
+      })
+      .returning({ id: tripRecapPhotos.id, imageUrl: tripRecapPhotos.imageUrl });
+    if (!photo) throw new Error("addCrewRecapPhoto: insert returned no row");
+    return { ok: true, photo } as const;
+  });
+}
+
+export async function listCrewRecapPhotosForTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<CrewRecapPhoto[]> {
+  return db
+    .select({ id: tripRecapPhotos.id, imageUrl: tripRecapPhotos.imageUrl })
+    .from(tripRecapPhotos)
+    .where(and(eq(tripRecapPhotos.shopId, shopId), eq(tripRecapPhotos.tripId, tripId)))
+    .orderBy(desc(tripRecapPhotos.createdAt));
+}
+
+export type DeleteCrewRecapPhotoResult = { deleted: true; imageUrl: string } | { deleted: false };
+
+/** Delete a staff-only close-out image and return its URL for tracked Blob cleanup. */
+export async function deleteCrewRecapPhoto(
+  db: AppDb,
+  shopId: string,
+  photoId: string,
+): Promise<DeleteCrewRecapPhotoResult> {
+  const [removed] = await db
+    .delete(tripRecapPhotos)
+    .where(and(eq(tripRecapPhotos.id, photoId), eq(tripRecapPhotos.shopId, shopId)))
+    .returning({ imageUrl: tripRecapPhotos.imageUrl });
+  return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
+}
+
 /** Set (or clear, with an empty string) a trip's crew-authored recap shout-out. */
 export async function setTripRecapShoutout(
   db: AppDb,
@@ -407,10 +540,10 @@ export async function setTripRecapShoutout(
 }
 
 /**
- * How far back a run looks for departed trips. A daily cron catches a trip on
- * the next run after it ends; 48h leaves a full missed-run of slack, and the
- * once-per-booking `trip_recap` delivery row means an overlapping window never
- * double-sends (docs ADR 20260721-scheduled-reminder-cadence).
+ * How far back a run looks for departed trips. The hourly recap scan catches a
+ * trip on its first run after the four-hour floor; 48h leaves a full missed-run
+ * of slack, and the once-per-booking `trip_recap` delivery row means an
+ * overlapping window never double-sends (docs ADR 20260721-scheduled-reminder-cadence).
  */
 export const RECAP_LOOKBACK_HOURS = 48;
 
@@ -440,6 +573,39 @@ export type SendDueRecapsOptions = {
   appOrigin?: string | null;
 };
 
+type RecapScanScope = { shopId?: string; tripId?: string };
+
+/**
+ * A staff-triggered send is deliberately narrower than the periodic scan. It
+ * has the same four-hour floor, so the close-out page cannot send a recap just
+ * because someone found the button early.
+ */
+export type SendTripRecapsResult =
+  | { ok: true; summary: RecapRunSummary }
+  | { ok: false; reason: "not_found" | "not_eligible" };
+
+export async function sendTripRecaps(
+  db: AppDb,
+  input: { shopId: string; tripId: string; options?: SendDueRecapsOptions },
+): Promise<SendTripRecapsResult> {
+  const now = input.options?.now ?? nowDate();
+  const [trip] = await db
+    .select({ id: trips.id, endsAt: trips.endsAt, status: trips.status })
+    .from(trips)
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .limit(1);
+  if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
+  if (!recapIsEligible(trip.endsAt, now)) return { ok: false, reason: "not_eligible" };
+  return {
+    ok: true,
+    summary: await sendRecaps(
+      db,
+      { ...input.options, now },
+      { shopId: input.shopId, tripId: input.tripId },
+    ),
+  };
+}
+
 /**
  * Send the post-trip recap for every booking on a trip that departed within the
  * lookback window and hasn't been sent one yet. Idempotent by the same
@@ -454,11 +620,21 @@ export async function sendDueRecaps(
   db: AppDb,
   options: SendDueRecapsOptions = {},
 ): Promise<RecapRunSummary> {
+  return sendRecaps(db, options);
+}
+
+/** Shared dispatcher for the all-shop cron and a single eligible departure. */
+async function sendRecaps(
+  db: AppDb,
+  options: SendDueRecapsOptions = {},
+  scope: RecapScanScope = {},
+): Promise<RecapRunSummary> {
   const now = options.now ?? nowDate();
   const emailProvider = notificationProviderForDb(options.emailProvider);
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
+  const eligibleBefore = new Date(now.getTime() - RECAP_MINIMUM_DELAY_HOURS * HOUR_MS);
 
   const rows = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })
@@ -474,11 +650,14 @@ export async function sendDueRecaps(
         // (Codex finding).
         ne(bookings.status, "no_show"),
         eq(trips.status, "scheduled"),
-        lte(trips.endsAt, now),
+        // The server-side four-hour floor is the authority; the close-out
+        // control merely reflects it and cannot cause an early send.
+        lte(trips.endsAt, eligibleBefore),
         gt(trips.endsAt, since),
+        ...(scope.shopId ? [eq(trips.shopId, scope.shopId)] : []),
+        ...(scope.tripId ? [eq(trips.id, scope.tripId)] : []),
       ),
     );
-
   const summary: RecapRunSummary = {
     scanned: rows.length,
     sent: 0,

@@ -5,6 +5,7 @@
   "emptyHeading": "No requests yet",
   "emptyDetail": "Divers ask from your schedule page and from any course page — “Nothing on a date that works?”. What they send lands here.",
   "groupCount": "{count, plural, one {# group could make this day} other {# groups could make this day}}",
+  "groupPeopleCount": "{groups, plural, one {# group} other {# groups}} · {divers, plural, one {# diver could make this day} other {# divers could make this day}}",
   "recommendationHeading": "Planning suggestion",
   "recommendationDetail": "About {divers} divers across {requests} requests. Start with {capacity} seats, then adjust for the departure you actually plan to run.",
   "addDeparture": "Put a departure on this day",

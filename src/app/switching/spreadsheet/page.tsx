@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
-import type { ReactElement } from "react";
+import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
@@ -10,7 +10,6 @@ import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import type { FunnelSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   ClosingCta,
@@ -123,6 +122,7 @@ export default async function SpreadsheetSwitchPage() {
           <SwitchingImportCta
             label={t("switching.common.openImportCta")}
             trialLabel={t("marketing.common.startTrial")}
+            source="switching-spreadsheet-mid"
           />
         }
       />
@@ -159,21 +159,17 @@ const WEDGE_ITEMS = [
 /**
  * Cached per negotiated locale (DIVER_LOCALES — two entries). `importCta` carries
  * {@link SwitchingImportCta} (session-scoped — reads `auth()`) as a
- * pass-through slot per Next's `"use cache"` interleaving rules: it is never
- * read or invoked here, only rendered where it belongs in the tree, so its
- * per-visitor content never enters the cache entry.
- *
- * Its render site (`ImportPhase`) wraps `{importCta}` in its own `<Suspense>` —
- * see the same fix on the `[competitor]` guide's `GuideBody` for why: without
- * it, this preview's Cache Components runtime replayed a spurious "unique key"
- * warning on every request.
+ * pass-through slot per Next's `"use cache"` interleaving rules. Its funnel
+ * source is bound before it crosses this cache boundary, so this body only
+ * renders the slot unchanged and its per-visitor content never enters the
+ * cache entry.
  */
 async function SpreadsheetBody({
   locale,
   importCta,
 }: {
   locale: DiverLocale;
-  importCta: ReactElement<{ source?: FunnelSource }>;
+  importCta: ReactNode;
 }) {
   "use cache";
   cacheLife("max");
@@ -250,12 +246,9 @@ async function SpreadsheetBody({
           </ul>
         </MovePhase>
         <ScopePhase locale={locale} number={2} />
-        <ImportPhase
-          locale={locale}
-          number={3}
-          source="switching-spreadsheet-mid"
-          importCta={importCta}
-        />
+        <ImportPhase locale={locale} number={3}>
+          <Suspense fallback={null}>{importCta}</Suspense>
+        </ImportPhase>
       </MovePath>
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}

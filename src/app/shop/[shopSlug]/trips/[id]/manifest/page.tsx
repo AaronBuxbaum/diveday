@@ -37,7 +37,7 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { type DeskNote, type DiverNote, DiverRollCall } from "./_components/DiverRollCall";
+import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
@@ -205,20 +205,36 @@ export default async function TripManifestPage({
   // forms and has no single home, so it stays at the top of the panel.
   const buddyErrorForm = buddyErrorText ? (buddyError === "few" ? "builder" : "panel") : null;
 
-  // Grouped by booking, oldest first (the query's own order) — the way a desk
-  // note reads is as a running thread on that seat.
-  const deskNotesByBooking = new Map<string, DeskNote[]>();
+  // One chronological note thread per booking. A person-scoped note and a
+  // booking note are two contexts in the same `internal_notes` source, not two
+  // lists the crew has to compare — the scope is retained only where it helps
+  // explain why a note follows a diver beyond this departure.
+  const notesByBooking = new Map<string, ManifestNote[]>();
   for (const { note, authorName } of bookingNotes) {
     if (!note.bookingId) continue;
-    const rows = deskNotesByBooking.get(note.bookingId) ?? [];
-    rows.push({ id: note.id, body: note.body, authorName, createdAt: note.createdAt });
-    deskNotesByBooking.set(note.bookingId, rows);
+    const rows = notesByBooking.get(note.bookingId) ?? [];
+    rows.push({
+      id: note.id,
+      body: note.body,
+      authorName,
+      createdAt: note.createdAt,
+      scope: "booking",
+    });
+    notesByBooking.set(note.bookingId, rows);
   }
-  const diverNotesByBooking = new Map<string, DiverNote[]>();
   for (const { note, authorName, bookingId } of diverNotes) {
-    const rows = diverNotesByBooking.get(bookingId) ?? [];
-    rows.push({ id: note.id, body: note.body, authorName, createdAt: note.createdAt });
-    diverNotesByBooking.set(bookingId, rows);
+    const rows = notesByBooking.get(bookingId) ?? [];
+    rows.push({
+      id: note.id,
+      body: note.body,
+      authorName,
+      createdAt: note.createdAt,
+      scope: "diver",
+    });
+    notesByBooking.set(bookingId, rows);
+  }
+  for (const rows of notesByBooking.values()) {
+    rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
   }
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
@@ -340,8 +356,7 @@ export default async function TripManifestPage({
         tripId={tripId}
         locale={locale}
         timezone={shop.timezone}
-        deskNotesByBooking={deskNotesByBooking}
-        diverNotesByBooking={diverNotesByBooking}
+        notesByBooking={notesByBooking}
         rollCallAction={boundRollCallAction}
         addPrivateNoteAction={boundAddPrivateNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}

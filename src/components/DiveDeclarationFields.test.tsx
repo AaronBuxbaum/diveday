@@ -52,7 +52,7 @@ describe("DiveDeclarationFields", () => {
     expect(
       screen.getByText(/Helps the shop pick which trips to tell you about/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Using another agency's certification record/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing here is checked/)).toBeInTheDocument();
   });
 
   it("can omit nitrox from the broad deal-list form", () => {

@@ -48,7 +48,6 @@ import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
-import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
@@ -64,7 +63,6 @@ import {
   reinstateTripAction,
   saveConditionsAction,
   saveDetails,
-  saveRecapShoutoutAction,
   saveRequirementsAction,
   setSeriesRepeatAction,
   updateSeriesCadenceAction,
@@ -286,7 +284,6 @@ export default async function ManageTripPage({
   const sectionsOnPage = new Set([
     ...(canConfigure ? ["details", "requirements"] : []),
     "conditions",
-    "recap-note",
     "lifecycle",
     ...(canConfigure && series ? ["series"] : []),
   ]);
@@ -389,14 +386,6 @@ export default async function ManageTripPage({
         }
         actions={
           <>
-            <Link
-              href={publicTripPath(shopSlug, tripId)}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("trips.detail.viewBookingPage")}
-            </Link>
             <CopyLinkButton
               path={publicTripPath(shopSlug, tripId)}
               label={t("trips.detail.copyBookingLink")}
@@ -409,6 +398,14 @@ export default async function ManageTripPage({
               popupBlockedLabel={t("shared.printButton.popupBlocked")}
               recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
             />
+            <Link
+              href={publicTripPath(shopSlug, tripId)}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "link", size: "sm" })}
+            >
+              {t("trips.detail.viewBookingPage")}
+            </Link>
           </>
         }
         extraMeta={
@@ -665,26 +662,6 @@ export default async function ManageTripPage({
         temperatureUnit={temperatureUnitFor(shop)}
         depthUnit={shop.depthUnit}
       />
-
-      {/* Only once the boat is back. The note is what the crew wants divers to
-          read *about the day they just had* — "the eagle ray on the second
-          dive", a thank-you to the group — and it rides out on the recap the
-          nightly run sends after a departure ends. Offered on a trip that has
-          not sailed, it was a blank box asking staff to write the highlight of
-          something that has not happened yet, sitting in the middle of the
-          surface where they set that trip up. The close-out puts it where it
-          belongs (`/close-out`, ADR 20260804-day-closeout): tonight's ended
-          departures each carry this editor, and this section is the same note
-          on the trip's own record afterwards, for the days when the evening
-          got away from someone. */}
-      {departed ? (
-        <RecapNoteSection
-          action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
-          status={noticeForForm(tripNotice, "recap-note")}
-          shoutout={trip.recapShoutout}
-          locale={locale}
-        />
-      ) : null}
 
       {canConfigure && series ? (
         <SeriesSection

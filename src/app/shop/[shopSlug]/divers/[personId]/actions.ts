@@ -502,6 +502,7 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
         certificationId,
         status: "verified",
         sighting,
+        reviewedByPersonId: staff.user.personId,
       })
     : ({ ok: false, reason: "not_found" } as const);
   revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "cards"));
@@ -577,11 +578,13 @@ export async function reviewSpecialtyAction(
           certificationId,
           status: "verified",
           sighting: sightingFromForm(formData),
+          reviewedByPersonId: staff.user.personId,
         })
       : await reviewSpecialtyCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
+          reviewedByPersonId: staff.user.personId,
         })
     : ({ ok: false, reason: "not_found" } as const);
   revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "specialty-cards"));

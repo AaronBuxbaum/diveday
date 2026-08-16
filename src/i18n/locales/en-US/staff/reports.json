@@ -18,8 +18,9 @@
   },
   "numbersLabel": "This month's numbers",
   "metrics": {
-    "revenueLabel": "Revenue collected",
+    "revenueLabel": "Net revenue",
     "revenueDetail": "Payments and deposits taken on this month's trips",
+    "revenueDetailWithImported": "Current-trip payments and deposits, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
     "bookingsLabel": "Bookings",
     "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
     "bookingsOther": "across {count, plural, one {# trip} other {# trips}}",
@@ -34,6 +35,13 @@
   },
   "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
   "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
+  "noTripsWithImportedHistory": "No DiveDay departures were recorded this month. The financial aggregate above comes from unverified imported source history.",
+  "importedHistory": {
+    "sectionLabel": "Unverified imported history",
+    "heading": "Unverified imported history",
+    "detail": "This month's net revenue includes {payments} in source payments and subtracts {refunds} in source refunds. Review every unverified source row in Orders; this is not a Stripe reconciliation.",
+    "viewOrders": "Review imported history in Orders"
+  },
   "tripsThisMonth": "Trips this month",
   "table": {
     "trip": "Trip",

@@ -58,22 +58,12 @@ export function DiveDeclarationFields({ showNitrox = true }: { showNitrox?: bool
         <Field
           label={t("common.certification.level")}
           hint={t("common.optional")}
-          /* Two sentences, one `description`, so both are wired onto the select
-             by `aria-describedby` rather than only the first. The second is the
-             equivalence hint: the ladder is a five-rung PADI/SSI shape and most
-             of the world's cards are not on it (CMAS stars, BSAC's grades,
-             RAID's numbered levels), so a diver holding one of those had no
-             honest option and no way to know which rung was meant. Staff have
-             carried the same mapping on the capture form since it shipped
-             (`divers.certifications.levelMapping`) — here there is no staffer,
-             so the diver needs it. */
           aside={
             <InfoHint
               label={t("common.certification.levelInfoLabel")}
               detail={t("common.certification.levelDescription")}
             />
           }
-          description={t("common.certification.levelHint")}
         >
           <select
             name="certificationLevel"

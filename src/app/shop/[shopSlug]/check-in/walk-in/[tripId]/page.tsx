@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -119,15 +118,6 @@ export default async function WalkInDiverPage({
         title={t("checkIn.walkIn.title")}
         description={t("checkIn.walkIn.description")}
       />
-      {/* Back means back one step — the boat picker — not out to the queue.
-          The queue is where a *finished* walk-in lands. */}
-      <Link
-        href={picker}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-      >
-        ← {t("checkIn.walkIn.backToPicker")}
-      </Link>
-
       {banner ? (
         <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">
           {gateRefusal ? tripAdmissionRefusalText(t, gateRefusal, locale) : t(banner.key)}

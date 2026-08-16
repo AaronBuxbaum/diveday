@@ -24,7 +24,7 @@
   "edit": {
     "backToCourses": "← Courses",
     "description": "Everything a diver reads before booking — the copy, the photos, and your pricing. The certification and minimum age come from the agency.",
-    "depthMarkersHint": "Depth markers: type '{depth18}' anywhere in this page and divers read “18 meters” or “60 feet”, whichever unit your shop is set to. The choices are '{depth12}', '{depth18}', '{depth21}', '{depth30}' and '{depth40}'; add an n for the bare number in a range, as in “to '{depth30n}'–'{depth40}'”. Delete a marker whenever you would rather write the depth yourself.",
+    "depthMarkersHint": "<marker>'{depth18}'</marker> is editor shorthand, not text divers see. Put it anywhere you want the diver page to say “18 meters” or “60 feet”, using your shop’s unit. Choose <marker>'{depth12}'</marker>, <marker>'{depth18}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> or <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range, such as <marker>'{depth30n}'</marker>–<marker>'{depth40}'</marker>. Delete a marker whenever you would rather write the depth yourself.",
     "liveAt": "Live at",
     "hiddenFromDivers": "Hidden from divers and the session picker.",
     "noticeSaved": "Course page saved.",

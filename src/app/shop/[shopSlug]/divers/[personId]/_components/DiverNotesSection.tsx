@@ -1,15 +1,16 @@
+import Link from "next/link";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
-import type { listDiverNotes } from "@/db/operations";
+import type { listDiverRecordNotes } from "@/db/operations";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { addDiverNoteAction, deleteDiverNoteAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
-type DiverNote = Awaited<ReturnType<typeof listDiverNotes>>[number];
+type DiverRecordNote = Awaited<ReturnType<typeof listDiverRecordNotes>>[number];
 
 export function DiverNotesSection({
   notes,
@@ -19,7 +20,7 @@ export function DiverNotesSection({
   timezone,
   status,
 }: {
-  notes: DiverNote[];
+  notes: DiverRecordNote[];
   shopSlug: string;
   personId: string;
   locale: string;
@@ -35,7 +36,7 @@ export function DiverNotesSection({
     >
       {notes.length > 0 ? (
         <ol className="grid gap-3">
-          {notes.map(({ note, authorName }) => (
+          {notes.map(({ note, authorName, tripId, tripTitle, tripStartsAt }) => (
             <li
               key={note.id}
               className="flex items-start justify-between gap-3 rounded-lg bg-surface-sunken px-3 py-3"
@@ -48,19 +49,34 @@ export function DiverNotesSection({
                     date: formatDateTimeTz(note.createdAt, locale, timezone),
                   })}
                 </p>
+                {tripId && tripTitle && tripStartsAt ? (
+                  <Link
+                    href={`/shop/${shopSlug}/trips/${tripId}`}
+                    className="mt-1 inline-block text-sm text-primary hover:underline"
+                  >
+                    {t("divers.notes.fromTrip", {
+                      trip: tripTitle,
+                      date: formatDateTimeTz(tripStartsAt, locale, timezone),
+                    })}
+                  </Link>
+                ) : note.bookingId === null ? (
+                  <p className="mt-1 text-sm text-muted">{t("divers.notes.appliesEverywhere")}</p>
+                ) : null}
               </div>
-              <form
-                action={deleteDiverNoteAction.bind(null, shopSlug, personId)}
-                className="shrink-0"
-              >
-                <input type="hidden" name="noteId" value={note.id} />
-                <SubmitButton
-                  pendingLabel={t("divers.notes.deleting")}
-                  className={buttonClass({ variant: "danger-ghost", size: "sm", busy: true })}
+              {note.bookingId === null ? (
+                <form
+                  action={deleteDiverNoteAction.bind(null, shopSlug, personId)}
+                  className="shrink-0"
                 >
-                  {t("divers.notes.delete")}
-                </SubmitButton>
-              </form>
+                  <input type="hidden" name="noteId" value={note.id} />
+                  <SubmitButton
+                    pendingLabel={t("divers.notes.deleting")}
+                    className={buttonClass({ variant: "danger-ghost", size: "sm", busy: true })}
+                  >
+                    {t("divers.notes.delete")}
+                  </SubmitButton>
+                </form>
+              ) : null}
             </li>
           ))}
         </ol>

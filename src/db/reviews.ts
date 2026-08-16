@@ -226,6 +226,9 @@ export type PublicReview = {
 /** How many reviews the schedule shows at once — a curated 2x2 on wide screens. */
 export const PUBLIC_REVIEW_PAGE_SIZE = 4;
 
+/** The full archive is still bounded, but useful enough to browse one page at a time. */
+export const PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE = 20;
+
 /** Every review the shop has released, including a rating with no comment. */
 function publishedReviewScope(shopId: string) {
   return and(
@@ -359,7 +362,7 @@ export async function listPublishedShopReviewsPage(
   shopId: string,
   options: { page?: number; limit?: number } = {},
 ): Promise<PublicReviewPage> {
-  const pageSize = options.limit ?? PUBLIC_REVIEW_PAGE_SIZE;
+  const pageSize = options.limit ?? PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE;
   const scope = publishedReviewScope(shopId);
   const paged = await offsetPage({
     page: options.page,
@@ -394,6 +397,9 @@ export type StaffReview = {
   isStandout: boolean;
   isPublished: boolean;
   isHidden: boolean;
+  /** The current recorded case for a hidden review, never a stale prior hide. */
+  hiddenReason: ReviewModerationReason | null;
+  hiddenReasonNote: string | null;
   /** Staff see who actually wrote it — the abbreviation is a public-page rule, not an internal one. */
   diverName: string;
   personId: string;
@@ -462,6 +468,7 @@ export async function listShopReviewsForStaff(
           tripTitle: trips.title,
           divedAt: trips.startsAt,
           createdAt: tripReviews.createdAt,
+          updatedAt: tripReviews.updatedAt,
         })
         .from(tripReviews)
         .innerJoin(people, eq(people.id, tripReviews.personId))
@@ -472,8 +479,40 @@ export async function listShopReviewsForStaff(
         .offset(offset),
   });
 
+  // A hidden review's reason lives in its audit trail rather than on the
+  // review row. Read only the current hide (not a prior version that a diver
+  // later revised), and only for this page, so the staff list can explain its
+  // own state without turning one screen into an unbounded event history.
+  const reviewIds = paged.rows.map((review) => review.id);
+  const currentHides =
+    reviewIds.length === 0
+      ? []
+      : await db
+          .select({
+            reviewId: reviewModerationEvents.reviewId,
+            reason: reviewModerationEvents.reason,
+            reasonNote: reviewModerationEvents.reasonNote,
+          })
+          .from(reviewModerationEvents)
+          .innerJoin(tripReviews, eq(tripReviews.id, reviewModerationEvents.reviewId))
+          .where(
+            and(
+              inArray(reviewModerationEvents.reviewId, reviewIds),
+              eq(reviewModerationEvents.action, "hidden"),
+              gte(reviewModerationEvents.occurredAt, tripReviews.updatedAt),
+            ),
+          );
+  const currentHideByReviewId = new Map(currentHides.map((hide) => [hide.reviewId, hide]));
+
   return {
-    reviews: paged.rows,
+    reviews: paged.rows.map(({ updatedAt: _updatedAt, ...review }) => {
+      const hide = currentHideByReviewId.get(review.id);
+      return {
+        ...review,
+        hiddenReason: hide?.reason ?? null,
+        hiddenReasonNote: hide?.reasonNote ?? null,
+      };
+    }),
     page: paged.page,
     pageCount: paged.pageCount,
     pageSize: paged.pageSize,

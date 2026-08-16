@@ -354,7 +354,7 @@ export default async function ReviewsPage({
                   // Published five-star rows carry the earned-moment tone, so
                   // this dynamic list row is not a neutral SectionCard.
                   id={`review-${review.id}`}
-                  className={`flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-start ${
+                  className={`flex flex-col gap-3 rounded-2xl border p-5 ${
                     standout ? "border-accent/40 bg-accent/10" : "border-border bg-surface"
                   }`}
                 >
@@ -418,9 +418,21 @@ export default async function ReviewsPage({
                           ),
                         })}
                       </p>
+                      {review.isHidden && review.hiddenReason ? (
+                        <p className="mt-2 text-sm text-muted">
+                          {review.hiddenReasonNote
+                            ? t("reviews.hiddenReasonWithNote", {
+                                reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                                note: review.hiddenReasonNote,
+                              })
+                            : t("reviews.hiddenReason", {
+                                reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                              })}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col gap-2 sm:w-64">
+                  <div className="flex flex-wrap items-start gap-2 border-t border-border pt-3">
                     {!review.isHidden ? (
                       /* Hiding states a case, so it cannot be a bare button any
                        more (ADR 20260813-review-moderation-has-a-floor). The
@@ -448,7 +460,6 @@ export default async function ReviewsPage({
                           reasonLabel={t("reviews.hideReasonLabel")}
                           reasonPlaceholder={t("reviews.hideReasonPlaceholder")}
                           noteLabel={t("reviews.hideNoteLabel")}
-                          notePlaceholder={t("reviews.hideNotePlaceholder")}
                           hideLabel={t("reviews.hideConfirm")}
                           savingLabel={t("reviews.saving")}
                         />
@@ -463,25 +474,29 @@ export default async function ReviewsPage({
                         </SubmitButton>
                       </form>
                     ) : null}
+                    {review.isPublished && review.comment ? (
+                      <form action={setReviewStandoutAction} className="shrink-0">
+                        <input type="hidden" name="reviewId" value={review.id} />
+                        <input
+                          type="hidden"
+                          name="standout"
+                          value={review.isStandout ? "false" : "true"}
+                        />
+                        <SubmitButton
+                          pendingLabel={t("reviews.saving")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          {review.isStandout
+                            ? t("reviews.removeStandout")
+                            : t("reviews.markStandout")}
+                        </SubmitButton>
+                      </form>
+                    ) : review.isPublished ? (
+                      <p className="self-center text-sm text-muted">
+                        {t("reviews.standoutWrittenOnly")}
+                      </p>
+                    ) : null}
                   </div>
-                  {review.isPublished && review.comment ? (
-                    <form action={setReviewStandoutAction} className="shrink-0">
-                      <input type="hidden" name="reviewId" value={review.id} />
-                      <input
-                        type="hidden"
-                        name="standout"
-                        value={review.isStandout ? "false" : "true"}
-                      />
-                      <SubmitButton
-                        pendingLabel={t("reviews.saving")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {review.isStandout
-                          ? t("reviews.removeStandout")
-                          : t("reviews.markStandout")}
-                      </SubmitButton>
-                    </form>
-                  ) : null}
                 </li>
               );
             })}

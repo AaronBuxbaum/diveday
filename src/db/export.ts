@@ -40,6 +40,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
   nitroxCertifications,
@@ -64,6 +65,7 @@ import {
   tripDives,
   tripInvitations,
   tripLastMinutePromos,
+  tripRecapPhotos,
   tripRequirements,
   tripReviews,
   tripScheduleDays,
@@ -209,6 +211,21 @@ export async function loadShopExportBundleInput(
         .from(recapPhotos)
         .where(eq(recapPhotos.shopId, shopId))
         .orderBy(asc(recapPhotos.createdAt), asc(recapPhotos.id));
+
+      const tripRecapPhotoRows = await tx
+        .select({
+          photo: tripRecapPhotos,
+          tripTitle: trips.title,
+          uploadedByName: people.fullName,
+        })
+        .from(tripRecapPhotos)
+        .innerJoin(trips, and(eq(trips.id, tripRecapPhotos.tripId), eq(trips.shopId, shopId)))
+        .innerJoin(
+          people,
+          and(eq(people.id, tripRecapPhotos.uploadedByPersonId), eq(people.shopId, shopId)),
+        )
+        .where(eq(tripRecapPhotos.shopId, shopId))
+        .orderBy(asc(tripRecapPhotos.createdAt), asc(tripRecapPhotos.id));
 
       const reviewModerationRows = await tx
         .select({ event: reviewModerationEvents, staffName: people.fullName })
@@ -490,6 +507,12 @@ export async function loadShopExportBundleInput(
         .where(eq(priorVisits.shopId, shopId))
         .orderBy(asc(priorVisits.visitedOn), asc(priorVisits.id));
 
+      const importedPaymentHistoryRows = await tx
+        .select()
+        .from(importedPaymentHistory)
+        .where(eq(importedPaymentHistory.shopId, shopId))
+        .orderBy(asc(importedPaymentHistory.occurredOn), asc(importedPaymentHistory.id));
+
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
       const cardsByPerson = new Map<string, typeof certificationRows>();
@@ -536,12 +559,14 @@ export async function loadShopExportBundleInput(
         ]);
       }
 
-      // Every image URL any CSV below references, for the photos/ bundle
-      // (ADR 20260724-export-bundled-photos). fetchExportPhotos filters this
-      // again to DiveDay's own storage — collecting a non-managed URL here is
-      // harmless, just never fetched.
+      // Every DiveDay-stored image or imported-document URL any CSV below
+      // references, for the photos/ bundle (ADR 20260724-export-bundled-photos
+      // and 20260816-imported-payment-history-is-evidence). `fetchExportPhotos`
+      // filters this again to DiveDay's own storage — collecting a non-managed
+      // URL here is harmless, just never fetched.
       const photoUrls = [
         ...recapPhotoRows.map((row) => row.imageUrl),
+        ...tripRecapPhotoRows.map(({ photo }) => photo.imageUrl),
         ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
         // No field-guide photos: a creature row is a catalog slug, and the
         // picture on its card is DiveDay's own asset under `public/marine-life`
@@ -557,6 +582,7 @@ export async function loadShopExportBundleInput(
           row.importSourceDocumentUrl,
           row.importSourceMedicalDocumentUrl,
         ]),
+        ...importedPaymentHistoryRows.map((row) => row.receiptDocumentUrl),
       ].filter((url): url is string => Boolean(url));
 
       const tables: ExportTable[] = [
@@ -809,6 +835,7 @@ export async function loadShopExportBundleInput(
             "expires_at",
             "review_note",
             "reviewed_at",
+            "reviewed_by_person_id",
             // Provenance from the contact importer (ADR 20260724-import-verified-cards):
             // a non-null imported_at is the definitive "this card was migrated, not
             // carded on sight" marker, permanent even after a staff confirm.
@@ -834,6 +861,7 @@ export async function loadShopExportBundleInput(
             row.expiresAt,
             row.reviewNote,
             row.reviewedAt,
+            row.reviewedByPersonId,
             row.importedAt,
             row.importedFromLabel,
             row.selfDeclaredAt,
@@ -855,6 +883,7 @@ export async function loadShopExportBundleInput(
             "expires_at",
             "review_note",
             "reviewed_at",
+            "reviewed_by_person_id",
             "deleted_at",
             "created_at",
           ],
@@ -869,6 +898,7 @@ export async function loadShopExportBundleInput(
             row.expiresAt,
             row.reviewNote,
             row.reviewedAt,
+            row.reviewedByPersonId,
             row.deletedAt,
             row.createdAt,
           ]),
@@ -885,6 +915,7 @@ export async function loadShopExportBundleInput(
             "status",
             "review_note",
             "reviewed_at",
+            "reviewed_by_person_id",
             "imported_at",
             "imported_from_label",
             // Same reason as the level card's — see certifications.csv above.
@@ -901,6 +932,7 @@ export async function loadShopExportBundleInput(
             row.status,
             row.reviewNote,
             row.reviewedAt,
+            row.reviewedByPersonId,
             row.importedAt,
             row.importedFromLabel,
             row.selfDeclaredAt,
@@ -1696,6 +1728,52 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["prior_visits.csv"],
         },
         {
+          // Separate source evidence, deliberately not folded into orders.csv:
+          // an old processor's receipt or Stripe reference is not a DiveDay
+          // invoice. The export keeps the source row portable without making
+          // the next system mistake it for a live payment.
+          file: "imported_payment_history.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "occurred_on",
+            "direction",
+            "title",
+            "status_label",
+            "amount_label",
+            "amount_cents",
+            "currency",
+            "payment_reference",
+            "receipt_reference",
+            "receipt_document_url",
+            "source_label",
+            "source_reference",
+            "stripe_reference",
+            "imported_at",
+          ],
+          rows: importedPaymentHistoryRows.map((row) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.occurredOn,
+            row.direction,
+            row.title,
+            row.statusLabel,
+            row.amountLabel,
+            row.amountCents,
+            row.currency,
+            row.paymentReference,
+            row.receiptReference,
+            row.receiptDocumentUrl,
+            row.sourceLabel,
+            row.sourceReference,
+            row.stripeReference,
+            row.importedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["imported_payment_history.csv"],
+        },
+        {
           file: "internal_notes.csv",
           header: [
             "id",
@@ -2040,6 +2118,28 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["recap_photos.csv"],
+        },
+        {
+          file: "trip_recap_photos.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "image_url",
+            "uploaded_by_person_id",
+            "uploaded_by_person_name",
+            "created_at",
+          ],
+          rows: tripRecapPhotoRows.map(({ photo, tripTitle, uploadedByName }) => [
+            photo.id,
+            photo.tripId,
+            tripTitle,
+            photo.imageUrl,
+            photo.uploadedByPersonId,
+            uploadedByName,
+            photo.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_recap_photos.csv"],
         },
         {
           file: "trip_reviews.csv",
@@ -2433,6 +2533,12 @@ export async function loadShopExportCounts(
     "prior_visits.csv": await countOf(
       db.select({ n: count() }).from(priorVisits).where(eq(priorVisits.shopId, shopId)),
     ),
+    "imported_payment_history.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(importedPaymentHistory)
+        .where(eq(importedPaymentHistory.shopId, shopId)),
+    ),
     "orders.csv": await countOf(
       db.select({ n: count() }).from(orders).where(eq(orders.shopId, shopId)),
     ),
@@ -2451,6 +2557,9 @@ export async function loadShopExportCounts(
     ),
     "recap_photos.csv": await countOf(
       db.select({ n: count() }).from(recapPhotos).where(eq(recapPhotos.shopId, shopId)),
+    ),
+    "trip_recap_photos.csv": await countOf(
+      db.select({ n: count() }).from(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId)),
     ),
     "trip_reviews.csv": await countOf(
       db.select({ n: count() }).from(tripReviews).where(eq(tripReviews.shopId, shopId)),

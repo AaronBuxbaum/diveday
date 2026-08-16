@@ -24,6 +24,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -58,6 +59,7 @@ import {
   tripDives,
   tripInvitations,
   tripLastMinutePromos,
+  tripRecapPhotos,
   tripRequirements,
   tripReviews,
   tripSeries,
@@ -746,6 +748,7 @@ export async function resetDemoSchedule(
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
+  await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
@@ -761,6 +764,8 @@ export async function resetDemoSchedule(
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  // The staff-only close-out album also references its trip and uploader.
+  await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // The moderation trail references the review it describes, so it goes first
   // (ADR 20260813-review-moderation-has-a-floor).
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));

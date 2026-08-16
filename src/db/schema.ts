@@ -1374,8 +1374,9 @@ export const trips = pgTable(
     // `sendDueReminders` (src/db/reminders.ts): scheduled trips departing
     // between now and the reminder horizon.
     index("trips_status_starts_idx").on(table.status, table.startsAt),
-    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home inside
-    // the recap lookback — the same shape one column over, on `ends_at`.
+    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home at
+    // least four hours ago inside the recap lookback — the same shape one
+    // column over, on `ends_at`.
     index("trips_status_ends_idx").on(table.status, table.endsAt),
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
@@ -2146,9 +2147,9 @@ export const notificationKind = pgEnum("notification_kind", [
   // (src/lib/reminders.ts) means each cadence sends at most once.
   "trip_reminder_7d",
   "trip_reminder_24h",
-  // The post-trip recap message — sent once per booking after the trip departs,
-  // linking to the diver's shareable recap page (docs first-principles
-  // brainstorm C: the word-of-mouth window, weaponized).
+  // The post-trip recap message — sent once per booking no earlier than four
+  // hours after the trip ends, linking to the diver's shareable recap page
+  // (docs first-principles brainstorm C: the word-of-mouth window, weaponized).
   "trip_recap",
   // The weather blow-out cascade message: the cancellation, the diver's money
   // story, and the alternatives they qualify for (ADR 20260804-blowout-cascade).
@@ -3402,6 +3403,12 @@ export const certifications = pgTable(
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     /**
+     * The live staff member who made the review that marked this card
+     * certified. Null on records predating this accountable trail and on an
+     * import that has not yet been reviewed by this shop.
+     */
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    /**
      * Provenance for a card brought in by the contact importer
      * (ADR 20260724-import-verified-cards). A non-null `importedAt` is the
      * definitive "this card was migrated" marker — mirroring `waiverRecords`'
@@ -3537,6 +3544,8 @@ export const specialtyCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** See certifications.reviewedByPersonId. */
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * specialty card lands `verified` and flagged
@@ -3646,6 +3655,108 @@ export const priorVisits = pgTable(
       table.shopId,
       table.personId,
       table.dedupeKey,
+    ),
+  ],
+);
+
+/**
+ * The direction a prior system assigns to an imported financial record. It is
+ * deliberately a small, source-evidence vocabulary rather than an Order or
+ * Stripe status: `payment` and `refund` can contribute to the unverified
+ * import slice of the financial aggregates when their amount and currency are
+ * clear; `unknown` remains visible in Orders but never changes a total.
+ */
+export const importedPaymentDirection = pgEnum("imported_payment_direction", [
+  "payment",
+  "refund",
+  "unknown",
+]);
+
+/**
+ * Payment and receipt history carried from another system. This is *not* an
+ * `orders` row: it has no live Stripe invoice, no booking-payment effect, and
+ * no authority to issue or refund money. Every value is source evidence and
+ * renders as an unverified import until a future reconciliation explicitly
+ * proves otherwise.
+ *
+ * `amountCents` / `currency` are deliberately paired and nullable. The import
+ * parser fills them only for a self-identifying supported currency; those are
+ * the only source rows permitted into aggregate revenue/refund math. The raw
+ * `amountLabel` is always retained so staff can see exactly what the source
+ * said, including an amount too ambiguous to aggregate.
+ *
+ * A `stripeReference` is a non-authoritative crosswalk seam, not a synthetic
+ * Stripe object. It lets a later reconciliation match a source-exported
+ * `in_`/`pi_`/`ch_` identifier against the real connected account without ever
+ * inventing a charge or retaining card credentials.
+ */
+export const importedPaymentHistory = pgTable(
+  "imported_payment_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /** Shop-local calendar day the source says this payment/refund occurred. */
+    occurredOn: date("occurred_on").notNull(),
+    /** Source-derived direction, never a local payment or order status. */
+    direction: importedPaymentDirection("direction").notNull().default("unknown"),
+    /** What the prior system called the sale, trip, or receipt. */
+    title: text("title"),
+    /** The source's own status word, preserved rather than mapped. */
+    statusLabel: text("status_label"),
+    /** Source money text, preserved verbatim whether it can be normalized or not. */
+    amountLabel: text("amount_label"),
+    /** Parsed only when the amount named a supported currency unambiguously. */
+    amountCents: integer("amount_cents"),
+    /** Lowercase ISO 4217 code paired with amountCents. */
+    currency: text("currency"),
+    /** Prior processor/order-system payment identifier, not a credential. */
+    paymentReference: text("payment_reference"),
+    /** Prior receipt number or reference, not a locally-issued receipt. */
+    receiptReference: text("receipt_reference"),
+    /** First-party re-stored receipt document only; raw external URLs are never kept. */
+    receiptDocumentUrl: text("receipt_document_url"),
+    /** Prior shop or source-system label the row carried. */
+    sourceLabel: text("source_label"),
+    /** Prior booking/order identifier that contextualizes the row. */
+    sourceReference: text("source_reference"),
+    /** Unverified Stripe object reference retained solely for future reconciliation. */
+    stripeReference: text("stripe_reference"),
+    /** Stable source/content key that makes re-imports idempotent. */
+    dedupeKey: text("dedupe_key").notNull(),
+    /** Always set — this table only receives imports, never hand-created payments. */
+    importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("imported_payment_history_shop_person_idx").on(
+      table.shopId,
+      table.personId,
+      table.occurredOn,
+    ),
+    index("imported_payment_history_shop_date_idx").on(table.shopId, table.occurredOn),
+    index("imported_payment_history_shop_currency_direction_idx").on(
+      table.shopId,
+      table.currency,
+      table.direction,
+      table.occurredOn,
+    ),
+    uniqueIndex("imported_payment_history_shop_person_dedupe_unique").on(
+      table.shopId,
+      table.personId,
+      table.dedupeKey,
+    ),
+    check(
+      "imported_payment_history_amount_nonnegative",
+      sql`${table.amountCents} IS NULL OR ${table.amountCents} >= 0`,
+    ),
+    check(
+      "imported_payment_history_amount_currency_pair",
+      sql`(${table.amountCents} IS NULL AND ${table.currency} IS NULL) OR (${table.amountCents} IS NOT NULL AND ${table.currency} IS NOT NULL)`,
     ),
   ],
 );
@@ -3763,6 +3874,8 @@ export const nitroxCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** See certifications.reviewedByPersonId. */
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * nitrox card lands `verified` (flagged) awaiting a staff confirm
@@ -4142,6 +4255,33 @@ export const recapPhotos = pgTable(
   (table) => [
     index("recap_photos_booking_idx").on(table.bookingId, table.createdAt),
     index("recap_photos_trip_idx").on(table.tripId, table.createdAt),
+  ],
+);
+
+/**
+ * A crew-owned image kept with a departure's close-out. Unlike `recapPhotos`,
+ * it has no diver booking and is intentionally staff-only: choosing to share
+ * an instructor's group photos outside the shop is a separate audience policy,
+ * never an accidental consequence of uploading them here.
+ */
+export const tripRecapPhotos = pgTable(
+  "trip_recap_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    imageUrl: text("image_url").notNull(),
+    uploadedByPersonId: uuid("uploaded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_recap_photos_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
   ],
 );
 

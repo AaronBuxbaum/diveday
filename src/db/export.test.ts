@@ -54,6 +54,7 @@ const EXPECTED_FILES = [
   "waiver_records.csv",
   "rental_fit.csv",
   "prior_visits.csv",
+  "imported_payment_history.csv",
   "internal_notes.csv",
   "activity_events.csv",
   "notification_deliveries.csv",
@@ -64,6 +65,7 @@ const EXPECTED_FILES = [
   "dive_site_creatures.csv",
   "dive_site_moments.csv",
   "recap_photos.csv",
+  "trip_recap_photos.csv",
   "trip_reviews.csv",
   "review_moderation_events.csv",
   "shop_promo_codes.csv",
@@ -107,6 +109,7 @@ const EXPORTED_TABLES = [
   "waiver_records",
   "rental_fit_profiles",
   "prior_visits",
+  "imported_payment_history",
   "orders",
   "order_line_items",
   "tips",
@@ -114,6 +117,7 @@ const EXPORTED_TABLES = [
   "dive_site_creatures",
   "dive_site_moments",
   "recap_photos",
+  "trip_recap_photos",
   "trip_reviews",
   "review_moderation_events",
   "shop_promo_codes",
@@ -293,6 +297,13 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "dedupe_key",
     "created_at", // when the import ran; `imported_at` already carries that
   ],
+  imported_payment_history: [
+    "shop_id",
+    // Re-import machinery, not a source fact; the exported source references
+    // and visible fields carry the history elsewhere.
+    "dedupe_key",
+    "created_at", // `imported_at` is the meaningful import timestamp
+  ],
   orders: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
@@ -312,6 +323,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   dive_site_creatures: ["shop_id"],
   dive_site_moments: ["shop_id"],
   recap_photos: ["shop_id"],
+  trip_recap_photos: ["shop_id"],
   trip_reviews: ["shop_id"],
   shop_promo_codes: [
     "shop_id",
@@ -428,6 +440,7 @@ describe("full-shop export dataset", () => {
       "activity_events.csv",
       "notification_deliveries.csv",
       "shop_promo_redemptions.csv",
+      "imported_payment_history.csv",
       "course_inquiries.csv",
     ]) {
       expect(table(input, file).rows.length, `${file} has no rows`).toBeGreaterThan(0);

@@ -153,9 +153,9 @@ const ROW_DISCLOSURE_PANEL_CLASS =
   "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
- * Staff notes that belong on a diver's row, rather than in a separate desk
- * view. Booking notes come from the Guests tab; diver notes come from the
- * Diver record and follow the person onto every booking.
+ * Staff notes that belong on a diver's row, rather than in separate desk and
+ * diver-record stacks. Booking notes come from the Guests tab; diver notes
+ * come from the Diver record and follow the person onto every booking.
  *
  * The crew reading this page should not have to know whether a note was
  * written before a booking existed or for one particular departure. Both are
@@ -172,25 +172,25 @@ const ROW_DISCLOSURE_PANEL_CLASS =
  */
 function StaffNotes({
   notes,
-  heading,
   locale,
   timezone,
+  t,
 }: {
   notes: ReadonlyArray<ManifestNote>;
-  heading: string;
   locale: string;
   timezone: string;
+  t: StaffTranslator;
 }) {
   if (notes.length === 0) return null;
   return (
     <section className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 print:hidden">
-      <h4 className="text-xs font-semibold tracking-widest text-muted uppercase">{heading}</h4>
       <ul className="mt-1 flex flex-col gap-1.5">
         {notes.map((entry) => (
           <li key={entry.id} className="break-words text-base whitespace-pre-wrap">
             {entry.body}
             <span className="ms-1 text-sm text-muted">
               — {entry.authorName} · {formatDateTimeTz(entry.createdAt, locale, timezone)}
+              {entry.scope === "diver" ? ` · ${t("manifest.noteAppliesAcrossDepartures")}` : ""}
             </span>
           </li>
         ))}
@@ -205,13 +205,8 @@ export type ManifestNote = {
   body: string;
   authorName: string;
   createdAt: Date;
+  scope: "booking" | "diver";
 };
-
-/** Booking-scoped notes retain their desk vocabulary at the call site. */
-export type DeskNote = ManifestNote;
-
-/** Person-scoped notes follow a diver onto each trip. */
-export type DiverNote = ManifestNote;
 
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
@@ -222,8 +217,7 @@ export function DiverRollCall({
   tripId,
   locale,
   timezone,
-  deskNotesByBooking,
-  diverNotesByBooking,
+  notesByBooking,
   rollCallAction,
   addPrivateNoteAction,
   rollCallButtonCopy,
@@ -237,10 +231,8 @@ export function DiverRollCall({
   tripId: string;
   locale: string;
   timezone: string;
-  /** The Guests tab's private notes, by booking — see `StaffNotes`. */
-  deskNotesByBooking: ReadonlyMap<string, ReadonlyArray<DeskNote>>;
-  /** Notes written on the Diver record, resolved onto this booking. */
-  diverNotesByBooking: ReadonlyMap<string, ReadonlyArray<DiverNote>>;
+  /** All staff context for this booking, regardless of where it was written. */
+  notesByBooking: ReadonlyMap<string, ReadonlyArray<ManifestNote>>;
   rollCallAction: RollCallAction;
   addPrivateNoteAction: PrivateNoteAction;
   /**
@@ -462,16 +454,10 @@ export function DiverRollCall({
                   {/* What the desk already knows about this diver, where the
                       crew reading the roll call can see it. */}
                   <StaffNotes
-                    notes={diverNotesByBooking.get(diver.bookingId) ?? []}
-                    heading={t("manifest.diverNotesHeading")}
+                    notes={notesByBooking.get(diver.bookingId) ?? []}
                     locale={locale}
                     timezone={timezone}
-                  />
-                  <StaffNotes
-                    notes={deskNotesByBooking.get(diver.bookingId) ?? []}
-                    heading={t("manifest.deskNotesHeading")}
-                    locale={locale}
-                    timezone={timezone}
+                    t={t}
                   />
                   {/* The row's two secondary paths, on one line. Reference
                       facts are disclosed on demand — nine emergency contacts
@@ -525,18 +511,18 @@ export function DiverRollCall({
                       <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
                         <DisclosureCaret className="group-open/note:rotate-90" />
                         <span className="group-hover/summary:underline">
-                          {(deskNotesByBooking.get(diver.bookingId)?.length ?? 0) > 0
-                            ? t("trips.roster.privateStaffNotes", {
-                                count: deskNotesByBooking.get(diver.bookingId)?.length ?? 0,
-                              })
-                            : t("trips.roster.addFirstNoteSummary")}
+                          {t("trips.roster.addFirstNoteSummary")}
                         </span>
                       </summary>
                       <div className={ROW_DISCLOSURE_PANEL_CLASS}>
                         <PrivateNoteForm
                           action={addPrivateNoteAction}
                           hiddenFields={{ bookingId: diver.bookingId }}
-                          resetKey={deskNotesByBooking.get(diver.bookingId)?.length ?? 0}
+                          resetKey={
+                            notesByBooking
+                              .get(diver.bookingId)
+                              ?.filter((note) => note.scope === "booking").length ?? 0
+                          }
                           rows={2}
                           copy={{
                             label: t("trips.roster.addNoteLabel"),

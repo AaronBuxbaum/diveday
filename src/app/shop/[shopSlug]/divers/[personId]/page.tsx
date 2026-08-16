@@ -11,7 +11,7 @@ import {
 } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
-import { listDiverNotes } from "@/db/operations";
+import { listDiverRecordNotes } from "@/db/operations";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -108,7 +108,7 @@ export default async function DiverDetailPage({
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
     canPersonErasePersonalData(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
-    listDiverNotes(db, shop.id, personId),
+    listDiverRecordNotes(db, shop.id, personId),
   ]);
   // `orders/new` refuses outright without a payable account, so the Payments
   // section offers "Connect payments" rather than invoice buttons that bounce.

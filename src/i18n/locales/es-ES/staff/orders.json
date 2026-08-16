@@ -109,9 +109,9 @@
     "filteredByDiver": "Mostrando los pedidos de {name}.",
     "filteredByTrip": "Mostrando los pedidos de {title}.",
     "openFilteredTrip": "Abrir la salida",
-    "emptyAll": "Todavía no hay pedidos — aparecerán aquí en cuanto recepción envíe uno.",
-    "emptyFiltered": "Ningún pedido coincide con estos filtros.",
-    "emptyNoPayments": "Todavía no hay pedidos — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
+    "emptyAll": "Todavía no hay pedidos de DiveDay — aparecerán aquí en cuanto recepción envíe uno.",
+    "emptyFiltered": "Ningún pedido de DiveDay coincide con estos filtros.",
+    "emptyNoPayments": "Todavía no hay pedidos de DiveDay — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
     "table": {
       "diver": "Buceador",
       "trip": "Salida",
@@ -121,6 +121,28 @@
     },
     "pagination": {
       "total": "{count, plural, one {# pedido} other {# pedidos}}"
+    },
+    "importedHistory": {
+      "sectionLabel": "Historial de pagos importado",
+      "heading": "Historial de pagos importado",
+      "detail": "Los registros de pagos, reembolsos y recibos del origen no están verificados. Usan el estado del origen en vez de un estado de pedido; solo una cantidad clara en la moneda de este centro entra en el agregado de ingresos/reembolsos, que se etiqueta por separado. Nunca son pedidos Stripe activos ni pagos de reserva.",
+      "unverified": "Importación sin verificar",
+      "table": {
+        "source": "Registro del origen",
+        "status": "Estado del origen"
+      },
+      "direction": {
+        "payment": "Pago del origen",
+        "refund": "Reembolso del origen",
+        "unknown": "Registro del origen"
+      },
+      "receiptReference": "Recibo {reference}",
+      "openReceipt": "Abrir recibo",
+      "stripeReference": "Referencia de Stripe: {reference}",
+      "amountNotProvided": "Importe no indicado",
+      "pagination": {
+        "total": "{count, plural, one {# registro importado del origen} other {# registros importados del origen}}"
+      }
     },
     "paymentOps": {
       "sectionLabel": "Pagos que necesitan revisión",

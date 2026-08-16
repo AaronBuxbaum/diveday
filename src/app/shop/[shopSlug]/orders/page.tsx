@@ -13,6 +13,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { QueryForm } from "@/components/ui/QueryForm";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
+import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
@@ -23,10 +24,12 @@ import { getShopTripTitle } from "@/db/trips";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { isManagedBlobUrl } from "@/lib/storage/blob-host";
 import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
 
@@ -59,6 +62,18 @@ const OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
   invoice: "orders.index.paymentOps.kind.invoice",
   refund: "orders.index.paymentOps.kind.refund",
 };
+
+const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", StaffMessageKey> = {
+  payment: "orders.index.importedHistory.direction.payment",
+  refund: "orders.index.importedHistory.direction.refund",
+  unknown: "orders.index.importedHistory.direction.unknown",
+};
+
+/** A source URL is rendered only after import re-stored it, or when it is a same-origin legacy path. */
+function safeImportedDocumentUrl(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith("/") || isManagedBlobUrl(url) ? url : null;
+}
 
 /**
  * Where `orders/new` lands a staffer it turned away — for having no connected
@@ -116,11 +131,12 @@ export default async function OrdersIndexPage({
     to?: string;
     range?: string;
     page?: string;
+    importedPage?: string;
     notice?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { status, personId, personQuery, tripId, from, to, range, page, notice } =
+  const { status, personId, personQuery, tripId, from, to, range, page, importedPage, notice } =
     await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
@@ -224,9 +240,29 @@ export default async function OrdersIndexPage({
     { page: Number.parseInt(page ?? "", 10) },
   );
   const rows = orderPage.rows;
+  // Imported source history has no local trip/order status to filter against.
+  // It does follow the diver filter and an explicitly chosen calendar range,
+  // but it is deliberately not trapped in the live Orders page's default
+  // 90-day window — a migration's oldest receipt must stay findable. A trip
+  // filter means "only records tied to this live departure", which imported
+  // history cannot honestly claim, so that narrow view renders no history.
+  const importedHistoryPage = tripFilter
+    ? null
+    : await listImportedPaymentHistory(
+        db,
+        shop.id,
+        {
+          personId: personFilter,
+          personQuery: personFilter ? undefined : trimmedQuery,
+          from: customRange && from && isValidCalendarDate(from) ? from : undefined,
+          to: customRange && to && isValidCalendarDate(to) ? to : undefined,
+        },
+        { page: Number.parseInt(importedPage ?? "", 10) },
+      );
+  const hasImportedHistory = Boolean(importedHistoryPage && importedHistoryPage.total > 0);
 
   /** This page's URL with the filters kept and only the given params swapped. */
-  const hrefWith = (overrides: { page?: number; range?: string | null }) => {
+  const hrefWith = (overrides: { page?: number; importedPage?: number; range?: string | null }) => {
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (personFilter) query.set("personId", personFilter);
@@ -245,6 +281,9 @@ export default async function OrdersIndexPage({
     if (nextRange) query.set("range", nextRange);
     if (overrides.page !== undefined && overrides.page > 1) {
       query.set("page", String(overrides.page));
+    }
+    if (overrides.importedPage !== undefined && overrides.importedPage > 1) {
+      query.set("importedPage", String(overrides.importedPage));
     }
     const search = query.toString();
     return search ? `/shop/${shopSlug}/orders?${search}` : `/shop/${shopSlug}/orders`;
@@ -295,7 +334,7 @@ export default async function OrdersIndexPage({
                 this same door — two identical primaries for one action is
                 triage work the layout should do (principle 8), so the header
                 stands down. */}
-            {rows.length === 0 && !hasFilters ? null : paymentsConnected ? (
+            {rows.length === 0 && !hasImportedHistory && !hasFilters ? null : paymentsConnected ? (
               <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
                 {t("orders.index.newOrder")}
               </Link>
@@ -493,7 +532,7 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && !hasImportedHistory ? (
         // The same fork the header makes (Loop 3): with no orders on file the
         // one thing that moves a shop forward is either sending the first one
         // or connecting the account that can. Filtered-to-nothing is a
@@ -528,7 +567,7 @@ export default async function OrdersIndexPage({
             />
           )}
         </EmptyState>
-      ) : (
+      ) : rows.length > 0 ? (
         <Table shellClassName="mt-6">
           <THead>
             <Th>{t("orders.index.table.diver")}</Th>
@@ -557,7 +596,7 @@ export default async function OrdersIndexPage({
                 );
               return (
                 <tr key={row.order.id}>
-                  <Td>
+                  <Td className="align-middle">
                     <Link
                       href={`/shop/${shopSlug}/orders/${row.order.id}`}
                       className="font-medium text-foreground hover:text-primary hover:underline"
@@ -569,7 +608,7 @@ export default async function OrdersIndexPage({
                     </div>
                     {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
                   </Td>
-                  <Td muted hideBelow="sm">
+                  <Td muted hideBelow="sm" className="align-middle">
                     {row.trip?.title ?? row.order.description ?? "—"}
                   </Td>
                   {/* Settled rows leave the cell empty — "Paid" on 45 of 50
@@ -578,10 +617,10 @@ export default async function OrdersIndexPage({
                   <Td hideBelow="sm" className="align-middle">
                     {statusBadge}
                   </Td>
-                  <Td muted className="whitespace-nowrap tabular-nums">
+                  <Td muted className="align-middle whitespace-nowrap tabular-nums">
                     {formatShortDate(row.order.createdAt, locale, shop.timezone)}
                   </Td>
-                  <Td numeric>
+                  <Td numeric className="align-middle">
                     {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
                   </Td>
                 </tr>
@@ -589,7 +628,7 @@ export default async function OrdersIndexPage({
             })}
           </TBody>
         </Table>
-      )}
+      ) : null}
 
       <Pager
         page={orderPage.page}
@@ -599,6 +638,105 @@ export default async function OrdersIndexPage({
         t={t}
         className="mt-4"
       />
+
+      {hasImportedHistory && importedHistoryPage ? (
+        <section aria-label={t("orders.index.importedHistory.sectionLabel")} className="mt-10">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">{t("orders.index.importedHistory.heading")}</h2>
+              <p className="mt-1 max-w-3xl text-sm text-muted">
+                {t("orders.index.importedHistory.detail")}
+              </p>
+            </div>
+            <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
+          </div>
+          <Table shellClassName="mt-4">
+            <THead>
+              <Th>{t("orders.index.table.diver")}</Th>
+              <Th hideBelow="sm">{t("orders.index.importedHistory.table.source")}</Th>
+              <Th hideBelow="sm">{t("orders.index.importedHistory.table.status")}</Th>
+              <Th>{t("orders.index.table.date")}</Th>
+              <Th numeric>{t("orders.index.table.amount")}</Th>
+            </THead>
+            <TBody>
+              {importedHistoryPage.rows.map(({ history, person }) => {
+                const receiptDocumentUrl = safeImportedDocumentUrl(history.receiptDocumentUrl);
+                return (
+                  <tr key={history.id}>
+                    <Td className="align-middle">
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${person.id}`}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {person.fullName}
+                      </Link>
+                      <div className="mt-1 sm:hidden">
+                        <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
+                      </div>
+                      <div className="mt-1 text-xs text-muted sm:hidden">
+                        {history.title ?? history.sourceReference ?? "—"}
+                      </div>
+                    </Td>
+                    <Td muted hideBelow="sm" className="align-middle">
+                      <div>{history.title ?? history.sourceReference ?? "—"}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                        <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
+                        {history.sourceLabel ? <span>{history.sourceLabel}</span> : null}
+                        {history.receiptReference ? (
+                          <span>
+                            {t("orders.index.importedHistory.receiptReference", {
+                              reference: history.receiptReference,
+                            })}
+                          </span>
+                        ) : null}
+                        {receiptDocumentUrl ? (
+                          <a
+                            href={receiptDocumentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-primary underline underline-offset-2"
+                          >
+                            {t("orders.index.importedHistory.openReceipt")}
+                          </a>
+                        ) : null}
+                      </div>
+                    </Td>
+                    <Td hideBelow="sm" className="align-middle">
+                      <div>{t(IMPORTED_PAYMENT_DIRECTION_KEYS[history.direction])}</div>
+                      {history.statusLabel ? (
+                        <div className="mt-1 text-xs text-muted">{history.statusLabel}</div>
+                      ) : null}
+                      {history.stripeReference ? (
+                        <div className="mt-1 text-xs text-muted">
+                          {t("orders.index.importedHistory.stripeReference", {
+                            reference: history.stripeReference,
+                          })}
+                        </div>
+                      ) : null}
+                    </Td>
+                    <Td muted className="align-middle whitespace-nowrap tabular-nums">
+                      {formatCalendarDate(history.occurredOn, locale)}
+                    </Td>
+                    <Td numeric className="align-middle">
+                      {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
+                    </Td>
+                  </tr>
+                );
+              })}
+            </TBody>
+          </Table>
+          <Pager
+            page={importedHistoryPage.page}
+            pageCount={importedHistoryPage.pageCount}
+            href={(target) => hrefWith({ importedPage: target })}
+            total={t("orders.index.importedHistory.pagination.total", {
+              count: importedHistoryPage.total,
+            })}
+            t={t}
+            className="mt-4"
+          />
+        </section>
+      ) : null}
     </main>
   );
 }

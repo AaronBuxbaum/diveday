@@ -60,6 +60,8 @@ export type IncidentCertificationEvidence = {
   status: string;
   /** When staff last reviewed/confirmed the card, if they have. */
   reviewedAt: string | null;
+  /** The staffer who made that review, null for older or imported evidence. */
+  reviewedByName: string | null;
   /** Shop-set refresher-due date (date-only string), if any. */
   expiresAt: string | null;
   /**
@@ -98,6 +100,12 @@ export type IncidentWaiverStatus = {
    * 20260724-import-waiver-acceptance).
    */
   signatureMethod: string | null;
+  /**
+   * The accountable staff member on a paper attestation. This is deliberately
+   * absent for a diver's own digital signature and prior-system import: the
+   * log names a staff member only when the shop itself attested a paper record.
+   */
+  recordedByName: string | null;
 };
 
 export type IncidentRollCallResult = {
@@ -288,11 +296,13 @@ export type IncidentTimelineEventInput = {
 
 export type IncidentDiverEvidenceInput = {
   bookingId: string;
-  certifications: readonly Certification[];
-  specialtyCertifications: readonly SpecialtyCertification[];
-  nitroxCertifications: readonly NitroxCertification[];
+  certifications: readonly (Certification & { reviewedByName?: string | null })[];
+  specialtyCertifications: readonly (SpecialtyCertification & { reviewedByName?: string | null })[];
+  nitroxCertifications: readonly (NitroxCertification & { reviewedByName?: string | null })[];
   /** The governing record after the sign-once rule (`effectiveWaiverForBooking`), or null. */
   waiver: WaiverRecord | null;
+  /** The staff member who attested the governing paper waiver, if any. */
+  waiverRecordedByName?: string | null;
 };
 
 export type IncidentExportInput = {
@@ -353,6 +363,7 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       identifier: card.identifier,
       status: card.status,
       reviewedAt: iso(card.reviewedAt),
+      reviewedByName: card.reviewedByName ?? null,
       expiresAt: card.expiresAt ?? null,
       imported: card.importedAt !== null,
       selfDeclared: isUnsightedSelfDeclaration(card),
@@ -365,6 +376,7 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       identifier: card.identifier,
       status: card.status,
       reviewedAt: iso(card.reviewedAt),
+      reviewedByName: card.reviewedByName ?? null,
       expiresAt: card.expiresAt ?? null,
       imported: card.importedAt !== null,
       // A specialty card is never self-declared: neither public form asks.
@@ -378,6 +390,7 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       identifier: card.identifier,
       status: card.status,
       reviewedAt: iso(card.reviewedAt),
+      reviewedByName: card.reviewedByName ?? null,
       expiresAt: null,
       imported: card.importedAt !== null,
       selfDeclared: isUnsightedSelfDeclaration(card),
@@ -385,7 +398,11 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
   ];
 }
 
-function waiverStatus(record: WaiverRecord | null, now: Date): IncidentWaiverStatus {
+function waiverStatus(
+  record: WaiverRecord | null,
+  now: Date,
+  recordedByName: string | null | undefined,
+): IncidentWaiverStatus {
   // The same fail-closed derivation readiness uses. A record parked in medical
   // review reads `medical_review` — a status, never the answers behind it.
   //
@@ -402,6 +419,7 @@ function waiverStatus(record: WaiverRecord | null, now: Date): IncidentWaiverSta
       templateTitle: null,
       templateVersion: null,
       signatureMethod: null,
+      recordedByName: null,
     };
   }
   return {
@@ -410,6 +428,8 @@ function waiverStatus(record: WaiverRecord | null, now: Date): IncidentWaiverSta
     templateTitle: record.templateTitle,
     templateVersion: record.templateVersion,
     signatureMethod: record.signatureMethod,
+    recordedByName:
+      record.signatureMethod === "in_person_attested" ? (recordedByName ?? null) : null,
   };
 }
 
@@ -503,7 +523,11 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       // No evidence entry at all reads the same as empty evidence: an
       // explicit "nothing on file", never a crash and never a filtered row.
       certifications: evidence ? certificationEvidence(evidence) : [],
-      waiver: waiverStatus(evidence?.waiver ?? null, input.generatedAt),
+      waiver: waiverStatus(
+        evidence?.waiver ?? null,
+        input.generatedAt,
+        evidence?.waiverRecordedByName,
+      ),
     };
   });
 

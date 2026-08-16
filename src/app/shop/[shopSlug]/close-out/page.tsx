@@ -13,7 +13,14 @@ import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "@/db/closeout";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
+import {
+  addCrewRecapPhoto,
+  canAddCrewRecapPhoto,
+  deleteCrewRecapPhoto,
+  deleteRecapPhoto,
+  sendTripRecaps,
+  setTripRecapShoutout,
+} from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import {
   CLOSEOUT_ADMIN_STATUS_KEYS,
@@ -36,8 +43,10 @@ import {
 } from "@/lib/closeout";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { recapEligibleAt } from "@/lib/recap-schedule";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 import { RecapNoteEditor } from "./_components/RecapNoteEditor";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -180,6 +189,106 @@ export default async function CloseOutPage({
     );
   }
 
+  /**
+   * Store an instructor/crew image on the close-out only. It deliberately does
+   * not appear on diver recap pages: sharing a group photo is an audience
+   * decision the shop makes separately, not an accidental side effect of this
+   * upload form.
+   */
+  async function uploadCrewRecapPhotoAction(tripId: string, formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    const file = formData.get("crewPhoto");
+    if (!(file instanceof File) || file.size === 0) {
+      revalidateAndRedirect(closeOut, noticeUrl(closeOut, "crew-photo-failed", { noted: tripId }));
+    }
+    const db = await getDb();
+    const eligibility = await canAddCrewRecapPhoto(db, {
+      shopId: staff.user.shopId,
+      tripId,
+      uploadedByPersonId: staff.user.personId,
+    });
+    if (!eligibility.ok) {
+      const notice = eligibility.reason === "limit" ? "crew-photo-limit" : "invalid";
+      revalidateAndRedirect(closeOut, noticeUrl(closeOut, notice, { noted: tripId }));
+    }
+    const stored = await storeRecapImage({
+      filename: file.name,
+      contentType: file.type,
+      bytes: await file.arrayBuffer(),
+    });
+    if (stored.status !== "stored") {
+      revalidateAndRedirect(
+        closeOut,
+        noticeUrl(
+          closeOut,
+          stored.status === "not_configured" ? "crew-photo-unconfigured" : "crew-photo-failed",
+          {
+            noted: tripId,
+          },
+        ),
+      );
+    }
+    const result = await addCrewRecapPhoto(db, {
+      shopId: staff.user.shopId,
+      tripId,
+      uploadedByPersonId: staff.user.personId,
+      imageUrl: stored.url,
+    });
+    if (!result.ok) {
+      await deleteStoredImage(stored.url);
+      const notice = result.reason === "limit" ? "crew-photo-limit" : "crew-photo-failed";
+      revalidateAndRedirect(closeOut, noticeUrl(closeOut, notice, { noted: tripId }));
+    }
+    revalidateAndRedirect(closeOut, noticeUrl(closeOut, "crew-photo-added", { noted: tripId }));
+  }
+
+  async function deleteCrewRecapPhotoAction(tripId: string, formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const photoId = String(formData.get("photoId") ?? "");
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    if (!photoId) redirect(closeOut);
+    const db = await getDb();
+    const result = await deleteCrewRecapPhoto(db, staff.user.shopId, photoId);
+    if (result.deleted) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId: staff.user.shopId,
+        kind: "recap_photo",
+        url: result.imageUrl,
+      });
+    }
+    revalidateAndRedirect(closeOut, noticeUrl(closeOut, "crew-photo-removed", { noted: tripId }));
+  }
+
+  /**
+   * A deliberate send for one returned departure. `sendTripRecaps` carries the
+   * same four-hour floor as the automatic scheduler, so a crafted POST cannot
+   * turn the countdown into an early message.
+   */
+  async function sendRecapAction(tripId: string, _formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    const result = await sendTripRecaps(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+    });
+    if (!result.ok) {
+      revalidateAndRedirect(
+        closeOut,
+        noticeUrl(closeOut, result.reason === "not_eligible" ? "recap-not-ready" : "invalid"),
+      );
+    }
+    revalidateAndRedirect(
+      closeOut,
+      noticeUrl(closeOut, result.summary.failed > 0 ? "recap-send-attention" : "recap-sent", {
+        noted: tripId,
+      }),
+    );
+  }
+
   const detailTime = (departure: CloseoutDeparture) =>
     formatTime(
       departure.status === "not_departed" ? departure.startsAt : departure.endsAt,
@@ -224,6 +333,65 @@ export default async function CloseOutPage({
         <div className="mb-6">
           <ShopNotice tone="success" role="status">
             {t("trips.notices.recapPhotoRemoved")}
+          </ShopNotice>
+        </div>
+      ) : null}
+      {notice === "crew-photo-added" ? (
+        <div className="mb-6">
+          <ShopNotice tone="success" role="status">
+            {t("closeout.notice.crewPhotoAdded")}
+          </ShopNotice>
+        </div>
+      ) : null}
+      {notice === "crew-photo-removed" ? (
+        <div className="mb-6">
+          <ShopNotice tone="success" role="status">
+            {t("closeout.notice.crewPhotoRemoved")}
+          </ShopNotice>
+        </div>
+      ) : null}
+      {notice === "crew-photo-limit" ? (
+        <div className="mb-6">
+          <ShopNotice tone="danger" role="alert">
+            {t("closeout.notice.crewPhotoLimit")}
+          </ShopNotice>
+        </div>
+      ) : null}
+      {notice === "crew-photo-unconfigured" ? (
+        <div className="mb-6">
+          <ShopNotice tone="danger" role="alert">
+            {t("closeout.notice.crewPhotoUnsupported")}
+          </ShopNotice>
+        </div>
+      ) : null}
+      {notice === "crew-photo-failed" ? (
+        <div className="mb-6">
+          <ShopNotice tone="danger" role="alert">
+            {t("closeout.notice.crewPhotoFailed")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {notice === "recap-sent" ? (
+        <div className="mb-6">
+          <ShopNotice tone="success" role="status">
+            {t("closeout.notice.recapSent")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {notice === "recap-send-attention" ? (
+        <div className="mb-6">
+          <ShopNotice tone="warning" role="status">
+            {t("closeout.notice.recapAttention")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {notice === "recap-not-ready" ? (
+        <div className="mb-6">
+          <ShopNotice tone="neutral" role="status">
+            {t("closeout.notice.recapNotReady")}
           </ShopNotice>
         </div>
       ) : null}
@@ -385,6 +553,19 @@ export default async function CloseOutPage({
                       t={t}
                       photos={departure.photos}
                       deletePhotoAction={deleteRecapPhotoAction.bind(null, departure.tripId)}
+                      crewPhotos={departure.crewPhotos}
+                      crewPhotoInputId={`crew-recap-photo-${departure.tripId}`}
+                      uploadCrewPhotoAction={uploadCrewRecapPhotoAction.bind(
+                        null,
+                        departure.tripId,
+                      )}
+                      deleteCrewPhotoAction={deleteCrewRecapPhotoAction.bind(
+                        null,
+                        departure.tripId,
+                      )}
+                      recapSendAction={sendRecapAction.bind(null, departure.tripId)}
+                      recapEligibleAt={recapEligibleAt(departure.endsAt)}
+                      recapNowMs={now.getTime()}
                     />
                   ) : null}
                 </li>

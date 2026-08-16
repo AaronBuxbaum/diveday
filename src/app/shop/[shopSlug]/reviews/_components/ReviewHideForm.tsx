@@ -15,7 +15,6 @@ export function ReviewHideForm({
   reasonLabel,
   reasonPlaceholder,
   noteLabel,
-  notePlaceholder,
   hideLabel,
   savingLabel,
 }: {
@@ -25,7 +24,6 @@ export function ReviewHideForm({
   reasonLabel: string;
   reasonPlaceholder: string;
   noteLabel: string;
-  notePlaceholder: string;
   hideLabel: string;
   savingLabel: string;
 }) {
@@ -61,7 +59,6 @@ export function ReviewHideForm({
           type="text"
           maxLength={200}
           required
-          placeholder={notePlaceholder}
           aria-label={noteLabel}
           className={controlClass}
         />

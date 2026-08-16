@@ -2,7 +2,15 @@
   "title": "Close-out",
   "notice": {
     "closed": "Day closed. The record is below — see you tomorrow.",
-    "acknowledgeRequired": "Acknowledge the open boat or head count before closing the day."
+    "acknowledgeRequired": "Acknowledge the open boat or head count before closing the day.",
+    "recapSent": "Any still-outstanding recaps were sent.",
+    "recapAttention": "Some recaps need attention. Check the post-dive reports below.",
+    "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
+    "crewPhotoAdded": "Crew photo added to this close-out.",
+    "crewPhotoRemoved": "Crew photo removed.",
+    "crewPhotoLimit": "This close-out already has the maximum number of crew photos.",
+    "crewPhotoUnsupported": "Photo uploads are not configured for this shop yet.",
+    "crewPhotoFailed": "That photo could not be added. Check the file and try again."
   },
   "headline": {
     "allClear": "Everyone is home",
@@ -53,6 +61,26 @@
       "pending": "{count, plural, one {# report is still queued.} other {# reports are still queued.}}",
       "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}"
     }
+  },
+  "recap": {
+    "waiting": "Automatic sending is available in {remaining}. Recaps are never sent before four hours after the departure ends.",
+    "ready": "This departure's recaps can now be sent. Automatic sending will also pick them up.",
+    "send": "Send recap now",
+    "sending": "Sending recap…",
+    "lessThanMinute": "less than a minute"
+  },
+  "crewPhotos": {
+    "heading": "Crew photos",
+    "description": "Keep instructor photos with this close-out. They stay staff-only and are not added to diver recaps.",
+    "photoAlt": "Crew photo from this departure",
+    "add": "Add a crew photo",
+    "upload": "Upload photo",
+    "adding": "Uploading photo…",
+    "remove": "Remove",
+    "confirmRemove": "Remove this crew photo from the close-out?",
+    "removeConfirmButton": "Remove photo",
+    "removeCancel": "Keep photo",
+    "removing": "Removing photo…"
   },
   "leftovers": {
     "heading": "Today's leftovers",

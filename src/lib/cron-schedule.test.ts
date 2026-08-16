@@ -7,6 +7,7 @@ import {
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "./cron-schedule";
+import { RECAP_CRON_CRONTAB } from "./recap-schedule";
 
 /**
  * vercel.json is the deployed schedule. Everything else in the repo that names
@@ -26,6 +27,11 @@ describe("the daily tick", () => {
     expect(reminders?.schedule).toBe(DAILY_TICK_CRONTAB);
   });
 
+  it("matches the deployed hourly schedule for /api/cron/recaps", () => {
+    const recaps = vercelCrons().find((cron) => cron.path === "/api/cron/recaps");
+    expect(recaps?.schedule).toBe(RECAP_CRON_CRONTAB);
+  });
+
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {
     // What `src/db/notifications.ts` actually depends on is not that the
     // reminders tick is the *only* daily cron — a second daily entry is fine,
@@ -42,14 +48,13 @@ describe("the daily tick", () => {
     // a departure cancels itself at a moment printed on the booking page, and
     // a daily pass makes that promise true to within about a day.
     //
-    // So the guard is now an allowlist rather than a ban, and the bar for
-    // joining it is written here: a sub-daily route must not touch
-    // `notification_send_queue` — it may `notify()` directly and record the
-    // delivery (which is what the sweep does, for the same reason the
-    // conditions-hold send does: a message about tomorrow's boat cannot wait
-    // for tomorrow's pass), but it may not enqueue or drain. Adding another
-    // entry here is still the deliberate act it always was.
-    const SUB_DAILY_ALLOWED = new Set(["/api/cron/minimum-seats"]);
+    // So the guard is now an allowlist rather than a ban. The hourly recap
+    // pass is the second deliberate exception: unlike generic retry work, it
+    // owns one user-visible promise (never before four hours; normally within
+    // an hour after that) and calls only `sendDueRecaps`, whose query holds
+    // that floor. Adding a route here is still a product and operations change,
+    // not a scheduling convenience.
+    const SUB_DAILY_ALLOWED = new Set(["/api/cron/minimum-seats", "/api/cron/recaps"]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");
       return minute.includes("/") || minute === "*" || hour.includes("/") || hour === "*";
@@ -64,12 +69,14 @@ describe("the daily tick", () => {
    * sub-daily route importing either is the mistake the allowlist would
    * otherwise silently permit.
    */
-  it("keeps the sub-daily routes off the notification send queue", () => {
-    const route = readFileSync(
-      path.join(process.cwd(), "src/app/api/cron/minimum-seats/route.ts"),
-      "utf8",
-    );
-    expect(route).not.toMatch(/sendNotification\b|sendNotificationBatch\b/);
+  it("keeps the sub-daily routes off the generic notification queue", () => {
+    for (const routePath of [
+      "src/app/api/cron/minimum-seats/route.ts",
+      "src/app/api/cron/recaps/route.ts",
+    ]) {
+      const route = readFileSync(path.join(process.cwd(), routePath), "utf8");
+      expect(route).not.toMatch(/sendNotification\b|sendNotificationBatch\b/);
+    }
   });
 });
 

@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
@@ -92,6 +92,34 @@ export async function getIncidentExport(
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;
 
+  // A paper waiver and a certification review are accountable staff acts, not
+  // anonymous completions. Resolve only the ids the governing evidence names,
+  // and still tenant-scope the lookup: a malformed foreign id must never
+  // become a name on this shop's owner-only incident document.
+  const accountableStaffIds = new Set<string>();
+  for (const row of readinessRows) {
+    if (row.waiver?.signatureMethod === "in_person_attested" && row.waiver.recordedByPersonId) {
+      accountableStaffIds.add(row.waiver.recordedByPersonId);
+    }
+    for (const card of [
+      ...row.certifications,
+      ...row.specialtyCertifications,
+      ...row.nitroxCertifications,
+    ]) {
+      if (card.reviewedByPersonId) accountableStaffIds.add(card.reviewedByPersonId);
+    }
+  }
+  const accountableStaff =
+    accountableStaffIds.size === 0
+      ? []
+      : await db
+          .select({ id: people.id, fullName: people.fullName })
+          .from(people)
+          .where(and(eq(people.shopId, shopId), inArray(people.id, [...accountableStaffIds])));
+  const accountableStaffNameById = new Map(
+    accountableStaff.map((staff) => [staff.id, staff.fullName]),
+  );
+
   const events: IncidentTimelineEventInput[] = [
     ...diverEventRows.map(({ event, subject, recorder }) => ({
       subjectKind: "diver" as const,
@@ -158,13 +186,31 @@ export async function getIncidentExport(
     manifests,
     diverEvidence: readinessRows.map((row) => ({
       bookingId: row.booking.id,
-      certifications: row.certifications,
-      specialtyCertifications: row.specialtyCertifications,
-      nitroxCertifications: row.nitroxCertifications,
+      certifications: row.certifications.map((card) => ({
+        ...card,
+        reviewedByName: card.reviewedByPersonId
+          ? (accountableStaffNameById.get(card.reviewedByPersonId) ?? null)
+          : null,
+      })),
+      specialtyCertifications: row.specialtyCertifications.map((card) => ({
+        ...card,
+        reviewedByName: card.reviewedByPersonId
+          ? (accountableStaffNameById.get(card.reviewedByPersonId) ?? null)
+          : null,
+      })),
+      nitroxCertifications: row.nitroxCertifications.map((card) => ({
+        ...card,
+        reviewedByName: card.reviewedByPersonId
+          ? (accountableStaffNameById.get(card.reviewedByPersonId) ?? null)
+          : null,
+      })),
       // The governing record after the sign-once rule — the same resolution
       // the boarding gate reads, so "signed" here always means what it meant
       // at the dock.
       waiver: row.waiver,
+      waiverRecordedByName: row.waiver?.recordedByPersonId
+        ? (accountableStaffNameById.get(row.waiver.recordedByPersonId) ?? null)
+        : null,
     })),
     events,
     buddyTeams,

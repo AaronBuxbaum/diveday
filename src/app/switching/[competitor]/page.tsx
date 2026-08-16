@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactElement } from "react";
+import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
@@ -11,7 +11,7 @@ import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { type FunnelSource, guideSource } from "@/lib/funnel";
+import { guideSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
@@ -118,6 +118,7 @@ export default async function MigrationGuidePage({
 async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
+  const importSource = guideSource(guide.slug, "mid");
   return (
     <GuideBody
       locale={locale}
@@ -126,6 +127,7 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
         <SwitchingImportCta
           label={t("switching.common.openImportCta")}
           trialLabel={t("marketing.common.startTrial")}
+          source={importSource}
         />
       }
     />
@@ -136,18 +138,10 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
  * Cached per (negotiated locale, guide) — `guide` is a plain, serializable
  * data object (`src/lib/migration-guides.ts`), safe as a `"use cache"`
  * argument. `importCta` carries {@link SwitchingImportCta} (session-scoped —
- * reads `auth()`) as a pass-through slot per Next's interleaving rules: never
- * read or invoked here, only rendered where it belongs, so its per-visitor
- * content never enters the cache entry.
- *
- * Its render site (`ImportPhase`) wraps `{importCta}` in a `<Suspense>` —
- * without one, this preview's Cache Components runtime replayed a spurious
- * "unique key" warning on every request that reached this cached body,
- * because the dynamic child was streaming into a cache boundary with no
- * boundary of its own to resolve against. Isolating the dynamic read behind
- * its own `<Suspense>`, per the Next migrating-to-cache-components guide, is
- * what stopped it — confirmed by removing `importCta` entirely (warning
- * gone) and then restoring it wrapped (still gone, button still renders).
+ * reads `auth()`) as a pass-through slot per Next's interleaving rules. Its
+ * funnel source is bound before it crosses this cache boundary, so this body
+ * only renders the slot unchanged and its per-visitor content never enters the
+ * cache entry.
  */
 async function GuideBody({
   locale,
@@ -156,7 +150,7 @@ async function GuideBody({
 }: {
   locale: DiverLocale;
   guide: MigrationGuide;
-  importCta: ReactElement<{ source?: FunnelSource }>;
+  importCta: ReactNode;
 }) {
   "use cache";
   cacheLife("max");
@@ -252,8 +246,6 @@ async function GuideBody({
         <ImportPhase
           locale={locale}
           number={3}
-          source={guideSource(guide.slug, "mid")}
-          importCta={importCta}
           importerNote={
             guide.importerNote && (
               <>
@@ -264,7 +256,9 @@ async function GuideBody({
               </>
             )
           }
-        />
+        >
+          <Suspense fallback={null}>{importCta}</Suspense>
+        </ImportPhase>
         <MovePhase number={4} title={t(guide.cutover.heading)} intro={t(guide.cutover.intro)}>
           <StepList
             steps={guide.cutover.steps.map((step) => ({

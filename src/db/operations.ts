@@ -251,6 +251,32 @@ export async function listDiverNotes(db: AppDb, shopId: string, personId: string
 }
 
 /**
+ * Every staff note about one diver, in one chronological record.
+ *
+ * `internal_notes` already holds both scopes: a person-scoped note has no
+ * booking, while a trip note has the booking and therefore its departure.
+ * The diver record is the one place staff need the complete story, so it
+ * reads both shapes and carries the booking context as metadata instead of
+ * copying a trip note into a second note system.
+ */
+export async function listDiverRecordNotes(db: AppDb, shopId: string, personId: string) {
+  return db
+    .select({
+      note: internalNotes,
+      authorName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      tripStartsAt: trips.startsAt,
+    })
+    .from(internalNotes)
+    .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
+    .leftJoin(bookings, eq(bookings.id, internalNotes.bookingId))
+    .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(internalNotes.shopId, shopId), eq(internalNotes.personId, personId)))
+    .orderBy(asc(internalNotes.createdAt));
+}
+
+/**
  * Resolve diver-scoped notes onto the booking that represents that diver on a
  * trip. This is the bridge that lets the Diver page and boat manifest share
  * one source of truth without making a diver note belong to a single booking.

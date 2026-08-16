@@ -59,7 +59,9 @@
   "hideReasonLabel": "Why are you taking it down?",
   "hideReasonPlaceholder": "Choose a reason…",
   "hideNoteLabel": "What happened",
-  "hideNotePlaceholder": "Only if you chose “Something else”",
+  "hiddenReason": "Hidden because: {reason}",
+  "hiddenReasonWithNote": "Hidden because: {reason} — {note}",
+  "standoutWrittenOnly": "Only written reviews can be standouts.",
   "hideReason": {
     "abusive": "Abusive or harassing",
     "namesAPerson": "Names a member of staff or another diver",

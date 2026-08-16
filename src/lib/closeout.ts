@@ -122,10 +122,10 @@ export type CloseoutTripInput = {
   booked: number;
   /**
    * The crew's post-trip note, as it stands. Carried here because the close-out
-   * is where it gets written: the nightly run mails each diver their recap
-   * after the departure ends, so the evening the boat came in is both the last
-   * chance to add "the eagle ray on the second dive" and the one moment someone
-   * still remembers it. Null when nothing is written yet.
+   * is where it gets written: the hourly recap scan mails each diver no earlier
+   * than four hours after the departure ends, so the evening the boat came in is
+   * both the last chance to add "the eagle ray on the second dive" and the one
+   * moment someone still remembers it. Null when nothing is written yet.
    */
   recapShoutout: string | null;
   photos?: {
@@ -134,6 +134,11 @@ export type CloseoutTripInput = {
     caption: string | null;
     diverName: string;
     bookingId: string;
+  }[];
+  /** Instructor/crew photos kept with the close-out only, never a diver recap by default. */
+  crewPhotos?: {
+    id: string;
+    imageUrl: string;
   }[];
 };
 
@@ -177,6 +182,10 @@ export type CloseoutDeparture = {
     caption: string | null;
     diverName: string;
     bookingId: string;
+  }[];
+  crewPhotos: {
+    id: string;
+    imageUrl: string;
   }[];
 };
 
@@ -317,6 +326,7 @@ export function assembleDayCloseout(input: {
       recapShoutout: trip.recapShoutout,
       ended: trip.endsAt <= now,
       photos: trip.photos ?? [],
+      crewPhotos: trip.crewPhotos ?? [],
       ...departureStatus(trip, worstGapByTrip.get(trip.tripId), now),
     }))
     .sort(

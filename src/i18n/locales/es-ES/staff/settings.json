@@ -413,7 +413,7 @@
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {
       "label": "No incluido, a propósito:",
-      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
+      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
   "import": {
@@ -474,16 +474,20 @@
         "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
       },
       "cardOnFile": {
-        "what": "Tarjeta guardada / pagos",
-        "detail": "Se queda con tu procesador de pagos — DiveDay nunca importa datos de tarjetas ni de pagos."
+        "what": "Tarjeta guardada / credencial de pago",
+        "detail": "Se queda con tu procesador de pagos. DiveDay nunca importa números de tarjeta, CVC, métodos de pago ni credenciales de pago reutilizables."
       },
       "pastVisits": {
         "what": "Visitas pasadas (qué reservaron y cuándo)",
         "detail": "Cada fila de reserva se convierte en historial de visitas — no es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
       },
-      "receiptsService": {
-        "what": "Recibos e historial de taller",
-        "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — hoy DiveDay guarda tallas, no unidades de alquiler individuales."
+      "paymentHistory": {
+        "what": "Historial de pagos y recibos",
+        "detail": "Las filas de pagos, reembolsos y recibos del origen se importan como historial sin verificar en Pedidos. Una cantidad claramente interpretada en la moneda de tu centro se indica en el agregado de ingresos/reembolsos; nunca se convierte en un pedido Stripe activo ni en un pago de reserva."
+      },
+      "serviceHistory": {
+        "what": "Historial de mantenimiento de equipo",
+        "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
       }
     },
     "wizard": {
@@ -520,6 +524,15 @@
         "waiver_source_name": "Origen del waiver",
         "waiver_document_url": "Documento del waiver",
         "medical_document_url": "Documento médico",
+        "payment_date": "Fecha de pago",
+        "payment_status": "Estado del pago",
+        "payment_amount": "Importe del pago",
+        "payment_currency": "Moneda del pago",
+        "payment_direction": "Dirección de pago / reembolso",
+        "payment_reference": "Referencia de pago",
+        "receipt_reference": "Referencia del recibo",
+        "receipt_document_url": "Documento del recibo",
+        "stripe_reference": "Referencia de Stripe",
         "visit_date": "Fecha de visita anterior",
         "visit_title": "Visita anterior",
         "visit_status": "Estado de la visita anterior",
@@ -530,6 +543,7 @@
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
       "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
       "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Consulta “Qué se importa” arriba para ver qué significa eso y qué no.",
+      "paymentHistoryRowsNotice": "{count, plural, one {# fila de pago, reembolso o recibo del origen} other {# filas de pago, reembolso o recibo del origen}} se importarán como historial sin verificar. Nunca crean pedidos ni cargos en Stripe.",
       "stats": {
         "diversInFile": "Buceadores en el archivo",
         "extraCardRows": "Filas de certificación extra",
@@ -538,7 +552,8 @@
         "specialties": "Especialidades",
         "nitroxCards": "Certificaciones de nitrox",
         "waivers": "Waivers",
-        "pastVisits": "Visitas anteriores"
+        "pastVisits": "Visitas anteriores",
+        "paymentHistory": "Historial de pagos / recibos"
       },
       "table": {
         "rowNumber": "#",
@@ -575,6 +590,9 @@
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
         "visitsLine": "{count, plural, one {# visita anterior añadida} other {# visitas anteriores añadidas}} al historial del centro de los buceadores.",
         "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están — volver a ejecutar la misma exportación no duplica el historial de nadie.",
+        "paymentHistoryLine": "{count, plural, one {# registro de pago / recibo del origen sin verificar} other {# registros de pago / recibo del origen sin verificar}} añadidos a Pedidos.",
+        "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como están.",
+        "receiptDocumentsFailedNote": " {count} enlace(s) de documento de recibo no se pudieron descargar y se dejaron fuera del registro del origen.",
         "seeRoster": "Ver el listado"
       }
     },
@@ -602,6 +620,8 @@
       "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer — el buceador se importa sin esta visita.",
       "visitNoReference": "Visita importada sin referencia de reserva: una reimportación coincide por fecha, nombre e importe, así que dos reservas idénticas el mismo día entran como una sola visita.",
       "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha — el buceador se importa sin esta visita.",
+      "paymentHistoryDateUnreadable": "La fecha del historial de pagos “{value}” no es una fecha que podamos leer — ese registro del origen no se importará.",
+      "paymentHistoryNoDate": "Esta fila de pago o recibo del origen no tiene una fecha utilizable, así que no se importará.",
       "noName": "Sin nombre — fila omitida.",
       "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las certificaciones, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
       "noEmailNewRecord": "Sin correo — importado como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo."

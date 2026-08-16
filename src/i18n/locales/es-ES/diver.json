@@ -18,7 +18,6 @@
       "levelNone": "Todavía no tengo certificación",
       "levelInfoLabel": "Por qué preguntamos por la certificación",
       "levelDescription": "Ayuda al centro a elegir de qué salidas avisarte. Aquí no se verifica nada: confirmarán qué puedes bucear antes de que entres al agua.",
-      "levelHint": "¿Tu registro de certificación es de otra agencia? Elige el más parecido: CMAS 1★, RAID Open Water 20 y BSAC Ocean Diver equivalen a Open Water; CMAS 2★, RAID Advanced 35 y BSAC Sports Diver, a Advanced Open Water; CMAS 3★ y BSAC Dive Leader, a Divemaster. Los registros de GUE no encajan en esta lista, así que para uno de ellos “Prefiero no decirlo” es la respuesta correcta.",
       "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
     },
     "units": {
@@ -2302,16 +2301,20 @@
             "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
           },
           "cardOnFile": {
-            "what": "Tarjeta guardada / pagos",
-            "detail": "Se queda con tu procesador de pagos — DiveDay nunca importa datos de tarjetas ni de pagos."
+            "what": "Tarjeta guardada / credencial de pago",
+            "detail": "Se queda con tu procesador de pagos. DiveDay nunca importa números de tarjeta, CVC, métodos de pago ni credenciales de pago reutilizables."
           },
           "pastVisits": {
             "what": "Visitas pasadas (qué reservaron y cuándo)",
             "detail": "Cada fila de reserva se convierte en historial de visitas — no es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
           },
-          "receiptsService": {
-            "what": "Recibos e historial de taller",
-            "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — DiveDay guarda tallas, no equipos concretos."
+          "paymentHistory": {
+            "what": "Historial de pagos y recibos",
+            "detail": "Las filas de pagos, reembolsos y recibos del origen se importan como historial sin verificar en Pedidos. Una cantidad claramente interpretada en la moneda de tu centro se indica en el agregado de ingresos/reembolsos; nunca se convierte en un pedido Stripe activo ni en un pago de reserva."
+          },
+          "serviceHistory": {
+            "what": "Historial de mantenimiento de equipo",
+            "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
           }
         }
       },

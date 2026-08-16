@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "./closeout";
+import { addCrewRecapPhoto } from "./recap";
 import { bookings as bookingsTable, people, rollCallEvents, trips as tripsTable } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { listStaff } from "./trips";
@@ -62,6 +63,31 @@ describe("day close-out (in-memory PGlite)", () => {
     // The report task is part of the close-out's headline shape, not an
     // invisible side channel below an "Everyone is home" message.
     expect(state.shape).toBe("outstanding");
+  });
+
+  it("carries a crew photo onto its departure's close-out row", async () => {
+    const { db, shop } = await seededShopContext();
+    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const completed = state.departures.find(
+      (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
+    );
+    const [staff] = await listStaff(db, shop.id);
+    if (!completed || !staff) throw new Error("completed trip and staff fixture required");
+
+    const added = await addCrewRecapPhoto(db, {
+      shopId: shop.id,
+      tripId: completed.tripId,
+      uploadedByPersonId: staff.person.id,
+      imageUrl: "https://img/crew-closeout.jpg",
+      now: new Date(nowMs()),
+    });
+    if (!added.ok) throw new Error("crew photo should be accepted for a completed trip");
+
+    const refreshed = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    expect(
+      refreshed.state.departures.find((departure) => departure.tripId === completed.tripId)
+        ?.crewPhotos,
+    ).toContainEqual(expect.objectContaining(added.photo));
   });
 
   it("records exactly the unreconciled head count that was open at the moment of closing", async () => {

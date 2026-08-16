@@ -19,6 +19,7 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { switchingHref, trialHref } from "@/lib/funnel";
 import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
+import { ProductChapterNav } from "./_components/ProductChapterNav";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -218,36 +219,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           its chapter. This strip is the page's whole table of contents — a
           buyer who only reads this line already knows the product covers the
           day end to end. */}
-      <nav
-        aria-label={t("marketing.product.arcTitle")}
-        className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm"
-      >
-        <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-8 px-6 py-2 text-sm">
-          <p className="py-2.5 font-semibold">{t("marketing.product.arcTitle")}</p>
-          {/* Two aligned columns on a phone rather than a free wrap: five
-              labels of five different widths wrapping raggedly read as an
-              accident, and a horizontal scroller would hide half the day — the
-              whole point of this strip is that a visitor sees all five
-              chapters at once. `auto` on the first column, not `grid-cols-2`:
-              equal halves are 171px at 390px wide, which is narrower than the
-              longest label in either locale ("After the boat is back", "Con el
-              barco de vuelta") and broke it over two lines with its number
-              floating beside them. */}
-          <ol className="grid grid-cols-[auto_1fr] gap-x-4 sm:flex sm:flex-wrap sm:gap-x-8">
-            {chapters.map((mark) => (
-              <li key={mark.id}>
-                <a
-                  href={`#${mark.id}`}
-                  className="flex min-h-11 items-center gap-2 font-medium text-muted transition-colors hover:text-foreground"
-                >
-                  <span className="text-xs tabular-nums">{mark.number}</span>
-                  {mark.label}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </nav>
+      <ProductChapterNav
+        ariaLabel={t("marketing.product.arcTitle")}
+        title={t("marketing.product.arcTitle")}
+        chapters={chapters}
+      />
 
       {/* Chapter 01 — days before: the booking takes itself. */}
       <section id="booking" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">

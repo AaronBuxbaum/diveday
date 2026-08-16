@@ -302,6 +302,72 @@ test.describe("contact import — prior visits", () => {
   });
 });
 
+/**
+ * Payment history is useful migration evidence but deliberately does not
+ * manufacture a DiveDay order, booking payment, or Stripe confirmation. This
+ * walks the staff path from a source export through the visible unverified
+ * rows and the separately-labelled revenue/refund contribution.
+ */
+const PAYMENT_HISTORY_CSV = [
+  "Full Name,Email,Payment Date,Payment Status,Payment Amount,Payment Currency,Payment Direction,Payment ID,Receipt Number,Stripe Payment Intent ID",
+  "Source Sloane,source.sloane@example.com,2026-03-04,Paid,USD 165.00,USD,Payment,legacy-pay-1001,REC-1001,pi_legacy_1001",
+  "Source Sloane,source.sloane@example.com,2026-03-05,Refunded,USD 25.00,USD,Refund,legacy-refund-1001,REC-1002,pi_legacy_1002",
+].join("\n");
+
+test.describe("contact import — payment and receipt history", () => {
+  signedInAsOwner();
+
+  test("source payments and refunds stay visibly unverified while tracing the aggregate back to Orders", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
+
+    await page.setInputFiles('input[type="file"]', {
+      name: "payment-history.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(PAYMENT_HISTORY_CSV, "utf-8"),
+    });
+    await expect(
+      page.getByText(
+        "2 payment, refund, or receipt source rows will be imported as unverified history.",
+      ),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Import 1 contact" }).click();
+    await expect(
+      page.getByText("2 unverified payment / receipt source records added to Orders."),
+    ).toBeVisible();
+
+    await page.goto("/shop/blue-mantis/orders?from=2026-03-01&to=2026-03-31&range=custom");
+    const history = page.getByRole("region", { name: "Imported payment history" });
+    await expect(history).toBeVisible();
+    await expect(history.getByText("Source Sloane").first()).toBeVisible();
+    await expect(history.getByText("Unverified import").first()).toBeVisible();
+    await expect(history.getByText("Source payment")).toBeVisible();
+    await expect(history.getByText("Source refund")).toBeVisible();
+    await expect(history.getByText("Stripe reference: pi_legacy_1001")).toBeVisible();
+    await expect(history.getByRole("link", { name: "Source Sloane" }).first()).toHaveAttribute(
+      "href",
+      /\/shop\/blue-mantis\/divers\//,
+    );
+
+    await page.goto("/shop/blue-mantis/reports?month=2026-03");
+    const importedNotice = page.getByRole("region", { name: "Unverified imported history" });
+    await expect(importedNotice).toContainText("source payments");
+    await expect(importedNotice).toContainText("source refunds");
+    await importedNotice.getByRole("link", { name: "Review imported history in Orders" }).click();
+    await expect(page).toHaveURL(
+      /\/shop\/blue-mantis\/orders\?from=2026-03-01&to=2026-03-31&range=custom/,
+    );
+    await expect(page.getByRole("region", { name: "Imported payment history" })).toContainText(
+      "Source Sloane",
+    );
+  });
+});
+
 test.describe("contact import — explicit bounds (CR-016)", () => {
   signedInAsOwner();
 

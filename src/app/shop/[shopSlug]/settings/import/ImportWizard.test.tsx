@@ -58,6 +58,8 @@ const ISSUE_CODES: ImportIssueCode[] = [
   "visit_date_unreadable",
   "visit_no_reference",
   "visit_no_date",
+  "payment_history_date_unreadable",
+  "payment_history_no_date",
   "no_name",
   "merged_duplicate",
   "no_email_new_record",
@@ -89,6 +91,7 @@ const COPY = {
   unmappedColumns: "Unmapped columns: {columns}",
   waiverRowsNotice: "{count} rows carry a waiver",
   visitRowsNotice: "{count} rows carry a past visit",
+  paymentHistoryRowsNotice: "{count} rows carry payment history",
   stats: {
     diversInFile: "Divers in file",
     extraCardRows: "Extra card rows",
@@ -98,6 +101,7 @@ const COPY = {
     nitroxCards: "Nitrox cards",
     waivers: "Waivers",
     pastVisits: "Past visits",
+    paymentHistory: "Payment history",
   },
   table: {
     rowNumber: "Row",
@@ -142,6 +146,9 @@ const COPY = {
     waiverDocumentsFailedNote: " ({count} documents failed)",
     visitsLine: "Visits added: {count}",
     visitsSkippedNote: " ({count} already on file)",
+    paymentHistoryLine: "Payment history added: {count}",
+    paymentHistorySkippedNote: " ({count} already on file)",
+    receiptDocumentsFailedNote: " ({count} receipt documents failed)",
     seeRoster: "See roster",
   },
 };
