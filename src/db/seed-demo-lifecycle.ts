@@ -56,6 +56,7 @@ import {
   tripBlowoutDivers,
   tripBlowouts,
   tripDives,
+  tripInvitations,
   tripLastMinutePromos,
   tripRequirements,
   tripReviews,
@@ -139,6 +140,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
   // including the unsubscribe tokens that reference the entries.

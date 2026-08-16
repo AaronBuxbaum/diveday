@@ -118,7 +118,11 @@
     "minimumDecisionLabel": "Decidir con",
     "minimumDecisionDescription": "Cuánto antes de la salida se toma la decisión. Al reservar, se indica el momento exacto al buceador.",
     "diversSuffix": "buceadores",
-    "hoursBeforeSuffix": "horas de antelación"
+    "hoursBeforeSuffix": "horas de antelación",
+    "requestPlanHeading": "Partir de las peticiones",
+    "requestPlanDescription": "Las personas marcadas recibirán una invitación para esta salida, pero no una reserva. Cambia la selección antes de ponerla en el calendario.",
+    "requestPlanRecommendation": "Hay aproximadamente {divers} buceadores representados. Capacidad inicial sugerida: {capacity} plazas.",
+    "requestPlanDivers": "{divers} buceadores"
   },
   "addBooking": "Añadir una reserva"
 }

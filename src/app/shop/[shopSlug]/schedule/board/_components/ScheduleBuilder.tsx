@@ -212,6 +212,10 @@ export type BuilderCopy = {
   endsNever: string;
   endsOnChoice: string;
   endsOnLabel: string;
+  requestPlanHeading?: string;
+  requestPlanDescription?: string;
+  requestPlanRecommendation?: string;
+  requestPlanDivers?: string;
 };
 
 /**
@@ -226,6 +230,21 @@ export type BuilderInitialCourse = {
   title: string;
   /** The admission line the old full form showed under the select, pre-resolved. */
   requirement: string;
+};
+
+/**
+ * Lead context handed from Requests to the one trip-creation form. Checked
+ * rows become invitations only; they do not become bookings or consume seats.
+ */
+export type BuilderRequestPlan = {
+  estimatedDivers: number;
+  suggestedCapacity: number;
+  requests: Array<{
+    id: string;
+    name: string;
+    subject: string;
+    divers: number;
+  }>;
 };
 
 /** Everything the panel needs that only matters once "More options" is open. */
@@ -274,6 +293,7 @@ function AddPanel({
   copy,
   more,
   initialCourse,
+  requestPlan,
   startExpanded,
   onAdd,
   onCancel,
@@ -285,6 +305,7 @@ function AddPanel({
   copy: BuilderCopy;
   more: BuilderMoreOptions;
   initialCourse: BuilderInitialCourse | null;
+  requestPlan?: BuilderRequestPlan | null;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
@@ -333,6 +354,42 @@ function AddPanel({
       columns={1}
       className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
+      {requestPlan ? (
+        <fieldset className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <legend className="px-1 text-sm font-semibold text-primary">
+            {copy.requestPlanHeading ?? ""}
+          </legend>
+          <p className="text-sm text-muted">{copy.requestPlanDescription ?? ""}</p>
+          <p className="mt-2 text-sm font-medium">
+            {fill(copy.requestPlanRecommendation ?? "", {
+              capacity: requestPlan.suggestedCapacity,
+              divers: requestPlan.estimatedDivers,
+            })}
+          </p>
+          <ul className="mt-3 grid gap-2">
+            {requestPlan.requests.map((request) => (
+              <li key={request.id}>
+                <label className="flex min-h-11 items-start gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="inquiryId"
+                    value={request.id}
+                    defaultChecked
+                    className="mt-1 size-4 accent-primary"
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-medium">{request.name}</span>
+                    <span className="block text-muted">
+                      <span>{request.subject}</span>{" "}
+                      <span>{fill(copy.requestPlanDivers ?? "", { divers: request.divers })}</span>
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      ) : null}
       <Field label={copy.whatIsIt}>
         <input
           name="title"
@@ -431,7 +488,7 @@ function AddPanel({
             required
             min={1}
             max={60}
-            defaultValue={12}
+            defaultValue={requestPlan?.suggestedCapacity ?? 12}
             className={`${controlClass} tabular-nums`}
           />
         </Field>
@@ -763,6 +820,7 @@ export function ScheduleBuilder({
   copy,
   more,
   initialCourse,
+  requestPlan,
   openAdd,
 }: {
   shopSlug: string;
@@ -778,6 +836,8 @@ export function ScheduleBuilder({
   more: BuilderMoreOptions;
   /** Set when the board was reached from a course's "schedule a session" control. */
   initialCourse: BuilderInitialCourse | null;
+  /** Requests selected from the Requests page, or null for an ordinary add. */
+  requestPlan?: BuilderRequestPlan | null;
   /**
    * Whether to arrive with the add panel already open, and how deep. Every
    * former door to `/trips/new` now lands here instead, and a link that used to
@@ -808,7 +868,7 @@ export function ScheduleBuilder({
   const cancelTopAdd = () => {
     setOpen(null);
     const params = new URLSearchParams(searchParams);
-    for (const key of ["add", "date", "course"]) params.delete(key);
+    for (const key of ["add", "date", "course", "requests"]) params.delete(key);
     router.replace(`${pathname}${params.size > 0 ? `?${params}` : ""}`, { scroll: false });
     document.querySelector<HTMLElement>("[data-board-add]")?.focus();
   };
@@ -942,6 +1002,7 @@ export function ScheduleBuilder({
           copy={copy}
           more={more}
           initialCourse={initialCourse}
+          requestPlan={requestPlan}
           startExpanded={openAdd === "expanded"}
           onAdd={actions.add}
           onCancel={cancelTopAdd}
@@ -1017,6 +1078,7 @@ export function ScheduleBuilder({
                 copy={copy}
                 more={more}
                 initialCourse={null}
+                requestPlan={null}
                 startExpanded={false}
                 onAdd={actions.add}
                 onCancel={() => closePanel(`add:${day.dateIso}`)}

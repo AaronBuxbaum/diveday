@@ -25,6 +25,7 @@ import { QueryForm } from "@/components/ui/QueryForm";
  */
 export function PersonSearchForm({
   query,
+  queryName = "diverq",
   hiddenFields,
   label,
   placeholder,
@@ -34,6 +35,8 @@ export function PersonSearchForm({
 }: {
   /** The server's own query — see the `key` below for why it is not just a default. */
   query: string;
+  /** The URL key for this search when a page has more than one picker. */
+  queryName?: string;
   /** Extra state a GET reload must carry, e.g. the walk-in's chosen `tripId`. */
   hiddenFields?: Record<string, string>;
   label: string;
@@ -50,7 +53,7 @@ export function PersonSearchForm({
       <Field label={label} className="min-w-0 flex-1">
         <input
           type="search"
-          name="diverq"
+          name={queryName}
           // Keyed on the server's own query so the box can never disagree with
           // it. `defaultValue` applies at mount only, so without this the typed
           // text survives a navigation as client state the comment above

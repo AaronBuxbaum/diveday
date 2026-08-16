@@ -56,6 +56,7 @@ import {
   tripBlowoutDivers,
   tripBlowouts,
   tripDives,
+  tripInvitations,
   tripLastMinutePromos,
   tripRequirements,
   tripReviews,
@@ -783,6 +784,7 @@ export async function resetDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
+  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   // References trips (last-minute-deal blasts) and people (the last-minute
   // list itself), so both must go before the trips/people deletes below or

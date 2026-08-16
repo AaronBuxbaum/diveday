@@ -13,6 +13,7 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type DateRequestMatch, groupDateRequests } from "@/lib/date-requests";
 import { formatShortDate } from "@/lib/format";
+import { adviseRequests } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -126,6 +127,31 @@ function RequestCard({
   );
 }
 
+function RequestAdviceCard({
+  count,
+  estimatedDivers,
+  suggestedCapacity,
+  t,
+}: {
+  count: number;
+  estimatedDivers: number;
+  suggestedCapacity: number;
+  t: StaffTranslator;
+}) {
+  return (
+    <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <p className="text-sm font-semibold text-primary">{t("requests.recommendationHeading")}</p>
+      <p className="mt-1 text-sm text-muted">
+        {t("requests.recommendationDetail", {
+          divers: estimatedDivers,
+          requests: count,
+          capacity: suggestedCapacity,
+        })}
+      </p>
+    </div>
+  );
+}
+
 /**
  * Every date a diver asked for that the board has nothing on, grouped by day.
  *
@@ -188,41 +214,71 @@ export default async function RequestsPage({
         <div className="flex flex-col gap-8">
           {groups.map((group) => (
             <section key={group.date} aria-labelledby={`date-${group.date}`}>
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-                <div>
-                  <h2 id={`date-${group.date}`} className="text-xl font-semibold tracking-tight">
-                    {formatCalendarDate(group.date, locale)}
-                  </h2>
-                  <p className="mt-1 text-sm text-muted">
-                    {t("requests.groupCount", { count: group.groupCount })}
-                  </p>
-                </div>
-                {/* The whole point of counting groups against a day: the
-                    builder opens on that date with the full form already
-                    disclosed (ADR 20260806-one-trip-create-form). */}
-                <Link
-                  href={`/shop/${shopSlug}/schedule/board?add=full&date=${group.date}`}
-                  className={buttonClass({
-                    variant: "secondary",
-                    size: "sm",
-                  })}
-                >
-                  {t("requests.addDeparture")}
-                </Link>
-              </div>
-              <ul className="mt-3 flex flex-col gap-3">
-                {group.entries.map((entry) => (
-                  <RequestCard
-                    key={`${group.date}-${entry.request.id}`}
-                    request={entry.request}
-                    match={entry.match}
-                    locale={locale}
-                    timezone={timezone}
-                    shopSlug={shopSlug}
-                    t={t}
-                  />
-                ))}
-              </ul>
+              {(() => {
+                const advice = adviseRequests(
+                  group.entries.map(({ request }) => ({
+                    id: request.id,
+                    divers: request.divers,
+                    experienceLevel: request.experienceLevel,
+                    courseId: request.courseId,
+                  })),
+                );
+                const params = new URLSearchParams({
+                  add: "full",
+                  date: group.date,
+                  requests: group.entries.map(({ request }) => request.id).join(","),
+                });
+                return (
+                  <>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+                      <div>
+                        <h2
+                          id={`date-${group.date}`}
+                          className="text-xl font-semibold tracking-tight"
+                        >
+                          {formatCalendarDate(group.date, locale)}
+                        </h2>
+                        <p className="mt-1 text-sm text-muted">
+                          {t("requests.groupCount", { count: group.groupCount })}
+                        </p>
+                      </div>
+                      {/* The whole point of counting groups against a day: the
+                          builder opens on that date with the full form already
+                          disclosed (ADR 20260806-one-trip-create-form), and
+                          carries these leads forward as invitations rather than
+                          losing the context at the route boundary. */}
+                      <Link
+                        href={`/shop/${shopSlug}/schedule/board?${params.toString()}`}
+                        className={buttonClass({
+                          variant: "secondary",
+                          size: "sm",
+                        })}
+                      >
+                        {t("requests.addDeparture")}
+                      </Link>
+                    </div>
+                    <RequestAdviceCard
+                      count={advice.requestCount}
+                      estimatedDivers={advice.estimatedDivers}
+                      suggestedCapacity={advice.suggestedCapacity}
+                      t={t}
+                    />
+                    <ul className="mt-3 flex flex-col gap-3">
+                      {group.entries.map((entry) => (
+                        <RequestCard
+                          key={`${group.date}-${entry.request.id}`}
+                          request={entry.request}
+                          match={entry.match}
+                          locale={locale}
+                          timezone={timezone}
+                          shopSlug={shopSlug}
+                          t={t}
+                        />
+                      ))}
+                    </ul>
+                  </>
+                );
+              })()}
             </section>
           ))}
 

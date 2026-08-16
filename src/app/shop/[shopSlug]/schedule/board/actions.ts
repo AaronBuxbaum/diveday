@@ -6,7 +6,9 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
+import { createTripRequestInvitations } from "@/db/trip-invitations";
 import {
   countShopTrips,
   createTrip,
@@ -178,13 +180,24 @@ function repeatWeekdaysFrom(formData: FormData): WeekdaySet {
 
 export async function addDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
-  const { db, shop } = await requireBoardAuthor(shopSlug);
+  const { db, shop, session } = await requireBoardAuthor(shopSlug);
   const invalid = async () => {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
+  const requestIds = z.array(z.uuid()).safeParse(formData.getAll("inquiryId"));
+  if (!requestIds.success) return await invalid();
+  // The request ids arrive from a client form and the builder URL is shareable.
+  // A staffer who can create a departure is not automatically allowed to read
+  // the private lead details that would be attached to it.
+  if (
+    requestIds.data.length > 0 &&
+    !(await canPersonViewShopReports(db, shop.id, session.user.personId))
+  ) {
+    return await invalid();
+  }
   const {
     title,
     description,
@@ -304,6 +317,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       template: { startsAt, endsAt: lastDay.endsAt, scheduleDays },
     });
     if (!series) return await invalid();
+    const firstTrip = series.trips[0];
+    if (!firstTrip) return await invalid();
+    await createTripRequestInvitations(db, {
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      requestIds: requestIds.data,
+      createdByPersonId: session.user.personId,
+    });
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
   }
@@ -316,6 +337,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     scheduleDays,
   });
   if (!created) return await invalid();
+  await createTripRequestInvitations(db, {
+    shopId: shop.id,
+    tripId: created.id,
+    requestIds: requestIds.data,
+    createdByPersonId: session.user.personId,
+  });
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   return await landAfterAdd(db, shop, shopSlug, title, 1);
 }

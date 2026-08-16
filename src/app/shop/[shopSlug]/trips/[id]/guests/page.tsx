@@ -19,6 +19,7 @@ import { listTripPrepDivers } from "@/db/rental-fit";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { listTripInvitations } from "@/db/trip-invitations";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -36,8 +37,10 @@ import { uuidParam } from "@/lib/uuid";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
+import { DirectInvitationSection } from "../_components/DirectInvitationSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { isRosterFilter, RosterSection } from "../_components/RosterSection";
+import { TripInvitationSection } from "../_components/TripInvitationSection";
 import { resolveTripNotice, TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { WaitlistSection } from "../_components/WaitlistSection";
@@ -45,10 +48,12 @@ import {
   addInternalNoteAction,
   addToWaitlistAction,
   confirmDiverIdentityAction,
+  createDirectTripInvitationAction,
   deleteInternalNoteAction,
   inviteWaitlistAction,
   markPaymentAction,
   markWaiverInPersonAction,
+  recordTripInvitationAction,
   removeBookingAction,
   restoreInternalNoteAction,
   saveRosterEmergencyContactAction,
@@ -79,6 +84,7 @@ type TripGuestsSearchParams = Promise<{
   notice?: string;
   bid?: string;
   diverq?: string;
+  inviteq?: string;
   count?: string;
   /** Which form on this page the notice answers — see `resolveTripNotice`. */
   form?: string;
@@ -143,7 +149,7 @@ async function TripGuestsBody({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { notice, bid, diverq, count, form, gate, rf, noteBookingId, noteBody } =
+  const { notice, bid, diverq, inviteq, count, form, gate, rf, noteBookingId, noteBody } =
     await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
@@ -158,10 +164,13 @@ async function TripGuestsBody({
   // The returning-diver picker only books, so it is skipped once the boat is
   // full — hand-entry then wait-lists instead.
   const diverQuery = diverq?.trim() ?? "";
+  const inviteQuery = inviteq?.trim() ?? "";
   const diverCandidates =
     isFull(trip) || diverQuery === ""
       ? []
       : await listBookableDivers(db, shop.id, tripId, { query: diverQuery });
+  const invitationCandidates =
+    inviteQuery === "" ? [] : await listBookableDivers(db, shop.id, tripId, { query: inviteQuery });
   const [
     roster,
     requirement,
@@ -169,6 +178,7 @@ async function TripGuestsBody({
     readinessRows,
     prepDivers,
     waitlist,
+    invitations,
     lastMinuteList,
     lastMinutePromos,
     bookingNotes,
@@ -182,6 +192,7 @@ async function TripGuestsBody({
     listTripReadiness(db, shop.id, tripId),
     listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
+    listTripInvitations(db, shop.id, tripId),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
@@ -442,6 +453,29 @@ async function TripGuestsBody({
           timezone={shop.timezone}
         />
       ) : null}
+
+      {invitations.length > 0 ? (
+        <TripInvitationSection
+          invitations={invitations}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          shopName={shop.name}
+          tripTitle={trip.title}
+          tripStartsAt={trip.startsAt}
+          timezone={shop.timezone}
+          inviteAction={recordTripInvitationAction.bind(null, shopSlug, tripId)}
+          locale={locale}
+        />
+      ) : null}
+
+      <DirectInvitationSection
+        shopSlug={shopSlug}
+        tripId={tripId}
+        query={inviteQuery}
+        candidates={invitationCandidates}
+        inviteAction={createDirectTripInvitationAction.bind(null, shopSlug, tripId)}
+        locale={locale}
+      />
 
       {/* After the roster, not before it: this page's question is "who is
           attending", and the answer leads while the tools follow

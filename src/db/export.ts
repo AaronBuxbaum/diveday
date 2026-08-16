@@ -62,6 +62,7 @@ import {
   tips,
   tripAssignments,
   tripDives,
+  tripInvitations,
   tripLastMinutePromos,
   tripRequirements,
   tripReviews,
@@ -412,6 +413,13 @@ export async function loadShopExportBundleInput(
         .from(courseInquiries)
         .where(eq(courseInquiries.shopId, shopId))
         .orderBy(asc(courseInquiries.createdAt), asc(courseInquiries.id));
+      const inquiryById = new Map(inquiryRows.map((row) => [row.id, row]));
+
+      const invitationRows = await tx
+        .select()
+        .from(tripInvitations)
+        .where(eq(tripInvitations.shopId, shopId))
+        .orderBy(asc(tripInvitations.createdAt), asc(tripInvitations.id));
 
       const rollCallRows = await tx
         .select()
@@ -1204,6 +1212,44 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["waitlist_entries.csv"],
+        },
+        {
+          file: "trip_invitations.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "source",
+            "course_inquiry_id",
+            "waitlist_entry_id",
+            "person_id",
+            "person_name",
+            "created_by_person_id",
+            "created_by_name",
+            "invited_at",
+            "created_at",
+          ],
+          rows: invitationRows.map((row) => {
+            const inquiry = row.courseInquiryId ? inquiryById.get(row.courseInquiryId) : undefined;
+            const personId = row.personId ?? inquiry?.personId ?? null;
+            return [
+              row.id,
+              row.tripId,
+              tripTitle.get(row.tripId),
+              tripStartsAt.get(row.tripId),
+              row.source,
+              row.courseInquiryId,
+              row.waitlistEntryId,
+              personId,
+              personId ? personName.get(personId) : inquiry?.name,
+              row.createdByPersonId,
+              personName.get(row.createdByPersonId),
+              row.invitedAt,
+              row.createdAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["trip_invitations.csv"],
         },
         {
           file: "last_minute_list.csv",
@@ -2347,6 +2393,9 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(tripWaitlistEntries)
         .where(eq(tripWaitlistEntries.shopId, shopId)),
+    ),
+    "trip_invitations.csv": await countOf(
+      db.select({ n: count() }).from(tripInvitations).where(eq(tripInvitations.shopId, shopId)),
     ),
     "last_minute_list.csv": await countOf(
       db

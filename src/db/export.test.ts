@@ -41,6 +41,7 @@ const EXPECTED_FILES = [
   "staff_shifts.csv",
   "bookings.csv",
   "waitlist_entries.csv",
+  "trip_invitations.csv",
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
   "booking_payment_events.csv",
@@ -96,6 +97,7 @@ const EXPORTED_TABLES = [
   "course_inquiries",
   "shop_promo_redemptions",
   "trip_waitlist_entries",
+  "trip_invitations",
   "last_minute_list_entries",
   "trip_last_minute_promos",
   "roll_call_events",
@@ -243,6 +245,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
   trip_waitlist_entries: ["shop_id"],
+  trip_invitations: ["shop_id"],
   last_minute_list_entries: ["shop_id"],
   trip_last_minute_promos: [
     "shop_id",

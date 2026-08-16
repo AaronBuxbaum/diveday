@@ -21,6 +21,7 @@ import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/d
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
+import { createDirectTripInvitation, recordTripInvitation } from "@/db/trip-invitations";
 import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
@@ -157,6 +158,8 @@ const addDiverSchema = z.object({
   email: diverEmailSchema,
   phone: diverPhoneSchema.optional(),
 });
+
+const directInvitationSchema = z.object({ personId: z.uuid() });
 
 function parseAddDiver(formData: FormData) {
   return addDiverSchema.safeParse({
@@ -745,6 +748,47 @@ export async function inviteWaitlistAction(
   // whether it was sent from the roster or straight from Today (WP-9 → §7).
   revalidatePath(shopPath(shopSlug));
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
+}
+
+/**
+ * Records a staff outreach attempt for a request-origin invitation. The
+ * browser then opens the same safe composer fallback used by the wait-list
+ * invite; this deliberately does not turn a lead into a booking or consume a
+ * seat.
+ */
+export async function recordTripInvitationAction(
+  shopSlug: string,
+  tripId: string,
+  invitationId: string,
+): Promise<"fallback"> {
+  const s = (await requireShopSurface(shopSlug)).session;
+  await recordTripInvitation(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    invitationId,
+  });
+  revalidatePath(guestsPath(shopSlug, tripId));
+  return "fallback";
+}
+
+/** Invites an existing diver without seating them on the departure. */
+export async function createDirectTripInvitationAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const guests = guestsPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
+  if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
+  await createDirectTripInvitation(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    personId: parsed.data.personId,
+    createdByPersonId: s.user.personId,
+  });
+  revalidatePath(guests);
+  redirect(`${guests}#invitations`);
 }
 
 /**

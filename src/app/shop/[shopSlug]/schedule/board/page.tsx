@@ -7,7 +7,9 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
@@ -29,6 +31,7 @@ import {
 } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { adviseRequests } from "@/lib/request-advisor";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -38,6 +41,7 @@ import {
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { uuidParam } from "@/lib/uuid";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
@@ -45,6 +49,7 @@ import {
   type BuilderInitialCourse,
   type BuilderMoreOptions,
   type BuilderPriceInput,
+  type BuilderRequestPlan,
   ScheduleBuilder,
 } from "./_components/ScheduleBuilder";
 import {
@@ -125,11 +130,21 @@ export default async function ScheduleBoardPage({
     date?: string;
     /** Opens the add panel pointed at a course (the catalogue's own control). */
     course?: string;
+    /** Comma-separated request ids carried from the Requests planning link. */
+    requests?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder, created, series, add, date, course } = await searchParams;
+  const { after, back, builder, created, series, add, date, course, requests } = await searchParams;
+  const requestIds = [
+    ...new Set(
+      (requests ?? "")
+        .split(",")
+        .map((value) => uuidParam(value))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
   const session = await requireStaffSession();
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug — a staff member
@@ -152,18 +167,20 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [range, { trips: upcoming, nextCursor }, canConfigure, openRollCalls] = await Promise.all([
-    upcomingScheduleRange(db, shop.id, now),
-    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
-    // Departures that already came back with a head count still open (DOM-H3).
-    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
-    // whose `startsAt` is still ahead of `now` — so this is its own backwards
-    // query, and one batched query for every such boat rather than a per-trip
-    // roll-call lookup. Only on the first page: they belong at the front of
-    // the board, not repeated on top of every later cursor page.
-    after ? [] : openAfterDiveRollCalls(db, shop.id, now),
-  ]);
+  const [range, { trips: upcoming, nextCursor }, canConfigure, canViewReports, openRollCalls] =
+    await Promise.all([
+      upcomingScheduleRange(db, shop.id, now),
+      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+      canPersonConfigureTrips(db, shop.id, session.user.personId),
+      canPersonViewShopReports(db, shop.id, session.user.personId),
+      // Departures that already came back with a head count still open (DOM-H3).
+      // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
+      // whose `startsAt` is still ahead of `now` — so this is its own backwards
+      // query, and one batched query for every such boat rather than a per-trip
+      // roll-call lookup. Only on the first page: they belong at the front of
+      // the board, not repeated on top of every later cursor page.
+      after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+    ]);
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
@@ -179,6 +196,37 @@ export default async function ScheduleBoardPage({
   const requestedCourse = course
     ? ((await listActiveCourses(db, shop.id)).find((row) => row.id === course) ?? null)
     : null;
+
+  // Request details are contact information. Only the same live report gate
+  // that protects /requests may carry them onto the builder, even though the
+  // board itself is readable by a wider staff audience.
+  const requestRows =
+    canViewReports && requestIds.length > 0
+      ? await listDateRequestsByIds(db, shop.id, requestIds)
+      : [];
+  const requestAdvice = adviseRequests(
+    requestRows.map((request) => ({
+      id: request.id,
+      divers: request.divers,
+      experienceLevel: request.experienceLevel,
+      courseId: request.courseId,
+    })),
+  );
+  const requestPlan: BuilderRequestPlan | null =
+    requestRows.length > 0
+      ? {
+          estimatedDivers: requestAdvice.estimatedDivers,
+          suggestedCapacity: requestAdvice.suggestedCapacity,
+          requests: requestRows.map((request) => ({
+            id: request.id,
+            name: request.name ?? st("requests.anonymous"),
+            subject: request.courseTitle
+              ? st("requests.aboutCourse", { course: request.courseTitle })
+              : st("requests.aboutDive", { interest: request.interest ?? "" }),
+            divers: Math.max(1, request.divers ?? 1),
+          })),
+        }
+      : null;
 
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
   // The named form whenever the action passed a title back; the anonymous
@@ -294,6 +342,10 @@ export default async function ScheduleBoardPage({
     endsNever: st("schedule.builder.endsNever"),
     endsOnChoice: st("schedule.builder.endsOnChoice"),
     endsOnLabel: st("schedule.builder.endsOnLabel"),
+    requestPlanHeading: st("schedule.builder.requestPlanHeading"),
+    requestPlanDescription: st("schedule.builder.requestPlanDescription"),
+    requestPlanRecommendation: st.raw("schedule.builder.requestPlanRecommendation"),
+    requestPlanDivers: st.raw("schedule.builder.requestPlanDivers"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive
@@ -533,6 +585,7 @@ export default async function ScheduleBoardPage({
         copy={builderCopy}
         more={builderMore}
         initialCourse={initialCourse}
+        requestPlan={requestPlan}
         openAdd={addPanelState}
         actions={{
           add: addDepartureAction.bind(null, shopSlug),

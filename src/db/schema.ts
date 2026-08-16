@@ -1664,6 +1664,66 @@ export const tripWaitlistEntries = pgTable(
 );
 
 /**
+ * A staff-selected invitation to a departure. This is deliberately not a
+ * booking and not a wait-list position: it reserves no capacity, never enters
+ * the manifest, and can be created for the same request on more than one trip.
+ * The source discriminator leaves room for invitations chosen from the wait
+ * list or an existing diver record without forcing those concepts to share a
+ * table's meaning (ADR 20260816-trip-invitations).
+ */
+export const tripInvitationSource = pgEnum("trip_invitation_source", [
+  "date_request",
+  "waitlist",
+  "direct",
+]);
+
+export const tripInvitations = pgTable(
+  "trip_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    source: tripInvitationSource("source").notNull(),
+    /** Set for a request-origin invitation; the request carries its contact snapshot. */
+    courseInquiryId: uuid("course_inquiry_id").references(() => courseInquiries.id),
+    /** Set for a wait-list-origin invitation; the wait-list row remains separate. */
+    waitlistEntryId: uuid("waitlist_entry_id").references(() => tripWaitlistEntries.id),
+    /** Set only for a direct existing-diver invitation. */
+    personId: uuid("person_id").references(() => people.id),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    /** The staff outreach attempt; null means the invitation is still pending. */
+    invitedAt: timestamp("invited_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_invitations_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
+    uniqueIndex("trip_invitations_trip_request_unique")
+      .on(table.tripId, table.courseInquiryId)
+      .where(sql`${table.courseInquiryId} is not null`),
+    uniqueIndex("trip_invitations_trip_waitlist_unique")
+      .on(table.tripId, table.waitlistEntryId)
+      .where(sql`${table.waitlistEntryId} is not null`),
+    uniqueIndex("trip_invitations_trip_person_unique")
+      .on(table.tripId, table.personId)
+      .where(sql`${table.personId} is not null`),
+    check(
+      "trip_invitations_source_reference_check",
+      sql`(
+        (${table.source} = 'date_request' and ${table.courseInquiryId} is not null and ${table.waitlistEntryId} is null and ${table.personId} is null)
+        or (${table.source} = 'waitlist' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is not null and ${table.personId} is null)
+        or (${table.source} = 'direct' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is null and ${table.personId} is not null)
+      )`,
+    ),
+  ],
+);
+
+/**
  * A diver opted in, shop-wide, to hear about last-minute deals — deliberately
  * separate from `tripWaitlistEntries` (per-trip interest in a *full* charter).
  * `availableFrom`/`availableUntil` are the date range the diver said they're
