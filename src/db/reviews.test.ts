@@ -345,7 +345,7 @@ describe("listShopReviewsForStaff pagination", () => {
 });
 
 describe("setReviewPublished", () => {
-  it("cannot hide a review that has not been published first", async () => {
+  it("can hide a waiting review directly without publishing it first", async () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Still waiting" });
     const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
@@ -355,7 +355,45 @@ describe("setReviewPublished", () => {
         recordedByPersonId: ownerId,
         reason: "spam",
       }),
-    ).toBe("not_published");
+    ).toBe(true);
+    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
+    expect(await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).toMatchObject({
+      reviews: [],
+      total: 0,
+    });
+    expect(await listShopReviewsForStaff(db, shop.id)).toMatchObject({
+      reviews: [{ id: review.id, isPublished: false, isHidden: true }],
+      total: 1,
+    });
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({
+      count: 0,
+      average: null,
+      suppressedCount: 1,
+    });
+
+    // Publishing is the inverse transition: it automatically clears Hidden
+    // and returns the review to the public set.
+    expect(
+      await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId }),
+    ).toBe(true);
+    expect(await listShopReviewsForStaff(db, shop.id)).toMatchObject({
+      reviews: [{ id: review.id, isPublished: true, isHidden: false, isStandout: false }],
+    });
+    expect(await getShopReviewAggregate(db, shop.id)).toMatchObject({
+      count: 1,
+      suppressedCount: 0,
+    });
+
+    // A new diver revision starts Unread again, even though the review has a
+    // historical hidden event.
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 4,
+      comment: "A new version to read",
+    });
+    expect(await listShopReviewsForStaff(db, shop.id)).toMatchObject({
+      reviews: [{ id: review.id, isPublished: false, isHidden: false }],
+    });
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
   });
 
@@ -412,6 +450,7 @@ describe("setReviewPublished", () => {
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 1, comment: "Not for me" });
     const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
     await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    expect(await setReviewStandout(db, shop.id, review.id, true)).toBe(true);
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({
       count: 1,
       average: 1,
@@ -431,7 +470,14 @@ describe("setReviewPublished", () => {
       suppressedCount: 1,
     });
     expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
-    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
+
+    // Releasing a hidden review un-hides it, but a standout is a separate
+    // public choice and must be selected again after the review was hidden.
+    await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
+    expect(await listShopReviewsForStaff(db, shop.id)).toMatchObject({
+      reviews: [{ id: review.id, isPublished: true, isHidden: false, isStandout: false }],
+    });
   });
 });
 

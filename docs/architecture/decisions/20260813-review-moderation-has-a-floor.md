@@ -156,3 +156,16 @@ the aggregate and are not used for the editorial schedule preview: without words
 empty testimonial card. The archive is the complete customer view, however, so it lists every
 published review, including rating-only reviews rendered as stars with their first-name-and-last-
 initial byline and verified-diver date.
+
+## Amendment, 20260816 — moderation has three states
+
+The prior amendment's rule that publication must precede hiding is superseded. A review with words
+starts **Unread**. Staff may publish it, moving it to **Published**, or hide it directly, moving it
+to **Hidden** without ever placing it on the public page. Publishing a hidden review automatically
+unhides it and returns it to Published; hiding a published review returns it to Hidden. These are
+the only three current moderation states. A **standout** is an optional flag only while a review is
+Published: hiding clears it, and republishing requires staff to choose it again if desired.
+
+The append-only moderation trail remains the record of why a review was hidden. A diver's later
+revision starts a fresh Unread state even when the older version had been hidden, so a historical
+hide never silently carries onto new words.

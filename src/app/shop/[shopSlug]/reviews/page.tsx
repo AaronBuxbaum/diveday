@@ -164,7 +164,9 @@ export default async function ReviewsPage({
   // counted off the same page of reviews rather than off `waitingCount` (which
   // counts the whole shop, including reviews on a page this one has not
   // reached) — staff can never be offered a button that acts on nothing here.
-  const pendingOnPage = reviews.filter((review) => !review.isPublished).length;
+  // Hidden reviews stay unpublished, but are deliberately not waiting for a
+  // first read and therefore do not belong in this bulk-release action.
+  const pendingOnPage = reviews.filter((review) => !review.isPublished && !review.isHidden).length;
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -343,7 +345,7 @@ export default async function ReviewsPage({
         ) : (
           <ul className="flex flex-col gap-3">
             {reviews.map((review) => {
-              const standout = review.isStandout;
+              const standout = review.isPublished && review.isStandout;
               return (
                 <li
                   key={review.id}
@@ -357,22 +359,30 @@ export default async function ReviewsPage({
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-2">
-                    {review.isPublished ? null : (
+                    {!review.isPublished && !review.isHidden ? (
                       <ReviewSelectCheckbox
                         reviewId={review.id}
                         ariaLabel={t("reviews.selectToPublishAriaLabel", {
                           name: review.diverName,
                         })}
                       />
-                    )}
+                    ) : null}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <StarRating
                           rating={review.rating}
                           label={t("reviews.rating", { rating: review.rating })}
                         />
-                        <Badge tone={review.isPublished ? "success" : "neutral"}>
-                          {review.isPublished ? t("reviews.published") : t("reviews.waitingOnYou")}
+                        <Badge
+                          tone={
+                            review.isPublished ? "success" : review.isHidden ? "warning" : "neutral"
+                          }
+                        >
+                          {review.isPublished
+                            ? t("reviews.published")
+                            : review.isHidden
+                              ? t("reviews.hidden")
+                              : t("reviews.waitingOnYou")}
                         </Badge>
                         {standout ? (
                           <span className="text-xs font-semibold text-primary">
@@ -410,45 +420,50 @@ export default async function ReviewsPage({
                       </p>
                     </div>
                   </div>
-                  {review.isPublished ? (
-                    /* Hiding states a case, so it cannot be a bare button any
+                  <div className="flex shrink-0 flex-col gap-2 sm:w-64">
+                    {!review.isHidden ? (
+                      /* Hiding states a case, so it cannot be a bare button any
                        more (ADR 20260813-review-moderation-has-a-floor). The
                        picker waits behind a disclosure: the shop that opens
                        this is already sure, and the reason list is the whole
                        point — a shop that finds none of them true is telling
-                       itself something. */
-                    <details className="shrink-0 sm:w-64">
-                      <summary
-                        className={`${buttonClass({
-                          variant: "secondary",
-                        })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-                      >
-                        {t("reviews.hide")}
-                      </summary>
-                      <ReviewHideForm
-                        reviewId={review.id}
-                        action={setReviewPublishedAction}
-                        reasons={REVIEW_MODERATION_REASONS.map((reason) => ({
-                          value: reason,
-                          label: t(REVIEW_REASON_KEYS[reason]),
-                        }))}
-                        reasonLabel={t("reviews.hideReasonLabel")}
-                        reasonPlaceholder={t("reviews.hideReasonPlaceholder")}
-                        noteLabel={t("reviews.hideNoteLabel")}
-                        notePlaceholder={t("reviews.hideNotePlaceholder")}
-                        hideLabel={t("reviews.hideConfirm")}
-                        savingLabel={t("reviews.saving")}
-                      />
-                    </details>
-                  ) : (
-                    <form action={setReviewPublishedAction} className="shrink-0">
-                      <input type="hidden" name="reviewId" value={review.id} />
-                      <input type="hidden" name="publish" value="true" />
-                      <SubmitButton pendingLabel={t("reviews.saving")} className={buttonClass()}>
-                        {t("reviews.publish")}
-                      </SubmitButton>
-                    </form>
-                  )}
+                       itself something. This is available before publication
+                       as well: hiding a waiting review records the decision
+                       and keeps it out of the public set. */
+                      <details>
+                        <summary
+                          className={`${buttonClass({
+                            variant: "secondary",
+                          })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+                        >
+                          {t("reviews.hide")}
+                        </summary>
+                        <ReviewHideForm
+                          reviewId={review.id}
+                          action={setReviewPublishedAction}
+                          reasons={REVIEW_MODERATION_REASONS.map((reason) => ({
+                            value: reason,
+                            label: t(REVIEW_REASON_KEYS[reason]),
+                          }))}
+                          reasonLabel={t("reviews.hideReasonLabel")}
+                          reasonPlaceholder={t("reviews.hideReasonPlaceholder")}
+                          noteLabel={t("reviews.hideNoteLabel")}
+                          notePlaceholder={t("reviews.hideNotePlaceholder")}
+                          hideLabel={t("reviews.hideConfirm")}
+                          savingLabel={t("reviews.saving")}
+                        />
+                      </details>
+                    ) : null}
+                    {!review.isPublished ? (
+                      <form action={setReviewPublishedAction} className="shrink-0">
+                        <input type="hidden" name="reviewId" value={review.id} />
+                        <input type="hidden" name="publish" value="true" />
+                        <SubmitButton pendingLabel={t("reviews.saving")} className={buttonClass()}>
+                          {t("reviews.publish")}
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                  </div>
                   {review.isPublished && review.comment ? (
                     <form action={setReviewStandoutAction} className="shrink-0">
                       <input type="hidden" name="reviewId" value={review.id} />

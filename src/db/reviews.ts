@@ -9,6 +9,9 @@ import {
   inArray,
   isNotNull,
   isNull,
+  max,
+  not,
+  or,
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
@@ -62,7 +65,7 @@ export async function submitTripReview(
   if (!isUuid(input.bookingId)) return { ok: false, reason: "not_found" };
   const comment = normalizeReviewComment(input.comment);
   const publish = publishesImmediately(comment);
-  const now = nowDate();
+  const submittedAt = nowDate();
 
   return db.transaction(async (tx) => {
     const [booking] = await tx
@@ -83,10 +86,27 @@ export async function submitTripReview(
     }
 
     const [existing] = await tx
-      .select({ id: tripReviews.id })
+      .select({ id: tripReviews.id, updatedAt: tripReviews.updatedAt })
       .from(tripReviews)
       .where(eq(tripReviews.bookingId, input.bookingId))
       .limit(1);
+
+    // `updated_at` is the revision boundary used to distinguish an old hide
+    // from the diver's new unread version. Keep it strictly monotonic even
+    // when the app clock is frozen in tests or two writes share a millisecond.
+    const [lastModeration] = existing
+      ? await tx
+          .select({ occurredAt: max(reviewModerationEvents.occurredAt) })
+          .from(reviewModerationEvents)
+          .where(eq(reviewModerationEvents.reviewId, existing.id))
+      : [];
+    const priorRevisionAt = [existing?.updatedAt, lastModeration?.occurredAt]
+      .filter((value): value is Date => Boolean(value))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    const now =
+      priorRevisionAt && priorRevisionAt.getTime() >= submittedAt.getTime()
+        ? new Date(priorRevisionAt.getTime() + 1)
+        : submittedAt;
 
     const values = {
       shopId: booking.shopId,
@@ -167,12 +187,12 @@ export async function getShopReviewAggregate(
 /**
  * How many of this shop's reviews are currently down by its own hand.
  *
- * Currently-unpublished **and** carrying a recorded `hidden` act — both halves
- * matter. A review awaiting release has never been hidden, so it is not
- * counted; a review that was hidden and later republished is back in the
- * average, so it is not counted either. What is left is exactly the set a shop
- * chose to remove, which is what decides whether DiveDay still vouches for its
- * average (ADR 20260813-review-moderation-has-a-floor).
+ * Currently-unpublished **and** carrying a current recorded `hidden` act —
+ * both halves matter. A review awaiting release has never been hidden, so it
+ * is not counted; a review that was hidden and later republished is back in
+ * the average, so it is not counted either. What is left is exactly the set a
+ * shop chose to remove, which is what decides whether DiveDay still vouches
+ * for its average (ADR 20260813-review-moderation-has-a-floor).
  *
  * Not scoped by `since`: the moderation page's "this month" line is about
  * volume, and a shop's suppression share is a fact about its whole record.
@@ -185,17 +205,7 @@ export async function countSuppressedReviews(db: DbExecutor, shopId: string): Pr
       and(
         eq(tripReviews.shopId, shopId),
         eq(tripReviews.isPublished, false),
-        exists(
-          db
-            .select({ one: reviewModerationEvents.id })
-            .from(reviewModerationEvents)
-            .where(
-              and(
-                eq(reviewModerationEvents.reviewId, tripReviews.id),
-                eq(reviewModerationEvents.action, "hidden"),
-              ),
-            ),
-        ),
+        hiddenReviewExists(db),
       ),
     );
   return row?.count ?? 0;
@@ -228,6 +238,26 @@ function publishedReviewScope(shopId: string) {
 /** The schedule preview stays editorial: an empty card says nothing. */
 function publicWrittenReviewScope(shopId: string) {
   return and(publishedReviewScope(shopId), isNotNull(tripReviews.comment));
+}
+
+/**
+ * A current recorded hide distinguishes a suppressed unpublished review from
+ * one awaiting a read. A prior hide is deliberately ignored after the diver
+ * revises the review, because that new revision starts in Unread again.
+ */
+function hiddenReviewExists(db: DbExecutor) {
+  return exists(
+    db
+      .select({ one: reviewModerationEvents.id })
+      .from(reviewModerationEvents)
+      .where(
+        and(
+          eq(reviewModerationEvents.reviewId, tripReviews.id),
+          eq(reviewModerationEvents.action, "hidden"),
+          gte(reviewModerationEvents.occurredAt, tripReviews.updatedAt),
+        ),
+      ),
+  );
 }
 
 /**
@@ -363,6 +393,7 @@ export type StaffReview = {
   comment: string | null;
   isStandout: boolean;
   isPublished: boolean;
+  isHidden: boolean;
   /** Staff see who actually wrote it — the abbreviation is a public-page rule, not an internal one. */
   diverName: string;
   personId: string;
@@ -393,19 +424,20 @@ export type StaffReviewPage = {
  * more" and "Back to top" and nothing in between — no way back one page, and
  * no way to see how much queue was left (ADR 20260803-one-pagination-model).
  *
- * `onlyWaiting` narrows the same query to unpublished rows only — the
- * "Waiting on you" tab. It stays a plain extra `where` clause rather than a
- * different sort order, applied to the count as well as the page, so "page 2
- * of 4" means the same thing in both tabs.
+ * `onlyWaiting` narrows the same query to unpublished rows with no current
+ * hidden act — the "Waiting on you" tab. It stays a plain extra `where` clause
+ * rather than a different sort order, applied to the count as well as the
+ * page, so "page 2 of 4" means the same thing in both tabs.
  */
 export async function listShopReviewsForStaff(
   db: DbExecutor,
   shopId: string,
   options: { page?: number; limit?: number; onlyWaiting?: boolean } = {},
 ): Promise<StaffReviewPage> {
+  const hidden = hiddenReviewExists(db);
   const scope = and(
     eq(tripReviews.shopId, shopId),
-    options.onlyWaiting ? eq(tripReviews.isPublished, false) : undefined,
+    options.onlyWaiting ? and(eq(tripReviews.isPublished, false), not(hidden)) : undefined,
   );
 
   const paged = await offsetPage({
@@ -423,6 +455,7 @@ export async function listShopReviewsForStaff(
           comment: tripReviews.comment,
           isStandout: tripReviews.isStandout,
           isPublished: tripReviews.isPublished,
+          isHidden: sql<boolean>`${tripReviews.isPublished} = false and ${hidden}`,
           diverName: people.fullName,
           personId: tripReviews.personId,
           tripId: tripReviews.tripId,
@@ -467,7 +500,9 @@ export type SetReviewPublishedResult =
  * Hiding clears `publishedAt` so a later re-publish sorts by when it was
  * actually released rather than by a stale first release — a review taken down
  * and restored belongs at the top of the list it rejoins, not buried where it
- * used to be.
+ * used to be. A review waiting for its first read may be hidden directly; it
+ * remains unpublished and the recorded act is what moves it out of the
+ * waiting queue.
  *
  * **A hide states a case.** It carries a reason code, and `other` carries the
  * shop's own words; without them nothing is written at all. That is not
@@ -506,14 +541,26 @@ export async function setReviewPublished(
     // moderation events or silently re-date a review that already won the
     // race. The live-person predicate also makes erasure terminal for public
     // review publication.
+    const hidden = hiddenReviewExists(tx);
+    const transitionState = isPublished
+      ? eq(tripReviews.isPublished, false)
+      : or(eq(tripReviews.isPublished, true), and(eq(tripReviews.isPublished, false), not(hidden)));
     const [updated] = await tx
       .update(tripReviews)
-      .set({ isPublished, publishedAt: isPublished ? now : null, updatedAt: now })
+      // Standout is a public-only choice. Hiding removes it, and publishing a
+      // previously hidden/unread review starts it as an ordinary published
+      // review that staff can mark standout again if they still want to.
+      .set({
+        isPublished,
+        isStandout: false,
+        publishedAt: isPublished ? now : null,
+        updatedAt: now,
+      })
       .where(
         and(
           eq(tripReviews.id, reviewId),
           eq(tripReviews.shopId, shopId),
-          eq(tripReviews.isPublished, !isPublished),
+          transitionState,
           exists(
             tx
               .select({ one: people.id })
@@ -634,6 +681,7 @@ export async function setReviewsPublished(
       .update(tripReviews)
       .set({
         isPublished: true,
+        isStandout: false,
         publishedAt: sql`coalesce(${tripReviews.publishedAt}, ${now})`,
         updatedAt: now,
       })
@@ -671,9 +719,10 @@ export async function countReviewsAwaitingModeration(
   db: DbExecutor,
   shopId: string,
 ): Promise<number> {
+  const hidden = hiddenReviewExists(db);
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(tripReviews)
-    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.isPublished, false)));
+    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.isPublished, false), not(hidden)));
   return row?.count ?? 0;
 }
