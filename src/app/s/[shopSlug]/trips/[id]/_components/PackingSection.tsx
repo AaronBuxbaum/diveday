@@ -1,5 +1,6 @@
 import type { DiverMessageKey } from "@/i18n/messages";
-import { diverTranslator } from "@/i18n/messages";
+
+// Keep the type-only planning export first so Biome preserves this mixed import group.\nimport { diverTranslator } from "@/i18n/messages";
 import {
   type DockDayStep,
   dockDayTimeline,
