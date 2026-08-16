@@ -218,7 +218,10 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           its chapter. This strip is the page's whole table of contents — a
           buyer who only reads this line already knows the product covers the
           day end to end. */}
-      <nav aria-label={t("marketing.product.arcTitle")} className="border-b border-border">
+      <nav
+        aria-label={t("marketing.product.arcTitle")}
+        className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm"
+      >
         <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-8 px-6 py-2 text-sm">
           <p className="py-2.5 font-semibold">{t("marketing.product.arcTitle")}</p>
           {/* Two aligned columns on a phone rather than a free wrap: five
@@ -247,7 +250,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       </nav>
 
       {/* Chapter 01 — days before: the booking takes itself. */}
-      <section id="booking" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-20 lg:py-24">
+      <section id="booking" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <ChapterMarker mark={chapter.booking} />
@@ -274,7 +277,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
       {/* Chapter 02 — before departure: one readiness answer. Mirrors chapter
           01's grid so the two read as a pair — the mockup swaps sides. */}
-      <section id="readiness" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-20 lg:py-24">
+      <section id="readiness" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <MarketingMockup
             label={t("marketing.product.readinessMockupLabel")}
@@ -311,7 +314,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       {/* Chapter 03 — the night before: a quieter band with no mockup. The
           evening splits in two — the crew's prep list, the diver's brief —
           so the chapter does too, either side of one hairline. */}
-      <section id="night-before" className="scroll-mt-6 border-y border-border bg-surface">
+      <section id="night-before" className="scroll-mt-24 border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
             <ChapterMarker mark={chapter["night-before"]} />
@@ -343,7 +346,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* Chapter 04 — at the dock: the differentiator gets the phone. */}
-      <section id="dock" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-20 lg:py-24">
+      <section id="dock" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
         {/* The phone gets the narrower column, not the wider one: it is a
             fixed 384px object, so a 1.1fr column left it floating in ~110px of
             slack on either side and pushed the story it illustrates away from
@@ -406,7 +409,10 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
       {/* Chapter 05 — after the boat is back: the day's earned moment, so the
           chapter narrows to a single centered thought instead of a grid. */}
-      <section id="recap" className="mx-auto max-w-3xl scroll-mt-6 px-6 py-20 text-center lg:py-24">
+      <section
+        id="recap"
+        className="mx-auto max-w-3xl scroll-mt-24 px-6 py-20 text-center lg:py-24"
+      >
         <ChapterMarker mark={chapter.recap} centered />
         <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
           {t("marketing.product.recapTitle")}

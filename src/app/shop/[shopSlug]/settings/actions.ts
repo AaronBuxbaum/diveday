@@ -136,6 +136,14 @@ const addressSchema = z.object({
   addressRegion: z.string().trim().max(120),
   addressPostalCode: z.string().trim().max(20),
   addressCountry: z.string().trim().max(2),
+  latitude: z
+    .union([z.literal(""), z.coerce.number().min(-90).max(90)])
+    .optional()
+    .nullable(),
+  longitude: z
+    .union([z.literal(""), z.coerce.number().min(-180).max(180)])
+    .optional()
+    .nullable(),
 });
 
 const reviewUrlSchema = z.object({
@@ -412,8 +420,13 @@ export async function saveAddressAction(formData: FormData) {
   }
   const parsed = addressSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "address-invalid", { saved: "address" }));
-  await setShopAddress(await getDb(), session.user.shopId, parsed.data);
-  const emptied = Object.values(parsed.data).every((value) => value.length === 0);
+  const { latitude, longitude, ...textFields } = parsed.data;
+  await setShopAddress(await getDb(), session.user.shopId, {
+    ...textFields,
+    latitude: typeof latitude === "number" ? latitude : null,
+    longitude: typeof longitude === "number" ? longitude : null,
+  });
+  const emptied = Object.values(textFields).every((value) => value.length === 0);
   const notice = emptied ? "address-removed" : "address-saved";
   revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "address" }));
 }

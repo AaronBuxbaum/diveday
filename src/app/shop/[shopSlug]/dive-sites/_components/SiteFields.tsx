@@ -162,6 +162,7 @@ export function SiteFields({
               step="any"
               min={-90}
               max={90}
+              required
               defaultValue={values?.forecastLatitude ?? ""}
               className={controlClass}
             />
@@ -173,6 +174,7 @@ export function SiteFields({
               step="any"
               min={-180}
               max={180}
+              required
               defaultValue={values?.forecastLongitude ?? ""}
               className={controlClass}
             />

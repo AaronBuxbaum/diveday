@@ -47,12 +47,6 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
-    await page.getByRole("button", { name: "Copy and tailor" }).click();
-    await expect(page.getByText("Independent copy ready to tailor.")).toBeVisible();
-    await expect(page.getByRole("heading", { name: `${siteName} copy` })).toBeVisible();
-    await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
-    await expect(page.getByLabel("Longitude")).toHaveValue("-80.321");
-
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(tripTitle);
     // Dive one's site, by name: expanded, the panel keeps the quick row's

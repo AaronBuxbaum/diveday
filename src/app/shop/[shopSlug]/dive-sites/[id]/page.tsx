@@ -10,11 +10,9 @@ import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
-  copyDiveSite,
   deleteDiveSite,
   getDiveSite,
   listDiveSiteCreatures,
-  listDiveSites,
   listUpcomingTripsForSite,
   SITE_NAME_TAKEN,
   updateDiveSiteForForm,
@@ -157,10 +155,8 @@ export default async function EditDiveSitePage({
     const updated = await updateDiveSiteForForm(activeDb, activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...siteFields,
-      forecastLatitude:
-        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
-      forecastLongitude:
-        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
+      forecastLatitude: parsed.fields.forecastLatitude as number,
+      forecastLongitude: parsed.fields.forecastLongitude as number,
       satelliteImageUrl: photos.photos.satelliteImageUrl,
       routeImageUrl: photos.photos.routeImageUrl,
       imageUrls: photos.photos.imageUrls,
@@ -201,21 +197,6 @@ export default async function EditDiveSitePage({
     revalidateAndRedirect(`${back}/${id}`, noticeUrl(`${back}/${id}`, "saved"));
   }
 
-  async function copyAction() {
-    "use server";
-    const activeSession = await requireStaffSession();
-    const activeDb = await getDb();
-    const names = new Set(
-      (await listDiveSites(activeDb, activeSession.user.shopId)).map((entry) => entry.name),
-    );
-    let copyName = `${site.name} copy`;
-    let number = 2;
-    while (names.has(copyName)) copyName = `${site.name} copy ${number++}`;
-    const copy = await copyDiveSite(activeDb, activeSession.user.shopId, id, copyName);
-    if (!copy) notFound();
-    revalidateAndRedirect(back, noticeUrl(`${back}/${copy.id}`, "copied"));
-  }
-
   async function deleteAction() {
     "use server";
     const activeSession = await requireStaffSession();
@@ -240,54 +221,45 @@ export default async function EditDiveSitePage({
           eyebrow={t("diveSites.catalogEyebrow")}
           title={site.name}
           description={t("diveSites.edit.description")}
+          align="start"
           actions={
-            <>
-              <form action={copyAction}>
+            <details className="w-full sm:w-auto">
+              {/* The real `danger` variant, not a hand-copied approximation
+                  of it: this string had drifted to `border-danger/30` where
+                  the variant is `/40` and `py-2` where every other button on
+                  the page is `py-2.5`, so the one destructive control here
+                  read a shade lighter and a pixel shorter than the danger
+                  buttons it opens. `w-full sm:w-auto` keeps the phone
+                  behaviour the `<details>` around it already asks for, which
+                  the block `flex` used to give for free. */}
+              <summary
+                className={`${buttonClass({
+                  variant: "danger",
+                  className: "w-full sm:w-auto",
+                })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+              >
+                {t("diveSites.edit.archiveSite")}
+              </summary>
+              <form
+                action={deleteAction}
+                className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
+              >
+                <p className="text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
                 <SubmitButton
-                  pendingLabel={t("diveSites.edit.copying")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("diveSites.edit.copyAndTailor")}
-                </SubmitButton>
-              </form>
-              <details className="w-full sm:w-auto">
-                {/* The real `danger` variant, not a hand-copied approximation
-                    of it: this string had drifted to `border-danger/30` where
-                    the variant is `/40` and `py-2` where every other button on
-                    the page is `py-2.5`, so the one destructive control here
-                    read a shade lighter and a pixel shorter than the danger
-                    buttons it opens. `w-full sm:w-auto` keeps the phone
-                    behaviour the `<details>` around it already asks for, which
-                    the block `flex` used to give for free. */}
-                <summary
-                  className={buttonClass({
-                    variant: "danger",
-                    className: "w-full sm:w-auto",
-                  })}
+                  pendingLabel={t("diveSites.edit.archiving")}
+                  className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
                 >
                   {t("diveSites.edit.archiveSite")}
-                </summary>
-                <form
-                  action={deleteAction}
-                  className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
-                >
-                  <p className="text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
-                  <SubmitButton
-                    pendingLabel={t("diveSites.edit.archiving")}
-                    className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
-                  >
-                    {t("diveSites.edit.archiveSite")}
-                  </SubmitButton>
-                  {/* The archive refusal is the one thing on this page that
-                      still travels by URL, and it belongs on the archive form
-                      — not in a banner over a briefing the staffer never
-                      touched. */}
-                  <FormStatus tone="danger" className="mt-2">
-                    {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
-                  </FormStatus>
-                </form>
-              </details>
-            </>
+                </SubmitButton>
+                {/* The archive refusal is the one thing on this page that
+                    still travels by URL, and it belongs on the archive form
+                    — not in a banner over a briefing the staffer never
+                    touched. */}
+                <FormStatus tone="danger" className="mt-2">
+                  {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
+                </FormStatus>
+              </form>
+            </details>
           }
         />
       </div>

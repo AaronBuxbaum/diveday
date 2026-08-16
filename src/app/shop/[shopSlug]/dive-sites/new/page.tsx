@@ -107,10 +107,8 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
     const site = await createDiveSiteForForm(await getDb(), {
       shopId: activeSession.user.shopId,
       ...siteFields,
-      forecastLatitude:
-        parsed.fields.forecastLatitude === "" ? undefined : parsed.fields.forecastLatitude,
-      forecastLongitude:
-        parsed.fields.forecastLongitude === "" ? undefined : parsed.fields.forecastLongitude,
+      forecastLatitude: parsed.fields.forecastLatitude as number,
+      forecastLongitude: parsed.fields.forecastLongitude as number,
       satelliteImageUrl: photos.photos.satelliteImageUrl,
       routeImageUrl: photos.photos.routeImageUrl,
       imageUrls: photos.photos.imageUrls,

@@ -213,6 +213,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressRegion: "FL",
       addressPostalCode: "33037",
       addressCountry: "US",
+      latitude: 25.0865,
+      longitude: -80.4473,
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
       // a full set is cheaper than the pieces, each piece has its own price, and
       // nitrox is a per-dive surcharge. Divers see these when they set their
@@ -470,11 +472,9 @@ export async function createDemoShop(
     staff.map((person) => person.id),
   );
 
-  // No fabricated billing back-fill on a minted demo: `seedHistory` pins
-  // globally-unique waiver token hashes and Stripe ids that would collide with
-  // the canonical demo (and with a second minted demo). The billing/orders
-  // showcase lives on blue-mantis; a throwaway demo is the lean schedule.
-  await seedDemoSchedule(db, shop.id, { history: false });
+  // Seed history (including orders, reviews, and tips) on a minted demo now
+  // that waiver tokens and Stripe IDs are shop-specific to prevent collisions.
+  await seedDemoSchedule(db, shop.id, { history: true });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -1013,7 +1013,7 @@ export async function resetDemoSchedule(
   // test minted is not seeded state and correctly does not come back.
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
-  await seedDemoSchedule(db, shopId, { history: opts.history === true });
+  await seedDemoSchedule(db, shopId, { history: opts.history !== false });
 }
 
 /**

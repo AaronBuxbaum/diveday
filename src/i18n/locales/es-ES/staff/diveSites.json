@@ -54,6 +54,9 @@
     "preview_underwater": "Briefing submarino",
     "preview_landmarks": "Referencias",
     "preview_fieldGuide": "Guía de campo",
+    "locationRequiredTitle": "Se requiere ubicación de la tienda",
+    "locationRequiredDescription": "Para explorar las plantillas globales ordenadas por distancia, primero debes configurar la dirección y ubicación de tu tienda en los ajustes.",
+    "goToSettings": "Ir a Ajustes",
     "pagination": {
       "total": "{count, plural, one {# sitio} other {# sitios}}"
     }
@@ -177,7 +180,7 @@
     "nitroxCheckbox": "Nitrox",
     "saving": "Guardando…",
     "optionalHint": "(opcional)",
-    "errorCoordinates": "Agrega ambas coordenadas GPS, o deja las dos en blanco: una ubicación necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
+    "errorCoordinates": "Agrega ambas coordenadas GPS: una ubicación necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo — revisa la cifra y vuelve a guardar.",
     "errorImages": "Una de esas fotos no se pudo guardar — un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
     "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro — guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
@@ -189,7 +192,7 @@
     "copyAndTailor": "Copiar y adaptar",
     "copying": "Copiando…",
     "archiveSite": "Archivar sitio",
-    "archiveConfirmBody": "Las salidas que ya lo visitaron lo conservan; las nuevas salidas ya no verán este sitio.",
+    "archiveConfirmBody": "Las salidas futuras y pasadas programadas para visitar este sitio lo conservarán. Solo se ocultará para nuevas salidas.",
     "archiving": "Archivando…",
     "copiedNotice": "Copia independiente lista para adaptar.",
     "savedNotice": "Sitio de buceo guardado.",

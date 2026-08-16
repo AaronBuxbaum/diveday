@@ -34,6 +34,8 @@ export type ShopAddressFields = {
   addressPostalCode: string;
   /** ISO 3166-1 **alpha-2**, which is what the column stores and schema.org wants. */
   addressCountry: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 /** One row a staffer can pick from the type-ahead. */
@@ -89,6 +91,8 @@ export type LookedUpAddress = {
   region?: string | null;
   postalCode?: string | null;
   countryCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 /**
@@ -116,6 +120,8 @@ export function toShopAddressFields(parts: LookedUpAddress): ShopAddressFields {
     addressRegion: parts.region?.trim() ?? "",
     addressPostalCode: parts.postalCode?.trim() ?? "",
     addressCountry: (parts.countryCode ?? "").trim().slice(0, 2).toUpperCase(),
+    latitude: parts.latitude ?? null,
+    longitude: parts.longitude ?? null,
   };
 }
 
@@ -128,7 +134,8 @@ export function toShopAddressFields(parts: LookedUpAddress): ShopAddressFields {
  * instead of offering it.
  */
 export function hasAddressParts(address: ShopAddressFields): boolean {
-  return Object.values(address).some((value) => value.length > 0);
+  const { latitude, longitude, ...textFields } = address;
+  return Object.values(textFields).some((value) => value.length > 0);
 }
 
 /**

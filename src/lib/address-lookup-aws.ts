@@ -164,6 +164,7 @@ export function awsAddressLookupProvider(
                 PostalCode?: string;
                 Country?: { Code2?: string };
               };
+              Position?: number[];
             };
           }[];
         };
@@ -186,6 +187,8 @@ export function awsAddressLookupProvider(
             region: place.Address?.Region?.Code || place.Address?.Region?.Name,
             postalCode: place.Address?.PostalCode,
             countryCode: place.Address?.Country?.Code2,
+            latitude: place.Position?.[1],
+            longitude: place.Position?.[0],
           });
           // Braces to the `AdditionalFeatures` belt above: a pick *replaces* the
           // whole address and saves it, so a suggestion carrying no structured

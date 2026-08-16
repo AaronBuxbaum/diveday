@@ -165,19 +165,13 @@ export default async function DiveSitesPage({
       {stats.total === 0 ? null : (
         <section
           aria-label={t("diveSites.list.overviewAriaLabel")}
-          className="mb-8 grid gap-3 sm:grid-cols-3"
+          className="mb-8 grid gap-3 sm:grid-cols-2"
         >
           <ShopStat
             label={t("diveSites.list.savedSites")}
             value={stats.total}
             detail={t("diveSites.list.savedSitesDetail")}
             tone="primary"
-          />
-          <ShopStat
-            label={t("diveSites.list.withForecastPoints")}
-            value={stats.withForecastPoints}
-            detail={t("diveSites.list.withForecastPointsDetail")}
-            tone="success"
           />
           <ShopStat
             label={t("diveSites.list.fromTemplates")}
@@ -370,10 +364,47 @@ async function CatalogView({
 }) {
   const back = shopPath(shopSlug, "dive-sites");
   const catalogHref = `${back}?view=catalog`;
+  const activeSession = await requireStaffSession();
+  const db = await getDb();
+  const shop = await getShopById(db, activeSession.user.shopId);
+  const locationIsProvided = !!(shop?.addressStreet && shop?.addressLocality);
+
+  if (!locationIsProvided) {
+    return (
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <Link href={back} className="text-sm font-medium text-primary hover:underline">
+          {t("diveSites.backToLibrary")}
+        </Link>
+        <div className="mt-8 flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center bg-card">
+          <h2 className="text-lg font-semibold text-foreground">
+            {t("diveSites.catalog.locationRequiredTitle")}
+          </h2>
+          <p className="mt-2 text-sm text-muted max-w-md">
+            {t("diveSites.catalog.locationRequiredDescription")}
+          </p>
+          <div className="mt-6">
+            <Link
+              href={shopPath(shopSlug, "settings?section=address")}
+              className={buttonClass({ variant: "primary" })}
+            >
+              {t("diveSites.catalog.goToSettings")}
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const shopCoordinates =
+    shop?.latitude != null && shop?.longitude != null
+      ? { latitude: shop.latitude, longitude: shop.longitude }
+      : null;
+
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range so a bookmarked page past the end lands on the last real one.
-  const catalog = await listGlobalDiveSiteTemplates(await getDb(), {
+  const catalog = await listGlobalDiveSiteTemplates(db, {
     page: Number.parseInt(page ?? "", 10),
+    shopCoordinates,
   });
   const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
   async function importAction(formData: FormData) {
