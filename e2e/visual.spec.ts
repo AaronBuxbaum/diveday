@@ -820,10 +820,11 @@ async function openDiverProfile(page: Page, search: string, fullName: string, in
  */
 async function tripIdWithoutSigningIn(
   browser: Browser,
+  workerBaseURL: string,
   storageState: string,
   title: string,
 ): Promise<string> {
-  const context = await browser.newContext({ storageState });
+  const context = await browser.newContext({ baseURL: workerBaseURL, storageState });
   try {
     return await seededTripId(makeActivitySafe(await context.newPage()), "blue-mantis", title);
   } finally {
@@ -1219,6 +1220,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public trip page's requirement note renders true to the design (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
       }) => {
         // A board crawl on a second context, then the capture. Same
@@ -1226,6 +1228,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await tripIdWithoutSigningIn(
           browser,
+          workerBaseURL,
           await staffStorageState("owner"),
           ADVANCED_CHARTER,
         );
@@ -1258,11 +1261,13 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public trip page lays the day out from its own legs (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await tripIdWithoutSigningIn(
           browser,
+          workerBaseURL,
           await staffStorageState("owner"),
           MINIMUM_SEATS_TRIP,
         );
@@ -1313,6 +1318,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the post-trip recap renders true to the design (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
         request,
       }) => {
@@ -1320,6 +1326,7 @@ for (const scheme of ["light", "dark"] as const) {
         // the tallest capture in the file.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const reviewSettingsContext = await browser.newContext({
+          baseURL: workerBaseURL,
           storageState: await staffStorageState("owner"),
         });
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
@@ -1353,11 +1360,13 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the unsigned waiver renders true to the design (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
       }) => {
         // Board → trip → Guests → send, on a second context, then the capture.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
           storageState: await staffStorageState("owner"),
         });
         const staffPage = makeActivitySafe(await staffContext.newPage());
