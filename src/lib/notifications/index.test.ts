@@ -303,6 +303,50 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     });
   });
 
+  it("points List-Unsubscribe/List-Unsubscribe-Post at the one-click API route", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify(
+      {
+        kind: "waitlist_invite",
+        waitlistEntryId: "00000000-0000-4000-8000-000000000003",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "delivered+waitlist@dive.day",
+        locale: "en-US",
+        diverName: "Nora Quinn",
+        shopName: "Blue Mantis",
+        tripTitle: "Two-Tank Reef",
+        startsAt: new Date("2026-08-01T12:00:00.000Z"),
+        endsAt: new Date("2026-08-01T15:00:00.000Z"),
+        timezone: "America/New_York",
+        bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
+        invitedAt: new Date("2026-07-21T10:00:00.000Z"),
+        unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
+      },
+      provider,
+    );
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.Content?.Simple?.Headers).toEqual([
+      {
+        Name: "List-Unsubscribe",
+        Value: "<https://diveday.example/unsubscribe/tok_abc123/one-click>",
+      },
+      { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+    ]);
+  });
+
+  it("omits the List-Unsubscribe headers for a notification with no unsubscribe link", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify(booking, provider);
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.Content?.Simple?.Headers).toBeUndefined();
+  });
+
   it("never calls SES for a reserved test recipient", async () => {
     const client = { send: vi.fn() };
     const provider = sesNotificationProvider(sesConfig, { client });
