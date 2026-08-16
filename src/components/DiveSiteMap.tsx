@@ -66,7 +66,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
 
   return (
     <figure className="overflow-hidden border-b border-border bg-surface-sunken">
-      <div className="relative h-64 overflow-hidden sm:h-80">
+      <div className="relative h-[calc(16rem+4rem)] overflow-hidden sm:h-[calc(20rem+4rem)]">
         <div
           className="absolute inset-0 origin-top-left"
           style={
@@ -92,6 +92,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
             title={t("site.terrainMapTitle", { site: site.name })}
             src={googleTerrainEmbedUrl(query, site.routeZoom)}
             className="h-full w-full"
+            showAttribution
           >
             <svg
               viewBox="0 0 100 100"

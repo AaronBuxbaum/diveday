@@ -1,6 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { Suspense } from "react";
+import { cloneElement, type ReactElement, type ReactNode, Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { ScrollToHash } from "@/components/ScrollToHash";
@@ -380,13 +379,15 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
 export function ImportPhase({
   locale,
   number,
+  source,
   importerNote,
   importCta,
 }: {
   locale: DiverLocale;
   number: number;
+  source: FunnelSource;
   importerNote?: ReactNode;
-  importCta: ReactNode;
+  importCta: ReactElement<{ source?: FunnelSource }>;
 }) {
   const t = diverTranslator(locale);
   const steps = [
@@ -415,7 +416,7 @@ export function ImportPhase({
           {importerNote}
         </p>
       )}
-      <Suspense fallback={null}>{importCta}</Suspense>
+      <Suspense fallback={null}>{cloneElement(importCta, { source })}</Suspense>
     </MovePhase>
   );
 }

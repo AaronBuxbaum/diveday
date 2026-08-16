@@ -37,16 +37,17 @@ function teamPath(shopSlug: string): string {
   return shopPath(shopSlug, "settings", "team");
 }
 
-/** Returns the redirect target when the actor lacks the team gate, or null to proceed. */
+/** Refuses here so callers cannot forget to act on a returned redirect target. */
 async function teamManagementBlock(session: {
   user: { shopId: string; personId: string; shopSlug: string };
-}): Promise<string | null> {
+}): Promise<void> {
+  const path = teamPath(session.user.shopSlug);
   const allowed = await canPersonManageStaffAccounts(
     await getDb(),
     session.user.shopId,
     session.user.personId,
   );
-  return allowed ? null : noticeUrl(teamPath(session.user.shopSlug), "not-authorized");
+  if (!allowed) redirect(noticeUrl(path, "not-authorized"));
 }
 
 function rolesFromFormData(formData: FormData): Role[] {
@@ -110,8 +111,7 @@ async function sendInviteEmail(input: {
 export async function inviteStaffAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const parsed = inviteSchema.safeParse(Object.fromEntries(formData));
   const roles = rolesFromFormData(formData);
@@ -165,8 +165,7 @@ async function findTeamMember(shopId: string, userAccountId: string) {
 export async function resendInviteAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const userAccountId = String(formData.get("userAccountId") ?? "");
   const member = await findTeamMember(session.user.shopId, userAccountId);
@@ -203,8 +202,7 @@ export async function resendInviteAction(formData: FormData) {
 export async function saveAllStaffRolesAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const db = await getDb();
   const staff = await listShopStaff(db, session.user.shopId);
@@ -244,8 +242,7 @@ export async function saveAllStaffRolesAction(formData: FormData) {
 export async function saveStaffEmergencyContactAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const personId = String(formData.get("personId") ?? "");
   if (!personId) redirect(path);
@@ -270,8 +267,7 @@ export async function saveStaffEmergencyContactAction(formData: FormData) {
 export async function setStaffStatusAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const personId = String(formData.get("personId") ?? "");
   const userAccountId = String(formData.get("userAccountId") ?? "");
@@ -291,8 +287,7 @@ export async function setStaffStatusAction(formData: FormData) {
 export async function removeStaffAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const personId = String(formData.get("personId") ?? "");
   const userAccountId = String(formData.get("userAccountId") ?? "");
@@ -339,8 +334,7 @@ export async function removeStaffAction(formData: FormData) {
 export async function restoreStaffAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
-  const blocked = await teamManagementBlock(session);
-  if (blocked) redirect(blocked);
+  await teamManagementBlock(session);
 
   const personId = String(formData.get("personId") ?? "");
   const userAccountId = String(formData.get("userAccountId") ?? "");

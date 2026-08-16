@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for Reports (design principle 1) — the monthly
@@ -12,10 +13,10 @@ export default function ReportsLoading() {
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-2xl border border-border bg-surface" />
+            <div key={i} className={sectionCardClass({ padding: "none", className: "h-24" })} />
           ))}
         </div>
-        <div className="mt-8 h-64 rounded-2xl border border-border bg-surface" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-8 h-64" })} />
       </div>
     </main>
   );

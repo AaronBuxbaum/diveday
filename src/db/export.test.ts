@@ -469,6 +469,9 @@ describe("full-shop export dataset", () => {
     // incident review would correlate against.
     expect(rollCall.header).toContain("client_event_id");
     expect(rollCall.header).toContain("offline_snapshot_saved_at");
+    const crewRollCall = table(input, "roll_call_crew_events.csv");
+    expect(crewRollCall.header).toContain("source");
+    expect(crewRollCall.header).toContain("client_event_id");
   });
 
   it("flattens each person into an import-ready contacts row", async () => {

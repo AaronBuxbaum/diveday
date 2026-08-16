@@ -483,7 +483,7 @@
       },
       "receiptsService": {
         "what": "Receipts & service history",
-        "detail": "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs."
+        "detail": "Payment records stay with your processor; gear-service history has nowhere to land — today, DiveDay tracks sizes, not individual rental units."
       }
     },
     "wizard": {

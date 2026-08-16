@@ -6,6 +6,7 @@ import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import type { BookableDiver } from "@/db/divers";
 
@@ -74,11 +75,9 @@ export function SeatDiverPanel({
   copy: SeatDiverPanelCopy;
 }) {
   return (
-    <>
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold">{copy.findHeading}</h2>
+    <div className="mt-6 space-y-6">
+      <SectionCard title={copy.findHeading} padding="lg">
         <PersonSearchForm
-          className="mt-3"
           query={query}
           hiddenFields={searchHiddenFields}
           label={copy.findLabel}
@@ -109,15 +108,16 @@ export function SeatDiverPanel({
             />
           )
         ) : null}
-      </section>
+      </SectionCard>
 
-      <section
+      <SectionCard
         id="hand-entry"
-        className="mt-6 scroll-mt-24 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
+        className="scroll-mt-24"
+        padding="lg"
+        title={copy.handEntryHeading}
+        description={copy.handEntryDescription}
       >
-        <h2 className="text-lg font-semibold">{copy.handEntryHeading}</h2>
-        <p className="mt-1 text-sm text-muted">{copy.handEntryDescription}</p>
-        <form action={seatNewDiverAction.bind(null, surface, shopSlug)} className="mt-4">
+        <form action={seatNewDiverAction.bind(null, surface, shopSlug)}>
           <input type="hidden" name="tripId" value={tripId} />
           <PersonFieldTrio
             as="div"
@@ -133,7 +133,7 @@ export function SeatDiverPanel({
             </SubmitButton>
           </FieldActions>
         </form>
-      </section>
-    </>
+      </SectionCard>
+    </div>
   );
 }

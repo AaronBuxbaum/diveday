@@ -350,6 +350,8 @@ export default async function ReviewsPage({
                   key={review.id}
                   // A refused hide comes back with `#review-<id>`, so the row
                   // that argued is the one the browser lands on.
+                  // Published five-star rows carry the earned-moment tone, so
+                  // this dynamic list row is not a neutral SectionCard.
                   id={`review-${review.id}`}
                   className={`flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-start ${
                     standout ? "border-accent/40 bg-accent/10" : "border-border bg-surface"

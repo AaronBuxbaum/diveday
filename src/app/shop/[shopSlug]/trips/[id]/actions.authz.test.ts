@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { bookings, tripRequirements, trips } from "@/db/schema";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -36,7 +37,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 // The money seam. Mocked so a refusal can be checked where the refund would
 // actually have been issued, rather than inferred from a notice string.
@@ -46,7 +47,7 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
 const { removeBookingAction, reinstateTripAction, saveRequirementsAction } = await import(
   "./actions"
@@ -110,6 +111,7 @@ async function paidBookingId(db: AppDb, shopId: string, tripId: string): Promise
 async function context() {
   const { db, shop } = await seededShopContext();
   vi.mocked(getDb).mockResolvedValue(db);
+  activeSurface = { db, shop };
   return {
     db,
     shop,
@@ -119,10 +121,28 @@ async function context() {
   };
 }
 
+type SeededContext = Awaited<ReturnType<typeof seededShopContext>>;
+let activeSurface: Pick<SeededContext, "db" | "shop"> | null = null;
+
 function signIn(shop: { id: string; slug: string }, personId: string) {
-  vi.mocked(requireStaffSession).mockResolvedValue(
-    staffSession({ shopId: shop.id, shopSlug: shop.slug, personId }),
-  );
+  if (!activeSurface) throw new Error("test surface is not initialized");
+  const surface = activeSurface;
+  const session = staffSession({ shopId: shop.id, shopSlug: shop.slug, personId });
+  vi.mocked(requireShopSurface).mockImplementation(async (_shopSlug, options) => {
+    if (options?.allow && !(await options.allow(surface.db, shop.id, personId))) {
+      throw new Error(
+        `REDIRECT:${noticeUrl(
+          shopPath(shop.slug, ...(options.refusal.landing ?? [])),
+          options.refusal.notice,
+        )}`,
+      );
+    }
+    return {
+      session,
+      db: surface.db,
+      shop: surface.shop,
+    };
+  });
 }
 
 function requirementsForm(minimumCertificationLevel: string): FormData {
@@ -223,6 +243,18 @@ describe("putting a cancelled trip back on the board", () => {
       .from(trips)
       .where(eq(trips.id, tripId));
     expect(after?.status).toBe("cancelled");
+  });
+
+  it("passes the route slug and trip landing to the throwing surface preamble", async () => {
+    const { shop, tripId, captain } = await context();
+    signIn(shop, captain);
+
+    await redirectedTo(() => reinstateTripAction(shop.slug, tripId));
+
+    expect(requireShopSurface).toHaveBeenCalledWith(shop.slug, {
+      allow: expect.any(Function),
+      refusal: { notice: "not-authorized", landing: ["trips", tripId] },
+    });
   });
 
   it("lets an owner reinstate it", async () => {

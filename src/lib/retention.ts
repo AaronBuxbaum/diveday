@@ -1,5 +1,5 @@
 /**
- * Retention windows for the append-only tables that otherwise grow forever
+ * Retention windows for operational tables that otherwise grow forever
  * (DATA-M4/PAY-L2, ADR 20260803-append-only-retention).
  *
  * Framework-free on purpose: this file is nothing but the numbers, the reason
@@ -17,9 +17,10 @@
  * in the codebase has to move.
  *
  * **This mechanism prunes trails, never people.** Every table below is an
- * append-only operational log — webhook events, delivery attempts, activity
- * rows, tokens. No table holding a person lives here, and that is a standing
- * decision rather than an omission: DiveDay retains customer and contact data
+ * operational trail entries — webhook events, delivery attempts, activity
+ * rows, delivery outcomes, and tokens. No table holding a person lives here;
+ * that is a standing decision rather than an omission: DiveDay retains customer
+ * and contact data
  * indefinitely and deletes it only when somebody explicitly asks it to
  * (product owner, 2026-08-14). So a dormancy clock on `people`,
  * `course_inquiries` or `trip_waitlist_entries` — expiring the record of
@@ -48,6 +49,7 @@ export const STRIPE_WEBHOOK_RETRY_DAYS = 3;
  */
 export type RetainedTable =
   | "stripe_webhook_events"
+  | "notification_deliveries"
   | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
@@ -75,6 +77,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * connected-account ids, timestamps).
    */
   stripe_webhook_events: 400,
+  /**
+   * 400 days. This is the current delivery outcome a shop uses to answer
+   * whether a message reached a diver. It is mutable latest state rather than
+   * append-only history, but its provider detail and send error are still
+   * operational trail data and must not remain unbounded.
+   */
+  notification_deliveries: 400,
   /**
    * 400 days. The durable proof that a shop did (or did not) reach a diver —
    * the record a "you never told me the trip was cancelled" conversation turns

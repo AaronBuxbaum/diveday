@@ -69,17 +69,25 @@ export type MoveTripOutcome =
  * then deleted it straight into a foreign-key violation instead of refusing
  * cleanly (review 20260803, D3).
  */
-async function countRollCallEvidence(tx: DbExecutor, tripId: string): Promise<number> {
+async function countRollCallEvidence(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<number> {
   // `queryAll`, not `Promise.all`: every caller of this is a transaction --
   // one checked-out pg client, which queues a fan-out and warns that pg@9 will
   // refuse it (issue #517, the file's other reader below).
   const [[divers], [crew]] = await queryAll(tx, [
-    () => tx.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.tripId, tripId)),
+    () =>
+      tx
+        .select({ n: count() })
+        .from(rollCallEvents)
+        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId))),
     () =>
       tx
         .select({ n: count() })
         .from(rollCallCrewEvents)
-        .where(eq(rollCallCrewEvents.tripId, tripId)),
+        .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId))),
   ]);
   return (divers?.n ?? 0) + (crew?.n ?? 0);
 }
@@ -119,7 +127,7 @@ export async function moveTrip(
     if (!existing) return { ok: false, reason: "not_found" };
     if (existing.status !== "scheduled") return { ok: false, reason: "not_scheduled" };
 
-    if ((await countRollCallEvidence(tx, tripId)) > 0) {
+    if ((await countRollCallEvidence(tx, shopId, tripId)) > 0) {
       return { ok: false, reason: "already_sailed" };
     }
 
@@ -204,7 +212,7 @@ export async function deleteTrip(
       .where(eq(tripWaitlistEntries.tripId, tripId));
     if (waiting > 0) return { ok: false, reason: "has_roster" };
 
-    if ((await countRollCallEvidence(tx, tripId)) > 0) {
+    if ((await countRollCallEvidence(tx, shopId, tripId)) > 0) {
       return { ok: false, reason: "already_sailed" };
     }
 

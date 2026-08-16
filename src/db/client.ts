@@ -8,6 +8,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
 import { getDbPoolConfig } from "@/lib/db-pool-config";
 import { withExplicitSslMode } from "./connection-string";
+import { refreshCanonicalDemoSchedule } from "./demo-refresh";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import { shops } from "./schema";
 import { seedIfEmpty } from "./seed";
@@ -209,6 +210,18 @@ export async function seedProductionDb(
   });
 }
 
+/**
+ * Keep the persisted local playground current without ever touching a real
+ * database. Production gets this pass from `/api/cron/demo-refresh`; a local
+ * PGlite database has no cron, so the natural equivalent is the next dev boot.
+ * The explicit URL guard stays here as well as at the call site so a future
+ * caller cannot accidentally run the demo keeper against a configured pool.
+ */
+export async function refreshPgliteDemo(db: AppDb, databaseUrl = process.env.DATABASE_URL) {
+  if (databaseUrl) return;
+  await refreshCanonicalDemoSchedule(db);
+}
+
 async function init(): Promise<AppDb> {
   const databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl) {
@@ -255,6 +268,7 @@ async function init(): Promise<AppDb> {
   // atomicity as the Postgres branch above — useful across dev-server
   // restarts against a persisted `.pglite` data dir.
   await seedProductionDb(db);
+  await refreshPgliteDemo(db, databaseUrl);
   return db;
 }
 

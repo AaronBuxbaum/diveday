@@ -37,7 +37,7 @@ async function seededBooking() {
 
 describe("notification delivery status", () => {
   it("queues a retryable provider failure and drains it later", async () => {
-    const { db, shop, booking } = await seededBooking();
+    const { db, shop, trip, booking } = await seededBooking();
     const notification: Notification = {
       kind: "booking_confirmation",
       bookingId: booking.bookingId,
@@ -46,7 +46,7 @@ describe("notification delivery status", () => {
       locale: "en-US",
       diverName: "Nora Quinn",
       shopName: shop.name,
-      tripTitle: "Two-Tank Reef",
+      tripTitle: trip.title,
       startsAt: new Date("2026-08-01T12:00:00.000Z"),
       endsAt: new Date("2026-08-01T15:00:00.000Z"),
       timezone: shop.timezone,
@@ -82,7 +82,46 @@ describe("notification delivery status", () => {
     expect(attempts).toBe(2);
     await expect(
       db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
-    ).resolves.toMatchObject([{ status: "sent", providerMessageId: "retry-success" }]);
+    ).resolves.toMatchObject([
+      { status: "sent", providerMessageId: "retry-success", payload: null },
+    ]);
+  });
+
+  it("clears the payload when a retry reaches a terminal failure", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    const notification: Notification = {
+      kind: "booking_confirmation",
+      bookingId: booking.bookingId,
+      shopId: shop.id,
+      to: "nora@example.com",
+      locale: "en-US",
+      diverName: "Nora Quinn",
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: new Date("2026-08-01T12:00:00.000Z"),
+      endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      timezone: shop.timezone,
+    };
+    let attempts = 0;
+    const provider: NotificationProvider = {
+      async send() {
+        attempts += 1;
+        return attempts === 1
+          ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
+          : { status: "failed", retryable: false, errorCode: "permanent_failure" };
+      },
+    };
+
+    await sendNotification(db, notification, provider);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({ failed: 1 });
+    await expect(
+      db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
+    ).resolves.toMatchObject([{ status: "failed", payload: null, errorCode: "permanent_failure" }]);
   });
 
   it("shows a failed booking email on the shop dashboard query", async () => {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import type { FunnelSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   ClosingCta,
@@ -118,7 +119,12 @@ export default async function SpreadsheetSwitchPage() {
       </Suspense>
       <SpreadsheetBody
         locale={locale}
-        importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
+        importCta={
+          <SwitchingImportCta
+            label={t("switching.common.openImportCta")}
+            trialLabel={t("marketing.common.startTrial")}
+          />
+        }
       />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
@@ -167,7 +173,7 @@ async function SpreadsheetBody({
   importCta,
 }: {
   locale: DiverLocale;
-  importCta: ReactNode;
+  importCta: ReactElement<{ source?: FunnelSource }>;
 }) {
   "use cache";
   cacheLife("max");
@@ -201,7 +207,7 @@ async function SpreadsheetBody({
         />
       </GuideContext>
 
-      <MidCta locale={locale} source="switching-spreadsheet" />
+      <MidCta locale={locale} source="switching-spreadsheet-mid" />
 
       {/* The whole mechanical path, as one rail: ready your own sheet → the
           importer's own scope table, verbatim → the importer. */}
@@ -244,7 +250,12 @@ async function SpreadsheetBody({
           </ul>
         </MovePhase>
         <ScopePhase locale={locale} number={2} />
-        <ImportPhase locale={locale} number={3} importCta={importCta} />
+        <ImportPhase
+          locale={locale}
+          number={3}
+          source="switching-spreadsheet-mid"
+          importCta={importCta}
+        />
       </MovePath>
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
@@ -252,7 +263,7 @@ async function SpreadsheetBody({
 
       <ClosingCta
         locale={locale}
-        source="switching-spreadsheet"
+        source="switching-spreadsheet-close"
         title={t("switching.spreadsheet.closingTitle")}
         body={t("switching.spreadsheet.closingDescription")}
         backLabel={t("switching.spreadsheet.otherSystems")}

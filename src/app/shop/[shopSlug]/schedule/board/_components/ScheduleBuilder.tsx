@@ -473,6 +473,8 @@ function AddPanel({
       </FieldGrid>
       {/* `<fieldset disabled>` reaches every control inside it, so this whole
           block leaves the submission in one attribute while it is hidden. */}
+      {/* A legend names this payment control group; it must remain a
+          fieldset rather than becoming a generic SectionCard. */}
       <fieldset
         hidden={!expanded}
         disabled={!expanded}
@@ -647,6 +649,8 @@ function AddPanel({
           copy={more.diveFields}
         />
       )}
+      {/* A legend names this recurrence control group; it must remain a
+          fieldset rather than becoming a generic SectionCard. */}
       <fieldset
         hidden={!expanded}
         disabled={!expanded}

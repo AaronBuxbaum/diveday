@@ -112,6 +112,16 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   ).toHaveCount(1);
 });
 
+test("the walk-in picker explains an invalid submission before a boat is chosen", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
+  await expect(
+    page.getByText("Choose a boat and enter a name before adding a walk-in.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Choose a boat and enter a name");
+});
+
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
   // A same-day, one-seat trip so it's both offered by the walk-in picker
   // (today's/tomorrow's departures) and trivially fillable in one step.

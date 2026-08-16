@@ -145,6 +145,9 @@ export default async function EditCoursePage({
 
       <UnsavedChangesGuard>
         <form action={saveAction} className="mt-6 flex flex-col gap-6">
+          {/* These panels are fieldsets, not SectionCards: each legend is the
+              accessible name of a control group, and SectionCard deliberately
+              has no `fieldset` element. */}
           <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
             <legend className="px-1 text-sm font-semibold">{t("courses.edit.pitchLegend")}</legend>
             <FieldGrid columns={1} className="mt-3 gap-y-5">

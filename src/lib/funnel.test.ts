@@ -36,6 +36,18 @@ describe("eventSource", () => {
     expect(trialHref("pricing-close")).toBe("/onboard?from=pricing-close");
   });
 
+  it("keeps each switching guide door distinct by position", () => {
+    expect(guideSource("eve")).toBe("switching-eve");
+    expect(guideSource("eve", "mid")).toBe("switching-eve-mid");
+    expect(guideSource("eve", "close")).toBe("switching-eve-close");
+    expect(eventSource("switching-eve-mid")).toBe("switching-eve-mid");
+    expect(eventSource("switching-eve-close")).toBe("switching-eve-close");
+    expect(trialHref(guideSource("eve", "mid"))).toBe("/onboard?from=switching-eve-mid");
+    expect(trialHref(guideSource("eve", "close"))).toBe("/onboard?from=switching-eve-close");
+    expect(eventSource("switching-spreadsheet-mid")).toBe("switching-spreadsheet-mid");
+    expect(eventSource("switching-spreadsheet-close")).toBe("switching-spreadsheet-close");
+  });
+
   it("collapses anything outside the vocabulary to unknown", () => {
     // The value reaches us from the visitor's own request, so free-form text
     // and markup collapse to one bucket rather than becoming event properties.

@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Departure-picker skeleton for the global "add a booking" door (design
@@ -10,10 +11,12 @@ export default function NewBookingLoading() {
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-full max-w-lg" />
-        <div className="mt-8 flex flex-col gap-3">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-xl border border-border bg-surface" />
-          ))}
+        <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-20 rounded-xl border border-border bg-surface-sunken" />
+            ))}
+          </div>
         </div>
       </div>
     </main>

@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for Reviews (design principle 1) — the moderation
@@ -11,7 +12,7 @@ export default function ReviewsLoading() {
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
         <div className="mt-8 flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-28 rounded-2xl border border-border bg-surface" />
+            <div key={i} className={sectionCardClass({ padding: "none", className: "h-28" })} />
           ))}
         </div>
       </div>

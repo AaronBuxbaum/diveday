@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
@@ -124,46 +125,47 @@ export default async function WalkInPage({
         </ShopNotice>
       ) : null}
 
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold">{t("checkIn.walkIn.tripLabel")}</h2>
-        {trips.length === 0 ? (
-          // The copy already names the schedule as where to look; this is
-          // the link that sentence was describing.
-          <EmptyState className="mt-2">
-            <p className="mx-auto max-w-md text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {t("checkIn.walkIn.tripEmptyAction")}
-            </Link>
-          </EmptyState>
-        ) : (
-          <TripPickerList
-            className="mt-3"
-            options={trips.map((trip) => ({
-              id: trip.tripId,
-              href: `${self}/${trip.tripId}`,
-              // JSX rather than template literals, for the same reason the
-              // Add-booking picker keeps its own: text is shaped per DOM text
-              // node, so joining these into single strings re-kerns across the
-              // old node boundaries and shifts glyphs sub-pixel.
-              label: (
-                <>
-                  {trip.title} ·{" "}
-                  {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                </>
-              ),
-              // A string, unlike `label` above: the same node-joining shifts
-              // these two numbers sub-pixel, but writing them as JSX puts a
-              // bare "/" text node in a component, which `pnpm check:copy`
-              // rightly refuses. Two digits of sub-pixel shaping is the
-              // cheaper side of that trade.
-              meta: `${trip.booked}/${trip.capacity}`,
-            }))}
-          />
-        )}
-      </section>
+      <div className="mt-6">
+        <SectionCard title={t("checkIn.walkIn.tripLabel")} padding="lg">
+          {trips.length === 0 ? (
+            // The copy already names the schedule as where to look; this is
+            // the link that sentence was describing.
+            <EmptyState className="mt-2">
+              <p className="mx-auto max-w-md text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("checkIn.walkIn.tripEmptyAction")}
+              </Link>
+            </EmptyState>
+          ) : (
+            <TripPickerList
+              className="mt-3"
+              options={trips.map((trip) => ({
+                id: trip.tripId,
+                href: `${self}/${trip.tripId}`,
+                // JSX rather than template literals, for the same reason the
+                // Add-booking picker keeps its own: text is shaped per DOM text
+                // node, so joining these into single strings re-kerns across the
+                // old node boundaries and shifts glyphs sub-pixel.
+                label: (
+                  <>
+                    {trip.title} ·{" "}
+                    {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                  </>
+                ),
+                // A string, unlike `label` above: the same node-joining shifts
+                // these two numbers sub-pixel, but writing them as JSX puts a
+                // bare "/" text node in a component, which `pnpm check:copy`
+                // rightly refuses. Two digits of sub-pixel shaping is the
+                // cheaper side of that trade.
+                meta: `${trip.booked}/${trip.capacity}`,
+              }))}
+            />
+          )}
+        </SectionCard>
+      </div>
     </main>
   );
 }

@@ -1871,6 +1871,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in-walk-in", scheme);
       });
 
+      test(`the walk-in picker explains an invalid submission (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
+        await page
+          .getByText("Choose a boat and enter a name before adding a walk-in.", { exact: true })
+          .waitFor();
+        await capture(page, "check-in-walk-in-notice", scheme);
+      });
+
       test(`the walk-in diver step renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in/walk-in");
         await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
@@ -2036,6 +2044,23 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
         await capture(page, "diver-profile", scheme);
+      });
+
+      /**
+       * The diver record on the day somebody says they hold no card: a
+       * warning-toned correction panel, not a certification row. The state is
+       * test-only because the demo shop should not permanently claim that a
+       * healthy diver is uncertified; the seed route also makes the staff
+       * eraser available to the functional flow.
+       */
+      test(`a diver's no-card declaration renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states");
+        await openDiverProfile(page, "Nadia", "Nadia Petrov", "NP");
+        await page.getByText("Not certified yet — diver's word").waitFor();
+        await capture(page, "diver-profile-not-certified", scheme);
       });
 
       // A diver holding a card past its shop refresher-due date: the
@@ -2227,7 +2252,7 @@ for (const scheme of ["light", "dark"] as const) {
         // 2026-08-15, when "not certified yet" became an answer a diver can
         // give. One of the counted may hold no certification at all, so there
         // is no level for the sentence to name.
-        await page.getByText("2 of 3 are below this departure's requirement.").waitFor();
+        await page.getByText("3 of 4 are below this departure's requirement.").waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -2250,10 +2275,10 @@ for (const scheme of ["light", "dark"] as const) {
        * below every bar there is (Selah Mbeki). Ten recipients, none hidden, so
        * the cap's own boundary is on a baseline too.
        *
-       * The night charter rather than the reef morning, deliberately: the two
-       * seeded joiners state a window that starts tomorrow, precisely so today's
-       * reef departure — the fixture the two captures above are pinned to —
-       * keeps the recipient list it had.
+       * The night charter still carries both seeded joiners, while Selah also
+       * starts today so the headline reef departure has one marked row when a
+       * demo visitor opens it. Rowan remains tomorrow-only, keeping that first
+       * list realistic rather than alarming.
        */
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);

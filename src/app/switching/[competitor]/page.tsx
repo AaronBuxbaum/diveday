@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
@@ -11,7 +11,7 @@ import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { guideSource } from "@/lib/funnel";
+import { type FunnelSource, guideSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
@@ -122,7 +122,12 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
     <GuideBody
       locale={locale}
       guide={guide}
-      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
+      importCta={
+        <SwitchingImportCta
+          label={t("switching.common.openImportCta")}
+          trialLabel={t("marketing.common.startTrial")}
+        />
+      }
     />
   );
 }
@@ -151,7 +156,7 @@ async function GuideBody({
 }: {
   locale: DiverLocale;
   guide: MigrationGuide;
-  importCta: ReactNode;
+  importCta: ReactElement<{ source?: FunnelSource }>;
 }) {
   "use cache";
   cacheLife("max");
@@ -226,7 +231,7 @@ async function GuideBody({
         </section>
       )}
 
-      <MidCta locale={locale} source={source} />
+      <MidCta locale={locale} source={guideSource(guide.slug, "mid")} />
 
       {/* The whole mechanical path, as one rail: export (files the shop makes
           itself) → the importer's own scope table, verbatim → the importer →
@@ -247,6 +252,7 @@ async function GuideBody({
         <ImportPhase
           locale={locale}
           number={3}
+          source={guideSource(guide.slug, "mid")}
           importCta={importCta}
           importerNote={
             guide.importerNote && (
@@ -274,7 +280,7 @@ async function GuideBody({
 
       <ClosingCta
         locale={locale}
-        source={source}
+        source={guideSource(guide.slug, "close")}
         title={
           guide.coexist
             ? t("switching.competitor.runTheDay", { competitor: guide.competitor })

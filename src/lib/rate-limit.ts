@@ -435,6 +435,8 @@ export const RATE_LIMITS = {
    * plenty.
    */
   accountTokenAction: perHour(20),
+  /** RFC 8058 unsubscribe POSTs, per capability token rather than shared provider IP. */
+  oneClickUnsubscribe: perHour(10),
   /** Public booking submissions, per IP. */
   booking: perHour(10),
   /**

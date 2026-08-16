@@ -258,7 +258,7 @@
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentSquare": "Estás al día con el centro para esta salida.",
     "paymentStillOpen": "Tu plaza está a salvo — el pago sigue abierto",
-    "paymentOneThingLeft": "Solo queda una cosa: el pago",
+    "paymentOneThingLeft": "Termina de pagar tu plaza",
     "paymentBody": "Paga de forma segura en la página de pago del propio centro. Si prefieres pagar en el mostrador, también está bien.",
     "finishPaying": "Terminar el pago",
     "payNow": "Pagar ahora",
@@ -728,10 +728,10 @@
   "rental": {
     "heading": "Equipo de alquiler",
     "ownGear": "Traes tu propio equipo — no hace falta alquiler.",
-    "matched": "Equipo asignado y preparado.",
+    "matched": "Tallas registradas — la tripulación confirmará el ajuste en el muelle.",
     "selectSizes": "Elige tus tallas para confirmar el equipo.",
     "noCharge": "No se te cobrará alquiler en esta salida.",
-    "sizesLocked": "La tripulación ya tiene tus tallas listas.",
+    "sizesLocked": "Tus tallas están listas para que la tripulación las revise en el muelle.",
     "addSizes": "Añade tallas para todo lo que has marcado.",
     "whatToPlan": "¿Qué preparamos para ti?",
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
@@ -2675,7 +2675,7 @@
         },
         "gearSerials": {
           "title": "Números de serie del equipo",
-          "detail": "DiveDay rastrea las tallas de cada buceador y arma la lista de equipo del viaje. No gestiona equipos individuales ni su historial de mantenimiento."
+          "detail": "DiveDay rastrea las tallas de cada buceador y arma la lista de equipo del viaje. Hoy todavía no registra unidades de alquiler individuales ni su historial de mantenimiento."
         },
         "agencyLine": {
           "title": "Una línea directa con PADI o SSI",
@@ -2684,7 +2684,7 @@
       },
       "closingTitle": "Pruébalo como la persona que hace el trabajo.",
       "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — luego empieza tu propio centro de prueba.",
-      "spreadsheetLink": "¿Llevas una hoja de cálculo hoy? Tráela — hasta lo hacemos contigo →",
+      "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →",
       "gettingDemoReady": "Preparando la demo…"
     },
     "pricing": {
@@ -2820,7 +2820,7 @@
         "heading": "Cuánto tiempo se guarda",
         "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. Los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
         "activity": "Historial de actividad del personal: 3 años.",
-        "delivery": "Intentos de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error más que el contenido de los mensajes, aunque el texto de error de un proveedor a veces cita la dirección a la que no pudo llegar.",
+        "delivery": "Resultados e intentos de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error más que el contenido de los mensajes, aunque el texto de error de un proveedor a veces cita la dirección a la que no pudo llegar.",
         "payments": "Historial de eventos de pago: 7 años, acorde con el horizonte habitual de los registros financieros. Los pedidos y los pagos en sí son registros del centro y se conservan hasta que el centro los elimina.",
         "webhooks": "Registros de eventos del procesador de pagos: 400 días. No contienen ningún dato de buceadores.",
         "tokens": "Tokens caducados de inicio de sesión y de restablecimiento: 90 días después de su propia caducidad. Uno vigente no se poda nunca.",

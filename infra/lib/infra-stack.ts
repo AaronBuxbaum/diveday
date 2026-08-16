@@ -1194,7 +1194,8 @@ exports.handler = async (event) => {
     observabilityAlarms.addSubscription(new subscriptions.EmailSubscription(alertEmail));
     const alarmAction = new cloudwatchActions.SnsAction(observabilityAlarms);
 
-    // One registry row becomes a filter, an alarm, and a dashboard series. See
+    // One registry row becomes a filter and a dashboard series, and optionally
+    // an alarm. See
     // infra/lib/observability.ts for why the set is deliberately small.
     const signalMetrics = LOG_SIGNALS.map((signal) => {
       const filter = new logs.MetricFilter(this, `${signal.metricName}Filter`, {
@@ -1217,19 +1218,21 @@ exports.handler = async (event) => {
         statistic: "Sum",
         period: cdk.Duration.minutes(signal.periodMinutes),
       });
-      const alarm = new cloudwatch.Alarm(this, `${signal.metricName}Alarm`, {
-        alarmName: alarmNameFor(signal),
-        alarmDescription: alarmDescriptionFor(signal),
-        metric,
-        threshold: signal.threshold,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-        // A quiet app is a healthy app. `defaultValue` above covers the periods
-        // the app logged anything at all; a genuinely idle period has no
-        // datapoint, and treating that as breaching would page on a slow Tuesday.
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      });
-      alarm.addAlarmAction(alarmAction);
+      if (signal.alarm !== false) {
+        const alarm = new cloudwatch.Alarm(this, `${signal.metricName}Alarm`, {
+          alarmName: alarmNameFor(signal),
+          alarmDescription: alarmDescriptionFor(signal),
+          metric,
+          threshold: signal.threshold,
+          evaluationPeriods: 1,
+          comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+          // A quiet app is a healthy app. `defaultValue` above covers the periods
+          // the app logged anything at all; a genuinely idle period has no
+          // datapoint, and treating that as breaching would page on a slow Tuesday.
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        });
+        alarm.addAlarmAction(alarmAction);
+      }
       return metric;
     });
 

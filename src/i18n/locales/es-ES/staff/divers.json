@@ -79,7 +79,8 @@
     "clearNoCertificationHint": "Alguien indicó en un formulario público que este buceador no tiene ninguna tarjeta. Cualquiera que sepa su nombre y su correo puede dejar esa respuesta, así que corrígela si el buceador no la dio. Al corregirla se registra quién lo hizo y la ficha deja de decir nada sobre una tarjeta — nunca que esté certificado — y las listas de ofertas y de espera dejan de señalarlo como no certificado.",
     "clearNoCertification": "No nos dijo eso",
     "clearingNoCertification": "Corrigiendo…",
-    "noCertificationClearedNote": "El {date} se corrigió en esta ficha una respuesta de “aún sin certificación”. Quién lo hizo viaja en la exportación de datos del centro.",
+    "noCertificationClearedNote": "El {date}, {name} corrigió en esta ficha una respuesta de “aún sin certificación”.",
+    "noCertificationClearedByUnknown": "un miembro del personal",
     "noCertificationRestated": "El personal ya corrigió esta respuesta una vez y desde entonces se ha vuelto a dar en un formulario público. Cualquiera que sepa el nombre y el correo de este buceador puede dejarla."
   },
   "page": {
@@ -293,6 +294,7 @@
     "cardRestored": "Tarjeta restaurada. Vuelve a contar para la disposición.",
     "cardRestoreConflict": "No se pudo restaurar esa tarjeta — otra tarjeta ahora usa su número. Vuelve a añadirla si aún la necesitas.",
     "personSaved": "Datos del buceador actualizados.",
+    "notAuthorizedDetails": "Tu cuenta ya no puede editar a este buceador en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "profileSaved": "Perfil de ajuste de alquiler guardado.",
     "fitFlagged": "Marcado para ajuste manual. La lista de preparación mostrará que este buceador necesita ajuste del personal en el check-in.",
     "fitCleared": "Marca de ajuste despejada — este buceador vuelve a prepararse con sus tallas indicadas.",
@@ -323,6 +325,7 @@
     "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
     "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad del centro, y no puedes borrar el tuyo propio.",
     "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
+    "notAuthorizedWaiver": "Tu cuenta ya no puede registrar una liberación en papel para este centro. Pide a un propietario o gerente que revise tu acceso.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",
     "cardRemovedToast": "Tarjeta eliminada.",
     "waiverPaperRecorded": "Liberación en papel registrada — firmada y archivada.",
@@ -335,6 +338,7 @@
     "noCertificationNothingToClear": "No hay nada que corregir — la ficha de este buceador ya no dice que no tenga tarjeta.",
     "notAuthorizedCards": "Tu cuenta ya no puede modificar tarjetas en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "noteAdded": "Nota del buceador añadida.",
-    "noteDeleted": "Nota del buceador eliminada."
+    "noteDeleted": "Nota del buceador eliminada.",
+    "notAuthorizedNotes": "Tu cuenta ya no puede cambiar las notas de este buceador en este centro. Pide a un propietario o gerente que revise tu acceso."
   }
 }

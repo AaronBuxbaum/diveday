@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { BoardingBar } from "@/components/BoardingBar";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { DepartureSummary } from "@/db/today";
@@ -116,7 +117,7 @@ function DepartureCard({
   const crewNames = localCrew.map((c) => c.fullName).join(", ");
 
   return (
-    <li className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
+    <SectionCard as="li" padding="md" className="list-none">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
@@ -294,7 +295,7 @@ function DepartureCard({
           <FormStatus tone="danger">{assignError ? copy.assignFailed : undefined}</FormStatus>
         </div>
       </details>
-    </li>
+    </SectionCard>
   );
 }
 

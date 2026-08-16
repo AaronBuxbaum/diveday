@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for Requests (design principle 1) — a header, a date
@@ -15,7 +16,10 @@ export default function RequestsLoading() {
             <div className="mt-2 h-4 w-56 rounded bg-surface-sunken" />
             <div className="mt-3 flex flex-col gap-3">
               {[0, 1].map((card) => (
-                <div key={card} className="h-32 rounded-2xl border border-border bg-surface" />
+                <div
+                  key={card}
+                  className={sectionCardClass({ padding: "none", className: "h-32" })}
+                />
               ))}
             </div>
           </div>

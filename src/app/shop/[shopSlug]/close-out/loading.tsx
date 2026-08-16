@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the close-out (design principle 1) — header, the
@@ -14,18 +15,24 @@ export default function CloseOutLoading() {
         <div className="mt-10 h-5 w-56 rounded bg-surface-sunken" />
         <div className="mt-4 flex flex-col gap-3">
           {[0, 1].map((i) => (
-            <div key={`dep-${i}`} className="h-24 rounded-2xl border border-border bg-surface" />
+            <div
+              key={`dep-${i}`}
+              className={sectionCardClass({ padding: "none", className: "h-24" })}
+            />
           ))}
         </div>
 
         <div className="mt-10 h-5 w-44 rounded bg-surface-sunken" />
         <div className="mt-4 flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
-            <div key={`left-${i}`} className="h-24 rounded-2xl border border-border bg-surface" />
+            <div
+              key={`left-${i}`}
+              className={sectionCardClass({ padding: "none", className: "h-24" })}
+            />
           ))}
         </div>
 
-        <div className="mt-10 h-36 rounded-2xl border border-border bg-surface" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-10 h-36" })} />
       </div>
     </main>
   );

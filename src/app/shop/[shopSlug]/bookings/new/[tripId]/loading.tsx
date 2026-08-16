@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Diver-picker skeleton for step two of "add a booking" — the roster search
@@ -10,7 +11,12 @@ export default function NewBookingForTripLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-64 max-w-full" descriptionWidth="w-48" />
         <div className="mt-6 h-11 w-full max-w-sm rounded-lg bg-surface-sunken" />
-        <div className="mt-6 flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
+        <div
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-6 flex flex-col divide-y divide-border",
+          })}
+        >
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-16 bg-surface" />
           ))}

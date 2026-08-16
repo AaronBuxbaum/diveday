@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
-import { recordRollCall } from "./manifests";
+import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -47,6 +47,20 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       status: "boarded",
     });
     expect(boarded).toMatchObject({ ok: true });
+    const crewMember = (await getTripManifest(db, shop.id, reef.id))?.crew[0];
+    if (!crewMember) throw new Error("demo reef crew missing");
+    const crewBoarded = await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: crewMember.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      source: "offline",
+      clientEventId: "11111111-1111-4111-8111-111111111111",
+      offlineSnapshotSavedAt: new Date(nowDate().getTime() - 60 * 60 * 1000),
+      occurredAt: nowDate(),
+    });
+    expect(crewBoarded).toMatchObject({ ok: true });
     const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
     expect(doc).not.toBeNull();
     if (!doc) throw new Error("unreachable");
@@ -67,6 +81,12 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     expect(doc.timeline.some((entry) => entry.kind === "diver" && entry.action === "boarded")).toBe(
       true,
     );
+    expect(
+      doc.timeline.some(
+        (entry) =>
+          entry.kind === "crew" && entry.action === "boarded" && entry.source === "offline",
+      ),
+    ).toBe(true);
 
     // Same records, same hash — regenerated a moment later with the same
     // frozen clock, the document reproduces byte-identically.

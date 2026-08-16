@@ -55,11 +55,43 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { clearNoCertificationDeclaration, recordSelfDeclaredCards } from "./self-declared-cards";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 describe("person-first diver records", () => {
+  it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Cleared Casey",
+      email: "cleared-casey@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const [staff] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")))
+      .limit(1);
+    if (!staff) throw new Error("seed staff missing");
+
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      noCertification: true,
+    });
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      byPersonId: staff.id,
+    });
+
+    expect((await getDiverProfile(db, shop.id, diver.id))?.noCertificationClearedByName).toBe(
+      "Dana Reyes",
+    );
+  });
+
   it("composes cards, fit, and history from one diver record", async () => {
     const { db, shop } = await seededShopContext();
 

@@ -10,15 +10,26 @@ vi.mock("./seed", async (importOriginal) => {
   };
 });
 
+vi.mock("./demo-refresh", () => ({
+  refreshCanonicalDemoSchedule: vi.fn(async () => ({
+    found: true,
+    runwayDays: 30,
+    refreshed: false,
+    today: "already",
+  })),
+}));
+
 const {
   isDemoShopSeeded,
   isTransactionExecutor,
   queryAll,
+  refreshPgliteDemo,
   seedProductionDb,
   sqlStateOf,
   violatesUniqueIndex,
 } = await import("./client");
 const { seedIfEmpty } = await import("./seed");
+const { refreshCanonicalDemoSchedule } = await import("./demo-refresh");
 
 /** A driver error as it actually arrives: wrapped, with the SQLSTATE one layer down. */
 function wrappedDriverError(fields: { code: string; constraint?: string }) {
@@ -134,5 +145,18 @@ describe("seedProductionDb (cold-start fast path)", () => {
 
     expect(lock).not.toHaveBeenCalled();
     expect(seedIfEmpty).not.toHaveBeenCalled();
+  });
+});
+
+describe("refreshPgliteDemo", () => {
+  it("runs the demo keeper for local PGlite and refuses configured databases", async () => {
+    const db = await unseededTestDb();
+    vi.mocked(refreshCanonicalDemoSchedule).mockClear();
+
+    await refreshPgliteDemo(db, "");
+    expect(refreshCanonicalDemoSchedule).toHaveBeenCalledWith(db);
+
+    await refreshPgliteDemo(db, "postgres://configured.example/db");
+    expect(refreshCanonicalDemoSchedule).toHaveBeenCalledTimes(1);
   });
 });

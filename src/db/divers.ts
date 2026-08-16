@@ -14,6 +14,7 @@ import {
   notInArray,
   or,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { diverDepthLimit } from "@/lib/depth-ceiling";
@@ -657,10 +658,15 @@ export async function getDiverProfile(
   personId: string,
   options: { includeRemoved?: boolean } = {},
 ) {
+  const clearedBy = alias(people, "no_certification_cleared_by");
   const [personRow] = await db
-    .select({ person: people })
+    .select({ person: people, clearedByName: clearedBy.fullName })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .leftJoin(
+      clearedBy,
+      and(eq(clearedBy.id, people.noCertificationClearedByPersonId), eq(clearedBy.shopId, shopId)),
+    )
     .where(
       and(
         eq(people.id, personId),
@@ -749,6 +755,7 @@ export async function getDiverProfile(
 
   return {
     person: personRow.person,
+    noCertificationClearedByName: personRow.clearedByName,
     certifications: levelCards,
     specialtyCertifications: specialtyCards,
     nitroxCertifications: nitroxCards,

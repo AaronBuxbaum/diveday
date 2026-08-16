@@ -8,6 +8,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { closeDay, getDayCloseout } from "@/db/closeout";
@@ -282,6 +283,10 @@ export default async function CloseOutPage({
               const checkpoint =
                 departure.diveNumber >= 1 ? `after_dive_${departure.diveNumber}` : "departure";
               return (
+                // The departure row carries a live close-out status tone (the
+                // danger border is meaningful), so it stays hand-typed rather
+                // than losing that operational signal in neutral SectionCard
+                // chrome.
                 <li
                   key={departure.tripId}
                   className={`rounded-2xl border bg-surface p-4 shadow-sm sm:p-5 ${
@@ -368,10 +373,7 @@ export default async function CloseOutPage({
           ) : (
             <ul className="mt-4 flex flex-col gap-3">
               {state.leftovers.map((action) => (
-                <li
-                  key={action.id}
-                  className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
-                >
+                <SectionCard as="li" key={action.id} className="list-none">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -412,22 +414,20 @@ export default async function CloseOutPage({
                       </label>
                     </fieldset>
                   </div>
-                </li>
+                </SectionCard>
               ))}
             </ul>
           )}
         </section>
 
-        <section
-          aria-labelledby="closeout-close-heading"
-          className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+        <SectionCard
+          className="mb-10"
+          padding="lg"
+          title={t("closeout.close.heading")}
+          description={t("closeout.close.note")}
         >
-          <h2 id="closeout-close-heading" className="font-semibold">
-            {t("closeout.close.heading")}
-          </h2>
-          <p className="mt-1 text-sm text-muted">{t("closeout.close.note")}</p>
           {state.mustAcknowledge.length > 0 ? (
-            <label className="mt-4 flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/5 p-4 text-sm">
+            <label className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/5 p-4 text-sm">
               <input
                 type="checkbox"
                 name="acknowledge"
@@ -444,7 +444,7 @@ export default async function CloseOutPage({
               {latest ? t("closeout.close.buttonAgain") : t("closeout.close.button")}
             </SubmitButton>
           </div>
-        </section>
+        </SectionCard>
       </form>
 
       {/* Tomorrow is a *handoff*, not a second queue. This section used to
@@ -466,7 +466,7 @@ export default async function CloseOutPage({
             <p className="text-sm text-muted">{t("closeout.tomorrow.empty")}</p>
           </EmptyState>
         ) : (
-          <div className="mt-4 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
+          <SectionCard as="div" className="mt-4">
             <p className="font-semibold">
               {t("closeout.tomorrow.count", { count: state.tomorrow.total })}
             </p>
@@ -488,7 +488,7 @@ export default async function CloseOutPage({
                 header and a permanent slot in the phone dock, one tap from
                 here and from everywhere else. A button that only repeats
                 standing chrome adds a control without adding a destination. */}
-          </div>
+          </SectionCard>
         )}
       </section>
     </main>

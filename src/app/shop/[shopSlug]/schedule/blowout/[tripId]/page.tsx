@@ -8,6 +8,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
@@ -141,7 +142,7 @@ export default async function BlowoutPage({
             <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
           ) : null}
         </div>
-        <section className="max-w-2xl rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <SectionCard as="div" padding="lg" className="max-w-2xl">
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
           {roster.length === 0 ? (
@@ -180,7 +181,7 @@ export default async function BlowoutPage({
               </SubmitButton>
             </form>
           )}
-        </section>
+        </SectionCard>
       </>
     );
   }

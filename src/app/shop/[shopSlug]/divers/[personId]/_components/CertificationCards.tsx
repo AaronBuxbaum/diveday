@@ -216,14 +216,14 @@ export async function CertificationCards({
            is behind the owner/manager export gate. An archived card keeps a
            visible row for the same reason.
 
-           The date, not the name: the staff member is on the row
-           (`no_certification_cleared_by_person_id`) and in the export, but
-           resolving it to a name needs a join this component does not have —
-           `_components` here take their data as props and never read the
-           database (FU-20260815-a-cleared-not-certified-stamp-does-not-name-who-cleared-it). */
+           The actor name is resolved by `getDiverProfile`; this component only
+           renders the prop, keeping `_components` database-free. */
         <p className="mt-4 text-sm text-muted">
           {t("divers.certifications.noCertificationClearedNote", {
             date: formatShortDate(diver.person.noCertificationClearedAt, locale, shop.timezone),
+            name:
+              diver.noCertificationClearedByName ??
+              t("divers.certifications.noCertificationClearedByUnknown"),
           })}
         </p>
       ) : null}

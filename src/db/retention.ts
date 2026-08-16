@@ -12,13 +12,14 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
   stripeWebhookEvents,
 } from "./schema";
 
 /**
- * Delete rows past their retention window from the append-only tables that
+ * Delete rows past their retention window from operational tables that
  * otherwise grow without bound (DATA-M4/PAY-L2, ADR
  * 20260803-append-only-retention).
  *
@@ -144,6 +145,24 @@ export async function pruneExpiredRecords(
         db
           .delete(notificationDeliveryAttempts)
           .where(inArray(notificationDeliveryAttempts.id, ids)),
+    ),
+  );
+
+  // The latest delivery outcome is mutable state, but it is still an
+  // operational trail: its provider detail and send error are the evidence a
+  // shop reads when asking whether a message reached a diver. Measure it from
+  // the latest send attempt, which is refreshed whenever a new send replaces
+  // the row.
+  outcomes.push(
+    await pruneBatch(
+      "notification_deliveries",
+      () =>
+        db
+          .select({ id: notificationDeliveries.id })
+          .from(notificationDeliveries)
+          .where(lt(notificationDeliveries.attemptedAt, cutoff("notification_deliveries")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(notificationDeliveries).where(inArray(notificationDeliveries.id, ids)),
     ),
   );
 

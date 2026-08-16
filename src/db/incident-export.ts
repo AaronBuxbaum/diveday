@@ -109,8 +109,7 @@ export async function getIncidentExport(
       subjectName: subject.fullName,
       checkpoint: event.checkpoint,
       status: event.status,
-      // Crew events have no offline path; the live manifest is their one writer.
-      source: "live" as const,
+      source: event.source,
       recordedByName: recorder.fullName,
       note: event.note,
       occurredAt: event.occurredAt,

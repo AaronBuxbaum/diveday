@@ -2209,7 +2209,8 @@ export const notificationSendQueue = pgTable(
       .notNull()
       .references(() => shops.id),
     idempotencyKey: text("idempotency_key").notNull().unique(),
-    payload: jsonb("payload").$type<Notification>().notNull(),
+    /** Cleared after a terminal send; queued/processing rows always carry it. */
+    payload: jsonb("payload").$type<Notification>(),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull(),

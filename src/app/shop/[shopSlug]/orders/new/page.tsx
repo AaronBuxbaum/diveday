@@ -5,6 +5,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -187,113 +188,115 @@ export default async function NewOrderPage({
         </p>
       ) : null}
 
-      <form action={createOrderAction} className="flex flex-col gap-6">
-        {prefillBookingId ? (
-          <input type="hidden" name="bookingId" value={prefillBookingId} />
-        ) : null}
+      <SectionCard padding="lg" className="mt-8">
+        <form action={createOrderAction} className="flex flex-col gap-6">
+          {prefillBookingId ? (
+            <input type="hidden" name="bookingId" value={prefillBookingId} />
+          ) : null}
 
-        <FieldGrid columns={1} className="gap-y-6">
-          <Field label={t("orders.new.customerLabel")}>
-            <select
-              name="personId"
-              required
-              defaultValue={prefillPersonId ?? ""}
-              className={controlClass}
-            >
-              <option value="" disabled>
-                {t("orders.new.chooseCustomer")}
-              </option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.fullName}
-                  {customer.email ? ` — ${customer.email}` : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("orders.new.noteLabel")} hint={t("orders.new.noteHint")}>
-            <input
-              type="text"
-              name="description"
-              maxLength={200}
-              placeholder={t("orders.new.notePlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-medium">{t("orders.new.lineItemsLegend")}</legend>
-          {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
-            const rowDefault = lineDefaults[i] ?? null;
-            return (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
-                key={i}
-                className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[7rem_1fr_5rem_6rem]"
+          <FieldGrid columns={1} className="gap-y-6">
+            <Field label={t("orders.new.customerLabel")}>
+              <select
+                name="personId"
+                required
+                defaultValue={prefillPersonId ?? ""}
+                className={controlClass}
               >
-                <select
-                  name={`kind-${i}`}
-                  defaultValue={rowDefault?.kind ?? "other"}
-                  // The `<legend>` names the fieldset, not this row's control,
-                  // so each picker states which line it belongs to — four
-                  // identically-labelled "Kind" selects would be no more use to
-                  // a screen reader than none at all (WCAG 4.1.2).
-                  aria-label={t("orders.new.lineItemKindAria", { number: i + 1 })}
-                  className={controlClass}
-                >
-                  {LINE_ITEM_KINDS.map((kind) => (
-                    <option key={kind.value} value={kind.value}>
-                      {t(kind.key)}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  name={`description-${i}`}
-                  defaultValue={rowDefault?.description}
-                  placeholder={t("orders.new.lineItemDescriptionPlaceholder")}
-                  maxLength={200}
-                  className={controlClass}
-                />
-                <input
-                  type="number"
-                  name={`quantity-${i}`}
-                  defaultValue={1}
-                  min={1}
-                  aria-label={t("orders.new.quantityLabel")}
-                  className={controlClass}
-                />
-                <input
-                  type="number"
-                  name={`unitAmount-${i}`}
-                  step={unitAmountStep}
-                  min={0}
-                  defaultValue={rowDefault?.unitAmount}
-                  aria-label={t("orders.new.unitPriceLabel")}
-                  placeholder={t("orders.new.unitPricePlaceholder")}
-                  className={controlClass}
-                />
-              </div>
-            );
-          })}
-        </fieldset>
+                <option value="" disabled>
+                  {t("orders.new.chooseCustomer")}
+                </option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.fullName}
+                    {customer.email ? ` — ${customer.email}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label={t("orders.new.noteLabel")} hint={t("orders.new.noteHint")}>
+              <input
+                type="text"
+                name="description"
+                maxLength={200}
+                placeholder={t("orders.new.notePlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton
-            pendingLabel={t("orders.new.sending")}
-            className={buttonClass({ size: "lg" })}
-          >
-            {t("orders.new.submit")}
-          </SubmitButton>
-          {/* Why the order was refused, beside the button that tried to send
+          <fieldset className="flex flex-col gap-3">
+            <legend className="text-sm font-medium">{t("orders.new.lineItemsLegend")}</legend>
+            {Array.from({ length: LINE_ITEM_ROWS }).map((_, i) => {
+              const rowDefault = lineDefaults[i] ?? null;
+              return (
+                <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed set of static rows, never reordered
+                  key={i}
+                  className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-[7rem_1fr_5rem_6rem]"
+                >
+                  <select
+                    name={`kind-${i}`}
+                    defaultValue={rowDefault?.kind ?? "other"}
+                    // The `<legend>` names the fieldset, not this row's control,
+                    // so each picker states which line it belongs to — four
+                    // identically-labelled "Kind" selects would be no more use to
+                    // a screen reader than none at all (WCAG 4.1.2).
+                    aria-label={t("orders.new.lineItemKindAria", { number: i + 1 })}
+                    className={controlClass}
+                  >
+                    {LINE_ITEM_KINDS.map((kind) => (
+                      <option key={kind.value} value={kind.value}>
+                        {t(kind.key)}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    name={`description-${i}`}
+                    defaultValue={rowDefault?.description}
+                    placeholder={t("orders.new.lineItemDescriptionPlaceholder")}
+                    maxLength={200}
+                    className={controlClass}
+                  />
+                  <input
+                    type="number"
+                    name={`quantity-${i}`}
+                    defaultValue={1}
+                    min={1}
+                    aria-label={t("orders.new.quantityLabel")}
+                    className={controlClass}
+                  />
+                  <input
+                    type="number"
+                    name={`unitAmount-${i}`}
+                    step={unitAmountStep}
+                    min={0}
+                    defaultValue={rowDefault?.unitAmount}
+                    aria-label={t("orders.new.unitPriceLabel")}
+                    placeholder={t("orders.new.unitPricePlaceholder")}
+                    className={controlClass}
+                  />
+                </div>
+              );
+            })}
+          </fieldset>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <SubmitButton
+              pendingLabel={t("orders.new.sending")}
+              className={buttonClass({ size: "lg" })}
+            >
+              {t("orders.new.submit")}
+            </SubmitButton>
+            {/* Why the order was refused, beside the button that tried to send
               it — the invoice form is long enough that a banner under the
               heading is off screen by the time anyone presses Send. */}
-          <FormStatus tone="danger">
-            {notice ? (noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")) : undefined}
-          </FormStatus>
-        </div>
-      </form>
+            <FormStatus tone="danger">
+              {notice ? (noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")) : undefined}
+            </FormStatus>
+          </div>
+        </form>
+      </SectionCard>
     </main>
   );
 }

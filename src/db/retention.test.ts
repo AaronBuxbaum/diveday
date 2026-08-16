@@ -8,6 +8,7 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  notificationDeliveries,
   notificationDeliveryAttempts,
   stripeWebhookEvents,
   userAccounts,
@@ -110,6 +111,30 @@ describe("pruneExpiredRecords", () => {
       },
     ]);
 
+    const deliveryWindow = RETENTION_DAYS.notification_deliveries;
+    const insertedDeliveries = await db
+      .insert(notificationDeliveries)
+      .values([
+        {
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          kind: "booking_confirmation",
+          status: "sent",
+          attemptedAt: daysAgo(deliveryWindow + 1),
+        },
+        {
+          shopId: shop.id,
+          bookingId: entry.booking.id,
+          kind: "waiver_request",
+          status: "sent",
+          attemptedAt: daysAgo(deliveryWindow - 1),
+        },
+      ])
+      .returning({ id: notificationDeliveries.id });
+    const ancientDelivery = insertedDeliveries[0];
+    const recentDelivery = insertedDeliveries[1];
+    if (!ancientDelivery || !recentDelivery) throw new Error("delivery insert failed");
+
     const activityWindow = RETENTION_DAYS.activity_events;
     const seededActivity = await db
       .select({ id: activityEvents.id })
@@ -136,6 +161,7 @@ describe("pruneExpiredRecords", () => {
 
     const summary = await pruneExpiredRecords(db, { now: NOW });
     expect(outcomeFor(summary, "notification_delivery_attempts").deleted).toBe(1);
+    expect(outcomeFor(summary, "notification_deliveries").deleted).toBe(1);
     expect(outcomeFor(summary, "activity_events").deleted).toBe(1);
 
     // The seeded attempts (all recent) plus the one recent insert; only the
@@ -144,6 +170,11 @@ describe("pruneExpiredRecords", () => {
       .select({ id: notificationDeliveryAttempts.id })
       .from(notificationDeliveryAttempts);
     expect(attempts).toHaveLength(seededAttempts.length + 1);
+    const deliveries = await db
+      .select({ id: notificationDeliveries.id })
+      .from(notificationDeliveries);
+    expect(deliveries.map((row) => row.id)).toContain(recentDelivery.id);
+    expect(deliveries.map((row) => row.id)).not.toContain(ancientDelivery.id);
 
     const activity = await db
       .select({ id: activityEvents.id })

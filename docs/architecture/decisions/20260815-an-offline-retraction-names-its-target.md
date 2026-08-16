@@ -185,17 +185,17 @@ back aboard" and switches to "Recorded on another device or on the live manifest
 not here"; at the dock it goes back to awaiting and asks again. The header's rejected count says a
 correction needs attention, and the live manifest remains the authority.
 
-**What this deliberately does not do.** It records no evidence that a retraction was checked. The
-target of an *applied* named retraction is derivable from the trail — the compare-and-set guarantees
-it is the row immediately before it at that subject and checkpoint — so the departure log an insurer
-reads is not missing the fact anyone would look for. What is genuinely unrecoverable is
-*provenance*: whether a given `cleared` was named (compare-and-set) or bare (legacy), and how much
-bare traffic is left. Nothing counts either, so the transition in decision 3 is a decision that
-cannot currently be revisited on evidence, and the "revisit if crews report retractions failing"
-trigger asks crews to report something they are given no words for. Both reviews raised this from
-opposite sides; it needs a counted `$.event` in `infra/lib/observability.ts` and possibly a
-`retracts_client_event_id` column, which are other paths and their own change. Filed as
-`FU-20260815-a-refused-retraction-is-a-signal-nobody-counts`.
+**What this deliberately does not do.** It records no extra provenance column for whether a
+retraction was checked. The target of an *applied* named retraction is derivable from the trail — the
+compare-and-set guarantees it is the row immediately before it at that subject and checkpoint — so
+the departure log an insurer reads is not missing the fact anyone would look for. A separate
+`retracts_client_event_id` column would duplicate that derivable target, widen two append-only safety
+tables, and still would not answer the operational question by itself. The unrecoverable provenance
+question is therefore intentionally a metric question, not a trail-shape question: the two
+`manifest.offline_retraction_superseded` and `manifest.offline_retraction_unnamed` counters record
+refusals and legacy bare traffic without putting a person, booking, or note in the log. The bare
+counter's target is zero; it is evidence for revisiting the compatibility rule, not a deadline that
+changes it.
 
 One nuisance worth naming rather than coding around: the sync route applies a batch oldest-first by
 `occurredAt`, so if a tablet's clock steps *backwards* between a mark and its retraction, the

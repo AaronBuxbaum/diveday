@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import type { BlockerQueue } from "@/db/blockers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { URGENCY_KEYS } from "@/i18n/today-labels";
@@ -107,7 +108,7 @@ function TripGroup({
 }) {
   const batchIds = waiverBookingIds(trip);
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+    <SectionCard as="div" padding="none" className="overflow-hidden">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-surface-sunken px-4 py-3 sm:px-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline gap-x-2">
@@ -144,7 +145,7 @@ function TripGroup({
           <DiverRow key={diver.bookingId} diver={diver} shopSlug={shopSlug} t={t} />
         ))}
       </ul>
-    </section>
+    </SectionCard>
   );
 }
 

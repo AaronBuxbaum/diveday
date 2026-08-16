@@ -85,39 +85,39 @@ import { timeZoneAnchor } from "@/lib/timezones";
  * Hiding the page is a courtesy, never the gate: a server action is a POST
  * endpoint whose id ships to any browser that has ever rendered the form, so
  * without this a demoted staffer — or anyone who kept an old page open — could
- * still rewrite the shop's timezone, address, or packing list. Returns the
- * settings redirect target when the actor lacks the gate, or null when they
- * may proceed.
+ * still rewrite the shop's timezone, address, or packing list. Refusal
+ * redirects here so callers cannot forget to act on a returned target.
  */
 async function settingsBlock(session: {
   user: { shopId: string; personId: string; shopSlug: string };
-}): Promise<string | null> {
+}): Promise<void> {
+  const settings = shopPath(session.user.shopSlug, "settings");
   const allowed = await canPersonManageShopSettings(
     await getDb(),
     session.user.shopId,
     session.user.personId,
   );
-  return allowed ? null : noticeUrl(shopPath(session.user.shopSlug, "settings"), "not-authorized");
+  if (!allowed) revalidateAndRedirect(settings, noticeUrl(settings, "not-authorized"));
 }
 
 /**
  * Payment settings (Stripe Connect and the rental catalog/prices) are
  * owner/manager work (H-14, ADR 20260724-role-authorization), re-checked
- * against live roles. Returns the settings redirect target when the actor
- * lacks the gate, or null when they may proceed. Narrower than
- * {@link settingsBlock} by intent rather than by effect — the two resolve to
- * the same roles today, and each states its own reason so one can move without
- * silently dragging the other.
+ * against live roles. Refusal redirects here so callers cannot forget to act
+ * on a returned target. Narrower than {@link settingsBlock} by intent rather
+ * than by effect — the two resolve to the same roles today, and each states
+ * its own reason so one can move without silently dragging the other.
  */
 async function paymentSettingsBlock(session: {
   user: { shopId: string; personId: string; shopSlug: string };
-}): Promise<string | null> {
+}): Promise<void> {
+  const settings = shopPath(session.user.shopSlug, "settings");
   const allowed = await canPersonManagePaymentSettings(
     await getDb(),
     session.user.shopId,
     session.user.personId,
   );
-  return allowed ? null : noticeUrl(shopPath(session.user.shopSlug, "settings"), "not-authorized");
+  if (!allowed) revalidateAndRedirect(settings, noticeUrl(settings, "not-authorized"));
 }
 
 const contactSchema = z.object({
@@ -165,11 +165,7 @@ const reviewUrlSchema = z.object({
 export async function savePackingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const packingList = String(formData.get("packingList") ?? "")
     .split("\n")
     .map((item) => item.trim())
@@ -213,11 +209,7 @@ export async function savePackingAction(formData: FormData) {
 export async function saveUnitsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const depthUnit = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
   const temperatureUnit = z
     .enum(["celsius", "fahrenheit"])
@@ -231,11 +223,7 @@ export async function saveUnitsAction(formData: FormData) {
   const submittedCurrency = formData.get("currency");
   let currency: ShopCurrency | null = null;
   if (submittedCurrency !== null) {
-    const blocked = await paymentSettingsBlock(session);
-    if (blocked) {
-      revalidateAndRedirect(settings, blocked);
-      return;
-    }
+    await paymentSettingsBlock(session);
     // Not `toShopCurrency`: that coerces anything unknown to usd, which would
     // silently save dollars for a shop that submitted a typo. An unrecognized
     // value is a refusal.
@@ -266,11 +254,7 @@ export async function saveUnitsAction(formData: FormData) {
 export async function saveDockDayRhythmAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const rhythm = parseDockDayRhythm(
     Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formData.get(field)])),
   );
@@ -285,16 +269,8 @@ export async function saveDockDayRhythmAction(formData: FormData) {
 export async function saveRentalItemsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const selected = SHOP_CATALOG_ITEMS.filter((item) => formData.get(item.name) === "on").map(
     (item) => item.kind,
   );
@@ -328,16 +304,8 @@ function parsePriceAmount(
 export async function saveRentalPricingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(noticeUrl(settings, "rental-prices-invalid", { saved: "rentalPricing" }));
@@ -385,11 +353,7 @@ export async function saveRentalPricingAction(formData: FormData) {
 export async function saveContactAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "contact-invalid", { saved: "contact" }));
   await setShopContact(await getDb(), session.user.shopId, parsed.data);
@@ -413,11 +377,7 @@ export async function saveContactAction(formData: FormData) {
 export async function saveAddressAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const parsed = addressSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "address-invalid", { saved: "address" }));
   const { latitude, longitude, ...textFields } = parsed.data;
@@ -435,11 +395,7 @@ export async function saveAddressAction(formData: FormData) {
 export async function saveReviewUrlAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const parsed = reviewUrlSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "review-url-invalid", { saved: "reviewLink" }));
   await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
@@ -455,11 +411,7 @@ export async function saveReviewUrlAction(formData: FormData) {
 export async function saveSearchListingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const listed = formData.get("searchListed") === "on";
   await setShopSearchListing(await getDb(), session.user.shopId, listed);
   const notice = listed ? "search-listing-on" : "search-listing-off";
@@ -469,16 +421,8 @@ export async function saveSearchListingAction(formData: FormData) {
 export async function disconnectAction() {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account && !account.disconnectedAt) {
@@ -492,16 +436,8 @@ export async function disconnectAction() {
 export async function refreshAction() {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account) {
@@ -527,11 +463,7 @@ export async function refreshAction() {
 export async function saveTimezoneAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const submitted = formData.get("timezone");
   // An id this runtime can't resolve would make every date formatter on every
   // surface throw, so an unrecognized value is a refusal, never a fallback.

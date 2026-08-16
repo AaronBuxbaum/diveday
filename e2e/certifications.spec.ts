@@ -86,6 +86,60 @@ test("staff captures and verifies level and specialty cards before either can be
   ).toHaveCount(0);
 });
 
+test("a diver record keeps card refusals visible and clears a wrong no-card stamp", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(30_000);
+  const seeded = await request.post("/api/test/seed-trouble-states");
+  expect(seeded.ok()).toBe(true);
+
+  // Rowan's seeded self-declared level is the card-sighting path: a bad number
+  // must return to the same open disclosure, then a plausible number must
+  // certify the claim.
+  await page.goto("/shop/blue-mantis/divers?q=Rowan");
+  await page.getByRole("link", { name: /Rowan Feld/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Rowan Feld" })).toBeVisible();
+  const cards = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Certification cards" }) })
+    .filter({ visible: true });
+  await cards.getByText("Certify from card", { exact: true }).click();
+
+  const sightingNumber = page.locator('input[name="sightedIdentifier"]').filter({ visible: true });
+  await sightingNumber.fill("xx");
+  await page.getByRole("button", { name: "Mark certified" }).click();
+  await expect(
+    page.getByText(
+      "That doesn't look like a card number. Type the number printed on the card, digits included.",
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator('details[open] input[name="sightedIdentifier"]').filter({ visible: true }),
+  ).toHaveCount(1);
+
+  await sightingNumber.fill("PADI-ROWAN-2026");
+  await page.getByRole("button", { name: "Mark certified" }).click();
+  await expect(page.getByRole("status")).toContainText("Card marked certified.");
+  await expect(page.getByText("PADI-ROWAN-2026", { exact: true })).toBeVisible();
+
+  // Nadia is the test-only uncarded state. Clearing it removes the warning
+  // rather than turning the record into a certified one, and the confirmation
+  // is the durable page-level outcome after the panel unmounts.
+  await page.goto("/shop/blue-mantis/divers?q=Nadia");
+  await page.getByRole("link", { name: /Nadia Petrov/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Nadia Petrov" })).toBeVisible();
+  await expect(page.getByText("Not certified yet — diver's word", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "They didn't tell us that" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Cleared. This diver's record no longer says anything about a card",
+  );
+  await expect(page.getByText("Not certified yet — diver's word", { exact: true })).toHaveCount(0);
+});
+
 /*
  * The three card-photo upload tests that used to sit here (CR-011 oversize
  * rejection, CR-012 decode/re-encode and disguised-file rejection) went with

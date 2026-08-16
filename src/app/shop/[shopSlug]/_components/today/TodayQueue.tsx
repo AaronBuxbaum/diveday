@@ -6,6 +6,7 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
@@ -75,89 +76,89 @@ function ActionRow({
   // button. Ten bordered "Open …" buttons down a queue made every row read
   // as a form; a tappable row reads as a list.
   const rowIsLink = !action.waiver && !action.resend && !action.invite && !action.payment?.orderId;
-  return (
-    <li
-      className={
-        grouped
-          ? `group/row relative px-4 py-3.5 transition-colors duration-200 sm:px-5${
-              rowIsLink
-                ? " hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60"
-                : ""
-            }`
-          : `group/row relative rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 sm:p-5${
-              // Pressable chrome only on a card that is actually pressable —
-              // a Send-waiver card that scaled and tinted on hover while only
-              // its button did anything was a false affordance.
-              rowIsLink
-                ? " card-scale-hint hover:border-primary/40 has-[a:focus-visible]:border-primary/40"
-                : ""
-            }`
-      }
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-        {lead}
-        {action.waiver ? (
-          <WaiverSendControl
-            shopSlug={shopSlug}
-            surface="today"
-            bookingIds={action.waiver.bookingIds}
-            label={action.actionLabel}
-            copy={waiverCopy}
-          />
-        ) : action.resend ? (
-          <ResendConfirmationControl
-            shopSlug={shopSlug}
-            bookingId={action.resend.bookingId}
-            label={action.actionLabel}
-            copy={resendCopy}
-          />
-        ) : action.invite ? (
-          <WaitlistInvite
-            entryId={action.invite.entryId}
-            personName={action.invite.personName}
-            personEmail={action.invite.personEmail}
-            invitedAt={action.invite.invitedAt}
-            bookingPath={action.invite.bookingPath}
-            shopName={shopName}
-            tripTitle={action.invite.tripTitle}
-            tripWhen={action.invite.tripWhen}
-            invite={inviteAction.bind(null, action.invite.tripId)}
-            copy={inviteCopy}
-          />
-        ) : action.payment?.orderId ? (
-          <PaymentActionControl
-            shopSlug={shopSlug}
-            orderId={action.payment.orderId}
-            hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
-            copy={paymentCopy}
-          />
-        ) : (
-          <>
-            {/* The stretched link, same construction as the public schedule's
+  const rowClass = grouped
+    ? `group/row relative px-4 py-3.5 transition-colors duration-200 sm:px-5${
+        rowIsLink ? " hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""
+      }`
+    : `group/row relative transition-colors duration-200${
+        // Pressable chrome only on a card that is actually pressable — a
+        // Send-waiver card that scaled and tinted on hover while only its
+        // button did anything was a false affordance.
+        rowIsLink
+          ? " card-scale-hint hover:border-primary/40 has-[a:focus-visible]:border-primary/40"
+          : ""
+      }`;
+  const content = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+      {lead}
+      {action.waiver ? (
+        <WaiverSendControl
+          shopSlug={shopSlug}
+          surface="today"
+          bookingIds={action.waiver.bookingIds}
+          label={action.actionLabel}
+          copy={waiverCopy}
+        />
+      ) : action.resend ? (
+        <ResendConfirmationControl
+          shopSlug={shopSlug}
+          bookingId={action.resend.bookingId}
+          label={action.actionLabel}
+          copy={resendCopy}
+        />
+      ) : action.invite ? (
+        <WaitlistInvite
+          entryId={action.invite.entryId}
+          personName={action.invite.personName}
+          personEmail={action.invite.personEmail}
+          invitedAt={action.invite.invitedAt}
+          bookingPath={action.invite.bookingPath}
+          shopName={shopName}
+          tripTitle={action.invite.tripTitle}
+          tripWhen={action.invite.tripWhen}
+          invite={inviteAction.bind(null, action.invite.tripId)}
+          copy={inviteCopy}
+        />
+      ) : action.payment?.orderId ? (
+        <PaymentActionControl
+          shopSlug={shopSlug}
+          orderId={action.payment.orderId}
+          hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
+          copy={paymentCopy}
+        />
+      ) : (
+        <>
+          {/* The stretched link, same construction as the public schedule's
                 agenda rows: an invisible overlay makes the whole row the tap
                 target (a far better dock-test target than a 44px button), the
                 aria-label keeps the destination's name for screen readers and
                 the role-based tests, and the visible affordance below is
                 presentational. `has-[a:focus-visible]` on the row carries the
                 focus tint; the overlay's own outline draws around the row. */}
-            <Link
-              href={action.href}
-              aria-label={action.actionLabel}
-              className={`absolute inset-0 z-0 ${grouped ? "" : "rounded-2xl"}`}
-            />
-            <span
-              aria-hidden="true"
-              className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
-            >
-              {action.actionLabel}
-              <span className="inline-block transition-transform duration-200 group-hover/row:translate-x-0.5">
-                ›
-              </span>
+          <Link
+            href={action.href}
+            aria-label={action.actionLabel}
+            className={`absolute inset-0 z-0 ${grouped ? "" : "rounded-2xl"}`}
+          />
+          <span
+            aria-hidden="true"
+            className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
+          >
+            {action.actionLabel}
+            <span className="inline-block transition-transform duration-200 group-hover/row:translate-x-0.5">
+              ›
             </span>
-          </>
-        )}
-      </div>
-    </li>
+          </span>
+        </>
+      )}
+    </div>
+  );
+  return grouped ? (
+    <li className={rowClass}>{content}</li>
+  ) : (
+    <SectionCard as="li" className={rowClass}>
+      {content}
+    </SectionCard>
   );
 }
 
@@ -317,13 +318,15 @@ export function TodayQueue({
                     ))}
                   </ul>
                 ) : (
-                  <section
+                  /* No hover chrome on the card itself: the card never
+                     navigates, and having just taught "tint = tappable" on
+                     the rows inside it, a scaling, border-tinting wrapper
+                     would be a false affordance. The rows carry their own. */
+                  <SectionCard
+                    as="div"
                     key={departureGroup.key}
-                    // No hover chrome on the card itself: the card never
-                    // navigates, and having just taught "tint = tappable" on
-                    // the rows inside it, a scaling, border-tinting wrapper
-                    // would be a false affordance. The rows carry their own.
-                    className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
+                    padding="none"
+                    className="overflow-hidden"
                   >
                     <h4 className="border-b border-border bg-surface-sunken px-4 py-2 text-sm font-semibold sm:px-5">
                       {departureGroup.label}
@@ -345,7 +348,7 @@ export function TodayQueue({
                         />
                       ))}
                     </ul>
-                  </section>
+                  </SectionCard>
                 ),
               )}
             </div>

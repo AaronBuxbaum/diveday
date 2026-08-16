@@ -272,6 +272,21 @@ export async function drainNotificationRetries(
       .returning();
     if (!claimed) continue;
 
+    if (!candidate.payload) {
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          lockedUntil: null,
+          errorCode: "missing_payload",
+          lastError: null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      summary.failed += 1;
+      continue;
+    }
+
     const notification = reviveQueuedNotification(candidate.payload);
     let delivery: NotificationDelivery;
     try {
@@ -308,6 +323,7 @@ export async function drainNotificationRetries(
         .update(notificationSendQueue)
         .set({
           status: "sent",
+          payload: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
           updatedAt: nowDate(),
@@ -337,6 +353,7 @@ export async function drainNotificationRetries(
         .update(notificationSendQueue)
         .set({
           status: "failed",
+          payload: null,
           lockedUntil: null,
           httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,
           errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,

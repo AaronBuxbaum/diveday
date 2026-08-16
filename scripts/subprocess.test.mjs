@@ -146,6 +146,10 @@ describe("scripts/", () => {
         "check-repo.mjs",
         "already bounded, and by a stronger mechanism: an async detached process group SIGKILLed as a whole, which spawnSync cannot do",
       ],
+      [
+        "e2e-server.mjs",
+        "an intentionally long-lived async supervisor; its detached process group is the bound and its signal/exit handlers reap the whole group",
+      ],
     ]);
 
     const offenders = readdirSync(HERE)

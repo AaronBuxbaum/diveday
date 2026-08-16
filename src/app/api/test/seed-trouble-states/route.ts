@@ -22,12 +22,14 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
 
 /**
- * Puts the seeded demo shop into the four states that only render when
- * something has gone wrong, so a visual capture can photograph them.
+ * Puts the seeded demo shop into the trouble states that only render when
+ * something has gone wrong, plus a diver record state, so visual captures can
+ * photograph them.
  *
- * These four panels — stuck payment operations and owed refunds on the Orders
+ * These panels — stuck payment operations and owed refunds on the Orders
  * index, stuck media deletions and owed processor erasures in Settings' "Data &
- * integrations" group, and the rating-withheld banner on Reviews — are the
+ * integrations" group, the rating-withheld banner on Reviews, and a diver's
+ * no-card declaration on the diver record — are the
  * class of surface **most** likely to render badly and least likely to be
  * looked at: warning-toned blocks of dense text with inline links, seen by a
  * shop on its worst day. Until this route none of them had ever been
@@ -72,6 +74,20 @@ export async function POST(request: Request) {
     .orderBy(people.createdAt)
     .limit(1);
   if (!actor) return NextResponse.json({ error: "not_seeded" }, { status: 409 });
+
+  // 6. A diver who said they hold no card, so the record's warning panel and
+  // its staff eraser can be exercised without putting a permanent warning in
+  // the demo seed. Nadia Petrov is a healthy, uncarded fixture diver; the
+  // exact name keeps this state deterministic and prevents the first-person
+  // ordering above from coupling unrelated trouble panels to it.
+  await db
+    .update(people)
+    .set({
+      noCertificationDeclaredAt: now,
+      noCertificationClearedAt: null,
+      noCertificationClearedByPersonId: null,
+    })
+    .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Nadia Petrov")));
 
   // 1. A payment operation nobody ever confirmed. `listStuckPaymentOperations`
   //    reads `started` intents older than STALE_AFTER_MS, so the row is

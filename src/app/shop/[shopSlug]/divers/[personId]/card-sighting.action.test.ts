@@ -29,6 +29,9 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
+  notFound: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", async (importOriginal) => {
@@ -40,6 +43,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
+const { notFound } = await import("next/navigation");
 const {
   clearNoCertificationAction,
   deleteCertificationAction,
@@ -92,6 +96,18 @@ function sighting(certificationId: string, fields: Record<string, string>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("the diver-record action subject", () => {
+  it("404s a malformed bound person id before any session or database read", async () => {
+    await expect(reviewAction("blue-mantis", "not-a-uuid", new FormData())).rejects.toThrow(
+      "NOT_FOUND",
+    );
+
+    expect(notFound).toHaveBeenCalledOnce();
+    expect(requireStaffSession).not.toHaveBeenCalled();
+    expect(getDb).not.toHaveBeenCalled();
+  });
 });
 
 describe("a card sighting whose number is not a card number", () => {

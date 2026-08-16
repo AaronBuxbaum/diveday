@@ -149,7 +149,7 @@ function demandsAnything(requirement: LastMinuteDepartureBar | null): boolean {
   );
 }
 
-function ranksBelow(
+export function ranksBelow(
   recipient: LastMinuteRecipientLevel,
   requirement: LastMinuteDepartureBar | null,
 ): boolean {

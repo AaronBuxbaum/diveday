@@ -483,7 +483,7 @@
       },
       "receiptsService": {
         "what": "Recibos e historial de taller",
-        "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — DiveDay guarda tallas, no equipos concretos."
+        "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — hoy DiveDay guarda tallas, no unidades de alquiler individuales."
       }
     },
     "wizard": {

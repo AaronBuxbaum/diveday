@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for Check-in (design principle 1) — the readiness
@@ -14,7 +15,7 @@ export default function CheckInLoading() {
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
         <div className="mt-8 flex flex-col gap-6">
           {[0, 1].map((group) => (
-            <div key={group} className="rounded-2xl border border-border bg-surface">
+            <div key={group} className={sectionCardClass({ padding: "none" })}>
               <div className="border-b border-border px-4 py-3">
                 <div className="h-5 w-56 rounded bg-surface-sunken" />
                 <div className="mt-1.5 h-4 w-40 rounded bg-surface-sunken" />

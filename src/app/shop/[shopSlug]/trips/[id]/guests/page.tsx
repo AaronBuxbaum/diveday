@@ -418,9 +418,9 @@ async function TripGuestsBody({
           certificationSummaries={certificationSummaries}
           /* The same folded gate the deal panel below states — a wait list is
              per-trip, so the departure the staffer is inviting onto is the one
-             already resolved above. Passed as the rung alone: this list is not
-             reordered, filtered, or gated by it, it is only said on the row. */
-          minimumCertificationLevel={dealRequirement.minimumCertificationLevel}
+             already resolved above. The shared predicate marks the row without
+             reordering, filtering, or gating this lead list. */
+          departureRequirement={dealRequirement}
           locale={locale}
           timezone={shop.timezone}
         />

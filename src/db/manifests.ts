@@ -5,6 +5,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { effectiveCrewRoles } from "@/lib/crew-roles";
 import { rentalFitLine } from "@/lib/dive-prep";
+import { log } from "@/lib/log";
 import {
   type BuddyTeammate,
   buildTripManifest,
@@ -636,6 +637,32 @@ function offlineRetractionSuperseded(input: {
   return input.newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase();
 }
 
+/** Count offline retraction outcomes without putting person data in logs. */
+function logOfflineRetractionSignals(
+  input: {
+    shopId: string;
+    tripId: string;
+    status: string;
+    source?: string;
+    retractsClientEventId?: string;
+  },
+  outcome: { ok: boolean; duplicate?: boolean; reason?: string },
+): void {
+  if (input.source !== "offline" || input.status !== "cleared" || outcome.duplicate) return;
+  if (!input.retractsClientEventId) {
+    log("manifest.offline_retraction_unnamed", "info", {
+      shopId: input.shopId,
+      tripId: input.tripId,
+    });
+  }
+  if (!outcome.ok && outcome.reason === RETRACTION_SUPERSEDED) {
+    log("manifest.offline_retraction_superseded", "warn", {
+      shopId: input.shopId,
+      tripId: input.tripId,
+    });
+  }
+}
+
 export type RecordRollCallOutcome =
   | { ok: true; eventId: string; duplicate?: boolean }
   | {
@@ -807,6 +834,7 @@ export async function recordRollCall(
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }
+  logOfflineRetractionSignals(input, outcome);
   return outcome;
 }
 
@@ -1028,6 +1056,7 @@ export async function recordCrewRollCall(
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }
+  logOfflineRetractionSignals(input, outcome);
   return outcome;
 }
 

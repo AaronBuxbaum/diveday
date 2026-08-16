@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { bookings, people, waiverRecords } from "@/db/schema";
+import { bookings, people, personRoles, waiverRecords } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -175,5 +175,18 @@ describe("recording a paper waiver from the diver record", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/divers/${removed.id}?notice=waiver-error&form=waiver`);
     expect(await completedWaivers(db, shop.id, removed.id)).toHaveLength(0);
+  });
+
+  it("refuses a staff account that was revoked after the page loaded", async () => {
+    const { db, shop, personId } = await context();
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    await db.delete(personRoles).where(eq(personRoles.personId, owner));
+
+    const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${personId}?notice=not-authorized-waiver&form=waiver`,
+    );
+    expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
   });
 });

@@ -110,6 +110,11 @@ const NOTICE_KEYS: Record<
 
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },
+  "not-authorized-details": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedDetails",
+  },
   duplicate: {
     form: "details",
     tone: "danger",
@@ -141,6 +146,11 @@ const NOTICE_KEYS: Record<
   "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },
   "fit-cleared": { form: "fit", tone: "success", key: "divers.notices.fitCleared" },
   "not-authorized-fit": { form: "fit", tone: "danger", key: "divers.notices.notAuthorizedFit" },
+  "not-authorized-waiver": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedWaiver",
+  },
 
   // Payments.
   refunded: { form: "payments", tone: "success", key: "divers.notices.refunded" },
@@ -173,6 +183,11 @@ const NOTICE_KEYS: Record<
   // when a redirect is needed to carry the undo text.
   "note-added": { form: "notes", tone: "success", key: "divers.notices.noteAdded" },
   "note-deleted": { form: "notes", tone: "success", key: "divers.notices.noteDeleted" },
+  "not-authorized-notes": {
+    form: "notes",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedNotes",
+  },
 
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.

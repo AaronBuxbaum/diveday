@@ -79,7 +79,8 @@
     "clearNoCertificationHint": "Someone said on a public form that this diver holds no card. Anyone who knows their name and email can leave that answer, so clear it if they didn't give it. Clearing records who corrected it and leaves the record saying nothing about a card — never that they're certified — and the deal and wait lists stop flagging them as uncertified.",
     "clearNoCertification": "They didn't tell us that",
     "clearingNoCertification": "Clearing…",
-    "noCertificationClearedNote": "A “not certified yet” answer was cleared from this record on {date}. Who cleared it travels in this shop’s data export.",
+    "noCertificationClearedNote": "A “not certified yet” answer was cleared from this record by {name} on {date}.",
+    "noCertificationClearedByUnknown": "a staff member",
     "noCertificationRestated": "Staff cleared this answer once before and it has been given again on a public form since. Anyone who knows this diver's name and email can leave it."
   },
   "page": {
@@ -293,6 +294,7 @@
     "cardRestored": "Card restored. It counts toward readiness again.",
     "cardRestoreConflict": "Couldn't restore that card — another card now uses its number. Re-add it if you still need it.",
     "personSaved": "Diver details updated.",
+    "notAuthorizedDetails": "Your account can’t edit this diver for this shop any more. Ask an owner or manager to check your access.",
     "profileSaved": "Rental fit profile saved.",
     "fitFlagged": "Flagged for hands-on fitting. The prep list will show this diver needs staff sizing at check-in.",
     "fitCleared": "Fit flag cleared — this diver packs from their stated sizes again.",
@@ -323,6 +325,7 @@
     "eraseNameMismatch": "The name you typed doesn't match this diver's, so nothing was erased. Type it exactly as it appears above.",
     "eraseRefused": "This record can't be erased. Staff records keep the shop's own accountability trail, and you can't erase your own.",
     "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
+    "notAuthorizedWaiver": "Your account can’t record a paper waiver for this shop any more. Ask an owner or manager to check your access.",
     "invalid": "Check the details and try again.",
     "cardRemovedToast": "Card removed.",
     "waiverPaperRecorded": "Paper waiver recorded — signed and on file.",
@@ -335,6 +338,7 @@
     "noCertificationNothingToClear": "Nothing to clear — this diver's record no longer says they hold no card.",
     "notAuthorizedCards": "Your account can't change cards for this shop any more. Ask an owner or manager to check your access.",
     "noteAdded": "Diver note added.",
-    "noteDeleted": "Diver note deleted."
+    "noteDeleted": "Diver note deleted.",
+    "notAuthorizedNotes": "Your account can’t change this diver’s notes for this shop any more. Ask an owner or manager to check your access."
   }
 }

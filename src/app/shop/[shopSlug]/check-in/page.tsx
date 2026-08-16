@@ -10,6 +10,7 @@ import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import type { CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
@@ -339,10 +340,11 @@ export default async function CheckInPage({
               ).length;
               const allAboard = checkedInCount === departure.rows.length;
               return (
-                <section
+                <SectionCard
+                  as="div"
                   key={departure.tripId}
-                  aria-labelledby={`departure-${departure.tripId}`}
-                  className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
+                  padding="none"
+                  className="overflow-hidden"
                 >
                   <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                     <div className="min-w-0">
@@ -551,7 +553,7 @@ export default async function CheckInPage({
                       );
                     })}
                   </div>
-                </section>
+                </SectionCard>
               );
             })}
           </div>

@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /** Form-shaped skeleton for the walk-in counter's diver step (design principle 1). */
 export default function WalkInDiverLoading() {
@@ -6,7 +7,7 @@ export default function WalkInDiverLoading() {
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-80 max-w-full" />
-        <div className="mt-8 rounded-2xl border border-border bg-surface p-6">
+        <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           {["name", "email", "phone", "trip"].map((slot) => (
             <div key={slot} className="mt-4 first:mt-0">
               <div className="h-4 w-24 rounded bg-surface-sunken" />

@@ -2,11 +2,10 @@
  * What DiveDay counts in its own log stream, and what it wakes someone up for.
  *
  * One row per condition. A row is simultaneously a CloudWatch **metric filter**
- * (the count), an **alarm** (the threshold and the email), and a **dashboard
- * widget** (the picture) -- declared once here and expanded three times in
- * S17 of `infra-stack.ts`. Adding a signal is editing this array; there is
- * deliberately no way to add a graph without also deciding what a bad value is
- * and who answers it.
+ * (the count) and a **dashboard widget** (the picture); alarmed rows also have
+ * an alarm and email. All are declared once here and expanded in S17 of
+ * `infra-stack.ts`. Adding a signal is editing this array; there is deliberately
+ * no way to add a graph without stating what it means and who answers it.
  *
  * Why a registry rather than a metric per event code, priced honestly:
  *
@@ -16,12 +15,12 @@
  * month. Past those it is $0.30 per metric, $0.10 per alarm, $3.00 per
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
- * This registry currently declares 13 metrics (8 log signals + 5 web vitals)
- * and 11 alarms (8 + the 3 alarmed vitals), so it sits 3 metrics and 1 alarm
- * over the free allowance at about $1.00/month. Adding a counted signal costs
- * $0.40/month -- $0.30 for the metric and $0.10 for the alarm -- which is the
- * real number to weigh, not zero and not the free-tier cliff it looks like from
- * the alarm count alone.
+ * This registry currently declares 15 metrics (10 log signals + 5 web vitals)
+ * and 11 alarms (8 + the 3 alarmed vitals), so it sits 5 metrics and 1 alarm
+ * over the free allowance at about $1.60/month. A counted signal without an
+ * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
+ * numbers to weigh, not zero and not the free-tier cliff it looks like from the
+ * alarm count alone.
  *
  * The rationing still holds at those prices: this app emits ~40 distinct event
  * codes, so a filter per code would be ~$12/month plus ~$4 of alarms, for a set
@@ -54,6 +53,8 @@ export interface LogSignal {
   readonly events?: readonly string[];
   /** Counts every line at this `$.level`, whatever its event code. */
   readonly level?: "warn" | "error";
+  /** Set false for a metric collected for evidence but not alarmed yet. */
+  readonly alarm?: boolean;
   /** Datapoints at or above this value in one period raise the alarm. */
   readonly threshold: number;
   /** Alarm evaluation window. CloudWatch's own ceiling is one day. */
@@ -206,6 +207,32 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     periodMinutes: 60,
     response:
       "docs/engineering/realtime-manifest-events-runbook.md -- check the connection ceiling against the number of boats out.",
+  },
+  {
+    metricName: "OfflineRetractionSuperseded",
+    title: "Offline retractions refused",
+    why:
+      "A boat device tried to retract a statement that another device or the live manifest had already replaced. " +
+      "The device keeps the safety mark visible, but a rising count means crews are working from conflicting copies.",
+    events: ["manifest.offline_retraction_superseded"],
+    threshold: 1,
+    periodMinutes: 60,
+    alarm: false,
+    response:
+      "Read the shop and trip counts in Logs Insights, then compare the affected boat's devices and live manifest.",
+  },
+  {
+    metricName: "OfflineRetractionUnnamed",
+    title: "Legacy offline retractions",
+    why:
+      "A bare offline retraction preserves compatibility with a device that predates compare-and-set targets. " +
+      "This counter should trend to zero before the compatibility decision is revisited.",
+    events: ["manifest.offline_retraction_unnamed"],
+    threshold: 1,
+    periodMinutes: 1_440,
+    alarm: false,
+    response:
+      "Read the daily count in Logs Insights; the target is zero, and no deadline is imposed by this metric.",
   },
 ];
 

@@ -7,6 +7,7 @@ import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
@@ -100,59 +101,62 @@ export default async function NewBookingPage({
         ← {t("bookings.new.backToBoard")}
       </Link>
 
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold">{t("bookings.new.tripHeading")}</h2>
-        {/* The list is filtered to departures with a seat left, and a filter
+      <div className="mt-6">
+        <SectionCard
+          title={t("bookings.new.tripHeading")}
+          description={t("bookings.new.fullExcluded")}
+          padding="lg"
+        >
+          {/* The list is filtered to departures with a seat left, and a filter
             nobody announced reads as a missing departure: a sold-out Saturday
             simply wasn't here, with nothing on screen to say why or what to do
             about it. Says both, and names the board as the place to do it. */}
-        <p className="mt-1 text-sm text-muted">{t("bookings.new.fullExcluded")}</p>
-        {trips.length === 0 ? (
-          // "Put a departure on the board first" now goes to the board.
-          <EmptyState className="mt-2">
-            <p className="mx-auto max-w-md text-sm text-muted">{t("bookings.new.tripEmpty")}</p>
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ className: "mt-4" })}
-            >
-              {t("bookings.new.tripEmptyAction")}
-            </Link>
-          </EmptyState>
-        ) : (
-          <>
-            {/* The shared picker row, also worn by the counter walk-in. Seats
+          {trips.length === 0 ? (
+            // "Put a departure on the board first" now goes to the board.
+            <EmptyState className="mt-2">
+              <p className="mx-auto max-w-md text-sm text-muted">{t("bookings.new.tripEmpty")}</p>
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {t("bookings.new.tripEmptyAction")}
+              </Link>
+            </EmptyState>
+          ) : (
+            <>
+              {/* The shared picker row, also worn by the counter walk-in. Seats
                 left, not "booked/capacity": the question at this moment is
                 whether this diver fits. */}
-            <TripPickerList
-              className="mt-3"
-              options={trips.map((trip) => ({
-                id: trip.id,
-                href: `/shop/${shopSlug}/bookings/new/${trip.id}`,
-                // Kept as JSX, not a template literal: the browser shapes text
-                // per DOM text node, so collapsing these three expressions and
-                // their separators into one string re-kerns across what were
-                // node boundaries and moves glyphs by a fraction of a pixel.
-                // Invisible to a reader, but a real visual-regression diff.
-                label: (
-                  <>
-                    {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-                    {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                  </>
-                ),
-                meta: t("bookings.new.seatsLeft", { count: spotsRemaining(trip) }),
-              }))}
-            />
-            <Pager
-              page={tripPage.page}
-              pageCount={tripPage.pageCount}
-              href={pageHref}
-              total={t("bookings.new.pagination.total", { count: tripPage.total })}
-              t={t}
-              className="mt-4"
-            />
-          </>
-        )}
-      </section>
+              <TripPickerList
+                options={trips.map((trip) => ({
+                  id: trip.id,
+                  href: `/shop/${shopSlug}/bookings/new/${trip.id}`,
+                  // Kept as JSX, not a template literal: the browser shapes text
+                  // per DOM text node, so collapsing these three expressions and
+                  // their separators into one string re-kerns across what were
+                  // node boundaries and moves glyphs by a fraction of a pixel.
+                  // Invisible to a reader, but a real visual-regression diff.
+                  label: (
+                    <>
+                      {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+                      {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                    </>
+                  ),
+                  meta: t("bookings.new.seatsLeft", { count: spotsRemaining(trip) }),
+                }))}
+              />
+              <Pager
+                page={tripPage.page}
+                pageCount={tripPage.pageCount}
+                href={pageHref}
+                total={t("bookings.new.pagination.total", { count: tripPage.total })}
+                t={t}
+                className="mt-4"
+              />
+            </>
+          )}
+        </SectionCard>
+      </div>
     </main>
   );
 }

@@ -59,7 +59,7 @@ import {
   MIN_INTERVAL_WEEKS,
   weekdaySetFrom,
 } from "@/lib/recurrence";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,
@@ -191,15 +191,16 @@ const guestsPath = (shopSlug: string, tripId: string) =>
  * This is deliberately narrower than "everything on Overview": the *operating*
  * actions the glossary assigns to the day-of crew — predicted-conditions entry,
  * day-of crew assignment (manifest accuracy), and a single trip's weather
- * cancellation — stay `requireStaffSession`, as do the roster/booking/recap
- * actions. Only trip definition and bulk schedule management run through here.
+ * cancellation — stay on the ordinary shop-surface preamble, as do the
+ * roster/booking/recap actions. Only trip definition and bulk schedule
+ * management add the live role gate below.
  */
 async function requireTripConfig(shopSlug: string, tripId: string) {
-  const s = await requireStaffSession();
-  if (!(await canPersonConfigureTrips(await getDb(), s.user.shopId, s.user.personId))) {
-    redirect(noticeUrl(backPath(shopSlug, tripId), "not-authorized"));
-  }
-  return s;
+  const { session } = await requireShopSurface(shopSlug, {
+    allow: canPersonConfigureTrips,
+    refusal: { notice: "not-authorized", landing: ["trips", tripId] },
+  });
+  return session;
 }
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
@@ -299,7 +300,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   // record water temp, viz, and surface state and own the go/no-go call
   // (glossary). This is operating work, not trip definition, so it stays open to
   // all staff even though the rest of Overview is config-gated (H-14).
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   const db = await getDb();
@@ -372,7 +373,7 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
   // Crew-entered conditions (see saveConditionsAction) — operating work, open to
   // all staff.
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
   revalidateAndRedirect(
     back,
@@ -387,7 +388,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   // divers are notified. It only flips status (no money moves — refunds stay
   // owner/manager on the per-booking path), so it's open to all staff. Bulk
   // schedule management (reinstate, whole-series cancel, create) stays config.
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
   revalidateAndRedirect(back, noticeUrl(back, "cancelled"));
 }
@@ -531,7 +532,7 @@ export async function saveRecapShoutoutAction(
   formData: FormData,
 ) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const parsed = recapShoutoutSchema.safeParse({
     recapShoutout: formData.get("recapShoutout") ?? "",
   });
@@ -555,7 +556,7 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
   // so taking a photo down teleported the staffer to a different tab and put
   // the confirmation on a page with nothing to confirm.
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const photoId = String(formData.get("photoId") ?? "");
   if (!photoId) redirect(back);
   const db = await getDb();
@@ -591,7 +592,7 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
  */
 export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("note") ?? "");
   const saved = await addInternalNote(await getDb(), {
@@ -617,7 +618,7 @@ export async function deleteInternalNoteAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const noteId = String(formData.get("noteId") ?? "");
   const result = await deleteInternalNote(await getDb(), {
     shopId: s.user.shopId,
@@ -650,7 +651,7 @@ export async function restoreInternalNoteAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("body") ?? "");
   const restored = bookingId
@@ -670,7 +671,7 @@ export async function restoreInternalNoteAction(
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseAddDiver(formData);
   if (!parsed.success) redirect(noticeUrl(back, "diver-invalid"));
   const outcome = await joinTripWaitlist(await getDb(), {
@@ -714,7 +715,7 @@ export async function inviteWaitlistAction(
   tripId: string,
   entryId: string,
 ): Promise<WaitlistInviteResult> {
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const result = await inviteWaitlistDiver(await getDb(), {
     shopId: s.user.shopId,
     shopSlug,
@@ -740,7 +741,7 @@ export async function sendLastMinuteDealAction(
 ) {
   const back = guestsPath(shopSlug, tripId);
   const anchor = "#last-minute-deal";
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const discountPercent = Number(formData.get("discountPercent"));
   if (!isValidLastMinuteDiscountPercent(discountPercent)) {
     redirect(noticeUrl(`${back}${anchor}`, "last-minute-invalid-discount"));
@@ -805,7 +806,7 @@ function refundNotice(refund: CancellationRefundOutcome): string {
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
   const dbi = await getDb();
@@ -856,7 +857,7 @@ export async function undoRemoveBookingAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
   const dbi = await getDb();
@@ -904,7 +905,7 @@ export async function confirmDiverIdentityAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
   const confirmed = await confirmBookingIdentity(await getDb(), s.user.shopId, bookingId);
@@ -936,7 +937,7 @@ export async function markWaiverInPersonAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(noticeUrl(back, "waiver-error"));
   const outcome = await recordInPersonWaiver(await getDb(), {
@@ -973,7 +974,7 @@ export async function saveRosterEmergencyContactAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!bookingId || !parsed.success) redirect(noticeUrl(back, "invalid"));
@@ -996,7 +997,7 @@ export async function saveRosterEmergencyContactAction(
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const status = paymentStatusSchema.safeParse(formData.get("status"));
   const db = await getDb();
@@ -1064,7 +1065,7 @@ export async function updateTripCrewAction(
   tripId: string,
   change: TripCrewChange,
 ): Promise<{ ok: boolean }> {
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
   const success = await changeTripCrew(db, s.user.shopId, tripId, change);
   if (success) {

@@ -55,15 +55,12 @@ import { recordSelfDeclaredCards } from "./self-declared-cards";
  * The window both joiners state, and the one number in this file that is load
  * bearing.
  *
- * It deliberately starts **tomorrow**, so neither of them matches today's reef
- * departure. That departure's deal panel is the fixture two visual baselines and
- * their exact-count waits are pinned to (`trip-guests-deal-recipients` and
- * `trip-guests-deal-below-requirement` in `e2e/visual.spec.ts`, which drive the
- * public form themselves and then assert "N of M are below"). Seeding into it
- * would have rewritten somebody else's baseline to say the same thing this says
- * on every other departure in the window.
+ * Selah's window starts **today** so the headline reef departure has one marked
+ * recipient before a demo visitor opens it. Rowan still starts tomorrow, which
+ * keeps the first capture's list realistic without putting two marked rows on
+ * the three-person headline list. The reef panel's two visual baselines and
+ * exact-count wait are consequently updated together in `e2e/visual.spec.ts`.
  */
-const AVAILABLE_FROM_DAYS = 1;
 const AVAILABLE_UNTIL_DAYS = 30;
 
 const JOINERS = [
@@ -71,6 +68,7 @@ const JOINERS = [
     fullName: "Rowan Feld",
     email: "rowan.feld@example.com",
     phone: "+1-305-555-0196",
+    availableFromDays: 1,
     /**
      * A claim, and nothing behind it. Open Water clears the shop's ordinary
      * reef gate, so this row is *not* below most departures' bar — which is
@@ -84,6 +82,7 @@ const JOINERS = [
     fullName: "Selah Mbeki",
     email: "selah.mbeki@example.com",
     phone: "+1-305-555-0197",
+    availableFromDays: 0,
     /**
      * The answer the list had no way to give until 2026-08-15, and the one the
      * whole column exists for: a Discover Scuba customer, a snorkeller, the
@@ -102,7 +101,6 @@ export async function seedSelfDeclaredJoiners(
   includeHistoryData: boolean,
 ): Promise<void> {
   if (!includeHistoryData) return;
-  const availableFrom = dateAt(AVAILABLE_FROM_DAYS);
   const availableUntil = dateAt(AVAILABLE_UNTIL_DAYS);
 
   // Sequential, never `Promise.all`: this can be handed a transaction, and a
@@ -128,7 +126,7 @@ export async function seedSelfDeclaredJoiners(
     await db.insert(lastMinuteListEntries).values({
       shopId,
       personId: person.id,
-      availableFrom,
+      availableFrom: dateAt(joiner.availableFromDays),
       availableUntil,
       createdAt: nextCreatedAt(),
     });

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
-import { createTrip, duplicateTrip, listTripScheduleDays, moveTrip } from "./trips";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import { rollCallCrewEvents } from "./schema";
+import { createTrip, deleteTrip, duplicateTrip, listTripScheduleDays, moveTrip } from "./trips";
 
 describe("moveTrip / duplicateTrip across a DST transition", () => {
   // The seeded blue-mantis shop is America/New_York. Spring-forward in 2026
@@ -237,5 +239,51 @@ describe("moveTrip / duplicateTrip when the start's clock time also changes", ()
       hour: 11,
       minute: 15,
     });
+  });
+});
+
+describe("schedule edits after roll-call evidence", () => {
+  it("refuses move and delete after a head count, but deletes an untouched trip", async () => {
+    const { db, shop } = await seededShopContext();
+    const staffId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const sailed = await createTrip(db, {
+      shopId: shop.id,
+      title: "Roll-call guard regression",
+      startsAt: new Date("2099-06-10T13:00:00.000Z"),
+      endsAt: new Date("2099-06-10T17:00:00.000Z"),
+      capacity: 8,
+      plannedDives: 1,
+    });
+    if (!sailed) throw new Error("failed to create trip");
+
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: sailed.id,
+      personId: staffId,
+      recordedByPersonId: staffId,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date("2099-06-10T12:00:00.000Z"),
+    });
+
+    expect(await moveTrip(db, shop.id, sailed.id, new Date("2099-06-11T13:00:00.000Z"))).toEqual({
+      ok: false,
+      reason: "already_sailed",
+    });
+    expect(await deleteTrip(db, shop.id, sailed.id)).toEqual({
+      ok: false,
+      reason: "already_sailed",
+    });
+
+    const untouched = await createTrip(db, {
+      shopId: shop.id,
+      title: "Untouched schedule row",
+      startsAt: new Date("2099-06-12T13:00:00.000Z"),
+      endsAt: new Date("2099-06-12T17:00:00.000Z"),
+      capacity: 8,
+      plannedDives: 1,
+    });
+    if (!untouched) throw new Error("failed to create untouched trip");
+    expect(await deleteTrip(db, shop.id, untouched.id)).toEqual({ ok: true });
   });
 });

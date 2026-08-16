@@ -3,6 +3,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getCurrentWaiverTemplate } from "@/db/waivers";
@@ -120,9 +121,9 @@ export default async function WaiverTemplatesPage({
             })}
           </p>
         ) : null}
-        <div className="mt-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+        <SectionCard as="div" padding="lg" className="mt-4">
           {editForm}
-        </div>
+        </SectionCard>
       </section>
     </>
   );

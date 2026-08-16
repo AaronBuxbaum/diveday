@@ -12,6 +12,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManagePaymentSettings } from "@/db/authz";
@@ -246,13 +247,14 @@ export default async function PromosPage({
 
       {/* The target the empty state below jumps to — a plain in-page anchor,
           so nothing re-renders and the form keeps whatever is typed in it. */}
-      <section
+      <SectionCard
         id="new-code"
-        className="scroll-mt-24 rounded-lg border border-border bg-surface p-6"
+        className="scroll-mt-24"
+        padding="lg"
+        title={t("promos.newCode.heading")}
+        description={t("promos.newCode.detail")}
       >
-        <h2 className="font-medium">{t("promos.newCode.heading")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("promos.newCode.detail")}</p>
-        <FieldGrid as="form" action={createPromoAction} columns={2} className="mt-4">
+        <FieldGrid as="form" action={createPromoAction} columns={2}>
           <Field
             label={t("promos.fields.code")}
             hint={t("promos.fields.codeHint")}
@@ -339,7 +341,7 @@ export default async function PromosPage({
               that changed nothing it depends on. */}
           <FieldErrorFocus key={notice} scope="new-code" />
         </FieldGrid>
-      </section>
+      </SectionCard>
 
       <h2 className="mt-8 font-medium">{t("promos.yourCodes")}</h2>
       {promos.length === 0 ? (
@@ -363,9 +365,11 @@ export default async function PromosPage({
             );
             const switchable = promo.status === "active" || promo.status === "disabled";
             return (
-              <li
+              <SectionCard
+                as="li"
                 key={promo.id}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 sm:flex-row sm:items-start"
+                padding="lg"
+                className="list-none flex flex-col gap-3 sm:flex-row sm:items-start"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -463,7 +467,7 @@ export default async function PromosPage({
                     </form>
                   </div>
                 ) : null}
-              </li>
+              </SectionCard>
             );
           })}
         </ul>
@@ -494,9 +498,11 @@ export default async function PromosPage({
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
           {tripDeals.map((deal) => (
-            <li
+            <SectionCard
+              as="li"
               key={deal.id}
-              className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-5"
+              padding="lg"
+              className="list-none flex flex-col gap-1"
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="text-sm font-medium text-primary tabular-nums">
@@ -516,7 +522,7 @@ export default async function PromosPage({
                 })}{" "}
                 · {t("promos.tripDeals.recipients", { count: deal.recipientCount })}
               </p>
-            </li>
+            </SectionCard>
           ))}
         </ul>
       )}

@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
+import { SectionCard } from "@/components/ui/card";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import type { getShopById } from "@/db/shops";
 import { getSignedWaiverRecordForShop, listWaiverIntegrityAudit } from "@/db/waivers";
@@ -213,6 +214,9 @@ export default async function WaiverSignaturesPage({
           <h2 id="signed-record-heading" className="text-lg font-semibold">
             {t("waiversStaff.signatures.signedRecordHeading")}
           </h2>
+          {/* Highlighted records carry the primary tone that pins a searched
+              signature above the ordinary audit list, so this stays a tone
+              panel rather than becoming a neutral SectionCard. */}
           <ul className="mt-4 divide-y divide-border rounded-lg border border-primary/40 bg-surface">
             <SignedRecordRow
               entry={highlighted}
@@ -235,18 +239,20 @@ export default async function WaiverSignaturesPage({
           </EmptyState>
         ) : (
           <>
-            <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-              {entries.map((entry) => (
-                <SignedRecordRow
-                  key={entry.id}
-                  entry={entry}
-                  shopSlug={shopSlug}
-                  shop={shop}
-                  locale={locale}
-                  t={t}
-                />
-              ))}
-            </ul>
+            <SectionCard as="div" padding="none" className="mt-4 overflow-hidden">
+              <ul className="divide-y divide-border">
+                {entries.map((entry) => (
+                  <SignedRecordRow
+                    key={entry.id}
+                    entry={entry}
+                    shopSlug={shopSlug}
+                    shop={shop}
+                    locale={locale}
+                    t={t}
+                  />
+                ))}
+              </ul>
+            </SectionCard>
             <Pager
               page={auditPage.page}
               pageCount={auditPage.pageCount}

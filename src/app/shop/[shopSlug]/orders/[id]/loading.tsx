@@ -3,7 +3,7 @@ import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Receipt-shaped skeleton for one order (design principle 1) — line items,
- * payment state, and refund history are all read per request.
+ * payment state is read per request.
  *
  * The shell comes from `sectionCardClass({ padding: "lg" })`, the same call
  * the page's own receipt card makes, so the two cannot drift apart.
@@ -20,7 +20,6 @@ export default function OrderLoading() {
             ))}
           </div>
         </div>
-        <div className={sectionCardClass({ padding: "none", className: "mt-6 h-32" })} />
       </div>
     </main>
   );

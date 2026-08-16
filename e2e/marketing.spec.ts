@@ -185,10 +185,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // number that answers "does the spreadsheet audience need a direct door" was
   // about to be read against a denominator missing this page — the one a reader
   // reaches *after* the homepage convinced them.
-  await expect(productMain.getByRole("link", { name: /On a spreadsheet today\?/ })).toHaveAttribute(
-    "href",
-    "/switching/spreadsheet?from=product-spreadsheet",
-  );
+  await expect(
+    productMain.getByRole("link", { name: /See how DiveDay reads your spreadsheet/ }),
+  ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
@@ -417,6 +416,12 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
+  await expect(
+    page
+      .getByRole("heading", { name: "Bring the file into DiveDay" })
+      .locator("..")
+      .getByRole("link", { name: "Start a trial" }),
+  ).toHaveAttribute("href", "/onboard?from=switching-eve-mid");
 
   // A buyer can act from the hero, not only from the closing block seven
   // sections down: the demo form and the trial link sit in the same section as
@@ -603,6 +608,12 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // sitting on their own shop's session (see import.spec.ts) — an anonymous
   // visitor has no shop to deep-link into.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
+  await expect(
+    page
+      .getByRole("heading", { name: "Bring the file into DiveDay" })
+      .locator("..")
+      .getByRole("link", { name: "Start a trial" }),
+  ).toHaveAttribute("href", "/onboard?from=switching-spreadsheet-mid");
 
   // The starter template downloads a real CSV (not a dead link).
   const templateHref = await page
