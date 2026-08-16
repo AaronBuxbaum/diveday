@@ -175,10 +175,7 @@ jobs:
     needs: build
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
-    # Four shards still run in parallel, but each shard now keeps one browser
-    # and one Next server to avoid CPU contention. Give that stable topology
-    # enough wall-clock budget to finish the full shard.
-    timeout-minutes: 30
+    timeout-minutes: 20
     permissions:
       contents: read
     strategy:
@@ -215,14 +212,6 @@ jobs:
             fi
           done
           pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
-        env:
-          # Each worker owns both a Chromium process and a Next server. On a
-          # 4-core GitHub runner, two workers per shard oversubscribe the CPU
-          # and turn ordinary locator waits into cascading 8–60s timeouts.
-          # Keep the non-visual suite on the same one-worker topology as the
-          # visual suite; the four shards still provide parallelism across
-          # runners without contention inside one runner.
-          E2E_WORKERS: "1"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
         # (20260731-ci-parallelization-resources-build-concurrency.md)
@@ -273,7 +262,7 @@ jobs:
     needs: build
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     permissions:
       contents: read
     strategy:
