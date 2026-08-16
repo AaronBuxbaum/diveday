@@ -13,6 +13,7 @@ import {
   ne,
   notInArray,
   or,
+  sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
@@ -838,4 +839,36 @@ export async function getDiverProfile(
       currentTemplateVersion: waiverTemplate?.version ?? null,
     }),
   };
+}
+
+/**
+ * Finds divers in a shop whose names match exactly (case-insensitive) or are similar
+ * (similarity score > 0.4 using pg_trgm similarity).
+ */
+export async function findSimilarDivers(db: AppDb, shopId: string, fullName: string) {
+  const trimmed = fullName.trim();
+  const lowerName = trimmed.toLowerCase();
+
+  return db
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      email: people.email,
+      phone: people.phone,
+    })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+        or(
+          eq(sql`lower(${people.fullName})`, lowerName),
+          sql`similarity(lower(${people.fullName}), ${lowerName}) > 0.4`,
+        ),
+      ),
+    )
+    .orderBy(desc(sql`similarity(lower(${people.fullName}), ${lowerName})`))
+    .limit(5);
 }

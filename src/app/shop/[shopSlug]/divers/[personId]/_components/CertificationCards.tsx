@@ -75,7 +75,7 @@ export async function CertificationCards({
             `<details>`, and an answer rendered inside a shut disclosure is
             worse than the page-top banner it replaces — invisible rather than
             merely far away. */}
-        <details open={Boolean(sectionStatus)}>
+        <details open={Boolean(sectionStatus) && sectionStatus?.tone !== "success"}>
           {/* Through the wrapper, like every other button-shaped thing (see
               divers/page.tsx and reviews/page.tsx): the hand-written string
               this replaces was `buttonClass()`'s primary/md output copied out
@@ -118,17 +118,7 @@ export async function CertificationCards({
                 Diver has to decide which rung it is, and the answer lived only
                 in the glossary. It belongs where the picking happens
                 (docs/product/glossary.md — CMAS, RAID, GUE). */}
-            <Field
-              label={t("divers.certifications.level")}
-              description={
-                <>
-                  <span className="block">{t("divers.certifications.levelMapping")}</span>
-                  <span className="mt-1 block">
-                    {t("divers.certifications.levelMappingCaution")}
-                  </span>
-                </>
-              }
-            >
+            <Field label={t("divers.certifications.level")}>
               <select name="level" className={controlClass}>
                 {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                   <option key={value} value={value}>

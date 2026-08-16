@@ -11,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
-import { listBookableDivers } from "@/db/divers";
+import { findSimilarDivers, listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "@/db/operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
@@ -99,6 +99,9 @@ type TripGuestsSearchParams = Promise<{
   /** The deleted note's booking + text, carried by the land-then-undo redirect (§7). */
   noteBookingId?: string;
   noteBody?: string;
+  confirmName?: string;
+  confirmEmail?: string;
+  confirmPhone?: string;
 }>;
 
 /**
@@ -149,8 +152,21 @@ async function TripGuestsBody({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { notice, bid, diverq, inviteq, count, form, gate, rf, noteBookingId, noteBody } =
-    await searchParams;
+  const {
+    notice,
+    bid,
+    diverq,
+    inviteq,
+    count,
+    form,
+    gate,
+    rf,
+    noteBookingId,
+    noteBody,
+    confirmName,
+    confirmEmail,
+    confirmPhone,
+  } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -159,6 +175,7 @@ async function TripGuestsBody({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
+  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
   // The returning-diver picker only books, so it is skipped once the boat is
@@ -231,14 +248,25 @@ async function TripGuestsBody({
     rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
   }
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
+  const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
+    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
+  );
+  const waitlistPersonIds = waitlist.map(({ person }) => person.id);
+  const preCertSummaries = await listCertificationSummaries(db, shop.id, [
+    ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
+  ]);
+
+  // Filter out any last-minute matched diver who has level === null (not certified and doesn't claim to be certified)
+  const lastMinuteCertified = lastMinuteMatched.filter(({ person }) => {
+    const cert = preCertSummaries.get(person.id);
+    return cert && cert.level !== null;
+  });
+
   // The same set, in the same order, that `sendLastMinuteDealBlast` would mail:
   // matched on the stated date window, then wait-listed divers first. A preview
   // that disagreed with the send would be worse than no preview — the staffer
   // would be vetting a list that isn't the one going out.
-  const lastMinuteRecipients = orderLastMinuteRecipients(
-    lastMinuteList.filter(({ entry }) => lastMinuteEntryMatchesTripDate(entry, tripDateIso)),
-    waitlist.map(({ person }) => person.id),
-  );
+  const lastMinuteRecipients = orderLastMinuteRecipients(lastMinuteCertified, waitlistPersonIds);
   /**
    * **The gate the deal panel states above its recipient list** — the trip's
    * own requirement folded with every dive site it visits, which is the same
@@ -265,12 +293,7 @@ async function TripGuestsBody({
   // anybody here knows. A joiner may have named their own level on the public
   // form, and it renders marked self-declared — the fact that stops a shop
   // mailing an Open Water diver a discount on a deep wreck (FU-20260813).
-  const certificationSummaries = await listCertificationSummaries(db, shop.id, [
-    ...new Set([
-      ...lastMinuteRecipients.map(({ person }) => person.id),
-      ...waitlist.map(({ person }) => person.id),
-    ]),
-  ]);
+  const certificationSummaries = preCertSummaries;
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
   // whose money is already gone (dive-domain review).
@@ -495,6 +518,10 @@ async function TripGuestsBody({
           addExistingDiverAction={seatExistingDiverAction.bind(null, "trip-guests", shopSlug)}
           status={noticeForForm(tripNotice, "add-diver")}
           locale={locale}
+          confirmName={confirmName}
+          confirmEmail={confirmEmail}
+          confirmPhone={confirmPhone}
+          confirmMatches={confirmMatches}
         />
       )}
 

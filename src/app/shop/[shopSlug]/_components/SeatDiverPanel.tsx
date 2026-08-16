@@ -30,6 +30,8 @@ export type SeatDiverPanelCopy = {
   emailLabel: string;
   phoneLabel: string;
   optionalHint: string;
+  confirmMatchesTitle?: string;
+  confirmMatchesSubmit?: string;
 };
 
 /**
@@ -63,6 +65,10 @@ export function SeatDiverPanel({
   searchHiddenFields,
   copy,
   newDiverDefaults,
+  confirmName,
+  confirmEmail,
+  confirmPhone,
+  confirmMatches,
 }: {
   surface: SeatSurfaceId;
   shopSlug: string;
@@ -80,9 +86,62 @@ export function SeatDiverPanel({
     phone?: string;
   };
   copy: SeatDiverPanelCopy;
+  confirmName?: string;
+  confirmEmail?: string;
+  confirmPhone?: string;
+  confirmMatches?: Array<{
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  }>;
 }) {
   return (
     <div className="mt-6 space-y-6">
+      {confirmMatches && confirmMatches.length > 0 ? (
+        <div className="border border-warning/25 bg-warning/10 rounded-xl p-4 text-left">
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold text-sm">
+              {copy.confirmMatchesTitle || "Did you mean one of these existing potential matches?"}
+            </h3>
+            <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
+              {confirmMatches.map((match) => (
+                <li key={match.id}>
+                  <form
+                    action={seatExistingDiverAction.bind(null, surface, shopSlug)}
+                    className="inline"
+                  >
+                    <input type="hidden" name="tripId" value={tripId} />
+                    <input type="hidden" name="personId" value={match.id} />
+                    <button type="submit" className="underline font-medium text-left">
+                      {match.fullName}
+                    </button>
+                  </form>
+                  {match.email || match.phone ? (
+                    <span className="text-muted text-xs ml-1">
+                      ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <form action={seatNewDiverAction.bind(null, surface, shopSlug)} className="mt-2">
+              <input type="hidden" name="tripId" value={tripId} />
+              <input type="hidden" name="fullName" value={confirmName} />
+              <input type="hidden" name="email" value={confirmEmail} />
+              <input type="hidden" name="phone" value={confirmPhone} />
+              <input type="hidden" name="force" value="true" />
+              <SubmitButton
+                pendingLabel={copy.adding}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {copy.confirmMatchesSubmit || "Create new diver anyway"}
+              </SubmitButton>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       <SectionCard title={copy.findHeading} padding="lg">
         <PersonSearchForm
           query={query}

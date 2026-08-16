@@ -11,6 +11,7 @@ import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
+  findSimilarDivers,
   getDiverProfile,
   listBookableDivers,
   listDiverSummaries,
@@ -2305,6 +2306,34 @@ describe("listDiverSummaries certification level", () => {
     expect(await summaryFor(db, shop.id, "Level Aspiring")).toMatchObject({
       certificationLevel: "open_water",
       pendingCertificationCount: 1,
+    });
+  });
+
+  describe("findSimilarDivers name similarity and exact matching", () => {
+    it("finds exact and case-insensitive name matches, and similar names using trigram similarity", async () => {
+      const { db, shop } = await seededShopContext();
+
+      // Create a diver to match
+      const baseDiver = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Johnathan Doe",
+        email: "johndoe@example.com",
+      });
+      expect(baseDiver).not.toBeNull();
+
+      // Exact case-insensitive match
+      const exactMatches = await findSimilarDivers(db, shop.id, "johnathan doe");
+      expect(exactMatches).toHaveLength(1);
+      expect(exactMatches[0].fullName).toBe("Johnathan Doe");
+
+      // Similar match (typo / abbreviation)
+      const similarMatches = await findSimilarDivers(db, shop.id, "Jonathan Do");
+      expect(similarMatches).toHaveLength(1);
+      expect(similarMatches[0].fullName).toBe("Johnathan Doe");
+
+      // Unrelated name should not match
+      const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
+      expect(noMatches).toHaveLength(0);
     });
   });
 });

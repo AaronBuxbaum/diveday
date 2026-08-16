@@ -221,7 +221,7 @@ export function LastMinuteDealSection({
                 })}
               </p>
             ) : null}
-            <p className="mt-1 text-sm text-muted">{t("trips.lastMinute.recipientsNote")}</p>
+
             {/* A default range, not a `Pager` — deliberately, and against ADR
                 20260803-one-pagination-model's "every paged staff list wears
                 Pager". `Pager` navigates the page's own URL, and this `<ul>`

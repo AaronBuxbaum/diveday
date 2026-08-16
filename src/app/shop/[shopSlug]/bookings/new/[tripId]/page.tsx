@@ -15,7 +15,7 @@ import {
   listDateRequestsByIds,
   listDateRequestsForCalendarDates,
 } from "@/db/course-inquiries";
-import { getBookableDiver, listBookableDivers } from "@/db/divers";
+import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
@@ -92,6 +92,9 @@ export default async function NewBookingDiverPage({
     request?: string;
     /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
+    confirmName?: string;
+    confirmEmail?: string;
+    confirmPhone?: string;
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
@@ -101,11 +104,13 @@ export default async function NewBookingDiverPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { diverq, notice, gate, request } = await searchParams;
+  const { diverq, notice, gate, request, confirmName, confirmEmail, confirmPhone } =
+    await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
+  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const requestId = request ? uuidParam(request) : null;
@@ -249,6 +254,10 @@ export default async function NewBookingDiverPage({
               }
             : undefined
         }
+        confirmName={confirmName}
+        confirmEmail={confirmEmail}
+        confirmPhone={confirmPhone}
+        confirmMatches={confirmMatches}
         copy={{
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
@@ -268,6 +277,8 @@ export default async function NewBookingDiverPage({
           emailLabel: t("seatDiver.emailLabel"),
           phoneLabel: t("seatDiver.phoneLabel"),
           optionalHint: t("seatDiver.optionalHint"),
+          confirmMatchesTitle: t("divers.page.confirmMatchesTitle"),
+          confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
     </main>

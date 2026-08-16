@@ -51,8 +51,6 @@
     "addCard": "Añadir certificación",
     "agency": "Agencia",
     "level": "Nivel",
-    "levelMapping": "Otras agencias: CMAS 1★, RAID Open Water 20 y BSAC Ocean Diver → Open Water; CMAS 2★, RAID Advanced 35 y BSAC Sports Diver → Advanced Open Water; CMAS 3★ y BSAC Dive Leader → Divemaster.",
-    "levelMappingCaution": "Las estrellas CMAS también son grados de instructor, así que verifica el registro de certificación y no te fíes solo de las palabras. GUE no encaja en esta escala — registra también la certificación de nivel inicial de otra agencia que tenga el buceador.",
     "cardNumber": "Número de certificación",
     "refresherDue": "Vencimiento del repaso",
     "refresherHint": "(opcional)",
@@ -105,7 +103,9 @@
     "optionalHint": "(opcional)",
     "phoneLabel": "Teléfono",
     "adding": "Añadiendo…",
-    "addDiver": "Añadir buceador"
+    "addDiver": "Añadir buceador",
+    "confirmMatchesTitle": "¿Te refieres a alguno de estos posibles duplicados?",
+    "confirmMatchesSubmit": "Crear nuevo buceador de todos modos"
   },
   "list": {
     "viewAllDivers": "Todos los buceadores",

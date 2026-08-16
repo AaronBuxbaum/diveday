@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
@@ -12,7 +13,13 @@ import { sectionCardClass } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
+import {
+  createDiver,
+  findSimilarDivers,
+  isDiverFilter,
+  listDiverSummaries,
+  restoreDiver,
+} from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -77,16 +84,29 @@ export default async function DiversPage({
     q?: string;
     page?: string;
     filter?: string;
+    confirmName?: string;
+    confirmEmail?: string;
+    confirmPhone?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, deleted, q, page, filter: filterParam } = await searchParams;
+  const {
+    notice,
+    deleted,
+    q,
+    page,
+    filter: filterParam,
+    confirmName,
+    confirmEmail,
+    confirmPhone,
+  } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const query = q?.trim() ?? "";
   // Both gates in one round trip, and *before* the roster query, because the
   // view the query runs depends on one of them:
@@ -138,6 +158,20 @@ export default async function DiversPage({
     const parsed = diverSchema.safeParse(Object.fromEntries(formData));
     const roster = shopPath(staff.user.shopSlug, "divers");
     if (!parsed.success) redirect(noticeUrl(roster, "invalid"));
+
+    const force = formData.get("force") === "true";
+    if (!force) {
+      const db = await getDb();
+      const matches = await findSimilarDivers(db, staff.user.shopId, parsed.data.fullName);
+      if (matches.length > 0) {
+        const search = new URLSearchParams();
+        search.set("confirmName", parsed.data.fullName);
+        if (parsed.data.email) search.set("confirmEmail", parsed.data.email);
+        if (parsed.data.phone) search.set("confirmPhone", parsed.data.phone);
+        redirect(`${roster}?${search.toString()}`);
+      }
+    }
+
     const diver = await createDiver(await getDb(), {
       shopId: staff.user.shopId,
       fullName: parsed.data.fullName,
@@ -221,6 +255,43 @@ export default async function DiversPage({
       ) : noticeText ? (
         <ShopNotice tone={noticeIsError ? "danger" : "success"} className="mt-6">
           <p role="status">{noticeText}</p>
+        </ShopNotice>
+      ) : null}
+
+      {potentialMatches.length > 0 ? (
+        <ShopNotice tone="warning" className="mt-6">
+          <div className="flex flex-col gap-2 text-left">
+            <h3 className="font-semibold text-base">{t("divers.page.confirmMatchesTitle")}</h3>
+            <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
+              {potentialMatches.map((match) => (
+                <li key={match.id}>
+                  <Link
+                    href={`${shopPath(shopSlug, "divers", match.id)}`}
+                    className="underline font-medium"
+                  >
+                    {match.fullName}
+                  </Link>
+                  {match.email || match.phone ? (
+                    <span className="text-muted text-sm ml-1">
+                      ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <form action={addDiverAction} className="mt-2">
+              <input type="hidden" name="fullName" value={confirmName} />
+              <input type="hidden" name="email" value={confirmEmail} />
+              <input type="hidden" name="phone" value={confirmPhone} />
+              <input type="hidden" name="force" value="true" />
+              <SubmitButton
+                pendingLabel={t("divers.page.adding")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("divers.page.confirmMatchesSubmit")}
+              </SubmitButton>
+            </form>
+          </div>
         </ShopNotice>
       ) : null}
 

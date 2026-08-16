@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
 import { getDb } from "@/db/client";
-import { listBookableDivers } from "@/db/divers";
+import { findSimilarDivers, listBookableDivers } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
@@ -83,6 +83,9 @@ export default async function WalkInDiverPage({
     notice?: string;
     /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
+    confirmName?: string;
+    confirmEmail?: string;
+    confirmPhone?: string;
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
@@ -92,11 +95,12 @@ export default async function WalkInDiverPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { diverq, notice, gate } = await searchParams;
+  const { diverq, notice, gate, confirmName, confirmEmail, confirmPhone } = await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
+  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -144,6 +148,10 @@ export default async function WalkInDiverPage({
         tripId={trip.id}
         query={query}
         candidates={candidates}
+        confirmName={confirmName}
+        confirmEmail={confirmEmail}
+        confirmPhone={confirmPhone}
+        confirmMatches={confirmMatches}
         copy={{
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
@@ -163,6 +171,8 @@ export default async function WalkInDiverPage({
           emailLabel: t("seatDiver.emailLabel"),
           phoneLabel: t("seatDiver.phoneLabel"),
           optionalHint: t("seatDiver.optionalHint"),
+          confirmMatchesTitle: t("divers.page.confirmMatchesTitle"),
+          confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
     </main>

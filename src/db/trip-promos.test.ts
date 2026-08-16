@@ -14,7 +14,11 @@ import {
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 
-const visitor = { fullName: "Nora Quinn", email: "nora@example.com" };
+const visitor = {
+  fullName: "Nora Quinn",
+  email: "nora@example.com",
+  declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
+};
 
 async function context() {
   const { db, shop } = await seededShopContext();
@@ -106,6 +110,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Priya Shah",
       email: "priya@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
     const provider = fakePromotions();
@@ -156,6 +161,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Wren Ostrowski",
       email: "wren@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
     const outcome = await sendLastMinuteDealBlast(
@@ -205,6 +211,23 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     expect(outcome).toEqual({ ok: false, reason: "stripe_failed" });
     const [promo] = await listTripLastMinutePromos(db, shop.id, openTrip.id);
     expect(promo?.status).toBe("failed");
+  });
+
+  it("refuses to send the blast when the only matching recipient is uncertified", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Uncertified Diver",
+      email: "uncertified@example.com",
+      declaration: { noCertification: true, nitrox: false },
+    });
+    const outcome = await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
+      fakePromotions(),
+    );
+    expect(outcome).toEqual({ ok: false, reason: "no_recipients" });
   });
 });
 

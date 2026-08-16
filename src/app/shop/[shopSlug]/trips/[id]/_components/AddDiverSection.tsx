@@ -38,6 +38,10 @@ export function AddDiverSection({
   addExistingDiverAction,
   status,
   locale,
+  confirmName,
+  confirmEmail,
+  confirmPhone,
+  confirmMatches,
 }: {
   shopSlug: string;
   /**
@@ -62,6 +66,15 @@ export function AddDiverSection({
    */
   status?: FormNotice;
   locale: string;
+  confirmName?: string;
+  confirmEmail?: string;
+  confirmPhone?: string;
+  confirmMatches?: Array<{
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  }>;
 }) {
   const t = staffTranslator(locale);
   const searched = query.length > 0;
@@ -71,6 +84,45 @@ export function AddDiverSection({
       <FormStatus tone={status?.tone} className="mt-2">
         {status?.text}
       </FormStatus>
+
+      {confirmMatches && confirmMatches.length > 0 ? (
+        <div className="border border-warning/25 bg-warning/10 rounded-xl p-4 mt-4 text-left">
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold text-sm">{t("divers.page.confirmMatchesTitle")}</h3>
+            <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
+              {confirmMatches.map((match) => (
+                <li key={match.id}>
+                  <form action={addExistingDiverAction} className="inline">
+                    <input type="hidden" name="tripId" value={tripId} />
+                    <input type="hidden" name="personId" value={match.id} />
+                    <button type="submit" className="underline font-medium text-left">
+                      {match.fullName}
+                    </button>
+                  </form>
+                  {match.email || match.phone ? (
+                    <span className="text-muted text-xs ml-1">
+                      ({[match.email, match.phone].filter(Boolean).join(", ")})
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <form action={full ? addToWaitlistAction : addBookingAction} className="mt-2">
+              <input type="hidden" name="tripId" value={tripId} />
+              <input type="hidden" name="fullName" value={confirmName} />
+              <input type="hidden" name="email" value={confirmEmail} />
+              <input type="hidden" name="phone" value={confirmPhone} />
+              <input type="hidden" name="force" value="true" />
+              <SubmitButton
+                pendingLabel={t("seatDiver.adding")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("divers.page.confirmMatchesSubmit")}
+              </SubmitButton>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {full ? (
         <p className="mt-1 text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>

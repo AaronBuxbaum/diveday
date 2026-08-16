@@ -177,6 +177,7 @@ async function paidBookingContext(
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
     const blast = await sendLastMinuteDealBlast(
       db,

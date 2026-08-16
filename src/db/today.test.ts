@@ -356,6 +356,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -383,6 +384,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       fullName: "Nora Quinn",
       email: "nora@example.com",
       availableFrom: nextYear,
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -407,6 +409,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
     const sent = await sendLastMinuteDealBlast(
       db,

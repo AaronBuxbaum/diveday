@@ -103,6 +103,7 @@ export async function seedMoreTrips(
     conditionsSummary?: string;
     completedDemo?: boolean;
     roster: number[];
+    priceCents?: number;
   };
 
   // Each capacity/booked pair is chosen so its remaining-seat count never
@@ -456,6 +457,7 @@ export async function seedMoreTrips(
         status: def.status ?? "scheduled",
         conditionsHold: def.conditionsHold ?? false,
         conditionsSummary: def.conditionsSummary,
+        priceCents: def.priceCents,
       })),
     )
     .returning();

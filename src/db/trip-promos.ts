@@ -19,6 +19,7 @@ import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { offsetPage } from "./paging";
 import { type TripLastMinutePromo, tripLastMinutePromos, trips } from "./schema";
+import { listCertificationSummaries } from "./self-declared-cards";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWaitlist, getTripWithBooked } from "./trips";
@@ -80,7 +81,15 @@ export async function sendLastMinuteDealBlast(
     ({ entry, person }) =>
       Boolean(person.email) && lastMinuteEntryMatchesTripDate(entry, tripDateIso),
   );
-  if (matches.length === 0) return { ok: false, reason: "no_recipients" };
+
+  const personIds = matches.map((row) => row.person.id);
+  const certSummaries = await listCertificationSummaries(db, input.shopId, personIds);
+  const certifiedMatches = matches.filter(({ person }) => {
+    const cert = certSummaries.get(person.id);
+    return cert && cert.level !== null;
+  });
+
+  if (certifiedMatches.length === 0) return { ok: false, reason: "no_recipients" };
 
   // A diver already waiting on this exact trip has told the shop they want
   // this departure, and the deal can otherwise sell the seat out from under
@@ -90,7 +99,7 @@ export async function sendLastMinuteDealBlast(
   // (ADR 20260813-wait-list-is-a-lead-list).
   const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
   const orderedMatches = orderLastMinuteRecipients(
-    matches,
+    certifiedMatches,
     waitlist.map(({ person }) => person.id),
   );
 

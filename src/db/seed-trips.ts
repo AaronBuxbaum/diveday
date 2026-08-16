@@ -70,6 +70,7 @@ export async function seedTrips(
       endsAt: Date;
       capacity: number;
       plannedDives?: number;
+      priceCents?: number;
     },
   ) {
     const courseId = courseIdByTitle.get(courseTitle);
@@ -89,6 +90,7 @@ export async function seedTrips(
         startsAt: todaySailStart, // sails today, so Today always has a board
         endsAt: new Date(todaySailStart.getTime() + 3.5 * 60 * 60 * 1000),
         capacity: 12,
+        priceCents: 9500,
       },
       {
         shopId,
@@ -100,6 +102,7 @@ export async function seedTrips(
         startsAt: at(2, 19, 30),
         endsAt: at(2, 23, 0),
         capacity: 8,
+        priceCents: 12000,
       },
       {
         shopId,
@@ -109,6 +112,7 @@ export async function seedTrips(
         startsAt: at(5, 12, 0),
         endsAt: at(5, 16, 0),
         capacity: 10,
+        priceCents: 14500,
       },
       {
         shopId,
@@ -128,6 +132,7 @@ export async function seedTrips(
         startsAt: at(4, 14, 0),
         endsAt: at(4, 17, 0),
         capacity: 4,
+        priceCents: 19500,
       },
       // The course page is only half a demo without a date to book: this is the
       // session its "See dates" button lands on.
@@ -144,6 +149,7 @@ export async function seedTrips(
               // this session's "N spots left" distinct from every other seeded
               // trip's, which e2e assertions match on by text.
               capacity: 5,
+              priceCents: 59500,
             },
           ]
         : []),
@@ -160,6 +166,7 @@ export async function seedTrips(
         startsAt: at(3, 11, 30),
         endsAt: at(3, 15, 0),
         capacity: 12,
+        priceCents: 9000,
       },
       {
         shopId,
@@ -176,6 +183,7 @@ export async function seedTrips(
         startsAt: at(8, 8, 0),
         endsAt: at(8, 16, 0),
         capacity: 6,
+        priceCents: 15000,
       }),
       ...courseSession("Peak Performance Buoyancy", {
         title: "Peak Performance Buoyancy — one day",
@@ -183,6 +191,7 @@ export async function seedTrips(
         startsAt: at(13, 8, 0),
         endsAt: at(13, 15, 0),
         capacity: 4,
+        priceCents: 15000,
       }),
       // Two evenings, because that is what the Night Diver page sells: its
       // day-by-day plan is "Evening 1 — dusk and dark" and "Evening 2 —
@@ -199,6 +208,7 @@ export async function seedTrips(
         endsAt: at(16, 21, 0),
         capacity: 6,
         plannedDives: 3,
+        priceCents: 22000,
       }),
       ...courseSession("Deep Diver", {
         title: "Deep Diver — Spiegel Grove & the wall",
@@ -208,6 +218,7 @@ export async function seedTrips(
         endsAt: at(21, 16, 0),
         capacity: 6,
         plannedDives: 4,
+        priceCents: 32000,
       }),
     ])
     .returning();
