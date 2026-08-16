@@ -212,6 +212,14 @@ jobs:
             fi
           done
           pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+        env:
+          # Each worker owns both a Chromium process and a Next server. On a
+          # 4-core GitHub runner, two workers per shard oversubscribe the CPU
+          # and turn ordinary locator waits into cascading 8–60s timeouts.
+          # Keep the non-visual suite on the same one-worker topology as the
+          # visual suite; the four shards still provide parallelism across
+          # runners without contention inside one runner.
+          E2E_WORKERS: "1"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
         # (20260731-ci-parallelization-resources-build-concurrency.md)
