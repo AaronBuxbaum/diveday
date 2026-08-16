@@ -364,7 +364,16 @@ describe("setReviewPublished", () => {
       total: 0,
     });
     expect(await listShopReviewsForStaff(db, shop.id)).toMatchObject({
-      reviews: [{ id: review.id, isPublished: false, isHidden: true }],
+      reviews: [
+        {
+          id: review.id,
+          isPublished: false,
+          isHidden: true,
+          hiddenReason: "spam",
+          hiddenAt: expect.any(Date),
+          hiddenBy: "Dana Reyes",
+        },
+      ],
       total: 1,
     });
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({

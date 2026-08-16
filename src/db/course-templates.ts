@@ -451,7 +451,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Shake the rust off before your first dive back",
       overview:
-        "If it has been a year or more since your last dive, the theory fades faster than the fun does. This is the PADI ReActivate program: a short knowledge review, then a confined-water session where you put the gear back on and find that your hands still know what to do.\n\nWe go over the skills that matter after a break — mask clearing, regulator recovery, weighting and buoyancy, sharing air, and how your computer works. Then you dive. Most divers feel normal again within the first ten minutes of the confined-water session.\n\nThis is not a new certification. It is a dated refresher noted on your certification record, and it is the honest thing to do before you get on a boat with strangers.",
+        "If it has been a year or more since your last dive, the theory fades faster than the fun does. This is the PADI ReActivate program: a short knowledge review, then a confined-water session where you put the gear back on and find that your hands still know what to do.\n\nWe go over the skills that matter after a break — mask clearing, regulator recovery, weighting and buoyancy, sharing air, and how your computer works. Then you dive. Most divers feel normal again within the first ten minutes of the confined-water session.\n\nThis is not a new certification. It is a dated refresher noted on your certification record, and it is the right reset before you get on a boat with strangers.",
       heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
       galleryPhotos: bundledGallery("Brain coral 2 Molasses Reef 20080309.jpg"),
       durationText: "Half a day · about 4 hours",
@@ -1026,7 +1026,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How long does it really take?",
           answer:
-            "Four to eight weeks for most candidates, longer if you are working around a job. The program is performance-based, so the honest answer is that it takes as long as it takes to be someone we would put in front of customers.",
+            "Four to eight weeks for most candidates, longer if you are working around a job. The program is performance-based, so the timeline follows the skills: you finish when you are ready to lead a safe, confident dive for customers.",
         },
         {
           question: "Is Divemaster the same as instructor?",

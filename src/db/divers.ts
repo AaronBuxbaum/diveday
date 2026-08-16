@@ -639,6 +639,55 @@ export async function listBookableDivers(
 }
 
 /**
+ * The same returning-diver shape for a request that already points at a person.
+ * Looking up by id keeps "book this person" exact even when two divers share a
+ * name, while the trip and active-booking checks keep a stale request from
+ * creating a duplicate seat.
+ */
+export async function getBookableDiver(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<BookableDiver | null> {
+  const [booked] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        eq(bookings.personId, personId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (booked) return null;
+
+  const [row] = await db
+    .select({ person: people })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const [rentalFit] = await db
+    .select()
+    .from(rentalFitProfiles)
+    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
+    .limit(1);
+  return { person: row.person, rentalFit: rentalFit ?? null };
+}
+
+/**
  * One diver's whole record.
  *
  * `includeRemoved` is what makes removal reversible from the UI. A removed

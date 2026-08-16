@@ -122,7 +122,8 @@
     "requestPlanHeading": "Partir de las peticiones",
     "requestPlanDescription": "Las personas marcadas recibirán una invitación para esta salida, pero no una reserva. Cambia la selección antes de ponerla en el calendario.",
     "requestPlanRecommendation": "Hay aproximadamente {divers} buceadores representados. Capacidad inicial sugerida: {capacity} plazas.",
-    "requestPlanDivers": "{divers} buceadores"
+    "requestPlanDivers": "{divers} buceadores",
+    "requestPlanPerson": "{name} ({divers, plural, one {# buceador} other {# buceadores}})"
   },
   "addBooking": "Añadir una reserva"
 }

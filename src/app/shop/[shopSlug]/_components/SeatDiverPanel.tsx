@@ -62,6 +62,7 @@ export function SeatDiverPanel({
   personHref,
   searchHiddenFields,
   copy,
+  newDiverDefaults,
 }: {
   surface: SeatSurfaceId;
   shopSlug: string;
@@ -72,6 +73,12 @@ export function SeatDiverPanel({
   personHref?: ((personId: string) => string) | null;
   /** State a GET search must carry, e.g. the walk-in's `?tripId=`. */
   searchHiddenFields?: Record<string, string>;
+  /** Request details can prefill a new diver without changing the shared action. */
+  newDiverDefaults?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+  };
   copy: SeatDiverPanelCopy;
 }) {
   return (
@@ -126,6 +133,7 @@ export function SeatDiverPanel({
             emailLabel={copy.emailLabel}
             phoneLabel={copy.phoneLabel}
             optionalHint={copy.optionalHint}
+            defaultValues={newDiverDefaults}
           />
           <FieldActions className="mt-4">
             <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>

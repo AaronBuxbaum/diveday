@@ -37,7 +37,7 @@
   "crewMarkNotBackAboard": "Mark not back aboard",
   "crewNotBackAboardActive": "Not back aboard",
   "crewRollCallRecordedBy": "{label} · {date} · {name}",
-  "noCrew": "Nobody is on this trip's crew yet. Add whoever ran the boat and this checkpoint can close honestly.",
+  "noCrew": "Nobody is on this trip's crew yet. Add whoever ran the boat to complete this checkpoint.",
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip's crew",
   "checkpointRollCallHeading": "{checkpoint} roll call",

@@ -16,8 +16,15 @@ import { nowDate } from "@/lib/clock";
 import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
+import {
+  type DiveSiteTemplateUpdateMode,
+  diveSiteTemplateDiff,
+  diveSiteTemplateSnapshot,
+  diveSiteTemplateSnapshotFromSite,
+  mergedDiveSiteTemplateSnapshot,
+} from "@/lib/dive-site-template-sync";
 import type { CertificationLevel } from "@/lib/readiness";
-import { type AppDb, violatesUniqueIndex } from "./client";
+import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage } from "./paging";
 import {
@@ -455,7 +462,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
   });
 }
 
-export async function listDiveSiteCreatures(db: AppDb, shopId: string, siteId: string) {
+export async function listDiveSiteCreatures(db: DbExecutor, shopId: string, siteId: string) {
   return (
     db
       .select()
@@ -484,7 +491,7 @@ export async function listDiveSiteCreatures(db: AppDb, shopId: string, siteId: s
  * columns are left null and are read by nothing.
  */
 export async function replaceDiveSiteCreatures(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   siteId: string,
   species: readonly MarineLifeSlug[],
@@ -700,6 +707,170 @@ export async function currentGlobalDiveSiteVersions(
     .from(globalDiveSites)
     .where(inArray(globalDiveSites.id, ids));
   return new Map(rows.map((row) => [row.id, row.version]));
+}
+
+export type DiveSiteTemplateUpdate = {
+  templateName: string;
+  currentVersion: number;
+  latestVersion: number;
+  legacyBaseline: boolean;
+  diff: ReturnType<typeof diveSiteTemplateDiff>;
+};
+
+/**
+ * The current published revision for one shop-owned site, with a field-level
+ * diff against the version that site started from. Historical catalog rows are
+ * immutable, so they provide the baseline without adding another snapshot
+ * column to the shop's briefing.
+ */
+export async function getDiveSiteTemplateUpdate(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+): Promise<DiveSiteTemplateUpdate | null> {
+  const site = await getDiveSite(db, shopId, siteId);
+  if (!site?.sourceTemplateId || site.sourceTemplateVersion == null) return null;
+
+  const [template] = await db
+    .select()
+    .from(globalDiveSites)
+    .where(eq(globalDiveSites.id, site.sourceTemplateId))
+    .limit(1);
+  if (!template || template.currentVersion <= site.sourceTemplateVersion) return null;
+
+  const [latestVersion, baselineVersion] = await Promise.all([
+    db
+      .select()
+      .from(globalDiveSiteVersions)
+      .where(
+        and(
+          eq(globalDiveSiteVersions.globalDiveSiteId, template.id),
+          eq(globalDiveSiteVersions.version, template.currentVersion),
+        ),
+      )
+      .limit(1),
+    db
+      .select()
+      .from(globalDiveSiteVersions)
+      .where(
+        and(
+          eq(globalDiveSiteVersions.globalDiveSiteId, template.id),
+          eq(globalDiveSiteVersions.version, site.sourceTemplateVersion),
+        ),
+      )
+      .limit(1),
+  ]);
+  const latest = latestVersion[0];
+  if (!latest) return null;
+  const creatures = await listDiveSiteCreatures(db, shopId, siteId);
+  const currentSnapshot = diveSiteTemplateSnapshotFromSite({
+    ...site,
+    creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(isMarineLifeSlug),
+  });
+  const baseline = baselineVersion[0]
+    ? diveSiteTemplateSnapshot(baselineVersion[0].briefing)
+    : null;
+  const latestSnapshot = diveSiteTemplateSnapshot(latest.briefing);
+  return {
+    templateName: latest.briefing.name,
+    currentVersion: site.sourceTemplateVersion,
+    latestVersion: latest.version,
+    legacyBaseline: baseline === null,
+    diff: diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot),
+  };
+}
+
+/** Apply a reviewed catalog revision without replacing local media or route work. */
+export async function pullDiveSiteTemplateUpdates(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+  mode: DiveSiteTemplateUpdateMode,
+) {
+  return db.transaction(async (tx) => {
+    const [site] = await tx
+      .select()
+      .from(diveSites)
+      .where(
+        and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)),
+      )
+      .for("update");
+    if (!site?.sourceTemplateId || site.sourceTemplateVersion == null) {
+      return { status: "unavailable" as const };
+    }
+
+    const [template] = await tx
+      .select()
+      .from(globalDiveSites)
+      .where(eq(globalDiveSites.id, site.sourceTemplateId))
+      .limit(1);
+    if (!template || template.currentVersion <= site.sourceTemplateVersion) {
+      return { status: "unavailable" as const };
+    }
+    const latestVersion = await tx
+      .select()
+      .from(globalDiveSiteVersions)
+      .where(
+        and(
+          eq(globalDiveSiteVersions.globalDiveSiteId, template.id),
+          eq(globalDiveSiteVersions.version, template.currentVersion),
+        ),
+      )
+      .limit(1);
+    const baselineVersion = await tx
+      .select()
+      .from(globalDiveSiteVersions)
+      .where(
+        and(
+          eq(globalDiveSiteVersions.globalDiveSiteId, template.id),
+          eq(globalDiveSiteVersions.version, site.sourceTemplateVersion),
+        ),
+      )
+      .limit(1);
+    const latest = latestVersion[0];
+    if (!latest) return { status: "unavailable" as const };
+
+    const creatures = await listDiveSiteCreatures(tx, shopId, siteId);
+    const currentSnapshot = diveSiteTemplateSnapshotFromSite({
+      ...site,
+      creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(isMarineLifeSlug),
+    });
+    const baseline = baselineVersion[0]
+      ? diveSiteTemplateSnapshot(baselineVersion[0].briefing)
+      : null;
+    const latestSnapshot = diveSiteTemplateSnapshot(latest.briefing);
+    const diff = diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot);
+    const merged = mergedDiveSiteTemplateSnapshot(currentSnapshot, baseline, latestSnapshot, mode);
+    const [updated] = await tx
+      .update(diveSites)
+      .set({
+        description: merged.description,
+        locationName: merged.locationName,
+        forecastLatitude: merged.forecastLatitude,
+        forecastLongitude: merged.forecastLongitude,
+        marineLife: merged.marineLife,
+        marineLifeDescription: merged.marineLifeDescription,
+        difficultyLevel: merged.difficultyLevel,
+        depthRange: merged.depthRange,
+        maxDepthMeters: merged.maxDepthMeters,
+        expectedBottomTimeMinutes: merged.expectedBottomTimeMinutes,
+        currentNote: merged.currentNote,
+        divePlan: merged.divePlan,
+        fitTone: merged.fitTone,
+        fitNote: merged.fitNote,
+        fieldGuideTipsHeading: merged.fieldGuideTipsHeading,
+        landmarks: merged.landmarks,
+        minimumCertificationLevel: merged.minimumCertificationLevel,
+        requiredSpecialties: merged.requiredSpecialties,
+        requiresNitrox: merged.requiresNitrox,
+        sourceTemplateVersion: latest.version,
+      })
+      .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
+      .returning();
+    if (!updated) return { status: "unavailable" as const };
+    await replaceDiveSiteCreatures(tx, shopId, siteId, merged.creatures);
+    return { status: "updated" as const, mode, diff, site: updated };
+  });
 }
 
 export type UpcomingSiteTrip = {

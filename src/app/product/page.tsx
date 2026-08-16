@@ -9,6 +9,7 @@ import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,
+  RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -385,23 +386,25 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
       {/* Chapter 05 — after the boat is back: the day's earned moment, so the
           chapter narrows to a single centered thought instead of a grid. */}
-      <section
-        id="recap"
-        className="mx-auto max-w-3xl scroll-mt-24 px-6 py-20 text-center lg:py-24"
-      >
-        <ChapterMarker mark={chapter.recap} centered />
-        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {t("marketing.product.recapTitle")}
-        </h2>
-        <p className="mt-5 text-lg leading-8 text-muted">
-          {t("marketing.product.recapDescription")}
-        </p>
-        <SectionCard as="div" padding="lg" className="mx-auto mt-8 max-w-xl text-left">
-          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.product.recapCardLabel")}
-          </p>
-          <p className="mt-3 leading-7 text-muted">{t("marketing.product.afterTripBody")}</p>
-        </SectionCard>
+      <section id="recap" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
+        <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <div>
+            <ChapterMarker mark={chapter.recap} />
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              {t("marketing.product.recapTitle")}
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-muted">
+              {t("marketing.product.recapDescription")}
+            </p>
+            <p className="mt-4 leading-7 text-muted">{t("marketing.product.afterTripBody")}</p>
+          </div>
+          <MarketingMockup
+            label={t("marketing.product.recapMockupLabel")}
+            className="shadow-xl shadow-foreground/5"
+          >
+            <RecapPageFallback locale={locale} />
+          </MarketingMockup>
+        </div>
       </section>
 
       {/* Money is not a chapter — it runs under every one of them, so it sits

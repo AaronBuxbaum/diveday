@@ -25,7 +25,7 @@ import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireStaffSession } from "@/lib/session";
@@ -419,16 +419,26 @@ export default async function ReviewsPage({
                         })}
                       </p>
                       {review.isHidden && review.hiddenReason ? (
-                        <p className="mt-2 text-sm text-muted">
-                          {review.hiddenReasonNote
-                            ? t("reviews.hiddenReasonWithNote", {
-                                reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
-                                note: review.hiddenReasonNote,
-                              })
-                            : t("reviews.hiddenReason", {
-                                reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                        <div className="mt-2 space-y-1 text-sm text-muted">
+                          <p>
+                            {review.hiddenReasonNote
+                              ? t("reviews.hiddenReasonWithNote", {
+                                  reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                                  note: review.hiddenReasonNote,
+                                })
+                              : t("reviews.hiddenReason", {
+                                  reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                                })}
+                          </p>
+                          {review.hiddenAt && review.hiddenBy ? (
+                            <p>
+                              {t("reviews.hiddenMeta", {
+                                date: formatDateTimeTz(review.hiddenAt, locale, timezone),
+                                name: review.hiddenBy,
                               })}
-                        </p>
+                            </p>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                   </div>

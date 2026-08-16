@@ -216,6 +216,7 @@ export type BuilderCopy = {
   requestPlanDescription?: string;
   requestPlanRecommendation?: string;
   requestPlanDivers?: string;
+  requestPlanPerson?: string;
 };
 
 /**
@@ -355,7 +356,7 @@ function AddPanel({
       className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       {requestPlan ? (
-        <fieldset className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <fieldset className="sticky top-4 z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
           <legend className="px-1 text-sm font-semibold text-primary">
             {copy.requestPlanHeading ?? ""}
           </legend>
@@ -378,11 +379,13 @@ function AddPanel({
                     className="mt-1 size-4 accent-primary"
                   />
                   <span className="min-w-0">
-                    <span className="block font-medium">{request.name}</span>
-                    <span className="block text-muted">
-                      <span>{request.subject}</span>{" "}
-                      <span>{fill(copy.requestPlanDivers ?? "", { divers: request.divers })}</span>
+                    <span className="block font-medium">
+                      {fill(copy.requestPlanPerson ?? "", {
+                        name: request.name,
+                        divers: request.divers,
+                      })}
                     </span>
+                    <span className="block text-muted">{request.subject}</span>
                   </span>
                 </label>
               </li>

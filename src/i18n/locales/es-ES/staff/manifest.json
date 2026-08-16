@@ -37,7 +37,7 @@
   "crewMarkNotBackAboard": "Marcar sin regresar a bordo",
   "crewNotBackAboardActive": "Sin regresar a bordo",
   "crewRollCallRecordedBy": "{label} · {date} · {name}",
-  "noCrew": "Todavía no hay tripulación en esta salida. Añade a quien llevó el barco y este control podrá cerrarse con honestidad.",
+  "noCrew": "Todavía no hay tripulación en esta salida. Añade a quien llevó el barco para completar este control.",
   "addCrewToTrip": "Añadir tripulación a la salida",
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
   "checkpointRollCallHeading": "Pase de lista · {checkpoint}",

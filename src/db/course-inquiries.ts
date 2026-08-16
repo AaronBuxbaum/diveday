@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { AppDb, DbExecutor } from "./client";
@@ -247,5 +247,50 @@ export async function listDateRequestsByIds(
     .from(courseInquiries)
     .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
     .where(and(eq(courseInquiries.shopId, shopId), inArray(courseInquiries.id, ids)))
+    .orderBy(desc(courseInquiries.createdAt));
+}
+
+/**
+ * Requests that named one of the supplied calendar dates. Callers may pass a
+ * small expanded window so flexible requests can be filtered with
+ * `dateRequestMatchFor` using the same rules as the Requests page.
+ */
+export async function listDateRequestsForCalendarDates(
+  db: DbExecutor,
+  shopId: string,
+  dates: CalendarDate[],
+): Promise<DateRequestRow[]> {
+  const uniqueDates = [...new Set(dates)];
+  if (uniqueDates.length === 0) return [];
+  return db
+    .select({
+      id: courseInquiries.id,
+      courseId: courseInquiries.courseId,
+      courseTitle: courses.title,
+      interest: courseInquiries.interest,
+      personId: courseInquiries.personId,
+      name: courseInquiries.name,
+      email: courseInquiries.email,
+      phone: courseInquiries.phone,
+      experienceLevel: courseInquiries.experienceLevel,
+      timing: courseInquiries.timing,
+      preferredDate: courseInquiries.preferredDate,
+      alternateDate: courseInquiries.alternateDate,
+      dateFlexible: courseInquiries.dateFlexible,
+      divers: courseInquiries.divers,
+      message: courseInquiries.message,
+      createdAt: courseInquiries.createdAt,
+    })
+    .from(courseInquiries)
+    .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
+    .where(
+      and(
+        eq(courseInquiries.shopId, shopId),
+        or(
+          inArray(courseInquiries.preferredDate, uniqueDates),
+          inArray(courseInquiries.alternateDate, uniqueDates),
+        ),
+      ),
+    )
     .orderBy(desc(courseInquiries.createdAt));
 }

@@ -93,6 +93,18 @@ function matchFor(dates: DateRequestDates, date: CalendarDate): DateRequestMatch
 }
 
 /**
+ * Whether a request belongs beside a particular departure date. The booking
+ * flow uses the same rules as the Requests page so a flexible request is not
+ * shown for one surface and silently omitted from the other.
+ */
+export function dateRequestMatchFor(
+  dates: DateRequestDates,
+  date: CalendarDate,
+): DateRequestMatch | null {
+  return matchFor(dates, date);
+}
+
+/**
  * Groups requests by the dates they name.
  *
  * `datesOf` reads the three fields off whatever row shape the caller holds, so

@@ -21,6 +21,7 @@
   "whenSuits": "Cuándo le viene bien: {timing}",
   "askedOn": "Pedido el {date}",
   "viewDiver": "Abrir ficha del buceador",
+  "createBooking": "Crear una reserva",
   "experience": {
     "never": "Nunca ha buceado",
     "tried": "Ha probado el buceo, sin certificar",

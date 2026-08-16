@@ -120,7 +120,7 @@ test.describe("as owner, reviews list", () => {
     await page.goto("/shop/blue-mantis/reviews?filter=waiting");
     const waiting = page
       .locator("li")
-      .filter({ hasText: "Choppy ride out, but the reef more than made up for it." })
+      .filter({ hasText: "A warm, patient crew and a brilliant final drift over the reef." })
       .filter({ visible: true });
     await expect(waiting.getByText("Waiting on you")).toBeVisible();
     await expect(waiting.getByRole("button", { name: "Publish" })).toBeVisible();

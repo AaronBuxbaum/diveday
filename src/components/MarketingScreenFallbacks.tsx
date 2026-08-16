@@ -309,3 +309,77 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
     </div>
   );
 }
+
+/**
+ * A slice of the post-trip page a diver keeps and shares: the trip identity,
+ * useful dive facts, a crew note, and the diver's own photos. It gives the
+ * product page a concrete picture of the memory the trip creates after the
+ * operational work is finished.
+ */
+export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
+  return (
+    <div className="bg-background">
+      <AppBar label={t("fallback.recap.label")} />
+      <div className="p-5">
+        <p className="text-xs font-medium tracking-widest text-primary uppercase">
+          {t("fallback.recap.eyebrow")}
+        </p>
+        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h3 className="text-xl font-semibold tracking-tight">{t("fallback.recap.greeting")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
+          </div>
+          <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+            {t("fallback.recap.completed")}
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          {/* i18n-exempt: sample dive facts used only in the marketing mockup */}
+          {[
+            [t("fallback.recap.depth"), "18 m"],
+            [t("fallback.recap.visibility"), "24 m"],
+            [t("fallback.recap.water"), "27°C"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-border bg-surface p-2">
+              <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-xl border border-border bg-surface p-3">
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            {t("fallback.recap.crewNoteLabel")}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-muted">{t("fallback.recap.crewNote")}</p>
+        </div>
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-sm font-semibold">{t("fallback.recap.photos")}</h4>
+            <span className="text-xs text-muted">{t("fallback.recap.photoCount")}</span>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-primary/35 via-primary/10 to-surface" />
+            <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-success/30 via-primary/10 to-surface" />
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled
+            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
+          >
+            {t("fallback.recap.share")}
+          </button>
+          <button
+            type="button"
+            disabled
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border px-3 text-xs font-semibold"
+          >
+            {t("fallback.recap.addPhoto")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

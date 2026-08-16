@@ -122,7 +122,8 @@
     "requestPlanHeading": "Starting from requests",
     "requestPlanDescription": "Checked people will be invited to this departure, not booked. Change the selection before putting it on the board.",
     "requestPlanRecommendation": "About {divers} divers are represented. Suggested starting capacity: {capacity} seats.",
-    "requestPlanDivers": "{divers} divers"
+    "requestPlanDivers": "{divers} divers",
+    "requestPlanPerson": "{name} ({divers, plural, one {# diver} other {# divers}})"
   },
   "addBooking": "Add a booking"
 }

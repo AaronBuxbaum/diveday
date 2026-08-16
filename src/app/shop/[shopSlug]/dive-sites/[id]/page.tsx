@@ -12,8 +12,10 @@ import { getDb } from "@/db/client";
 import {
   deleteDiveSite,
   getDiveSite,
+  getDiveSiteTemplateUpdate,
   listDiveSiteCreatures,
   listUpcomingTripsForSite,
+  pullDiveSiteTemplateUpdates,
   SITE_NAME_TAKEN,
   updateDiveSiteForForm,
 } from "@/db/dive-sites";
@@ -23,6 +25,10 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
+import type {
+  DiveSiteTemplateField,
+  DiveSiteTemplateUpdateMode,
+} from "@/lib/dive-site-template-sync";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -59,6 +65,9 @@ const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   saved: "diveSites.edit.savedNotice",
   copied: "diveSites.edit.copiedNotice",
+  "template-updated": "diveSites.edit.templateUpdates.updated",
+  "template-replaced": "diveSites.edit.templateUpdates.replaced",
+  "template-update-unavailable": "diveSites.edit.templateUpdates.unavailable",
 };
 
 // Only the archive action still refuses through the URL; a rejected *save*
@@ -66,6 +75,29 @@ const NOTICE_KEYS: Record<string, StaffMessageKey> = {
 // keeps a briefing's twenty fields from being wiped by their own error banner.
 const ERROR_KEYS: Record<string, StaffMessageKey> = {
   invalid: "diveSites.edit.errorInvalid",
+};
+
+const TEMPLATE_FIELD_KEYS: Record<DiveSiteTemplateField, StaffMessageKey> = {
+  description: "diveSites.edit.templateUpdates.fields.description",
+  locationName: "diveSites.edit.templateUpdates.fields.locationName",
+  forecastLatitude: "diveSites.edit.templateUpdates.fields.coordinates",
+  forecastLongitude: "diveSites.edit.templateUpdates.fields.coordinates",
+  marineLife: "diveSites.edit.templateUpdates.fields.marineLife",
+  marineLifeDescription: "diveSites.edit.templateUpdates.fields.marineLifeDescription",
+  difficultyLevel: "diveSites.edit.templateUpdates.fields.difficultyLevel",
+  depthRange: "diveSites.edit.templateUpdates.fields.depthRange",
+  maxDepthMeters: "diveSites.edit.templateUpdates.fields.maxDepthMeters",
+  expectedBottomTimeMinutes: "diveSites.edit.templateUpdates.fields.expectedBottomTimeMinutes",
+  currentNote: "diveSites.edit.templateUpdates.fields.currentNote",
+  divePlan: "diveSites.edit.templateUpdates.fields.divePlan",
+  fitTone: "diveSites.edit.templateUpdates.fields.fitTone",
+  fitNote: "diveSites.edit.templateUpdates.fields.fitNote",
+  fieldGuideTipsHeading: "diveSites.edit.templateUpdates.fields.fieldGuideTipsHeading",
+  landmarks: "diveSites.edit.templateUpdates.fields.landmarks",
+  minimumCertificationLevel: "diveSites.edit.templateUpdates.fields.minimumCertificationLevel",
+  requiredSpecialties: "diveSites.edit.templateUpdates.fields.requiredSpecialties",
+  requiresNitrox: "diveSites.edit.templateUpdates.fields.requiresNitrox",
+  creatures: "diveSites.edit.templateUpdates.fields.creatures",
 };
 
 export default async function EditDiveSitePage({
@@ -106,6 +138,7 @@ export default async function EditDiveSitePage({
     listUpcomingTripsForSite(db, session.user.shopId, id),
     listDiveSiteCreatures(db, session.user.shopId, id),
   ]);
+  const templateUpdate = await getDiveSiteTemplateUpdate(db, session.user.shopId, id);
 
   async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";
@@ -209,6 +242,35 @@ export default async function EditDiveSitePage({
     );
   }
 
+  async function pullTemplateAction(formData: FormData) {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const mode = formData.get("mode");
+    if (mode !== "preserve-shop-edits" && mode !== "replace-template-copy") {
+      revalidateAndRedirect(
+        `${back}/${id}`,
+        noticeUrl(`${back}/${id}`, "template-update-unavailable"),
+      );
+    }
+    const result = await pullDiveSiteTemplateUpdates(
+      await getDb(),
+      activeSession.user.shopId,
+      id,
+      mode as DiveSiteTemplateUpdateMode,
+    );
+    revalidateAndRedirect(
+      `${back}/${id}`,
+      noticeUrl(
+        `${back}/${id}`,
+        result.status === "updated"
+          ? result.mode === "replace-template-copy"
+            ? "template-replaced"
+            : "template-updated"
+          : "template-update-unavailable",
+      ),
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
@@ -224,58 +286,90 @@ export default async function EditDiveSitePage({
           title={site.name}
           description={t("diveSites.edit.description")}
           align="start"
-          actions={
-            <details className="w-full sm:w-auto">
-              {/* The real `danger` variant, not a hand-copied approximation
-                  of it: this string had drifted to `border-danger/30` where
-                  the variant is `/40` and `py-2` where every other button on
-                  the page is `py-2.5`, so the one destructive control here
-                  read a shade lighter and a pixel shorter than the danger
-                  buttons it opens. `w-full sm:w-auto` keeps the phone
-                  behaviour the `<details>` around it already asks for, which
-                  the block `flex` used to give for free. */}
-              <summary
-                className={`${buttonClass({
-                  variant: "danger",
-                  className: "w-full sm:w-auto",
-                })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-              >
-                {t("diveSites.edit.archiveSite")}
-              </summary>
-              <form
-                action={deleteAction}
-                className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
-              >
-                <p className="text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
-                <SubmitButton
-                  pendingLabel={t("diveSites.edit.archiving")}
-                  className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
-                >
-                  {t("diveSites.edit.archiveSite")}
-                </SubmitButton>
-                {/* The archive refusal is the one thing on this page that
-                    still travels by URL, and it belongs on the archive form
-                    — not in a banner over a briefing the staffer never
-                    touched. */}
-                <FormStatus tone="danger" className="mt-2">
-                  {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
-                </FormStatus>
-              </form>
-            </details>
-          }
         />
       </div>
       {/* Only "copied" is genuinely about the page: it lands the staffer on a
           *different* site's record, which is news the whole page carries. The
           save confirmation went to the form that earned it, and the archive
           refusal to the archive button. */}
-      {notice === "copied" && noticeKey ? (
+      {noticeKey &&
+      (notice === "copied" ||
+        notice === "template-updated" ||
+        notice === "template-replaced" ||
+        notice === "template-update-unavailable") ? (
         <p
-          role="status"
-          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-strong"
+          role={notice === "template-update-unavailable" ? "alert" : "status"}
+          className={`mt-6 rounded-lg px-3 py-2 text-sm font-medium ${
+            notice === "template-update-unavailable"
+              ? "bg-danger/10 text-danger-strong"
+              : "bg-success/10 text-success-strong"
+          }`}
         >
           {t(noticeKey)}
         </p>
+      ) : null}
+      {templateUpdate ? (
+        <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
+          <h2 className="text-base font-semibold">{t("diveSites.edit.templateUpdates.title")}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {templateUpdate.legacyBaseline
+              ? t("diveSites.edit.templateUpdates.legacyDescription", {
+                  latest: templateUpdate.latestVersion,
+                })
+              : t("diveSites.edit.templateUpdates.description", {
+                  current: templateUpdate.currentVersion,
+                  latest: templateUpdate.latestVersion,
+                })}
+          </p>
+          {templateUpdate.diff.length > 0 ? (
+            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              {templateUpdate.diff.map((change) => (
+                <li
+                  key={change.field}
+                  className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+                >
+                  <span>{t(TEMPLATE_FIELD_KEYS[change.field])}</span>
+                  <span className="shrink-0 text-xs font-medium text-muted">
+                    {change.shopChanged
+                      ? t("diveSites.edit.templateUpdates.shopEdit")
+                      : t("diveSites.edit.templateUpdates.templateChange")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-muted">
+              {t("diveSites.edit.templateUpdates.noFieldChanges")}
+            </p>
+          )}
+          <p className="mt-4 text-sm text-muted">
+            {t("diveSites.edit.templateUpdates.keepEditsDescription")}
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+            <form action={pullTemplateAction} className="flex flex-col gap-1">
+              <input type="hidden" name="mode" value="preserve-shop-edits" />
+              <SubmitButton pendingLabel={t("diveSites.edit.templateUpdates.applying")}>
+                {t("diveSites.edit.templateUpdates.keepEdits")}
+              </SubmitButton>
+              <span className="text-xs text-muted">
+                {t("diveSites.edit.templateUpdates.keepEditsHint")}
+              </span>
+            </form>
+            <form action={pullTemplateAction} className="flex flex-col gap-1">
+              <input type="hidden" name="mode" value="replace-template-copy" />
+              <SubmitButton
+                pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
+                className={buttonClass({ variant: "secondary" })}
+                confirmMessage={t("diveSites.edit.templateUpdates.replaceConfirm")}
+              >
+                {t("diveSites.edit.templateUpdates.replaceCopy")}
+              </SubmitButton>
+              <span className="text-xs text-muted">
+                {t("diveSites.edit.templateUpdates.replaceCopyHint")}
+              </span>
+            </form>
+          </div>
+        </section>
       ) : null}
       {upcomingTrips.length > 0 ? (
         <SectionCard title={t("diveSites.edit.upcomingHeading")} className="mt-8 overflow-hidden">
@@ -331,6 +425,32 @@ export default async function EditDiveSitePage({
           {t("diveSites.edit.saveBriefing")}
         </SubmitButton>
       </SiteFormShell>
+      <details
+        open={Boolean(error)}
+        className="mt-10 rounded-2xl border border-danger/30 bg-danger/5"
+      >
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-semibold text-danger [&::-webkit-details-marker]:hidden sm:px-5">
+          <span>{t("diveSites.edit.archiveSite")}</span>
+          <span aria-hidden="true" className="text-lg font-normal">
+            +
+          </span>
+        </summary>
+        <div className="border-t border-danger/20 p-4 text-sm sm:p-5">
+          <h2 className="font-semibold">{t("diveSites.edit.archiveConfirmTitle")}</h2>
+          <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
+          <form action={deleteAction} className="mt-4">
+            <SubmitButton
+              pendingLabel={t("diveSites.edit.archiving")}
+              className={buttonClass({ variant: "danger-solid" })}
+            >
+              {t("diveSites.edit.archiveSite")}
+            </SubmitButton>
+            <FormStatus tone="danger" className="mt-2">
+              {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
+            </FormStatus>
+          </form>
+        </div>
+      </details>
     </main>
   );
 }

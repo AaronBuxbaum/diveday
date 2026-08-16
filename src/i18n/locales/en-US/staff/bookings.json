@@ -15,6 +15,12 @@
     "handEntryDescription": "Email is optional — a name is enough to hold the seat, and the rest can follow.",
     "noticeInvalid": "Enter a name to add a diver — email and phone are optional here.",
     "backToPicker": "Back to the departure list",
+    "fromRequest": "Booking from a request",
+    "viewRequests": "View all requests",
+    "relevantRequests": "Relevant requests",
+    "relevantRequestsDescription": "These requests match this departure's date. Open one to book that person, or use the hand-entry form below.",
+    "bookFromRequest": "Book from this request",
+    "requestsCount": "{count, plural, one {# request} other {# requests}}",
     "pagination": {
       "total": "{count, plural, one {# departure} other {# departures}}"
     }

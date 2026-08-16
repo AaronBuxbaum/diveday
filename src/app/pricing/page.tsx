@@ -384,7 +384,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.pricing.dataExit.body")}
               </p>
               <p className="mt-4 leading-7 text-muted">
-                {t("marketing.pricing.dataExit.honestNote")}
+                {t("marketing.pricing.dataExit.securityNote")}
               </p>
             </div>
             <MarketingMockup

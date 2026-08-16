@@ -61,6 +61,7 @@
   "hideNoteLabel": "Qué pasó",
   "hiddenReason": "Oculta porque: {reason}",
   "hiddenReasonWithNote": "Oculta porque: {reason} — {note}",
+  "hiddenMeta": "Ocultada el {date} por {name}",
   "standoutWrittenOnly": "Solo las reseñas con texto pueden ser destacadas.",
   "hideReason": {
     "abusive": "Ofensiva o acosadora",

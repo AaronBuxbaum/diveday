@@ -46,6 +46,11 @@ type PersonFieldTrioProps = {
    */
   emailMaxLength?: number;
   phoneMaxLength?: number;
+  defaultValues?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+  };
   className?: string;
   children?: ReactNode;
 } & (
@@ -61,6 +66,7 @@ export function PersonFieldTrio({
   optionalHint,
   emailMaxLength = 200,
   phoneMaxLength = 30,
+  defaultValues,
   className = "",
   as,
   children,
@@ -72,6 +78,7 @@ export function PersonFieldTrio({
         <input
           name="fullName"
           required
+          defaultValue={defaultValues?.fullName}
           maxLength={120}
           autoComplete="name"
           className={controlClass}
@@ -82,6 +89,7 @@ export function PersonFieldTrio({
           name="email"
           type="email"
           required={email === "required"}
+          defaultValue={defaultValues?.email}
           maxLength={emailMaxLength}
           autoComplete="email"
           className={controlClass}
@@ -91,6 +99,7 @@ export function PersonFieldTrio({
         <input
           name="phone"
           type="tel"
+          defaultValue={defaultValues?.phone}
           maxLength={phoneMaxLength}
           autoComplete="tel"
           className={controlClass}

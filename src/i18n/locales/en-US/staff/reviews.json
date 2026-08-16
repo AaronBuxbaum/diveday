@@ -61,6 +61,7 @@
   "hideNoteLabel": "What happened",
   "hiddenReason": "Hidden because: {reason}",
   "hiddenReasonWithNote": "Hidden because: {reason} — {note}",
+  "hiddenMeta": "Hidden {date} by {name}",
   "standoutWrittenOnly": "Only written reviews can be standouts.",
   "hideReason": {
     "abusive": "Abusive or harassing",

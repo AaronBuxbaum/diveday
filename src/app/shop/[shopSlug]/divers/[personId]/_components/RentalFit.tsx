@@ -127,7 +127,7 @@ export function RentalFit({
             </Field>
           ) : null}
           {offers.has("weights") ? (
-            <Field label={t("divers.rentalFit.weightPreferenceLabel")} className="sm:col-span-2">
+            <Field label={t("divers.rentalFit.weightPreferenceLabel")}>
               <input
                 name="weightPreference"
                 defaultValue={profile?.weightPreference ?? ""}

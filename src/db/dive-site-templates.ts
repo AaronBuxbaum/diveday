@@ -534,7 +534,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         "Descend the mooring to the shallower section, work the length of one half, and turn on gas rather than on time.",
       fitTone: "demanding",
       fitNote:
-        "Deep, exposed and worth nitrox. Two dives here is the honest way to see the whole ship.",
+        "Deep, exposed and worth nitrox. Two dives here are the best way to see the whole ship.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [

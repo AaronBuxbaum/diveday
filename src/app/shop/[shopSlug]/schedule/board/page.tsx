@@ -346,6 +346,7 @@ export default async function ScheduleBoardPage({
     requestPlanDescription: st("schedule.builder.requestPlanDescription"),
     requestPlanRecommendation: st.raw("schedule.builder.requestPlanRecommendation"),
     requestPlanDivers: st.raw("schedule.builder.requestPlanDivers"),
+    requestPlanPerson: st.raw("schedule.builder.requestPlanPerson"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive

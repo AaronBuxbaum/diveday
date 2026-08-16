@@ -115,14 +115,22 @@ function RequestCard({
         </p>
       ) : null}
       {request.message ? <p className="mt-2 text-sm text-pretty">{request.message}</p> : null}
-      {request.personId ? (
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium">
+        {request.personId ? (
+          <Link
+            href={`/shop/${shopSlug}/divers/${request.personId}`}
+            className="text-primary hover:underline"
+          >
+            {t("requests.viewDiver")}
+          </Link>
+        ) : null}
         <Link
-          href={`/shop/${shopSlug}/divers/${request.personId}`}
-          className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+          href={`/shop/${shopSlug}/bookings/new?request=${encodeURIComponent(request.id)}`}
+          className="text-primary hover:underline"
         >
-          {t("requests.viewDiver")}
+          {t("requests.createBooking")}
         </Link>
-      ) : null}
+      </div>
     </li>
   );
 }

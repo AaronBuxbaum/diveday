@@ -21,6 +21,7 @@
   "whenSuits": "When suits: {timing}",
   "askedOn": "Asked {date}",
   "viewDiver": "Open diver record",
+  "createBooking": "Create a booking",
   "experience": {
     "never": "Never dived",
     "tried": "Tried scuba, not certified",

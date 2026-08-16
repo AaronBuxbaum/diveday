@@ -13,6 +13,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
@@ -394,6 +395,8 @@ export type StaffReview = {
   /** The current recorded case for a hidden review, never a stale prior hide. */
   hiddenReason: ReviewModerationReason | null;
   hiddenReasonNote: string | null;
+  hiddenAt: Date | null;
+  hiddenBy: string | null;
   /** Staff see who actually wrote it — the abbreviation is a public-page rule, not an internal one. */
   diverName: string;
   personId: string;
@@ -435,6 +438,7 @@ export async function listShopReviewsForStaff(
   options: { page?: number; limit?: number; onlyWaiting?: boolean } = {},
 ): Promise<StaffReviewPage> {
   const hidden = hiddenReviewExists(db);
+  const moderationActor = alias(people, "review_moderation_actor");
   const scope = and(
     eq(tripReviews.shopId, shopId),
     options.onlyWaiting ? and(eq(tripReviews.isPublished, false), not(hidden)) : undefined,
@@ -486,9 +490,18 @@ export async function listShopReviewsForStaff(
             reviewId: reviewModerationEvents.reviewId,
             reason: reviewModerationEvents.reason,
             reasonNote: reviewModerationEvents.reasonNote,
+            occurredAt: reviewModerationEvents.occurredAt,
+            recordedByName: moderationActor.fullName,
           })
           .from(reviewModerationEvents)
           .innerJoin(tripReviews, eq(tripReviews.id, reviewModerationEvents.reviewId))
+          .innerJoin(
+            moderationActor,
+            and(
+              eq(moderationActor.id, reviewModerationEvents.recordedByPersonId),
+              eq(moderationActor.shopId, shopId),
+            ),
+          )
           .where(
             and(
               inArray(reviewModerationEvents.reviewId, reviewIds),
@@ -505,6 +518,8 @@ export async function listShopReviewsForStaff(
         ...review,
         hiddenReason: hide?.reason ?? null,
         hiddenReasonNote: hide?.reasonNote ?? null,
+        hiddenAt: hide?.occurredAt ?? null,
+        hiddenBy: hide?.recordedByName ?? null,
       };
     }),
     page: paged.page,
