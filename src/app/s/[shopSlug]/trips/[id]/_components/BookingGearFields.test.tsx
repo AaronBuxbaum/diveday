@@ -54,7 +54,7 @@ describe("BookingGearFields", () => {
     expect(screen.getByLabelText("Need rental gear?")).not.toBeChecked();
     expect(screen.getByText(/you won't be charged for gear/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/^BCD/)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/I’d like nitrox/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/I.d like nitrox/)).not.toBeInTheDocument();
   });
 
   // The regression this component exists to prevent: every core item used to
@@ -217,7 +217,7 @@ describe("BookingGearFields", () => {
     askForGear();
     // The rest of the kit is untouched — this closes one box, not the picker.
     expect(screen.getByLabelText(/^BCD/)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/I’d like nitrox/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/I.d like nitrox/)).not.toBeInTheDocument();
   });
 
   it("keeps the nitrox box on a course that does run on it", () => {
@@ -234,7 +234,7 @@ describe("BookingGearFields", () => {
     );
 
     askForGear();
-    expect(screen.getByLabelText(/I’d like nitrox/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/I.d like nitrox/)).toBeInTheDocument();
   });
 
   it("quotes the set price once the diver picks the whole core kit, and adds nitrox on top", () => {
@@ -265,7 +265,7 @@ describe("BookingGearFields", () => {
     expect(screen.getByText("Gear for this diver: $45.00")).toBeInTheDocument();
     expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 4_500);
 
-    fireEvent.click(screen.getByLabelText(/I’d like nitrox/));
+    fireEvent.click(screen.getByLabelText(/I.d like nitrox/));
     // Nitrox is $12/dive × 2 planned dives = $24, added on top of the $45 set.
     expect(screen.getByText("Gear for this diver: $69.00")).toBeInTheDocument();
     expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 6_900);

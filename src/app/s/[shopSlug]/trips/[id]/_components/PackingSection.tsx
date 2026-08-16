@@ -7,6 +7,7 @@ import {
   type ProvidedItemCode,
   packingConfidence,
   type SiteBottomTimes,
+  type DockDayStep,
 } from "@/lib/diver-planning";
 import type { RentableItemKind } from "@/lib/rentals";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
@@ -33,6 +34,166 @@ const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   crewBriefing: "trip.providedItems.crewBriefing",
 };
+
+function StepIcon({ step, className }: { step: DockDayStep; className?: string }) {
+  switch (step) {
+    case "arrive":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    case "gearSetup":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="M12 22V12" />
+          <path d="m12 12 8.7-5" />
+          <path d="m12 12-8.7-5" />
+        </svg>
+      );
+    case "briefing":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "departure":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <path d="M2 17h20" />
+          <path d="M5 17h14v-2.5l-2-2H7l-2 2z" />
+          <path d="M12 12.5V8.5" />
+          <path d="M12 8.5h3L12 5.5v3Z" />
+        </svg>
+      );
+    case "boatRide":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <path d="M2 6c.6 0 1.2-.2 1.6-.6L5 4.3c.8-.8 2-.8 2.8 0l1.3 1.1c.4.4 1 .6 1.6.6s1.2-.2 1.6-.6l1.3-1.1c.8-.8 2-.8 2.8 0l1.3 1.1c.4.4 1 .6 1.6.6" />
+          <path d="M2 12c.6 0 1.2-.2 1.6-.6l1.3-1.1c.8-.8 2-.8 2.8 0l1.3 1.1c.4.4 1 .6 1.6.6s1.2-.2 1.6-.6l1.3-1.1c.8-.8 2-.8 2.8 0l1.3 1.1c.4.4 1 .6 1.6.6" />
+        </svg>
+      );
+    case "dive":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <circle cx="8" cy="12" r="3" />
+          <circle cx="16" cy="12" r="3" />
+          <path d="M11 12h2" />
+          <path d="M5 12h1" />
+          <path d="M18 12h1" />
+          <path d="M12 7v5" />
+        </svg>
+      );
+    case "surfaceInterval":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+          <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+          <line x1="6" y1="2" x2="6" y2="4" />
+          <line x1="10" y1="2" x2="10" y2="4" />
+          <line x1="14" y1="2" x2="14" y2="4" />
+        </svg>
+      );
+    case "return":
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <circle cx="12" cy="5" r="3" />
+          <line x1="12" y1="8" x2="12" y2="22" />
+          <line x1="9" y1="11" x2="15" y2="11" />
+          <path d="M5 15a7 7 0 0 0 14 0" />
+        </svg>
+      );
+    default:
+      return (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          <circle cx="12" cy="12" r="4" />
+        </svg>
+      );
+  }
+}
 
 export function PackingSection({
   shop,
@@ -159,28 +320,45 @@ export function PackingSection({
                       {t("trip.dockDayLabel", { number: dayIndex + 1 })}
                     </h4>
                   ) : null}
-                  <ol className="mt-2 space-y-1.5 text-sm">
-                    {dockDayTimeline(
-                      window.startsAt,
-                      shop,
-                      window.endsAt,
-                      divesThisDay,
-                      siteBottomTimes,
-                      legTravelTimes,
-                    ).map((entry) => (
-                      <li key={`${entry.step}-${entry.number ?? 0}`} className="flex gap-4">
-                        <span className="w-24 shrink-0 font-medium tabular-nums">
-                          {entry.at.toLocaleTimeString(locale, {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            timeZone: shop.timezone,
-                          })}
-                        </span>
-                        <span className="text-muted">
-                          {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })}
-                        </span>
-                      </li>
-                    ))}
+                  <ol className="relative mt-4 space-y-0 text-sm">
+                    {(() => {
+                      const timeline = dockDayTimeline(
+                        window.startsAt,
+                        shop,
+                        window.endsAt,
+                        divesThisDay,
+                        siteBottomTimes,
+                        legTravelTimes,
+                      );
+                      return timeline.map((entry, entryIndex) => (
+                        <li
+                          key={`${entry.step}-${entry.number ?? 0}`}
+                          className="relative flex items-start pl-8 pb-5 last:pb-0"
+                        >
+                          {entryIndex < timeline.length - 1 ? (
+                            <div
+                              className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-border"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          <div className="absolute left-0 top-0.5 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-xs z-10">
+                            <StepIcon step={entry.step} className="size-3.5" />
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-4">
+                            <span className="font-semibold tabular-nums text-foreground text-sm sm:w-20 sm:shrink-0">
+                              {entry.at.toLocaleTimeString(locale, {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                timeZone: shop.timezone,
+                              })}
+                            </span>
+                            <span className="text-muted text-sm leading-normal">
+                              {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })}
+                            </span>
+                          </div>
+                        </li>
+                      ));
+                    })()}
                   </ol>
                 </div>
               );
