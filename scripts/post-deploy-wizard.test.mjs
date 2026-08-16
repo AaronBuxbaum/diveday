@@ -149,8 +149,19 @@ describe("post-deploy wizard", () => {
       );
     };
 
-    expect((await vercelDeploy(true)).arguments_).toEqual(["exec", "vercel", "--prod", "--archive=tgz", "--yes"]);
-    expect((await vercelDeploy(false)).arguments_).toEqual(["exec", "vercel", "--prod", "--archive=tgz"]);
+    expect((await vercelDeploy(true)).arguments_).toEqual([
+      "exec",
+      "vercel",
+      "--prod",
+      "--archive=tgz",
+      "--yes",
+    ]);
+    expect((await vercelDeploy(false)).arguments_).toEqual([
+      "exec",
+      "vercel",
+      "--prod",
+      "--archive=tgz",
+    ]);
   });
 
   it("syncs the infra-deploy environment only on a workstation, never in CI", async () => {
