@@ -21,7 +21,7 @@ import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_MINIMUM_DELAY_HOURS, recapIsEligible } from "@/lib/recap-schedule";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import {
   notificationProviderForDb,
@@ -192,7 +192,7 @@ export async function getRecapPageData(
   }
 
   const [photos, stripeAccount, latestTip] = await Promise.all([
-    listRecapPhotosForBooking(db, bookingId),
+    listRecapPhotosForBooking(db, bookingId, row.tripId),
     getShopStripeAccount(db, row.shopId),
     getLatestTipForBooking(db, row.shopId, bookingId),
   ]);
@@ -247,17 +247,38 @@ export async function getRecapPageData(
   };
 }
 
-/** A diver's own recap photos for one booking, newest first. */
+/** A diver's recap photos, including staff-shared departure photos, newest first. */
 export async function listRecapPhotosForBooking(
   db: AppDb,
   bookingId: string,
+  tripId?: string,
 ): Promise<RecapPhotoView[]> {
-  const rows = await db
-    .select({ id: recapPhotos.id, imageUrl: recapPhotos.imageUrl, caption: recapPhotos.caption })
-    .from(recapPhotos)
-    .where(eq(recapPhotos.bookingId, bookingId))
-    .orderBy(desc(recapPhotos.createdAt));
-  return rows;
+  const [diverRows, crewRows] = await Promise.all([
+    db
+      .select({
+        id: recapPhotos.id,
+        imageUrl: recapPhotos.imageUrl,
+        caption: recapPhotos.caption,
+        createdAt: recapPhotos.createdAt,
+      })
+      .from(recapPhotos)
+      .where(eq(recapPhotos.bookingId, bookingId))
+      .orderBy(desc(recapPhotos.createdAt)),
+    tripId
+      ? db
+          .select({
+            id: tripRecapPhotos.id,
+            imageUrl: tripRecapPhotos.imageUrl,
+            createdAt: tripRecapPhotos.createdAt,
+          })
+          .from(tripRecapPhotos)
+          .where(eq(tripRecapPhotos.tripId, tripId))
+          .orderBy(desc(tripRecapPhotos.createdAt))
+      : Promise.resolve([]),
+  ]);
+  return [...diverRows, ...crewRows.map((photo) => ({ ...photo, caption: null }))]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map(({ createdAt: _createdAt, ...photo }) => photo);
 }
 
 export type RecapPhotoEligibility =
@@ -406,7 +427,7 @@ export async function deleteRecapPhoto(
   return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
 }
 
-/** Staff-only photos taken on a departure, newest first. They never reach a diver recap by default. */
+/** Staff photos taken on a departure, newest first. They are shared into each diver recap. */
 export type CrewRecapPhoto = { id: string; imageUrl: string };
 
 export type CrewRecapPhotoEligibility =
@@ -451,8 +472,8 @@ export type AddCrewRecapPhotoResult =
 
 /**
  * Attach a staff-owned image to one completed departure. The row has no
- * booking by design: it stays on the close-out's staff-only album until a
- * later, explicit sharing policy chooses an audience for it.
+ * booking by design: one upload is shared into every diver recap for the
+ * completed departure.
  */
 export async function addCrewRecapPhoto(
   db: AppDb,
@@ -476,6 +497,9 @@ export async function addCrewRecapPhoto(
       .for("update");
     if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" } as const;
     if (trip.endsAt > now) return { ok: false, reason: "not_ended" } as const;
+    if (await hasSentTripRecap(tx, input.shopId, input.tripId)) {
+      return { ok: false, reason: "not_found" } as const;
+    }
     const [{ count: existing } = { count: 0 }] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(tripRecapPhotos)
@@ -511,7 +535,51 @@ export async function listCrewRecapPhotosForTrip(
 
 export type DeleteCrewRecapPhotoResult = { deleted: true; imageUrl: string } | { deleted: false };
 
-/** Delete a staff-only close-out image and return its URL for tracked Blob cleanup. */
+/** A successful delivery freezes the close-out's shared recap content. */
+export async function hasSentTripRecap(db: DbExecutor, shopId: string, tripId: string) {
+  const rows = await db
+    .select({
+      bookingId: bookings.id,
+      bookingStatus: bookings.status,
+      deliveryStatus: notificationDeliveries.status,
+    })
+    .from(bookings)
+    .leftJoin(
+      notificationDeliveries,
+      and(
+        eq(notificationDeliveries.bookingId, bookings.id),
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.kind, "trip_recap"),
+      ),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+        ne(bookings.status, "no_show"),
+      ),
+    );
+  return rows.length > 0 && rows.every((row) => row.deliveryStatus === "sent");
+}
+
+/** Set (or clear, with an empty string) a trip's crew-authored recap shout-out. */
+export async function setTripRecapShoutout(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  shoutout: string,
+): Promise<boolean> {
+  if (await hasSentTripRecap(db, shopId, tripId)) return false;
+  const [trip] = await db
+    .update(trips)
+    .set({ recapShoutout: shoutout.trim() || null })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .returning({ id: trips.id });
+  return Boolean(trip);
+}
+
+/** Delete a shared close-out image and return its URL for tracked Blob cleanup. */
 export async function deleteCrewRecapPhoto(
   db: AppDb,
   shopId: string,
@@ -522,21 +590,6 @@ export async function deleteCrewRecapPhoto(
     .where(and(eq(tripRecapPhotos.id, photoId), eq(tripRecapPhotos.shopId, shopId)))
     .returning({ imageUrl: tripRecapPhotos.imageUrl });
   return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
-}
-
-/** Set (or clear, with an empty string) a trip's crew-authored recap shout-out. */
-export async function setTripRecapShoutout(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  shoutout: string,
-): Promise<boolean> {
-  const [trip] = await db
-    .update(trips)
-    .set({ recapShoutout: shoutout.trim() || null })
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .returning({ id: trips.id });
-  return Boolean(trip);
 }
 
 /**

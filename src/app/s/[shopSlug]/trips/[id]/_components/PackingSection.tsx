@@ -39,6 +39,7 @@ export function PackingSection({
   trip,
   rentalFit,
   day,
+  days,
   multiDay,
   siteBottomTimes,
   legTravelTimes,
@@ -58,6 +59,8 @@ export function PackingSection({
    * home at day three's 5:00 PM — a nine-hour morning nobody sells.
    */
   day?: { startsAt: Date; endsAt: Date };
+  /** All meeting windows when the departure repeats its dock rhythm. */
+  days?: { startsAt: Date; endsAt: Date }[];
   /** Whether this departure meets on more than one day — the rhythm repeats. */
   multiDay: boolean;
   /**
@@ -90,7 +93,7 @@ export function PackingSection({
   temperatureStatedAbove: boolean;
   locale: string;
 }) {
-  const window = day ?? trip;
+  const rhythmDays = days?.length ? days : [day ?? trip];
   const packing = packingConfidence(shop.packingList, rentalFit ?? null, shop.briefingMinutes > 0);
   const t = diverTranslator(locale);
   // Said here only when nothing above has said it. This used to be an
@@ -141,39 +144,50 @@ export function PackingSection({
           </ul>
         </div>
       </div>
-      <h3 className="mt-6 font-semibold">{t("trip.dockDayRhythm")}</h3>
-      {/* The shop's own minutes laid over this departure's clock, for this
-          departure's own dive count — not the trip window's thirds, which is
-          what this list used to be. A multi-day course runs the same shape each
-          day, and says so rather than implying it only happens once. */}
-      {multiDay ? <p className="mt-1 text-sm text-muted">{t("trip.dockDayEachDay")}</p> : null}
-      {/* Time first, in an aligned tabular column: a schedule is read by the
-          clock, and the ragged "label · time" lines it replaces made the eye
-          hunt for every time inside a sentence. The alignment is the shape —
-          no rule or box needed. */}
-      <ol className="mt-3 space-y-1.5 text-sm">
-        {dockDayTimeline(
-          window.startsAt,
-          shop,
-          window.endsAt,
-          trip.plannedDives,
-          siteBottomTimes,
-          legTravelTimes,
-        ).map((entry) => (
-          <li key={`${entry.step}-${entry.number ?? 0}`} className="flex gap-4">
-            <span className="w-24 shrink-0 font-medium tabular-nums">
-              {entry.at.toLocaleTimeString(locale, {
-                hour: "numeric",
-                minute: "2-digit",
-                timeZone: shop.timezone,
-              })}
-            </span>
-            <span className="text-muted">
-              {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })}
-            </span>
-          </li>
-        ))}
-      </ol>
+      {trip.course ? null : (
+        <>
+          <h3 className="mt-6 font-semibold">{t("trip.dockDayRhythm")}</h3>
+          <div className="mt-3 space-y-5">
+            {rhythmDays.map((window, dayIndex) => {
+              const baseDives = Math.floor(trip.plannedDives / rhythmDays.length);
+              const divesThisDay =
+                baseDives + (dayIndex < trip.plannedDives % rhythmDays.length ? 1 : 0);
+              return (
+                <div key={`${window.startsAt.toISOString()}-${window.endsAt.toISOString()}`}>
+                  {multiDay ? (
+                    <h4 className="font-medium">
+                      {t("trip.dockDayLabel", { number: dayIndex + 1 })}
+                    </h4>
+                  ) : null}
+                  <ol className="mt-2 space-y-1.5 text-sm">
+                    {dockDayTimeline(
+                      window.startsAt,
+                      shop,
+                      window.endsAt,
+                      divesThisDay,
+                      siteBottomTimes,
+                      legTravelTimes,
+                    ).map((entry) => (
+                      <li key={`${entry.step}-${entry.number ?? 0}`} className="flex gap-4">
+                        <span className="w-24 shrink-0 font-medium tabular-nums">
+                          {entry.at.toLocaleTimeString(locale, {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            timeZone: shop.timezone,
+                          })}
+                        </span>
+                        <span className="text-muted">
+                          {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </section>
   );
 }

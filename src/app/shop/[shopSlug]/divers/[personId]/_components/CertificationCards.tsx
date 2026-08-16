@@ -296,6 +296,14 @@ export async function CertificationCards({
                   {card.reviewNote ? (
                     <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
                   ) : null}
+                  {card.reviewedAt && card.reviewedByName ? (
+                    <p className="mt-1 text-sm text-muted">
+                      {t("divers.certifications.verifiedBy", {
+                        name: card.reviewedByName,
+                        date: formatShortDate(card.reviewedAt, locale, shop.timezone),
+                      })}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {selfDeclared ? (

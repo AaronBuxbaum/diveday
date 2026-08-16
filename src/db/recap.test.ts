@@ -348,7 +348,7 @@ describe("recap photos and crew shout-out", () => {
     expect(afterDelete.some((p) => p.id === doomed.photo.id)).toBe(false);
   });
 
-  it("keeps crew photos on the close-out, not a diver recap, and records only a live staff upload", async () => {
+  it("shares crew photos into every diver recap and records only a live staff upload", async () => {
     const { db, shop, reef, bookingId, afterTrip } = await recapContext();
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("staff fixture missing");
@@ -372,7 +372,6 @@ describe("recap photos and crew shout-out", () => {
       }),
     ).toEqual({ ok: false, reason: "not_staff" });
 
-    const recapPhotosBefore = (await getRecapPageData(db, bookingId))?.photos;
     const added = await addCrewRecapPhoto(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -384,9 +383,11 @@ describe("recap photos and crew shout-out", () => {
     if (!added.ok) throw new Error("crew photo not added");
 
     expect(await listCrewRecapPhotosForTrip(db, shop.id, reef.id)).toContainEqual(added.photo);
-    // Staff shots are not silently sent to every diver who happened to be on
-    // the boat; a sharing policy must make that audience choice explicitly.
-    expect((await getRecapPageData(db, bookingId))?.photos).toEqual(recapPhotosBefore);
+    expect((await getRecapPageData(db, bookingId))?.photos).toContainEqual({
+      id: added.photo.id,
+      imageUrl: "https://img/crew.jpg",
+      caption: null,
+    });
 
     expect(
       await deleteCrewRecapPhoto(db, "00000000-0000-0000-0000-000000000000", added.photo.id),

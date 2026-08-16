@@ -55,45 +55,7 @@ export function DiveDeclarationFields({ showNitrox = true }: { showNitrox?: bool
     // last-minute form's own spacer comment already records.
     <div className="flex flex-col gap-3">
       <FieldGrid columns={2}>
-        <Field
-          label={t("common.certification.level")}
-          hint={t("common.optional")}
-          aside={
-            <InfoHint
-              label={t("common.certification.levelInfoLabel")}
-              detail={t("common.certification.levelDescription")}
-            />
-          }
-        >
-          <select
-            name="certificationLevel"
-            value={answer}
-            onChange={(event) => setAnswer(event.target.value)}
-            className={controlClass}
-          >
-            {/* First and pre-selected: skipping is the default, not something
-                the diver has to go back and choose. */}
-            <option value="">{t("common.certification.levelUnsaid")}</option>
-            {/* **An honest answer for the joiner who holds no card**, and the
-                one this list was missing: Discover Scuba and Try Scuba
-                customers, snorkellers, the non-diving half of a couple. Their
-                only option used to be "Rather not say", which reads to staff
-                exactly like a certified regular who skipped the question — so
-                the shop mailed them a certified two-tank charter.
-
-                Above the ladder rather than below it, so the whole select reads
-                in one direction: no card, then the rungs in order. Its value is
-                deliberately not a `CertificationLevel` — it lands as a stamp on
-                the person and never as a certification row, because a Discover
-                Scuba experience is not one (ADR 20260814-self-declared-cards). */}
-            <option value={NO_CERTIFICATION_ANSWER}>{t("common.certification.levelNone")}</option>
-            {Object.entries(DIVER_CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-              <option key={value} value={value}>
-                {t(key)}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <DiveCertificationField answer={answer} onAnswerChange={setAnswer} />
       </FieldGrid>
       {/* Nitrox stays on the trip-specific wait list, where a diver is naming
           what they want from that departure. The shop-wide deal list does not
@@ -114,5 +76,47 @@ export function DiveDeclarationFields({ showNitrox = true }: { showNitrox?: bool
         </label>
       ) : null}
     </div>
+  );
+}
+
+/** The level field shared by the broad deal list and trip wait lists. */
+export function DiveCertificationField({
+  answer,
+  onAnswerChange,
+}: {
+  answer?: string;
+  onAnswerChange?: (value: string) => void;
+}) {
+  const t = useTranslations();
+  return (
+    <Field
+      label={t("common.certification.level")}
+      hint={t("common.optional")}
+      aside={
+        <InfoHint
+          label={t("common.certification.levelInfoLabel")}
+          detail={t("common.certification.levelDescription")}
+        />
+      }
+    >
+      <select
+        name="certificationLevel"
+        {...(answer === undefined
+          ? { defaultValue: "" }
+          : {
+              value: answer,
+              onChange: (event) => onAnswerChange?.(event.target.value),
+            })}
+        className={controlClass}
+      >
+        <option value="">{t("common.certification.levelUnsaid")}</option>
+        <option value={NO_CERTIFICATION_ANSWER}>{t("common.certification.levelNone")}</option>
+        {Object.entries(DIVER_CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+          <option key={value} value={value}>
+            {t(key)}
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }

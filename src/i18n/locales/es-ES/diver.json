@@ -126,7 +126,8 @@
       "drysuit": "Agua fría: un semiseco de 7 mm con capucha y guantes, o traje seco si buceas con uno."
     },
     "dockDayRhythm": "Cómo será tu día en el muelle",
-    "dockDayEachDay": "Los horarios de abajo son del primer día; todos los días de esta salida siguen la misma forma.",
+    "dockDayEachDay": "Cada día tiene su propio ritmo en el muelle.",
+    "dockDayLabel": "Día {number}",
     "briefingsEyebrow": "Briefings de inmersión",
     "planTwoTank": "Tu plan de dos inmersiones",
     "planDiveCount": "Tu plan de {count} inmersiones",

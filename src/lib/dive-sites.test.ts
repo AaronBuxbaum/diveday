@@ -28,12 +28,12 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
 }
 
 describe("parseDiveSiteForm", () => {
-  it("refuses a briefing with no coordinates at all", () => {
+  it("allows a briefing with no coordinates yet", () => {
     const result = parseDiveSiteForm(
       formEntries({ forecastLatitude: "", forecastLongitude: "" }),
       "meters",
     );
-    expect(result).toEqual({ ok: false, error: "coordinatesIncomplete" });
+    expect(result.ok).toBe(true);
   });
 
   // A site that names no time in the water is the ordinary case: the shop's

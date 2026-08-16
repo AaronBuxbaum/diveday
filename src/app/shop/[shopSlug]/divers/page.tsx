@@ -10,14 +10,14 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
-import { canPersonDeleteDiver } from "@/db/authz";
+import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
-import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { canDeleteDiver, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -102,10 +102,14 @@ export default async function DiversPage({
   //
   // Together, not in series: the page already waits on the list query, and a
   // roster read is not the place to add a second sequential hop.
-  const [canDelete, canImport] = await Promise.all([
-    canPersonDeleteDiver(db, shop.id, session.user.personId),
-    canPersonImportShopData(db, shop.id, session.user.personId),
-  ]);
+  // Both permissions come from the same live staff-role read. The old route
+  // asked each helper to independently load the person, account, and roles;
+  // that was six sequential database round trips on a cold Vercel request,
+  // making the otherwise bounded roster occasionally cross the five-second
+  // runtime limit.
+  const liveRoles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
+  const canDelete = liveRoles !== null && canDeleteDiver(liveRoles);
+  const canImport = liveRoles !== null && canImportShopData(liveRoles);
   const requested = isDiverFilter(filterParam) ? filterParam : "all";
   const filter = requested === "removed" && !canDelete ? "all" : requested;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into

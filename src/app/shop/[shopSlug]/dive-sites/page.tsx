@@ -384,7 +384,7 @@ async function CatalogView({
           </p>
           <div className="mt-6">
             <Link
-              href={shopPath(shopSlug, "settings?section=address")}
+              href={`${shopPath(shopSlug, "settings")}?section=address`}
               className={buttonClass({ variant: "primary" })}
             >
               {t("diveSites.catalog.goToSettings")}

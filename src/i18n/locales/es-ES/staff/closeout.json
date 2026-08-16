@@ -67,7 +67,8 @@
     "ready": "Los resúmenes de esta salida ya se pueden enviar. El envío automático también los recogerá.",
     "send": "Enviar resumen ahora",
     "sending": "Enviando resumen…",
-    "lessThanMinute": "menos de un minuto"
+    "lessThanMinute": "menos de un minuto",
+    "sent": "Este resumen se envió a las {time}. La nota y las fotos están bloqueadas."
   },
   "crewPhotos": {
     "heading": "Fotos del equipo",

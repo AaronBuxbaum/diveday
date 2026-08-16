@@ -128,6 +128,8 @@ export type CloseoutTripInput = {
    * moment someone still remembers it. Null when nothing is written yet.
    */
   recapShoutout: string | null;
+  /** The latest successful recap send, if this departure is now locked. */
+  recapSentAt?: Date | null;
   photos?: {
     id: string;
     imageUrl: string;
@@ -135,7 +137,7 @@ export type CloseoutTripInput = {
     diverName: string;
     bookingId: string;
   }[];
-  /** Instructor/crew photos kept with the close-out only, never a diver recap by default. */
+  /** Staff photos shared with every diver's recap for the completed departure. */
   crewPhotos?: {
     id: string;
     imageUrl: string;
@@ -169,6 +171,7 @@ export type CloseoutDeparture = {
   uncounted: number;
   /** See `CloseoutTripInput.recapShoutout`. */
   recapShoutout: string | null;
+  recapSentAt: Date | null;
   /**
    * Whether this departure is behind the shop — the same reading `sendDueRecaps`
    * makes about whose recap is due. Only a returned boat is offered the recap
@@ -324,6 +327,7 @@ export function assembleDayCloseout(input: {
       endsAt: trip.endsAt,
       booked: trip.booked,
       recapShoutout: trip.recapShoutout,
+      recapSentAt: trip.recapSentAt ?? null,
       ended: trip.endsAt <= now,
       photos: trip.photos ?? [],
       crewPhotos: trip.crewPhotos ?? [],

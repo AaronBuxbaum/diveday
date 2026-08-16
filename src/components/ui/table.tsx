@@ -171,6 +171,7 @@ export function Td({
   numeric = false,
   muted = false,
   hideBelow,
+  align = "top",
   pad = true,
   className = "",
   children,
@@ -179,6 +180,7 @@ export function Td({
   numeric?: boolean;
   /** Secondary ink for a supporting cell. */
   muted?: boolean;
+  align?: "top" | "middle";
   hideBelow?: keyof typeof HIDE_BELOW;
   /**
    * Opt out of the cell padding **only** for a tbody that reflows its rows to
@@ -192,7 +194,7 @@ export function Td({
 }) {
   return (
     <td
-      className={`align-top ${pad ? "px-4 py-3" : ""} ${
+      className={`${align === "middle" ? "align-middle" : "align-top"} ${pad ? "px-4 py-3" : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
       } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`.trim()}
     >

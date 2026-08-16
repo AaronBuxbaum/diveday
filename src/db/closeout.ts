@@ -86,7 +86,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       ),
     );
   if (rows.length === 0) return [];
-  const [counts, photos, crewPhotos] = await Promise.all([
+  const [counts, photos, crewPhotos, recapDeliveries] = await Promise.all([
     db
       .select({ tripId: bookings.tripId, booked: count() })
       .from(bookings)
@@ -140,6 +140,31 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
         ),
       )
       .orderBy(desc(tripRecapPhotos.createdAt)),
+    db
+      .select({
+        tripId: bookings.tripId,
+        bookingStatus: bookings.status,
+        deliveryStatus: notificationDeliveries.status,
+        attemptedAt: notificationDeliveries.attemptedAt,
+      })
+      .from(bookings)
+      .leftJoin(
+        notificationDeliveries,
+        and(
+          eq(notificationDeliveries.bookingId, bookings.id),
+          eq(notificationDeliveries.shopId, shopId),
+          eq(notificationDeliveries.kind, "trip_recap"),
+        ),
+      )
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(
+            bookings.tripId,
+            rows.map((row) => row.id),
+          ),
+        ),
+      ),
   ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
   const photosByTrip = new Map<string, typeof photos>();
@@ -154,6 +179,19 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     list.push(photo);
     crewPhotosByTrip.set(photo.tripId, list);
   }
+  const recapStateByTrip = new Map<string, { total: number; sent: number; latest: Date | null }>();
+  for (const delivery of recapDeliveries) {
+    if (delivery.bookingStatus === "cancelled" || delivery.bookingStatus === "no_show") continue;
+    const state = recapStateByTrip.get(delivery.tripId) ?? { total: 0, sent: 0, latest: null };
+    state.total++;
+    if (delivery.deliveryStatus === "sent") {
+      state.sent++;
+      if (delivery.attemptedAt && (!state.latest || delivery.attemptedAt > state.latest)) {
+        state.latest = delivery.attemptedAt;
+      }
+    }
+    recapStateByTrip.set(delivery.tripId, state);
+  }
   return rows.map((row) => ({
     tripId: row.id,
     title: row.title,
@@ -161,6 +199,10 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
     recapShoutout: row.recapShoutout,
+    recapSentAt:
+      recapStateByTrip.get(row.id)?.total === recapStateByTrip.get(row.id)?.sent
+        ? (recapStateByTrip.get(row.id)?.latest ?? null)
+        : null,
     photos: photosByTrip.get(row.id) ?? [],
     crewPhotos: crewPhotosByTrip.get(row.id) ?? [],
   }));

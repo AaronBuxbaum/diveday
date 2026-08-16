@@ -18,6 +18,7 @@ import {
   canAddCrewRecapPhoto,
   deleteCrewRecapPhoto,
   deleteRecapPhoto,
+  hasSentTripRecap,
   sendTripRecaps,
   setTripRecapShoutout,
 } from "@/db/recap";
@@ -175,6 +176,7 @@ export default async function CloseOutPage({
     const closeOut = shopPath(staff.user.shopSlug, "close-out");
     if (!photoId) redirect(closeOut);
     const db = await getDb();
+    if (await hasSentTripRecap(db, staff.user.shopId, tripId)) redirect(closeOut);
     const result = await deleteRecapPhoto(db, staff.user.shopId, photoId);
     if (result.deleted) {
       await queueAndAttemptMediaDeletion(db, {
@@ -189,12 +191,7 @@ export default async function CloseOutPage({
     );
   }
 
-  /**
-   * Store an instructor/crew image on the close-out only. It deliberately does
-   * not appear on diver recap pages: sharing a group photo is an audience
-   * decision the shop makes separately, not an accidental side effect of this
-   * upload form.
-   */
+  /** Store a staff image on the close-out and share it with every diver recap. */
   async function uploadCrewRecapPhotoAction(tripId: string, formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
@@ -251,6 +248,7 @@ export default async function CloseOutPage({
     const closeOut = shopPath(staff.user.shopSlug, "close-out");
     if (!photoId) redirect(closeOut);
     const db = await getDb();
+    if (await hasSentTripRecap(db, staff.user.shopId, tripId)) redirect(closeOut);
     const result = await deleteCrewRecapPhoto(db, staff.user.shopId, photoId);
     if (result.deleted) {
       await queueAndAttemptMediaDeletion(db, {
@@ -566,6 +564,12 @@ export default async function CloseOutPage({
                       recapSendAction={sendRecapAction.bind(null, departure.tripId)}
                       recapEligibleAt={recapEligibleAt(departure.endsAt)}
                       recapNowMs={now.getTime()}
+                      recapSentAt={departure.recapSentAt}
+                      recapSentAtLabel={
+                        departure.recapSentAt
+                          ? formatTime(departure.recapSentAt, locale, shop.timezone)
+                          : undefined
+                      }
                     />
                   ) : null}
                 </li>

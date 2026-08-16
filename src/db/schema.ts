@@ -3460,6 +3460,8 @@ export const certifications = pgTable(
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who removed the card, when the removal was accountable. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -3562,6 +3564,8 @@ export const specialtyCertifications = pgTable(
     importedFromLabel: text("imported_from_label"),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who removed the card, when the removal was accountable. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -3896,6 +3900,8 @@ export const nitroxCertifications = pgTable(
     selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who removed the card, when the removal was accountable. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -4260,9 +4266,8 @@ export const recapPhotos = pgTable(
 
 /**
  * A crew-owned image kept with a departure's close-out. Unlike `recapPhotos`,
- * it has no diver booking and is intentionally staff-only: choosing to share
- * an instructor's group photos outside the shop is a separate audience policy,
- * never an accidental consequence of uploading them here.
+ * it has no diver booking because one upload is shared with every diver on
+ * the completed departure's recap.
  */
 export const tripRecapPhotos = pgTable(
   "trip_recap_photos",

@@ -141,11 +141,14 @@ export async function reviewNitroxCertification(
  */
 export async function archiveNitroxCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
     .update(nitroxCertifications)
-    .set({ deletedAt: nowDate() })
+    .set({
+      deletedAt: nowDate(),
+      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+    })
     .where(
       and(
         eq(nitroxCertifications.id, input.certificationId),
@@ -191,7 +194,7 @@ export async function restoreNitroxCertification(
   if (conflict) return false;
   const [row] = await db
     .update(nitroxCertifications)
-    .set({ deletedAt: null })
+    .set({ deletedAt: null, deletedByPersonId: null })
     .where(
       and(
         eq(nitroxCertifications.id, input.certificationId),

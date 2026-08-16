@@ -67,11 +67,12 @@
     "ready": "This departure's recaps can now be sent. Automatic sending will also pick them up.",
     "send": "Send recap now",
     "sending": "Sending recap…",
-    "lessThanMinute": "less than a minute"
+    "lessThanMinute": "less than a minute",
+    "sent": "This recap was sent at {time}. The note and photos are now locked."
   },
   "crewPhotos": {
     "heading": "Crew photos",
-    "description": "Keep instructor photos with this close-out. They stay staff-only and are not added to diver recaps.",
+    "description": "Photos here are shared with every diver in this departure's recap.",
     "photoAlt": "Crew photo from this departure",
     "add": "Add a crew photo",
     "upload": "Upload photo",

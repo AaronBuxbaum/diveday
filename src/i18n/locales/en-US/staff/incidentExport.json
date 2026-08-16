@@ -47,7 +47,7 @@
   "certRefresherDue": "Refresher due {date}",
   "waiverComplete": "Waiver signed {date} — “{title}”, version {version}.",
   "waiverCompleteAttested": "Recorded by staff from an in-person signature.",
-  "waiverPaperMarkedBy": "Marked on paper by {name}.",
+  "waiverPaperMarkedBy": "Recorded by {name} from an in-person signature.",
   "waiverCompleteImported": "Imported acceptance from a prior system — not signed through this shop’s own release.",
   "waiverNotSigned": "No current signed waiver on record.",
   "waiverPending": "A waiver link was issued and has not been signed.",

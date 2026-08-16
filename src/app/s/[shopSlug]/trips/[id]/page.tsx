@@ -591,6 +591,7 @@ export default async function TripDetailPage({
           trip={trip}
           rentalFit={rentalFit}
           day={meetingDays[0]}
+          days={meetingDays}
           multiDay={meetingDays.length > 1}
           siteBottomTimes={siteBottomTimes}
           legTravelTimes={legTravelTimes}

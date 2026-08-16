@@ -446,7 +446,7 @@ export function RosterSection({
                 {readiness ? (
                   readiness.status === "ready" ? (
                     <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
-                      <span aria-hidden="true">✓</span>
+                      <span aria-hidden="true">🌊</span>
                       {readinessStatusText(t, "ready")}
                     </span>
                   ) : (

@@ -65,6 +65,7 @@ export default async function DiverDetailPage({
     notice?: string;
     undo?: string;
     cardType?: string;
+    by?: string;
     /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
     /** Which form on this page the notice answers — see `resolveDiverNotice`. */
@@ -80,7 +81,7 @@ export default async function DiverDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
-  const { notice, undo, cardType, gate, form, edit, noteBody } = await searchParams;
+  const { notice, undo, cardType, by, gate, form, edit, noteBody } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -146,7 +147,7 @@ export default async function DiverDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice", "undo", "cardType", "form", "edit", "noteBody"]} />
+      <FlashParams params={["notice", "undo", "cardType", "by", "form", "edit", "noteBody"]} />
       <DiverHeader
         diver={diver}
         shopSlug={shopSlug}
@@ -174,7 +175,11 @@ export default async function DiverDetailPage({
       ) : null}
       {cardRemovalUndo ? (
         <UndoToast
-          message={staffTranslator(locale)("divers.notices.cardRemovedToast")}
+          message={staffTranslator(locale)("divers.notices.cardRemovedToast", {
+            name:
+              by ??
+              staffTranslator(locale)("divers.certifications.noCertificationClearedByUnknown"),
+          })}
           action={restoreCardAction.bind(null, shopSlug, personId)}
           fields={{ certificationId: undo, cardType }}
           pendingLabel={t("shared.undoToast.pendingLabel")}

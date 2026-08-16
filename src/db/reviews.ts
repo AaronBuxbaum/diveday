@@ -1,6 +1,5 @@
 import {
   and,
-  asc,
   count,
   desc,
   eq,
@@ -17,7 +16,6 @@ import {
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
-  MAX_REVIEW_RATING,
   normalizeReviewComment,
   publishesImmediately,
   type ReviewAggregate,
@@ -32,6 +30,7 @@ import {
   people,
   reviewModerationEvents,
   reviewModerationReason,
+  shops,
   tripReviews,
   trips,
 } from "./schema";
@@ -263,18 +262,12 @@ function hiddenReviewExists(db: DbExecutor) {
   );
 }
 
-/**
- * Standouts are one bucket and are newest first. The fallback buckets are
- * rating 5 through rating 1, each newest first. This is deliberately explicit
- * rather than a plain `rating DESC` sort, because an older standout should
- * still outrank an uncurated five-star fallback.
- */
+/** Newest review days first; on a shared day, the higher rating leads. */
 function publicReviewOrder() {
   return [
-    asc(sql<number>`case when ${tripReviews.isStandout} then 0 else 1 end`),
-    asc(
-      sql<number>`case when ${tripReviews.isStandout} then 0 else ${MAX_REVIEW_RATING} - ${tripReviews.rating} end`,
-    ),
+    desc(sql`date_trunc('day', ${trips.startsAt} at time zone ${shops.timezone})`),
+    desc(tripReviews.rating),
+    desc(trips.startsAt),
     desc(tripReviews.publishedAt),
     desc(tripReviews.id),
   ] as const;
@@ -325,6 +318,7 @@ async function fetchPublicReviewRows(
     .from(tripReviews)
     .innerJoin(people, eq(people.id, tripReviews.personId))
     .innerJoin(trips, eq(trips.id, tripReviews.tripId))
+    .innerJoin(shops, eq(shops.id, tripReviews.shopId))
     .where(scope)
     .orderBy(...publicReviewOrder())
     .limit(options.limit ?? Number.MAX_SAFE_INTEGER)

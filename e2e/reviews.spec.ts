@@ -109,14 +109,14 @@ test.describe("as owner, reviews list", () => {
     await published.getByLabel("Why are you taking it down?").selectOption("spam");
     await published.getByRole("button", { name: "Hide this review" }).click();
     await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
-    await expect(published.getByText("Waiting on you")).toBeVisible();
+    await expect(published.getByText("⚠️Hidden", { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");
     await expect(page.getByText(comment)).toHaveCount(0);
   });
 
-  test("a waiting review has to be published before hiding is available", async ({ page }) => {
+  test("a waiting review can be hidden with a recorded reason", async ({ page }) => {
     await page.goto("/shop/blue-mantis/reviews?filter=waiting");
     const waiting = page
       .locator("li")
@@ -124,7 +124,7 @@ test.describe("as owner, reviews list", () => {
       .filter({ visible: true });
     await expect(waiting.getByText("Waiting on you")).toBeVisible();
     await expect(waiting.getByRole("button", { name: "Publish" })).toBeVisible();
-    await expect(waiting.getByText("Hide", { exact: true })).toHaveCount(0);
+    await expect(waiting.getByText("Hide", { exact: true })).toBeVisible();
   });
 
   test("hiding a review can be undone from the toast", async ({ page }) => {

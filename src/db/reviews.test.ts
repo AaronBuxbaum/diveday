@@ -204,7 +204,7 @@ describe("public review reads", () => {
     ]);
   });
 
-  it("puts standouts first, newest within that bucket, then rating fallbacks", async () => {
+  it("sorts by dive date, then puts the higher rating first on the same day", async () => {
     const {
       db,
       shop,
@@ -259,10 +259,10 @@ describe("public review reads", () => {
     expect(await setReviewStandout(db, shop.id, newer.id, true)).toBe(true);
 
     expect((await listPublishedShopReviews(db, shop.id)).map((row) => row.comment)).toEqual([
+      "Fallback good",
+      "Fallback best",
       "Standout newer",
       "Standout older",
-      "Fallback best",
-      "Fallback good",
     ]);
     expect((await listPublishedShopReviewsPage(db, shop.id)).total).toBe(4);
   });

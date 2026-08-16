@@ -55,7 +55,7 @@ export function ShopReviews({
         </p>
       </div>
       <p className="mt-1 text-sm text-muted">{t("reviews.verifiedNote")}</p>
-      <ReviewCards reviews={reviews} locale={locale} timezone={timezone} t={t} />
+      <ReviewCards reviews={reviews} locale={locale} timezone={timezone} t={t} preview />
     </section>
   );
 }
@@ -67,18 +67,25 @@ export function ReviewCards({
   timezone,
   t,
   showTrip = true,
+  preview = false,
 }: {
   reviews: PublicReview[];
   locale: string;
   timezone: string;
   t: DiverTranslator;
   showTrip?: boolean;
+  /** Keep the schedule compact on a phone while showing the full 2x2 preview on wide screens. */
+  preview?: boolean;
 }) {
   if (reviews.length === 0) return null;
   return (
     <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-      {reviews.map((review) => (
-        <SectionCard as="li" key={review.id}>
+      {reviews.map((review, index) => (
+        <SectionCard
+          as="li"
+          key={review.id}
+          className={preview && index >= 3 ? "hidden sm:block" : undefined}
+        >
           <StarRating
             rating={review.rating}
             label={t("reviews.ratingOption", { rating: review.rating })}

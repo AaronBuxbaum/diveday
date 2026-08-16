@@ -514,7 +514,11 @@ function WaiverLine({
                 : t("incidentExport.waiverCompleteAttested")
             }`
           : waiver.signatureMethod === "in_person"
-            ? ` ${t("incidentExport.waiverCompleteAttested")}`
+            ? ` ${
+                waiver.recordedByName
+                  ? t("incidentExport.waiverPaperMarkedBy", { name: waiver.recordedByName })
+                  : t("incidentExport.waiverCompleteAttested")
+              }`
             : "";
     return (
       <>

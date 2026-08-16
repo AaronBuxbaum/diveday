@@ -475,9 +475,10 @@ export async function createDemoShop(
     staff.map((person) => person.id),
   );
 
-  // Seed history (including orders, reviews, and tips) on a minted demo now
-  // that waiver tokens and Stripe IDs are shop-specific to prevent collisions.
-  await seedDemoSchedule(db, shop.id, { history: true });
+  // A minted shop is a clean schedule fixture: private-shop tests own their
+  // configuration and should not inherit history-only trip-leg overrides or
+  // review/order rows from the canonical demo.
+  await seedDemoSchedule(db, shop.id, { history: false });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -764,7 +765,7 @@ export async function resetDemoSchedule(
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
-  // The staff-only close-out album also references its trip and uploader.
+  // The shared close-out photo album also references its trip and uploader.
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // The moderation trail references the review it describes, so it goes first
   // (ADR 20260813-review-moderation-has-a-floor).

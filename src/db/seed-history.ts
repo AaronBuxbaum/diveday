@@ -805,9 +805,11 @@ export async function seedHistory(
     "Vis was unreal and the crew found us a turtle on the second tank.",
     "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
     "Choppy ride out, but the reef more than made up for it.",
+    "The crew made a busy weekend feel easy, thoughtful, and beautifully organized.",
+    "A warm, patient crew and a brilliant final drift over the reef.",
   ];
-  // The written reviews go on three *different* departures, so the public list
-  // reads like a shop's history rather than one memorable boat day.
+  // The written reviews go on different departures, so the public list reads
+  // like a shop's history rather than one memorable boat day.
   const commentedTrips = new Set<string>();
   const reviewRows = plans
     .map((plan, i) => {
@@ -817,9 +819,9 @@ export async function seedHistory(
         commentedTrips.size < reviewComments.length && !commentedTrips.has(booking.tripId);
       if (wantsComment) commentedTrips.add(booking.tripId);
       const comment = wantsComment ? reviewComments[commentedTrips.size - 1] : null;
-      // The third written review stays unpublished — that is the "waiting on
+      // The fifth written review stays unpublished — that is the "waiting on
       // you" card the staff Reviews page exists to clear.
-      const isPublished = comment === null || commentedTrips.size < 3;
+      const isPublished = comment === null || commentedTrips.size < 5;
       const createdAt = new Date(plan.createdAt.getTime() + 6 * 60 * 60 * 1000);
       return {
         shopId,
@@ -828,7 +830,7 @@ export async function seedHistory(
         personId: plan.personId,
         rating: i % 3 === 0 ? 5 : 4,
         comment,
-        isStandout: Boolean(comment && isPublished && commentedTrips.size <= 2),
+        isStandout: Boolean(comment && isPublished && commentedTrips.size <= 4),
         isPublished,
         publishedAt: isPublished ? createdAt : null,
         createdAt,

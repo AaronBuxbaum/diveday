@@ -172,14 +172,14 @@ export async function seedMoreTrips(
       roster: draw(9),
     },
     {
-      title: "Rescue Diver — two-day course",
+      title: "Rescue Diver — three-day course",
       description: "Problem prevention and rescue skills for experienced divers.",
       // Kept clear of the seeded Open Water course (day 9-11) and Deep Diver
       // (day 20-21) — both also crew Marcus, and overlapping his assignment
       // window would collide (see the "no seeded course may overlap" rule
       // near seedMoreTrips's top).
       startsAt: at(58, 8, 0),
-      endsAt: at(59, 17, 0),
+      endsAt: at(60, 17, 0),
       capacity: 4,
       courseTitle: "Rescue Diver",
       roster: [29, 40, 42],
@@ -461,12 +461,26 @@ export async function seedMoreTrips(
     .returning();
 
   await db.insert(tripScheduleDays).values(
-    insertedTrips.map((trip) => ({
-      tripId: trip.id,
-      dayNumber: 1,
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-    })),
+    insertedTrips.flatMap((trip, index) => {
+      const def = tripDefs[index];
+      const dayCount = def?.courseTitle
+        ? Math.round((trip.endsAt.getTime() - trip.startsAt.getTime()) / (24 * 60 * 60 * 1000)) + 1
+        : 1;
+      return Array.from({ length: dayCount }, (_, dayIndex) => ({
+        tripId: trip.id,
+        dayNumber: dayIndex + 1,
+        startsAt:
+          dayIndex === 0
+            ? trip.startsAt
+            : new Date(trip.startsAt.getTime() + dayIndex * 24 * 60 * 60 * 1000),
+        endsAt:
+          dayIndex === dayCount - 1
+            ? trip.endsAt
+            : new Date(
+                trip.startsAt.getTime() + dayIndex * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000,
+              ),
+      }));
+    }),
   );
 
   // One `trip_dives` row per planned dive, the way `seed-trips.ts` and

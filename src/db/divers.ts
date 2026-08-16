@@ -659,6 +659,9 @@ export async function getDiverProfile(
   options: { includeRemoved?: boolean } = {},
 ) {
   const clearedBy = alias(people, "no_certification_cleared_by");
+  const levelReviewer = alias(people, "level_certification_reviewer");
+  const specialtyReviewer = alias(people, "specialty_certification_reviewer");
+  const nitroxReviewer = alias(people, "nitrox_certification_reviewer");
   const [personRow] = await db
     .select({ person: people, clearedByName: clearedBy.fullName })
     .from(people)
@@ -691,8 +694,9 @@ export async function getDiverProfile(
     waiverTemplate,
   ] = await Promise.all([
     db
-      .select()
+      .select({ card: certifications, reviewedByName: levelReviewer.fullName })
       .from(certifications)
+      .leftJoin(levelReviewer, eq(levelReviewer.id, certifications.reviewedByPersonId))
       .where(
         and(
           eq(certifications.shopId, shopId),
@@ -702,8 +706,12 @@ export async function getDiverProfile(
       )
       .orderBy(desc(certifications.createdAt)),
     db
-      .select()
+      .select({ card: specialtyCertifications, reviewedByName: specialtyReviewer.fullName })
       .from(specialtyCertifications)
+      .leftJoin(
+        specialtyReviewer,
+        eq(specialtyReviewer.id, specialtyCertifications.reviewedByPersonId),
+      )
       .where(
         and(
           eq(specialtyCertifications.shopId, shopId),
@@ -713,8 +721,9 @@ export async function getDiverProfile(
       )
       .orderBy(desc(specialtyCertifications.createdAt)),
     db
-      .select()
+      .select({ card: nitroxCertifications, reviewedByName: nitroxReviewer.fullName })
       .from(nitroxCertifications)
+      .leftJoin(nitroxReviewer, eq(nitroxReviewer.id, nitroxCertifications.reviewedByPersonId))
       .where(
         and(
           eq(nitroxCertifications.shopId, shopId),
@@ -756,9 +765,15 @@ export async function getDiverProfile(
   return {
     person: personRow.person,
     noCertificationClearedByName: personRow.clearedByName,
-    certifications: levelCards,
-    specialtyCertifications: specialtyCards,
-    nitroxCertifications: nitroxCards,
+    certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
+    specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
+      ...card,
+      reviewedByName,
+    })),
+    nitroxCertifications: nitroxCards.map(({ card, reviewedByName }) => ({
+      ...card,
+      reviewedByName,
+    })),
     rentalFit: profile[0] ?? null,
     bookings: bookingRows,
     orders: personOrders,

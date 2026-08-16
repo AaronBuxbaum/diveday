@@ -392,12 +392,6 @@ export default async function ManageTripPage({
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}
             />
-            <PrintTripBundleButton
-              href={shopPath(shopSlug, "trips", tripId, "print")}
-              label={t("shared.printButton.label")}
-              popupBlockedLabel={t("shared.printButton.popupBlocked")}
-              recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
-            />
             <Link
               href={publicTripPath(shopSlug, tripId)}
               target="_blank"
@@ -406,6 +400,12 @@ export default async function ManageTripPage({
             >
               {t("trips.detail.viewBookingPage")}
             </Link>
+            <PrintTripBundleButton
+              href={shopPath(shopSlug, "trips", tripId, "print")}
+              label={t("shared.printButton.label")}
+              popupBlockedLabel={t("shared.printButton.popupBlocked")}
+              recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
+            />
           </>
         }
         extraMeta={

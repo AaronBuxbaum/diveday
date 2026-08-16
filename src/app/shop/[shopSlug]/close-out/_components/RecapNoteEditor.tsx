@@ -44,6 +44,8 @@ export function RecapNoteEditor({
   recapSendAction,
   recapEligibleAt,
   recapNowMs,
+  recapSentAt,
+  recapSentAtLabel,
 }: {
   action: (formData: FormData) => void;
   shoutout: string | null;
@@ -69,7 +71,10 @@ export function RecapNoteEditor({
   recapSendAction?: (formData: FormData) => void;
   recapEligibleAt?: Date;
   recapNowMs?: number;
+  recapSentAt?: Date | null;
+  recapSentAtLabel?: string;
 }) {
+  const recapLocked = Boolean(recapSentAt);
   return (
     <details open={saved} className="group/recap mt-3 border-t border-border pt-3">
       {/* Stacked below `sm`, one line from there. Inline at phone width the
@@ -92,31 +97,38 @@ export function RecapNoteEditor({
           {shoutout ?? t("trips.recapNote.emptySummary")}
         </span>
       </summary>
-      <p className="mt-2 max-w-2xl text-sm text-muted">{t("trips.recapNote.description")}</p>
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        {recapLocked && recapSentAtLabel
+          ? t("closeout.recap.sent", { time: recapSentAtLabel })
+          : t("trips.recapNote.description")}
+      </p>
       <form action={action} className="mt-2 flex flex-col gap-3">
         <textarea
           name="recapShoutout"
           rows={3}
           maxLength={400}
           defaultValue={shoutout ?? ""}
+          disabled={recapLocked}
           placeholder={t("trips.recapNote.placeholder")}
           aria-label={t("trips.recapNote.heading")}
           className={controlClass}
         />
         <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton
-            pendingLabel={t("trips.recapNote.saving")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("trips.recapNote.save")}
-          </SubmitButton>
+          {!recapLocked ? (
+            <SubmitButton
+              pendingLabel={t("trips.recapNote.saving")}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("trips.recapNote.save")}
+            </SubmitButton>
+          ) : null}
           <FormStatus tone={saved ? "success" : undefined}>
             {saved ? t("trips.notices.recapNote") : null}
           </FormStatus>
         </div>
       </form>
 
-      {recapSendAction && recapEligibleAt && recapNowMs !== undefined ? (
+      {!recapLocked && recapSendAction && recapEligibleAt && recapNowMs !== undefined ? (
         <RecapSendControl
           action={recapSendAction}
           eligibleAt={recapEligibleAt.toISOString()}
@@ -131,7 +143,7 @@ export function RecapNoteEditor({
         />
       ) : null}
 
-      {photos.length > 0 && deletePhotoAction ? (
+      {photos.length > 0 ? (
         <div className="mt-4 border-t border-border pt-4">
           <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
             {t("trips.recapPhotos.heading")}{" "}
@@ -163,26 +175,28 @@ export function RecapNoteEditor({
                       <p className="truncate text-xs text-muted">{photo.caption}</p>
                     ) : null}
                   </div>
-                  <form action={deletePhotoAction}>
-                    <input type="hidden" name="photoId" value={photo.id} />
-                    <InlineConfirm
-                      triggerLabel={t("trips.recapPhotos.remove")}
-                      triggerClassName={buttonClass({
-                        variant: "danger-ghost",
-                        size: "sm",
-                        className: "shrink-0",
-                      })}
-                      confirmClassName={buttonClass({
-                        variant: "danger-ghost",
-                        size: "sm",
-                        busy: true,
-                      })}
-                      message={t("trips.recapPhotos.confirmRemove")}
-                      confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
-                      cancelLabel={t("trips.recapPhotos.removeCancel")}
-                      pendingLabel={t("trips.recapPhotos.removing")}
-                    />
-                  </form>
+                  {!recapLocked && deletePhotoAction ? (
+                    <form action={deletePhotoAction}>
+                      <input type="hidden" name="photoId" value={photo.id} />
+                      <InlineConfirm
+                        triggerLabel={t("trips.recapPhotos.remove")}
+                        triggerClassName={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                          className: "shrink-0",
+                        })}
+                        confirmClassName={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                          busy: true,
+                        })}
+                        message={t("trips.recapPhotos.confirmRemove")}
+                        confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
+                        cancelLabel={t("trips.recapPhotos.removeCancel")}
+                        pendingLabel={t("trips.recapPhotos.removing")}
+                      />
+                    </form>
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -215,53 +229,57 @@ export function RecapNoteEditor({
                     />
                   </div>
                   <div className="flex justify-end px-2 py-1.5">
-                    <form action={deleteCrewPhotoAction}>
-                      <input type="hidden" name="photoId" value={photo.id} />
-                      <InlineConfirm
-                        triggerLabel={t("closeout.crewPhotos.remove")}
-                        triggerClassName={buttonClass({
-                          variant: "danger-ghost",
-                          size: "sm",
-                        })}
-                        confirmClassName={buttonClass({
-                          variant: "danger-ghost",
-                          size: "sm",
-                          busy: true,
-                        })}
-                        message={t("closeout.crewPhotos.confirmRemove")}
-                        confirmLabel={t("closeout.crewPhotos.removeConfirmButton")}
-                        cancelLabel={t("closeout.crewPhotos.removeCancel")}
-                        pendingLabel={t("closeout.crewPhotos.removing")}
-                      />
-                    </form>
+                    {!recapLocked ? (
+                      <form action={deleteCrewPhotoAction}>
+                        <input type="hidden" name="photoId" value={photo.id} />
+                        <InlineConfirm
+                          triggerLabel={t("closeout.crewPhotos.remove")}
+                          triggerClassName={buttonClass({
+                            variant: "danger-ghost",
+                            size: "sm",
+                          })}
+                          confirmClassName={buttonClass({
+                            variant: "danger-ghost",
+                            size: "sm",
+                            busy: true,
+                          })}
+                          message={t("closeout.crewPhotos.confirmRemove")}
+                          confirmLabel={t("closeout.crewPhotos.removeConfirmButton")}
+                          cancelLabel={t("closeout.crewPhotos.removeCancel")}
+                          pendingLabel={t("closeout.crewPhotos.removing")}
+                        />
+                      </form>
+                    ) : null}
                   </div>
                 </li>
               ))}
             </ul>
           ) : null}
 
-          <form action={uploadCrewPhotoAction} className="mt-3 flex flex-col gap-3">
-            <label htmlFor={crewPhotoInputId} className="text-sm font-medium">
-              {t("closeout.crewPhotos.add")}
-            </label>
-            <ImageFileInput
-              id={crewPhotoInputId}
-              name="crewPhoto"
-              required
-              copy={{
-                wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-              }}
-            />
-            <div>
-              <SubmitButton
-                pendingLabel={t("closeout.crewPhotos.adding")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("closeout.crewPhotos.upload")}
-              </SubmitButton>
-            </div>
-          </form>
+          {!recapLocked ? (
+            <form action={uploadCrewPhotoAction} className="mt-3 flex flex-col gap-3">
+              <label htmlFor={crewPhotoInputId} className="text-sm font-medium">
+                {t("closeout.crewPhotos.add")}
+              </label>
+              <ImageFileInput
+                id={crewPhotoInputId}
+                name="crewPhoto"
+                required
+                copy={{
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                }}
+              />
+              <div>
+                <SubmitButton
+                  pendingLabel={t("closeout.crewPhotos.adding")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("closeout.crewPhotos.upload")}
+                </SubmitButton>
+              </div>
+            </form>
+          ) : null}
         </div>
       ) : null}
     </details>

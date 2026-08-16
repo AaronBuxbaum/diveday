@@ -126,7 +126,8 @@
       "drysuit": "Cold — a 7 mm semi-dry with hood and gloves, or a drysuit if you dive one."
     },
     "dockDayRhythm": "Your dock-day rhythm",
-    "dockDayEachDay": "Times below are day one — every day of this trip follows the same shape.",
+    "dockDayEachDay": "Each day has its own dock rhythm.",
+    "dockDayLabel": "Day {number}",
     "briefingsEyebrow": "Dive briefings",
     "planTwoTank": "Your two-tank plan",
     "planDiveCount": "Your {count}-dive plan",

@@ -596,7 +596,7 @@ export default async function OrdersIndexPage({
                 );
               return (
                 <tr key={row.order.id}>
-                  <Td className="align-middle">
+                  <Td align="middle">
                     <Link
                       href={`/shop/${shopSlug}/orders/${row.order.id}`}
                       className="font-medium text-foreground hover:text-primary hover:underline"
@@ -608,19 +608,19 @@ export default async function OrdersIndexPage({
                     </div>
                     {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
                   </Td>
-                  <Td muted hideBelow="sm" className="align-middle">
+                  <Td muted hideBelow="sm" align="middle">
                     {row.trip?.title ?? row.order.description ?? "—"}
                   </Td>
                   {/* Settled rows leave the cell empty — "Paid" on 45 of 50
                       rows is the expected state formatted as information, so
                       a marker appears only where a staffer is needed. */}
-                  <Td hideBelow="sm" className="align-middle">
+                  <Td hideBelow="sm" align="middle">
                     {statusBadge}
                   </Td>
-                  <Td muted className="align-middle whitespace-nowrap tabular-nums">
+                  <Td muted align="middle" className="whitespace-nowrap tabular-nums">
                     {formatShortDate(row.order.createdAt, locale, shop.timezone)}
                   </Td>
-                  <Td numeric className="align-middle">
+                  <Td numeric align="middle">
                     {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
                   </Td>
                 </tr>
@@ -663,7 +663,7 @@ export default async function OrdersIndexPage({
                 const receiptDocumentUrl = safeImportedDocumentUrl(history.receiptDocumentUrl);
                 return (
                   <tr key={history.id}>
-                    <Td className="align-middle">
+                    <Td align="middle">
                       <Link
                         href={`/shop/${shopSlug}/divers/${person.id}`}
                         className="font-medium text-foreground hover:text-primary hover:underline"
@@ -677,7 +677,7 @@ export default async function OrdersIndexPage({
                         {history.title ?? history.sourceReference ?? "—"}
                       </div>
                     </Td>
-                    <Td muted hideBelow="sm" className="align-middle">
+                    <Td muted hideBelow="sm" align="middle">
                       <div>{history.title ?? history.sourceReference ?? "—"}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                         <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
@@ -701,7 +701,7 @@ export default async function OrdersIndexPage({
                         ) : null}
                       </div>
                     </Td>
-                    <Td hideBelow="sm" className="align-middle">
+                    <Td hideBelow="sm" align="middle">
                       <div>{t(IMPORTED_PAYMENT_DIRECTION_KEYS[history.direction])}</div>
                       {history.statusLabel ? (
                         <div className="mt-1 text-xs text-muted">{history.statusLabel}</div>
@@ -714,10 +714,10 @@ export default async function OrdersIndexPage({
                         </div>
                       ) : null}
                     </Td>
-                    <Td muted className="align-middle whitespace-nowrap tabular-nums">
+                    <Td muted align="middle" className="whitespace-nowrap tabular-nums">
                       {formatCalendarDate(history.occurredOn, locale)}
                     </Td>
-                    <Td numeric className="align-middle">
+                    <Td numeric align="middle">
                       {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
                     </Td>
                   </tr>

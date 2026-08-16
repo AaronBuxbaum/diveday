@@ -177,8 +177,12 @@ export function parseDiveSiteForm(
   const parsed = diveSiteFormSchema.safeParse(entries);
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { forecastLatitude, forecastLongitude, maxDepth } = parsed.data;
-  // A site needs a GPS location (both latitude and longitude).
-  if (forecastLatitude === "" || forecastLongitude === "") {
+  // A site may be saved before its GPS location is known, but a partial pair
+  // is never meaningful and is refused until both coordinates are present.
+  if (
+    (forecastLatitude === "" && forecastLongitude !== "") ||
+    (forecastLatitude !== "" && forecastLongitude === "")
+  ) {
     return { ok: false, error: "coordinatesIncomplete" };
   }
   const maxDepthMeters = maxDepth === "" ? null : depthToMeters(maxDepth, depthUnit);

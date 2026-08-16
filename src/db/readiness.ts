@@ -355,11 +355,14 @@ export async function reviewCertification(
  */
 export async function archiveCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
     .update(certifications)
-    .set({ deletedAt: nowDate() })
+    .set({
+      deletedAt: nowDate(),
+      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+    })
     .where(
       and(
         eq(certifications.id, input.certificationId),
@@ -405,7 +408,7 @@ export async function restoreCertification(
   if (conflict) return false;
   const [row] = await db
     .update(certifications)
-    .set({ deletedAt: null })
+    .set({ deletedAt: null, deletedByPersonId: null })
     .where(
       and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
     )
@@ -552,11 +555,14 @@ export function reviewNoteFor(note: string | undefined): string | null {
 /** Soft-archive a specialty card. Shop-scoped, mirroring `archiveCertification`. */
 export async function archiveSpecialtyCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
     .update(specialtyCertifications)
-    .set({ deletedAt: nowDate() })
+    .set({
+      deletedAt: nowDate(),
+      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+    })
     .where(
       and(
         eq(specialtyCertifications.id, input.certificationId),
@@ -599,7 +605,7 @@ export async function restoreSpecialtyCertification(
   if (conflict) return false;
   const [row] = await db
     .update(specialtyCertifications)
-    .set({ deletedAt: null })
+    .set({ deletedAt: null, deletedByPersonId: null })
     .where(
       and(
         eq(specialtyCertifications.id, input.certificationId),

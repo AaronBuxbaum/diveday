@@ -1,5 +1,6 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -41,7 +42,7 @@ import {
   reviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { certificationAgency, certificationLevel } from "@/db/schema";
+import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { recordInPersonWaiver } from "@/db/waivers";
@@ -352,6 +353,15 @@ function sightedNumberRefused(formData: FormData): boolean {
 async function isLiveStaff(db: AppDb, shopId: string, personId: string): Promise<boolean> {
   const roles = await loadActiveStaffRoles(db, shopId, personId);
   return Boolean(roles && isStaff(roles));
+}
+
+async function liveStaffName(db: AppDb, shopId: string, personId: string) {
+  const [staff] = await db
+    .select({ fullName: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  return staff?.fullName ?? "staff";
 }
 
 /**
@@ -665,14 +675,25 @@ export async function deleteCertificationAction(
   const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
   const deleted = certificationId
-    ? await archiveCertification(db, { shopId: staff.user.shopId, certificationId })
+    ? await archiveCertification(db, {
+        shopId: staff.user.shopId,
+        certificationId,
+        deletedByPersonId: staff.user.personId,
+      })
     : false;
+  const removedBy = deleted
+    ? await liveStaffName(db, staff.user.shopId, staff.user.personId)
+    : null;
   // Land-then-undo: the delete happens now, and the toast on the next render
   // carries the id + type so a single tap restores it (no confirm dialog).
   revalidateAndRedirect(
     base,
     deleted
-      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType: "level" })
+      ? noticeUrl(base, "card-deleted", {
+          undo: certificationId,
+          cardType: "level",
+          by: removedBy ?? undefined,
+        })
       : backTo(base, "invalid", "cards"),
   );
 }
@@ -690,13 +711,28 @@ export async function deleteSpecialtyAction(
   const cardType = formData.get("cardType") === "nitrox" ? "nitrox" : "specialty";
   const deleted = certificationId
     ? cardType === "nitrox"
-      ? await archiveNitroxCertification(db, { shopId: staff.user.shopId, certificationId })
-      : await archiveSpecialtyCertification(db, { shopId: staff.user.shopId, certificationId })
+      ? await archiveNitroxCertification(db, {
+          shopId: staff.user.shopId,
+          certificationId,
+          deletedByPersonId: staff.user.personId,
+        })
+      : await archiveSpecialtyCertification(db, {
+          shopId: staff.user.shopId,
+          certificationId,
+          deletedByPersonId: staff.user.personId,
+        })
     : false;
+  const removedBy = deleted
+    ? await liveStaffName(db, staff.user.shopId, staff.user.personId)
+    : null;
   revalidateAndRedirect(
     base,
     deleted
-      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType })
+      ? noticeUrl(base, "card-deleted", {
+          undo: certificationId,
+          cardType,
+          by: removedBy ?? undefined,
+        })
       : backTo(base, "invalid", "specialty-cards"),
   );
 }

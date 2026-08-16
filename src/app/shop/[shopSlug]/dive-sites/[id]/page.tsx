@@ -155,8 +155,10 @@ export default async function EditDiveSitePage({
     const updated = await updateDiveSiteForForm(activeDb, activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...siteFields,
-      forecastLatitude: parsed.fields.forecastLatitude as number,
-      forecastLongitude: parsed.fields.forecastLongitude as number,
+      forecastLatitude:
+        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
+      forecastLongitude:
+        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
       satelliteImageUrl: photos.photos.satelliteImageUrl,
       routeImageUrl: photos.photos.routeImageUrl,
       imageUrls: photos.photos.imageUrls,

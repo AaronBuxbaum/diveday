@@ -2,7 +2,6 @@ import type { BirthdayCallout } from "./age";
 import type { DepthCeilingCheck } from "./depth-ceiling";
 import type { RentalFitLine } from "./dive-prep";
 import type { ReadinessResult } from "./readiness";
-import { unavailableReadiness } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard } from "./roll-call";
 import type { MedicalWaiverMark } from "./waivers";
@@ -20,6 +19,15 @@ export type {
   RollCallRecord,
   RollCallState,
 } from "./roll-call";
+
+/** A missing live readiness read must fail closed on the offline manifest. */
+function unavailableReadiness(): ReadinessResult {
+  return {
+    status: "blocked",
+    blockers: [{ code: "readiness_unavailable" }],
+  };
+}
+
 export {
   carryForwardNotBoarded,
   isNotBackAboard,
