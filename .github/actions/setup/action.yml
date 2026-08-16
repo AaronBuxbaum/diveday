@@ -1,6 +1,6 @@
 name: Setup pnpm and install
 description: >
-  Sets up pnpm, Node 22 with the pnpm cache, and installs dependencies with a
+  Sets up pnpm, Node 24 with the pnpm cache, and installs dependencies with a
   frozen lockfile — the setup steps every CI job needs before it can run
   anything else.
 runs:
@@ -9,7 +9,7 @@ runs:
     - uses: pnpm/action-setup@v6
     - uses: actions/setup-node@v7
       with:
-        node-version: 22
+        node-version: 24
         cache: pnpm
     - run: pnpm install --frozen-lockfile
       shell: bash
