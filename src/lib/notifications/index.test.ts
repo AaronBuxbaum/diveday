@@ -303,7 +303,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     });
   });
 
-  it("sets the List-Unsubscribe header for a notification that carries an unsubscribe link", async () => {
+  it("points List-Unsubscribe/List-Unsubscribe-Post at the one-click API route", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });
 
@@ -329,11 +329,15 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
 
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
     expect(command.input.Content?.Simple?.Headers).toEqual([
-      { Name: "List-Unsubscribe", Value: "<https://diveday.example/unsubscribe/tok_abc123>" },
+      {
+        Name: "List-Unsubscribe",
+        Value: "<https://diveday.example/unsubscribe/tok_abc123/one-click>",
+      },
+      { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
     ]);
   });
 
-  it("omits the List-Unsubscribe header for a notification with no unsubscribe link", async () => {
+  it("omits the List-Unsubscribe headers for a notification with no unsubscribe link", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });
 

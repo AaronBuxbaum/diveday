@@ -122,6 +122,32 @@ function unsubscribeUrlOf(notification: Notification): string | undefined {
   return "unsubscribeUrl" in notification ? notification.unsubscribeUrl : undefined;
 }
 
+/**
+ * The page URL (`/unsubscribe/<token>`) is for a human who clicks the in-body
+ * link — it stays a GET-safe confirm page (`src/app/unsubscribe/[token]/page.tsx`).
+ * The one-click header target is the sibling route nested one level deeper
+ * (`src/app/unsubscribe/[token]/one-click/route.ts`), which acts on a bare
+ * POST with no confirmation — that's what `List-Unsubscribe-Post` promises
+ * the mail client. Deliberately `/unsubscribe/<token>/one-click`, not
+ * `/api/unsubscribe/<token>`: the URL's first path segment has to stay
+ * `"unsubscribe"` so the bearer token remains covered by the existing
+ * `CAPABILITY_ROUTE_PREFIXES` telemetry redaction (`src/lib/capability-urls.ts`)
+ * — an `/api/...` sibling would have shipped the raw token to Sentry on any
+ * server error (security review finding on this task). Same token, different
+ * path, so no second URL needs threading through the notification schema and
+ * every call site that builds one.
+ */
+function oneClickUnsubscribeUrl(unsubscribeUrl: string): string | undefined {
+  try {
+    const url = new URL(unsubscribeUrl);
+    if (!url.pathname.startsWith("/unsubscribe/")) return undefined;
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/one-click`;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export function sesNotificationProvider(
   config: SesConfig,
   options: SesProviderOptions = {},
@@ -138,6 +164,7 @@ export function sesNotificationProvider(
       if (invalidRecipient) return invalidRecipient;
       const message = messageFor(notification);
       const unsubscribeUrl = unsubscribeUrlOf(notification);
+      const oneClickUrl = unsubscribeUrl && oneClickUnsubscribeUrl(unsubscribeUrl);
       try {
         const result = await client.send(
           new SendEmailCommand({
@@ -150,14 +177,17 @@ export function sesNotificationProvider(
                   Html: { Data: message.html, Charset: "UTF-8" },
                   Text: { Data: message.text, Charset: "UTF-8" },
                 },
-                // RFC 8058: lets Gmail/Yahoo/Outlook surface a native "Unsubscribe"
-                // control next to the sender, backed by the same confirmation page
-                // as the in-body link. Deliberately no `List-Unsubscribe-Post` — that
-                // promises a one-click POST with no confirmation, which this page
-                // doesn't do; adding it without matching behavior would make mail
-                // clients silently fail to unsubscribe recipients who click it.
-                ...(unsubscribeUrl && {
-                  Headers: [{ Name: "List-Unsubscribe", Value: `<${unsubscribeUrl}>` }],
+                // RFC 8058 one-click unsubscribe: `List-Unsubscribe` names the
+                // POST target and `List-Unsubscribe-Post` is the fixed token that
+                // tells Gmail/Yahoo/Outlook it's safe to POST there with no
+                // confirmation — lets them surface a native "Unsubscribe" control
+                // next to the sender. Points at the API route, not the in-body
+                // confirm-page link.
+                ...(oneClickUrl && {
+                  Headers: [
+                    { Name: "List-Unsubscribe", Value: `<${oneClickUrl}>` },
+                    { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+                  ],
                 }),
               },
             },
