@@ -17,7 +17,7 @@ type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
  * One entry per notice code, carrying its tone, its message key, and — the
  * field that changed here — **the form it belongs to**.
  *
- * This page is one ~6,400px scroll of eight independent sections: the details
+ * This page is one ~6,400px scroll of nine independent sections: the details
  * editor, level cards, specialty cards, rental fit, payments, book-an-activity,
  * remove, erase. Every one of their outcomes used to resolve into a single
  * banner under the `<h1>`, so saving a rental fit two screens down answered you
@@ -168,6 +168,12 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.paymentNotConnected",
   },
 
+  // Diver-record notes are staff context shared with the boat manifest. The
+  // normal add path revalidates in place, while delete/undo uses these codes
+  // when a redirect is needed to carry the undo text.
+  "note-added": { form: "notes", tone: "success", key: "divers.notices.noteAdded" },
+  "note-deleted": { form: "notes", tone: "success", key: "divers.notices.noteDeleted" },
+
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.
   booked: { form: "book-activity", tone: "success", key: "divers.notices.booked" },
@@ -262,6 +268,7 @@ const DIVER_FORMS = new Set([
   "fit",
   "payments",
   "book-activity",
+  "notes",
   "remove",
   "restore",
   "erase",

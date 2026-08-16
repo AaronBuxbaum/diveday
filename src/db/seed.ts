@@ -1013,7 +1013,7 @@ export async function resetDemoSchedule(
   // test minted is not seeded state and correctly does not come back.
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
-  await seedDemoSchedule(db, shopId, { history: opts.history !== false });
+  await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }
 
 /**

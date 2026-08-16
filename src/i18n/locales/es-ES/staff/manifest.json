@@ -42,6 +42,7 @@
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
   "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
   "checkedInPill": "Registrado",
+  "diverNotesHeading": "Notas del buceador",
   "deskNotesHeading": "Desde el mostrador",
   "age": "{age} años",
   "minorAge": "Menor · {age} años",

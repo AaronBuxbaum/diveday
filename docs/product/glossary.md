@@ -14,6 +14,13 @@ new domain concept, define it here in the same PR.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
+- **Staff note** — shop-private operational context written for the next person on the team. A
+  note has one general kind for now and attaches either to a **diver** (shared across that diver's
+  record and the live boat manifest) or to one **booking** (departure-specific desk context). It is
+  displayed with its author and timestamp, is exported with the shop's records, and is never
+  evidence: readiness, trip admission, capacity, boarding, and roll-call completion do not read it.
+  New note kinds must name their audience and retention before they are added; free text is not a
+  license to put medical or boarding decisions into an unaudited gate.
 
 ## Certification
 
