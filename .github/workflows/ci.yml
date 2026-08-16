@@ -175,7 +175,10 @@ jobs:
     needs: build
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Four shards still run in parallel, but each shard now keeps one browser
+    # and one Next server to avoid CPU contention. Give that stable topology
+    # enough wall-clock budget to finish the full shard.
+    timeout-minutes: 30
     permissions:
       contents: read
     strategy:
@@ -270,7 +273,7 @@ jobs:
     needs: build
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
     strategy:
