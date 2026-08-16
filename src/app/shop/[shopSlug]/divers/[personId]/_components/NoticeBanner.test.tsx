@@ -181,7 +181,7 @@ describe("NoticeBanner", () => {
 });
 
 /**
- * **The routing half.** This record is eight independent forms on one ~6,400px
+ * **The routing half.** This record is nine independent forms on one ~6,400px
  * scroll — details, level cards, specialty cards, rental fit, payments, book an
  * activity, remove, erase — and every one of their outcomes used to resolve
  * into a single banner under the `<h1>`. Save a rental fit halfway down the

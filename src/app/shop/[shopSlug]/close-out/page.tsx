@@ -11,7 +11,8 @@ import { buttonClass } from "@/components/ui/button";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { closeDay, getDayCloseout } from "@/db/closeout";
-import { setTripRecapShoutout } from "@/db/recap";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import {
   CLOSEOUT_DECISION_KEYS,
@@ -141,6 +142,27 @@ export default async function CloseOutPage({
     revalidateAndRedirect(closeOut, `${closeOut}?noted=${encodeURIComponent(tripId)}`);
   }
 
+  async function deleteRecapPhotoAction(tripId: string, formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const photoId = String(formData.get("photoId") ?? "");
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    if (!photoId) redirect(closeOut);
+    const db = await getDb();
+    const result = await deleteRecapPhoto(db, staff.user.shopId, photoId);
+    if (result.deleted) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId: staff.user.shopId,
+        kind: "recap_photo",
+        url: result.imageUrl,
+      });
+    }
+    revalidateAndRedirect(
+      closeOut,
+      `${closeOut}?notice=recap-photo-removed&noted=${encodeURIComponent(tripId)}`,
+    );
+  }
+
   const detailTime = (departure: CloseoutDeparture) =>
     formatTime(
       departure.status === "not_departed" ? departure.startsAt : departure.endsAt,
@@ -172,6 +194,14 @@ export default async function CloseOutPage({
         <div className="mb-6">
           <ShopNotice tone="neutral" role="status">
             {t("incidentExport.ownerOnlyNotice")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {notice === "recap-photo-removed" ? (
+        <div className="mb-6">
+          <ShopNotice tone="success" role="status">
+            {t("trips.notices.recapPhotoRemoved")}
           </ShopNotice>
         </div>
       ) : null}
@@ -314,6 +344,8 @@ export default async function CloseOutPage({
                       shoutout={departure.recapShoutout}
                       saved={noted === departure.tripId}
                       t={t}
+                      photos={departure.photos}
+                      deletePhotoAction={deleteRecapPhotoAction.bind(null, departure.tripId)}
                     />
                   ) : null}
                 </li>

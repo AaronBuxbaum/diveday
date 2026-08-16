@@ -52,9 +52,7 @@ export function TripCapacityBadge({
  * reading of the trip, like Overview's dive sites or its multi-day schedule.
  */
 export function TripPageHeader({
-  title,
-  startsAt,
-  endsAt,
+  trip,
   locale,
   timeZone,
   badge,
@@ -62,9 +60,7 @@ export function TripPageHeader({
   extraMeta,
   actions,
 }: {
-  title: string;
-  startsAt: Date;
-  endsAt: Date;
+  trip: { title: string; startsAt: Date; endsAt: Date };
   locale: string;
   /** The shop's own zone — never the host's. See `src/lib/format.ts`. */
   timeZone: string;
@@ -82,7 +78,7 @@ export function TripPageHeader({
 }) {
   return (
     <ShopPageHeader
-      title={title}
+      title={trip.title}
       description={description}
       actions={actions}
       meta={
@@ -90,8 +86,8 @@ export function TripPageHeader({
           <div className="flex flex-wrap items-center gap-3">
             {badge}
             <span className="text-muted">
-              {formatShortDate(startsAt, locale, timeZone)} ·{" "}
-              {formatTimeRangeTz(startsAt, endsAt, locale, timeZone)}
+              {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
+              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
             </span>
           </div>
           {extraMeta}

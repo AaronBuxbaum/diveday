@@ -58,7 +58,7 @@
     "title": "Walk-in",
     "description": "Elige el barco de hoy y luego busca al buceador o añádelo de cero — sin necesidad de correo en el mostrador.",
     "backToQueue": "Volver al check-in",
-    "backToPicker": "Elegir otro barco",
+    "backToPicker": "¿No es este? Elige otro barco.",
     "tripLabel": "¿Qué barco?",
     "tripEmpty": "No sale ningún barco en el próximo día y medio — consulta el calendario en su lugar.",
     "tripEmptyAction": "Ver el calendario",

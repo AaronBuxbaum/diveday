@@ -599,7 +599,11 @@ export type GlobalDiveSiteTemplatePage = {
  */
 export async function listGlobalDiveSiteTemplates(
   db: AppDb,
-  options: { page?: number; limit?: number } = {},
+  options: {
+    page?: number;
+    limit?: number;
+    shopCoordinates?: { latitude: number; longitude: number } | null;
+  } = {},
 ): Promise<GlobalDiveSiteTemplatePage> {
   const currentVersionJoin = and(
     eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
@@ -616,14 +620,21 @@ export async function listGlobalDiveSiteTemplates(
         .innerJoin(globalDiveSiteVersions, currentVersionJoin);
       return counted?.total ?? 0;
     },
-    fetchRows: async (offset, limit) =>
-      db
+    fetchRows: async (offset, limit) => {
+      const order = options.shopCoordinates
+        ? asc(
+            sql<number>`((${globalDiveSiteVersions.briefing}->>'forecastLatitude')::numeric - ${options.shopCoordinates.latitude}) * ((${globalDiveSiteVersions.briefing}->>'forecastLatitude')::numeric - ${options.shopCoordinates.latitude}) + ((${globalDiveSiteVersions.briefing}->>'forecastLongitude')::numeric - ${options.shopCoordinates.longitude}) * ((${globalDiveSiteVersions.briefing}->>'forecastLongitude')::numeric - ${options.shopCoordinates.longitude})`,
+          )
+        : asc(globalDiveSites.slug);
+
+      return db
         .select({ template: globalDiveSites, version: globalDiveSiteVersions })
         .from(globalDiveSites)
         .innerJoin(globalDiveSiteVersions, currentVersionJoin)
-        .orderBy(asc(globalDiveSites.slug))
+        .orderBy(order)
         .limit(limit)
-        .offset(offset),
+        .offset(offset);
+    },
   });
 
   return {

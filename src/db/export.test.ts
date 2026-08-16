@@ -209,7 +209,7 @@ const EXCLUDED_TABLES = [
  */
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
-  shops: ["jurisdiction", "is_demo"], // DiveDay-side config, not shop records
+  shops: ["jurisdiction", "is_demo", "latitude", "longitude"], // DiveDay-side config, not shop records
   staff_shifts: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [

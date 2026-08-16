@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { anonymizeDiver } from "@/db/anonymize";
@@ -24,6 +25,7 @@ import {
   restoreNitroxCertification,
   reviewNitroxCertification,
 } from "@/db/nitrox";
+import { addDiverNote, deleteDiverNote } from "@/db/operations";
 import { refundOrder } from "@/db/orders";
 import {
   archiveCertification,
@@ -180,6 +182,7 @@ const FORM_ANCHORS: Record<string, string> = {
   "specialty-cards": "#cards",
   fit: "#fit",
   payments: "#payments",
+  notes: "#notes",
   "book-activity": "#trips",
   remove: "#remove-heading",
   restore: "#removed-heading",
@@ -195,6 +198,66 @@ function backTo(base: string, notice: string, form?: string) {
   // The anchor rides on the path so `noticeUrl` keeps the query ahead of it;
   // `form` drops out of the query entirely when there is none.
   return noticeUrl(`${base}${form ? (FORM_ANCHORS[form] ?? "") : ""}`, notice, { form });
+}
+
+/**
+ * Add a note to the diver record. The successful path revalidates in place so
+ * the new line appears beside the field that was just used; the refusal path
+ * lands on the Notes anchor with the same section-scoped status treatment as
+ * the other long-form record editors.
+ */
+export async function addDiverNoteAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = shopPath(shopSlug, "divers", personId);
+  const staff = await requireStaffSession();
+  const note = await addDiverNote(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    actorPersonId: staff.user.personId,
+    body: String(formData.get("note") ?? ""),
+  });
+  if (!note) {
+    revalidateAndRedirect(base, backTo(base, "invalid", "notes"));
+    return;
+  }
+  revalidatePath(base);
+}
+
+/** Delete a person-scoped note and carry its text to a one-tap undo toast. */
+export async function deleteDiverNoteAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = shopPath(shopSlug, "divers", personId);
+  const staff = await requireStaffSession();
+  const result = await deleteDiverNote(await getDb(), {
+    shopId: staff.user.shopId,
+    actorPersonId: staff.user.personId,
+    noteId: String(formData.get("noteId") ?? ""),
+  });
+  revalidateAndRedirect(
+    base,
+    result.deleted
+      ? noticeUrl(`${base}#notes`, "note-deleted", { noteBody: result.body })
+      : backTo(base, "invalid", "notes"),
+  );
+}
+
+/** Restore a deleted diver note through the same audited insert path. */
+export async function restoreDiverNoteAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const base = shopPath(shopSlug, "divers", personId);
+  const staff = await requireStaffSession();
+  const restored = await addDiverNote(await getDb(), {
+    shopId: staff.user.shopId,
+    personId,
+    actorPersonId: staff.user.personId,
+    body: String(formData.get("body") ?? ""),
+  });
+  revalidateAndRedirect(base, backTo(base, restored ? "note-added" : "invalid", "notes"));
 }
 
 /**

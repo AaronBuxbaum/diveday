@@ -215,6 +215,8 @@ export async function setShopAddress(
     addressRegion?: string | null;
     addressPostalCode?: string | null;
     addressCountry?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
   },
 ) {
   const clean = (value: string | null | undefined) => value?.trim() || null;
@@ -226,6 +228,8 @@ export async function setShopAddress(
       addressRegion: clean(address.addressRegion),
       addressPostalCode: clean(address.addressPostalCode),
       addressCountry: clean(address.addressCountry),
+      latitude: address.latitude ?? null,
+      longitude: address.longitude ?? null,
     })
     .where(eq(shops.id, shopId))
     .returning();

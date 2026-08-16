@@ -60,7 +60,8 @@ const EMPTY_ADDRESS: ShopAddressFields = {
 };
 
 function isSet(address: ShopAddressFields): boolean {
-  return Object.values(address).some((value) => value.length > 0);
+  const { latitude, longitude, ...textFields } = address;
+  return Object.values(textFields).some((value) => value.length > 0);
 }
 
 /** The stored address as a person reads it: street, then everything else. */
@@ -77,7 +78,11 @@ function addressLines(address: ShopAddressFields): string[] {
 
 function toFormData(address: ShopAddressFields): FormData {
   const form = new FormData();
-  for (const [field, value] of Object.entries(address)) form.set(field, value);
+  for (const [field, value] of Object.entries(address)) {
+    if (value !== null && value !== undefined) {
+      form.set(field, String(value));
+    }
+  }
   return form;
 }
 

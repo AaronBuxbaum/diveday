@@ -2,6 +2,7 @@
   "subNav": {
     "ariaLabel": "Ficha del buceador",
     "cards": "Titulaciones",
+    "notes": "Notas",
     "fit": "Tallas",
     "payments": "Pagos",
     "trips": "Salidas",
@@ -242,6 +243,18 @@
     "bookingFallback": "Reserva",
     "showOlderEntries": "{count, plural, one {Mostrar # entrada anterior} other {Mostrar # entradas anteriores}}"
   },
+  "notes": {
+    "heading": "Notas del buceador",
+    "description": "Contexto solo para el personal sobre este buceador, compartido con la tripulación en el manifiesto de su barco.",
+    "empty": "Aún no hay notas.",
+    "addLabel": "Añadir una nota",
+    "placeholder": "¿Qué debe saber la próxima persona del equipo?",
+    "adding": "Añadiendo…",
+    "add": "Añadir nota",
+    "deleting": "Eliminando…",
+    "delete": "Eliminar",
+    "writtenBy": "{name} · {date}"
+  },
   "specialty": {
     "heading": "Tarjetas de especialidad",
     "description": "Se necesita una tarjeta de Nitrox verificada antes de un llenado de EANx.",
@@ -320,6 +333,8 @@
     "noCertificationCleared": "Corregido. La ficha de este buceador ya no dice nada sobre una tarjeta — corregirla nunca añade ninguna.",
     "duplicateCard": "Otra tarjeta activa de este centro ya tiene ese número. Revisa el número o elimina la tarjeta que lo tiene.",
     "noCertificationNothingToClear": "No hay nada que corregir — la ficha de este buceador ya no dice que no tenga tarjeta.",
-    "notAuthorizedCards": "Tu cuenta ya no puede modificar tarjetas en este centro. Pide a un propietario o gerente que revise tu acceso."
+    "notAuthorizedCards": "Tu cuenta ya no puede modificar tarjetas en este centro. Pide a un propietario o gerente que revise tu acceso.",
+    "noteAdded": "Nota del buceador añadida.",
+    "noteDeleted": "Nota del buceador eliminada."
   }
 }

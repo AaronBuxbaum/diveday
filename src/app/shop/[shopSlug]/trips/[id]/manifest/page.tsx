@@ -16,7 +16,7 @@ import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
-import { listBookingNotes } from "@/db/operations";
+import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -37,7 +37,7 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { type DeskNote, DiverRollCall } from "./_components/DiverRollCall";
+import { type DeskNote, type DiverNote, DiverRollCall } from "./_components/DiverRollCall";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
@@ -94,7 +94,7 @@ export default async function TripManifestPage({
   if (!shop) notFound();
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
-  const [completeManifests, buddyTeamsList, bookingNotes] = await Promise.all([
+  const [completeManifests, buddyTeamsList, bookingNotes, diverNotes] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
@@ -102,8 +102,11 @@ export default async function TripManifestPage({
     // member from every row's team (ADR 20260804-buddy-teams).
     listTripBuddyTeams(db, shop.id, tripId),
     // The private staff notes written on the Guests tab. Read here, never
-    // written here — see `DeskNotes`.
+    // written here — see `StaffNotes`.
     listBookingNotes(db, shop.id, tripId),
+    // Person-scoped notes written on the Diver record. Resolve them onto this
+    // trip's booking below so every interface reads the same source of truth.
+    listDiverNotesForTrip(db, shop.id, tripId),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -211,6 +214,12 @@ export default async function TripManifestPage({
     rows.push({ id: note.id, body: note.body, authorName, createdAt: note.createdAt });
     deskNotesByBooking.set(note.bookingId, rows);
   }
+  const diverNotesByBooking = new Map<string, DiverNote[]>();
+  for (const { note, authorName, bookingId } of diverNotes) {
+    const rows = diverNotesByBooking.get(bookingId) ?? [];
+    rows.push({ id: note.id, body: note.body, authorName, createdAt: note.createdAt });
+    diverNotesByBooking.set(bookingId, rows);
+  }
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
   // Crew have no readiness, so the `not_ready` refusal can never be returned by
@@ -247,9 +256,7 @@ export default async function TripManifestPage({
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
-        title={manifest.trip.title}
-        startsAt={manifest.trip.startsAt}
-        endsAt={manifest.trip.endsAt}
+        trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
         // One line about what this page *is*. What to do at each checkpoint is
@@ -335,6 +342,7 @@ export default async function TripManifestPage({
         locale={locale}
         timezone={shop.timezone}
         deskNotesByBooking={deskNotesByBooking}
+        diverNotesByBooking={diverNotesByBooking}
         rollCallAction={boundRollCallAction}
         saveRollCallNoteAction={boundSaveRollCallNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}

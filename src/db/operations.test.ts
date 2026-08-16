@@ -2,9 +2,13 @@ import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
+  addDiverNote,
   addInternalNote,
+  deleteDiverNote,
   deleteInternalNote,
   listBookingNotes,
+  listDiverNotes,
+  listDiverNotesForTrip,
   listTripActivity,
 } from "./operations";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -94,6 +98,61 @@ describe("staff-only operational context", () => {
         body: "   ",
       }),
     ).resolves.toBeNull();
+  });
+
+  it("shares a diver note between the diver record and a trip manifest", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+
+    const note = await addDiverNote(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      actorPersonId: actor.person.id,
+      body: "  First boat dive since certification; keep the briefing unhurried.  ",
+    });
+    expect(note).toMatchObject({
+      personId: rosterEntry.person.id,
+      bookingId: null,
+      body: "First boat dive since certification; keep the briefing unhurried.",
+    });
+
+    expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(1);
+    expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
+    expect(await listDiverNotesForTrip(db, shop.id, trip.id)).toEqual([
+      expect.objectContaining({
+        bookingId: rosterEntry.booking.id,
+        authorName: actor.person.fullName,
+      }),
+    ]);
+  });
+
+  it("deletes a diver note without touching booking-scoped notes", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+
+    const note = await addDiverNote(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      actorPersonId: actor.person.id,
+      body: "Remove after the trip.",
+    });
+    if (!note) throw new Error("expected note to be created");
+
+    await expect(
+      deleteDiverNote(db, { shopId: shop.id, noteId: note.id, actorPersonId: actor.person.id }),
+    ).resolves.toEqual({ deleted: true, body: "Remove after the trip." });
+    expect(await listDiverNotes(db, shop.id, rosterEntry.person.id)).toHaveLength(0);
+    expect(
+      (await listTripActivity(db, shop.id, trip.id)).some((row) => row.message.includes(note.body)),
+    ).toBe(false);
   });
 
   it("deletes a private booking note and records a plain-language activity event", async () => {

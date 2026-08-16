@@ -2,6 +2,7 @@
   "subNav": {
     "ariaLabel": "Diver record",
     "cards": "Cards",
+    "notes": "Notes",
     "fit": "Fit",
     "payments": "Payments",
     "trips": "Trips",
@@ -242,6 +243,18 @@
     "bookingFallback": "Booking",
     "showOlderEntries": "{count, plural, one {Show # older entry} other {Show # older entries}}"
   },
+  "notes": {
+    "heading": "Diver notes",
+    "description": "Staff-only context about this diver, shared with crew on their boat manifest.",
+    "empty": "No notes yet.",
+    "addLabel": "Add a note",
+    "placeholder": "What should the next staff member know?",
+    "adding": "Adding…",
+    "add": "Add note",
+    "deleting": "Deleting…",
+    "delete": "Delete",
+    "writtenBy": "{name} · {date}"
+  },
   "specialty": {
     "heading": "Specialty cards",
     "description": "A verified Nitrox card is required before an EANx fill.",
@@ -320,6 +333,8 @@
     "noCertificationCleared": "Cleared. This diver's record no longer says anything about a card — clearing never adds one.",
     "duplicateCard": "Another live card at this shop already has that number. Check the number, or delete the card that holds it.",
     "noCertificationNothingToClear": "Nothing to clear — this diver's record no longer says they hold no card.",
-    "notAuthorizedCards": "Your account can't change cards for this shop any more. Ask an owner or manager to check your access."
+    "notAuthorizedCards": "Your account can't change cards for this shop any more. Ask an owner or manager to check your access.",
+    "noteAdded": "Diver note added.",
+    "noteDeleted": "Diver note deleted."
   }
 }

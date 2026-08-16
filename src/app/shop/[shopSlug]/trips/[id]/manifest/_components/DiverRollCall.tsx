@@ -153,15 +153,13 @@ const ROW_DISCLOSURE_PANEL_CLASS =
   "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
- * One diver's private staff notes, as written on the Guests tab.
+ * Staff notes that belong on a diver's row, rather than in a separate desk
+ * view. Booking notes come from the Guests tab; diver notes come from the
+ * Diver record and follow the person onto every booking.
  *
- * Two kinds of note used to live on this departure with no path between them:
- * the **desk note** a staffer writes against a booking ("nervous, first boat
- * dive since her course — keep her with a DM"), and the **roll-call note** the
- * crew writes at a checkpoint. The first is exactly the sort of thing the
- * second is for, and the crew reading this page could not see it — it was two
- * taps away on another tab, on a card that had to be found and expanded. So it
- * reads here, on the row it is about.
+ * The crew reading this page should not have to know whether a note was
+ * written before a booking existed or for one particular departure. Both are
+ * context, and both read here, on the row they are about.
  *
  * Read-only, and deliberately so: writing one is a desk act with an author, an
  * activity-trail entry and an undo, and duplicating that at the rail would be
@@ -172,23 +170,21 @@ const ROW_DISCLOSURE_PANEL_CLASS =
  * note a shop wrote for itself about a customer is not a document either of
  * them asked for, and paper cannot be un-handed.
  */
-function DeskNotes({
+function StaffNotes({
   notes,
+  heading,
   locale,
   timezone,
-  t,
 }: {
-  notes: ReadonlyArray<DeskNote>;
+  notes: ReadonlyArray<ManifestNote>;
+  heading: string;
   locale: string;
   timezone: string;
-  t: StaffTranslator;
 }) {
   if (notes.length === 0) return null;
   return (
     <section className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 print:hidden">
-      <h4 className="text-xs font-semibold tracking-widest text-muted uppercase">
-        {t("manifest.deskNotesHeading")}
-      </h4>
+      <h4 className="text-xs font-semibold tracking-widest text-muted uppercase">{heading}</h4>
       <ul className="mt-1 flex flex-col gap-1.5">
         {notes.map((entry) => (
           <li key={entry.id} className="text-base">
@@ -203,13 +199,19 @@ function DeskNotes({
   );
 }
 
-/** One private staff note, flattened to what this page renders. */
-export type DeskNote = {
+/** One staff note, flattened to what this page renders. */
+export type ManifestNote = {
   id: string;
   body: string;
   authorName: string;
   createdAt: Date;
 };
+
+/** Booking-scoped notes retain their desk vocabulary at the call site. */
+export type DeskNote = ManifestNote;
+
+/** Person-scoped notes follow a diver onto each trip. */
+export type DiverNote = ManifestNote;
 
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
@@ -221,6 +223,7 @@ export function DiverRollCall({
   locale,
   timezone,
   deskNotesByBooking,
+  diverNotesByBooking,
   rollCallAction,
   saveRollCallNoteAction,
   rollCallButtonCopy,
@@ -234,8 +237,10 @@ export function DiverRollCall({
   tripId: string;
   locale: string;
   timezone: string;
-  /** The Guests tab's private notes, by booking — see `DeskNotes`. */
+  /** The Guests tab's private notes, by booking — see `StaffNotes`. */
   deskNotesByBooking: ReadonlyMap<string, ReadonlyArray<DeskNote>>;
+  /** Notes written on the Diver record, resolved onto this booking. */
+  diverNotesByBooking: ReadonlyMap<string, ReadonlyArray<DiverNote>>;
   rollCallAction: RollCallAction;
   saveRollCallNoteAction: (
     bookingId: string,
@@ -460,11 +465,17 @@ export function DiverRollCall({
                   ) : null}
                   {/* What the desk already knows about this diver, where the
                       crew reading the roll call can see it. */}
-                  <DeskNotes
-                    notes={deskNotesByBooking.get(diver.bookingId) ?? []}
+                  <StaffNotes
+                    notes={diverNotesByBooking.get(diver.bookingId) ?? []}
+                    heading={t("manifest.diverNotesHeading")}
                     locale={locale}
                     timezone={timezone}
-                    t={t}
+                  />
+                  <StaffNotes
+                    notes={deskNotesByBooking.get(diver.bookingId) ?? []}
+                    heading={t("manifest.deskNotesHeading")}
+                    locale={locale}
+                    timezone={timezone}
                   />
                   {/* The row's two secondary paths, on one line. Reference
                       facts are disclosed on demand — nine emergency contacts

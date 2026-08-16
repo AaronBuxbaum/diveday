@@ -57,6 +57,8 @@ describe("Amazon Location address suggestions", () => {
             addressRegion: "FL",
             addressPostalCode: "33037",
             addressCountry: "US",
+            latitude: null,
+            longitude: null,
           },
         },
       ],
@@ -88,6 +90,8 @@ describe("Amazon Location address suggestions", () => {
         addressRegion: "FL",
         addressPostalCode: "33037",
         addressCountry: "US",
+        latitude: null,
+        longitude: null,
       },
     });
   });

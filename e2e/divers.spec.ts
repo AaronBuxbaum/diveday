@@ -64,7 +64,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(subNav).toBeVisible();
 
   const payments = page.getByRole("heading", { name: "Payments" });
-  // Seventh of eleven sections: far below the fold on arrival.
+  // Eighth of twelve sections: far below the fold on arrival.
   await expect(payments).not.toBeInViewport();
 
   await subNav.getByRole("link", { name: "Payments" }).click();
@@ -80,8 +80,27 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
 
   // The destructive tail is deliberately not a sub-nav target: archiving a
   // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(5);
+  await expect(subNav.getByRole("link")).toHaveCount(6);
   await expect(subNav.getByRole("link", { name: /Erase|Archive/ })).toHaveCount(0);
+});
+
+test("a diver note is shared with the live boat manifest", async ({ page }) => {
+  const note = `Briefing note ${e2eNow().getTime()}`;
+
+  await page.goto(`/shop/${SHOP}/divers?q=Priya`);
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  const notes = page.getByRole("region", { name: "Diver notes" });
+  await notes.getByLabel("Add a note").fill(note);
+  await notes.getByRole("button", { name: "Add note" }).click();
+  await expect(notes).toContainText(note);
+
+  await page.getByRole("region", { name: "Upcoming trips" }).getByRole("link").first().click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
+  const row = page.locator("#roll-call-list li").filter({ hasText: "Priya Sharma" });
+  await expect(row.getByText("Diver notes", { exact: true })).toBeVisible();
+  await expect(row).toContainText(note);
 });
 
 // Task 144 (safety-adjacent — this prints on the manifest): Today used to
@@ -336,7 +355,7 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
 /**
  * **An outcome belongs beside the control that earned it.**
  *
- * The diver record is eight independent forms on one ~6,400px scroll, and every
+ * The diver record is nine independent forms on one ~6,400px scroll, and every
  * one of their outcomes used to resolve into a single banner under the `<h1>`:
  * you saved a rental fit halfway down the page and the confirmation appeared
  * off-screen above you. Each section now renders its own (`resolveDiverNotice`
