@@ -848,6 +848,7 @@ export async function loadShopExportBundleInput(
             // an ordinary card the moment the file is read back.
             "self_declared_at",
             "deleted_at",
+            "deleted_by_person_id",
             "created_at",
           ],
           rows: certificationRows.map((row) => [
@@ -866,6 +867,7 @@ export async function loadShopExportBundleInput(
             row.importedFromLabel,
             row.selfDeclaredAt,
             row.deletedAt,
+            row.deletedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["certifications.csv"],
@@ -885,6 +887,7 @@ export async function loadShopExportBundleInput(
             "reviewed_at",
             "reviewed_by_person_id",
             "deleted_at",
+            "deleted_by_person_id",
             "created_at",
           ],
           rows: specialtyRows.map((row) => [
@@ -900,6 +903,7 @@ export async function loadShopExportBundleInput(
             row.reviewedAt,
             row.reviewedByPersonId,
             row.deletedAt,
+            row.deletedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["specialty_certifications.csv"],
@@ -921,6 +925,7 @@ export async function loadShopExportBundleInput(
             // Same reason as the level card's — see certifications.csv above.
             "self_declared_at",
             "deleted_at",
+            "deleted_by_person_id",
             "created_at",
           ],
           rows: nitroxRows.map((row) => [
@@ -937,6 +942,7 @@ export async function loadShopExportBundleInput(
             row.importedFromLabel,
             row.selfDeclaredAt,
             row.deletedAt,
+            row.deletedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["nitrox_certifications.csv"],
