@@ -4,7 +4,6 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
-  openHandEntry,
   openRosterDetails,
   seededTripId,
 } from "./helpers";

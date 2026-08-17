@@ -1,13 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import {
-  createTrip,
-  daysFromNow,
-  e2eNow,
-  findTripOnBoard,
-  openHandEntry,
-  openTripFromBoard,
-} from "./helpers";
+import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -288,8 +281,11 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await expect(page.getByText(title).first()).toBeVisible();
 
+  // The diver form is a dedicated step shared by all seating doors.
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
   // Name only: this door takes the no-email diver the counter always could.
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Phoned In Pat");
+  await page.getByLabel("Full name").fill("Phoned In Pat");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
   // Lands on the trip's Guests tab with the roster's usual success affordance.
@@ -306,7 +302,9 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   const tripId = await scheduleTrip(page, title, 9, 1);
 
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("First Aboard Fay");
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("First Aboard Fay");
   await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
@@ -315,7 +313,9 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   // The boat is full now. The refusal comes back to the door that produced it,
   // still pointed at the same departure, so the next diver is one field away.
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Too Late Theo");
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Too Late Theo");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=diver-full`));

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 test.describe.configure({ timeout: 45_000 });
 
@@ -177,7 +177,9 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
 
   // A refusal lands back on the walk-in form with the boat still chosen — the
   // staffer's next move is another diver or another boat, not a trip page.
-  await expect(page).toHaveURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/shop/blue-mantis/check-in/walk-in/${tripId}\\?notice=walkin-full$`),
+  );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".

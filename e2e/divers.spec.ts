@@ -315,7 +315,8 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
   const diverName = `Archivable Diver ${stamp}`;
 
   await page.goto(`/shop/${SHOP}/divers`);
-  await page.getByText("Add a diver").click(); // the form lives in a collapsed <details>
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(`archivable-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add diver" }).click();

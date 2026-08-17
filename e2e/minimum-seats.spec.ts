@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 import { E2E_CRON_SECRET } from "./servers";
 
 /**

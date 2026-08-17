@@ -1897,7 +1897,9 @@ for (const scheme of ["light", "dark"] as const) {
         const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
         await tripSection.locator("ul li a").filter({ visible: true }).first().click();
         await page.waitForURL(/\/check-in\/walk-in\/[^/?]+$/);
-        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await page.getByRole("link", { name: "Add diver", exact: true }).click();
+        await page.waitForURL(/\/divers\/new/);
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
         await capture(page, "check-in-walk-in-diver", scheme);
       });
 
@@ -1925,7 +1927,9 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .click();
         await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
-        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await page.getByRole("link", { name: "Add diver", exact: true }).click();
+        await page.waitForURL(/\/divers\/new/);
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
         await capture(page, "booking-new-diver", scheme);
       });
 
