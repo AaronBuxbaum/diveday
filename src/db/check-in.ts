@@ -141,7 +141,7 @@ export async function listWalkInTrips(
         // The check-in queue deliberately includes its short look-back window;
         // reusing that lower bound here offered a boat already underway and
         // made the picker hand a valid-looking choice to a refusal.
-        gt(trips.startsAt, now),
+        gt(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
         lte(trips.startsAt, arrivals.to),
       ),
     )

@@ -343,7 +343,11 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
     .limit(1)
     .for("update");
-  if (trip?.status !== "scheduled" || trip.conditionsHold || trip.startsAt <= nowDate()) {
+  if (
+    trip?.status !== "scheduled" ||
+    trip.conditionsHold ||
+    new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= nowDate()
+  ) {
     return { ok: false, reason: "trip_unavailable" };
   }
 
@@ -820,7 +824,9 @@ export async function selfCancelBooking(
       .from(trips)
       .where(eq(trips.id, row.tripId))
       .limit(1);
-    if (trip && trip.startsAt <= now) return { ok: false, reason: "trip_departed" };
+    if (trip && new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
+      return { ok: false, reason: "trip_departed" };
+    }
 
     const [cancelled] = await tx
       .update(bookings)
@@ -938,7 +944,9 @@ export async function rescheduleBooking(
         .from(trips)
         .where(eq(trips.id, row.tripId))
         .limit(1);
-      if (oldTrip && oldTrip.startsAt <= now) return { ok: false, reason: "trip_departed" };
+      if (oldTrip && new Date(oldTrip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
+        return { ok: false, reason: "trip_departed" };
+      }
 
       const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
       // waived is a settled state exactly like paid/deposit_paid — staff decided

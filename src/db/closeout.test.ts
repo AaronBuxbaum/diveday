@@ -16,7 +16,8 @@ describe("day close-out (in-memory PGlite)", () => {
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
 
-    const before = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
+    const before = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
     expect(before.latest).toBeNull();
     expect(before.closeCount).toBe(0);
     // The seed always has a boat sailing today (demoTodayDepartureStart).
@@ -28,11 +29,12 @@ describe("day close-out (in-memory PGlite)", () => {
       timeZone: shop.timezone,
       actorPersonId: staff.person.id,
       decisions: {},
+      now,
     });
     expect(record.actorName).toBe(staff.person.fullName);
     expect(record.shopDay).toBe(before.state.shopDay);
 
-    const after = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const after = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
     expect(after.closeCount).toBe(1);
     expect(after.latest?.id).toBe(record.id);
     expect(after.latest?.actorName).toBe(staff.person.fullName);
@@ -40,7 +42,8 @@ describe("day close-out (in-memory PGlite)", () => {
 
   it("seeds a completed local-day dive and its post-dive report progress", async () => {
     const { db, shop } = await seededShopContext();
-    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
+    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
     const completed = state.departures.find(
       (departure) => departure.title === DEMO_COMPLETED_TRIP_TITLE,
     );
@@ -179,7 +182,8 @@ describe("day close-out (in-memory PGlite)", () => {
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
 
-    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const now = new Date(nowMs() + 60 * 60 * 1000); // 10:30 AM
+    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
     const [firstLeftover] = state.leftovers;
     if (!firstLeftover) throw new Error("expected the seed to leave today at least one leftover");
 
@@ -189,6 +193,7 @@ describe("day close-out (in-memory PGlite)", () => {
       timeZone: shop.timezone,
       actorPersonId: staff.person.id,
       decisions: { [firstLeftover.id]: "dismiss" },
+      now,
     });
     const dismissed = first.outstanding.leftovers.find((l) => l.id === firstLeftover.id);
     expect(dismissed?.decision).toBe("dismiss");
@@ -201,7 +206,7 @@ describe("day close-out (in-memory PGlite)", () => {
 
     // Dismissal is a memory, not a filter: the queue keeps deriving from the
     // source of truth, so the same row is still there to decide about again.
-    const reopened = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const reopened = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
     expect(reopened.state.leftovers.some((l) => l.id === firstLeftover.id)).toBe(true);
 
     const second = await closeDay(db, {
@@ -210,8 +215,9 @@ describe("day close-out (in-memory PGlite)", () => {
       timeZone: shop.timezone,
       actorPersonId: staff.person.id,
       decisions: {},
+      now,
     });
-    const after = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const after = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
     expect(after.closeCount).toBe(2);
     expect(after.latest?.id).toBe(second.id);
     expect(after.latest?.id).not.toBe(first.id);

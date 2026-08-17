@@ -116,10 +116,7 @@ describe("refreshCanonicalDemoSchedule", () => {
 
     // The bug this exists for. Every seeded departure is anchored to the moment
     // the database was seeded, that seed runs exactly once, and about two
-    // months later the whole board is in the past — so the public schedule the
-    // homepage's "See a diver's booking page" link opens says "No trips on the
-    // books yet" to every visitor who clicks it.
-    await ageTheBoard(db, shop.id, seededRunway + 1);
+    await ageTheBoard(db, shop.id, seededRunway + 2);
     expect((await upcomingScheduleRange(db, shop.id)).first).toBeNull();
 
     const result = await refreshCanonicalDemoSchedule(db);
@@ -141,7 +138,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // `resetDemoSchedule` restores only the playground half by design (ADR
     // 20260718-demo-mode), and nothing else here would notice if that changed.
     const { db, shop } = await seededShopContext({ history: true });
-    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
 
     await refreshCanonicalDemoSchedule(db);
 
@@ -176,7 +173,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
     await db.delete(people).where(eq(people.id, relief[0].id));
-    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
 
     await expect(refreshCanonicalDemoSchedule(db)).resolves.toMatchObject({ refreshed: true });
 
@@ -217,7 +214,7 @@ describe("refreshCanonicalDemoSchedule", () => {
       .insert(people)
       .values({ shopId: shop.id, fullName: captain.fullName, email: "sal@example.com" })
       .returning({ id: people.id });
-    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
 
     await refreshCanonicalDemoSchedule(db);
 
@@ -246,7 +243,7 @@ describe("refreshCanonicalDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.fullName, LEAD_INSTRUCTOR_NAME)));
     await db.delete(personRoles).where(eq(personRoles.personId, lead.id));
-    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 1);
+    await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
 
     await expect(refreshCanonicalDemoSchedule(db)).resolves.toMatchObject({ refreshed: true });
 
