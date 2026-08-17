@@ -40,7 +40,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "beginner",
         depthRange: "6–12 m",
         maxDepthMeters: 12,
-        currentNote: "Usually gentle; the crew confirms the final plan.",
+        currentNote: "Usually gentle.",
         divePlan:
           "Follow the coral ridge, pause at the sand channels, then drift back along the shallow garden.",
         // Structured, with the shop's own note on each: the paragraph a diver
@@ -105,7 +105,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "advanced",
         depthRange: "18–40 m",
         maxDepthMeters: 40,
-        currentNote: "Open-water current can be strong; the crew confirms the line plan.",
+        currentNote: "Open-water current can be strong.",
         divePlan:
           "Descend together on the mooring line, tour the exterior flight deck and well deck, then return to the ascent line with reserve gas.",
         landmarks: [
@@ -149,7 +149,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "beginner",
         depthRange: "5–8 m",
         maxDepthMeters: 8,
-        currentNote: "Usually gentle; the crew confirms the final plan.",
+        currentNote: "Usually gentle.",
         divePlan:
           "Arc from the mooring through the bright sand channels, pause at the statue, then return across the shallow coral garden.",
         landmarks: [
@@ -195,7 +195,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "intermediate",
         depthRange: "8–15 m",
         maxDepthMeters: 15,
-        currentNote: "Mild, but the site sits in open water — the crew calls the drop.",
+        currentNote: "Mild, but the site sits in open water.",
         divePlan:
           "Swim the length of the hull from bow to stern along the sand, then return over the plates at 9 meters (30 feet).",
         landmarks: [
@@ -228,7 +228,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "beginner",
         depthRange: "6–14 m",
         maxDepthMeters: 14,
-        currentNote: "Usually gentle; the crew confirms the final plan.",
+        currentNote: "Usually gentle.",
         divePlan:
           "Drop on the mooring, work the ledges and swim-throughs into the current, then drift back over the coral heads.",
         landmarks: [
@@ -271,7 +271,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "advanced",
         depthRange: "15–37 m",
         maxDepthMeters: 37,
-        currentNote: "Can run strong on the surface; the crew calls the line and the drop.",
+        currentNote: "Can run strong on the surface.",
         divePlan:
           "Descend the mooring to the deck, tour the superstructure and gun mounts, then ascend on reserve gas with a safety stop.",
         landmarks: [
@@ -310,7 +310,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         difficultyLevel: "beginner",
         depthRange: "5–12 m",
         maxDepthMeters: 12,
-        currentNote: "Usually gentle; the crew confirms the final plan.",
+        currentNote: "Usually gentle.",
         divePlan:
           "Drift the coral ridge from the mooring, pause over the barrel-shaped heads, then loop back over the sand.",
         landmarks: [

@@ -18,4 +18,9 @@ describe("e2e server lifecycle", () => {
     expect(config).toContain("command: e2eServerCommand(port)");
     expect(config).toContain("reuseExistingServer: false");
   });
+
+  it("does not forward routine server stdout into Playwright output", () => {
+    expect(config).toContain('stdout: "ignore"');
+    expect(config).toContain('stderr: "pipe"');
+  });
 });

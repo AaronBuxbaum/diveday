@@ -208,14 +208,11 @@ export default defineConfig({
       // failure. Let Playwright fail loudly on a port collision so the
       // supervisor's cleanup path, and the process table, remain actionable.
       reuseExistingServer: false,
-      // Playwright's default swallows a running server's output, which is fine
-      // until the *server* is what fails: a route that throws mid-stream shows
-      // up client-side as nothing but "socket hang up", and the stack that
-      // explains it goes to the server's stderr where no one can read it. That
-      // is exactly the wall the recap OG-image failure hit. Piping costs
-      // nothing on a green run — Playwright only surfaces this output when a
-      // test fails — and turns a blind failure into a readable one.
-      stdout: "pipe",
+      // Routine application logs (including one structured web-vital line per
+      // page) are written to stdout. Forwarding that stream makes every
+      // Playwright run noisy with `[WebServer]` telemetry. Keep stderr piped so
+      // startup and request failures still appear when the server is broken.
+      stdout: "ignore",
       stderr: "pipe",
       // `next start` serves a build that already exists on disk, so it boots in
       // seconds; 60s covers a cold, contended CI runner without making a

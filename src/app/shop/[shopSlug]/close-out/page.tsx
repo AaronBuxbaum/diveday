@@ -163,6 +163,13 @@ export default async function CloseOutPage({
   async function saveRecapNoteAction(tripId: string, formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
+    const actionDb = await getDb();
+    if (await hasSentTripRecap(actionDb, staff.user.shopId, tripId)) {
+      revalidateAndRedirect(
+        shopPath(staff.user.shopSlug, "close-out"),
+        noticeUrl(shopPath(staff.user.shopSlug, "close-out"), "recap-locked", { noted: tripId }),
+      );
+    }
     const note = String(formData.get("recapShoutout") ?? "").slice(0, 400);
     await setTripRecapShoutout(await getDb(), staff.user.shopId, tripId, note);
     const closeOut = shopPath(staff.user.shopSlug, "close-out");
@@ -196,6 +203,10 @@ export default async function CloseOutPage({
     "use server";
     const staff = await requireStaffSession();
     const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    const actionDb = await getDb();
+    if (await hasSentTripRecap(actionDb, staff.user.shopId, tripId)) {
+      revalidateAndRedirect(closeOut, noticeUrl(closeOut, "recap-locked", { noted: tripId }));
+    }
     const file = formData.get("crewPhoto");
     if (!(file instanceof File) || file.size === 0) {
       revalidateAndRedirect(closeOut, noticeUrl(closeOut, "crew-photo-failed", { noted: tripId }));
@@ -390,6 +401,14 @@ export default async function CloseOutPage({
         <div className="mb-6">
           <ShopNotice tone="neutral" role="status">
             {t("closeout.notice.recapNotReady")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {notice === "recap-locked" ? (
+        <div className="mb-6">
+          <ShopNotice tone="neutral" role="status">
+            {t("closeout.notice.recapLocked")}
           </ShopNotice>
         </div>
       ) : null}
@@ -611,9 +630,17 @@ export default async function CloseOutPage({
                       </p>
                     ) : null}
                     {task.failed > 0 ? (
-                      <p className="mt-1 text-sm text-danger">
-                        {t("closeout.admin.postDiveReports.failed", { count: task.failed })}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <p className="text-danger">
+                          {t("closeout.admin.postDiveReports.failed", { count: task.failed })}
+                        </p>
+                        <Link
+                          href="#closeout-departures-heading"
+                          className="font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {t("closeout.admin.postDiveReports.review")}
+                        </Link>
+                      </div>
                     ) : null}
                   </div>
                 </div>
