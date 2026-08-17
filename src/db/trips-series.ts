@@ -256,6 +256,8 @@ async function materializeWindow(
         depositCents: template.trip.depositCents,
         cancellationWindowHours: template.trip.cancellationWindowHours,
         isPrivate: template.trip.isPrivate,
+        diveMode: template.trip.diveMode,
+        boatId: template.trip.boatId,
         drafts: template.drafts,
         scheduleDays: days,
       }),
@@ -375,6 +377,8 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
       depositCents: input.depositCents,
       cancellationWindowHours: input.cancellationWindowHours,
       isPrivate: input.isPrivate,
+      diveMode: input.diveMode,
+      boatId: input.boatId,
       drafts,
       scheduleDays: seedDays,
     });

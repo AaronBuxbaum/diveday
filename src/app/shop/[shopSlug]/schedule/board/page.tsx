@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
+import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
@@ -167,20 +168,28 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [range, { trips: upcoming, nextCursor }, canConfigure, canViewReports, openRollCalls] =
-    await Promise.all([
-      upcomingScheduleRange(db, shop.id, now),
-      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-      canPersonConfigureTrips(db, shop.id, session.user.personId),
-      canPersonViewShopReports(db, shop.id, session.user.personId),
-      // Departures that already came back with a head count still open (DOM-H3).
-      // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
-      // whose `startsAt` is still ahead of `now` — so this is its own backwards
-      // query, and one batched query for every such boat rather than a per-trip
-      // roll-call lookup. Only on the first page: they belong at the front of
-      // the board, not repeated on top of every later cursor page.
-      after ? [] : openAfterDiveRollCalls(db, shop.id, now),
-    ]);
+  const [
+    range,
+    { trips: upcoming, nextCursor },
+    canConfigure,
+    canViewReports,
+    openRollCalls,
+    shopBoats,
+  ] = await Promise.all([
+    upcomingScheduleRange(db, shop.id, now),
+    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    canPersonViewShopReports(db, shop.id, session.user.personId),
+    // Departures that already came back with a head count still open (DOM-H3).
+    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
+    // whose `startsAt` is still ahead of `now` — so this is its own backwards
+    // query, and one batched query for every such boat rather than a per-trip
+    // roll-call lookup. Only on the first page: they belong at the front of
+    // the board, not repeated on top of every later cursor page.
+    after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+    listBoats(db, shop.id),
+  ]);
+  const boatMap = new Map(shopBoats.map((b) => [b.id, b.name]));
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
@@ -211,12 +220,15 @@ export default async function ScheduleBoardPage({
       experienceLevel: request.experienceLevel,
       courseId: request.courseId,
     })),
+    shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
   );
   const requestPlan: BuilderRequestPlan | null =
     requestRows.length > 0
       ? {
           estimatedDivers: requestAdvice.estimatedDivers,
           suggestedCapacity: requestAdvice.suggestedCapacity,
+          suggestedBoatName: requestAdvice.suggestedBoat?.name ?? null,
+          exceedsKnownBoats: requestAdvice.exceedsKnownBoats,
           requests: requestRows.map((request) => ({
             id: request.id,
             name: request.name ?? st("requests.anonymous"),
@@ -349,6 +361,14 @@ export default async function ScheduleBoardPage({
     requestPlanRecommendation: st.raw("schedule.builder.requestPlanRecommendation"),
     requestPlanDivers: st.raw("schedule.builder.requestPlanDivers"),
     requestPlanPerson: st.raw("schedule.builder.requestPlanPerson"),
+    requestPlanBoatRecommendation: st.raw("boats.requestPlanBoatRecommendation"),
+    requestPlanBoatExceeded: st("boats.requestPlanBoatExceeded"),
+    diveModeLabel: st("boats.diveModeLabel"),
+    modeBoat: st("boats.modeBoat"),
+    modeShore: st("boats.modeShore"),
+    modePool: st("boats.modePool"),
+    boatSelectLabel: st("boats.boatSelectLabel"),
+    unassignedBoat: st("boats.unassignedBoat"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive
@@ -423,6 +443,8 @@ export default async function ScheduleBoardPage({
       booked: number;
       courseTitle: string | null;
       diveSiteName: string | null;
+      diveMode?: "boat" | "shore" | "pool";
+      boatId?: string | null;
     },
     rollCallOpen: { diveNumber: number; uncounted: number } | null,
   ) {
@@ -452,6 +474,8 @@ export default async function ScheduleBoardPage({
       crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
       priceCents: trip.priceCents,
       rollCallOpen,
+      diveMode: trip.diveMode ?? "boat",
+      boatName: trip.boatId ? (boatMap.get(trip.boatId) ?? null) : null,
     });
   }
 
@@ -472,6 +496,8 @@ export default async function ScheduleBoardPage({
         booked: open.rosterSize,
         courseTitle: null,
         diveSiteName: null,
+        diveMode: "boat",
+        boatId: null,
       },
       { diveNumber: open.diveNumber, uncounted: open.uncounted },
     );
@@ -493,9 +519,23 @@ export default async function ScheduleBoardPage({
         booked: trip.booked,
         courseTitle: trip.course?.title ?? null,
         diveSiteName: trip.diveSite?.name ?? null,
+        diveMode: trip.diveMode,
+        boatId: trip.boatId,
       },
       null,
     );
+  }
+
+  if (shopBoats.length > 0) {
+    for (const day of builderDays) {
+      const boatTrips = day.trips.filter((t) => (t.diveMode ?? "boat") === "boat");
+      if (boatTrips.length > shopBoats.length) {
+        day.boatWarning = st("boats.concurrencyWarning", {
+          tripCount: boatTrips.length,
+          boatCount: shopBoats.length,
+        });
+      }
+    }
   }
 
   return (

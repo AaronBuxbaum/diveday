@@ -8,6 +8,7 @@ import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
+import { createBoat, deleteBoat, updateBoat } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { retryMediaDeletion } from "@/db/media-deletions";
@@ -18,6 +19,7 @@ import {
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
+  setShopDivingOptions,
   setShopDockDayRhythm,
   setShopPackingList,
   setShopRentalItems,
@@ -60,6 +62,7 @@ import {
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
+import { uuidParam } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
  * Shop settings mutations
@@ -653,4 +656,80 @@ export async function dischargeProcessorErasureAction(formData: FormData) {
     actorPersonId: session.user.personId,
   });
   revalidatePath(shopPath(session.user.shopSlug, "settings"));
+}
+
+/** Saves whether the shop offers shore diving and/or pool diving. */
+export async function saveDivingOptionsAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const hasShoreDiving = formData.get("hasShoreDiving") === "on";
+  const hasPoolDiving = formData.get("hasPoolDiving") === "on";
+
+  const db = await getDb();
+  await setShopDivingOptions(db, session.user.shopId, { hasShoreDiving, hasPoolDiving });
+
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
+  );
+}
+
+/** Creates a new boat for the shop. */
+export async function createBoatAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const name = String(formData.get("name") ?? "").trim();
+  const capacity = Number(formData.get("capacity") ?? 0);
+
+  if (!name || Number.isNaN(capacity) || capacity <= 0) {
+    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+  }
+
+  const db = await getDb();
+  await createBoat(db, session.user.shopId, name, capacity);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "boat-created", { saved: "boats" }));
+}
+
+/** Updates an existing boat's name and capacity. */
+export async function updateBoatAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const rawBoatId = formData.get("boatId");
+  const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
+  const name = String(formData.get("name") ?? "").trim();
+  const capacity = Number(formData.get("capacity") ?? 0);
+
+  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0) {
+    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+  }
+
+  const db = await getDb();
+  await updateBoat(db, session.user.shopId, boatId, name, capacity);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "boat-updated", { saved: "boats" }));
+}
+
+/** Deletes a boat from the shop. */
+export async function deleteBoatAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const rawBoatId = formData.get("boatId");
+  const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
+  if (!boatId) {
+    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+  }
+
+  const db = await getDb();
+  await deleteBoat(db, session.user.shopId, boatId);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "boat-deleted", { saved: "boats" }));
 }

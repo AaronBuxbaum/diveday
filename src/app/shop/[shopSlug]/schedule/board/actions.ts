@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
+import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
@@ -90,15 +91,31 @@ export async function loadBuilderOptionsAction() {
   const db = await getDb();
   const shopId = session.user.shopId;
   if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) {
-    return { courses: [], diveSites: [] };
+    return {
+      courses: [],
+      diveSites: [],
+      boats: [],
+      hasShoreDiving: false,
+      hasPoolDiving: false,
+    };
   }
-  const [courses, diveSites] = await Promise.all([
+  const [courses, diveSites, boats, shop] = await Promise.all([
     listActiveCourses(db, shopId).then((rows) =>
       rows.map((row) => ({ id: row.id, title: row.title, agency: row.agency })),
     ),
     listDiveSites(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
+    listBoats(db, shopId).then((rows) =>
+      rows.map((row) => ({ id: row.id, name: row.name, capacity: row.capacity })),
+    ),
+    getShopById(db, shopId),
   ]);
-  return { courses, diveSites };
+  return {
+    courses,
+    diveSites,
+    boats,
+    hasShoreDiving: shop?.hasShoreDiving ?? false,
+    hasPoolDiving: shop?.hasPoolDiving ?? false,
+  };
 }
 
 /**
@@ -117,6 +134,11 @@ const addSchema = z.object({
     (value) => value === "true" || value === true,
     z.boolean().optional().default(false),
   ),
+  diveMode: z.preprocess(
+    (value) => value || "boat",
+    z.enum(["boat", "shore", "pool"]).default("boat"),
+  ),
+  boatId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -221,6 +243,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     repeatIntervalWeeks,
     repeatEndsOn,
     isPrivate,
+    diveMode,
+    boatId,
   } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
@@ -299,6 +323,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     // row saying nothing and read as one on the next edit.
     minimumDecisionHours: minimumBookings ? (minimumDecisionHours ?? null) : null,
     isPrivate,
+    diveMode,
+    boatId: diveMode === "boat" ? boatId : null,
   };
 
   if (repeatIntervalWeeks > 0) {

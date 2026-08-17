@@ -299,6 +299,9 @@ export async function duplicateTrip(
       priceCents: source.priceCents,
       depositCents: source.depositCents,
       cancellationWindowHours: source.cancellationWindowHours,
+      isPrivate: source.isPrivate,
+      diveMode: source.diveMode,
+      boatId: source.boatId,
       drafts: dives.map((dive) => ({
         diveNumber: dive.diveNumber,
         title: dive.title,

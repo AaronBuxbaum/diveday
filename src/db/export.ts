@@ -27,6 +27,7 @@ import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { AppDb } from "./client";
 import {
   activityEvents,
+  boats,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookingPaymentEvents,
@@ -513,6 +514,14 @@ export async function loadShopExportBundleInput(
         .where(eq(importedPaymentHistory.shopId, shopId))
         .orderBy(asc(importedPaymentHistory.occurredOn), asc(importedPaymentHistory.id));
 
+      const boatRows = await tx
+        .select()
+        .from(boats)
+        .where(eq(boats.shopId, shopId))
+        .orderBy(asc(boats.createdAt), asc(boats.id));
+
+      const boatName = new Map(boatRows.map((row) => [row.id, row.name]));
+
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
       const cardsByPerson = new Map<string, typeof certificationRows>();
@@ -600,6 +609,8 @@ export async function loadShopExportBundleInput(
             "medical_jurisdiction",
             "depth_unit",
             "temperature_unit",
+            "has_shore_diving",
+            "has_pool_diving",
             "contact_email",
             "contact_phone",
             "address_street",
@@ -638,6 +649,8 @@ export async function loadShopExportBundleInput(
               shop.jurisdiction,
               shop.depthUnit,
               shop.temperatureUnit,
+              shop.hasShoreDiving,
+              shop.hasPoolDiving,
               shop.contactEmail,
               shop.contactPhone,
               shop.addressStreet,
@@ -660,6 +673,12 @@ export async function loadShopExportBundleInput(
             ],
           ],
           note: EXPORT_FILE_NOTES["shop.csv"],
+        },
+        {
+          file: "boats.csv",
+          header: ["id", "name", "capacity", "created_at"],
+          rows: boatRows.map((row) => [row.id, row.name, row.capacity, row.createdAt]),
+          note: EXPORT_FILE_NOTES["boats.csv"],
         },
         {
           file: "contacts.csv",
@@ -971,6 +990,9 @@ export async function loadShopExportBundleInput(
             "course_id",
             "dive_site_id",
             "dive_site_name",
+            "dive_mode",
+            "boat_id",
+            "boat_name",
             "conditions_hold",
             "conditions_summary",
             "water_temperature_c",
@@ -1000,6 +1022,9 @@ export async function loadShopExportBundleInput(
             row.courseId,
             row.diveSiteId,
             row.diveSiteId ? siteName.get(row.diveSiteId) : null,
+            row.diveMode,
+            row.boatId,
+            row.boatId ? boatName.get(row.boatId) : null,
             row.conditionsHold,
             row.conditionsSummary,
             row.waterTemperatureC,
@@ -2405,6 +2430,9 @@ export async function loadShopExportCounts(
   );
   const counts: Record<keyof typeof EXPORT_FILE_NOTES, number> = {
     "shop.csv": 1,
+    "boats.csv": await countOf(
+      db.select({ n: count() }).from(boats).where(eq(boats.shopId, shopId)),
+    ),
     // One flat import-ready row per person, so the count mirrors people.csv.
     "contacts.csv": peopleCount,
     "people.csv": peopleCount,

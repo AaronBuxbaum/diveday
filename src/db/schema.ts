@@ -93,6 +93,8 @@ export const shops = pgTable(
      * set to feet, so no existing shop's reading changed on the day it landed.
      */
     temperatureUnit: temperatureUnit("temperature_unit").notNull().default("celsius"),
+    hasShoreDiving: boolean("has_shore_diving").notNull().default(false),
+    hasPoolDiving: boolean("has_pool_diving").notNull().default(false),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -410,6 +412,8 @@ export const personRoles = pgTable(
 );
 
 export const tripStatus = pgEnum("trip_status", ["scheduled", "cancelled"]);
+
+export const diveMode = pgEnum("dive_mode", ["boat", "shore", "pool"]);
 
 /**
  * How a trip series repeats. Only weekly, and deliberately so: a weekday *set*
@@ -1064,6 +1068,20 @@ export const diveSites = pgTable(
   ],
 );
 
+export const boats = pgTable(
+  "boats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    capacity: integer("capacity").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("boats_shop_id_idx").on(table.shopId)],
+);
+
 /** DiveDay-maintained common-site catalog; shops copy a published version into their own library. */
 export const globalDiveSites = pgTable(
   "global_dive_sites",
@@ -1337,6 +1355,8 @@ export const trips = pgTable(
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
     isPrivate: boolean("is_private").notNull().default(false),
+    diveMode: diveMode("dive_mode").notNull().default("boat"),
+    boatId: uuid("boat_id").references(() => boats.id, { onDelete: "set null" }),
     conditionsSummary: text("conditions_summary"),
     /**
      * Always Celsius regardless of the shop's `temperature_unit`, and

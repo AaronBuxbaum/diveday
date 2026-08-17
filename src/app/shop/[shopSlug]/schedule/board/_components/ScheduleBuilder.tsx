@@ -55,6 +55,8 @@ export type BuilderTrip = {
    * boat's list have no result recorded at it.
    */
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
+  diveMode?: "boat" | "shore" | "pool";
+  boatName?: string | null;
 };
 
 export type BuilderDay = {
@@ -70,10 +72,12 @@ export type BuilderDay = {
    */
   parts: { weekday: string; day: string; month: string };
   trips: BuilderTrip[];
+  boatWarning?: string | null;
 };
 
 export type BuilderOption = { id: string; title: string };
 export type BuilderCourseOption = BuilderOption & { agency: string };
+export type BuilderBoatOption = { id: string; name: string; capacity: number };
 
 /**
  * What the add-a-departure panel's two selects offer. Fetched when the panel
@@ -81,7 +85,13 @@ export type BuilderCourseOption = BuilderOption & { agency: string };
  * props on every board render: a shop's whole course catalogue and every dive
  * site it dives, shipped to a browser for two controls behind a closed panel.
  */
-export type BuilderOptions = { courses: BuilderCourseOption[]; diveSites: BuilderOption[] };
+export type BuilderOptions = {
+  courses: BuilderCourseOption[];
+  diveSites: BuilderOption[];
+  boats?: BuilderBoatOption[];
+  hasShoreDiving?: boolean;
+  hasPoolDiving?: boolean;
+};
 
 /**
  * Everything the price box needs that is neither copy nor a value — all of it
@@ -219,6 +229,14 @@ export type BuilderCopy = {
   requestPlanRecommendation?: string;
   requestPlanDivers?: string;
   requestPlanPerson?: string;
+  requestPlanBoatRecommendation?: string;
+  requestPlanBoatExceeded?: string;
+  diveModeLabel?: string;
+  modeBoat?: string;
+  modeShore?: string;
+  modePool?: string;
+  boatSelectLabel?: string;
+  unassignedBoat?: string;
 };
 
 /**
@@ -242,6 +260,8 @@ export type BuilderInitialCourse = {
 export type BuilderRequestPlan = {
   estimatedDivers: number;
   suggestedCapacity: number;
+  suggestedBoatName?: string | null;
+  exceedsKnownBoats?: boolean;
   requests: Array<{
     id: string;
     name: string;
@@ -322,6 +342,10 @@ function AddPanel({
   const [courseId, setCourseId] = useState(initialCourse?.id ?? "");
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
 
+  const [diveMode, setDiveMode] = useState<"boat" | "shore" | "pool">("boat");
+  const [selectedBoatId, setSelectedBoatId] = useState<string>("");
+  const [capacity, setCapacity] = useState<number>(requestPlan?.suggestedCapacity ?? 12);
+
   /**
    * The two facts both depths ask for, held here so the disclosure can never
    * eat them: collapsed they are the "Dives" box and the "Dive site" select,
@@ -369,6 +393,19 @@ function AddPanel({
               divers: requestPlan.estimatedDivers,
             })}
           </p>
+          {requestPlan.suggestedBoatName ? (
+            <p className="mt-1 text-sm text-muted font-medium">
+              {fill(copy.requestPlanBoatRecommendation ?? "", {
+                boatName: requestPlan.suggestedBoatName,
+                capacity: requestPlan.suggestedCapacity,
+              })}
+            </p>
+          ) : null}
+          {requestPlan.exceedsKnownBoats ? (
+            <p className="mt-1 text-sm text-warning font-medium">
+              {copy.requestPlanBoatExceeded ?? ""}
+            </p>
+          ) : null}
           <ul className="mt-3 grid gap-2">
             {requestPlan.requests.map((request) => (
               <li key={request.id}>
@@ -500,6 +537,56 @@ function AddPanel({
           className={`${controlClass} tabular-nums sm:w-40`}
         />
       </Field>
+      {options?.hasShoreDiving ||
+      options?.hasPoolDiving ||
+      (options?.boats && options.boats.length > 0) ? (
+        <FieldGrid columns={2} className="gap-y-4">
+          {options?.hasShoreDiving || options?.hasPoolDiving ? (
+            <Field label={copy.diveModeLabel ?? "Dive mode"}>
+              <select
+                name="diveMode"
+                value={diveMode}
+                onChange={(event) => setDiveMode(event.target.value as "boat" | "shore" | "pool")}
+                className={controlClass}
+              >
+                <option value="boat">{copy.modeBoat ?? "Boat dive"}</option>
+                {options.hasShoreDiving ? (
+                  <option value="shore">{copy.modeShore ?? "Shore dive"}</option>
+                ) : null}
+                {options.hasPoolDiving ? (
+                  <option value="pool">{copy.modePool ?? "Pool session"}</option>
+                ) : null}
+              </select>
+            </Field>
+          ) : (
+            <input type="hidden" name="diveMode" value="boat" />
+          )}
+          {diveMode === "boat" && options?.boats && options.boats.length > 0 ? (
+            <Field label={copy.boatSelectLabel ?? "Assigned boat"} hint={copy.optional}>
+              <select
+                name="boatId"
+                value={selectedBoatId}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  setSelectedBoatId(id);
+                  const boat = options?.boats?.find((b) => b.id === id);
+                  if (boat) setCapacity(boat.capacity);
+                }}
+                className={controlClass}
+              >
+                <option value="">{copy.unassignedBoat ?? "Any / unassigned"}</option>
+                {options.boats.map((boat) => (
+                  <option key={boat.id} value={boat.id}>
+                    {boat.name} ({boat.capacity} seats)
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
+        </FieldGrid>
+      ) : (
+        <input type="hidden" name="diveMode" value="boat" />
+      )}
       <FieldGrid columns={2} className="gap-y-4">
         <Field label={copy.seats}>
           <input
@@ -508,7 +595,8 @@ function AddPanel({
             required
             min={1}
             max={60}
-            defaultValue={requestPlan?.suggestedCapacity ?? 12}
+            value={capacity}
+            onChange={(event) => setCapacity(Number(event.target.value))}
             className={`${controlClass} tabular-nums`}
           />
         </Field>
@@ -1090,6 +1178,12 @@ export function ScheduleBuilder({
                 </button>
               ) : null}
             </div>
+            {day.boatWarning ? (
+              <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning flex items-center gap-2">
+                <span aria-hidden="true">⚠️</span>
+                <span>{day.boatWarning}</span>
+              </div>
+            ) : null}
             {canConfigure && open === `add:${day.dateIso}` ? (
               <AddPanel
                 dateIso={day.dateIso}
@@ -1169,6 +1263,9 @@ export function ScheduleBuilder({
                           </Link>
                           <p className="mt-0.5 text-sm text-muted">
                             {[
+                              trip.boatName ? `⛵ ${trip.boatName}` : null,
+                              trip.diveMode === "shore" ? copy.modeShore : null,
+                              trip.diveMode === "pool" ? copy.modePool : null,
                               trip.courseTitle
                                 ? fill(copy.courseLabel, { title: trip.courseTitle })
                                 : null,
