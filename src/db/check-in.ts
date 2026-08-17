@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow } from "@/lib/operational-window";
@@ -137,11 +137,16 @@ export async function listWalkInTrips(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, arrivals.from),
+        // A walk-in can only be seated on a departure that has not started.
+        // The check-in queue deliberately includes its short look-back window;
+        // reusing that lower bound here offered a boat already underway and
+        // made the picker hand a valid-looking choice to a refusal.
+        gte(trips.startsAt, now),
         lte(trips.startsAt, arrivals.to),
       ),
     )
     .groupBy(trips.id)
+    .having(gt(trips.capacity, count(bookings.id)))
     .orderBy(asc(trips.startsAt));
 }
 

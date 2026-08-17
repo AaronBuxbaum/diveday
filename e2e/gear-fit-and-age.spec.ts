@@ -177,12 +177,17 @@ test.describe("minimum age (H-08, fail open)", () => {
   }
 
   test("admits a diver with no date of birth on file (fail open)", async ({ page }) => {
+    test.setTimeout(30_000);
     const stamp = e2eNow().getTime();
     const tripPath = await createAgeGateSession(page, `Age gate session ${stamp}`);
 
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
     await page.goto(`${tripPath}/guests`);
+    await page.getByRole("link", { name: "Add a diver" }).click();
+    if ((await page.locator('#hand-entry input[name="fullName"]:visible').count()) === 0) {
+      await page.getByText("New to the shop? Enter a diver by hand", { exact: true }).click();
+    }
     await page.getByLabel("Name", { exact: true }).fill(`Ageless Diver ${stamp}`);
     await page.getByLabel("Email", { exact: true }).fill(`ageless-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();

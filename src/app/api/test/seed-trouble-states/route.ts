@@ -9,10 +9,13 @@ import { getShopReviewAggregate, setReviewPublished } from "@/db/reviews";
 import {
   bookingPayments,
   bookings,
+  certifications,
   mediaDeletionAttempts,
+  nitroxCertifications,
   paymentOperationIntents,
   people,
   processorErasureObligations,
+  specialtyCertifications,
   tripReviews,
   trips,
 } from "@/db/schema";
@@ -80,6 +83,16 @@ export async function POST(request: Request) {
   // the demo seed. Nadia Petrov is a healthy, uncarded fixture diver; the
   // exact name keeps this state deterministic and prevents the first-person
   // ordering above from coupling unrelated trouble panels to it.
+  const [nadia] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Nadia Petrov")))
+    .limit(1);
+  if (nadia) {
+    await db.delete(nitroxCertifications).where(eq(nitroxCertifications.personId, nadia.id));
+    await db.delete(specialtyCertifications).where(eq(specialtyCertifications.personId, nadia.id));
+    await db.delete(certifications).where(eq(certifications.personId, nadia.id));
+  }
   await db
     .update(people)
     .set({

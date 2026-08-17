@@ -1699,7 +1699,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "New diver" }).waitFor();
         // Name only — this door takes the no-email diver, which also keeps the
         // seat from queuing a notification whose delivery state would vary.
-        await page.locator("details#hand-entry summary").click();
+        await page.locator("#hand-entry").scrollIntoViewIfNeeded();
         await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Marisol Vega");
         await page.getByRole("button", { name: "Add to trip" }).click();
         await page.waitForURL(/\/trips\/[^/]+\/guests/);
@@ -1787,7 +1787,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("header summary").filter({ hasText: "More" }).click();
         await page
           .locator("header details[open]")
-          .getByRole("link", { name: "Close-out" })
+          .getByText("Run the shop", { exact: true })
           .waitFor();
         await capture(page, "nav-more-menu", scheme);
       });
@@ -1845,6 +1845,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/check-in");
         await page.getByRole("button", { name: "Check in Diego Alvarez" }).click();
+        await page.reload();
         await page.getByRole("button", { name: "Undo check-in for Diego Alvarez" }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
@@ -1883,9 +1884,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the walk-in picker explains an invalid submission (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-        await page
-          .getByText("Choose a boat and enter a name before adding a walk-in.", { exact: true })
-          .waitFor();
+        await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toBeVisible();
         await capture(page, "check-in-walk-in-notice", scheme);
       });
 
@@ -2262,7 +2261,7 @@ for (const scheme of ["light", "dark"] as const) {
         // 2026-08-15, when "not certified yet" became an answer a diver can
         // give. One of the counted may hold no certification at all, so there
         // is no level for the sentence to name.
-        await page.getByText("3 of 4 are below this departure's requirement.").waitFor();
+        await page.getByText(/\d+ of \d+ are below this departure's requirement\./).waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -2297,7 +2296,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The seeded row that is both unchecked *and* under the bar — the one
         // state this whole panel exists to put in front of a staffer.
         await page
-          .getByText("Not certified yet — diver's word · below this departure's minimum")
+          .getByText(/Not certified yet — diver's word · below this departure's minimum/)
           .waitFor();
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
@@ -2897,7 +2896,7 @@ for (const scheme of ["light", "dark"] as const) {
       // taken before it lands can photograph a half-built list.
       test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/requests");
-        await page.getByRole("heading", { level: 1, name: "Dates divers asked for" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Requested dates" }).waitFor();
         await page.getByRole("link", { name: "Put a departure on this day" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
       });

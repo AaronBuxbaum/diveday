@@ -11,6 +11,8 @@ describe("e2e server lifecycle", () => {
     expect(supervisor).toContain("detached: false");
     expect(supervisor).toContain("child.kill(signal)");
     expect(supervisor).not.toContain('detached: process.platform !== "win32"');
+    expect(supervisor).toContain("process.ppid !== ownerPid");
+    expect(supervisor).toContain('process.stdin.once("end"');
     expect(supervisor).toContain('process.once("exit", () =>');
     expect(supervisor).toContain('signalChild("SIGKILL")');
   });

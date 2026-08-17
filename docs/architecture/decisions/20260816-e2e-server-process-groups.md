@@ -24,7 +24,9 @@ Playwright starts `scripts/e2e-server.mjs` in its own detached process group. Th
 supervisor keeps `next start` inside that group, forwards normal termination
 signals to the direct child, and uses synchronous exit cleanup as a final
 bounded kill of that child. Playwright's group teardown reaps the child and any
-descendants. The supervisor never searches for or kills an unrelated
+descendants. The supervisor also watches its launcher PID and inherited stdin;
+if Playwright crashes or is killed before teardown, it terminates Next itself
+instead of becoming an orphan. It never searches for or kills an unrelated
 `next-server`. Local runs do not reuse an existing server; a port collision is
 reported so the orphan can be inspected with `node scripts/stray-processes.mjs
 --list` before any cleanup.
@@ -44,6 +46,8 @@ reported so the orphan can be inspected with `node scripts/stray-processes.mjs
 
 - A normal Playwright teardown and an interrupted teardown both use the same
   process-group boundary for the Next process and its descendants.
+- A crashed Playwright launcher is detected by the supervisor rather than
+  leaving a server behind indefinitely.
 - A stale server cannot silently serve an old build to a local run.
 - The historical pair's exact parent command remains unknown; this decision
   records and fixes the likely e2e teardown boundary without claiming evidence

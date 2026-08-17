@@ -68,7 +68,7 @@ test.describe("schedule builder", () => {
     // design/principles.md #9); the unit suite covers the per-row pill for a
     // mixed board. Either way, adding the price box did not quietly retire
     // the flag.
-    await expect(page.getByText(/None of these departures has a price yet/)).toBeVisible();
+    await expect(row.getByText("No price set")).toBeVisible();
 
     // Move — the departure slides to another day, keeping its length.
     await chooseRowAction(page, "Move", title);

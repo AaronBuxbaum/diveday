@@ -2105,7 +2105,7 @@
       "exportDescription1": "Un archivo, no un proyecto: el importador muestra exactamente qué se transfiere —y qué no— antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
       "importMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
       "spreadsheetLink": "Tu hoja de cálculo, columna por columna →",
-      "leavingLabel": "Tus registros",
+      "leavingLabel": "Lo que sale",
       "exportDescription2": "Un ZIP con los registros de tu centro, listo para descargar desde Ajustes cuando necesites una copia completa. {terms}",
       "exportItem1": "Archivos CSV documentados, uno por tipo de registro",
       "exportItem2": "Buceadores, reservas, registros de exención y historial de pagos",
@@ -2573,7 +2573,7 @@
     },
     "about": {
       "eyebrow": "Quiénes somos",
-      "heroTitle": "Construye una temporada de buceo en la que tu equipo pueda confiar.",
+      "heroTitle": "Tu temporada no depende de nosotros.",
       "phoneFrameLabel": "Un capitán haciendo el pase de lista en DiveDay desde la copia sin conexión del teléfono.",
       "heroDescription": "Los pagos van por tu propia cuenta de Stripe, tus registros se descargan en un ZIP cualquier día, y el pase de lista funciona en un teléfono sin señal. DiveDay lo hacen buceadores, y todo lo que sigue es algo que puedes ir a probar en los próximos minutos.",
       "founderEyebrow": "Del fundador",

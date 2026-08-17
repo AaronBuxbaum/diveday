@@ -591,7 +591,7 @@
         "visitsLine": "{count, plural, one {# past visit} other {# past visits}} added to divers' shop history.",
         "visitsSkippedNote": " {count} were already imported and were left as they are — re-running the same export doesn't double anyone's history.",
         "paymentHistoryLine": "{count, plural, one {# unverified payment / receipt source record} other {# unverified payment / receipt source records}} added to Orders.",
-        "paymentHistorySkippedNote": " {count} were already imported and were left as they are.",
+        "paymentHistorySkippedNote": " {count} payment-history rows were already present and were left as they are.",
         "receiptDocumentsFailedNote": " {count} receipt document link(s) didn't fetch and were left off the source record.",
         "seeRoster": "See the roster"
       }

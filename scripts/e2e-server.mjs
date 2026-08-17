@@ -15,7 +15,9 @@ import process from "node:process";
  * group: making the Next child detached here would put it beyond Playwright's
  * kill boundary and recreate the orphan leak this wrapper is meant to prevent.
  * The normal signal path is paired with synchronous `exit` cleanup for cases
- * where the supervisor itself is leaving before Next has emitted `exit`.
+ * where the supervisor itself is leaving before Next has emitted `exit`. A
+ * parent-liveness watchdog covers the harder case where Playwright crashes or
+ * is killed before it can run its webServer teardown.
  */
 
 const nextBin = resolve(process.cwd(), "node_modules/next/dist/bin/next");
@@ -27,6 +29,14 @@ const child = spawn(process.execPath, [nextBin, "start", ...process.argv.slice(2
   // nested detached group here; Playwright would then be unable to reap us.
   detached: false,
 });
+
+const ownerPid = process.ppid;
+const ownerWatchdog = setInterval(() => {
+  // An orphaned supervisor cannot rely on Playwright to clean up its process
+  // group. This catches a crashed/killed launcher after one short interval.
+  if (ownerPid !== 1 && process.ppid !== ownerPid) shutdown("SIGTERM");
+}, 1_000);
+ownerWatchdog.unref();
 
 let shuttingDown = false;
 let forceKillTimer;
@@ -44,7 +54,7 @@ function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   signalChild(signal);
-  forceKillTimer = setTimeout(() => signalChildGroup("SIGKILL"), 5_000);
+  forceKillTimer = setTimeout(() => signalChild("SIGKILL"), 5_000);
   forceKillTimer.unref();
 }
 
@@ -62,6 +72,7 @@ child.once("exit", (code, signal) => {
   // direct child too in case it has not fully unwound when it emits `exit`.
   signalChild("SIGKILL");
   shuttingDown = true;
+  clearInterval(ownerWatchdog);
   if (forceKillTimer) clearTimeout(forceKillTimer);
   process.exitCode = code ?? (signal ? 128 + (signal === "SIGINT" ? 2 : 15) : 1);
 });
@@ -71,3 +82,7 @@ process.once("exit", () => {
   // the child emitted `exit`, do not leave Next behind in Playwright's group.
   if (!shuttingDown) signalChild("SIGKILL");
 });
+
+// Playwright gives webServer commands piped stdio. EOF means the launcher is
+// gone even when the runner did not reach its normal teardown path.
+process.stdin.once("end", () => shutdown("SIGTERM"));

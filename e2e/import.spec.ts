@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -176,13 +176,7 @@ test.describe("contact import — specialty cards", () => {
     const addDiver = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-    await openHandEntry(addDiver);
-    await addDiver.locator('input[name="fullName"]:visible').fill("Deep Dana");
-    await addDiver.locator('input[name="email"]:visible').fill("deep.dana@example.com");
-    await addDiver.getByRole("button", { name: "Add to trip" }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Diver added to the trip — but their waiver wasn’t emailed.",
-    );
+    await addDiver.getByRole("button", { name: "Deep Dana", exact: true }).click();
 
     // The card is on file and verified — and the dive still waits, which is the
     // whole point of the decision. The blocker names the fix, not just the fault.

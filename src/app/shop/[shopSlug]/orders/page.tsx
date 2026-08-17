@@ -532,7 +532,7 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
-      {rows.length === 0 && !hasImportedHistory ? (
+      {rows.length === 0 ? (
         // The same fork the header makes (Loop 3): with no orders on file the
         // one thing that moves a shop forward is either sending the first one
         // or connecting the account that can. Filtered-to-nothing is a

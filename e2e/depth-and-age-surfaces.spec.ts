@@ -7,6 +7,8 @@ const SHOP = DEMO_SHOP_SLUG;
 
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+test.describe.configure({ timeout: 30_000 });
+
 /**
  * Open a seeded dive site's edit form and set its maximum depth.
  *

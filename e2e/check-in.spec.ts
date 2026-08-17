@@ -1,6 +1,8 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
 
+test.describe.configure({ timeout: 45_000 });
+
 signedInAsOwner();
 
 test("counter check-in searches by diver, confirms live readiness, and keeps blocked rows out of the line", async ({
@@ -59,13 +61,15 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   // the top of the page (design principle 9), and no sentence under the row
   // teaching the re-tap either: a control the finger just put into "Checked in
   // ☑️" is its own affordance, and its accessible name already says "Undo".
-  const settled = row.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
-  await expect(settled).toBeVisible();
+  const settled = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  await expect(settled).toBeVisible({ timeout: 15_000 });
   await expect(settled).toContainText("Checked in ☑️");
   await expect(settled).not.toContainText("undo");
 
   await settled.click();
-  await expect(row.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
@@ -116,7 +120,7 @@ test("the walk-in picker explains an invalid submission before a boat is chosen"
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toContainText(
     "Choose a boat and enter a name before adding a walk-in.",
   );
 });

@@ -85,8 +85,8 @@ test.describe("as owner", () => {
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/promos");
 
-    await page.getByLabel("Code").first().fill("E2ETEST");
-    await page.getByLabel("Discount").first().fill("15");
+    await page.getByRole("textbox", { name: "Code" }).fill("E2ETEST");
+    await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();
     await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
 
@@ -110,11 +110,11 @@ test.describe("as owner", () => {
     await page.goto("/shop/blue-mantis/promos");
 
     // REEF10 is seeded, so this is a genuine duplicate.
-    await page.getByLabel("Code").first().fill("REEF10");
-    await page.getByLabel("Discount").first().fill("15");
+    await page.getByRole("textbox", { name: "Code" }).fill("REEF10");
+    await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();
 
-    const codeBox = page.getByLabel("Code").first();
+    const codeBox = page.getByRole("textbox", { name: "Code" });
     await expect(codeBox).toHaveAttribute("aria-invalid", "true");
     // The message is the box's own description, which is what a screen reader
     // reads when the cursor lands there — and the cursor does land there.
@@ -134,8 +134,8 @@ test.describe("as owner", () => {
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/promos");
 
-    await page.getByLabel("Code").first().fill("E2EUNDO");
-    await page.getByLabel("Discount").first().fill("15");
+    await page.getByRole("textbox", { name: "Code" }).fill("E2EUNDO");
+    await page.getByRole("spinbutton", { name: "Discount" }).fill("15");
     await page.getByRole("button", { name: "Create code" }).click();
     await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
     const failed = page.locator("li").filter({ hasText: "E2EUNDO" }).filter({ visible: true });

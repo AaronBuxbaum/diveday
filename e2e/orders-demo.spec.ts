@@ -79,7 +79,7 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
-    const rows = page.locator("tbody tr").filter({ visible: true });
+    const rows = page.locator("table").first().locator("tbody tr").filter({ visible: true });
     await expect(rows.first()).toBeVisible();
     const firstPageCount = await rows.count();
     expect(firstPageCount).toBeLessThanOrEqual(50);
@@ -122,7 +122,12 @@ test.describe("demo billing history", () => {
     const range = page.getByLabel("Date range");
     await expect(range).toHaveValue("recent");
 
-    const windowed = await page.locator("tbody tr").filter({ visible: true }).count();
+    const windowed = await page
+      .locator("table")
+      .first()
+      .locator("tbody tr")
+      .filter({ visible: true })
+      .count();
     const windowedTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
 
     await range.selectOption("all");
@@ -133,9 +138,9 @@ test.describe("demo billing history", () => {
     // and this test would pass on a page that silently ignores `?range=`.
     const allTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
     expect(allTotal).not.toBe(windowedTotal);
-    expect(await page.locator("tbody tr").filter({ visible: true }).count()).toBeGreaterThanOrEqual(
-      windowed,
-    );
+    expect(
+      await page.locator("table").first().locator("tbody tr").filter({ visible: true }).count(),
+    ).toBeGreaterThanOrEqual(windowed);
 
     // And back to the safe default, so the range control is not one-way.
     await page.getByLabel("Date range").selectOption("recent");
@@ -184,7 +189,7 @@ test.describe("demo billing history", () => {
     // sentence naming whose orders these are used to be read off the first row
     // and therefore vanished exactly here.
     await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
-    await expect(page.getByText("No orders match these filters.")).toBeVisible();
+    await expect(page.getByText("No DiveDay orders match these filters.")).toBeVisible();
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */
@@ -206,7 +211,7 @@ test.describe("demo billing history", () => {
     // the matched badges alone passes trivially when the match set is empty.
     // A settled order renders an empty status cell (only exceptional states
     // carry a badge), so "every row is paid" reads as "no row carries one".
-    const rows = page.locator("tbody tr").filter({ visible: true });
+    const rows = page.locator("table").first().locator("tbody tr").filter({ visible: true });
     await expect(rows.first()).toBeVisible();
     for (const row of await rows.all()) {
       await expect(row.locator("td").nth(2)).toHaveText("");

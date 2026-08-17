@@ -113,6 +113,7 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
 test("a freshly onboarded shop finds a way forward on its empty Divers and Orders pages", async ({
   page,
 }) => {
+  test.setTimeout(30_000);
   const unique = `empty-doors-${Date.now()}`;
   await page.goto("/onboard");
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Empty Doors E2E");
@@ -149,7 +150,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
     page.getByText(
       // One noun for one object: the record the front desk sends is an
       // "order" wherever it is named — "invoice" is only the Stripe artifact.
-      "No orders yet — connect payments and the front desk can send its first order from here.",
+      "No DiveDay orders yet — connect payments and the front desk can send its first order from here.",
     ),
   ).toBeVisible();
   // One door, once: while the unfiltered list is empty the header stands
