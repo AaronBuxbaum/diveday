@@ -66,6 +66,7 @@ test("a stale page link clamps back into the queue instead of showing nothing", 
   // land on the last page that exists — never an empty list while divers are
   // still blocked. Same clamp for a nonsense value.
   await page.goto(BY_DEPARTURE);
+  await expect(page.getByRole("heading", { name: "Not ready", level: 2 })).toBeVisible();
   const firstPage = await page
     .locator("div.mt-3.flex.flex-col.gap-5 > div.overflow-hidden")
     .filter({ visible: true })
