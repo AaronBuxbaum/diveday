@@ -1845,7 +1845,6 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/check-in");
         await page.getByRole("button", { name: "Check in Diego Alvarez" }).click();
-        await page.reload();
         await page.getByRole("button", { name: "Undo check-in for Diego Alvarez" }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
