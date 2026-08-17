@@ -249,6 +249,38 @@ test.describe("schedule builder", () => {
       ).toBeLessThanOrEqual(4);
     }
   });
+
+  test("staff add a private charter, and verify its private charter badge in schedule and details", async ({
+    page,
+  }) => {
+    const title = `Private Charter ${e2eNow().getTime()}`;
+    const addDay = daysFromNow(2);
+
+    await page.goto(BOARD);
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(addDay);
+    await page.getByLabel("Departs").fill("10:00");
+    await page.getByLabel("Returns").fill("14:00");
+    await page.getByLabel("Seats").fill("12");
+
+    // Expand the form to access "More options" and check "Private charter"
+    await page.getByRole("button", { name: /More options/i }).click();
+    await page.locator("input[name='isPrivate']").check();
+
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+    // Go to public schedule page and verify the Private badge is visible
+    await page.goto(`/s/${SHOP}`);
+    const tripCard = page.getByRole("listitem").filter({ hasText: title });
+    await expect(tripCard).toBeVisible();
+    await expect(tripCard.getByText("Private", { exact: true })).toBeVisible();
+
+    // Click on the trip details and verify "Private charter" badge in the details header
+    await tripCard.getByRole("link", { name: title }).click();
+    await expect(page.getByText("Private charter")).toBeVisible();
+  });
 });
 
 test.describe("schedule builder, as the daily crew", () => {

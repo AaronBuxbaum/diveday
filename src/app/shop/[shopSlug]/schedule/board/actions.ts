@@ -113,6 +113,10 @@ const addSchema = z.object({
   // Absent entirely from a collapsed submission, so optional rather than
   // required-but-empty.
   description: z.string().trim().max(500).optional(),
+  isPrivate: z.preprocess(
+    (value) => value === "true" || value === true,
+    z.boolean().optional().default(false),
+  ),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -216,6 +220,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     diveSiteId,
     repeatIntervalWeeks,
     repeatEndsOn,
+    isPrivate,
   } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
@@ -293,6 +298,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     // A window with no minimum beside it is not a policy — it would sit in the
     // row saying nothing and read as one on the next edit.
     minimumDecisionHours: minimumBookings ? (minimumDecisionHours ?? null) : null,
+    isPrivate,
   };
 
   if (repeatIntervalWeeks > 0) {

@@ -182,6 +182,8 @@ export type BuilderCopy = {
   courseNoCardRequired: string;
   descriptionLabel: string;
   descriptionPlaceholder: string;
+  isPrivateLabel: string;
+  isPrivateHint: string;
   daysLabel: string;
   daysDescription: string;
   payAtBookingLegend: string;
@@ -430,6 +432,21 @@ function AddPanel({
           placeholder={copy.descriptionPlaceholder}
           className={controlClass}
         />
+      </Field>
+      <Field label={null} className={expanded ? undefined : "hidden"}>
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
+          <input
+            type="checkbox"
+            name="isPrivate"
+            value="true"
+            disabled={!expanded}
+            className="size-4 rounded border-border"
+          />
+          <div className="flex flex-col">
+            <span>{copy.isPrivateLabel}</span>
+            <span className="text-xs font-normal text-muted">{copy.isPrivateHint}</span>
+          </div>
+        </label>
       </Field>
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>

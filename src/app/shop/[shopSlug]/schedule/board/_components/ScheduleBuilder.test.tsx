@@ -101,6 +101,8 @@ const COPY: BuilderCopy = {
   courseNoCardRequired: "No existing C-card required",
   descriptionLabel: "Description",
   descriptionPlaceholder: "Sites, conditions, who it's for.",
+  isPrivateLabel: "Private charter",
+  isPrivateHint: "Mark this trip as a private charter for your group",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",
