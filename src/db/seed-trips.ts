@@ -282,8 +282,7 @@ export async function seedTrips(
       {
         title: "French Reef",
         site: "French Reef",
-        description:
-          "French Reef is the second tank.",
+        description: "French Reef is the second tank.",
       },
     ],
     "Two-Tank Reef — Benwood & Elbow": [

@@ -247,8 +247,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       depthRange: "18–40 m (60–130 ft)",
       maxDepthMeters: 40,
-      currentNote:
-        "Open-water current can run hard, and it is a long ship.",
+      currentNote: "Open-water current can run hard, and it is a long ship.",
       divePlan:
         "Descend together on the mooring line, tour the exterior — flight deck, cranes, well deck — and return to the ascent line with reserve gas and a planned stop.",
       fitTone: "demanding",
@@ -299,8 +298,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       depthRange: "18–37 m (60–120 ft)",
       maxDepthMeters: 37,
-      currentNote:
-        "Can run strong on the surface and at depth.",
+      currentNote: "Can run strong on the surface and at depth.",
       divePlan:
         "Descend the mooring to the deck, tour the superstructure and gun mounts, then ascend on reserve gas with a stop on the line — the crow's nest at about 18 m is a good place to spend it.",
       fitTone: "demanding",
@@ -839,8 +837,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       depthRange: "12–43 m (40–140 ft)",
       maxDepthMeters: 43,
-      currentNote:
-        "Seven miles offshore in open water — current is common.",
+      currentNote: "Seven miles offshore in open water — current is common.",
       divePlan:
         "Down the line to the superstructure, one section only — the mast, a dish, or the bridge — and back to the line. Nobody sees this ship in one dive.",
       fitTone: "demanding",
