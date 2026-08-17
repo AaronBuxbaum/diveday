@@ -64,8 +64,11 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
     .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
-  await addDiver.getByLabel("Name").fill("Walk-in Wanda");
-  await addDiver.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
+  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Walk-in Wanda");
+  await addDiver
+    .getByLabel("Email")
+    .filter({ visible: true })
+    .fill(`wanda-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page.getByRole("status")).toContainText(
@@ -117,8 +120,11 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
-  await addDiver.getByLabel("Name").fill("Waitlist Wally");
-  await addDiver.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
+  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Waitlist Wally");
+  await addDiver
+    .getByLabel("Email")
+    .filter({ visible: true })
+    .fill(`wally-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to wait list" }).click();
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
@@ -170,7 +176,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
   // Search the shop's existing people and add one by identity — their record,
   // not a re-typed name, lands on the roster.
-  await addDiver.getByLabel("Find a returning diver").fill("Priya");
+  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
   await addDiver.getByRole("button", { name: "Search" }).click();
 
   const candidate = addDiver.getByRole("button", { name: "Add Priya Sharma to the trip" });
@@ -187,7 +193,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
   // Picking the same diver again is no longer offered — the roster can't
   // double-book them.
-  await addDiver.getByLabel("Find a returning diver").fill("Priya");
+  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
   await addDiver.getByRole("button", { name: "Search" }).click();
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 });
