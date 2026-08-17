@@ -1,13 +1,13 @@
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import {
+  type DockDayStep,
   dockDayTimeline,
   exposureSuitFor,
   type LegTravelTimes,
   type ProvidedItemCode,
   packingConfidence,
   type SiteBottomTimes,
-  type DockDayStep,
 } from "@/lib/diver-planning";
 import type { RentableItemKind } from "@/lib/rentals";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
