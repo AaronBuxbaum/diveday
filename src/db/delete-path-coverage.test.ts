@@ -116,6 +116,7 @@ const RESET_KEEPS: Record<string, string> = {
   notification_rate_limit_state: "provider coordination state, not shop records",
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
+  boats: "shop settings, outside the resettable schedule",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
   shop_backup_deliveries: "delivery history for those bundles, seeded alongside the destination",
   media_deletion_attempts: "internal reconciliation ledger, not schedule data",

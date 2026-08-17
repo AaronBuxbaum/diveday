@@ -9,6 +9,7 @@ import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   accountTokens,
   activityEvents,
+  boats,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -247,9 +248,16 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         nitroxCents: 1200,
       },
       isDemo: true,
+      hasShoreDiving: true,
+      hasPoolDiving: true,
     })
     .returning();
   if (!shop) throw new Error("seed: failed to insert demo shop");
+
+  await db.insert(boats).values([
+    { shopId: shop.id, name: "Mantis I", capacity: 12 },
+    { shopId: shop.id, name: "Mantis II", capacity: 20 },
+  ]);
 
   await db.insert(waiverTemplates).values({
     shopId: shop.id,
@@ -400,6 +408,8 @@ async function insertDemoShop(db: DbExecutor) {
             nitroxCents: 1200,
           },
           isDemo: true,
+          hasShoreDiving: true,
+          hasPoolDiving: true,
         })
         .returning();
       if (!shop) throw new Error("createDemoShop: failed to insert shop");
@@ -426,6 +436,11 @@ export async function createDemoShop(
   await enforceMintedDemoCap(db);
 
   const { shop, identity } = await insertDemoShop(db);
+
+  await db.insert(boats).values([
+    { shopId: shop.id, name: "Mantis I", capacity: 12 },
+    { shopId: shop.id, name: "Mantis II", capacity: 20 },
+  ]);
 
   await db.insert(waiverTemplates).values({
     shopId: shop.id,

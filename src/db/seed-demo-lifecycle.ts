@@ -5,6 +5,7 @@ import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
   activityEvents,
+  boats,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -202,6 +203,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
+  await db.delete(boats).where(eq(boats.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   // References both shops and people (ADR 20260803-processor-erasure-obligations),

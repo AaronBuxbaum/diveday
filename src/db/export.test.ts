@@ -26,6 +26,7 @@ import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
   "shop.csv",
+  "boats.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -77,6 +78,7 @@ const EXPECTED_FILES = [
 /** Schema tables that get their own CSV in the bundle. */
 const EXPORTED_TABLES = [
   "shops",
+  "boats",
   "people",
   "certifications",
   "specialty_certifications",
@@ -216,6 +218,7 @@ const EXCLUDED_TABLES = [
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: ["jurisdiction", "is_demo", "latitude", "longitude"], // DiveDay-side config, not shop records
+  boats: ["shop_id"],
   staff_shifts: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [

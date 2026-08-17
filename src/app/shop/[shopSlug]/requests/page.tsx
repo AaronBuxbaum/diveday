@@ -5,6 +5,7 @@ import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { listBoats } from "@/db/boats";
 import { type DateRequestRow, listDateRequestsForStaff } from "@/db/course-inquiries";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { requestLocale } from "@/i18n/request";
@@ -139,11 +140,15 @@ function RequestAdviceCard({
   count,
   estimatedDivers,
   suggestedCapacity,
+  suggestedBoat,
+  exceedsKnownBoats,
   t,
 }: {
   count: number;
   estimatedDivers: number;
   suggestedCapacity: number;
+  suggestedBoat?: { id: string; name: string; capacity: number } | null;
+  exceedsKnownBoats?: boolean;
   t: StaffTranslator;
 }) {
   return (
@@ -156,6 +161,17 @@ function RequestAdviceCard({
           capacity: suggestedCapacity,
         })}
       </p>
+      {suggestedBoat ? (
+        <p className="mt-1 text-sm text-muted font-medium">
+          {t("boats.requestBoatSuggestion", {
+            boatName: suggestedBoat.name,
+            capacity: suggestedBoat.capacity,
+          })}
+        </p>
+      ) : null}
+      {exceedsKnownBoats ? (
+        <p className="mt-1 text-sm text-warning font-medium">{t("boats.requestBoatExceeded")}</p>
+      ) : null}
     </div>
   );
 }
@@ -198,9 +214,13 @@ export default async function RequestsPage({
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a bookmarked page past the end lands on the last real one.
-  const requestPage = await listDateRequestsForStaff(db, shop.id, {
-    page: Number.parseInt(page ?? "", 10),
-  });
+  const [requestPage, shopBoats] = await Promise.all([
+    listDateRequestsForStaff(db, shop.id, {
+      page: Number.parseInt(page ?? "", 10),
+    }),
+    listBoats(db, shop.id),
+  ]);
+  const boatInputs = shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity }));
   const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
   const base = `/shop/${shopSlug}/requests`;
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
@@ -230,6 +250,7 @@ export default async function RequestsPage({
                     experienceLevel: request.experienceLevel,
                     courseId: request.courseId,
                   })),
+                  boatInputs,
                 );
                 const params = new URLSearchParams({
                   add: "full",
@@ -272,6 +293,8 @@ export default async function RequestsPage({
                       count={advice.requestCount}
                       estimatedDivers={advice.estimatedDivers}
                       suggestedCapacity={advice.suggestedCapacity}
+                      suggestedBoat={advice.suggestedBoat}
+                      exceedsKnownBoats={advice.exceedsKnownBoats}
                       t={t}
                     />
                     <ul className="mt-3 flex flex-col gap-3">

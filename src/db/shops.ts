@@ -274,3 +274,13 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
     .returning();
   return shop ?? null;
 }
+
+/** Sets whether the shop does shore diving and/or pool diving. */
+export async function setShopDivingOptions(
+  db: AppDb,
+  shopId: string,
+  options: { hasShoreDiving: boolean; hasPoolDiving: boolean },
+) {
+  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
