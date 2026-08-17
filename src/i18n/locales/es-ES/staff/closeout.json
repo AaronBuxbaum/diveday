@@ -6,6 +6,7 @@
     "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
     "recapAttention": "Algunos resúmenes requieren atención. Revisa los informes posteriores a la inmersión abajo.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
+    "recapLocked": "Este resumen ya se envió. Ya no se pueden cambiar la nota ni las fotos.",
     "crewPhotoAdded": "Foto del equipo añadida a este cierre.",
     "crewPhotoRemoved": "Foto del equipo eliminada.",
     "crewPhotoLimit": "Este cierre ya tiene el máximo de fotos del equipo.",
