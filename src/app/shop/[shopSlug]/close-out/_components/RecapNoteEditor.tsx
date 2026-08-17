@@ -41,8 +41,11 @@ export function RecapNoteEditor({
   crewPhotoInputId = "crew-recap-photo",
   uploadCrewPhotoAction,
   deleteCrewPhotoAction,
+  tripId,
   recapSendAction,
-  recapEligibleAt,
+  toggleRecapAutoSendPauseAction,
+  recapAutoSendAt,
+  recapAutoSendPaused = false,
   recapNowMs,
   recapSentAt,
   recapSentAtLabel,
@@ -68,8 +71,11 @@ export function RecapNoteEditor({
   crewPhotoInputId?: string;
   uploadCrewPhotoAction?: (formData: FormData) => void;
   deleteCrewPhotoAction?: (formData: FormData) => void;
+  tripId?: string;
   recapSendAction?: (formData: FormData) => void;
-  recapEligibleAt?: Date;
+  toggleRecapAutoSendPauseAction?: (formData: FormData) => void;
+  recapAutoSendAt?: Date | null;
+  recapAutoSendPaused?: boolean;
   recapNowMs?: number;
   recapSentAt?: Date | null;
   recapSentAtLabel?: string;
@@ -77,16 +83,29 @@ export function RecapNoteEditor({
   const recapLocked = Boolean(recapSentAt);
   return (
     <>
-      {!recapLocked && recapSendAction && recapEligibleAt && recapNowMs !== undefined ? (
+      {!recapLocked &&
+      recapSendAction &&
+      toggleRecapAutoSendPauseAction &&
+      tripId &&
+      recapNowMs !== undefined ? (
         <RecapSendControl
-          action={recapSendAction}
-          eligibleAt={recapEligibleAt.toISOString()}
+          sendAction={recapSendAction}
+          togglePauseAction={toggleRecapAutoSendPauseAction}
+          tripId={tripId}
+          autoSendAt={recapAutoSendAt ? recapAutoSendAt.toISOString() : null}
+          paused={recapAutoSendPaused}
           nowMs={recapNowMs}
           copy={{
             waiting: t.raw("closeout.recap.waiting"),
-            ready: t("closeout.recap.ready"),
+            due: t("closeout.recap.due"),
+            paused: t("closeout.recap.paused"),
+            noScheduledReturn: t("closeout.recap.noScheduledReturn"),
             send: t("closeout.recap.send"),
             sending: t("closeout.recap.sending"),
+            pause: t("closeout.recap.pause"),
+            pausing: t("closeout.recap.pausing"),
+            unpause: t("closeout.recap.unpause"),
+            unpausing: t("closeout.recap.unpausing"),
             lessThanMinute: t("closeout.recap.lessThanMinute"),
           }}
         />

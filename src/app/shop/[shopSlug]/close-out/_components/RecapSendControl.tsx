@@ -14,55 +14,93 @@ function remainingLabel(remainingMs: number, lessThanMinute: string): string {
   return `${hours}h ${String(rest).padStart(2, "0")}m`;
 }
 
-/**
- * The manual send control deliberately waits for the exact same moment as the
- * server-side recap scheduler. The live clock is just an affordance: the
- * server action rechecks the four-hour floor before it sends anything.
- */
+export type RecapSendControlCopy = {
+  waiting: string;
+  due: string;
+  paused: string;
+  noScheduledReturn: string;
+  send: string;
+  sending: string;
+  pause: string;
+  pausing: string;
+  unpause: string;
+  unpausing: string;
+  lessThanMinute: string;
+};
+
 export function RecapSendControl({
-  action,
-  eligibleAt,
+  sendAction,
+  togglePauseAction,
+  tripId,
+  autoSendAt,
+  paused,
   nowMs,
   copy,
 }: {
-  action: (formData: FormData) => void;
-  eligibleAt: string;
+  sendAction: (formData: FormData) => void;
+  togglePauseAction: (formData: FormData) => void;
+  tripId: string;
+  autoSendAt: string | null;
+  paused: boolean;
   /** Server-rendered start time keeps the first client render deterministic. */
   nowMs: number;
-  copy: {
-    waiting: string;
-    ready: string;
-    send: string;
-    sending: string;
-    lessThanMinute: string;
-  };
+  copy: RecapSendControlCopy;
 }) {
-  const dueAtMs = Date.parse(eligibleAt);
+  const dueAtMs = autoSendAt ? Date.parse(autoSendAt) : null;
   const [currentMs, setCurrentMs] = useState(nowMs);
-  const remainingMs = dueAtMs - currentMs;
-  const canSend = remainingMs <= 0;
+  const remainingMs = dueAtMs !== null ? dueAtMs - currentMs : null;
 
   useEffect(() => {
     const interval = window.setInterval(() => setCurrentMs(Date.now()), 30_000);
     return () => window.clearInterval(interval);
   }, []);
 
+  let statusText: string;
+  if (!autoSendAt || dueAtMs === null) {
+    statusText = copy.noScheduledReturn;
+  } else if (paused) {
+    statusText = copy.paused;
+  } else if (remainingMs !== null && remainingMs <= 0) {
+    statusText = copy.due;
+  } else if (remainingMs !== null) {
+    statusText = copy.waiting.replace(
+      "{remaining}",
+      remainingLabel(remainingMs, copy.lessThanMinute),
+    );
+  } else {
+    statusText = copy.noScheduledReturn;
+  }
+
+  const canTogglePause = autoSendAt !== null;
+
   return (
-    <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
       <p aria-live="polite" className="text-sm text-muted">
-        {canSend
-          ? copy.ready
-          : copy.waiting.replace("{remaining}", remainingLabel(remainingMs, copy.lessThanMinute))}
+        {statusText}
       </p>
-      <form action={action} className="shrink-0">
-        <SubmitButton
-          pendingLabel={copy.sending}
-          disabled={!canSend}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {copy.send}
-        </SubmitButton>
-      </form>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {canTogglePause && (
+          <form action={togglePauseAction}>
+            <input type="hidden" name="tripId" value={tripId} />
+            <input type="hidden" name="paused" value={paused ? "false" : "true"} />
+            <SubmitButton
+              pendingLabel={paused ? copy.unpausing : copy.pausing}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {paused ? copy.unpause : copy.pause}
+            </SubmitButton>
+          </form>
+        )}
+        <form action={sendAction}>
+          <input type="hidden" name="tripId" value={tripId} />
+          <SubmitButton
+            pendingLabel={copy.sending}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {copy.send}
+          </SubmitButton>
+        </form>
+      </div>
     </div>
   );
 }

@@ -9,37 +9,87 @@ afterEach(() => {
 });
 
 const copy = {
-  waiting: "Automatic sending is available in {remaining}.",
-  ready: "Recaps can now be sent.",
+  waiting: "Automatic recap sending begins in {remaining}.",
+  due: "Automatic recap sending is due.",
+  paused: "Automatic recap sending is paused.",
+  noScheduledReturn: "No scheduled return time. Recaps will not be sent automatically.",
   send: "Send recap now",
   sending: "Sending recap…",
+  pause: "Pause automatic sending",
+  pausing: "Pausing automatic sending…",
+  unpause: "Unpause automatic sending",
+  unpausing: "Unpausing automatic sending…",
   lessThanMinute: "less than a minute",
 };
 
 describe("RecapSendControl", () => {
-  it("shows a live countdown and does not enable a premature send", () => {
+  it("shows a live countdown to automatic sending and allows immediate manual send", () => {
     render(
       <RecapSendControl
-        action={vi.fn()}
-        eligibleAt="2026-08-16T16:00:00.000Z"
+        sendAction={vi.fn()}
+        togglePauseAction={vi.fn()}
+        tripId="trip-123"
+        autoSendAt="2026-08-16T16:00:00.000Z"
+        paused={false}
         nowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
         copy={copy}
       />,
     );
-    expect(screen.getByText("Automatic sending is available in 4h 00m.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Send recap now" })).toBeDisabled();
+    expect(screen.getByText("Automatic recap sending begins in 4h 00m.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
   });
 
-  it("enables the manual send at the eligibility boundary", () => {
+  it("shows paused status and unpause button when automatic sending is paused", () => {
     render(
       <RecapSendControl
-        action={vi.fn()}
-        eligibleAt="2026-08-16T16:00:00.000Z"
+        sendAction={vi.fn()}
+        togglePauseAction={vi.fn()}
+        tripId="trip-123"
+        autoSendAt="2026-08-16T16:00:00.000Z"
+        paused={true}
+        nowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
+        copy={copy}
+      />,
+    );
+    expect(screen.getByText("Automatic recap sending is paused.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpause automatic sending" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
+  });
+
+  it("shows due status when autoSendAt has arrived", () => {
+    render(
+      <RecapSendControl
+        sendAction={vi.fn()}
+        togglePauseAction={vi.fn()}
+        tripId="trip-123"
+        autoSendAt="2026-08-16T16:00:00.000Z"
+        paused={false}
         nowMs={new Date("2026-08-16T16:00:00.000Z").getTime()}
         copy={copy}
       />,
     );
-    expect(screen.getByText("Recaps can now be sent.")).toBeInTheDocument();
+    expect(screen.getByText("Automatic recap sending is due.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
+  });
+
+  it("shows no scheduled return message when autoSendAt is null", () => {
+    render(
+      <RecapSendControl
+        sendAction={vi.fn()}
+        togglePauseAction={vi.fn()}
+        tripId="trip-123"
+        autoSendAt={null}
+        paused={false}
+        nowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
+        copy={copy}
+      />,
+    );
+    expect(
+      screen.getByText("No scheduled return time. Recaps will not be sent automatically."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /pause/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
   });
 });

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -18,7 +18,7 @@ import {
 } from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
-import { RECAP_MINIMUM_DELAY_HOURS, recapIsEligible } from "@/lib/recap-schedule";
+import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -629,13 +629,56 @@ export type SendDueRecapsOptions = {
 type RecapScanScope = { shopId?: string; tripId?: string };
 
 /**
- * A staff-triggered send is deliberately narrower than the periodic scan. It
- * has the same four-hour floor, so the close-out page cannot send a recap just
- * because someone found the button early.
+ * Pause automatic recap sending for a trip.
+ */
+export async function pauseTripRecapAutoSend(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const result = await db
+    .update(trips)
+    .set({ recapAutoSendPaused: true })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+  return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Unpause automatic recap sending for a trip.
+ * Sets the new auto-send time to the later of (the original sending time, 1 hour after the unpause).
+ */
+export async function unpauseTripRecapAutoSend(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  unpausedAt: Date = nowDate(),
+): Promise<{ ok: boolean; autoSendAt: Date | null }> {
+  const [trip] = await db
+    .select({ id: trips.id, endsAt: trips.endsAt, status: trips.status })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .limit(1);
+
+  if (trip?.status !== "scheduled") {
+    return { ok: false, autoSendAt: null };
+  }
+
+  const nextAutoSendAt = unpauseRecapAutoSendAt(trip.endsAt, unpausedAt);
+  await db
+    .update(trips)
+    .set({ recapAutoSendPaused: false, recapAutoSendAt: nextAutoSendAt })
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+
+  return { ok: true, autoSendAt: nextAutoSendAt };
+}
+
+/**
+ * A staff-triggered send can be initiated whenever staff wants on an ended departure.
+ * Sending recaps creates delivery records, naturally stopping any future automatic send.
  */
 export type SendTripRecapsResult =
   | { ok: true; summary: RecapRunSummary }
-  | { ok: false; reason: "not_found" | "not_eligible" };
+  | { ok: false; reason: "not_found" };
 
 export async function sendTripRecaps(
   db: AppDb,
@@ -648,7 +691,6 @@ export async function sendTripRecaps(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
     .limit(1);
   if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
-  if (!recapIsEligible(trip.endsAt, now)) return { ok: false, reason: "not_eligible" };
   return {
     ok: true,
     summary: await sendRecaps(
@@ -687,7 +729,7 @@ async function sendRecaps(
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
-  const eligibleBefore = new Date(now.getTime() - RECAP_MINIMUM_DELAY_HOURS * HOUR_MS);
+  const eligibleBefore = new Date(now.getTime() - RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS);
 
   const rows = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })
@@ -703,12 +745,18 @@ async function sendRecaps(
         // (Codex finding).
         ne(bookings.status, "no_show"),
         eq(trips.status, "scheduled"),
-        // The server-side four-hour floor is the authority; the close-out
-        // control merely reflects it and cannot cause an early send.
-        lte(trips.endsAt, eligibleBefore),
-        gt(trips.endsAt, since),
         ...(scope.shopId ? [eq(trips.shopId, scope.shopId)] : []),
-        ...(scope.tripId ? [eq(trips.id, scope.tripId)] : []),
+        ...(scope.tripId
+          ? [eq(trips.id, scope.tripId)]
+          : [
+              eq(trips.recapAutoSendPaused, false),
+              isNotNull(trips.endsAt),
+              gt(trips.endsAt, since),
+              or(
+                and(isNotNull(trips.recapAutoSendAt), lte(trips.recapAutoSendAt, now)),
+                and(isNull(trips.recapAutoSendAt), lte(trips.endsAt, eligibleBefore)),
+              ),
+            ]),
       ),
     );
   const summary: RecapRunSummary = {

@@ -67,9 +67,15 @@
   },
   "recap": {
     "waiting": "El envío automático del resumen comienza en {remaining}.",
-    "ready": "Los resúmenes de esta salida ya se pueden enviar. El envío automático también los recogerá.",
+    "due": "El envío automático del resumen está listo.",
+    "paused": "El envío automático del resumen está pausado.",
+    "noScheduledReturn": "Sin hora de regreso programada. Los resúmenes no se enviarán automáticamente.",
     "send": "Enviar resumen ahora",
     "sending": "Enviando resumen…",
+    "pause": "Pausar envío automático",
+    "pausing": "Pausando envío automático…",
+    "unpause": "Reanudar envío automático",
+    "unpausing": "Reanudando envío automático…",
     "lessThanMinute": "menos de un minuto",
     "sent": "Este resumen se envió a las {time}. La nota y las fotos están bloqueadas."
   },

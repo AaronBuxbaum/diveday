@@ -64,8 +64,11 @@ describe("the close-out's post-trip recap note", () => {
         shoutout={null}
         saved={false}
         t={t}
+        tripId="trip-123"
         recapSendAction={vi.fn()}
-        recapEligibleAt={new Date("2026-08-16T16:00:00.000Z")}
+        toggleRecapAutoSendPauseAction={vi.fn()}
+        recapAutoSendAt={new Date("2026-08-16T16:00:00.000Z")}
+        recapAutoSendPaused={false}
         recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
       />,
     );

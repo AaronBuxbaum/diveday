@@ -67,9 +67,15 @@
   },
   "recap": {
     "waiting": "Automatic recap sending begins in {remaining}.",
-    "ready": "This departure's recaps can now be sent. Automatic sending will also pick them up.",
+    "due": "Automatic recap sending is due.",
+    "paused": "Automatic recap sending is paused.",
+    "noScheduledReturn": "No scheduled return time. Recaps will not be sent automatically.",
     "send": "Send recap now",
     "sending": "Sending recap…",
+    "pause": "Pause automatic sending",
+    "pausing": "Pausing automatic sending…",
+    "unpause": "Unpause automatic sending",
+    "unpausing": "Unpausing automatic sending…",
     "lessThanMinute": "less than a minute",
     "sent": "This recap was sent at {time}. The note and photos are now locked."
   },

@@ -235,7 +235,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   certifications: ["shop_id"],
   specialty_certifications: ["shop_id"],
   nitrox_certifications: ["shop_id"],
-  trips: ["shop_id", "recap_shoutout"], // recap copy travels with recap_photos.csv
+  trips: [
+    "shop_id",
+    "recap_shoutout", // recap copy travels with recap_photos.csv
+    "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
+    "recap_auto_send_at",
+  ],
   trip_series: ["shop_id"],
   trip_series_skips: ["id", "shop_id"],
   trip_dives: [],

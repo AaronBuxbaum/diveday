@@ -19,8 +19,10 @@ import {
   deleteCrewRecapPhoto,
   deleteRecapPhoto,
   hasSentTripRecap,
+  pauseTripRecapAutoSend,
   sendTripRecaps,
   setTripRecapShoutout,
+  unpauseTripRecapAutoSend,
 } from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import {
@@ -44,7 +46,7 @@ import {
 } from "@/lib/closeout";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { recapEligibleAt } from "@/lib/recap-schedule";
+import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
@@ -272,9 +274,8 @@ export default async function CloseOutPage({
   }
 
   /**
-   * A deliberate send for one returned departure. `sendTripRecaps` carries the
-   * same four-hour floor as the automatic scheduler, so a crafted POST cannot
-   * turn the countdown into an early message.
+   * A staff send for one returned departure. Staff can click to send the recap
+   * now whenever they want on an ended departure.
    */
   async function sendRecapAction(tripId: string, _formData: FormData) {
     "use server";
@@ -285,10 +286,7 @@ export default async function CloseOutPage({
       tripId,
     });
     if (!result.ok) {
-      revalidateAndRedirect(
-        closeOut,
-        noticeUrl(closeOut, result.reason === "not_eligible" ? "recap-not-ready" : "invalid"),
-      );
+      revalidateAndRedirect(closeOut, noticeUrl(closeOut, "invalid"));
     }
     revalidateAndRedirect(
       closeOut,
@@ -296,6 +294,22 @@ export default async function CloseOutPage({
         noted: tripId,
       }),
     );
+  }
+
+  async function toggleRecapAutoSendPauseAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    const tripId = String(formData.get("tripId") ?? "");
+    const paused = formData.get("paused") === "true";
+    if (!tripId) redirect(closeOut);
+    const db = await getDb();
+    if (paused) {
+      await pauseTripRecapAutoSend(db, staff.user.shopId, tripId);
+    } else {
+      await unpauseTripRecapAutoSend(db, staff.user.shopId, tripId);
+    }
+    revalidateAndRedirect(closeOut, `${closeOut}?noted=${encodeURIComponent(tripId)}`);
   }
 
   /** Retry every ended departure represented by the failed close-out task. */
@@ -316,15 +330,10 @@ export default async function CloseOutPage({
 
     const db = await getDb();
     let failed = 0;
-    let notReady = 0;
     for (const tripId of tripIds) {
       const result = await sendTripRecaps(db, { shopId: staff.user.shopId, tripId });
       if (!result.ok) {
-        if (result.reason === "not_eligible") {
-          notReady++;
-        } else {
-          failed++;
-        }
+        failed++;
         continue;
       }
       failed += result.summary.failed;
@@ -332,7 +341,7 @@ export default async function CloseOutPage({
 
     revalidateAndRedirect(
       closeOut,
-      noticeUrl(closeOut, failed > 0 || notReady > 0 ? "recap-send-attention" : "recap-sent"),
+      noticeUrl(closeOut, failed > 0 ? "recap-send-attention" : "recap-sent"),
     );
   }
 
@@ -618,8 +627,11 @@ export default async function CloseOutPage({
                         null,
                         departure.tripId,
                       )}
+                      tripId={departure.tripId}
                       recapSendAction={sendRecapAction.bind(null, departure.tripId)}
-                      recapEligibleAt={recapEligibleAt(departure.endsAt)}
+                      toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
+                      recapAutoSendAt={recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt)}
+                      recapAutoSendPaused={departure.recapAutoSendPaused}
                       recapNowMs={now.getTime()}
                       recapSentAt={departure.recapSentAt}
                       recapSentAtLabel={

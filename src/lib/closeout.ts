@@ -130,6 +130,10 @@ export type CloseoutTripInput = {
   recapShoutout: string | null;
   /** The latest successful recap send, if this departure is now locked. */
   recapSentAt?: Date | null;
+  /** Whether automatic recap sending is paused for this departure. */
+  recapAutoSendPaused?: boolean;
+  /** Custom/unpaused automatic recap delivery target time. */
+  recapAutoSendAt?: Date | null;
   photos?: {
     id: string;
     imageUrl: string;
@@ -172,6 +176,8 @@ export type CloseoutDeparture = {
   /** See `CloseoutTripInput.recapShoutout`. */
   recapShoutout: string | null;
   recapSentAt: Date | null;
+  recapAutoSendPaused: boolean;
+  recapAutoSendAt: Date | null;
   /**
    * Whether this departure is behind the shop — the same reading `sendDueRecaps`
    * makes about whose recap is due. Only a returned boat is offered the recap
@@ -332,6 +338,8 @@ export function assembleDayCloseout(input: {
       booked: trip.booked,
       recapShoutout: trip.recapShoutout,
       recapSentAt: trip.recapSentAt ?? null,
+      recapAutoSendPaused: trip.recapAutoSendPaused ?? false,
+      recapAutoSendAt: trip.recapAutoSendAt ?? null,
       ended: trip.endsAt <= now,
       photos: trip.photos ?? [],
       crewPhotos: trip.crewPhotos ?? [],

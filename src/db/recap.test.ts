@@ -1,6 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDiverLocale } from "@/i18n/settings";
+import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
@@ -17,11 +18,13 @@ import {
   listRecapPhotosForTrip,
   MAX_RECAP_CAPTION_LENGTH,
   MAX_RECAP_PHOTOS_PER_BOOKING,
+  pauseTripRecapAutoSend,
   sendDueRecaps,
   sendTripRecaps,
   setTripRecapShoutout,
+  unpauseTripRecapAutoSend,
 } from "./recap";
-import { bookings, notificationDeliveries, people } from "./schema";
+import { bookings, notificationDeliveries, people, recapPhotos } from "./schema";
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
@@ -232,7 +235,19 @@ describe("recap photos and crew shout-out", () => {
     });
     const second = await addRecapPhoto(db, { bookingId, imageUrl: "https://img/two.jpg" });
     expect(first.ok && second.ok).toBe(true);
-    if (first.ok) expect(first.photo.caption).toBe("Turtle!"); // trimmed
+    if (first.ok) {
+      expect(first.photo.caption).toBe("Turtle!"); // trimmed
+      await db
+        .update(recapPhotos)
+        .set({ createdAt: new Date(nowMs() + 1000) })
+        .where(eq(recapPhotos.id, first.photo.id));
+    }
+    if (second.ok) {
+      await db
+        .update(recapPhotos)
+        .set({ createdAt: new Date(nowMs() + 2000) })
+        .where(eq(recapPhotos.id, second.photo.id));
+    }
     const data = await getRecapPageData(db, bookingId);
     expect(data?.photos.map((p) => p.imageUrl)).toEqual([
       "https://img/two.jpg",
@@ -542,15 +557,75 @@ describe("sendDueRecaps", () => {
     expect(sentBookingIds).toContain(bookingId);
   });
 
-  it("refuses a staff send before the same four-hour floor", async () => {
-    const { db, shop, reef } = await recapContext();
-    await expect(
-      sendTripRecaps(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        options: { now: new Date(reef.endsAt.getTime() + 3 * 60 * 60 * 1000) },
-      }),
-    ).resolves.toEqual({ ok: false, reason: "not_eligible" });
+  it("allows staff to send recaps immediately without waiting for the four-hour delay", async () => {
+    const { db, shop, reef, bookingId } = await recapContext();
+    const email = fakeEmail();
+    const result = await sendTripRecaps(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      options: {
+        now: new Date(reef.endsAt.getTime() + 10 * 60 * 1000), // 10 minutes after endsAt
+        emailProvider: email.provider,
+        smsProvider: fakeSms().provider,
+        appOrigin: ORIGIN,
+      },
+    });
+    expect(result.ok).toBe(true);
+    expect(email.sent.some((n) => "bookingId" in n && n.bookingId === bookingId)).toBe(true);
+  });
+
+  it("skips automatic sending when paused", async () => {
+    const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+    await pauseTripRecapAutoSend(db, shop.id, reef.id);
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
+  });
+
+  it("unpauses automatic sending setting autoSendAt to the later of original time and 1 hour after unpause", async () => {
+    const { db, shop, reef, bookingId } = await recapContext();
+    await pauseTripRecapAutoSend(db, shop.id, reef.id);
+
+    // Unpause early (1 hour after trip ends, so original 4-hour mark is later)
+    const earlyUnpause = new Date(reef.endsAt.getTime() + 1 * 60 * 60 * 1000);
+    const unpauseResult = await unpauseTripRecapAutoSend(db, shop.id, reef.id, earlyUnpause);
+    expect(unpauseResult.ok).toBe(true);
+    expect(unpauseResult.autoSendAt?.getTime()).toBe(reef.endsAt.getTime() + 4 * 60 * 60 * 1000);
+
+    // Unpause late (5 hours after trip ends, so unpause + 1h = 6h is later)
+    const lateUnpause = new Date(reef.endsAt.getTime() + 5 * 60 * 60 * 1000);
+    const lateResult = await unpauseTripRecapAutoSend(db, shop.id, reef.id, lateUnpause);
+    expect(lateResult.ok).toBe(true);
+    expect(lateResult.autoSendAt?.getTime()).toBe(lateUnpause.getTime() + 1 * 60 * 60 * 1000);
+
+    // At 5h30m (before unpause + 1h), auto send should not trigger
+    const emailBefore = fakeEmail();
+    await sendDueRecaps(db, {
+      now: new Date(reef.endsAt.getTime() + 5.5 * 60 * 60 * 1000),
+      emailProvider: emailBefore.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(
+      emailBefore.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId),
+    ).toHaveLength(0);
+
+    // At 6h05m (after unpause + 1h), auto send triggers
+    const emailAfter = fakeEmail();
+    await sendDueRecaps(db, {
+      now: new Date(reef.endsAt.getTime() + 6.1 * 60 * 60 * 1000),
+      emailProvider: emailAfter.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(
+      emailAfter.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId),
+    ).toHaveLength(1);
   });
 
   it("never sends a recap to a no-show — they never dived (Codex finding)", async () => {

@@ -1378,6 +1378,13 @@ export const trips = pgTable(
      * (20260723-post-trip-recap follow-up).
      */
     recapShoutout: text("recap_shoutout"),
+    /** Staff pause on automatic recap delivery for this departure. */
+    recapAutoSendPaused: boolean("recap_auto_send_paused").notNull().default(false),
+    /**
+     * When set, overrides the default 4-hour countdown after scheduled return
+     * (e.g. after being unpaused, to the later of original time or 1 hour from unpause).
+     */
+    recapAutoSendAt: timestamp("recap_auto_send_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

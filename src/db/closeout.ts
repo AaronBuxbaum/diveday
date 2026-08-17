@@ -74,6 +74,8 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       recapShoutout: trips.recapShoutout,
+      recapAutoSendPaused: trips.recapAutoSendPaused,
+      recapAutoSendAt: trips.recapAutoSendAt,
     })
     .from(trips)
     .where(
@@ -199,6 +201,8 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
     recapShoutout: row.recapShoutout,
+    recapAutoSendPaused: row.recapAutoSendPaused,
+    recapAutoSendAt: row.recapAutoSendAt,
     recapSentAt:
       recapStateByTrip.get(row.id)?.total === recapStateByTrip.get(row.id)?.sent
         ? (recapStateByTrip.get(row.id)?.latest ?? null)
