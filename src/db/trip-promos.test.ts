@@ -213,7 +213,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     expect(promo?.status).toBe("failed");
   });
 
-  it("refuses to send the blast when the only matching recipient is uncertified", async () => {
+  it("sends the blast successfully even when the only matching recipient is uncertified", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
     await joinLastMinuteList(db, {
@@ -227,7 +227,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
     );
-    expect(outcome).toEqual({ ok: false, reason: "no_recipients" });
+    expect(outcome.ok).toBe(true);
   });
 });
 

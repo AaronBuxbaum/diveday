@@ -108,6 +108,12 @@ export function StaffTabBar({
     if (!moreOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    const firstFocusable = sheetRef.current?.querySelector<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    firstFocusable?.focus();
+
     return () => {
       document.body.style.overflow = previous;
     };
@@ -220,13 +226,22 @@ export function StaffTabBar({
                 ref={moreButtonRef}
                 onClick={() => setMoreOpen((current) => !current)}
                 onKeyDown={(event) => {
-                  if (event.key !== "Tab" || event.shiftKey || !moreOpen) return;
-                  const firstFocusable = sheetRef.current?.querySelector<HTMLElement>(
-                    'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-                  );
-                  if (!firstFocusable) return;
-                  event.preventDefault();
-                  firstFocusable.focus();
+                  if (event.key !== "Tab" || !moreOpen) return;
+                  const focusable = [
+                    ...(sheetRef.current?.querySelectorAll<HTMLElement>(
+                      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                    ) ?? []),
+                  ];
+                  const first = focusable[0];
+                  const last = focusable[focusable.length - 1];
+                  if (!first || !last) return;
+                  if (event.shiftKey) {
+                    event.preventDefault();
+                    last.focus();
+                  } else {
+                    event.preventDefault();
+                    first.focus();
+                  }
                 }}
                 aria-expanded={moreOpen}
                 aria-controls={moreOpen ? sheetId : undefined}

@@ -1538,7 +1538,8 @@ describe("course template updates", () => {
       slug: "private-navigation",
       isPrivate: true,
     });
-    expect(course?.isPrivate).toBe(true);
+    if (!course) throw new Error("course not created");
+    expect(course.isPrivate).toBe(true);
 
     const fetched = await getCourseBySlug(db, shop.id, "private-navigation");
     expect(fetched?.isPrivate).toBe(true);
@@ -1546,5 +1547,26 @@ describe("course template updates", () => {
     const activeList = await listActiveCourses(db, shop.id);
     const found = activeList.find((c) => c.slug === "private-navigation");
     expect(found?.isPrivate).toBe(true);
+
+    // Change isPrivate from true to false
+    const updatedToFalse = await updateCourse(db, shop.id, course.id, {
+      isPrivate: false,
+    });
+    expect(updatedToFalse?.isPrivate).toBe(false);
+
+    // Omit isPrivate (which is undefined) and verify it preserves the stored false value
+    const updatedOmittedFalse = await updateCourse(db, shop.id, course.id, {
+      priceCents: 15000,
+    });
+    expect(updatedOmittedFalse?.isPrivate).toBe(false);
+
+    // Change isPrivate back to true
+    await updateCourse(db, shop.id, course.id, { isPrivate: true });
+
+    // Omit isPrivate (which is undefined) and verify it preserves the stored true value
+    const updatedOmittedTrue = await updateCourse(db, shop.id, course.id, {
+      priceCents: 20000,
+    });
+    expect(updatedOmittedTrue?.isPrivate).toBe(true);
   });
 });
