@@ -283,7 +283,7 @@ export async function seedTrips(
         title: "French Reef",
         site: "French Reef",
         description:
-          "French Reef is the second tank; the crew confirms the exact mooring at the dock.",
+          "French Reef is the second tank.",
       },
     ],
     "Two-Tank Reef — Benwood & Elbow": [
@@ -303,7 +303,7 @@ export async function seedTrips(
         // `dive_sites` row backs.
         title: "Second tank — the crew's call at the dock",
         description:
-          "Shallow coral heads and a wreck-strewn bottom; a long, easy second tank on a full tank of air. Which mooring depends on the wind, so the crew names it on the way out.",
+          "Shallow coral heads and a wreck-strewn bottom; a long, easy second tank on a full tank of air.",
       },
     ],
     "Afternoon Two-Tank — French Reef": [
