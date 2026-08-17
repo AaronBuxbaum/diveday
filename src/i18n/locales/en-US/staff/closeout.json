@@ -59,11 +59,12 @@
       "description": "Send each diver the recap from a completed departure.",
       "progress": "{completed} of {total} sent.",
       "pending": "{count, plural, one {# report is still queued.} other {# reports are still queued.}}",
-      "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}"
+      "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}",
+      "review": "Review and retry"
     }
   },
   "recap": {
-    "waiting": "Automatic sending is available in {remaining}. Recaps are never sent before four hours after the departure ends.",
+    "waiting": "Automatic recap sending begins in {remaining}.",
     "ready": "This departure's recaps can now be sent. Automatic sending will also pick them up.",
     "send": "Send recap now",
     "sending": "Sending recap…",
