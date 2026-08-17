@@ -29,3 +29,58 @@ export const diverPhoneSchema = z.string().trim().max(DIVER_PHONE_MAX);
  * "blank" means.
  */
 export const blankableDiverEmailSchema = z.union([z.literal(""), diverEmailSchema]);
+
+/**
+ * Splits or maps search query text to name or email:
+ * if the query contains '@', it is treated as an email, otherwise as a name.
+ */
+export function diverSearchPrefill(query: string): { name?: string; email?: string } {
+  const trimmed = query.trim();
+  if (!trimmed) return {};
+  if (trimmed.includes("@")) {
+    return { email: trimmed };
+  }
+  return { name: trimmed };
+}
+
+/**
+ * Builds the URL to the dedicated create-diver page (/shop/[shopSlug]/divers/new)
+ * prefilled with the query (name or email) and contextual params (tripId, surface, etc.).
+ */
+export function newDiverHref(
+  shopSlug: string,
+  params?: {
+    query?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    surface?: string;
+    tripId?: string;
+    waitlist?: boolean;
+    returnTo?: string;
+    request?: string;
+    extra?: Record<string, string | undefined>;
+  },
+): string {
+  const search = new URLSearchParams();
+  if (params?.query) {
+    const prefill = diverSearchPrefill(params.query);
+    if (prefill.email) search.set("email", prefill.email);
+    if (prefill.name) search.set("name", prefill.name);
+  }
+  if (params?.name) search.set("name", params.name);
+  if (params?.email) search.set("email", params.email);
+  if (params?.phone) search.set("phone", params.phone);
+  if (params?.surface) search.set("surface", params.surface);
+  if (params?.tripId) search.set("tripId", params.tripId);
+  if (params?.waitlist) search.set("waitlist", "true");
+  if (params?.returnTo) search.set("returnTo", params.returnTo);
+  if (params?.request) search.set("request", params.request);
+  if (params?.extra) {
+    for (const [k, v] of Object.entries(params.extra)) {
+      if (v !== undefined) search.set(k, v);
+    }
+  }
+  const base = `/shop/${shopSlug}/divers/new`;
+  return search.size > 0 ? `${base}?${search.toString()}` : base;
+}

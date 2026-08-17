@@ -140,15 +140,12 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })
     .click();
-  const addDiver = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await openHandEntry(addDiver);
-  await addDiver.locator('input[name="fullName"]:visible').fill("Meets The Minimum");
-  await addDiver
-    .locator('input[name="email"]:visible')
-    .fill(`meets-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Meets The Minimum");
+  await page.getByLabel("Email").fill(`meets-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
   await page.goto(tripUrl);
   await expect(page.getByText("Minimum head count")).toHaveCount(0);

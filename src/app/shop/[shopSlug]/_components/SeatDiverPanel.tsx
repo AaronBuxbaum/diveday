@@ -1,14 +1,15 @@
+import Link from "next/link";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
-import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
+import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { SubmitButton } from "@/components/SubmitButton";
 import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
-import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { FieldActions } from "@/components/ui/form";
 import type { BookableDiver } from "@/db/divers";
+import { fill } from "@/i18n/fill";
+import { newDiverHref } from "@/lib/person-fields";
 
 /** Every word this panel says, resolved by the page from the staff bundle. */
 export type SeatDiverPanelCopy = {
@@ -24,36 +25,23 @@ export type SeatDiverPanelCopy = {
   noMatchesHeading: string;
   noMatches: string;
   noMatchesAction: string;
-  handEntryHeading: string;
-  handEntryDescription: string;
-  nameLabel: string;
-  emailLabel: string;
-  phoneLabel: string;
-  optionalHint: string;
+  addDiver?: string;
+  addDiverAction?: string;
+  addDiverPrompt?: string;
+  addNewDiverAction?: string;
+  handEntryHeading?: string;
+  handEntryDescription?: string;
+  nameLabel?: string;
+  emailLabel?: string;
+  phoneLabel?: string;
+  optionalHint?: string;
   confirmMatchesTitle?: string;
   confirmMatchesSubmit?: string;
 };
 
 /**
- * The two-card "who is taking this seat?" panel: find a returning diver, or
- * hand-enter a fresh one.
- *
- * The counter walk-in and the global Add-booking door were ~85% the same page —
- * the same search form, the same candidate rows, the same empty box, the same
- * three-field form — kept in two files under two message namespaces, so the one
- * thing that genuinely differs between them (whether the email is required) had
- * been hand-copied into JSX even though `SEAT_SURFACES` already declares it.
- * This reads that declaration instead: pass the surface id and the panel binds
- * the shared seat-a-diver actions to it and takes its email rule from the same
- * row a reviewer reads for the refusal vocabulary and the landing paths.
- *
- * It lives under `src/app` rather than `src/components` deliberately — it
- * imports the server actions and the surface table, and shared UI may not reach
- * up into `src/app` (`pnpm check:architecture`). The pieces it composes are the
- * genuinely presentational ones and do live in `src/components/seat-diver/`.
- *
- * Words arrive as props: staff copy is resolved server-side by the page
- * (AGENTS.md — `staffTranslator` is server-side only).
+ * The single unified "who is taking this seat?" panel: find a returning diver, or
+ * jump to the dedicated create-diver page with the query prefilled.
  */
 export function SeatDiverPanel({
   surface,
@@ -96,6 +84,16 @@ export function SeatDiverPanel({
     phone: string | null;
   }>;
 }) {
+  const addHref = newDiverHref(shopSlug, {
+    query,
+    surface,
+    tripId,
+    name: newDiverDefaults?.fullName,
+    email: newDiverDefaults?.email,
+    phone: newDiverDefaults?.phone,
+    request: searchHiddenFields?.request,
+  });
+
   return (
     <div className="mt-6 space-y-6">
       {confirmMatches && confirmMatches.length > 0 ? (
@@ -150,56 +148,47 @@ export function SeatDiverPanel({
           placeholder={copy.findPlaceholder}
           submitLabel={copy.search}
           pendingLabel={copy.searching}
+          addDiverHref={addHref}
+          addDiverLabel={copy.addDiver || "Add diver"}
         />
 
         {query ? (
           candidates.length > 0 ? (
-            <PersonCandidateList
-              className="mt-4"
-              candidates={candidates}
-              tripId={tripId}
-              seatAction={seatExistingDiverAction.bind(null, surface, shopSlug)}
-              personHref={personHref}
-              addLabel={copy.addLabel}
-              pendingLabel={copy.adding}
-              addPersonAriaLabel={copy.addPersonAriaLabel}
-              noEmailOnFile={copy.noEmailOnFile}
-            />
+            <>
+              <PersonCandidateList
+                className="mt-4"
+                candidates={candidates}
+                tripId={tripId}
+                seatAction={seatExistingDiverAction.bind(null, surface, shopSlug)}
+                personHref={personHref}
+                addLabel={copy.addLabel}
+                pendingLabel={copy.adding}
+                addPersonAriaLabel={copy.addPersonAriaLabel}
+                noEmailOnFile={copy.noEmailOnFile}
+              />
+              <p className="mt-3 text-sm text-muted">
+                {copy.addDiverPrompt
+                  ? fill(copy.addDiverPrompt, { query })
+                  : `Not listed? Add “${query}” as a new diver`}{" "}
+                <Link href={addHref} className="font-medium text-primary hover:underline">
+                  {copy.addDiverAction || "Add diver"}
+                </Link>
+              </p>
+            </>
           ) : (
             <HandEntryPrompt
               className="mt-4"
               heading={copy.noMatchesHeading}
               body={copy.noMatches}
-              actionLabel={copy.noMatchesAction}
+              actionLabel={
+                copy.addNewDiverAction
+                  ? fill(copy.addNewDiverAction, { query })
+                  : copy.noMatchesAction
+              }
+              href={addHref}
             />
           )
         ) : null}
-      </SectionCard>
-
-      <SectionCard
-        id="hand-entry"
-        className="scroll-mt-24"
-        padding="lg"
-        title={copy.handEntryHeading}
-        description={copy.handEntryDescription}
-      >
-        <form action={seatNewDiverAction.bind(null, surface, shopSlug)}>
-          <input type="hidden" name="tripId" value={tripId} />
-          <PersonFieldTrio
-            as="div"
-            email={SEAT_SURFACES[surface].email}
-            nameLabel={copy.nameLabel}
-            emailLabel={copy.emailLabel}
-            phoneLabel={copy.phoneLabel}
-            optionalHint={copy.optionalHint}
-            defaultValues={newDiverDefaults}
-          />
-          <FieldActions className="mt-4">
-            <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>
-              {copy.addLabel}
-            </SubmitButton>
-          </FieldActions>
-        </form>
       </SectionCard>
     </div>
   );

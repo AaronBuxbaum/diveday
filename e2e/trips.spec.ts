@@ -313,16 +313,12 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     if (!tripPath) throw new Error(`no trip card found for ${title}`);
 
     await page.goto(`${tripPath}/guests`);
-    const addDiver = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
-      .filter({ visible: true });
-    await openHandEntry(addDiver);
-    await addDiver.locator('input[name="fullName"]:visible').fill(diver);
-    await addDiver
-      .locator('input[name="email"]:visible')
-      .fill(`ursula-${e2eNow().getTime()}@example.com`);
-    await addDiver.getByRole("button", { name: "Add to trip" }).click();
+    await page.getByRole("link", { name: "Add diver" }).click();
+    await page.waitForURL(/\/divers\/new/);
+    await page.getByLabel("Full name").fill(diver);
+    await page.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("button", { name: "Add to trip" }).click();
+    await page.waitForURL(/\/trips\/[^/]+\/guests/);
     // Prefix match: with no email provider configured the fleet gets the
     // honest "…but their waiver wasn't emailed" variant of this notice.
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");

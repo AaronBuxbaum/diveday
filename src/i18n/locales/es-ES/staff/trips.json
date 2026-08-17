@@ -241,7 +241,10 @@
     "handEntryDescriptionManifest": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en el manifiesto.",
     "nameLabel": "Nombre",
     "addToWaitlist": "Añadir a la lista de espera",
-    "noMatchesHeading": "Ningún buceador habitual con ese nombre"
+    "noMatchesHeading": "Ningún buceador habitual con ese nombre",
+    "addDiver": "Añadir buceador",
+    "addDiverPrompt": "¿No aparece? Añadir a “{query}” como nuevo buceador",
+    "addNewDiverAction": "Añadir a “{query}” como buceador"
   },
   "waitlist": {
     "heading": "Lista de espera",

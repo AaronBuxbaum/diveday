@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AddDiverSection } from "./AddDiverSection";
 
@@ -12,8 +12,8 @@ afterEach(cleanup);
 
 const action = (_formData: FormData) => {};
 
-describe("AddDiverSection hand-entry disclosure", () => {
-  it("starts collapsed before staff search for a new diver", () => {
+describe("AddDiverSection", () => {
+  it("renders search form and add diver link when trip is not full", () => {
     render(
       <AddDiverSection
         shopSlug="blue-mantis"
@@ -28,8 +28,53 @@ describe("AddDiverSection hand-entry disclosure", () => {
       />,
     );
 
-    const handEntry = document.getElementById("hand-entry");
-    expect(handEntry).toBeInstanceOf(HTMLDetailsElement);
-    expect((handEntry as HTMLDetailsElement).open).toBe(false);
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?surface=trip-guests&tripId=trip-1",
+    );
+  });
+
+  it("offers waitlist addition directly when trip is full", () => {
+    render(
+      <AddDiverSection
+        shopSlug="blue-mantis"
+        tripId="trip-1"
+        full={true}
+        query=""
+        candidates={[]}
+        addBookingAction={action}
+        addToWaitlistAction={action}
+        addExistingDiverAction={action}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Add to wait list" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?surface=trip-guests&tripId=trip-1&waitlist=true",
+    );
+  });
+
+  it("offers direct add-diver link with prefill when no matches are found", () => {
+    render(
+      <AddDiverSection
+        shopSlug="blue-mantis"
+        tripId="trip-1"
+        full={false}
+        query="Nobody Here"
+        candidates={[]}
+        addBookingAction={action}
+        addToWaitlistAction={action}
+        addExistingDiverAction={action}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByText("No returning diver matches “Nobody Here”.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add “Nobody Here” as a diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?name=Nobody+Here&surface=trip-guests&tripId=trip-1",
+    );
   });
 });

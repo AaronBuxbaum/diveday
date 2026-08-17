@@ -99,10 +99,6 @@
     ],
     "visual": ["schedule", "schedule-embed"]
   },
-  "/s/[shopSlug]/reviews": {
-    "e2e": ["reviews.spec.ts"],
-    "visual": ["public-reviews"]
-  },
   "/s/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
     "visual": ["public-courses"]
@@ -110,6 +106,10 @@
   "/s/[shopSlug]/courses/[slug]": {
     "e2e": ["a11y.spec.ts", "courses.spec.ts", "date-requests.spec.ts", "gear-fit-and-age.spec.ts"],
     "visual": ["course-page"]
+  },
+  "/s/[shopSlug]/reviews": {
+    "e2e": ["reviews.spec.ts"],
+    "visual": ["public-reviews"]
   },
   "/s/[shopSlug]/trips/[id]": {
     "e2e": [
@@ -235,6 +235,10 @@
       "diver-profile-not-certified",
       "diver-profile-payments"
     ]
+  },
+  "/shop/[shopSlug]/divers/new": {
+    "e2e": ["add-diver.spec.ts", "check-in.spec.ts", "divers.spec.ts", "gear-fit-and-age.spec.ts"],
+    "visual": []
   },
   "/shop/[shopSlug]/orders": {
     "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],

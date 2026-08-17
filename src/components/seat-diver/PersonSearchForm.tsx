@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
@@ -31,6 +32,8 @@ export function PersonSearchForm({
   placeholder,
   submitLabel,
   pendingLabel,
+  addDiverHref,
+  addDiverLabel,
   className = "",
 }: {
   /** The server's own query — see the `key` below for why it is not just a default. */
@@ -43,6 +46,9 @@ export function PersonSearchForm({
   placeholder: string;
   submitLabel: string;
   pendingLabel: string;
+  /** Optional link to add a new diver directly */
+  addDiverHref?: string;
+  addDiverLabel?: string;
   className?: string;
 }) {
   return (
@@ -74,6 +80,14 @@ export function PersonSearchForm({
       <SubmitButton pendingLabel={pendingLabel} className={buttonClass({ variant: "secondary" })}>
         {submitLabel}
       </SubmitButton>
+      {addDiverHref && addDiverLabel ? (
+        <Link
+          href={addDiverHref}
+          className={buttonClass({ variant: "primary", className: "whitespace-nowrap" })}
+        >
+          {addDiverLabel}
+        </Link>
+      ) : null}
     </QueryForm>
   );
 }

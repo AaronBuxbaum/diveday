@@ -241,7 +241,10 @@
     "handEntryDescriptionManifest": "For walk-ins or divers tracked in another system — puts them straight on the manifest.",
     "nameLabel": "Name",
     "addToWaitlist": "Add to wait list",
-    "noMatchesHeading": "No returning diver by that name"
+    "noMatchesHeading": "No returning diver by that name",
+    "addDiver": "Add diver",
+    "addDiverPrompt": "Not listed? Add “{query}” as a new diver",
+    "addNewDiverAction": "Add “{query}” as a diver"
   },
   "waitlist": {
     "heading": "Wait list",

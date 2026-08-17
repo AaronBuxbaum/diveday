@@ -71,12 +71,12 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
     .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
-  await openHandEntry(addDiver);
-  await addDiver.locator('input[name="fullName"]:visible').fill("Walk-in Wanda");
-  await addDiver
-    .locator('input[name="email"]:visible')
-    .fill(`wanda-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Walk-in Wanda");
+  await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
@@ -126,13 +126,13 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByText("Add a private note").first()).toBeVisible();
 
   // Trip is now full — the same section switches to wait-listing.
-  await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
-  await openHandEntry(addDiver);
-  await addDiver.locator('input[name="fullName"]:visible').fill("Waitlist Wally");
-  await addDiver
-    .locator('input[name="email"]:visible')
-    .fill(`wally-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to wait list" }).click();
+  await expect(page.getByRole("link", { name: "Add to wait list" })).toBeVisible();
+  await page.getByRole("link", { name: "Add to wait list" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Waitlist Wally");
+  await page.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to wait list" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
   await expect(page.getByText("Wait list").first()).toBeVisible();

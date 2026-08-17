@@ -25,6 +25,8 @@ type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 const emptyPage: DiverPage = { divers: [], total: 0, page: 1, pageCount: 0, pageSize: 25 };
 
 const copy = {
+  addDiverLabel: t("divers.list.addDiverAction"),
+  addDiverWithName: t.raw("divers.list.addDiverWithName"),
   viewAllDivers: t("divers.list.viewAllDivers"),
   viewDivingToday: t("divers.list.viewDivingToday"),
   viewNeedsAttention: t("divers.list.viewNeedsAttention"),
@@ -87,28 +89,21 @@ function renderList({
 }
 
 describe("DiverList empty state", () => {
-  it("offers the add-diver form as an action, not as prose", () => {
+  it("offers the add-diver page as a direct action link", () => {
     renderList();
     expect(screen.getByText("No divers on file yet.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add your first diver" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add your first diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new",
+    );
   });
 
-  it("opens the collapsed add-diver disclosure and focuses its first field", async () => {
-    const details = document.createElement("details");
-    details.id = "add-diver";
-    details.innerHTML = '<input name="fullName" />';
-    document.body.append(details);
-    // jsdom has no layout, so scrollIntoView is not implemented on elements.
-    details.scrollIntoView = vi.fn();
-
+  it("offers the add-diver button in the search toolbar", () => {
     renderList();
-    expect(details.open).toBe(false);
-    screen.getByRole("button", { name: "Add your first diver" }).click();
-
-    expect(details.open).toBe(true);
-    expect(details.scrollIntoView).toHaveBeenCalled();
-    expect(document.activeElement).toBe(details.querySelector('input[name="fullName"]'));
-    details.remove();
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new",
+    );
   });
 
   it("offers a bulk import to whoever may run one", () => {
@@ -125,15 +120,17 @@ describe("DiverList empty state", () => {
     expect(screen.queryByText(/spreadsheet/i)).toBeNull();
   });
 
-  it("offers the way back out when a search or view narrowed the list to nothing", () => {
+  it("offers the way back out or to add the typed diver when search narrowed to nothing", () => {
     renderList({ query: "nobody" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
-    // Widening the view is the fix here; adding a diver is not.
+    expect(screen.getByRole("link", { name: "Add “nobody” as a diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?name=nobody",
+    );
     expect(screen.getByRole("link", { name: "Show all divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers",
     );
-    expect(screen.queryByRole("button", { name: "Add your first diver" })).toBeNull();
   });
 
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {

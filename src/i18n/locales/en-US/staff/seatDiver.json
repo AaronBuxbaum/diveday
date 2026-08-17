@@ -14,5 +14,9 @@
   "optionalHint": "(optional)",
   "noMatchesHeading": "Nobody on file by that name",
   "noMatchesAction": "Enter them by hand",
+  "addDiver": "Add diver",
+  "addDiverAction": "Add diver",
+  "addDiverPrompt": "Not listed? Add “{query}” as a new diver",
+  "addNewDiverAction": "Add “{query}” as a diver",
   "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked"
 }

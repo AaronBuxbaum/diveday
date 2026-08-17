@@ -14,5 +14,9 @@
   "optionalHint": "(opcional)",
   "noMatchesHeading": "Nadie registrado con ese nombre",
   "noMatchesAction": "Introdúcelo a mano",
+  "addDiver": "Añadir buceador",
+  "addDiverAction": "Añadir buceador",
+  "addDiverPrompt": "¿No aparece? Añadir a “{query}” como nuevo buceador",
+  "addNewDiverAction": "Añadir a “{query}” como buceador",
   "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados"
 }
