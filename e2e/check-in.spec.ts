@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -116,10 +116,9 @@ test("the walk-in picker explains an invalid submission before a boat is chosen"
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-  await expect(
-    page.getByText("Choose a boat and enter a name before adding a walk-in.", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("Choose a boat and enter a name");
+  await expect(page.getByRole("alert")).toContainText(
+    "Choose a boat and enter a name before adding a walk-in.",
+  );
 });
 
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
@@ -146,8 +145,11 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+  await openHandEntry(addDiver);
   await addDiver.locator('input[name="fullName"]:visible').fill("Fills The Boat");
-  await addDiver.locator('input[name="email"]:visible').fill(`fills-${e2eNow().getTime()}@example.com`);
+  await addDiver
+    .locator('input[name="email"]:visible')
+    .fill(`fills-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",

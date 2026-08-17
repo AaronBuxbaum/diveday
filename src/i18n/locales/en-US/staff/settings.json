@@ -474,8 +474,8 @@
         "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
       },
       "cardOnFile": {
-        "what": "Card on file / payment credential",
-        "detail": "Stays with your payment processor. DiveDay never imports card numbers, CVCs, payment methods, or reusable payment credentials."
+        "what": "Credit card details",
+        "detail": "Stay with your payment processor. DiveDay never imports card numbers or CVCs."
       },
       "pastVisits": {
         "what": "Past visits (what they booked, when)",

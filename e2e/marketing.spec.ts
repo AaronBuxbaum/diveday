@@ -98,7 +98,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // in both directions — records arrive cleanly and leave the same way, which
   // is the reason to join, not a goodbye.
   await expect(
-    page.getByRole("heading", { name: "Your records come in clean, and leave the same way." }),
+    page.getByRole("heading", { name: "Bring your records in clean. Keep them useful." }),
   ).toBeVisible();
   // Both directions are shown, not just described: the importer's preview for
   // arriving, the export inventory for leaving. This band is the portability
@@ -282,7 +282,7 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // Asking for a password is the moment of maximum hesitation, so the three
   // reassurances sit with the form, not on a page the visitor already left.
   await expect(page.getByText("No card, no setup fee.")).toBeVisible();
-  await expect(page.getByText("Your records leave with you.")).toBeVisible();
+  await expect(page.getByText("Your records are ready from day one.")).toBeVisible();
   await expect(page.getByText("Real support, one email away.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
 

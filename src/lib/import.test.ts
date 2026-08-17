@@ -926,7 +926,7 @@ describe("IMPORT_HONESTY_TABLE", () => {
       (entry) => entry.id,
     );
     expect(behind).toEqual(expect.arrayContaining(["cardOnFile", "serviceHistory"]));
-    expect(row("cardOnFile").what).toBe("Card on file / payment credential");
+    expect(row("cardOnFile").what).toBe("Credit card details");
     expect(row("cardOnFile").detail).toMatch(/never imports card numbers/i);
     expect(row("serviceHistory").what).toBe("Gear service history");
 

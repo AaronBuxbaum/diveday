@@ -34,7 +34,10 @@ test.describe("owner", () => {
     // Close-out is a primary tab, so it is reachable without opening More.
     await nav.getByRole("link", { name: "Close-out" }).click();
     await expect(page).toHaveURL(/\/close-out$/);
-    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     await page.goto("/shop/blue-mantis");
     // The More menu holds every other *place*, in two named groups — the

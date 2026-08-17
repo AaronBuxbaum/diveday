@@ -1699,6 +1699,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "New diver" }).waitFor();
         // Name only — this door takes the no-email diver, which also keeps the
         // seat from queuing a notification whose delivery state would vary.
+        await page.locator("details#hand-entry summary").click();
         await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Marisol Vega");
         await page.getByRole("button", { name: "Add to trip" }).click();
         await page.waitForURL(/\/trips\/[^/]+\/guests/);

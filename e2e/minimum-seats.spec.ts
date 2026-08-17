@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
 import { E2E_CRON_SECRET } from "./servers";
 
 /**
@@ -143,8 +143,11 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+  await openHandEntry(addDiver);
   await addDiver.locator('input[name="fullName"]:visible').fill("Meets The Minimum");
-  await addDiver.locator('input[name="email"]:visible').fill(`meets-${e2eNow().getTime()}@example.com`);
+  await addDiver
+    .locator('input[name="email"]:visible')
+    .fill(`meets-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
   await page.goto(tripUrl);

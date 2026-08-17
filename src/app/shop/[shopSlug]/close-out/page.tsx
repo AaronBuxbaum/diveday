@@ -298,6 +298,40 @@ export default async function CloseOutPage({
     );
   }
 
+  /** Retry every ended departure represented by the failed close-out task. */
+  async function retryFailedPostDiveReportsAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    const tripIds = [
+      ...new Set(
+        formData
+          .getAll("tripId")
+          .filter((value): value is string => typeof value === "string" && value.length > 0),
+      ),
+    ];
+    if (tripIds.length === 0) {
+      revalidateAndRedirect(closeOut, noticeUrl(closeOut, "recap-send-attention"));
+    }
+
+    const db = await getDb();
+    let failed = 0;
+    let notReady = 0;
+    for (const tripId of tripIds) {
+      const result = await sendTripRecaps(db, { shopId: staff.user.shopId, tripId });
+      if (!result.ok) {
+        if (result.reason === "not_eligible") notReady++;
+        continue;
+      }
+      failed += result.summary.failed;
+    }
+
+    revalidateAndRedirect(
+      closeOut,
+      noticeUrl(closeOut, failed > 0 || notReady > 0 ? "recap-send-attention" : "recap-sent"),
+    );
+  }
+
   const detailTime = (departure: CloseoutDeparture) =>
     formatTime(
       departure.status === "not_departed" ? departure.startsAt : departure.endsAt,
@@ -634,12 +668,27 @@ export default async function CloseOutPage({
                         <p className="text-danger">
                           {t("closeout.admin.postDiveReports.failed", { count: task.failed })}
                         </p>
-                        <Link
-                          href="#closeout-departures-heading"
-                          className="font-medium text-primary underline-offset-2 hover:underline"
+                        <form
+                          action={retryFailedPostDiveReportsAction}
+                          className="flex flex-wrap items-center gap-2"
                         >
-                          {t("closeout.admin.postDiveReports.review")}
-                        </Link>
+                          {state.departures
+                            .filter((departure) => departure.ended)
+                            .map((departure) => (
+                              <input
+                                key={departure.tripId}
+                                type="hidden"
+                                name="tripId"
+                                value={departure.tripId}
+                              />
+                            ))}
+                          <SubmitButton
+                            pendingLabel={t("closeout.admin.postDiveReports.retrying")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("closeout.admin.postDiveReports.retry")}
+                          </SubmitButton>
+                        </form>
                       </div>
                     ) : null}
                   </div>

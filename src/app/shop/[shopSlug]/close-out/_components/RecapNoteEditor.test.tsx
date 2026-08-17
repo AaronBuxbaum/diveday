@@ -56,4 +56,51 @@ describe("the close-out's post-trip recap note", () => {
       screen.getByText(/Recap note saved — it rides along on every diver's recap\./),
     ).toBeInTheDocument();
   });
+
+  it("shows the automatic-send countdown without opening the recap editor", () => {
+    render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout={null}
+        saved={false}
+        t={t}
+        recapSendAction={vi.fn()}
+        recapEligibleAt={new Date("2026-08-16T16:00:00.000Z")}
+        recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
+      />,
+    );
+    expect(screen.getByText("Automatic recap sending begins in 4h 00m.")).toBeInTheDocument();
+    expect(document.querySelector("details")?.open).toBe(false);
+  });
+
+  it("locks the note and photo controls after the recap is sent", () => {
+    render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout="Thanks for diving with us."
+        saved={false}
+        t={t}
+        recapSentAt={new Date("2026-08-16T16:00:00.000Z")}
+        recapSentAtLabel="4:00 PM"
+        photos={[
+          {
+            id: "photo-1",
+            imageUrl: "https://img.example/photo.jpg",
+            caption: null,
+            diverName: "Rae R.",
+            bookingId: "booking-1",
+          },
+        ]}
+        deletePhotoAction={vi.fn()}
+        uploadCrewPhotoAction={vi.fn()}
+        deleteCrewPhotoAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toBeDisabled();
+    expect(
+      screen.getByText("This recap was sent at 4:00 PM. The note and photos are now locked."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload photo" })).not.toBeInTheDocument();
+  });
 });

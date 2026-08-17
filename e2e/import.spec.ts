@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -176,6 +176,7 @@ test.describe("contact import — specialty cards", () => {
     const addDiver = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+    await openHandEntry(addDiver);
     await addDiver.locator('input[name="fullName"]:visible').fill("Deep Dana");
     await addDiver.locator('input[name="email"]:visible').fill("deep.dana@example.com");
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
