@@ -28,13 +28,13 @@ test.describe("owner", () => {
       "Check-in",
       "Divers",
       "Board",
-      "Close-out",
+      "Close",
     ]);
 
-    // Close-out is a primary tab, so it is reachable without opening More.
-    await nav.getByRole("link", { name: "Close-out" }).click();
+    // Close is a primary tab, so it is reachable without opening More.
+    await nav.getByRole("link", { name: "Close" }).click();
     await expect(page).toHaveURL(/\/close-out$/);
-    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "Close" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -128,7 +128,7 @@ test.describe("captain", () => {
     const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
     // Close-out is the ungated primary destination; Orders is still visible,
     // but it now lives in More with the other daily work.
-    await expect(nav.getByRole("link", { name: "Close-out" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Close" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Orders" })).toHaveCount(0);
 
     // The More menu shows a captain only what their role can open: the
@@ -173,7 +173,7 @@ test.describe("phone dock", () => {
       "Check-in",
       "Divers",
       "Board",
-      "Close-out",
+      "Close",
     ]);
 
     // The header's own copy of the strip is gone from view on a phone.
