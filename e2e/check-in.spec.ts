@@ -13,6 +13,7 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
 
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
@@ -50,6 +51,10 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
+  await expect(page.getByRole("searchbox", { name: "Scan or search diver" })).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
 
   const row = page
     .locator("article")
@@ -192,6 +197,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill("Priya Sharma");
   await search.press("Enter");
 

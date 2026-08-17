@@ -109,11 +109,6 @@ export function StaffTabBar({
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const firstFocusable = sheetRef.current?.querySelector<HTMLElement>(
-      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    firstFocusable?.focus();
-
     return () => {
       document.body.style.overflow = previous;
     };

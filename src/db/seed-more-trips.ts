@@ -118,7 +118,7 @@ export async function seedMoreTrips(
       // close-out should show a real completed departure while the demo clock is
       // at its stable 09:30 local baseline.
       startsAt: at(0, 5, 30),
-      endsAt: at(0, 9, 0),
+      endsAt: at(0, 8, 30),
       capacity: 12,
       siteName: "Molasses Reef",
       completedDemo: true,
