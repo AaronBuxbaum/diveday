@@ -32,6 +32,7 @@ export type NewTrip = {
   minimumBookings?: number | null;
   minimumDecisionHours?: number | null;
   scheduleDays?: TripScheduleDayInput[];
+  isPrivate?: boolean;
 };
 
 export type TripScheduleDayInput = {
@@ -170,6 +171,7 @@ export async function insertTripInstance(
     minimumDecisionHours?: number | null;
     drafts: ReturnType<typeof normalizedDiveDrafts>;
     scheduleDays?: TripScheduleDayInput[];
+    isPrivate?: boolean;
   },
 ) {
   const [trip] = await tx
@@ -191,6 +193,7 @@ export async function insertTripInstance(
       minimumDecisionHours: params.minimumDecisionHours,
       plannedDives: params.plannedDives,
       diveSiteId: primaryDiveSiteId(params.drafts),
+      isPrivate: params.isPrivate ?? false,
     })
     .returning();
   if (!trip) throw new Error("insertTripInstance: insert returned no row");
@@ -250,6 +253,7 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       minimumDecisionHours: input.minimumDecisionHours,
       drafts,
       scheduleDays: input.scheduleDays,
+      isPrivate: input.isPrivate,
     });
   });
 }

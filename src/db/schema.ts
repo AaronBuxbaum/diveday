@@ -715,6 +715,7 @@ export const courses = pgTable(
      * about itself while editing marketing copy.
      */
     isIntroCourse: boolean("is_intro_course").notNull().default(false),
+    isPrivate: boolean("is_private").notNull().default(false),
     /**
      * Whether a diver may request an enriched-air fill on a session of this
      * course — the shop's answer to "can we run this one on nitrox?", set per
@@ -1335,6 +1336,7 @@ export const trips = pgTable(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
+    isPrivate: boolean("is_private").notNull().default(false),
     conditionsSummary: text("conditions_summary"),
     /**
      * Always Celsius regardless of the shop's `temperature_unit`, and

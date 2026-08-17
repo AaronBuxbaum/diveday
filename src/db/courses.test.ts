@@ -95,6 +95,7 @@ async function createCourse(db: AppDb, input: NewCourse) {
       scheduleDays: input.scheduleDays ?? [],
       faqs: input.faqs ?? [],
       isIntroCourse: input.isIntroCourse ?? false,
+      isPrivate: input.isPrivate ?? false,
     })
     .returning();
   return course ?? null;
@@ -1527,5 +1528,23 @@ describe("course template updates", () => {
     ).toEqual({
       status: "unavailable",
     });
+  });
+
+  it("stores a private course and retrieves its private status", async () => {
+    const { db, shop } = await seededShopContext();
+    const course = await createCourse(db, {
+      shopId: shop.id,
+      title: "Private Navigation",
+      slug: "private-navigation",
+      isPrivate: true,
+    });
+    expect(course?.isPrivate).toBe(true);
+
+    const fetched = await getCourseBySlug(db, shop.id, "private-navigation");
+    expect(fetched?.isPrivate).toBe(true);
+
+    const activeList = await listActiveCourses(db, shop.id);
+    const found = activeList.find((c) => c.slug === "private-navigation");
+    expect(found?.isPrivate).toBe(true);
   });
 });

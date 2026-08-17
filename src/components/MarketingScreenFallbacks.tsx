@@ -383,3 +383,72 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
     </div>
   );
 }
+
+export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
+  return (
+    <div className="bg-background">
+      <AppBar label={t("fallback.nightBefore.label")} />
+      <div className="p-5">
+        <p className="text-xs font-medium tracking-widest text-primary uppercase">
+          {t("fallback.nightBefore.eyebrow")}
+        </p>
+        <h3 className="mt-1 text-xl font-semibold tracking-tight">
+          {t("fallback.nightBefore.title")}
+        </h3>
+        <p className="mt-1 text-sm text-muted">{t("fallback.nightBefore.time")}</p>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          {[
+            [t("fallback.recap.water"), "27°C"],
+            [t("fallback.recap.visibility"), "24 m"],
+            [t("fallback.nightBefore.weatherLabel"), t("fallback.nightBefore.weatherValue")],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-border bg-surface p-2">
+              <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          <h4 className="text-sm font-semibold">{t("fallback.nightBefore.checklist")}</h4>
+          <div className="mt-2 space-y-2">
+            {[
+              [
+                t("fallback.nightBefore.waiver"),
+                t("fallback.recap.completed"),
+                "text-success bg-success/10",
+                "✓",
+              ],
+              [
+                t("fallback.nightBefore.cert"),
+                t("fallback.recap.completed"),
+                "text-success bg-success/10",
+                "✓",
+              ],
+              [
+                t("fallback.nightBefore.payment"),
+                t("fallback.recap.completed"),
+                "text-success bg-success/10",
+                "✓",
+              ],
+            ].map(([label, status, tone, glyph]) => (
+              <div
+                key={label}
+                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
+              >
+                <span className="text-sm font-semibold">{label}</span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
+                >
+                  <span>{glyph}</span> {status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

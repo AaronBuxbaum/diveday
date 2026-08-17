@@ -86,6 +86,8 @@
   },
   "trip": {
     "courseSession": "Course session",
+    "privateCharter": "Private charter",
+    "privateCharterBadge": "Private",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
     "freeCancellationUntil": "Free cancellation until {when}",
     "cancellationAskShop": "Cancellation questions? Ask the shop:",
@@ -364,8 +366,11 @@
     "photoAltFallback": "{course} — photo {n}",
     "datesHeading": "Upcoming dates",
     "noDatesLead": "No dates on the books right now — this course runs on request.",
+    "privateCourseDatesLead": "This is a private course and runs on request for your group.",
     "seeFullSchedule": "See the full schedule",
     "orAskUs": "ask us to set one",
+    "requestDifferentDateLead": "Looking for a different date?",
+    "requestDateLink": "Request a date",
     "orGetInTouch": "or get in touch and we will set one.",
     "startsAt": "Starts {time}",
     "joinWaitList": "Join the wait list",
@@ -395,7 +400,9 @@
     "nextDate": "Next date",
     "nextOpenDate": "Next open date",
     "moreDates": "More dates",
-    "agesAndUp": "Ages {age} and up"
+    "agesAndUp": "Ages {age} and up",
+    "privateCourse": "Private course",
+    "privateCourseBadge": "Private"
   },
   "courses": {
     "index": {
@@ -2029,6 +2036,18 @@
       "rowCount": "{count} rows",
       "notIncludedLabel": "Not included, on purpose:",
       "notIncludedText": "login accounts and password hashes, and per-device push credentials — credentials never leave."
+    },
+    "nightBefore": {
+      "label": "Ready brief",
+      "eyebrow": "Tomorrow's briefing",
+      "title": "Two-Tank Reef",
+      "time": "Tomorrow · 7:30 AM arrival",
+      "weatherLabel": "Weather",
+      "weatherValue": "Sunny",
+      "checklist": "Your pre-trip checklist",
+      "waiver": "Waiver",
+      "cert": "Certification",
+      "payment": "Payment"
     }
   },
   "demo": {
@@ -2671,6 +2690,7 @@
       "prepDiverLabel": "On the diver's phone",
       "nightBeforeTitle": "A brief in plain words, not a form letter",
       "nightBeforeBody": "When to be at the dock, what the water looks like, what to pack, and who to text if something changes — written gently enough for someone's first boat dive.",
+      "nightBeforeMockupLabel": "A diver's pre-trip briefing page showing arrival times, weather conditions, and readiness checklist status.",
       "dockEyebrow": "At the dock",
       "dockTitle": "A manifest that stays useful after the signal disappears.",
       "dockDescription": "Big phone controls, head counts for every dive, blockers that can't be ignored, a boarding history that keeps every correction, and a print view from the same manifest.",

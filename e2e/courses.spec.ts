@@ -655,3 +655,44 @@ test.describe("the public header nav", () => {
     await expect(header.locator('a[href^="mailto:"]')).toHaveCount(0);
   });
 });
+
+test("private course badge is visible in the catalog, and upcoming dates section shows runs-on-request UI", async ({
+  privateShop,
+  page,
+}) => {
+  test.setTimeout(30_000);
+  // 1. Visit the course editor page for Rescue Diver in our private shop
+  await page.goto(`/shop/${privateShop.slug}/courses/rescue-diver/edit`);
+
+  // 2. Select the "This is a private course" checkbox and save the page
+  const checkbox = page.getByLabel("This is a private course");
+  await checkbox.check();
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByRole("status")).toContainText("Course page saved");
+
+  // 3. Go to the public courses catalog list page
+  await page.goto(`/s/${privateShop.slug}/courses`);
+
+  // 4. Assert that the Rescue Diver course has the "Private" badge
+  const rescueDiverItem = page.getByRole("listitem").filter({ hasText: "Rescue Diver" });
+  await expect(rescueDiverItem.getByText("Private")).toBeVisible();
+
+  // 5. Go to the Rescue Diver course detail page
+  await page.goto(`/s/${privateShop.slug}/courses/rescue-diver`);
+
+  // 6. Check that the private course badge is visible in the Hero section
+  await expect(page.getByText("Private course", { exact: true })).toBeVisible();
+
+  // 7. Verify the dates section has runs-on-request UI and clicking request-date links scrolls to "Get in touch" form
+  const datesSection = page.locator("#dates");
+  await expect(
+    datesSection.getByText("This is a private course and runs on request for your group."),
+  ).toBeVisible();
+
+  const requestLink = datesSection.getByRole("link", { name: "Request a date" });
+  await expect(requestLink).toBeVisible();
+  await requestLink.click();
+
+  // Should anchor / scroll to #get-in-touch form
+  await expect(page.locator("#get-in-touch")).toBeVisible();
+});

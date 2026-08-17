@@ -86,6 +86,8 @@
   },
   "trip": {
     "courseSession": "Sesión de curso",
+    "privateCharter": "Chárter privado",
+    "privateCharterBadge": "Privado",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
     "cancellationAskShop": "¿Dudas sobre la cancelación? Pregunta al centro:",
@@ -364,8 +366,11 @@
     "photoAltFallback": "{course} — foto {n}",
     "datesHeading": "Próximas fechas",
     "noDatesLead": "Ahora mismo no hay fechas programadas — este curso se organiza bajo petición.",
+    "privateCourseDatesLead": "Este es un curso privado y se realiza bajo petición para tu grupo.",
     "seeFullSchedule": "Ver el calendario completo",
     "orAskUs": "pídenos que programemos una",
+    "requestDifferentDateLead": "¿Buscas otra fecha?",
+    "requestDateLink": "Solicitar una fecha",
     "orGetInTouch": "o escríbenos y programamos una.",
     "startsAt": "Empieza a las {time}",
     "joinWaitList": "Apuntarme a la lista de espera",
@@ -395,7 +400,9 @@
     "nextDate": "Próxima fecha",
     "nextOpenDate": "Próxima fecha disponible",
     "moreDates": "Más fechas",
-    "agesAndUp": "A partir de {age} años"
+    "agesAndUp": "A partir de {age} años",
+    "privateCourse": "Curso privado",
+    "privateCourseBadge": "Privado"
   },
   "courses": {
     "index": {
@@ -2029,6 +2036,18 @@
       "rowCount": "{count} filas",
       "notIncludedLabel": "Lo que no se incluye, a propósito:",
       "notIncludedText": "cuentas de acceso y hashes de contraseña, y credenciales push de cada dispositivo: las credenciales nunca salen."
+    },
+    "nightBefore": {
+      "label": "Resumen de preparación",
+      "eyebrow": "Breve de mañana",
+      "title": "Arrecife de dos tanques",
+      "time": "Mañana · llegada a las 7:30",
+      "weatherLabel": "Clima",
+      "weatherValue": "Soleado",
+      "checklist": "Tu lista de control previa al viaje",
+      "waiver": "Exención",
+      "cert": "Certificación",
+      "payment": "Pago"
     }
   },
   "demo": {
@@ -2671,6 +2690,7 @@
       "prepDiverLabel": "En el teléfono del buceador",
       "nightBeforeTitle": "Un aviso en palabras sencillas, no una carta modelo",
       "nightBeforeBody": "Cuándo estar en el muelle, cómo está el agua, qué llevar y a quién escribir si algo cambia — redactado con suavidad para la primera inmersión en barco de alguien.",
+      "nightBeforeMockupLabel": "Una página de preparación previa al viaje del buceador que muestra las horas de llegada, las condiciones meteorológicas y el estado de la lista de verificación.",
       "dockEyebrow": "En el muelle",
       "dockTitle": "Un listado que sigue siendo útil cuando desaparece la señal.",
       "dockDescription": "Controles grandes para el teléfono, recuentos para cada inmersión, bloqueos que no se pueden ignorar, un historial de embarque que conserva cada corrección y una vista de impresión desde el mismo listado.",

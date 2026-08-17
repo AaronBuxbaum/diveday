@@ -374,6 +374,8 @@ async function insertDemoShop(db: DbExecutor) {
           name: identity.name,
           slug: identity.slug,
           timezone: DEMO_SHOP_TIMEZONE,
+          contactEmail: identity.emailFor("hello"),
+          contactPhone: "+1 305 555 0142",
           rentalItems: [
             "bcd",
             "regulator",

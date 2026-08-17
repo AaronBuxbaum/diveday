@@ -28,6 +28,7 @@ export type NewCourse = {
   minimumCertificationLevel?: CertificationLevel | null;
   /** Whether a session of this course may run on enriched air — see the column's own note. */
   nitroxCompatible?: boolean;
+  isPrivate?: boolean;
 } & Partial<CourseContent>;
 
 /**
@@ -39,7 +40,7 @@ export type NewCourse = {
  */
 export type CoursePatch = Pick<
   NewCourse,
-  "priceCents" | "eLearningPriceCents" | "nitroxCompatible"
+  "priceCents" | "eLearningPriceCents" | "nitroxCompatible" | "isPrivate"
 >;
 
 /**
@@ -272,6 +273,7 @@ export async function updateCourse(
       // did not have it and the column keeps its own default rather than
       // silently flipping.
       ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
+      ...(input.isPrivate === undefined ? {} : { isPrivate: input.isPrivate }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

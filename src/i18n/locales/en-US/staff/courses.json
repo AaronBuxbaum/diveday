@@ -62,6 +62,8 @@
     "groupSizePlaceholder": "Max 5 students per instructor",
     "nitroxCompatibleLabel": "We can run this course on nitrox",
     "nitroxCompatibleHint": "Off for courses taught on air. When it is off, sessions of this course never offer divers the enriched-air box — a diver still needs verified nitrox certification before any fill.",
+    "isPrivateLabel": "This is a private course",
+    "isPrivateHint": "When this is on, the course is marked as Private, the upcoming dates section will show request-only behavior for this course, and a Private badge will be shown in the public catalog.",
     "enrollLegend": "Who can enroll",
     "orHigher": "{level} or higher",
     "ageSuffix": ", {age}+",

@@ -1838,14 +1838,16 @@ for (const scheme of ["light", "dark"] as const) {
       // The queue's settled state: a checked-in diver's row wearing the
       // roll-call grammar — success rule, "Checked in ☑️", the re-tap undo
       // hint — beside rows still waiting. The default capture above can never
-      // show this (the seed checks nobody in), and it is the half of the
-      // one-tap design a mis-styled row would silently break.
+      // show this reliably (the canonical fixture already carries a settled
+      // row), and it is the half of the one-tap design a mis-styled row would
+      // silently break. Reading the seeded row keeps this visual capture
+      // independent from the mutable check-in action while the functional
+      // check-in spec covers the toggle itself.
       test(`counter check-in's settled row renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.goto("/shop/blue-mantis/check-in");
-        await page.getByRole("button", { name: "Check in Diego Alvarez" }).click();
-        await page.getByRole("button", { name: "Undo check-in for Diego Alvarez" }).waitFor();
+        await page.getByRole("button", { name: "Undo check-in for Amara Osei" }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
 
