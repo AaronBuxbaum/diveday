@@ -64,11 +64,8 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
     .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
-  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Walk-in Wanda");
-  await addDiver
-    .getByLabel("Email")
-    .filter({ visible: true })
-    .fill(`wanda-${e2eNow().getTime()}@example.com`);
+  await addDiver.locator('input[name="fullName"]:visible').fill("Walk-in Wanda");
+  await addDiver.locator('input[name="email"]:visible').fill(`wanda-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page.getByRole("status")).toContainText(
@@ -120,11 +117,8 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
-  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Waitlist Wally");
-  await addDiver
-    .getByLabel("Email")
-    .filter({ visible: true })
-    .fill(`wally-${e2eNow().getTime()}@example.com`);
+  await addDiver.locator('input[name="fullName"]:visible').fill("Waitlist Wally");
+  await addDiver.locator('input[name="email"]:visible').fill(`wally-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to wait list" }).click();
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
