@@ -61,7 +61,8 @@
       "progress": "{completed} de {total} enviados.",
       "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
       "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}",
-      "review": "Revisar y reintentar"
+      "retry": "Reintentar informes fallidos",
+      "retrying": "Reintentando informes fallidos…"
     }
   },
   "recap": {

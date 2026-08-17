@@ -56,7 +56,7 @@ export function SpecialtyCards({
           <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
         {/* Opened by its own outcome — see CertificationCards for why. */}
-        <details open={Boolean(sectionStatus) && sectionStatus?.tone !== "success"}>
+        <details open={Boolean(sectionStatus)}>
           {/* Through the wrapper — see CertificationCards for why. */}
           <summary
             className={buttonClass({

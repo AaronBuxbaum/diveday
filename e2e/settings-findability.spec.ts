@@ -32,18 +32,12 @@ test.describe("as owner", () => {
   }) => {
     await page.goto(`/shop/${SHOP}/settings`);
 
-    // A plain in-page anchor per group: the hash lands, and the heading it
-    // names is a real target on the page.
-    const jump = page.getByRole("navigation", { name: "Settings sections" });
-    await jump.getByRole("link", { name: "Money" }).click();
-    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings#money$`));
-    // By id, not by accessible name: the group headings are rendered
-    // `uppercase` by CSS, and Chromium folds text-transform into the
-    // accessible name.
+    // The directory no longer renders a separate jump navigation. The group
+    // headings remain the stable anchors for deep links and the cards expose
+    // the actual doors.
     await expect(page.locator("h2#money")).toBeVisible();
-
-    await jump.getByRole("link", { name: "Data & integrations" }).click();
-    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings#data-integrations$`));
+    await page.goto(`/shop/${SHOP}/settings#data-integrations`);
+    await expect(page.locator("h2#data-integrations")).toBeVisible();
 
     // Team: the row an owner opening Settings to add a colleague looks for.
     // The heading is the link now — a door row carries no separate CTA label.

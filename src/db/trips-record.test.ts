@@ -268,4 +268,26 @@ describe("trip records (in-memory PGlite)", () => {
     });
     expect(await listTripScheduleDays(db, shop.id, trip.id)).toHaveLength(1);
   });
+
+  it("stores a private charter trip and retrieves its private status", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const privateTrip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Private Sunset Charter",
+      startsAt: new Date("2030-08-01T17:00:00.000Z"),
+      endsAt: new Date("2030-08-01T20:00:00.000Z"),
+      capacity: 12,
+      isPrivate: true,
+    });
+    if (!privateTrip) throw new Error("private trip not created");
+    expect(privateTrip.isPrivate).toBe(true);
+
+    const fetched = await getTripWithBooked(db, shop.id, privateTrip.id);
+    expect(fetched?.isPrivate).toBe(true);
+
+    const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const found = upcoming.find((t) => t.id === privateTrip.id);
+    expect(found?.isPrivate).toBe(true);
+  });
 });

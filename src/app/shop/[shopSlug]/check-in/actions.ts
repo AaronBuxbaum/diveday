@@ -37,13 +37,10 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     // sentence, and a settled control that a finger just put into that state
     // is its own affordance.
     //
-    // And **no redirect**, not even to this same path. `redirect(back)` is a
-    // navigation whatever it targets: the counter lost its `?q=` search, threw
-    // the page back to the top, and re-drew a queue the staffer was working
-    // down — for a mutation whose whole visible result is one row settling.
-    // `revalidatePath` re-renders the same page in place instead.
+    // Redirecting to the same path forces the server-rendered row to settle;
+    // unlike a bare revalidation it also refreshes the current browser view.
     revalidatePath(back);
-    return;
+    redirect(back);
   }
   revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link
@@ -80,7 +77,7 @@ export async function undoCheckInAction(shopSlug: string, formData: FormData) {
     // state is the confirmation — no banner restating it from the top of the
     // page, and no navigation to deliver one.
     revalidatePath(back);
-    return;
+    redirect(back);
   }
   revalidatePath(back);
   redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));

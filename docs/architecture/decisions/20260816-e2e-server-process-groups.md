@@ -20,9 +20,14 @@ build instead of an immediate port-collision signal.
 
 ## Decision
 
-Playwright starts `scripts/e2e-server.mjs`. The supervisor launches `next start`
-in its own process group, forwards normal termination signals to the group, and
-uses a synchronous exit cleanup as a final bounded kill of that same group. It
+Playwright starts `scripts/e2e-server.mjs` in its own detached process group. The
+supervisor keeps `next start` inside that group and signals the complete Next
+process tree rooted at the direct child, without signaling Playwright's group.
+The tree cleanup is used for normal, forced, launcher-loss, and synchronous-exit
+paths. Playwright's group teardown remains the final boundary for descendants
+that race the supervisor's cleanup. The supervisor also watches its launcher PID
+and inherited stdin; if Playwright crashes or is killed before teardown, it
+terminates Next and its descendants itself instead of becoming an orphan. It
 never searches for or kills an unrelated `next-server`. Local runs do not reuse
 an existing server; a port collision is reported so the orphan can be inspected
 with `node scripts/stray-processes.mjs --list` before any cleanup.
@@ -30,9 +35,8 @@ with `node scripts/stray-processes.mjs --list` before any cleanup.
 ## Alternatives considered
 
 - **Keep Playwright's direct `next start` command.** Rejected because the
-  runner owns the direct child, not a repository-controlled process-group
-  boundary, and the historical orphan proves the cleanup assumption was not
-  sufficient.
+  repository has no signal/exit cleanup boundary for the Next process and its
+  descendants.
 - **Keep `reuseExistingServer` on local runs.** Rejected because it converts a
   stale process into a successful run against the wrong build; a loud port
   collision is the useful failure while the process can still be inspected.
@@ -41,8 +45,10 @@ with `node scripts/stray-processes.mjs --list` before any cleanup.
 
 ## Consequences
 
-- A normal Playwright teardown and an interrupted teardown both have a bounded
-  path to the Next process and its descendants.
+- A normal Playwright teardown and an interrupted teardown both clean the Next
+  process and its descendants without signaling Playwright's process group.
+- A crashed Playwright launcher is detected by the supervisor, which cleans the
+  observed Next descendant tree rather than leaving a server behind indefinitely.
 - A stale server cannot silently serve an old build to a local run.
 - The historical pair's exact parent command remains unknown; this decision
   records and fixes the likely e2e teardown boundary without claiming evidence

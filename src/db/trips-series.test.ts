@@ -99,6 +99,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
       "2030-09-14",
       "2030-09-21",
     ]);
+
     const [firstInstance] = result.trips;
     if (!firstInstance) throw new Error("expected a first instance");
 
@@ -121,6 +122,24 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect(summary?.intervalWeeks).toBe(1);
     expect(summary?.scheduledCount).toBe(3);
     expect(summary?.endsOn).toBe("2030-09-21");
+  });
+
+  it("materializes a private charter series, keeping all occurrences private", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        isPrivate: true,
+        endsOn: "2030-09-21",
+      }),
+    );
+    if (!result) throw new Error("series not created");
+    expect(result.trips).toHaveLength(3);
+    for (const trip of result.trips) {
+      expect(trip.isPrivate).toBe(true);
+    }
   });
 
   it("puts a run on more than one weekday a week — Monday and Thursday is one series", async () => {

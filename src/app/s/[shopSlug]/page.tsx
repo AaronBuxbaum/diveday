@@ -497,6 +497,11 @@ export default async function SchedulePage({
                       <h2 className="text-base font-semibold group-hover:text-primary">
                         {trip.title}
                       </h2>
+                      {trip.isPrivate ? (
+                        <p className="mt-0.5 text-sm font-medium text-primary">
+                          {t("trip.privateCharterBadge")}
+                        </p>
+                      ) : null}
                       {trip.course ? (
                         <p className="mt-0.5 text-sm font-medium text-primary">
                           {t("schedule.courseSession")} ·{" "}

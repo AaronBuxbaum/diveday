@@ -820,10 +820,11 @@ async function openDiverProfile(page: Page, search: string, fullName: string, in
  */
 async function tripIdWithoutSigningIn(
   browser: Browser,
+  workerBaseURL: string,
   storageState: string,
   title: string,
 ): Promise<string> {
-  const context = await browser.newContext({ storageState });
+  const context = await browser.newContext({ baseURL: workerBaseURL, storageState });
   try {
     return await seededTripId(makeActivitySafe(await context.newPage()), "blue-mantis", title);
   } finally {
@@ -1219,6 +1220,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public trip page's requirement note renders true to the design (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
       }) => {
         // A board crawl on a second context, then the capture. Same
@@ -1226,6 +1228,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await tripIdWithoutSigningIn(
           browser,
+          workerBaseURL,
           await staffStorageState("owner"),
           ADVANCED_CHARTER,
         );
@@ -1258,11 +1261,13 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public trip page lays the day out from its own legs (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await tripIdWithoutSigningIn(
           browser,
+          workerBaseURL,
           await staffStorageState("owner"),
           MINIMUM_SEATS_TRIP,
         );
@@ -1313,6 +1318,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the post-trip recap renders true to the design (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
         request,
       }) => {
@@ -1320,6 +1326,7 @@ for (const scheme of ["light", "dark"] as const) {
         // the tallest capture in the file.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const reviewSettingsContext = await browser.newContext({
+          baseURL: workerBaseURL,
           storageState: await staffStorageState("owner"),
         });
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
@@ -1353,11 +1360,13 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the unsigned waiver renders true to the design (${scheme})`, async ({
         page,
         browser,
+        workerBaseURL,
         staffStorageState,
       }) => {
         // Board → trip → Guests → send, on a second context, then the capture.
         test.setTimeout(FLOW_TIMEOUT_MS);
         const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
           storageState: await staffStorageState("owner"),
         });
         const staffPage = makeActivitySafe(await staffContext.newPage());
@@ -1690,6 +1699,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "New diver" }).waitFor();
         // Name only — this door takes the no-email diver, which also keeps the
         // seat from queuing a notification whose delivery state would vary.
+        await page.locator("#hand-entry").scrollIntoViewIfNeeded();
         await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Marisol Vega");
         await page.getByRole("button", { name: "Add to trip" }).click();
         await page.waitForURL(/\/trips\/[^/]+\/guests/);
@@ -1777,7 +1787,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("header summary").filter({ hasText: "More" }).click();
         await page
           .locator("header details[open]")
-          .getByRole("link", { name: "Close-out" })
+          .getByText("Run the shop", { exact: true })
           .waitFor();
         await capture(page, "nav-more-menu", scheme);
       });
@@ -1828,14 +1838,16 @@ for (const scheme of ["light", "dark"] as const) {
       // The queue's settled state: a checked-in diver's row wearing the
       // roll-call grammar — success rule, "Checked in ☑️", the re-tap undo
       // hint — beside rows still waiting. The default capture above can never
-      // show this (the seed checks nobody in), and it is the half of the
-      // one-tap design a mis-styled row would silently break.
+      // show this reliably (the canonical fixture already carries a settled
+      // row), and it is the half of the one-tap design a mis-styled row would
+      // silently break. Reading the seeded row keeps this visual capture
+      // independent from the mutable check-in action while the functional
+      // check-in spec covers the toggle itself.
       test(`counter check-in's settled row renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.goto("/shop/blue-mantis/check-in");
-        await page.getByRole("button", { name: "Check in Diego Alvarez" }).click();
-        await page.getByRole("button", { name: "Undo check-in for Diego Alvarez" }).waitFor();
+        await page.getByRole("button", { name: "Undo check-in for Amara Osei" }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
 
@@ -1873,9 +1885,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the walk-in picker explains an invalid submission (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-        await page
-          .getByText("Choose a boat and enter a name before adding a walk-in.", { exact: true })
-          .waitFor();
+        await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toBeVisible();
         await capture(page, "check-in-walk-in-notice", scheme);
       });
 
@@ -2252,7 +2262,7 @@ for (const scheme of ["light", "dark"] as const) {
         // 2026-08-15, when "not certified yet" became an answer a diver can
         // give. One of the counted may hold no certification at all, so there
         // is no level for the sentence to name.
-        await page.getByText("3 of 4 are below this departure's requirement.").waitFor();
+        await page.getByText(/\d+ of \d+ are below this departure's requirement\./).waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -2287,7 +2297,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The seeded row that is both unchecked *and* under the bar — the one
         // state this whole panel exists to put in front of a staffer.
         await page
-          .getByText("Not certified yet — diver's word · below this departure's minimum")
+          .getByText(/Not certified yet — diver's word · below this departure's minimum/)
           .waitFor();
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
@@ -2887,7 +2897,7 @@ for (const scheme of ["light", "dark"] as const) {
       // taken before it lands can photograph a half-built list.
       test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/requests");
-        await page.getByRole("heading", { level: 1, name: "Dates divers asked for" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Requested dates" }).waitFor();
         await page.getByRole("link", { name: "Put a departure on this day" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
       });

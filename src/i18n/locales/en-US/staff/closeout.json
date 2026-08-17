@@ -61,7 +61,8 @@
       "progress": "{completed} of {total} sent.",
       "pending": "{count, plural, one {# report is still queued.} other {# reports are still queued.}}",
       "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}",
-      "review": "Review and retry"
+      "retry": "Retry failed reports",
+      "retrying": "Retrying failed reports…"
     }
   },
   "recap": {

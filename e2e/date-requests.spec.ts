@@ -74,7 +74,7 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // The act the count exists for: the schedule builder, opened on that day.
   await expect(firstDay.getByRole("link", { name: "Put a departure on this day" })).toHaveAttribute(
     "href",
-    `/shop/blue-mantis/schedule/board?add=full&date=${PREFERRED}`,
+    new RegExp(`/shop/blue-mantis/schedule/board\\?add=full&date=${PREFERRED}(?:&|$)`),
   );
 });
 

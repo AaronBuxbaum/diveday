@@ -473,7 +473,7 @@ export async function listRollCallGaps(
     // still reaches the crew scan below.
     if (bookingIds.length === 0 && crewIds.length === 0) continue;
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
-    const home = trip.endsAt <= now;
+    const home = new Date(trip.endsAt.getTime() + 60 * 60 * 1000) <= now;
     const underway = !home;
     const stale = home && trip.endsAt.getTime() < now.getTime() - RETURNED_ROLL_CALL_LOOKBACK_MS;
 

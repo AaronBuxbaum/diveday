@@ -173,7 +173,7 @@ test.describe("phone dock", () => {
       "Check-in",
       "Divers",
       "Board",
-      "Close-out",
+      "Close",
     ]);
 
     // The header's own copy of the strip is gone from view on a phone.

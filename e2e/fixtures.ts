@@ -17,6 +17,29 @@ type StaffRole = keyof typeof DEV_STAFF_LOGINS;
  * e.g. `const staffPage = makeActivitySafe(await staffContext.newPage());`.
  */
 export function makeActivitySafe(page: Page): Page {
+  // Page-level patches do not propagate to locators created from a locator:
+  // `section.getByLabel(...)` calls Locator.prototype directly. Patch the
+  // prototype once per worker so every descendant query observes the same
+  // visible-only contract, including the preserved hidden <Activity> trees.
+  const locatorPrototype = Object.getPrototypeOf(page.locator("body")) as Record<
+    PropertyKey,
+    unknown
+  >;
+  const marker = Symbol.for("diveday.playwright.visible-locators");
+  if (!locatorPrototype[marker]) {
+    for (const method of ["getByText", "getByRole", "getByLabel", "getByPlaceholder"]) {
+      const original = locatorPrototype[method];
+      if (typeof original !== "function") continue;
+      locatorPrototype[method] = function (this: object, ...args: unknown[]) {
+        const locator = Reflect.apply(original, this, args) as {
+          filter: (options: { visible: true }) => unknown;
+        };
+        return locator.filter({ visible: true });
+      };
+    }
+    locatorPrototype[marker] = true;
+  }
+
   const rawGetByText = page.getByText.bind(page);
   page.getByText = ((text: string | RegExp, options?: { exact?: boolean }) =>
     rawGetByText(text, options).filter({ visible: true })) as Page["getByText"];
@@ -33,8 +56,9 @@ export function makeActivitySafe(page: Page): Page {
 }
 
 /**
- * A test's own statement that it only **reads** — so `demoReset` below skips
- * the wipe-and-reseed of the whole demo shop it would otherwise pay for.
+ * A test's own statement that it only **reads**. The tag is descriptive
+ * metadata; `demoReset` still runs for every test so read-only assertions do
+ * not inherit mutations from an earlier test.
  *
  * ```ts
  * test("the schedule's filters narrow the list", { tag: READ_ONLY }, async ({ page }) => {
@@ -42,9 +66,8 @@ export function makeActivitySafe(page: Page): Page {
  *
  * The reset exists because a test that mutates the demo shop leaks its trips
  * and bookings into every later spec's fixture (see that fixture's comment for
- * the flake it was introduced to kill). A test that never writes cannot cause
- * that leak, so it can skip the round trip — roughly 1.2s on an idle box, and
- * far more on a loaded one.
+ * the flake it was introduced to kill). Resetting every test keeps each test's
+ * seeded assertions independent of Playwright's test order.
  *
  * **This is an assertion by the author, and no check can prove it.** Writing
  * the tag is the claim; a form submit, a server action, or a demo-shop mint
@@ -102,15 +125,12 @@ export const test = base.extend<
   // on `request` (an API call to the worker's own server), so parallel resets
   // never interfere; the browser clock is frozen in the `context` fixture below.
   demoReset: [
-    async ({ request }, use, testInfo) => {
-      // The one opt-out: a test that has asserted it only reads (see READ_ONLY
-      // above). Checked here rather than by overriding this fixture in a second
-      // `test` export, so the claim lives on the test that makes it and an
-      // untagged test always pays the reset.
-      if (testInfo.tags.includes(READ_ONLY)) {
-        await use(undefined);
-        return;
-      }
+    async ({ request }, use) => {
+      // Every test pays the reset, including tests tagged READ_ONLY. A test
+      // that writes nothing can still inherit mutations from the previous
+      // test, so READ_ONLY is descriptive metadata rather than an isolation
+      // opt-out. Skipping the reset made seeded read-only assertions depend on
+      // Playwright's test order and produced cross-test failures in CI.
       const response = await request.post("/api/test/reset");
       // Fail *here*, naming the reset, rather than letting the test run on a
       // half-wrecked shop. `resetDemoSchedule` is a hand-maintained topological

@@ -95,7 +95,8 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
       if (candidate.status !== "scheduled") return false;
       if (candidate.courseSession) return false;
       const startsAtMs = candidate.startsAt.getTime();
-      if (startsAtMs <= input.now.getTime() || startsAtMs > horizonEnd) return false;
+      if (startsAtMs + 60 * 60 * 1000 <= input.now.getTime() || startsAtMs > horizonEnd)
+        return false;
       if (candidate.activeBookings >= candidate.capacity) return false;
       if (alreadyBooked.has(candidate.id)) return false;
       return decideTripAdmission({

@@ -108,17 +108,10 @@ export function StaffTabBar({
     if (!moreOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [moreOpen]);
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    const firstFocusable = sheetRef.current?.querySelector<HTMLElement>(
-      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    firstFocusable?.focus();
   }, [moreOpen]);
 
   const trapSheetFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -227,6 +220,24 @@ export function StaffTabBar({
                 type="button"
                 ref={moreButtonRef}
                 onClick={() => setMoreOpen((current) => !current)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Tab" || !moreOpen) return;
+                  const focusable = [
+                    ...(sheetRef.current?.querySelectorAll<HTMLElement>(
+                      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                    ) ?? []),
+                  ];
+                  const first = focusable[0];
+                  const last = focusable[focusable.length - 1];
+                  if (!first || !last) return;
+                  if (event.shiftKey) {
+                    event.preventDefault();
+                    last.focus();
+                  } else {
+                    event.preventDefault();
+                    first.focus();
+                  }
+                }}
                 aria-expanded={moreOpen}
                 aria-controls={moreOpen ? sheetId : undefined}
                 // When the current page lives behind this door, say so in the

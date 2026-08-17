@@ -285,8 +285,12 @@ function departureStatus(
     };
   }
   const none = { gapReason: null, diveNumber: 0, uncounted: 0 };
-  if (trip.startsAt > now) return { status: "not_departed", ...none };
-  if (trip.endsAt > now) return { status: "still_out", ...none };
+  if (new Date(trip.startsAt.getTime() + 60 * 60 * 1000) > now) {
+    return { status: "not_departed", ...none };
+  }
+  if (new Date(trip.endsAt.getTime() + 60 * 60 * 1000) > now) {
+    return { status: "still_out", ...none };
+  }
   return { status: "all_home", ...none };
 }
 

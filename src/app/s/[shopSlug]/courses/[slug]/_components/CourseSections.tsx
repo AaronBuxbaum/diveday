@@ -129,7 +129,14 @@ export function CourseHero({
           title={course.title}
           description={course.summary ?? undefined}
         />
-        <div className="flex flex-wrap items-center gap-4">
+        {course.isPrivate ? (
+          <div className="mt-3">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+              {t("course.privateCourse")}
+            </span>
+          </div>
+        ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
               {money.format(minorToMajor(totalCents, currency))}
@@ -418,6 +425,7 @@ function sessionFacts(
  * to the trip page that already owns capacity, readiness, and payment.
  */
 export function CourseSessions({
+  isPrivate = false,
   sessions,
   shopSlug,
   timezone,
@@ -425,6 +433,7 @@ export function CourseSessions({
   inquiryHref,
   t,
 }: {
+  isPrivate?: boolean;
   sessions: Array<{
     id: string;
     title: string;
@@ -458,7 +467,21 @@ export function CourseSessions({
     <section id="dates" className="mt-14 scroll-mt-8">
       <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
         <h2 className="text-2xl font-semibold tracking-tight">{t("course.datesHeading")}</h2>
-        {!next ? (
+        {isPrivate ? (
+          <p className="mt-4 max-w-2xl text-muted">
+            {t("course.privateCourseDatesLead")}{" "}
+            {inquiryHref ? (
+              <>
+                <Link href={inquiryHref} className="font-medium text-primary hover:underline">
+                  {t("course.requestDateLink")}
+                </Link>
+                .
+              </>
+            ) : (
+              ` ${t("course.orGetInTouch")}`
+            )}
+          </p>
+        ) : !next ? (
           <p className="mt-4 max-w-2xl text-muted">
             {t("course.noDatesLead")}{" "}
             <Link
@@ -541,6 +564,15 @@ export function CourseSessions({
                   })}
                 </ul>
               </div>
+            ) : null}
+            {inquiryHref ? (
+              <p className="mt-6 text-sm text-muted">
+                {t("course.requestDifferentDateLead")}{" "}
+                <Link href={inquiryHref} className="font-medium text-primary hover:underline">
+                  {t("course.requestDateLink")}
+                </Link>
+                .
+              </p>
             ) : null}
           </>
         )}

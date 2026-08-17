@@ -129,6 +129,7 @@ export default async function PublicCoursesPage({
           {courseList.map((course) => {
             const totalCents = courseTotalCents(course);
             const detailLine = [
+              course.isPrivate ? t("course.privateCourseBadge") : null,
               course.durationText,
               course.minimumCertificationLevel
                 ? t("courses.index.requires", {

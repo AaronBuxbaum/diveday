@@ -62,6 +62,8 @@
     "groupSizePlaceholder": "Máx. 5 estudiantes por instructor",
     "nitroxCompatibleLabel": "Podemos impartir este curso con nitrox",
     "nitroxCompatibleHint": "Desactívalo en los cursos que se imparten con aire. Cuando está desactivado, las sesiones de este curso nunca ofrecen la casilla de aire enriquecido; además, para cualquier llenado el buceador necesita una titulación de nitrox verificada.",
+    "isPrivateLabel": "Este es un curso privado",
+    "isPrivateHint": "Cuando está activo, el curso se marca como Privado, la sección de próximas fechas mostrará el comportamiento de solicitar fecha, y se mostrará una etiqueta de Privado en el catálogo público.",
     "enrollLegend": "Quién puede inscribirse",
     "orHigher": "{level} o superior",
     "ageSuffix": ", {age}+",

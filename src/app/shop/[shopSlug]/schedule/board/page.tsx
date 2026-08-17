@@ -312,6 +312,8 @@ export default async function ScheduleBoardPage({
     courseNoCardRequired: st("schedule.builder.courseNoCardRequired"),
     descriptionLabel: st("schedule.builder.descriptionLabel"),
     descriptionPlaceholder: st("schedule.builder.descriptionPlaceholder"),
+    isPrivateLabel: st("schedule.builder.isPrivateLabel"),
+    isPrivateHint: st("schedule.builder.isPrivateHint"),
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),
     payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),

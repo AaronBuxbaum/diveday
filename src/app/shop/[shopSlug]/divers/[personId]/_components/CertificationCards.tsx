@@ -75,7 +75,7 @@ export async function CertificationCards({
             `<details>`, and an answer rendered inside a shut disclosure is
             worse than the page-top banner it replaces — invisible rather than
             merely far away. */}
-        <details open={Boolean(sectionStatus) && sectionStatus?.tone !== "success"}>
+        <details open={Boolean(sectionStatus)}>
           {/* Through the wrapper, like every other button-shaped thing (see
               divers/page.tsx and reviews/page.tsx): the hand-written string
               this replaces was `buttonClass()`'s primary/md output copied out

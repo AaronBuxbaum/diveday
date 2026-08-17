@@ -256,11 +256,10 @@ async function TripGuestsBody({
     ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
   ]);
 
-  // Filter out any last-minute matched diver who has level === null (not certified and doesn't claim to be certified)
-  const lastMinuteCertified = lastMinuteMatched.filter(({ person }) => {
-    const cert = preCertSummaries.get(person.id);
-    return cert && cert.level !== null;
-  });
+  // Keep every date-matched diver. Missing declarations remain eligible;
+  // the review fold distinguishes "said nothing" from "said no card" and
+  // renders both honestly instead of silently changing who the send reaches.
+  const lastMinuteCertified = lastMinuteMatched;
 
   // The same set, in the same order, that `sendLastMinuteDealBlast` would mail:
   // matched on the stated date window, then wait-listed divers first. A preview

@@ -131,6 +131,7 @@ test("comment moderation is disclosed before submitting, not discovered only aft
 test("a booking cancelled after the recap page loaded gets an honest notice, not a lie about a bad rating or a bad file (task 56)", async ({
   page,
   staffStorageState,
+  workerBaseURL,
 }) => {
   // The diver's page loads while the booking is still active — the review
   // and photo forms render normally.
@@ -143,7 +144,7 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   const staffContext = await page
     .context()
     .browser()
-    ?.newContext({ storageState: await staffStorageState("owner") });
+    ?.newContext({ baseURL: workerBaseURL, storageState: await staffStorageState("owner") });
   if (!staffContext) throw new Error("could not open a second browser context");
   const staffPage = makeActivitySafe(await staffContext.newPage());
   // The seed schedules several other trips under this same title (task 56's

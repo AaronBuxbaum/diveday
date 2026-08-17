@@ -361,7 +361,7 @@ export default async function TripDetailPage({
       : null,
   }));
 
-  const inPast = trip.startsAt <= nowDate();
+  const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= nowDate();
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`

@@ -89,6 +89,8 @@
     "courseNoCardRequired": "No existing certification required",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Sites, conditions, who it's for, required certs.",
+    "isPrivateLabel": "Private charter",
+    "isPrivateHint": "Mark this trip as a private charter for your group",
     "daysLabel": "How many days",
     "daysDescription": "Most departures are one day. A course weekend or a liveaboard that meets the same hours on consecutive days is a single trip — one roster, one set of waivers, one crew.",
     "payAtBookingLegend": "Pay at booking",

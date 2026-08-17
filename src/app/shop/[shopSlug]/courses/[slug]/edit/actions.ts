@@ -204,6 +204,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     priceCents: centsFromAmount(value.price, currency),
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
     nitroxCompatible: formData.get("nitroxCompatible") === "true",
+    isPrivate: formData.get("isPrivate") === "true",
   });
 
   // Once the content row is durably saved, any photo it no longer references

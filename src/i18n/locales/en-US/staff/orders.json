@@ -125,7 +125,7 @@
     "importedHistory": {
       "sectionLabel": "Imported payment history",
       "heading": "Imported payment history",
-      "detail": "Source payment, refund, and receipt records are unverified. They use source status rather than an order status; only a clear amount in this shop's currency contributes to the separately labelled revenue/refund aggregate. They are never live Stripe orders or booking payments.",
+      "detail": "Imported payment, refund, and receipt records are unverified. They use source status rather than an order status; only a clear amount in this shop's currency contributes to the separately labelled revenue/refund aggregate. They are never live Stripe orders or booking payments.",
       "unverified": "Unverified import",
       "table": {
         "source": "Source record",

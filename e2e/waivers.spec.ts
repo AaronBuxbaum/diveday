@@ -369,6 +369,7 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
 
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
   page,
+  workerBaseURL,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
@@ -382,7 +383,10 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   // own negotiated Accept-Language for navigation requests). The demo shop's
   // own default is English, so this proves the notice follows the visitor,
   // not the shop.
-  const visitorContext = await page.context().browser()?.newContext({ locale: "es-ES" });
+  const visitorContext = await page
+    .context()
+    .browser()
+    ?.newContext({ baseURL: workerBaseURL, locale: "es-ES" });
   if (!visitorContext) throw new Error("expected a browser to create a second context from");
   const visitorPage = makeActivitySafe(await visitorContext.newPage());
   await visitorPage.goto(`${new URL(page.url()).origin}${waiverHref}`);

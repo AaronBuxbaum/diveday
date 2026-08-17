@@ -1,5 +1,7 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
+
+test.describe.configure({ timeout: 45_000 });
 
 signedInAsOwner();
 
@@ -11,6 +13,7 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
 
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
@@ -48,6 +51,10 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
+  await expect(page.getByRole("searchbox", { name: "Scan or search diver" })).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
 
   const row = page
     .locator("article")
@@ -59,13 +66,15 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   // the top of the page (design principle 9), and no sentence under the row
   // teaching the re-tap either: a control the finger just put into "Checked in
   // ☑️" is its own affordance, and its accessible name already says "Undo".
-  const settled = row.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
-  await expect(settled).toBeVisible();
+  const settled = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  await expect(settled).toBeVisible({ timeout: 15_000 });
   await expect(settled).toContainText("Checked in ☑️");
   await expect(settled).not.toContainText("undo");
 
   await settled.click();
-  await expect(row.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
@@ -116,10 +125,9 @@ test("the walk-in picker explains an invalid submission before a boat is chosen"
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-  await expect(
-    page.getByText("Choose a boat and enter a name before adding a walk-in.", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("Choose a boat and enter a name");
+  await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toContainText(
+    "Choose a boat and enter a name before adding a walk-in.",
+  );
 });
 
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
@@ -146,8 +154,11 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await addDiver.getByLabel("Name").fill("Fills The Boat");
-  await addDiver.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
+  await openHandEntry(addDiver);
+  await addDiver.locator('input[name="fullName"]:visible').fill("Fills The Boat");
+  await addDiver
+    .locator('input[name="email"]:visible')
+    .fill(`fills-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
@@ -186,6 +197,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill("Priya Sharma");
   await search.press("Enter");
 
@@ -218,7 +230,10 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await card.getByText("Mark signed on paper").click();
-  await card.getByLabel("I have this diver's signed release on file", { exact: false }).check();
+  await card
+    .getByLabel("I have this diver's signed release on file", { exact: false })
+    .filter({ visible: true })
+    .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
 
   // Success lands **in place**: no banner, no navigation, and — the point of

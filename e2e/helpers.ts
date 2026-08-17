@@ -114,6 +114,14 @@ export async function openTripTab(page: Page, tab: "Guests" | "Manifest" | "Prep
   await page.waitForURL(new RegExp(`/${tab.toLowerCase()}(\\?|$)`));
 }
 
+/** Expand the optional hand-entry form before filling its person fields. */
+export async function openHandEntry(container: Locator): Promise<void> {
+  const details = container.locator("details#hand-entry");
+  if ((await details.getAttribute("open")) === null) {
+    await details.locator("summary").click();
+  }
+}
+
 /**
  * Put a departure on the board through the real staff form — the schedule
  * board's own add panel, opened at full depth (`?add=full`), which is the only

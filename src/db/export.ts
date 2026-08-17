@@ -978,6 +978,7 @@ export async function loadShopExportBundleInput(
             "surface_conditions",
             "conditions_updated_at",
             "description",
+            "is_private",
             "created_at",
           ],
           rows: tripRows.map((row) => [
@@ -1006,6 +1007,7 @@ export async function loadShopExportBundleInput(
             row.surfaceConditions,
             row.conditionsUpdatedAt,
             row.description,
+            row.isPrivate,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trips.csv"],
@@ -2286,6 +2288,7 @@ export async function loadShopExportBundleInput(
             "is_active",
             "is_intro_course",
             "nitrox_compatible",
+            "is_private",
             "created_at",
           ],
           rows: courseRows.map((row) => [
@@ -2316,6 +2319,7 @@ export async function loadShopExportBundleInput(
             row.isActive,
             row.isIntroCourse,
             row.nitroxCompatible,
+            row.isPrivate,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["courses.csv"],

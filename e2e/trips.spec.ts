@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openHandEntry,
   openRosterDetails,
   seededTripId,
 } from "./helpers";
@@ -205,7 +206,7 @@ test.describe("trip pulse", () => {
     // and the filter line stream in together, and `count()` never auto-waits.
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
     const rows = page.locator("tbody tr");
-    await expect(page.getByRole("table")).toBeVisible();
+    await expect(page.getByRole("table").first()).toBeVisible();
     const shopWide = await rows.count();
     expect(shopWide).toBeGreaterThan(1);
 
@@ -316,8 +317,11 @@ test.describe("undoing a removal after the trip is cancelled", () => {
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
       .filter({ visible: true });
-    await addDiver.getByLabel("Name").fill(diver);
-    await addDiver.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
+    await openHandEntry(addDiver);
+    await addDiver.locator('input[name="fullName"]:visible').fill(diver);
+    await addDiver
+      .locator('input[name="email"]:visible')
+      .fill(`ursula-${e2eNow().getTime()}@example.com`);
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
     // Prefix match: with no email provider configured the fleet gets the
     // honest "…but their waiver wasn't emailed" variant of this notice.

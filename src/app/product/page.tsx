@@ -9,6 +9,7 @@ import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,
+  NightBeforeBriefFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
@@ -288,36 +289,45 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      {/* Chapter 03 — the night before: a quieter band with no mockup. The
-          evening splits in two — the crew's prep list, the diver's brief —
-          so the chapter does too, either side of one hairline. */}
+      {/* Chapter 03 — the night before: a quieter band showing the crew's prep list
+          and the diver's brief alongside a live mockup of the pre-trip brief. */}
       <section id="night-before" className="scroll-mt-24 border-y border-border bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <ChapterMarker mark={chapter["night-before"]} />
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.product.prepTitle")}
-            </h2>
-          </div>
-          <div className="mt-12 grid gap-10 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border">
-            <div className="md:pr-10">
-              <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                {t("marketing.product.prepShopLabel")}
-              </p>
-              <h3 className="mt-3 text-xl font-semibold tracking-tight">
-                {t("marketing.product.prepShopTitle")}
-              </h3>
-              <p className="mt-3 leading-7 text-muted">{t("marketing.product.prepShopBody")}</p>
+          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+              <ChapterMarker mark={chapter["night-before"]} />
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {t("marketing.product.prepTitle")}
+              </h2>
+              <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:gap-8">
+                <div>
+                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                    {t("marketing.product.prepShopLabel")}
+                  </p>
+                  <h3 className="mt-3 text-xl font-semibold tracking-tight">
+                    {t("marketing.product.prepShopTitle")}
+                  </h3>
+                  <p className="mt-3 leading-7 text-muted">{t("marketing.product.prepShopBody")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                    {t("marketing.product.prepDiverLabel")}
+                  </p>
+                  <h3 className="mt-3 text-xl font-semibold tracking-tight">
+                    {t("marketing.product.nightBeforeTitle")}
+                  </h3>
+                  <p className="mt-3 leading-7 text-muted">
+                    {t("marketing.product.nightBeforeBody")}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="md:pl-10">
-              <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                {t("marketing.product.prepDiverLabel")}
-              </p>
-              <h3 className="mt-3 text-xl font-semibold tracking-tight">
-                {t("marketing.product.nightBeforeTitle")}
-              </h3>
-              <p className="mt-3 leading-7 text-muted">{t("marketing.product.nightBeforeBody")}</p>
-            </div>
+            <MarketingMockup
+              label={t("marketing.product.nightBeforeMockupLabel")}
+              className="shadow-xl shadow-foreground/5"
+            >
+              <NightBeforeBriefFallback locale={locale} />
+            </MarketingMockup>
           </div>
         </div>
       </section>

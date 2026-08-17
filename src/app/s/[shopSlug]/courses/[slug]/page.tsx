@@ -208,6 +208,7 @@ export default async function CoursePage({
       <CourseSchedule days={course.scheduleDays} locale={locale} t={t} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
+        isPrivate={course.isPrivate}
         sessions={sessions}
         shopSlug={shopSlug}
         timezone={shop.timezone}

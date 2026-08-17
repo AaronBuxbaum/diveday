@@ -89,6 +89,8 @@
     "courseNoCardRequired": "No se exige certificación previa",
     "descriptionLabel": "Descripción",
     "descriptionPlaceholder": "Puntos de inmersión, condiciones, para quién es, certificaciones requeridas.",
+    "isPrivateLabel": "Chárter privado",
+    "isPrivateHint": "Marcar esta salida como un chárter privado para su grupo",
     "daysLabel": "Cuántos días",
     "daysDescription": "Casi todas las salidas duran un día. Un curso de fin de semana o un liveaboard que se reúne a las mismas horas en días consecutivos es una sola salida: una lista, un juego de exenciones, una tripulación.",
     "payAtBookingLegend": "Pago al reservar",

@@ -284,6 +284,7 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   stay pixel-stable for visual regression; in production the clock is the native call, unchanged.
   `pnpm check:clock` enforces it. Never stabilise a visual test by masking moving text — freeze the
   clock at the Playwright harness boundary.
+- **Trips Late-Arrival & Departure Buffer**: Because trips often run late, all checks determining whether a departure has sailed, ended, or is "in the past" (e.g., booking eligibility, walk-in check-ins, blowout alternatives, closeout state, sitemap/stats visibility) must include a **1-hour buffer** on the scheduled departure or arrival time.
 - **A new page ships with a `loading.tsx` and `export const instant = true`.** That file is the
   route's `<Suspense>` boundary — what a client navigation into the segment paints, and what stands
   in the static shell while the page's request-scoped reads stream in. Shape it like the body it

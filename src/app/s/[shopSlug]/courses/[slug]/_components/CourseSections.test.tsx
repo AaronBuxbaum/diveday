@@ -201,4 +201,36 @@ describe("CourseSessions featured date", () => {
     );
     expect(screen.queryByRole("link", { name: "Book this date" })).not.toBeInTheDocument();
   });
+
+  it("renders the request-date link when isPrivate is true and inquiryHref is present", () => {
+    render(
+      <CourseSessions isPrivate={true} sessions={[]} {...props} inquiryHref="#get-in-touch" />,
+    );
+
+    expect(
+      screen.getByText(/This is a private course and runs on request for your group/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request a date" })).toHaveAttribute(
+      "href",
+      "#get-in-touch",
+    );
+  });
+
+  it("renders the default get-in-touch text when isPrivate is true and inquiryHref is null", () => {
+    render(<CourseSessions isPrivate={true} sessions={[]} {...props} inquiryHref={null} />);
+
+    expect(
+      screen.getByText(/This is a private course and runs on request for your group/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/or get in touch/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Request a date" })).not.toBeInTheDocument();
+  });
+
+  it("renders the public empty-state when isPrivate is false and there are no sessions", () => {
+    render(<CourseSessions isPrivate={false} sessions={[]} {...props} inquiryHref={null} />);
+
+    expect(
+      screen.getByText(/No dates on the books right now — this course runs on request/),
+    ).toBeInTheDocument();
+  });
 });
