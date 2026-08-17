@@ -176,8 +176,8 @@ test.describe("contact import — specialty cards", () => {
     const addDiver = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-    await addDiver.getByLabel("Name").fill("Deep Dana");
-    await addDiver.getByLabel("Email").fill("deep.dana@example.com");
+    await addDiver.getByLabel("Name").filter({ visible: true }).fill("Deep Dana");
+    await addDiver.getByLabel("Email").filter({ visible: true }).fill("deep.dana@example.com");
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
     await expect(page.getByRole("status")).toContainText(
       "Diver added to the trip — but their waiver wasn’t emailed.",
