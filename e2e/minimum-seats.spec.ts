@@ -143,8 +143,11 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await addDiver.getByLabel("Name").fill("Meets The Minimum");
-  await addDiver.getByLabel("Email").fill(`meets-${e2eNow().getTime()}@example.com`);
+  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Meets The Minimum");
+  await addDiver
+    .getByLabel("Email")
+    .filter({ visible: true })
+    .fill(`meets-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
   await page.goto(tripUrl);
