@@ -405,6 +405,14 @@ export default async function CloseOutPage({
         </div>
       ) : null}
 
+      {notice === "recap-locked" ? (
+        <div className="mb-6">
+          <ShopNotice tone="neutral" role="status">
+            {t("closeout.notice.recapLocked")}
+          </ShopNotice>
+        </div>
+      ) : null}
+
       {notice === "acknowledge-required" ? (
         <div className="mb-6">
           <ShopNotice tone="warning" role="alert">
