@@ -191,6 +191,7 @@ export const IMPORT_FIELDS = [
   "visit_status",
   "visit_amount",
   "visit_reference",
+  "internal_notes",
 ] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -479,6 +480,27 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "confirmation_code",
     "reference",
   ],
+  internal_notes: [
+    "internal_notes",
+    "internal_note",
+    "notes",
+    "note",
+    "staff_notes",
+    "staff_note",
+    "customer_notes",
+    "customer_note",
+    "admin_notes",
+    "admin_note",
+    "diver_notes",
+    "diver_note",
+    "comments",
+    "comment",
+    "remarks",
+    "remark",
+    "general_notes",
+    "memo",
+    "memos",
+  ],
 };
 
 /**
@@ -525,7 +547,8 @@ export type ImportScopeRowId =
   | "cardOnFile"
   | "pastVisits"
   | "paymentHistory"
-  | "serviceHistory";
+  | "serviceHistory"
+  | "diverNotes";
 
 /**
  * Published scope table — what the importer takes. The words live in the
@@ -560,6 +583,7 @@ export const IMPORT_HONESTY_TABLE: {
   { id: "pastVisits", scope: "included" },
   { id: "paymentHistory", scope: "included" },
   { id: "serviceHistory", scope: "stays-behind" },
+  { id: "diverNotes", scope: "included" },
 ];
 
 /** Normalize a header for alias lookup: lower, trim, punctuation/space → single "_". */
@@ -1040,6 +1064,8 @@ export type PreparedRow = {
   visit: PreparedVisit | null;
   /** Unverified source payment/refund/receipt history, separate from live orders. */
   paymentHistory: PreparedImportedPaymentHistory | null;
+  /** Internal / staff / diver notes imported into the diver's record. */
+  notes: string | null;
   /**
    * `import` writes the person and everything on the row. `merge` is a row whose
    * email already appeared earlier in the same file: it is the *same diver*, so
@@ -1102,6 +1128,7 @@ export type PreparedImport = {
     withVisit: number;
     /** Unverified payment/refund/receipt source rows this file records. */
     withPaymentHistory: number;
+    withNotes: number;
   };
   /** Set when the file has no header row, or no recognizable identity column. */
   fatal: ImportFatal | null;
@@ -1411,6 +1438,7 @@ export function prepareContactImport(text: string): PreparedImport {
       withWaiver: 0,
       withVisit: 0,
       withPaymentHistory: 0,
+      withNotes: 0,
     },
     fatal: null,
   };
@@ -1975,6 +2003,7 @@ export function prepareContactImport(text: string): PreparedImport {
       waiver: action === "skip" ? null : waiver,
       visit: action === "skip" ? null : visit,
       paymentHistory: action === "skip" ? null : paymentHistory,
+      notes: action === "skip" ? null : clean(at(cells, "internal_notes")),
       action,
       mergedIntoRow,
       issues,
@@ -2001,6 +2030,7 @@ export function prepareContactImport(text: string): PreparedImport {
       withWaiver: written.filter((row) => row.waiver).length,
       withVisit: written.filter((row) => row.visit).length,
       withPaymentHistory: written.filter((row) => row.paymentHistory).length,
+      withNotes: written.filter((row) => Boolean(row.notes)).length,
     },
     fatal: null,
   };

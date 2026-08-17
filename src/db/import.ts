@@ -43,6 +43,7 @@ import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
   certifications,
   importedPaymentHistory,
+  internalNotes,
   nitroxCertifications,
   people,
   personRoles,
@@ -92,6 +93,8 @@ export type ImportSummary = {
   paymentHistoryAdded: number;
   /** The same source financial row was already imported and was left untouched. */
   paymentHistorySkippedExisting: number;
+  /** Internal / staff / diver notes imported onto diver profiles. */
+  notesAdded: number;
   rowsSkipped: number;
 };
 
@@ -244,6 +247,7 @@ export async function commitContactImport(
     visitsSkippedExisting: 0,
     paymentHistoryAdded: 0,
     paymentHistorySkippedExisting: 0,
+    notesAdded: 0,
     rowsSkipped: prepared.rows.length - preparedRows.length,
   };
   if (preparedRows.length === 0) return summary;
@@ -765,6 +769,33 @@ async function writeEvidence(
         });
         summary.waiversAdded += 1;
       }
+    }
+  }
+
+  if (row.notes && row.notes.trim().length > 0) {
+    const body = row.notes.trim();
+    const existing = await tx
+      .select({ id: internalNotes.id })
+      .from(internalNotes)
+      .where(
+        and(
+          eq(internalNotes.shopId, shopId),
+          eq(internalNotes.personId, personId),
+          isNull(internalNotes.bookingId),
+          eq(internalNotes.body, body),
+        ),
+      )
+      .limit(1);
+    if (existing.length === 0) {
+      await tx.insert(internalNotes).values({
+        shopId,
+        personId,
+        bookingId: null,
+        body,
+        createdByPersonId: importedByPersonId,
+        createdAt: now,
+      });
+      summary.notesAdded += 1;
     }
   }
 }

@@ -993,6 +993,13 @@ describe("IMPORT_HONESTY_TABLE", () => {
     expect(insurance.detail).toMatch(/never a gate/i);
   });
 
+  it("brings internal & diver notes across into diver profiles", () => {
+    const notes = row("diverNotes");
+    expect(notes.what).toBe("Diver & staff notes");
+    expect(notes.scope).toBe("included");
+    expect(notes.detail).toMatch(/notes/i);
+  });
+
   it("never leaks internal vocabulary into a table three surfaces render verbatim", () => {
     // This table is rendered on both switching pages and in the import wizard.
     // An ADR id or a decision-register id here reaches a shop owner as a dead
@@ -1002,5 +1009,13 @@ describe("IMPORT_HONESTY_TABLE", () => {
       expect(resolved.what, `${entry.id} — what`).not.toMatch(INTERNAL_VOCABULARY);
       expect(resolved.detail, `${entry.id} — detail`).not.toMatch(INTERNAL_VOCABULARY);
     }
+  });
+
+  it("parses internal notes from internal_notes, comments, and notes columns", () => {
+    const csv = `name,email,notes\nSam Diver,sam@example.com,"Needs size L BCD, prefers morning dives"`;
+    const prepared = prepareContactImport(csv);
+    expect(prepared.fatal).toBeNull();
+    expect(prepared.rows[0].notes).toBe("Needs size L BCD, prefers morning dives");
+    expect(prepared.totals.withNotes).toBe(1);
   });
 });

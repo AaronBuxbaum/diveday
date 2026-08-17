@@ -488,6 +488,10 @@
       "serviceHistory": {
         "what": "Historial de mantenimiento de equipo",
         "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
+      },
+      "diverNotes": {
+        "what": "Notas internas y del buceador",
+        "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
       }
     },
     "wizard": {
@@ -537,7 +541,8 @@
         "visit_title": "Visita anterior",
         "visit_status": "Estado de la visita anterior",
         "visit_amount": "Importe de la visita anterior",
-        "visit_reference": "Referencia de reserva"
+        "visit_reference": "Referencia de reserva",
+        "internal_notes": "Notas internas"
       },
       "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
@@ -553,7 +558,8 @@
         "nitroxCards": "Certificaciones de nitrox",
         "waivers": "Waivers",
         "pastVisits": "Visitas anteriores",
-        "paymentHistory": "Historial de pagos / recibos"
+        "paymentHistory": "Historial de pagos / recibos",
+        "internalNotes": "Notas internas"
       },
       "table": {
         "rowNumber": "#",
@@ -592,6 +598,7 @@
         "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están — volver a ejecutar la misma exportación no duplica el historial de nadie.",
         "paymentHistoryLine": "{count, plural, one {# registro de pago / recibo del origen sin verificar} other {# registros de pago / recibo del origen sin verificar}} añadidos a Pedidos.",
         "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como están.",
+        "notesLine": "{count, plural, one {# nota interna} other {# notas internas}} importadas a perfiles de buceadores.",
         "receiptDocumentsFailedNote": " {count} enlace(s) de documento de recibo no se pudieron descargar y se dejaron fuera del registro del origen.",
         "seeRoster": "Ver el listado"
       }

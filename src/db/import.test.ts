@@ -10,6 +10,7 @@ import {
   bookings,
   certifications,
   importedPaymentHistory,
+  internalNotes,
   nitroxCertifications,
   orders,
   people,
@@ -778,6 +779,40 @@ describe("commitContactImport — prior visits and imported payment history", ()
     const strayShopId = other?.id ?? "00000000-0000-0000-0000-000000000000";
     const stray = await db.select().from(priorVisits).where(eq(priorVisits.shopId, strayShopId));
     expect(stray).toHaveLength(0);
+  });
+
+  it("imports internal notes onto diver profiles and does not duplicate identical notes on re-import", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const csv = [
+      "name,email,notes",
+      "Maya River,maya.river@example.com,Prefers steel 100s and morning dives",
+    ].join("\n");
+
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary.notesAdded).toBe(1);
+
+    const person = await personByEmail(db, shop.id, "maya.river@example.com");
+    if (!person) throw new Error("person not created");
+
+    const notes = await db
+      .select()
+      .from(internalNotes)
+      .where(and(eq(internalNotes.shopId, shop.id), eq(internalNotes.personId, person.id)));
+    expect(notes).toHaveLength(1);
+    expect(notes[0].body).toBe("Prefers steel 100s and morning dives");
+    expect(notes[0].bookingId).toBeNull();
+    expect(notes[0].createdByPersonId).toBe(importer);
+
+    // Re-import with the same note should not duplicate
+    const summary2 = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary2.notesAdded).toBe(0);
+
+    const notesAfter = await db
+      .select()
+      .from(internalNotes)
+      .where(and(eq(internalNotes.shopId, shop.id), eq(internalNotes.personId, person.id)));
+    expect(notesAfter).toHaveLength(1);
   });
 });
 

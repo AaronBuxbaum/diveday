@@ -488,6 +488,10 @@
       "serviceHistory": {
         "what": "Gear service history",
         "detail": "Stays behind — DiveDay tracks rental sizes, not a specific rig's service record."
+      },
+      "diverNotes": {
+        "what": "Internal & diver notes",
+        "detail": "Customer remarks and staff notes carry over directly into private notes on the diver's profile."
       }
     },
     "wizard": {
@@ -537,7 +541,8 @@
         "visit_title": "Past visit",
         "visit_status": "Past visit status",
         "visit_amount": "Past visit amount",
-        "visit_reference": "Booking reference"
+        "visit_reference": "Booking reference",
+        "internal_notes": "Internal notes"
       },
       "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren't recognized as a waiver column, so their contents never import. A recognized “waiver accepted” column is trusted instead; see below.",
       "unmappedColumns": "Not recognized, so ignored: {columns}.",
@@ -553,7 +558,8 @@
         "nitroxCards": "Nitrox certifications",
         "waivers": "Waivers",
         "pastVisits": "Past visits",
-        "paymentHistory": "Payment / receipt history"
+        "paymentHistory": "Payment / receipt history",
+        "internalNotes": "Internal notes"
       },
       "table": {
         "rowNumber": "#",
@@ -592,6 +598,7 @@
         "visitsSkippedNote": " {count} were already imported and were left as they are — re-running the same export doesn't double anyone's history.",
         "paymentHistoryLine": "{count, plural, one {# unverified payment / receipt source record} other {# unverified payment / receipt source records}} added to Orders.",
         "paymentHistorySkippedNote": " {count} payment-history rows were already present and were left as they are.",
+        "notesLine": "{count, plural, one {# internal note} other {# internal notes}} imported to diver profiles.",
         "receiptDocumentsFailedNote": " {count} receipt document link(s) didn't fetch and were left off the source record.",
         "seeRoster": "See the roster"
       }

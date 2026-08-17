@@ -52,6 +52,7 @@ type ImportWizardCopy = {
     waivers: string;
     pastVisits: string;
     paymentHistory: string;
+    internalNotes: string;
   };
   table: {
     rowNumber: string;
@@ -103,6 +104,7 @@ type ImportWizardCopy = {
     paymentHistoryLine: string;
     paymentHistorySkippedNote: string;
     receiptDocumentsFailedNote: string;
+    notesLine: string;
     seeRoster: string;
   };
 };
@@ -288,6 +290,9 @@ export function ImportWizard({
               { label: copy.stats.waivers, value: prepared.totals.withWaiver },
               { label: copy.stats.pastVisits, value: prepared.totals.withVisit },
               { label: copy.stats.paymentHistory, value: prepared.totals.withPaymentHistory },
+              ...(prepared.totals.withNotes > 0
+                ? [{ label: copy.stats.internalNotes, value: prepared.totals.withNotes }]
+                : []),
             ].map((stat) => (
               // `inset`: these tiles sit inside the wizard's own card, so they
               // take the sunken tile rather than stacking card on card.
@@ -385,25 +390,34 @@ export function ImportWizard({
                     )}
                   </Td>
                   <Td>
-                    {row.issues.length === 0 ? (
+                    {row.issues.length === 0 && !row.notes ? (
                       <span className="text-muted">{copy.table.emptyValue}</span>
                     ) : (
-                      <ul className="space-y-0.5">
-                        {/* The issue list is built once per row by prepareContactImport and
-                            never reordered or filtered afterward, so the index is a stable
-                            identity — there's no other natural key, since two issues can
-                            legitimately share the same code and params (e.g. "agency
-                            unrecognized" from both a cert and a specialty column). */}
-                        {row.issues.map((issue, index) => (
-                          <li
-                            // biome-ignore lint/suspicious/noArrayIndexKey: static, unreordered list
-                            key={`${issue.code}-${index}`}
-                            className={`text-xs ${issueTone[issue.level]}`}
-                          >
-                            {fill(copy.issues[issue.code], issue.params ?? {})}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="space-y-1">
+                        {row.notes ? (
+                          <p className="text-xs text-foreground/80 line-clamp-2" title={row.notes}>
+                            {row.notes}
+                          </p>
+                        ) : null}
+                        {row.issues.length > 0 ? (
+                          <ul className="space-y-0.5">
+                            {/* The issue list is built once per row by prepareContactImport and
+                                never reordered or filtered afterward, so the index is a stable
+                                identity — there's no other natural key, since two issues can
+                                legitimately share the same code and params (e.g. "agency
+                                unrecognized" from both a cert and a specialty column). */}
+                            {row.issues.map((issue, index) => (
+                              <li
+                                // biome-ignore lint/suspicious/noArrayIndexKey: static, unreordered list
+                                key={`${issue.code}-${index}`}
+                                className={`text-xs ${issueTone[issue.level]}`}
+                              >
+                                {fill(copy.issues[issue.code], issue.params ?? {})}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
                     )}
                   </Td>
                 </tr>
@@ -537,6 +551,11 @@ export function ImportWizard({
                       count: state.summary.receiptDocumentsFailed,
                     })
                   : ""}
+              </p>
+            ) : null}
+            {state.summary.notesAdded > 0 ? (
+              <p className="mt-1 text-sm">
+                {fill(copy.result.notesLine, { count: state.summary.notesAdded })}
               </p>
             ) : null}
             <Link

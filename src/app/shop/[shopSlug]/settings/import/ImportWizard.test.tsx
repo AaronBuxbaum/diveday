@@ -102,6 +102,7 @@ const COPY = {
     waivers: "Waivers",
     pastVisits: "Past visits",
     paymentHistory: "Payment history",
+    internalNotes: "Internal notes",
   },
   table: {
     rowNumber: "Row",
@@ -149,6 +150,7 @@ const COPY = {
     paymentHistoryLine: "Payment history added: {count}",
     paymentHistorySkippedNote: " ({count} already on file)",
     receiptDocumentsFailedNote: " ({count} receipt documents failed)",
+    notesLine: "Notes added: {count}",
     seeRoster: "See roster",
   },
 };
