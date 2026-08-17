@@ -10,10 +10,12 @@ import process from "node:process";
  * was interrupted between setup and teardown; its `next-server` descendant
  * then became an orphan and could be silently reused by local runs.
  *
- * The child is its own process group so one signal reaches `next start` and
- * every descendant it creates. The normal signal path is paired with the
- * synchronous `exit` cleanup for teardown failures; the latter is deliberately
- * a last-resort SIGKILL and never targets a process outside this group.
+ * Playwright already launches this command as the leader of a detached process
+ * group and kills that group during teardown. The supervisor must stay in that
+ * group: making the Next child detached here would put it beyond Playwright's
+ * kill boundary and recreate the orphan leak this wrapper is meant to prevent.
+ * The normal signal path is paired with synchronous `exit` cleanup for cases
+ * where the supervisor itself is leaving before Next has emitted `exit`.
  */
 
 const nextBin = resolve(process.cwd(), "node_modules/next/dist/bin/next");
@@ -21,17 +23,18 @@ const child = spawn(process.execPath, [nextBin, "start", ...process.argv.slice(2
   cwd: process.cwd(),
   env: process.env,
   stdio: "inherit",
-  detached: process.platform !== "win32",
+  // Playwright's webServer launcher owns the process group. Do not create a
+  // nested detached group here; Playwright would then be unable to reap us.
+  detached: false,
 });
 
 let shuttingDown = false;
 let forceKillTimer;
 
-function signalChildGroup(signal) {
+function signalChild(signal) {
   if (!child.pid) return;
-  const target = process.platform === "win32" ? child.pid : -child.pid;
   try {
-    process.kill(target, signal);
+    child.kill(signal);
   } catch (error) {
     if (error?.code !== "ESRCH") throw error;
   }
@@ -40,7 +43,7 @@ function signalChildGroup(signal) {
 function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
-  signalChildGroup(signal);
+  signalChild(signal);
   forceKillTimer = setTimeout(() => signalChildGroup("SIGKILL"), 5_000);
   forceKillTimer.unref();
 }
@@ -55,9 +58,9 @@ child.once("error", (error) => {
 });
 
 child.once("exit", (code, signal) => {
-  // The direct `next start` process may have exited while a descendant stayed
-  // alive. Reap the whole group before marking the supervisor complete.
-  signalChildGroup("SIGKILL");
+  // Playwright owns descendant cleanup at the process-group boundary. Kill the
+  // direct child too in case it has not fully unwound when it emits `exit`.
+  signalChild("SIGKILL");
   shuttingDown = true;
   if (forceKillTimer) clearTimeout(forceKillTimer);
   process.exitCode = code ?? (signal ? 128 + (signal === "SIGINT" ? 2 : 15) : 1);
@@ -65,6 +68,6 @@ child.once("exit", (code, signal) => {
 
 process.once("exit", () => {
   // `exit` handlers are synchronous by design. If the parent is leaving before
-  // the child emitted `exit`, do not leave a detached process group behind.
-  if (!shuttingDown) signalChildGroup("SIGKILL");
+  // the child emitted `exit`, do not leave Next behind in Playwright's group.
+  if (!shuttingDown) signalChild("SIGKILL");
 });

@@ -20,19 +20,20 @@ build instead of an immediate port-collision signal.
 
 ## Decision
 
-Playwright starts `scripts/e2e-server.mjs`. The supervisor launches `next start`
-in its own process group, forwards normal termination signals to the group, and
-uses a synchronous exit cleanup as a final bounded kill of that same group. It
-never searches for or kills an unrelated `next-server`. Local runs do not reuse
-an existing server; a port collision is reported so the orphan can be inspected
-with `node scripts/stray-processes.mjs --list` before any cleanup.
+Playwright starts `scripts/e2e-server.mjs` in its own detached process group. The
+supervisor keeps `next start` inside that group, forwards normal termination
+signals to the direct child, and uses synchronous exit cleanup as a final
+bounded kill of that child. Playwright's group teardown reaps the child and any
+descendants. The supervisor never searches for or kills an unrelated
+`next-server`. Local runs do not reuse an existing server; a port collision is
+reported so the orphan can be inspected with `node scripts/stray-processes.mjs
+--list` before any cleanup.
 
 ## Alternatives considered
 
 - **Keep Playwright's direct `next start` command.** Rejected because the
-  runner owns the direct child, not a repository-controlled process-group
-  boundary, and the historical orphan proves the cleanup assumption was not
-  sufficient.
+  repository has no signal/exit cleanup boundary for the Next process and its
+  descendants.
 - **Keep `reuseExistingServer` on local runs.** Rejected because it converts a
   stale process into a successful run against the wrong build; a loud port
   collision is the useful failure while the process can still be inspected.
@@ -41,8 +42,8 @@ with `node scripts/stray-processes.mjs --list` before any cleanup.
 
 ## Consequences
 
-- A normal Playwright teardown and an interrupted teardown both have a bounded
-  path to the Next process and its descendants.
+- A normal Playwright teardown and an interrupted teardown both use the same
+  process-group boundary for the Next process and its descendants.
 - A stale server cannot silently serve an old build to a local run.
 - The historical pair's exact parent command remains unknown; this decision
   records and fixes the likely e2e teardown boundary without claiming evidence
