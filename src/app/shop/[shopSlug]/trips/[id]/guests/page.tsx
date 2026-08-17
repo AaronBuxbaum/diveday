@@ -256,8 +256,7 @@ async function TripGuestsBody({
     ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
   ]);
 
-  // Filter out any last-minute matched diver who has level === null (not certified and doesn't claim to be certified)
-  // Keep the whole matched list. A missing declaration is still a recipient;
+  // Keep every date-matched diver. Missing declarations remain eligible;
   // the review fold distinguishes "said nothing" from "said no card" and
   // renders both honestly instead of silently changing who the send reaches.
   const lastMinuteCertified = lastMinuteMatched;

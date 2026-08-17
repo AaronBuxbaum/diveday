@@ -187,7 +187,7 @@ function StaffNotes({
       aria-label={t("manifest.diverNotesHeading")}
       className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 print:hidden"
     >
-      <p className="text-sm font-semibold">{t("manifest.diverNotesHeading")}</p>
+      <h3 className="text-sm font-semibold">{t("manifest.diverNotesHeading")}</h3>
       <ul className="mt-1 flex flex-col gap-1.5">
         {notes.map((entry) => (
           <li key={entry.id} className="break-words text-base whitespace-pre-wrap">

@@ -97,16 +97,14 @@ test.describe("demo billing history", () => {
     await page.waitForURL(/[?&]page=2/);
     await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
     // Different orders, not the same screen re-rendered.
-    await expect(page.locator("tbody tr").first().getByRole("link").first()).not.toHaveText(
-      firstDiver,
-    );
+    await expect(rows.first().getByRole("link").first()).not.toHaveText(firstDiver);
 
     // And back, without losing the pager.
     await page
       .getByRole("navigation", { name: "Pages" })
       .getByRole("link", { name: "Previous" })
       .click();
-    await expect(page.locator("tbody tr").first().getByRole("link").first()).toHaveText(firstDiver);
+    await expect(rows.first().getByRole("link").first()).toHaveText(firstDiver);
   });
 
   /**
@@ -153,7 +151,13 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
-    const row = page.locator("tbody tr").filter({ hasText: "Open — awaiting payment" }).first();
+    const row = page
+      .locator("table")
+      .first()
+      .locator("tbody tr")
+      .filter({ visible: true })
+      .filter({ hasText: "Open — awaiting payment" })
+      .first();
     await expect(row).toBeVisible();
     await expect(row.locator("td").nth(2)).toHaveClass(/align-middle/);
   });

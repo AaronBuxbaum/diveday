@@ -3,6 +3,7 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import process from "node:process";
+import { signalProcessTree } from "./e2e-process-tree.mjs";
 
 /**
  * Playwright's `webServer` owns this small supervisor, not `next start`
@@ -43,11 +44,7 @@ let forceKillTimer;
 
 function signalChild(signal) {
   if (!child.pid) return;
-  try {
-    child.kill(signal);
-  } catch (error) {
-    if (error?.code !== "ESRCH") throw error;
-  }
+  signalProcessTree(child.pid, signal);
 }
 
 function shutdown(signal) {
@@ -68,8 +65,8 @@ child.once("error", (error) => {
 });
 
 child.once("exit", (code, signal) => {
-  // Playwright owns descendant cleanup at the process-group boundary. Kill the
-  // direct child too in case it has not fully unwound when it emits `exit`.
+  // The process-tree helper runs before normal shutdown, while the root is
+  // still present, and remains safe if the root has already exited here.
   signalChild("SIGKILL");
   shuttingDown = true;
   clearInterval(ownerWatchdog);

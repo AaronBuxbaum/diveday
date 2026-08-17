@@ -320,7 +320,11 @@ export default async function CloseOutPage({
     for (const tripId of tripIds) {
       const result = await sendTripRecaps(db, { shopId: staff.user.shopId, tripId });
       if (!result.ok) {
-        if (result.reason === "not_eligible") notReady++;
+        if (result.reason === "not_eligible") {
+          notReady++;
+        } else {
+          failed++;
+        }
         continue;
       }
       failed += result.summary.failed;

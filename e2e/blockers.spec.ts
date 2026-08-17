@@ -49,7 +49,9 @@ test("the by-departure view stays inside one screenful of departure groups", asy
   await page.goto(BY_DEPARTURE);
   await expect(page.getByRole("heading", { name: "Not ready", level: 2 })).toBeVisible();
 
-  const groups = page.locator("div.mt-3.flex.flex-col.gap-5 > div.overflow-hidden");
+  const groups = page
+    .locator("div.mt-3.flex.flex-col.gap-5 > div.overflow-hidden")
+    .filter({ visible: true });
   const groupCount = await groups.count();
   expect(groupCount).toBeGreaterThan(0);
   expect(groupCount).toBeLessThanOrEqual(10);
@@ -66,6 +68,7 @@ test("a stale page link clamps back into the queue instead of showing nothing", 
   await page.goto(BY_DEPARTURE);
   const firstPage = await page
     .locator("div.mt-3.flex.flex-col.gap-5 > div.overflow-hidden")
+    .filter({ visible: true })
     .evaluateAll((els) => els.map((el) => el.textContent));
   expect(firstPage.length).toBeGreaterThan(0);
 
@@ -74,6 +77,7 @@ test("a stale page link clamps back into the queue instead of showing nothing", 
     await expect(page.getByRole("heading", { name: "Not ready", level: 2 })).toBeVisible();
     const clamped = await page
       .locator("div.mt-3.flex.flex-col.gap-5 > div.overflow-hidden")
+      .filter({ visible: true })
       .evaluateAll((els) => els.map((el) => el.textContent));
     expect(clamped.length).toBeGreaterThan(0);
   }

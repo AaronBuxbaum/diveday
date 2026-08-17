@@ -694,5 +694,6 @@ test("private course badge is visible in the catalog, and upcoming dates section
   await requestLink.click();
 
   // Should anchor / scroll to #get-in-touch form
-  await expect(page.locator("#get-in-touch")).toBeVisible();
+  await expect(page).toHaveURL(/#get-in-touch$/);
+  await expect(page.locator("#get-in-touch")).toBeInViewport();
 });

@@ -53,6 +53,13 @@ describe("counter check-in", () => {
     expect(reefOption?.booked).toBe(reef.booked);
   });
 
+  it("excludes a departure that starts exactly now", async () => {
+    const { db, shop, reef } = await context();
+    const options = await listWalkInTrips(db, shop.id, reef.startsAt);
+
+    expect(options.map((option) => option.tripId)).not.toContain(reef.id);
+  });
+
   it("rechecks readiness, records a successful check-in, and is idempotent", async () => {
     const { db, shop, staff, booking, personName } = await context();
     const issued = await issueWaiverRequest(db, {
