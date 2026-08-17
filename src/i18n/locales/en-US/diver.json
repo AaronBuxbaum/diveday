@@ -2014,7 +2014,7 @@
       "fieldEmail": "Email",
       "fieldCard": "Cert level",
       "fieldSuit": "Wetsuit size",
-      "ignored": "Not recognized, so ignored: legacy_id, internal_notes.",
+      "ignored": "Not recognized, so ignored: legacy_id, pos_sync_id.",
       "statDivers": "Divers in file",
       "statCards": "Certifications",
       "statSkipped": "Skipped",
@@ -2048,6 +2048,20 @@
       "waiver": "Waiver",
       "cert": "Certification",
       "payment": "Payment"
+    },
+    "shopPrep": {
+      "label": "Trip prep",
+      "eyebrow": "Crew staging & roster",
+      "title": "Two-Tank Morning Reef",
+      "time": "Tomorrow · 8:00 AM departure",
+      "diversLabel": "Divers",
+      "rentalsLabel": "Rental kits",
+      "tanksLabel": "Tanks filled",
+      "checklistHeading": "Staging checklist",
+      "gearStaged": "Rental gear staged",
+      "tanksReady": "Tanks analyzed & loaded",
+      "crewAssigned": "Crew assigned (Mateo & Sarah)",
+      "manifestReady": "Roster & manifest ready"
     }
   },
   "demo": {
@@ -2351,6 +2365,10 @@
           "serviceHistory": {
             "what": "Gear service history",
             "detail": "Stays behind — DiveDay tracks rental sizes, not a specific rig's service record."
+          },
+          "diverNotes": {
+            "what": "Diver & staff notes",
+            "detail": "Customer remarks and staff notes carry over directly into private notes on the diver's profile."
           }
         }
       },
@@ -2687,6 +2705,7 @@
       "prepShopLabel": "At the shop",
       "prepShopTitle": "A prep list written from the divers' own sizes",
       "prepShopBody": "Every diver's rental sizes land on the trip's prep list, so the boat is packed without a clipboard.",
+      "prepShopMockupLabel": "A dive shop's trip prep staging list showing rental kit allocations, tank fills, and crew assignments.",
       "prepDiverLabel": "On the diver's phone",
       "nightBeforeTitle": "A brief in plain words, not a form letter",
       "nightBeforeBody": "When to be at the dock, what the water looks like, what to pack, and who to text if something changes — written gently enough for someone's first boat dive.",

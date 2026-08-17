@@ -46,25 +46,27 @@ export function ProductChapterNav({
       aria-label={ariaLabel}
       className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm"
     >
-      <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-8 px-6 py-2 text-sm">
-        <p className="py-2.5 font-semibold">{title}</p>
-        <ol className="grid grid-cols-[auto_1fr] gap-x-4 sm:flex sm:flex-wrap sm:gap-x-8">
+      <div className="mx-auto flex max-w-6xl items-center gap-x-4 sm:gap-x-8 px-4 sm:px-6 py-1 text-sm overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <p className="shrink-0 py-2 text-xs sm:text-sm font-semibold tracking-tight">{title}</p>
+        <ol className="flex items-center gap-x-2 sm:gap-x-8 shrink-0">
           {chapters.map((chapter) => {
             const active = chapter.id === activeId;
             return (
-              <li key={chapter.id}>
+              <li key={chapter.id} className="shrink-0">
                 <a
                   href={`#${chapter.id}`}
                   aria-current={active ? "step" : undefined}
                   onClick={() => setActiveId(chapter.id)}
-                  className={`flex min-h-11 items-center gap-2 border-b-2 px-1 font-medium transition-colors ${
+                  className={`flex min-h-11 items-center gap-1.5 sm:gap-2 border-b-2 px-1.5 sm:px-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     active
                       ? "border-primary text-foreground"
                       : "border-transparent text-muted hover:text-foreground"
                   }`}
                 >
-                  <span className="text-xs tabular-nums">{chapter.number}</span>
-                  {chapter.label}
+                  <span className="text-[11px] sm:text-xs tabular-nums text-muted">
+                    {chapter.number}
+                  </span>
+                  <span>{chapter.label}</span>
                 </a>
               </li>
             );

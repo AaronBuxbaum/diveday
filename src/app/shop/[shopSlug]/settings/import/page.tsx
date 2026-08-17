@@ -79,6 +79,7 @@ function importWizardCopy(t: StaffTranslator) {
     visit_status: t("settings.import.wizard.fieldLabels.visit_status"),
     visit_amount: t("settings.import.wizard.fieldLabels.visit_amount"),
     visit_reference: t("settings.import.wizard.fieldLabels.visit_reference"),
+    internal_notes: t("settings.import.wizard.fieldLabels.internal_notes"),
   };
 
   const issues: Record<ImportIssueCode, string> = {
@@ -146,6 +147,7 @@ function importWizardCopy(t: StaffTranslator) {
       waivers: t("settings.import.wizard.stats.waivers"),
       pastVisits: t("settings.import.wizard.stats.pastVisits"),
       paymentHistory: t("settings.import.wizard.stats.paymentHistory"),
+      internalNotes: t("settings.import.wizard.stats.internalNotes"),
     },
     table: {
       rowNumber: t("settings.import.wizard.table.rowNumber"),
@@ -189,6 +191,7 @@ function importWizardCopy(t: StaffTranslator) {
       paymentHistoryLine: t.raw("settings.import.wizard.result.paymentHistoryLine"),
       paymentHistorySkippedNote: t.raw("settings.import.wizard.result.paymentHistorySkippedNote"),
       receiptDocumentsFailedNote: t.raw("settings.import.wizard.result.receiptDocumentsFailedNote"),
+      notesLine: t.raw("settings.import.wizard.result.notesLine"),
       seeRoster: t("settings.import.wizard.result.seeRoster"),
     },
   };
@@ -259,6 +262,10 @@ const SCOPE_ROW_KEYS: Record<ImportScopeRowId, { what: StaffMessageKey; detail: 
     serviceHistory: {
       what: "settings.import.scopeTable.serviceHistory.what",
       detail: "settings.import.scopeTable.serviceHistory.detail",
+    },
+    diverNotes: {
+      what: "settings.import.scopeTable.diverNotes.what",
+      detail: "settings.import.scopeTable.diverNotes.detail",
     },
   };
 

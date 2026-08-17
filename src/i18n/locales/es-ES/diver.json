@@ -2014,7 +2014,7 @@
       "fieldEmail": "Correo",
       "fieldCard": "Nivel de certificación",
       "fieldSuit": "Talla de traje",
-      "ignored": "No reconocidas, así que se ignoran: legacy_id, internal_notes.",
+      "ignored": "No reconocidas, así que se ignoran: legacy_id, pos_sync_id.",
       "statDivers": "Buceadores en el archivo",
       "statCards": "Certificaciones",
       "statSkipped": "Omitidos",
@@ -2048,6 +2048,20 @@
       "waiver": "Exención",
       "cert": "Certificación",
       "payment": "Pago"
+    },
+    "shopPrep": {
+      "label": "Preparación de salida",
+      "eyebrow": "Organización de equipo y tripulación",
+      "title": "Arrecife dos botellas matinal",
+      "time": "Mañana · Salida a las 8:00",
+      "diversLabel": "Buceadores",
+      "rentalsLabel": "Kits de alquiler",
+      "tanksLabel": "Botellas cargadas",
+      "checklistHeading": "Lista de preparación",
+      "gearStaged": "Equipos de alquiler preparados",
+      "tanksReady": "Botellas analizadas y a bordo",
+      "crewAssigned": "Tripulación asignada (Mateo y Sarah)",
+      "manifestReady": "Lista y manifiesto listos"
     }
   },
   "demo": {
@@ -2351,6 +2365,10 @@
           "serviceHistory": {
             "what": "Historial de mantenimiento de equipo",
             "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
+          },
+          "diverNotes": {
+            "what": "Notas internas y del buceador",
+            "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
           }
         }
       },
@@ -2687,6 +2705,7 @@
       "prepShopLabel": "En el centro",
       "prepShopTitle": "Una lista de equipo escrita con las tallas de los propios buceadores",
       "prepShopBody": "Las tallas de alquiler de cada buceador llegan a la lista de equipo del viaje, así que el barco se prepara sin tablilla.",
+      "prepShopMockupLabel": "Lista de preparación de salida que muestra la asignación de equipos de alquiler, botellas y tripulación.",
       "prepDiverLabel": "En el teléfono del buceador",
       "nightBeforeTitle": "Un aviso en palabras sencillas, no una carta modelo",
       "nightBeforeBody": "Cuándo estar en el muelle, cómo está el agua, qué llevar y a quién escribir si algo cambia — redactado con suavidad para la primera inmersión en barco de alguien.",

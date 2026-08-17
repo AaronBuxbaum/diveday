@@ -220,6 +220,10 @@ export const IMPORT_SCOPE_ROW_KEYS: Record<
     what: "marketing.guides.shared.scopeTable.serviceHistory.what",
     detail: "marketing.guides.shared.scopeTable.serviceHistory.detail",
   },
+  diverNotes: {
+    what: "marketing.guides.shared.scopeTable.diverNotes.what",
+    detail: "marketing.guides.shared.scopeTable.diverNotes.detail",
+  },
 };
 
 /**

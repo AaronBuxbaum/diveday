@@ -5,11 +5,30 @@ import {
   ExportBundleFallback,
   ImportPreviewFallback,
   NightBeforeBriefFallback,
+  ShopPrepListFallback,
 } from "./MarketingScreenFallbacks";
 
 afterEach(cleanup);
 
 describe("MarketingScreenFallbacks", () => {
+  describe("ShopPrepListFallback", () => {
+    it("renders in English with crew staging checklist", () => {
+      render(<ShopPrepListFallback locale="en-US" />);
+      expect(screen.getByText("Trip prep")).toBeInTheDocument();
+      expect(screen.getByText("Two-Tank Morning Reef")).toBeInTheDocument();
+      expect(screen.getByText("Staging checklist")).toBeInTheDocument();
+      expect(screen.getByText("Rental gear staged")).toBeInTheDocument();
+    });
+
+    it("renders in Spanish with crew staging checklist", () => {
+      render(<ShopPrepListFallback locale="es-ES" />);
+      expect(screen.getByText("Preparación de salida")).toBeInTheDocument();
+      expect(screen.getByText("Arrecife dos botellas matinal")).toBeInTheDocument();
+      expect(screen.getByText("Lista de preparación")).toBeInTheDocument();
+      expect(screen.getByText("Equipos de alquiler preparados")).toBeInTheDocument();
+    });
+  });
+
   describe("NightBeforeBriefFallback", () => {
     it("renders in English with checklist and weather details", () => {
       render(<NightBeforeBriefFallback locale="en-US" />);
