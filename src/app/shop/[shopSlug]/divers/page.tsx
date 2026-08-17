@@ -1,25 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
-import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { UndoToast } from "@/components/UndoToast";
-import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { FieldActions } from "@/components/ui/form";
 import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import {
-  createDiver,
-  findSimilarDivers,
-  isDiverFilter,
-  listDiverSummaries,
-  restoreDiver,
-} from "@/db/divers";
+import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -67,12 +53,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   invalid: { tone: "danger", key: "divers.page.noticeInvalid" },
 };
 
-const diverSchema = z.object({
-  fullName: z.string().trim().min(2).max(120),
-  email: z.union([z.literal(""), z.email().max(320)]),
-  phone: z.string().trim().max(40),
-});
-
 export default async function DiversPage({
   params,
   searchParams,
@@ -84,29 +64,16 @@ export default async function DiversPage({
     q?: string;
     page?: string;
     filter?: string;
-    confirmName?: string;
-    confirmEmail?: string;
-    confirmPhone?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const {
-    notice,
-    deleted,
-    q,
-    page,
-    filter: filterParam,
-    confirmName,
-    confirmEmail,
-    confirmPhone,
-  } = await searchParams;
+  const { notice, deleted, q, page, filter: filterParam } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const query = q?.trim() ?? "";
   // Both gates in one round trip, and *before* the roster query, because the
   // view the query runs depends on one of them:
@@ -152,57 +119,18 @@ export default async function DiversPage({
     return search.size ? `${roster}?${search}` : roster;
   };
 
-  async function addDiverAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const parsed = diverSchema.safeParse(Object.fromEntries(formData));
-    const roster = shopPath(staff.user.shopSlug, "divers");
-    if (!parsed.success) redirect(noticeUrl(roster, "invalid"));
-
-    const force = formData.get("force") === "true";
-    if (!force) {
-      const db = await getDb();
-      const matches = await findSimilarDivers(db, staff.user.shopId, parsed.data.fullName);
-      if (matches.length > 0) {
-        const search = new URLSearchParams();
-        search.set("confirmName", parsed.data.fullName);
-        if (parsed.data.email) search.set("confirmEmail", parsed.data.email);
-        if (parsed.data.phone) search.set("confirmPhone", parsed.data.phone);
-        redirect(`${roster}?${search.toString()}`);
-      }
-    }
-
-    const diver = await createDiver(await getDb(), {
-      shopId: staff.user.shopId,
-      fullName: parsed.data.fullName,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-    });
-    revalidateAndRedirect(
-      roster,
-      diver
-        ? // `?edit=1` opens the diver record's details form on arrival. This
-          // form asks for three fields; date of birth, dive insurance, and the
-          // emergency contact the manifest prints are all one collapsed
-          // disclosure away, and the front desk had to know to go looking for
-          // it while the diver is still standing there.
-          `${shopPath(staff.user.shopSlug, "divers", diver.id)}?edit=1`
-        : noticeUrl(roster, "duplicate"),
-    );
-  }
-
   async function restoreDiverAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
-    const db = await getDb();
+    const activeDb = await getDb();
     // Restoring is the inverse of the owner/manager-only deletion, so it takes
     // the same gate (H-14, ADR 20260724-role-authorization).
     const roster = shopPath(staff.user.shopSlug, "divers");
-    if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
+    if (!(await canPersonDeleteDiver(activeDb, staff.user.shopId, staff.user.personId))) {
       revalidateAndRedirect(roster, noticeUrl(roster, "not-authorized"));
     }
     const personId = String(formData.get("personId") ?? "");
-    const restored = personId && (await restoreDiver(db, staff.user.shopId, personId));
+    const restored = personId && (await restoreDiver(activeDb, staff.user.shopId, personId));
     revalidateAndRedirect(roster, noticeUrl(roster, restored ? "restored" : "restore-refused"));
   }
 
@@ -258,100 +186,6 @@ export default async function DiversPage({
         </ShopNotice>
       ) : null}
 
-      {potentialMatches.length > 0 ? (
-        <ShopNotice tone="warning" className="mt-6">
-          <div className="flex flex-col gap-2 text-left">
-            <h3 className="font-semibold text-base">{t("divers.page.confirmMatchesTitle")}</h3>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
-              {potentialMatches.map((match) => (
-                <li key={match.id}>
-                  <Link
-                    href={`${shopPath(shopSlug, "divers", match.id)}`}
-                    className="underline font-medium"
-                  >
-                    {match.fullName}
-                  </Link>
-                  {match.email || match.phone ? (
-                    <span className="text-muted text-sm ml-1">
-                      ({[match.email, match.phone].filter(Boolean).join(", ")})
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-            <form action={addDiverAction} className="mt-2">
-              <input type="hidden" name="fullName" value={confirmName} />
-              <input type="hidden" name="email" value={confirmEmail} />
-              <input type="hidden" name="phone" value={confirmPhone} />
-              <input type="hidden" name="force" value="true" />
-              <SubmitButton
-                pendingLabel={t("divers.page.adding")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("divers.page.confirmMatchesSubmit")}
-              </SubmitButton>
-            </form>
-          </div>
-        </ShopNotice>
-      ) : null}
-
-      {/* The id is the door the roster's empty state opens: with nobody on
-          file, "add one here" used to be prose pointing at a collapsed
-          disclosure two sections up, which is not a way forward. `scroll-mt`
-          keeps the summary clear of the sticky header once it is scrolled to.
-
-          At rest this is a button-shaped summary, nothing more. It used to be
-          a full-width bordered card — the largest object on the screen — for
-          the roster's *rare* path: the front desk arrives here to find a
-          person, not to mint one (design principle 8, "collapse the rare
-          path"). The card chrome now belongs to the open state only, where a
-          form actually stands in it. */}
-      <details id="add-diver" className="group/add mt-8 scroll-mt-24">
-        <summary
-          className={buttonClass({
-            variant: "secondary",
-            className: "list-none [&::-webkit-details-marker]:hidden",
-          })}
-        >
-          {t("divers.page.addDiverSummary")}{" "}
-          <span
-            aria-hidden="true"
-            className="text-lg font-normal transition-transform duration-200 group-open/add:rotate-45"
-          >
-            +
-          </span>
-        </summary>
-        <div className={sectionCardClass({ padding: "lg", className: "mt-3" })}>
-          <p className="text-sm text-muted">{t("divers.page.addDiverBody")}</p>
-          {/* The same name/email/phone trio every seat-a-diver door wears
-            (src/components/seat-diver/). This one mints a person without a
-            departure, so nothing here is required but the name — and its own
-            validator takes a longer address and phone than a seating does, so
-            it passes those caps rather than inheriting the tighter ones. */}
-          <PersonFieldTrio
-            className="mt-4"
-            as="form"
-            action={addDiverAction}
-            email="optional"
-            nameLabel={t("divers.page.fullNameLabel")}
-            emailLabel={t("divers.page.emailLabel")}
-            phoneLabel={t("divers.page.phoneLabel")}
-            optionalHint={t("divers.page.optionalHint")}
-            emailMaxLength={320}
-            phoneMaxLength={40}
-          >
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("divers.page.adding")}
-                className={buttonClass({ size: "lg" })}
-              >
-                {t("divers.page.addDiver")}
-              </SubmitButton>
-            </FieldActions>
-          </PersonFieldTrio>
-        </div>
-      </details>
-
       <DiverList
         page={diverPage}
         shopSlug={shopSlug}
@@ -370,6 +204,8 @@ export default async function DiversPage({
           />
         }
         copy={{
+          addDiverLabel: t("divers.list.addDiverAction"),
+          addDiverWithName: t.raw("divers.list.addDiverWithName"),
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewDivingToday: t("divers.list.viewDivingToday"),
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),

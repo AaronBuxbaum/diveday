@@ -7,6 +7,8 @@ import {
   diverEmailSchema,
   diverNameSchema,
   diverPhoneSchema,
+  diverSearchPrefill,
+  newDiverHref,
 } from "./person-fields";
 
 describe("diver person-field fragments", () => {
@@ -55,5 +57,51 @@ describe("diver person-field fragments", () => {
     expect(diverPhoneSchema.parse(" +1-305-555-0231 ")).toBe("+1-305-555-0231");
     expect(diverPhoneSchema.safeParse("1".repeat(DIVER_PHONE_MAX)).success).toBe(true);
     expect(diverPhoneSchema.safeParse("1".repeat(DIVER_PHONE_MAX + 1)).success).toBe(false);
+  });
+});
+
+describe("diverSearchPrefill", () => {
+  it("extracts email when '@' is present", () => {
+    expect(diverSearchPrefill("sarah@example.com")).toEqual({ email: "sarah@example.com" });
+    expect(diverSearchPrefill("  user@domain.org  ")).toEqual({ email: "user@domain.org" });
+  });
+
+  it("extracts name when '@' is not present", () => {
+    expect(diverSearchPrefill("Sarah Connor")).toEqual({ name: "Sarah Connor" });
+    expect(diverSearchPrefill("  John  ")).toEqual({ name: "John" });
+  });
+
+  it("returns empty object for empty or whitespace-only query", () => {
+    expect(diverSearchPrefill("")).toEqual({});
+    expect(diverSearchPrefill("   ")).toEqual({});
+  });
+});
+
+describe("newDiverHref", () => {
+  it("builds clean path when no params provided", () => {
+    expect(newDiverHref("blue-mantis")).toBe("/shop/blue-mantis/divers/new");
+  });
+
+  it("extracts name from query and preserves context params", () => {
+    expect(
+      newDiverHref("blue-mantis", {
+        query: "Alex Smith",
+        surface: "trip-guests",
+        tripId: "trip-123",
+        waitlist: true,
+      }),
+    ).toBe(
+      "/shop/blue-mantis/divers/new?name=Alex+Smith&surface=trip-guests&tripId=trip-123&waitlist=true",
+    );
+  });
+
+  it("extracts email from query when @ is present", () => {
+    expect(
+      newDiverHref("blue-mantis", {
+        query: "alex@example.com",
+        surface: "walk-in",
+        tripId: "trip-456",
+      }),
+    ).toBe("/shop/blue-mantis/divers/new?email=alex%40example.com&surface=walk-in&tripId=trip-456");
   });
 });

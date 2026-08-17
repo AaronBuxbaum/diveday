@@ -114,10 +114,16 @@ export async function openTripTab(page: Page, tab: "Guests" | "Manifest" | "Prep
   await page.waitForURL(new RegExp(`/${tab.toLowerCase()}(\\?|$)`));
 }
 
-/** Expand the optional hand-entry form before filling its person fields. */
+/** Navigate to the create-diver form from an add-diver section or panel. */
 export async function openHandEntry(container: Locator): Promise<void> {
+  const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });
+  if ((await addLink.count()) > 0) {
+    await addLink.click();
+    await container.page().waitForURL(/\/divers\/new/);
+    return;
+  }
   const details = container.locator("details#hand-entry");
-  if ((await details.getAttribute("open")) === null) {
+  if ((await details.count()) > 0 && (await details.getAttribute("open")) === null) {
     await details.locator("summary").click();
   }
 }

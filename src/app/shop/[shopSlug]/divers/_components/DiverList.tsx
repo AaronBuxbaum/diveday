@@ -13,6 +13,7 @@ import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill } from "@/i18n/fill";
+import { newDiverHref } from "@/lib/person-fields";
 import type { CertificationLevel } from "@/lib/readiness";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
@@ -27,6 +28,8 @@ type DiverSummary = DiverPage["divers"][number];
  * at render time via `pluralForm()`/`fill()` (`@/i18n/fill`).
  */
 export interface DiverListCopy {
+  addDiverLabel: string;
+  addDiverWithName: string;
   viewAllDivers: string;
   viewDivingToday: string;
   viewNeedsAttention: string;
@@ -251,24 +254,6 @@ export function DiverList({
     }, 250);
   };
 
-  /**
-   * The empty state's door to the add-diver form. That form is a collapsed
-   * `<details id="add-diver">` further up this page, so a bare `#add-diver`
-   * anchor would jump to a summary that is still shut — the fix is to open it,
-   * bring it into view, and put the cursor in the first field, which is what a
-   * staffer clicking the button meant. Wired here rather than re-rendering
-   * the form inside the card so there is still exactly one add form on the page.
-   */
-  const openAddDiver = () => {
-    const details = document.getElementById("add-diver");
-    if (!(details instanceof HTMLDetailsElement)) return;
-    details.open = true;
-    details.scrollIntoView({ behavior: "smooth", block: "start" });
-    details.querySelector<HTMLInputElement>('input[name="fullName"]')?.focus({
-      preventScroll: true,
-    });
-  };
-
   const { divers } = page;
   /** A search box or a view chip is on, so "nothing here" is a filter result. */
   const narrowed = Boolean(query) || filter !== "all";
@@ -331,18 +316,27 @@ export function DiverList({
             <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
           )}
         </div>
-        <div className="w-full sm:w-80">
-          <label className="sr-only" htmlFor="diver-search">
-            {copy.searchDiversLabel}
-          </label>
-          <input
-            id="diver-search"
-            type="search"
-            value={typed}
-            onChange={(event) => search(event.target.value)}
-            placeholder={copy.searchPlaceholder}
-            className={`${controlClass} min-w-0`}
-          />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="w-full min-w-0 sm:w-80">
+            <label className="sr-only" htmlFor="diver-search">
+              {copy.searchDiversLabel}
+            </label>
+            <input
+              id="diver-search"
+              type="search"
+              value={typed}
+              onChange={(event) => search(event.target.value)}
+              placeholder={copy.searchPlaceholder}
+              className={`${controlClass} min-w-0`}
+            />
+          </div>
+          <Link
+            href={newDiverHref(shopSlug, { query: typed })}
+            id="add-diver"
+            className={buttonClass({ variant: "primary", className: "whitespace-nowrap" })}
+          >
+            {copy.addDiverLabel}
+          </Link>
         </div>
       </div>
       {divers.length === 0 ? (
@@ -354,26 +348,32 @@ export function DiverList({
           {/* Narrowed to nothing and empty on day one are different problems,
               so they get different doors: widen the view, or start the roster. */}
           {narrowed ? (
-            <Link
-              href={hrefFor("", "all")}
-              scroll={false}
-              // Same reasoning as the view chips: this link clears the search
-              // and the view together, so a pending keystroke must not land
-              // afterwards and put half of it back.
-              onClick={cancelPendingSearch}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {copy.emptyShowAll}
-            </Link>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {typed.trim() ? (
+                <Link
+                  href={newDiverHref(shopSlug, { query: typed.trim() })}
+                  className={buttonClass({ size: "sm" })}
+                >
+                  {fill(copy.addDiverWithName, { name: typed.trim() })}
+                </Link>
+              ) : null}
+              <Link
+                href={hrefFor("", "all")}
+                scroll={false}
+                // Same reasoning as the view chips: this link clears the search
+                // and the view together, so a pending keystroke must not land
+                // afterwards and put half of it back.
+                onClick={cancelPendingSearch}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {copy.emptyShowAll}
+              </Link>
+            </div>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={openAddDiver}
-                className={buttonClass({ className: "mt-4" })}
-              >
+              <Link href={newDiverHref(shopSlug)} className={buttonClass({ className: "mt-4" })}>
                 {copy.emptyAddAction}
-              </button>
+              </Link>
               {importHref ? (
                 <>
                   <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openHandEntry, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 test.describe.configure({ timeout: 45_000 });
 
@@ -96,13 +96,15 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // The chosen boat is echoed back so the crew can confirm before adding anyone.
   await expect(page.getByText(tripTitle, { exact: false }).first()).toBeVisible();
 
-  // A search for someone who isn't on file falls through to hand-entry.
+  // A search for someone who isn't on file falls through to adding a diver.
   const search = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
   await search.fill("Zzyzx No Such Diver");
   await search.press("Enter");
   await expect(page.getByText(/No matches for/)).toBeVisible();
 
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Walk-in Test Diver");
+  await page.getByRole("link", { name: "Add “Zzyzx No Such Diver” as a diver" }).click();
+  await page.waitForURL(/\/divers\/new\?/);
+  await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
 
@@ -151,15 +153,12 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })
     .click();
-  const addDiver = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await openHandEntry(addDiver);
-  await addDiver.locator('input[name="fullName"]:visible').fill("Fills The Boat");
-  await addDiver
-    .locator('input[name="email"]:visible')
-    .fill(`fills-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Fills The Boat");
+  await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
   );
@@ -171,12 +170,16 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // say *why* a diver bounced.
   await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}`);
   await page.waitForURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Turned Away Tara");
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new\?/);
+  await page.getByLabel("Full name").fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   // A refusal lands back on the walk-in form with the boat still chosen — the
   // staffer's next move is another diver or another boat, not a trip page.
-  await expect(page).toHaveURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/shop/blue-mantis/check-in/walk-in/${tripId}\\?notice=walkin-full$`),
+  );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".

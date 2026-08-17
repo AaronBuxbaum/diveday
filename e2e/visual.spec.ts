@@ -1693,14 +1693,11 @@ for (const scheme of ["light", "dark"] as const) {
         // horizon, so Today gains a waiver row.
         await page.goto(`/shop/${unique}/bookings/new`);
         await page.getByRole("link", { name: /Two-Tank Morning Reef/ }).click();
-        // "New diver" rather than the trip heading: step one and step two both
-        // say "Which departure?", so that one resolves against the picker's own
-        // DOM and would let the hand-entry form still be streaming.
-        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await page.getByRole("link", { name: "Add diver" }).click();
+        await page.waitForURL(/\/divers\/new\?/);
         // Name only — this door takes the no-email diver, which also keeps the
         // seat from queuing a notification whose delivery state would vary.
-        await page.locator("#hand-entry").scrollIntoViewIfNeeded();
-        await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Marisol Vega");
+        await page.getByLabel("Full name").fill("Marisol Vega");
         await page.getByRole("button", { name: "Add to trip" }).click();
         await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
@@ -1900,7 +1897,9 @@ for (const scheme of ["light", "dark"] as const) {
         const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
         await tripSection.locator("ul li a").filter({ visible: true }).first().click();
         await page.waitForURL(/\/check-in\/walk-in\/[^/?]+$/);
-        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await page.getByRole("link", { name: "Add diver", exact: true }).click();
+        await page.waitForURL(/\/divers\/new/);
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
         await capture(page, "check-in-walk-in-diver", scheme);
       });
 
@@ -1928,7 +1927,9 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .click();
         await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
-        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await page.getByRole("link", { name: "Add diver", exact: true }).click();
+        await page.waitForURL(/\/divers\/new/);
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
         await capture(page, "booking-new-diver", scheme);
       });
 

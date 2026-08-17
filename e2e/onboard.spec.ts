@@ -139,8 +139,10 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
     "href",
     `/shop/${unique}/settings/import`,
   );
-  await page.getByRole("button", { name: "Add your first diver" }).click();
-  await expect(page.getByLabel("Full name")).toBeFocused();
+  await page.getByRole("link", { name: "Add your first diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+  await expect(page.getByLabel("Full name")).toBeVisible();
 
   // Orders: no orders and no connected account, so the one honest door is the
   // money settings — the same fork the page header already makes, now inside
