@@ -146,11 +146,8 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Fills The Boat");
-  await addDiver
-    .getByLabel("Email")
-    .filter({ visible: true })
-    .fill(`fills-${e2eNow().getTime()}@example.com`);
+  await addDiver.locator('input[name="fullName"]:visible').fill("Fills The Boat");
+  await addDiver.locator('input[name="email"]:visible').fill(`fills-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
