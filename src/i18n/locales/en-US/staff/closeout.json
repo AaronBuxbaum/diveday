@@ -6,6 +6,7 @@
     "recapSent": "Any still-outstanding recaps were sent.",
     "recapAttention": "Some recaps need attention. Check the post-dive reports below.",
     "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
+    "recapLocked": "This recap has been sent. Its note and photos can no longer be changed.",
     "crewPhotoAdded": "Crew photo added to this close-out.",
     "crewPhotoRemoved": "Crew photo removed.",
     "crewPhotoLimit": "This close-out already has the maximum number of crew photos.",
