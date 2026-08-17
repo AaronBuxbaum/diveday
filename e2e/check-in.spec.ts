@@ -146,8 +146,11 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const addDiver = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await addDiver.getByLabel("Name").fill("Fills The Boat");
-  await addDiver.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
+  await addDiver.getByLabel("Name").filter({ visible: true }).fill("Fills The Boat");
+  await addDiver
+    .getByLabel("Email")
+    .filter({ visible: true })
+    .fill(`fills-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
@@ -218,7 +221,10 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await card.getByText("Mark signed on paper").click();
-  await card.getByLabel("I have this diver's signed release on file", { exact: false }).check();
+  await card
+    .getByLabel("I have this diver's signed release on file", { exact: false })
+    .filter({ visible: true })
+    .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
 
   // Success lands **in place**: no banner, no navigation, and — the point of
