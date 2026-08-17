@@ -17,6 +17,29 @@ type StaffRole = keyof typeof DEV_STAFF_LOGINS;
  * e.g. `const staffPage = makeActivitySafe(await staffContext.newPage());`.
  */
 export function makeActivitySafe(page: Page): Page {
+  // Page-level patches do not propagate to locators created from a locator:
+  // `section.getByLabel(...)` calls Locator.prototype directly. Patch the
+  // prototype once per worker so every descendant query observes the same
+  // visible-only contract, including the preserved hidden <Activity> trees.
+  const locatorPrototype = Object.getPrototypeOf(page.locator("body")) as Record<
+    PropertyKey,
+    unknown
+  >;
+  const marker = Symbol.for("diveday.playwright.visible-locators");
+  if (!locatorPrototype[marker]) {
+    for (const method of ["getByText", "getByRole", "getByLabel", "getByPlaceholder"]) {
+      const original = locatorPrototype[method];
+      if (typeof original !== "function") continue;
+      locatorPrototype[method] = function (this: object, ...args: unknown[]) {
+        const locator = Reflect.apply(original, this, args) as {
+          filter: (options: { visible: true }) => unknown;
+        };
+        return locator.filter({ visible: true });
+      };
+    }
+    locatorPrototype[marker] = true;
+  }
+
   const rawGetByText = page.getByText.bind(page);
   page.getByText = ((text: string | RegExp, options?: { exact?: boolean }) =>
     rawGetByText(text, options).filter({ visible: true })) as Page["getByText"];
