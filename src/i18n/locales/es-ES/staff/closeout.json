@@ -59,11 +59,12 @@
       "description": "Envía a cada buceador el resumen de una salida completada.",
       "progress": "{completed} de {total} enviados.",
       "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
-      "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}"
+      "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}",
+      "review": "Revisar y reintentar"
     }
   },
   "recap": {
-    "waiting": "El envío automático estará disponible en {remaining}. Los resúmenes nunca se envían antes de cuatro horas tras el final de la salida.",
+    "waiting": "El envío automático del resumen comienza en {remaining}.",
     "ready": "Los resúmenes de esta salida ya se pueden enviar. El envío automático también los recogerá.",
     "send": "Enviar resumen ahora",
     "sending": "Enviando resumen…",
