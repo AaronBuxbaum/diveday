@@ -279,7 +279,7 @@ test.describe("schedule builder", () => {
 
     // Click on the trip details and verify "Private charter" badge in the details header
     await tripCard.getByRole("link", { name: title }).click();
-    await expect(page.getByText("Private charter")).toBeVisible();
+    await expect(page.getByText("Private charter", { exact: true })).toBeVisible();
   });
 });
 

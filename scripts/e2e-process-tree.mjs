@@ -1,9 +1,12 @@
-import { spawnSync } from "node:child_process";
 import process from "node:process";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 function directChildren(pid) {
   if (process.platform === "win32") return [];
-  const result = spawnSync("pgrep", ["-P", String(pid)], { encoding: "utf8" });
+  const result = runBounded("pgrep", ["-P", String(pid)], {
+    encoding: "utf8",
+    timeoutMs: SUBPROCESS_TIMEOUTS.processTable,
+  });
   if (result.status !== 0 || !result.stdout) return [];
   return result.stdout.trim().split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger);
 }
@@ -21,8 +24,9 @@ function collectDescendants(pid, seen = new Set()) {
 export function signalProcessTree(pid, signal) {
   if (!pid) return;
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(pid), "/T", ...(signal === "SIGKILL" ? ["/F"] : [])], {
+    runBounded("taskkill", ["/PID", String(pid), "/T", ...(signal === "SIGKILL" ? ["/F"] : [])], {
       stdio: "ignore",
+      timeoutMs: SUBPROCESS_TIMEOUTS.processTable,
     });
     return;
   }
