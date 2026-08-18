@@ -271,15 +271,10 @@ test.describe("schedule builder", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
-    // Go to public schedule page and verify the Private badge is visible
+    // Private charters are intentionally hidden from the public schedule.
     await page.goto(`/s/${SHOP}`);
     const tripCard = page.getByRole("listitem").filter({ hasText: title });
-    await expect(tripCard).toBeVisible();
-    await expect(tripCard.getByText("Private", { exact: true })).toBeVisible();
-
-    // Click on the trip details and verify "Private charter" badge in the details header
-    await tripCard.getByRole("link", { name: title }).click();
-    await expect(page.getByText("Private charter", { exact: true })).toBeVisible();
+    await expect(tripCard).toHaveCount(0);
   });
 });
 

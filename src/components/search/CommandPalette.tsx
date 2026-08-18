@@ -207,6 +207,11 @@ export function CommandPalette({
         href: newDiverHref(shopSlug, { query: q }),
       });
     }
+    // Destination commands take precedence over the catch-all "add a diver"
+    // result when both match the same query. Typing "Add a booking" should
+    // make the exact navigation command the first keyboard selection, not
+    // send the query text to the diver form.
+    if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
     if (diverItems.length > 0) {
       out.push({
         heading: copy.groupDivers,
@@ -255,7 +260,6 @@ export function CommandPalette({
         })),
       });
     }
-    if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
     // The second door to the language switcher, beside the one behind the
     // shop's name. Only the languages *not* in force: a row that changes
     // nothing is not a command. Matched on the group heading and on each
@@ -469,6 +473,7 @@ export function CommandPalette({
                               id={`${listId}-${item.key}`}
                               type="button"
                               role="option"
+                              aria-label={item.label}
                               aria-selected={isActive}
                               tabIndex={-1}
                               onMouseMove={() =>

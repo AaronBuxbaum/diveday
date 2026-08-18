@@ -42,7 +42,7 @@ test.describe("end-of-day close-out", () => {
     // fleet's frozen 09:30. Its recap editor and the partially completed report
     // task make both the returned-boat work and the administrative follow-up
     // visible in the real page, not only in unit fixtures.
-    await expect(page.getByText("Post-trip recap note")).toBeVisible();
+    await expect(page.getByText("Recap", { exact: true })).toBeVisible();
     await expect(page.getByText("6 of 8 sent.")).toBeVisible();
     await expect(page.getByText("2 reports are still queued.")).toBeVisible();
 

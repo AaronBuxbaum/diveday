@@ -315,11 +315,8 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
   const diverName = `Archivable Diver ${stamp}`;
 
   await page.goto(`/shop/${SHOP}/divers`);
-  await page.getByRole("link", { name: "Add diver", exact: true }).click();
-  await page.waitForURL(/\/divers\/new/);
-  await page.getByLabel("Full name").fill(diverName);
-  await page.getByLabel("Email").fill(`archivable-${stamp}@example.com`);
-  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
   await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
   const recordUrl = page.url().split("?")[0] ?? "";

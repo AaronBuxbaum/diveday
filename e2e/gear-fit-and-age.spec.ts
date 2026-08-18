@@ -211,11 +211,8 @@ test.describe("minimum age (H-08, fail open)", () => {
 
     // A diver who *does* have a date on file, aged 8 on the course date.
     await page.goto(`/shop/${SHOP}/divers`);
-    await page.getByRole("link", { name: "Add diver" }).click();
-    await page.waitForURL(/\/divers\/new/);
-    await page.getByLabel("Full name").fill(`Young Diver ${stamp}`);
-    await page.getByLabel("Email").fill(`young-${stamp}@example.com`);
-    await page.getByRole("button", { name: "Add diver" }).click();
+    await page.getByRole("searchbox", { name: "Search divers" }).fill(`Young Diver ${stamp}`);
+    await page.getByRole("button", { name: "Add diver", exact: true }).click();
     await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
 
     // Adding a diver lands with the details form already expanded — the

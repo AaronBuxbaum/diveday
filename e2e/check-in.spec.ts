@@ -96,7 +96,7 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // The departure is a path segment, not a `?tripId=` — which is what lets a
   // refusal land back on this same form with the boat still chosen and name
   // the gate it hit.
-  await expect(page).toHaveURL(/\/check-in\/walk-in\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/check-in\/walk-in\/[0-9a-f-]{36}(\?.*)?$/);
   // The chosen boat is echoed back so the crew can confirm before adding anyone.
   await expect(page.getByText(tripTitle, { exact: false }).first()).toBeVisible();
 

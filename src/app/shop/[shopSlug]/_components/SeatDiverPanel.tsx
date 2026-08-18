@@ -148,8 +148,8 @@ export function SeatDiverPanel({
           placeholder={copy.findPlaceholder}
           submitLabel={copy.search}
           pendingLabel={copy.searching}
-          addDiverHref={addHref}
-          addDiverLabel={copy.addDiver || "Add diver"}
+          addDiverHref={!query ? addHref : undefined}
+          addDiverLabel={!query ? copy.addDiver || "Add diver" : undefined}
         />
 
         {query ? (

@@ -332,7 +332,7 @@ export function DiverList({
             />
           </div>
           {typed.trim() && quickAddAction ? (
-            <form action={quickAddAction}>
+            <form action={quickAddAction} onSubmit={cancelPendingSearch}>
               <input type="hidden" name="query" value={typed.trim()} />
               <SubmitButton
                 pendingLabel={copy.addDiverLabel}

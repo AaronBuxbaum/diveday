@@ -636,6 +636,7 @@ export default async function CheckInPage({
             </div>
             <Link
               href={`/shop/${shopSlug}/check-in/walk-in?diverq=${encodeURIComponent(query)}`}
+              aria-label={t("checkIn.addWalkInAction", { query })}
               className={buttonClass({ size: "sm" })}
             >
               {t("checkIn.walkInAction")}
