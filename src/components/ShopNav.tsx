@@ -161,6 +161,7 @@ export function ShopNav({
                 emptyShort: t("shared.commandPalette.emptyShort"),
                 emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
                 groupDivers: t("shared.commandPalette.groupDivers"),
+                addDiver: t("shared.commandPalette.addDiver"),
                 groupTrips: t("shared.commandPalette.groupTrips"),
                 groupDiveSites: t("shared.commandPalette.groupDiveSites"),
                 groupCourses: t("shared.commandPalette.groupCourses"),

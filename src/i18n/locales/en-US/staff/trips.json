@@ -243,8 +243,8 @@
     "addToWaitlist": "Add to wait list",
     "noMatchesHeading": "No returning diver by that name",
     "addDiver": "Add diver",
-    "addDiverPrompt": "Not listed? Add “{query}” as a new diver",
-    "addNewDiverAction": "Add “{query}” as a diver"
+    "addDiverPrompt": "Not listed?",
+    "addNewDiverAction": "Add diver"
   },
   "waitlist": {
     "heading": "Wait list",

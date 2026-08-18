@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
+import { newDiverHref } from "@/lib/person-fields";
 import {
   type StaffDestinationGates,
   type StaffDestinationLabels,
@@ -38,6 +39,7 @@ export type CommandPaletteCopy = {
   emptyShort: string;
   emptyNoMatches: string;
   groupDivers: string;
+  addDiver: string;
   groupTrips: string;
   groupDiveSites: string;
   groupCourses: string;
@@ -191,15 +193,24 @@ export function CommandPalette({
       }
     }
     const out: PaletteGroup[] = [];
-    if (results.divers.length > 0) {
+    const diverItems: PaletteItem[] = results.divers.map((diver) => ({
+      key: `diver:${diver.id}`,
+      label: diver.fullName,
+      detail: diver.detail ?? undefined,
+      href: `${root}/divers/${diver.id}`,
+    }));
+    if (q.length >= 2) {
+      diverItems.push({
+        key: "diver:add",
+        label: copy.addDiver,
+        detail: q,
+        href: newDiverHref(shopSlug, { query: q }),
+      });
+    }
+    if (diverItems.length > 0) {
       out.push({
         heading: copy.groupDivers,
-        items: results.divers.map((diver) => ({
-          key: `diver:${diver.id}`,
-          label: diver.fullName,
-          detail: diver.detail ?? undefined,
-          href: `${root}/divers/${diver.id}`,
-        })),
+        items: diverItems,
       });
     }
     if (results.trips.length > 0) {
@@ -308,6 +319,7 @@ export function CommandPalette({
     query,
     boatBoardingHref,
     root,
+    shopSlug,
     gates,
     copy,
     languages,

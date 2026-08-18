@@ -66,7 +66,8 @@
     }
   },
   "recap": {
-    "heading": "Recap",
+    "summaryHeading": "Recap",
+    "heading": "Recap sending",
     "waiting": "Automatic recap sending begins in {remaining}.",
     "due": "Recaps will be sent within 1h.",
     "paused": "Automatic recap sending is paused.",
@@ -79,7 +80,12 @@
     "unpause": "Unpause automatic sending",
     "unpausing": "Unpausing automatic sending…",
     "lessThanMinute": "less than a minute",
-    "sent": "This recap was sent at {time}. The note and photos are now locked."
+    "sent": "This recap was sent at {time}. The note and photos are now locked.",
+    "summaryWaiting": "This recap will go out automatically around {time}.",
+    "summaryDue": "This recap is ready to send.",
+    "summaryPaused": "Recap sending is paused.",
+    "summaryFailed": "Automatic recap sending failed.",
+    "summaryNoScheduled": "This recap will not be sent automatically."
   },
   "crewPhotos": {
     "heading": "Crew photos",

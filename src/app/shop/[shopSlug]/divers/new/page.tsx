@@ -13,11 +13,13 @@ export default async function NewDiverPage({
   searchParams: Promise<{
     q?: string;
     name?: string;
+    email?: string;
+    phone?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { q, name } = await searchParams;
-  const query = (name || q || "").trim();
+  const { q, name, email, phone } = await searchParams;
+  const query = (name || email || phone || q || "").trim();
   redirect(
     query ? `/shop/${shopSlug}/divers?q=${encodeURIComponent(query)}` : `/shop/${shopSlug}/divers`,
   );

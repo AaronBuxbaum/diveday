@@ -546,6 +546,22 @@ export default async function CloseOutPage({
               const tone = CLOSEOUT_STATUS_TONES[departure.status];
               const checkpoint =
                 departure.diveNumber >= 1 ? `after_dive_${departure.diveNumber}` : "departure";
+              const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
+              const recapStatusSummary = departure.recapSentAt
+                ? t("closeout.recap.sent", {
+                    time: formatTime(departure.recapSentAt, locale, shop.timezone),
+                  })
+                : departure.recapFailed
+                  ? t("closeout.recap.summaryFailed")
+                  : departure.recapAutoSendPaused
+                    ? t("closeout.recap.summaryPaused")
+                    : autoSendAt && autoSendAt.getTime() <= now.getTime()
+                      ? t("closeout.recap.summaryDue")
+                      : autoSendAt
+                        ? t("closeout.recap.summaryWaiting", {
+                            time: formatTime(autoSendAt, locale, shop.timezone),
+                          })
+                        : t("closeout.recap.summaryNoScheduled");
               return (
                 // The departure row carries a live close-out status tone (the
                 // danger border is meaningful), so it stays hand-typed rather
@@ -628,16 +644,12 @@ export default async function CloseOutPage({
                       tripId={departure.tripId}
                       recapSendAction={sendRecapAction.bind(null, departure.tripId)}
                       toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
-                      recapAutoSendAt={recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt)}
+                      recapAutoSendAt={autoSendAt}
                       recapAutoSendPaused={departure.recapAutoSendPaused}
                       recapFailed={departure.recapFailed}
                       recapNowMs={now.getTime()}
                       recapSentAt={departure.recapSentAt}
-                      recapSentAtLabel={
-                        departure.recapSentAt
-                          ? formatTime(departure.recapSentAt, locale, shop.timezone)
-                          : undefined
-                      }
+                      recapStatusSummary={recapStatusSummary}
                     />
                   ) : null}
                 </li>

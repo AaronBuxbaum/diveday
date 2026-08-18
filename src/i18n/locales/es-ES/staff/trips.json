@@ -243,8 +243,8 @@
     "addToWaitlist": "Añadir a la lista de espera",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
     "addDiver": "Añadir buceador",
-    "addDiverPrompt": "¿No aparece? Añadir a “{query}” como nuevo buceador",
-    "addNewDiverAction": "Añadir a “{query}” como buceador"
+    "addDiverPrompt": "¿No aparece?",
+    "addNewDiverAction": "Añadir buceador"
   },
   "waitlist": {
     "heading": "Lista de espera",

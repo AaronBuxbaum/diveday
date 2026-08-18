@@ -50,6 +50,7 @@ export function RecapNoteEditor({
   recapNowMs,
   recapSentAt,
   recapSentAtLabel,
+  recapStatusSummary,
 }: {
   action: (formData: FormData) => void;
   shoutout: string | null;
@@ -81,8 +82,14 @@ export function RecapNoteEditor({
   recapNowMs?: number;
   recapSentAt?: Date | null;
   recapSentAtLabel?: string;
+  recapStatusSummary?: string;
 }) {
   const recapLocked = Boolean(recapSentAt);
+  const statusSummary =
+    recapStatusSummary ??
+    (recapLocked && recapSentAt && recapSentAtLabel
+      ? t("closeout.recap.sent", { time: recapSentAtLabel })
+      : t("trips.recapNote.description"));
   return (
     <details open={saved} className="group/recap mt-3 border-t border-border pt-3">
       {/* Stacked below `sm`, one line from there. Inline at phone width the
@@ -94,7 +101,7 @@ export function RecapNoteEditor({
       <summary className="flex min-h-11 cursor-pointer list-none flex-col justify-center gap-0.5 text-sm [&::-webkit-details-marker]:hidden sm:flex-row sm:items-center sm:justify-start sm:gap-2">
         <span className="flex shrink-0 items-center gap-2 font-medium">
           <DisclosureCaret className="text-muted group-open/recap:rotate-90" />
-          {t("trips.recapNote.heading")}
+          {t("closeout.recap.summaryHeading")}
         </span>
         {/* The note itself at rest, one line of it — what a passing glance
             needs is "is there one, and does it still read right", not the
@@ -105,11 +112,43 @@ export function RecapNoteEditor({
           {shoutout ?? t("trips.recapNote.emptySummary")}
         </span>
       </summary>
-      <p className="mt-2 max-w-2xl text-sm text-muted">
-        {recapLocked && recapSentAtLabel
-          ? t("closeout.recap.sent", { time: recapSentAtLabel })
-          : t("trips.recapNote.description")}
-      </p>
+      <p className="mt-2 max-w-2xl text-sm text-muted">{statusSummary}</p>
+
+      {!recapLocked &&
+      recapSendAction &&
+      toggleRecapAutoSendPauseAction &&
+      tripId &&
+      recapNowMs !== undefined ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
+            {t("closeout.recap.heading")}
+          </h4>
+          <RecapSendControl
+            sendAction={recapSendAction}
+            togglePauseAction={toggleRecapAutoSendPauseAction}
+            tripId={tripId}
+            autoSendAt={recapAutoSendAt ? recapAutoSendAt.toISOString() : null}
+            paused={recapAutoSendPaused}
+            failed={recapFailed}
+            nowMs={recapNowMs}
+            copy={{
+              waiting: t.raw("closeout.recap.waiting"),
+              due: t("closeout.recap.due"),
+              paused: t("closeout.recap.paused"),
+              failed: t("closeout.recap.failed"),
+              noScheduledReturn: t("closeout.recap.noScheduledReturn"),
+              send: t("closeout.recap.send"),
+              sending: t("closeout.recap.sending"),
+              pause: t("closeout.recap.pause"),
+              pausing: t("closeout.recap.pausing"),
+              unpause: t("closeout.recap.unpause"),
+              unpausing: t("closeout.recap.unpausing"),
+              lessThanMinute: t("closeout.recap.lessThanMinute"),
+            }}
+          />
+        </div>
+      ) : null}
+
       <form action={action} className="mt-2 flex flex-col gap-3">
         <textarea
           name="recapShoutout"
@@ -273,41 +312,6 @@ export function RecapNoteEditor({
               </div>
             </form>
           ) : null}
-        </div>
-      ) : null}
-
-      {!recapLocked &&
-      recapSendAction &&
-      toggleRecapAutoSendPauseAction &&
-      tripId &&
-      recapNowMs !== undefined ? (
-        <div className="mt-4 border-t border-border pt-4">
-          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
-            {t("closeout.recap.heading")}
-          </h4>
-          <RecapSendControl
-            sendAction={recapSendAction}
-            togglePauseAction={toggleRecapAutoSendPauseAction}
-            tripId={tripId}
-            autoSendAt={recapAutoSendAt ? recapAutoSendAt.toISOString() : null}
-            paused={recapAutoSendPaused}
-            failed={recapFailed}
-            nowMs={recapNowMs}
-            copy={{
-              waiting: t.raw("closeout.recap.waiting"),
-              due: t("closeout.recap.due"),
-              paused: t("closeout.recap.paused"),
-              failed: t("closeout.recap.failed"),
-              noScheduledReturn: t("closeout.recap.noScheduledReturn"),
-              send: t("closeout.recap.send"),
-              sending: t("closeout.recap.sending"),
-              pause: t("closeout.recap.pause"),
-              pausing: t("closeout.recap.pausing"),
-              unpause: t("closeout.recap.unpause"),
-              unpausing: t("closeout.recap.unpausing"),
-              lessThanMinute: t("closeout.recap.lessThanMinute"),
-            }}
-          />
         </div>
       ) : null}
     </details>

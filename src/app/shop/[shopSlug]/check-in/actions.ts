@@ -9,7 +9,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
-export async function checkInAction(shopSlug: string, formData: FormData) {
+export async function checkInAction(shopSlug: string, formData: FormData): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   // `shopPath`, not a template literal: `shopSlug` is an ordinary argument to
@@ -40,7 +40,7 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
     // Redirecting to the same path forces the server-rendered row to settle;
     // unlike a bare revalidation it also refreshes the current browser view.
     revalidatePath(back);
-    redirect(back);
+    return { ok: true };
   }
   revalidatePath(back);
   // `not_ready` carries the diver's booking/trip so the notice can link
@@ -61,7 +61,10 @@ export async function checkInAction(shopSlug: string, formData: FormData) {
  * high-frequency toggle gets re-tap undo, never a blocking confirm). The
  * correction lands in the activity trail as its own event.
  */
-export async function undoCheckInAction(shopSlug: string, formData: FormData) {
+export async function undoCheckInAction(
+  shopSlug: string,
+  formData: FormData,
+): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const back = shopPath(shopSlug, "check-in");
@@ -77,7 +80,7 @@ export async function undoCheckInAction(shopSlug: string, formData: FormData) {
     // state is the confirmation — no banner restating it from the top of the
     // page, and no navigation to deliver one.
     revalidatePath(back);
-    redirect(back);
+    return { ok: true };
   }
   revalidatePath(back);
   redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));

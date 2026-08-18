@@ -106,7 +106,7 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await walkInSearch.press("Enter");
   await expect(page.getByText(/No matches for/)).toBeVisible();
 
-  await page.getByRole("link", { name: "Add “Zzyzx No Such Diver” as a diver" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new\?/);
   await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.

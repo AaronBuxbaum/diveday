@@ -71,6 +71,12 @@ describe("diverSearchPrefill", () => {
     expect(diverSearchPrefill("  John  ")).toEqual({ name: "John" });
   });
 
+  it("extracts a phone number when the query looks like one", () => {
+    expect(diverSearchPrefill(" +1 (305) 555-0231 ")).toEqual({
+      phone: "+1 (305) 555-0231",
+    });
+  });
+
   it("returns empty object for empty or whitespace-only query", () => {
     expect(diverSearchPrefill("")).toEqual({});
     expect(diverSearchPrefill("   ")).toEqual({});

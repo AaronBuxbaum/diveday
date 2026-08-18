@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
@@ -970,6 +970,8 @@ export function ScheduleBuilder({
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
+  const [closingMenu, setClosingMenu] = useState<string | null>(null);
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The top add panel is opened by *links* — the header's "Add a departure",
   // the empty board's call to action, the former /trips/new doors — all of
@@ -1003,7 +1005,30 @@ export function ScheduleBuilder({
   const windowTrips = days.flatMap((day) => day.trips);
   const unpricedCount = windowTrips.filter((trip) => trip.priceCents === null).length;
   const allUnpriced = unpricedCount >= 3 && unpricedCount === windowTrips.length;
-  const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
+  const closeMenu = useCallback((menuKey: string) => {
+    setClosingMenu(menuKey);
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
+    menuCloseTimer.current = setTimeout(() => {
+      setOpen((current) => (current === menuKey ? null : current));
+      setClosingMenu((current) => (current === menuKey ? null : current));
+    }, 180);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
+    };
+  }, []);
+
+  const toggle = (panel: string) => {
+    if (open === panel) {
+      if (panel.startsWith("menu:")) closeMenu(panel);
+      else setOpen(null);
+      return;
+    }
+    setClosingMenu(null);
+    setOpen(panel);
+  };
 
   // The add panel's selects, fetched the first time any add panel opens and
   // kept for the rest of the visit — the catalogue does not change while a
@@ -1027,6 +1052,7 @@ export function ScheduleBuilder({
     toggleRefs.current[key] = el;
   };
   const closePanel = (key: string) => {
+    setClosingMenu(null);
     setOpen(null);
     toggleRefs.current[key]?.focus();
   };
@@ -1045,11 +1071,11 @@ export function ScheduleBuilder({
       const target = event.target;
       if (target instanceof Element && target.closest(`[data-row-menu="${CSS.escape(tripId)}"]`))
         return;
-      setOpen(null);
+      closeMenu(menuKey);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setOpen(null);
+      closeMenu(menuKey);
       toggleRefs.current[menuKey]?.focus();
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -1058,7 +1084,7 @@ export function ScheduleBuilder({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   // The schedule route has no dynamic id, so if `cacheComponents: true`'s
   // Activity-based navigation is ever re-enabled, this instance could
@@ -1412,8 +1438,14 @@ export function ScheduleBuilder({
                                 failure. Inline, nothing can ever be obscured,
                                 and the actions sit beside the row they act on
                                 (design/principles.md #10). */}
-                            {open === `menu:${trip.id}` ? (
-                              <div className="flex items-center gap-1 animate-scale-in">
+                            {open === `menu:${trip.id}` || closingMenu === `menu:${trip.id}` ? (
+                              <div
+                                className={`flex items-center gap-1 ${
+                                  closingMenu === `menu:${trip.id}`
+                                    ? "pointer-events-none animate-scale-out"
+                                    : "animate-scale-in"
+                                }`}
+                              >
                                 <button
                                   type="button"
                                   ref={focusOnMount}

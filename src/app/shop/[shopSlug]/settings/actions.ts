@@ -377,7 +377,7 @@ export async function saveContactAction(formData: FormData) {
  * An all-empty address is the Remove control, and it says so rather than
  * reporting "saved" for a thing that is now gone.
  */
-export async function saveAddressAction(formData: FormData) {
+export async function saveAddressAction(formData: FormData): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
@@ -389,9 +389,12 @@ export async function saveAddressAction(formData: FormData) {
     latitude: typeof latitude === "number" ? latitude : null,
     longitude: typeof longitude === "number" ? longitude : null,
   });
-  const emptied = Object.values(textFields).every((value) => value.length === 0);
-  const notice = emptied ? "address-removed" : "address-saved";
-  revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "address" }));
+  revalidatePath(settings);
+  // AddressSearch is an in-place picker. Returning after the write keeps the
+  // settings shell and viewport mounted instead of turning a suggestion tap
+  // into a full route navigation; the component already has the exact fields
+  // that were just persisted.
+  return { ok: true };
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */

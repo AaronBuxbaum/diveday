@@ -30,8 +30,8 @@ import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
+import { CheckInActionForm } from "./CheckInActionForm";
 import { CheckInSearch } from "./CheckInSearch";
-import { QueueRowButton } from "./QueueRowButton";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -294,7 +294,7 @@ export default async function CheckInPage({
           </p>
         </div>
 
-        {queue.length === 0 ? (
+        {queue.length === 0 && !(query && otherMatchingDivers.length > 0) ? (
           // "No one matches that scan" is true of a search that found nobody
           // and false of a counter that has nothing to show — on day one it
           // blamed the staffer's typing for an empty schedule. Three states,
@@ -464,53 +464,51 @@ export default async function CheckInPage({
                           }`}
                         >
                           {ready && !checkedIn ? (
-                            <form action={checkInAction.bind(null, shopSlug)}>
-                              <input type="hidden" name="bookingId" value={row.bookingId} />
-                              <QueueRowButton
-                                ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
-                                className="hover:bg-surface-sunken/60"
-                                trailing={
-                                  <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-primary">
-                                    {t("checkIn.checkInButton")}
-                                    {/* The empty half of the roll-call check: a
-                                        circle waiting to be ticked, so the row
-                                        reads as a checklist line, not a link. */}
-                                    <span className="size-5 rounded-full border-2 border-current" />
-                                  </span>
-                                }
-                                pendingTrailing={
-                                  // The circle stays put while the word changes,
-                                  // so the row's right edge never jumps on the
-                                  // one interaction this surface repeats all day.
-                                  <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-muted">
-                                    {t("checkIn.checkingIn")}
-                                    <span className="size-5 rounded-full border-2 border-current opacity-40" />
-                                  </span>
-                                }
-                              >
-                                {identity}
-                              </QueueRowButton>
-                            </form>
+                            <CheckInActionForm
+                              action={checkInAction.bind(null, shopSlug)}
+                              bookingId={row.bookingId}
+                              ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
+                              className="hover:bg-surface-sunken/60"
+                              trailing={
+                                <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-primary">
+                                  {t("checkIn.checkInButton")}
+                                  {/* The empty half of the roll-call check: a
+                                      circle waiting to be ticked, so the row
+                                      reads as a checklist line, not a link. */}
+                                  <span className="size-5 rounded-full border-2 border-current" />
+                                </span>
+                              }
+                              pendingTrailing={
+                                // The circle stays put while the word changes,
+                                // so the row's right edge never jumps on the
+                                // one interaction this surface repeats all day.
+                                <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-muted">
+                                  {t("checkIn.checkingIn")}
+                                  <span className="size-5 rounded-full border-2 border-current opacity-40" />
+                                </span>
+                              }
+                            >
+                              {identity}
+                            </CheckInActionForm>
                           ) : checkedIn ? (
-                            <form action={undoCheckInAction.bind(null, shopSlug)}>
-                              <input type="hidden" name="bookingId" value={row.bookingId} />
-                              <QueueRowButton
-                                ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
-                                className="hover:bg-success/15"
-                                trailing={
-                                  <span className="text-base font-semibold whitespace-nowrap text-success">
-                                    {t("checkIn.checkedInCheck")}
-                                  </span>
-                                }
-                                pendingTrailing={
-                                  <span className="text-base font-semibold whitespace-nowrap text-muted">
-                                    {t("checkIn.undoing")}
-                                  </span>
-                                }
-                              >
-                                {identity}
-                              </QueueRowButton>
-                            </form>
+                            <CheckInActionForm
+                              action={undoCheckInAction.bind(null, shopSlug)}
+                              bookingId={row.bookingId}
+                              ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
+                              className="hover:bg-success/15"
+                              trailing={
+                                <span className="text-base font-semibold whitespace-nowrap text-success">
+                                  {t("checkIn.checkedInCheck")}
+                                </span>
+                              }
+                              pendingTrailing={
+                                <span className="text-base font-semibold whitespace-nowrap text-muted">
+                                  {t("checkIn.undoing")}
+                                </span>
+                              }
+                            >
+                              {identity}
+                            </CheckInActionForm>
                           ) : (
                             <div className="px-4 py-3 sm:px-5">
                               <div className="flex flex-wrap items-center justify-between gap-2">

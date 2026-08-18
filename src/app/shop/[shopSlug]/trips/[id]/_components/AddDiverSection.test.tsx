@@ -29,7 +29,7 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Add diver" }).at(-1)).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new?surface=trip-guests&tripId=trip-1",
     );
@@ -72,7 +72,7 @@ describe("AddDiverSection", () => {
     );
 
     expect(screen.getByText("No returning diver matches “Nobody Here”.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add “Nobody Here” as a diver" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Add diver" })[1]).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new?name=Nobody+Here&surface=trip-guests&tripId=trip-1",
     );

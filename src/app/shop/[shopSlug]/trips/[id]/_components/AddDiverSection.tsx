@@ -180,7 +180,7 @@ export function AddDiverSection({
                   addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
                   noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
                 />
-                <p className="mt-3 text-sm text-muted">
+                <p className="rise-in mt-3 text-sm text-muted">
                   {t("trips.addDiver.addDiverPrompt", { query })}{" "}
                   <Link
                     href={newDiverHref(shopSlug, {

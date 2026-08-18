@@ -505,6 +505,21 @@ summary {
   animation: scale-in 200ms var(--ease-out-soft) both;
 }
 
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-scale-out {
+  animation: scale-out 180ms var(--ease-out-soft) both;
+}
+
 /* Reusable class for standard UI transitions (opacity, transform, background-color, border-color, etc.) */
 .transition-brand {
   transition-property:

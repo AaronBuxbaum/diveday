@@ -166,10 +166,8 @@ export function SeatDiverPanel({
                 addPersonAriaLabel={copy.addPersonAriaLabel}
                 noEmailOnFile={copy.noEmailOnFile}
               />
-              <p className="mt-3 text-sm text-muted">
-                {copy.addDiverPrompt
-                  ? fill(copy.addDiverPrompt, { query })
-                  : `Not listed? Add “${query}” as a new diver`}{" "}
+              <p className="rise-in mt-3 text-sm text-muted">
+                {copy.addDiverPrompt ? fill(copy.addDiverPrompt, { query }) : "Not listed?"}{" "}
                 <Link href={addHref} className="font-medium text-primary hover:underline">
                   {copy.addDiverAction || "Add diver"}
                 </Link>

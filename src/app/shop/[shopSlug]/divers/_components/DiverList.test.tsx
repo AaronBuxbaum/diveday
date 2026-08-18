@@ -113,7 +113,7 @@ describe("DiverList empty state", () => {
   it("offers the way back out or to add the typed diver when search narrowed to nothing", () => {
     renderList({ query: "nobody" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add “nobody” as a diver" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add diver" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show all divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers",

@@ -31,14 +31,23 @@ export const diverPhoneSchema = z.string().trim().max(DIVER_PHONE_MAX);
 export const blankableDiverEmailSchema = z.union([z.literal(""), diverEmailSchema]);
 
 /**
- * Splits or maps search query text to name or email:
- * if the query contains '@', it is treated as an email, otherwise as a name.
+ * Splits or maps search query text to name, email, or phone. The command
+ * palette and every seat-a-diver surface use the same prefill rule, so a
+ * searched phone number does not arrive in the name field.
  */
-export function diverSearchPrefill(query: string): { name?: string; email?: string } {
+export function diverSearchPrefill(query: string): {
+  name?: string;
+  email?: string;
+  phone?: string;
+} {
   const trimmed = query.trim();
   if (!trimmed) return {};
   if (trimmed.includes("@")) {
     return { email: trimmed };
+  }
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length >= 7 && /^[+\d() .-]+$/.test(trimmed)) {
+    return { phone: trimmed };
   }
   return { name: trimmed };
 }
@@ -67,6 +76,7 @@ export function newDiverHref(
     const prefill = diverSearchPrefill(params.query);
     if (prefill.email) search.set("email", prefill.email);
     if (prefill.name) search.set("name", prefill.name);
+    if (prefill.phone) search.set("phone", prefill.phone);
   }
   if (params?.name) search.set("name", params.name);
   if (params?.email) search.set("email", params.email);

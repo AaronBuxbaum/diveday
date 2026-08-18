@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -733,7 +733,9 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
     expect(move).toHaveFocus();
 
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull(),
+    );
     expect(trigger).toHaveFocus();
   });
 
@@ -750,13 +752,17 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
     await userEvent.click(
       screen.getByRole("button", { name: /^Move, copy, or remove Night Dive/ }),
     );
-    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull(),
+    );
     expect(screen.getByRole("button", { name: /^Move Night Dive/ })).toBeInTheDocument();
 
     // A stray click on the page is a dismissal, never swallowed work — the
     // list holds no typed state.
     await userEvent.click(screen.getByRole("heading", { name: "Sat, Aug 1" }));
-    expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull(),
+    );
   });
 
   it("choosing an action closes the list and opens that action's panel", async () => {
