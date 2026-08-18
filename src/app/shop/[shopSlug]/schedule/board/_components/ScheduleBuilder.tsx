@@ -1011,7 +1011,7 @@ export function ScheduleBuilder({
     menuCloseTimer.current = setTimeout(() => {
       setOpen((current) => (current === menuKey ? null : current));
       setClosingMenu((current) => (current === menuKey ? null : current));
-    }, 180);
+    }, 450);
   }, []);
 
   useEffect(() => {

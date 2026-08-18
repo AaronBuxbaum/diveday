@@ -45,13 +45,13 @@ const TAB_ORDER: {
 export function TripSubNav({
   shopSlug,
   tripId,
-  activityCount = 0,
+  guestCount = 0,
   copy,
   className = "",
 }: {
   shopSlug: string;
   tripId: string;
-  activityCount?: number;
+  guestCount?: number;
   copy: TripSubNavCopy;
   className?: string;
 }) {
@@ -67,7 +67,7 @@ export function TripSubNav({
             aria-hidden="true"
             className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs tabular-nums text-primary"
           >
-            {activityCount}
+            {guestCount}
           </span>
         </span>
       ) : (

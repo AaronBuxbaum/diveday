@@ -99,6 +99,38 @@ describe("waiver records (in-memory PGlite)", () => {
     );
   });
 
+  it("does not supersede a booking waiver when issuing a person-scoped waiver", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const bookingIssued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now,
+    });
+    if (!bookingIssued.ok) throw new Error("expected booking waiver link");
+
+    const independentIssued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      now: new Date(now.getTime() + 1),
+    });
+    if (!independentIssued.ok) throw new Error("expected independent waiver link");
+
+    expect(await getWaiverForToken(db, bookingIssued.token, now)).toMatchObject({
+      state: "available",
+    });
+
+    const [bookingRecord] = await db
+      .select({ supersededAt: waiverRecords.supersededAt })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, bookingIssued.recordId));
+    const [independentRecord] = await db
+      .select({ supersededAt: waiverRecords.supersededAt })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, independentIssued.recordId));
+    expect(bookingRecord?.supersededAt).toBeNull();
+    expect(independentRecord?.supersededAt).toBeNull();
+  });
+
   it("keeps the old template snapshot when a newer version becomes default", async () => {
     const { db, shop, booking, template } = await waiverContext();
     const issued = await issueWaiverRequest(db, {

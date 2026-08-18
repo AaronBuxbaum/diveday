@@ -475,7 +475,7 @@ summary {
 
 @keyframes slide-in-right {
   from {
-    transform: translateX(100%);
+    transform: translateX(var(--quick-add-shift, 0px));
   }
   to {
     transform: translateX(0);
@@ -484,12 +484,10 @@ summary {
 
 @keyframes slide-out-right {
   from {
-    opacity: 1;
     transform: translateX(0);
   }
   to {
-    opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(var(--quick-add-shift, 0px));
   }
 }
 
@@ -510,17 +508,15 @@ summary {
 
 @keyframes board-menu-in {
   from {
-    opacity: 0;
-    transform: translateX(-8px) scale(0.96);
+    transform: translateX(-1rem);
   }
   to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateX(0);
   }
 }
 
 .animate-board-menu-in {
-  animation: board-menu-in 500ms var(--ease-out-soft) both;
+  animation: board-menu-in 450ms var(--ease-out-soft) both;
 }
 
 .animate-fade-in {
@@ -548,17 +544,15 @@ summary {
 
 @keyframes board-menu-out {
   from {
-    opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateX(0);
   }
   to {
-    opacity: 0;
-    transform: translateX(-6px) scale(0.97);
+    transform: translateX(-1rem);
   }
 }
 
 .animate-board-menu-out {
-  animation: board-menu-out 360ms var(--ease-out-soft) both;
+  animation: board-menu-out 450ms var(--ease-out-soft) both;
 }
 
 .animate-scale-out {

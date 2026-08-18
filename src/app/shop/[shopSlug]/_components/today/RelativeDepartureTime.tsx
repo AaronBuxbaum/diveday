@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFormatter } from "@/lib/intl-cache";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -34,11 +35,10 @@ export function RelativeDepartureTime({
   const unit = absoluteMs >= HOUR_MS ? "hour" : "minute";
   const unitMs = unit === "hour" ? HOUR_MS : MINUTE_MS;
   const amount = Math.max(1, Math.round(absoluteMs / unitMs));
-  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always" }).format(
-    direction * amount,
-    unit,
-  );
-  const exact = new Intl.DateTimeFormat(locale, {
+  const relative = cachedFormatter("rel", Intl.RelativeTimeFormat, locale, {
+    numeric: "always",
+  }).format(direction * amount, unit);
+  const exact = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone,

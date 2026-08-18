@@ -83,6 +83,13 @@ export const CHECK_IN_ROW_TONE = {
   blocked: ROLL_CALL_ROW_TONE.blocked,
 } as const;
 
+/** A visible edge for the counter queue, strengthened on hover by the row. */
+export const CHECK_IN_STATUS_BAR_TONE = {
+  checkedIn: "bg-success",
+  awaiting: "bg-border-strong",
+  blocked: "bg-danger",
+} as const;
+
 /**
  * The offline manifest's **crew** rows — the same meanings again, on a card
  * rather than a left rule.

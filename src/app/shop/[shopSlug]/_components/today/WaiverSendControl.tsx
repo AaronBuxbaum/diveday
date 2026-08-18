@@ -30,13 +30,16 @@ function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: Wa
       >
         /waivers/{link.token.slice(0, 8)}…
       </a>
-      <Copyable
-        layout="inline"
-        value={url || `/waivers/${link.token}`}
-        copyLabel={copyText.copyLink}
-        copiedLabel={copyText.copied}
-        failedLabel={copyText.copyFailed}
-      />
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true">🔗</span>
+        <Copyable
+          layout="inline"
+          value={url || `/waivers/${link.token}`}
+          copyLabel={copyText.copyLink}
+          copiedLabel={copyText.copied}
+          failedLabel={copyText.copyFailed}
+        />
+      </span>
     </div>
   );
 }
@@ -154,6 +157,7 @@ export function WaiverSendControl({
   surface,
   tripId,
   bookingIds,
+  personId,
   label,
   hint,
   pendingLabel,
@@ -168,6 +172,8 @@ export function WaiverSendControl({
   /** Required when surface is "roster" — which trip's guests page to revalidate. */
   tripId?: string;
   bookingIds: string[];
+  /** A person-scoped waiver target, independent of any booking or schedule. */
+  personId?: string;
   label: string;
   /** Short trailing detail (e.g. "tap to resend") — the roster's richer status pill uses this. */
   hint?: string;
@@ -208,6 +214,7 @@ export function WaiverSendControl({
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
+        {personId ? <input type="hidden" name="personId" value={personId} /> : null}
         {exposeLink ? <input type="hidden" name="exposeLink" value="true" /> : null}
         {/* Resending is a send, not a reversible edit (principle 7,
             docs/design/principles.md) — a resend to someone who already got

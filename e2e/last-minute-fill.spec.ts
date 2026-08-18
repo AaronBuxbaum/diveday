@@ -184,7 +184,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
     .locator("li")
     .filter({ hasText: "Tess Alvarez" })
     .filter({ visible: true });
-  await expect(recipient).toContainText("Open Water — diver's word, no certification record");
+  await expect(recipient).toContainText("Open Water — unconfirmed");
 
   // And the send is still offered: informing, never gating. A filter here would
   // quietly stop the blast reaching everyone the shop has never carded, which
@@ -204,12 +204,11 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
  * separate wait-list declaration keeps that safety-sensitive question on the
  * trip-specific surface.
  *
- * The interesting behaviour here is the **cap**. This departure is chosen for it: eleven people
- * match its date and the panel draws ten. A cap that could hide the one
- * recipient nobody should mail would be worse than the unbounded list it
- * replaced, so being below the bar has to beat being late to the list.
+ * A person who has not confirmed a certification is not an eligible recipient
+ * for a certification-gated departure. They should be absent from the send
+ * list entirely, rather than appearing with a warning that staff might miss.
  */
-test("an uncertified joiner reaches the send list, above the ten-name cap", async ({ page }) => {
+test("an uncertified joiner is excluded from the last-minute send list", async ({ page }) => {
   test.setTimeout(45_000);
   await page.goto("/s/blue-mantis");
   const dealList = page.locator("#last-minute-list");
@@ -228,21 +227,12 @@ test("an uncertified joiner reaches the send list, above the ten-name cap", asyn
   await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
 
-  const recipient = page.locator("li").filter({ hasText: "Nell Byrne" }).filter({ visible: true });
-  await expect(recipient).toContainText(
-    "Not certified yet — diver's word · below this departure's minimum",
-  );
-  // Drawn, and the remainder stated rather than silently dropped.
-  await expect(page.getByText(/1 more isn.t shown/)).toBeVisible();
-  // Two of them now: this joiner, and the one the demo shop seeds
-  // (src/db/seed-self-declared.ts), which is what keeps the mark rendered
-  // somewhere without a test having to type it in first.
-  await expect(page.getByText("2 of 11 are below this departure's requirement.")).toBeVisible();
   await expect(
-    page.locator("li").filter({ hasText: "Selah Mbeki" }).filter({ visible: true }),
-  ).toContainText("Not certified yet — diver's word");
+    page.locator("li").filter({ hasText: "Nell Byrne" }).filter({ visible: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/below this departure's requirement/)).toHaveCount(0);
 
-  // And the send is still offered. Informing, never gating.
+  // Other eligible recipients can still receive the deal.
   await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();
 });
 

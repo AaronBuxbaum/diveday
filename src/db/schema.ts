@@ -3227,8 +3227,8 @@ export const waiverRecords = pgTable(
      * not bookings), and a staff-attested paper release recorded from the
      * diver's own record, where the conversation is about the person and they
      * may hold no booking at all (ADR 20260811-person-scoped-paper-waivers).
-     * Every record a *token* can reach still carries one — see
-     * `requireTokenBookingId`.
+     * A digital token may be booking-scoped or person-scoped; the public waiver
+     * page handles both contexts without making a schedule part of signing.
      */
     bookingId: uuid("booking_id").references(() => bookings.id),
     /**
@@ -3248,6 +3248,12 @@ export const waiverRecords = pgTable(
     templateVersion: integer("template_version").notNull(),
     templateBody: text("template_body").notNull(),
     status: waiverRecordStatus("status").notNull().default("pending"),
+    /** Latest delivery outcome for a digital link; null for paper/imported records. */
+    deliveryStatus: notificationDeliveryStatus("delivery_status"),
+    deliveryProviderMessageId: text("delivery_provider_message_id"),
+    deliveryProviderStatus: notificationProviderStatus("delivery_provider_status"),
+    deliveryProviderStatusAt: timestamp("delivery_provider_status_at", { withTimezone: true }),
+    deliveryError: text("delivery_error"),
     /** SHA-256 hash only — the raw bearer token is shown once when issued. */
     tokenHash: text("token_hash").notNull().unique(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

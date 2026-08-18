@@ -37,6 +37,7 @@ export function DiverHeader({
   editOpen?: boolean;
 }) {
   const t = staffTranslator(locale);
+  const formStatus = status?.tone === "danger" ? status : undefined;
   return (
     <>
       <Link
@@ -102,6 +103,9 @@ export function DiverHeader({
             </div>
           }
         />
+        {status?.tone === "success" ? (
+          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
+        ) : null}
         {/* The disclosure lives *under* the header, not in its `actions` slot.
             In the slot, the trigger sat in the header's narrow right-hand
             column and the panel opened inside it — a cramped one-column card
@@ -149,7 +153,7 @@ export function DiverHeader({
               label={t("divers.header.emailLabel")}
               hint={t("divers.header.optionalHint")}
               htmlFor="diver-email"
-              error={status?.field === "diver-email" ? status.text : undefined}
+              error={formStatus?.field === "diver-email" ? formStatus.text : undefined}
             >
               <input
                 id="diver-email"
@@ -236,8 +240,8 @@ export function DiverHeader({
               </SubmitButton>
               {/* A field-level refusal already renders on its own control, so
                   repeating it here would say the same thing twice. */}
-              {status?.field ? null : (
-                <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+              {formStatus?.field ? null : (
+                <DiverFormStatus status={formStatus} shopSlug={shopSlug} locale={locale} />
               )}
             </FieldActions>
           </FieldGrid>
@@ -246,7 +250,9 @@ export function DiverHeader({
       {/* Keyed on the notice text so an identical repeat refusal still re-fires:
           the effect only runs on a remount, and typing a second duplicate email
           produces the same URL as the first. */}
-      {status?.field ? <FieldErrorFocus key={status.text} field={status.field} /> : null}
+      {formStatus?.field ? (
+        <FieldErrorFocus key={formStatus.text} field={formStatus.field} />
+      ) : null}
     </>
   );
 }

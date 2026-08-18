@@ -241,6 +241,8 @@ export default async function DiversPage({
           toConfirmText: t.raw("divers.list.toConfirmText"),
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderLevel: t("divers.list.tableHeaderLevel"),
+          tableHeaderAttention: t("divers.list.tableHeaderAttention"),
+          noAttention: t("divers.list.noAttention"),
         }}
       />
     </main>

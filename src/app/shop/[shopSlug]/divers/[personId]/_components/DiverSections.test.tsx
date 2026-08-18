@@ -32,7 +32,7 @@ describe("the diver record's jump row", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.getAttribute("href")),
-    ).toEqual(["#cards", "#fit", "#payments", "#trips", "#notes", "#history"]);
+    ).toEqual(["#waiver", "#cards", "#fit", "#payments", "#trips", "#notes", "#history"]);
   });
 
   it("labels each link from the staff bundle", () => {
@@ -42,7 +42,7 @@ describe("the diver record's jump row", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Certifications", "Fit", "Payments", "Trips", "Notes", "History"]);
+    ).toEqual(["Waiver", "Certifications", "Fit", "Payments", "Trips", "Notes", "History"]);
   });
 
   /**

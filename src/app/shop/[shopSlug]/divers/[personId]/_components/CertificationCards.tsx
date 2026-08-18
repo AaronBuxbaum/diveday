@@ -76,80 +76,73 @@ export async function CertificationCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.certifications.description")}</p>
         </div>
-        <button
-          type="button"
-          popoverTarget={`add-certification-${personId}`}
-          popoverTargetAction="toggle"
-          className={buttonClass()}
-        >
-          {t("divers.certifications.addCard")}
-        </button>
+        <details className="relative ml-auto shrink-0">
+          <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
+            {t("divers.certifications.addCard")}
+          </summary>
+          <div className="absolute top-full right-0 z-30 mt-2 max-w-[calc(100vw-2rem)]">
+            {/* No `encType`: a function `action` is a server action, not a
+                native form post — React builds the `FormData` (files intact)
+                and ships it over its own transport, so the browser never reads
+                this attribute. Setting it anyway just trips a dev warning
+                ("Cannot specify a encType or method for a form that specifies a
+                function as the action"). */}
+            <FieldGrid
+              as="form"
+              action={addCertificationAction.bind(null, shopSlug, personId)}
+              columns={2}
+              className={sectionCardClass({
+                className: "gap-y-3 sm:w-[32rem]",
+              })}
+            >
+              <Field label={t("divers.certifications.agency")}>
+                <select name="agency" className={controlClass}>
+                  {Object.entries(AGENCY_KEYS).map(([value, key]) => (
+                    <option key={value} value={value}>
+                      {t(key)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {/* The ladder is agency-neutral by design, but the words on the
+                  card are not: a staffer holding a CMAS 2★ or a BSAC Sports
+                  Diver has to decide which rung it is, and the answer lived only
+                  in the glossary. It belongs where the picking happens
+                  (docs/product/glossary.md — CMAS, RAID, GUE). */}
+              <Field label={t("divers.certifications.level")}>
+                <select name="level" className={controlClass}>
+                  {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+                    <option key={value} value={value}>
+                      {t(key)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t("divers.certifications.cardNumber")}>
+                <input name="identifier" required className={controlClass} />
+              </Field>
+              <Field
+                label={t("divers.certifications.refresherDue")}
+                hint={t("divers.certifications.refresherHint")}
+              >
+                <input name="expiresOn" type="date" className={controlClass} />
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("divers.certifications.capturing")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("divers.certifications.captureForReview")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </div>
+        </details>
         {sectionStatus ? (
           <div className="basis-full">
             <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
           </div>
         ) : null}
-        <div
-          id={`add-certification-${personId}`}
-          popover="auto"
-          className="m-0 max-w-[calc(100vw-2rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl"
-        >
-          {/* No `encType`: a function `action` is a server action, not a
-              native form post — React builds the `FormData` (files intact)
-              and ships it over its own transport, so the browser never reads
-              this attribute. Setting it anyway just trips a dev warning
-              ("Cannot specify a encType or method for a form that specifies a
-              function as the action"). */}
-          <FieldGrid
-            as="form"
-            action={addCertificationAction.bind(null, shopSlug, personId)}
-            columns={2}
-            className={sectionCardClass({
-              className: "mt-3 gap-y-3 sm:w-[32rem]",
-            })}
-          >
-            <Field label={t("divers.certifications.agency")}>
-              <select name="agency" className={controlClass}>
-                {Object.entries(AGENCY_KEYS).map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {/* The ladder is agency-neutral by design, but the words on the
-                card are not: a staffer holding a CMAS 2★ or a BSAC Sports
-                Diver has to decide which rung it is, and the answer lived only
-                in the glossary. It belongs where the picking happens
-                (docs/product/glossary.md — CMAS, RAID, GUE). */}
-            <Field label={t("divers.certifications.level")}>
-              <select name="level" className={controlClass}>
-                {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("divers.certifications.cardNumber")}>
-              <input name="identifier" required className={controlClass} />
-            </Field>
-            <Field
-              label={t("divers.certifications.refresherDue")}
-              hint={t("divers.certifications.refresherHint")}
-            >
-              <input name="expiresOn" type="date" className={controlClass} />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("divers.certifications.capturing")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("divers.certifications.captureForReview")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
-        </div>
       </div>
       {noCertificationDeclared ? (
         /* **The one statement on this record a staffer could not correct.**

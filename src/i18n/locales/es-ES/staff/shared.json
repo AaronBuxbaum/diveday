@@ -633,9 +633,9 @@
     "medicalReview": "Revisión médica"
   },
   "certificationSummary": {
-    "selfDeclared": "{value} — dicho por el buceador, sin registro de certificación",
+    "selfDeclared": "{value} — sin confirmar",
     "levelNotSaid": "Nivel no indicado",
-    "notCertified": "Todavía sin certificación — dicho por el buceador",
+    "notCertified": "Todavía sin certificación — sin confirmar",
     "nitrox": "Nitrox",
     "belowRequirement": "{value} · por debajo del mínimo de esta salida"
   }

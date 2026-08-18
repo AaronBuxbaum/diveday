@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -8,19 +7,17 @@ import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form
 import type { TripLastMinutePromo } from "@/db/schema";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
-import {
-  CERTIFICATION_LEVEL_KEYS,
-  certificationSummaryBelowRequirementText,
-  certificationSummaryText,
-  certificationSummaryUnchecked,
-  SPECIALTY_KEYS,
-} from "@/i18n/readiness-labels";
+import { certificationSummaryText, certificationSummaryUnchecked } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
-import { reviewLastMinuteRecipients } from "@/lib/last-minute-list";
+import {
+  type CourseTargetInfo,
+  filterEligibleLastMinuteRecipients,
+  reviewLastMinuteRecipients,
+} from "@/lib/last-minute-list";
 import type { CertRequirementSource } from "@/lib/readiness";
 import type { FormNotice } from "@/lib/staff-notices";
+import { LastMinuteSendButton } from "./LastMinuteSendButton";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   sent: "success",
@@ -60,6 +57,7 @@ export function LastMinuteDealSection({
   shopSlug,
   recipients,
   requirement,
+  course = null,
   openSeats,
   cancelled,
   promos,
@@ -80,6 +78,7 @@ export function LastMinuteDealSection({
   shopSlug: string;
   recipients: readonly LastMinuteDealRecipient[];
   requirement: CertRequirementSource | null;
+  course?: CourseTargetInfo | null;
   openSeats: number;
   cancelled: boolean;
   promos: TripLastMinutePromo[];
@@ -89,75 +88,20 @@ export function LastMinuteDealSection({
   sendAction: (formData: FormData) => void;
 }) {
   const t = staffTranslator(locale);
-  const eligibleCount = recipients.length;
+  // The list is the audience, not a review queue. Keep people who do not meet
+  // this departure's gate out of both the visible list and the submitted form;
+  // self-declared levels remain eligible because that is explicitly what the
+  // last-minute opt-in records.
+  const eligibleRecipients = filterEligibleLastMinuteRecipients(recipients, requirement, course);
+  const eligibleCount = eligibleRecipients.length;
   const canSend = !cancelled && openSeats > 0 && eligibleCount > 0;
   const requiredLevel = requirement?.minimumCertificationLevel ?? null;
-  // Risky names first, capped, with the two counts the sentence below is made
-  // of. The send itself is untouched — `eligibleCount` above is still everyone.
+  // Risky names first, capped, with the count of omitted eligible names below.
+  // The send itself is untouched — `eligibleCount` above is still everyone.
   // The whole requirement goes in, not just the rung: a joiner who said they
   // hold no card is below a Deep-and-nitrox charter too, and that departure has
   // no minimum level for anyone to be compared against.
-  const review = reviewLastMinuteRecipients(recipients, requirement);
-  /**
-   * The gate in the trip's own words, reusing the requirements panel's phrases
-   * so one departure does not describe itself two ways on two screens.
-   *
-   * Specialties and nitrox ride along even though only the level orders. A line
-   * that named the minimum level and quietly dropped a required Deep card would
-   * be a shorter truth than the trip's, on the screen where a staffer decides
-   * who to invite onto it.
-   */
-  const requirementParts = [
-    requiredLevel
-      ? t("trips.requirements.certOrHigher", { level: t(CERTIFICATION_LEVEL_KEYS[requiredLevel]) })
-      : null,
-    ...(requirement?.requiredSpecialties ?? []).map((specialty) =>
-      t("trips.requirements.specialtyRequired", { specialty: t(SPECIALTY_KEYS[specialty]) }),
-    ),
-    requirement?.requiresNitrox ? t("trips.requirements.nitroxCardRequired") : null,
-  ].filter((part): part is string => Boolean(part));
-  /**
-   * **The one sentence a busy person can act on.** The list answers "who",
-   * which takes a scroll; this answers "is there anything wrong with this
-   * send", which is the question being asked at the button.
-   *
-   * Four shapes, and none of them is a zero: "0 said a level below" is a
-   * statistic a reader has to interpret, while "nobody did" is an answer. A
-   * departure that asks for no level says that instead, because there is
-   * nothing for a level to be below.
-   *
-   * The fourth shape is the honest one, and it was missing. **Only the ladder
-   * orders**, so a departure gated on a Deep card and nitrox rather than a
-   * level has `requiredLevel === null` — and the no-requirement sentence then
-   * read as an all-clear on a send where `decideTripAdmission` will refuse
-   * every recipient at checkout. Now it names what it cannot speak to. Marking
-   * the missing specialty per row would be better still and is a bigger change
-   * than this one; saying so is the floor.
-   *
-   * The count comes first when there is one, because on a card-gated departure
-   * both can be true at once: the fold *can* place the joiner who says they
-   * hold no card, and cannot place anybody else. Saying only the second would
-   * bury the one name it can name; saying only the first would read as an
-   * all-clear over the rest of the list.
-   */
-  const cardsCaveat =
-    requiredLevel === null && requirementParts.length > 0
-      ? t("trips.lastMinute.recipientsSummaryNoLevelButCards", {
-          list: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
-            requirementParts,
-          ),
-        })
-      : null;
-  const summary =
-    review.below > 0
-      ? `${t("trips.lastMinute.recipientsSummaryBelow", {
-          count: review.below,
-          total: review.total,
-        })}${cardsCaveat ? ` ${cardsCaveat}` : ""}`
-      : (cardsCaveat ??
-        (requiredLevel === null
-          ? t("trips.lastMinute.recipientsSummaryNoRequirement")
-          : t("trips.lastMinute.recipientsSummaryNoneBelow")));
+  const review = reviewLastMinuteRecipients(eligibleRecipients, requirement);
   return (
     // No top margin of its own: this renders inside a disclosure panel that
     // owns its inset. `scroll-mt-6` stays — the send action redirects to this
@@ -186,16 +130,6 @@ export function LastMinuteDealSection({
               between them — now sits between them and the control. */}
           <div className="basis-full">
             <h3 className="text-sm font-medium">{t("trips.lastMinute.recipientsHeading")}</h3>
-            {requirementParts.length > 0 ? (
-              <p className="mt-1 text-sm font-medium">
-                {t("trips.lastMinute.recipientsRequirement", {
-                  list: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
-                    requirementParts,
-                  ),
-                })}
-              </p>
-            ) : null}
-
             {/* A default range, not a `Pager` — deliberately, and against ADR
                 20260803-one-pagination-model's "every paged staff list wears
                 Pager". `Pager` navigates the page's own URL, and this `<ul>`
@@ -208,7 +142,7 @@ export function LastMinuteDealSection({
                 The cap is only safe because the ordering puts anyone below the
                 requirement first — see `reviewLastMinuteRecipients`. */}
             <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface-sunken">
-              {review.shown.map(({ recipient, belowRequirement }) => (
+              {review.shown.map(({ recipient }) => (
                 <li
                   key={recipient.personId}
                   className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm"
@@ -230,9 +164,7 @@ export function LastMinuteDealSection({
                         : "text-muted"
                     }
                   >
-                    {belowRequirement
-                      ? certificationSummaryBelowRequirementText(t, recipient.certification, locale)
-                      : certificationSummaryText(t, recipient.certification, locale)}
+                    {certificationSummaryText(t, recipient.certification, locale)}
                   </span>
                 </li>
               ))}
@@ -245,22 +177,6 @@ export function LastMinuteDealSection({
               </p>
             ) : null}
           </div>
-          {/* Warning-toned only when there is something to warn about, and the
-              words carry it either way (design/principles.md #6). It never
-              disables the button: informing is the design
-              (ADR 20260814-self-declared-cards). */}
-          <p
-            className={
-              review.below > 0
-                ? "basis-full text-sm font-medium text-warning-strong"
-                : "basis-full text-sm text-muted"
-            }
-          >
-            {summary}
-            {review.notSaid > 0 ? (
-              <> {t("trips.lastMinute.recipientsSummaryNotSaid", { count: review.notSaid })}</>
-            ) : null}
-          </p>
           <FieldGrid columns={1} className="max-w-28">
             <Field label={t("trips.lastMinute.discountLabel")}>
               <div className="flex items-center gap-1.5">
@@ -279,12 +195,12 @@ export function LastMinuteDealSection({
               </div>
             </Field>
           </FieldGrid>
-          <SubmitButton
+          <LastMinuteSendButton
+            initialCount={review.shown.length}
+            singularLabel={t("trips.lastMinute.sendTo", { count: 1 })}
+            pluralLabel={t("trips.lastMinute.sendTo", { count: 2 })}
             pendingLabel={t("trips.lastMinute.sending")}
-            className={buttonClass({ className: "px-5 py-2.5" })}
-          >
-            {t("trips.lastMinute.sendTo", { count: eligibleCount })}
-          </SubmitButton>
+          />
           <FormStatus tone={status?.tone} className="basis-full">
             {status?.text}
           </FormStatus>

@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +78,8 @@ export interface DiverListCopy {
   toConfirmText: string;
   tableHeaderPerson: string;
   tableHeaderLevel: string;
+  tableHeaderAttention: string;
+  noAttention: string;
 }
 
 function initials(fullName: string): string {
@@ -206,6 +215,8 @@ export function DiverList({
   const [quickAddMode, setQuickAddMode] = useState<QuickAddMode>(
     query.trim() ? "entering" : "hidden",
   );
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  const [quickAddShift, setQuickAddShift] = useState(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce: the
@@ -222,6 +233,20 @@ export function DiverList({
     if (quickAddMode !== "exiting") return;
     const timer = setTimeout(() => setQuickAddMode("hidden"), 250);
     return () => clearTimeout(timer);
+  }, [quickAddMode]);
+  useLayoutEffect(() => {
+    const quickAdd = quickAddRef.current;
+    if (quickAddMode === "hidden" || !quickAdd) {
+      setQuickAddShift(0);
+      return;
+    }
+    const updateShift = () =>
+      setQuickAddShift(Math.ceil(quickAdd.getBoundingClientRect().width + 8));
+    updateShift();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateShift);
+    observer.observe(quickAdd);
+    return () => observer.disconnect();
   }, [quickAddMode]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
 
@@ -336,7 +361,10 @@ export function DiverList({
             <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
           )}
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div
+          className="flex w-full max-w-full flex-wrap items-center gap-2 max-sm:overflow-x-hidden sm:w-auto"
+          style={{ "--quick-add-shift": `${quickAddShift}px` } as CSSProperties}
+        >
           <div className="w-full min-w-0 sm:w-80">
             <label className="sr-only" htmlFor="diver-search">
               {copy.searchDiversLabel}
@@ -358,6 +386,7 @@ export function DiverList({
           </div>
           {quickAddMode !== "hidden" && quickAddAction ? (
             <div
+              ref={quickAddRef}
               className={
                 quickAddMode === "exiting"
                   ? "animate-slide-out-right"
@@ -487,7 +516,7 @@ export function DiverList({
           {/* Desktop: the shared table vocabulary (`@/components/ui/table`) —
               one shell, one header voice, one row divider, one density, shared
               with orders, reports, the departure log and the import preview.
-              No `minWidth` floor: this is a two-column table, and the 720px
+              No `minWidth` floor: this is a three-column table, and the 720px
               floor it used to carry forced a sideways scroll on exactly the
               narrow-desktop widths the phone cards no longer cover. The shell's
               own `overflow-x-auto` stays as the safety net, and `relative` on
@@ -497,6 +526,7 @@ export function DiverList({
             <THead>
               <Th>{copy.tableHeaderPerson}</Th>
               <Th>{copy.tableHeaderLevel}</Th>
+              <Th>{copy.tableHeaderAttention}</Th>
             </THead>
             <TBody>
               {divers.map((diver) => (
@@ -509,7 +539,7 @@ export function DiverList({
                       beats the shell's inherited `text-sm`. `align-middle`
                       centres this cell's avatar against the taller of the two,
                       as it did before the conversion. */}
-                  <Td className="relative align-middle text-base">
+                  <Td className="align-middle text-base">
                     <Link
                       href={`/shop/${shopSlug}/divers/${diver.person.id}`}
                       className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
@@ -536,17 +566,24 @@ export function DiverList({
                       </div>
                     </Link>
                   </Td>
-                  {/* One quiet cell instead of a pill column plus an Attention
-                      column that said "None" on nearly every row: the level is
-                      muted roster fact, and a badge appears beside it only when
-                      this person actually needs a staffer (design principle 9).
-                      It replaced a card *count*, whose value was `1` on nearly
-                      every row and which answered a question staff rarely ask;
-                      "what level is this diver?" is the one they ask at booking
-                      time (FU-20260813). */}
+                  {/* The level is a stable fact column. Attention is separate
+                      and always present, so searching never redraws the table
+                      shape when a result happens to have no pending work. */}
                   <Td className="align-middle">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
+                      {filter === "removed" && restoreAction ? (
+                        <RestoreRow
+                          action={restoreAction}
+                          personId={diver.person.id}
+                          fullName={diver.person.fullName}
+                          copy={copy}
+                        />
+                      ) : null}
+                    </div>
+                  </Td>
+                  <Td className="align-middle">
+                    <div className="flex flex-wrap items-center gap-2">
                       {pendingCount(diver) > 0 ? (
                         <Badge tone="warning">
                           {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -557,13 +594,8 @@ export function DiverList({
                           {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                         </Badge>
                       ) : null}
-                      {filter === "removed" && restoreAction ? (
-                        <RestoreRow
-                          action={restoreAction}
-                          personId={diver.person.id}
-                          fullName={diver.person.fullName}
-                          copy={copy}
-                        />
+                      {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
+                        <span className="text-muted">{copy.noAttention}</span>
                       ) : null}
                     </div>
                   </Td>

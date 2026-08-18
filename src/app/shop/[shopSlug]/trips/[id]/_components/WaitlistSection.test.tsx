@@ -122,7 +122,7 @@ describe("WaitlistSection declared level", () => {
     // Names the absence, not the source. "Open Water (self-declared)" parsed as
     // "we know they're Open Water" with a footnote about provenance — and on a
     // phone-width row the footnote is the first thing to truncate.
-    const line = screen.getByText(/Open Water — diver's word, no certification record/);
+    const line = screen.getByText(/Open Water — unconfirmed/);
     expect(line).toBeVisible();
     // Warning-toned, the same treatment an imported specialty card gets so it
     // is never scanned as a plain level.
@@ -151,7 +151,7 @@ describe("WaitlistSection declared level", () => {
     // differ for one diver, which is why each is marked separately.
     const line = screen.getByText(/Advanced Open Water/);
     expect(line.textContent).not.toMatch(/Advanced Open Water — diver's word/);
-    expect(line.textContent).toMatch(/Nitrox — diver's word, no certification record/);
+    expect(line.textContent).toMatch(/Nitrox — unconfirmed/);
     // One unchecked claim anywhere on the line tones the whole line: the row is
     // a single decision ("do I invite this person?"), and the weakest fact on
     // it is the one that has to survive a glance.
@@ -192,7 +192,7 @@ describe("WaitlistSection declared level", () => {
       ]),
     );
 
-    const line = screen.getByText(/Not certified yet — diver's word/);
+    const line = screen.getByText(/Not certified yet — unconfirmed/);
     expect(line).toBeVisible();
     // Somebody's word, nobody's card — the same tone every unchecked claim on
     // this row wears.
@@ -240,9 +240,7 @@ describe("WaitlistSection below the departure's bar", () => {
       requirement("advanced_open_water"),
     );
 
-    const line = screen.getByText(
-      "Open Water — diver's word, no certification record · below this departure's minimum",
-    );
+    const line = screen.getByText("Open Water — unconfirmed · below this departure's minimum");
     expect(line).toBeVisible();
     // Two facts, two carriers: unchecked tones the row, under the bar is words.
     expect(line).toHaveClass("text-warning");
@@ -278,7 +276,7 @@ describe("WaitlistSection below the departure's bar", () => {
     );
 
     expect(
-      screen.getByText(/Not certified yet — diver's word · below this departure's minimum/),
+      screen.getByText(/Not certified yet — unconfirmed · below this departure's minimum/),
     ).toBeVisible();
   });
 

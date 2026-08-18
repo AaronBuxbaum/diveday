@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { CertRequirementSource } from "@/lib/readiness";
@@ -88,29 +88,50 @@ describe("LastMinuteDealSection recipient review", () => {
     ).toBeTruthy();
   });
 
-  it("states what the departure requires, above the list", () => {
+  it("updates the send count when a staffer changes the selected recipients", () => {
+    renderSection(
+      [recipient("Ravi Menon", "open_water"), recipient("Hana Kobayashi", "open_water")],
+      null,
+    );
+
+    const send = screen.getByRole("button", { name: "Send to 2 divers" });
+    const checkbox = screen.getAllByRole("checkbox")[0];
+    fireEvent.click(checkbox);
+
+    expect(send).toHaveTextContent("Send to 1 diver");
+  });
+
+  it("disables send when no recipients are selected", () => {
+    renderSection(
+      [recipient("Ravi Menon", "open_water"), recipient("Hana Kobayashi", "open_water")],
+      null,
+    );
+
+    const send = screen.getByRole("button", { name: "Send to 2 divers" });
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      fireEvent.click(checkbox);
+    }
+
+    expect(send).toHaveTextContent("Send to 0 divers");
+    expect(send).toBeDisabled();
+  });
+
+  it("does not repeat the departure requirement above the list", () => {
     const { container } = renderSection(
-      [recipient("Ravi Menon", "open_water")],
+      [recipient("Ravi Menon", "advanced_open_water")],
       requires("advanced_open_water"),
     );
 
-    const requirement = screen.getByText("This departure requires Advanced Open Water or higher.");
-    const list = container.querySelector("ul");
-    expect(
-      // biome-ignore lint/style/noNonNullAssertion: the list always renders when there is somebody to send to.
-      requirement.compareDocumentPosition(list!) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(container.textContent).not.toContain("This departure requires");
   });
 
   it("says nothing about a requirement when the departure has none", () => {
     const { container } = renderSection([recipient("Ravi Menon", "open_water")], requires(null));
 
-    // No empty scaffolding: a departure that demands nothing gets no sentence
-    // about its demands, and the summary says the useful thing instead.
+    // The recipient list is already filtered to people who can receive this
+    // deal, so there is no qualification explanation to repeat here.
     expect(container.textContent).not.toContain("This departure requires");
-    expect(container.textContent).toContain(
-      "This departure asks for no certification level, so nobody on this list is below it.",
-    );
+    expect(container.textContent).not.toContain("below this departure's requirement");
   });
 
   it("does not read as an all-clear on a departure gated by cards rather than a level", () => {
@@ -123,13 +144,8 @@ describe("LastMinuteDealSection recipient review", () => {
       requiresNitrox: true,
     });
 
-    expect(container.textContent).toContain(
-      "this list can't tell you who has those certifications",
-    );
-    // And it no longer claims nobody is below, which was the all-clear half of
-    // the same sentence — a claim this fold can now contradict on its own, as
-    // soon as one recipient says they hold no card at all.
-    expect(container.textContent).not.toContain("nobody on this list is below it");
+    expect(container.textContent).not.toContain("This departure requires");
+    expect(container.textContent).not.toContain("below this departure's requirement");
   });
 
   /**
@@ -139,7 +155,7 @@ describe("LastMinuteDealSection recipient review", () => {
    * unlifted, and possibly below the ten-name cap on the departure a shop is
    * most exposed on (2026-08-15 `dive-domain-expert` review).
    */
-  it("marks the uncertified joiner on a departure gated by cards rather than a level", () => {
+  it("does not show an uncertified joiner on a departure gated by cards", () => {
     const { container } = renderSection(
       [
         ...Array.from({ length: 11 }, (_, index) => recipient(`Diver ${index}`, "instructor")),
@@ -148,18 +164,11 @@ describe("LastMinuteDealSection recipient review", () => {
       { minimumCertificationLevel: null, requiredSpecialties: ["deep"], requiresNitrox: true },
     );
 
-    const rows = container.querySelectorAll("li");
-    expect(rows[0]?.textContent).toContain("Dee Ferrer");
-    expect(rows[0]?.textContent).toContain("below this departure's minimum");
-    // Both sentences, in that order: the name it can place, then the honest
-    // limit of what it can say about everybody else.
-    expect(container.textContent).toContain("1 of 12 is below this departure's requirement.");
-    expect(container.textContent).toContain(
-      "this list can't tell you who has those certifications",
-    );
+    expect(container.textContent).not.toContain("Dee Ferrer");
+    expect(container.textContent).not.toContain("below this departure's requirement");
   });
 
-  it("summarizes who is below the bar and who said nothing", () => {
+  it("does not show a redundant qualification summary", () => {
     const { container } = renderSection(
       [
         recipient("Hana Kobayashi", "advanced_open_water"),
@@ -170,11 +179,10 @@ describe("LastMinuteDealSection recipient review", () => {
       requires("advanced_open_water"),
     );
 
-    // One paragraph, two whole ICU sentences — never a concatenation, and with
-    // the space between them that a run-together "requirement.1 said" loses.
-    expect(container.textContent).toContain(
-      "2 of 4 are below this departure's requirement. 1 said nothing about their level.",
+    expect(container.textContent).not.toContain(
+      "Nobody on this list is below this departure's requirement.",
     );
+    expect(container.textContent).not.toContain("said nothing about their level");
   });
 
   /**
@@ -200,19 +208,10 @@ describe("LastMinuteDealSection recipient review", () => {
       requires("advanced_open_water"),
     );
 
-    expect(container.textContent).toContain("1 of 3 is below this departure's requirement.");
-    // The joiner who genuinely said nothing is still counted separately, and
-    // there is exactly one of them.
-    expect(container.textContent).toContain("1 said nothing about their level.");
-    const rows = container.querySelectorAll("li");
-    // Lifted to the top of the capped preview, like every other name that
-    // should give a staffer pause.
-    expect(rows[0]?.textContent).toContain("Dee Ferrer");
-    expect(rows[0]?.textContent).toContain(
-      "Not certified yet — diver's word · below this departure's minimum",
-    );
-    // Nobody has seen anything, so the row wears the same tone a claim does.
-    expect(rows[0]?.querySelector(":scope > span")?.className).toContain("text-warning");
+    expect(container.textContent).not.toContain("Dee Ferrer");
+    // The unqualified joiners are not shown or included in the send.
+    expect(container.textContent).not.toContain("said nothing about their level");
+    expect(container.querySelectorAll("li")).toHaveLength(1);
   });
 
   it("still says nothing about a bar the departure does not set, for an uncertified joiner", () => {
@@ -223,17 +222,17 @@ describe("LastMinuteDealSection recipient review", () => {
 
     // A departure that asks for no level has no bar for anyone to be under —
     // the answer is still stated on the row, and it is still not a refusal.
-    expect(container.textContent).toContain("Not certified yet — diver's word");
+    expect(container.textContent).toContain("Not certified yet — unconfirmed");
     expect(container.textContent).not.toContain("below this departure's minimum");
   });
 
-  it("answers with nobody rather than a zero when the whole list clears the bar", () => {
+  it("does not show an all-clear qualification sentence", () => {
     const { container } = renderSection(
       [recipient("Hana Kobayashi", "advanced_open_water")],
       requires("advanced_open_water"),
     );
 
-    expect(container.textContent).toContain(
+    expect(container.textContent).not.toContain(
       "Nobody on this list is below this departure's requirement.",
     );
     expect(container.textContent).not.toContain("said nothing about their level");
@@ -241,26 +240,14 @@ describe("LastMinuteDealSection recipient review", () => {
 
   it("says on the row itself that a diver ranks below the departure's level", () => {
     const { container } = renderSection(
-      [
-        // A card the shop has verified, one rung under the bar: calm, muted,
-        // and until this line existed the quietest thing on a screen whose
-        // warm rows meant something else entirely.
-        recipient("Ravi Menon", "open_water"),
-        recipient("Tess Alvarez", "open_water", true),
-        recipient("Hana Kobayashi", "advanced_open_water"),
-      ],
+      [recipient("Ravi Menon", "open_water"), recipient("Hana Kobayashi", "advanced_open_water")],
       requires("advanced_open_water"),
     );
 
     const rows = container.querySelectorAll("li");
-    expect(rows[0]?.textContent).toContain("Open Water · below this departure's minimum");
-    // The claim keeps its own mark and gains the second one; the two facts are
-    // separate and both are words.
-    expect(rows[1]?.textContent).toContain(
-      "Open Water — diver's word, no certification record · below this departure's minimum",
-    );
-    // Nobody who clears the bar is marked.
-    expect(rows[2]?.textContent).not.toContain("below this departure's minimum");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain("Hana Kobayashi");
+    expect(container.textContent).not.toContain("Ravi Menon");
   });
 
   it("marks nothing on the row when the departure asks for no level", () => {
@@ -271,16 +258,16 @@ describe("LastMinuteDealSection recipient review", () => {
 
   it("keeps the warning tone meaning only that nobody has seen the card", () => {
     const { container } = renderSection(
-      [recipient("Ravi Menon", "open_water"), recipient("Tess Alvarez", "open_water", true)],
+      [
+        recipient("Ravi Menon", "advanced_open_water"),
+        recipient("Tess Alvarez", "open_water", true),
+      ],
       requires("advanced_open_water"),
     );
 
     const tones = [...container.querySelectorAll("li > span")].map((span) => span.className);
-    // Both are below the bar. Only the unverified one is warm — a second
-    // reason to turn a row warm would make the mark mean "unverified, or
-    // under-certified, or both" (ADR 20260814-self-declared-cards).
+    expect(tones).toHaveLength(1);
     expect(tones[0]).toContain("text-muted");
-    expect(tones[1]).toContain("text-warning");
   });
 
   it("caps the drawn list, counts the rest, and never hides someone below the bar", () => {
@@ -294,11 +281,8 @@ describe("LastMinuteDealSection recipient review", () => {
 
     const rows = container.querySelectorAll("li");
     expect(rows).toHaveLength(10);
-    expect(rows[0]?.textContent).toContain("Ravi Menon");
-    expect(container.textContent).toContain(
-      "2 more aren't shown — anyone below the requirement is listed first.",
-    );
-    // The send is untouched by the cap: the button still offers everybody.
-    expect(screen.getByRole("button", { name: "Send to 12 divers" })).toBeDefined();
+    expect(container.textContent).not.toContain("Ravi Menon");
+    expect(container.textContent).toContain("1 more");
+    expect(screen.getByRole("button", { name: "Send to 10 divers" })).toBeDefined();
   });
 });

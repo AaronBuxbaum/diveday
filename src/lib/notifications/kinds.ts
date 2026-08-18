@@ -93,13 +93,15 @@ const bookingConfirmationSchema = z.object({
 const waiverRequestSchema = z.object({
   kind: z.literal("waiver_request"),
   waiverRecordId: z.uuid(),
-  bookingId: z.uuid(),
+  /** Present for trip-issued links; omitted for an independent person waiver. */
+  bookingId: z.uuid().optional(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  /** Present when the link was requested from a departure; omitted otherwise. */
+  tripTitle: z.string().trim().min(1).max(200).optional(),
   completionUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),

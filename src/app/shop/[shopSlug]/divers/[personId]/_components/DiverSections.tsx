@@ -20,6 +20,7 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  * 20260802-diver-data-erasure). Reaching them costs a scroll, on purpose.
  */
 export const DIVER_SECTIONS = [
+  { id: "waiver", labelKey: "divers.subNav.waiver" },
   { id: "cards", labelKey: "divers.subNav.cards" },
   { id: "fit", labelKey: "divers.subNav.fit" },
   { id: "payments", labelKey: "divers.subNav.payments" },

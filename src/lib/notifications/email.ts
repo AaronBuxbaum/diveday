@@ -38,7 +38,7 @@ type WaiverRequestEmailInput = {
   locale: DiverLocale;
   diverName: string;
   shopName: string;
-  tripTitle: string;
+  tripTitle?: string;
   completionUrl: string;
   expiresAt: Date;
   timezone: string;
@@ -1011,24 +1011,32 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
-  const title = escapeHtml(input.tripTitle);
+  const tripTitle = input.tripTitle?.trim();
+  const title = tripTitle ? escapeHtml(tripTitle) : null;
   const shop = escapeHtml(input.shopName);
   const url = escapeHtml(input.completionUrl);
 
-  const body = t("notifications.waiverRequest.body", {
-    shopName: input.shopName,
-    tripTitle: input.tripTitle,
-  });
-  const bodyHtml = t("notifications.waiverRequest.body", {
-    shopName: shop,
-    tripTitle: `<strong>${title}</strong>`,
-  });
+  const body = tripTitle
+    ? t("notifications.waiverRequest.body", {
+        shopName: input.shopName,
+        tripTitle,
+      })
+    : t("notifications.waiverRequest.genericBody", { shopName: input.shopName });
+  const bodyHtml = tripTitle
+    ? t("notifications.waiverRequest.body", {
+        shopName: shop,
+        tripTitle: `<strong>${title}</strong>`,
+      })
+    : t("notifications.waiverRequest.genericBody", { shopName: shop });
   const completeText = t("notifications.waiverRequest.completeText");
   const completeLink = t("notifications.waiverRequest.completeLink");
   const expiry = t("notifications.waiverRequest.expiry", { expiresAt });
+  const subject = tripTitle
+    ? t("notifications.waiverRequest.subject", { tripTitle })
+    : t("notifications.waiverRequest.genericSubject");
 
   return {
-    subject: t("notifications.waiverRequest.subject", { tripTitle: input.tripTitle }),
+    subject,
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${completeLink}</a></p><p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };

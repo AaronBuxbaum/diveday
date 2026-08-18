@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { rentalItemLabel } from "@/i18n/rental-labels";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { cardsNeedingLookCount, type DiverProfile, type Shop, unpaidBookingCount } from "./shared";
@@ -15,15 +14,8 @@ import { cardsNeedingLookCount, type DiverProfile, type Shop, unpaidBookingCount
  * exactly the same box as a booking count nobody has to do anything about. A
  * staffer scanning the record had to read all four sub-lines to find the work.
  *
- * The signifier is deliberately small and always doubled: a warning-tinted
- * border and fill, *plus* a badge that says what is wanted in words. Colour
- * never carries the meaning on its own (docs/design/principles.md #6), and the
- * `Badge` warning tone brings its own `▲` glyph for a colourblind scan.
- *
- * The word is "Needs attention", the roster's own; not readiness's "Blocked"
- * (`src/i18n/readiness-labels.ts`), which is a fact about one diver on one
- * departure and would be a bigger claim than any of this evidence supports —
- * nothing on this card decides whether anybody boards.
+ * The signifier is the card's warning-tinted border and fill. The top line
+ * stays a compact summary; the detail line explains what still needs work.
  */
 function StatCard({
   label,
@@ -31,7 +23,6 @@ function StatCard({
   detail,
   attention,
   success,
-  t,
 }: {
   label: string;
   value: ReactNode;
@@ -41,7 +32,6 @@ function StatCard({
   attention?: boolean;
   /** Set for an affirmative status that deserves calm success chrome. */
   success?: boolean;
-  t: StaffTranslator;
 }) {
   return (
     <div
@@ -57,21 +47,7 @@ function StatCard({
             : sectionCardClass()
       }
     >
-      {/* `flex-wrap`, and the badge nowraps. Four of these sit in one `lg`
-          row, so each card is about 200px wide — and "Rental fit" beside
-          "▲ Needs attention" does not fit in that. Without wrapping, flex shrank
-          *both*: the label broke after "Rental" and the badge broke mid-phrase,
-          giving a two-line label facing a two-line pill and a card that read as
-          damaged. Wrapping drops the badge to its own full-width line instead,
-          where it has room to stay one line and the label stays one line too. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-        <p className="text-sm text-muted">{label}</p>
-        {attention ? (
-          <Badge tone="warning" size="sm" className="whitespace-nowrap">
-            {t("divers.stats.needsAttention")}
-          </Badge>
-        ) : null}
-      </div>
+      <p className="text-sm text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold">{value}</p>
       {detail ? <p className="text-sm text-muted">{detail}</p> : null}
     </div>
@@ -83,13 +59,11 @@ export function StatsSummary({
   shop,
   locale,
   notesCount,
-  waiverCard,
 }: {
   diver: DiverProfile;
   shop: Shop;
   locale: string;
   notesCount: number;
-  waiverCard?: ReactNode;
 }) {
   const t = staffTranslator(locale);
   const profile = diver.rentalFit;
@@ -106,21 +80,17 @@ export function StatsSummary({
   const unpaid = unpaidBookingCount(diver);
   return (
     <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {needingLook > 0 ? (
-        <StatCard
-          t={t}
-          label={t("divers.stats.cards")}
-          attention
-          value={
-            diver.certifications.length +
-            diver.specialtyCertifications.length +
-            diver.nitroxCertifications.length
-          }
-          detail={t("divers.stats.needingLook", { count: needingLook })}
-        />
-      ) : null}
       <StatCard
-        t={t}
+        label={t("divers.stats.cards")}
+        attention={needingLook > 0}
+        value={
+          diver.certifications.length +
+          diver.specialtyCertifications.length +
+          diver.nitroxCertifications.length
+        }
+        detail={needingLook > 0 ? t("divers.stats.needingLook", { count: needingLook }) : null}
+      />
+      <StatCard
         label={t("divers.stats.bookings")}
         attention={unpaid > 0}
         value={totalBookings}
@@ -132,9 +102,8 @@ export function StatsSummary({
               : null
         }
       />
-      <StatCard t={t} label={t("divers.stats.notes")} value={notesCount} detail={null} />
+      <StatCard label={t("divers.stats.notes")} value={notesCount} detail={null} />
       <StatCard
-        t={t}
         label={t("divers.stats.rentalFit")}
         // Three states, not two. "Saved" used to mean nothing more than "a row
         // exists", so a diver who ticked BCD, wetsuit and weights and typed one
@@ -160,7 +129,6 @@ export function StatsSummary({
               : null
         }
       />
-      {waiverCard}
     </div>
   );
 }
