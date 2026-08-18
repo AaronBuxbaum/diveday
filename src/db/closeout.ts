@@ -181,16 +181,26 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     list.push(photo);
     crewPhotosByTrip.set(photo.tripId, list);
   }
-  const recapStateByTrip = new Map<string, { total: number; sent: number; latest: Date | null }>();
+  const recapStateByTrip = new Map<
+    string,
+    { total: number; sent: number; failed: number; latest: Date | null }
+  >();
   for (const delivery of recapDeliveries) {
     if (delivery.bookingStatus === "cancelled" || delivery.bookingStatus === "no_show") continue;
-    const state = recapStateByTrip.get(delivery.tripId) ?? { total: 0, sent: 0, latest: null };
+    const state = recapStateByTrip.get(delivery.tripId) ?? {
+      total: 0,
+      sent: 0,
+      failed: 0,
+      latest: null,
+    };
     state.total++;
     if (delivery.deliveryStatus === "sent") {
       state.sent++;
       if (delivery.attemptedAt && (!state.latest || delivery.attemptedAt > state.latest)) {
         state.latest = delivery.attemptedAt;
       }
+    } else if (delivery.deliveryStatus === "failed") {
+      state.failed++;
     }
     recapStateByTrip.set(delivery.tripId, state);
   }
@@ -203,6 +213,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     recapShoutout: row.recapShoutout,
     recapAutoSendPaused: row.recapAutoSendPaused,
     recapAutoSendAt: row.recapAutoSendAt,
+    recapFailed: (recapStateByTrip.get(row.id)?.failed ?? 0) > 0,
     recapSentAt:
       recapStateByTrip.get(row.id)?.total === recapStateByTrip.get(row.id)?.sent
         ? (recapStateByTrip.get(row.id)?.latest ?? null)

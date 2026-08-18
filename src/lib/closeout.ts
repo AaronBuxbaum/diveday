@@ -134,6 +134,8 @@ export type CloseoutTripInput = {
   recapAutoSendPaused?: boolean;
   /** Custom/unpaused automatic recap delivery target time. */
   recapAutoSendAt?: Date | null;
+  /** Whether automatic recap delivery failed for this departure. */
+  recapFailed?: boolean;
   photos?: {
     id: string;
     imageUrl: string;
@@ -178,6 +180,7 @@ export type CloseoutDeparture = {
   recapSentAt: Date | null;
   recapAutoSendPaused: boolean;
   recapAutoSendAt: Date | null;
+  recapFailed: boolean;
   /**
    * Whether this departure is behind the shop — the same reading `sendDueRecaps`
    * makes about whose recap is due. Only a returned boat is offered the recap
@@ -340,6 +343,7 @@ export function assembleDayCloseout(input: {
       recapSentAt: trip.recapSentAt ?? null,
       recapAutoSendPaused: trip.recapAutoSendPaused ?? false,
       recapAutoSendAt: trip.recapAutoSendAt ?? null,
+      recapFailed: trip.recapFailed ?? false,
       ended: trip.endsAt <= now,
       photos: trip.photos ?? [],
       crewPhotos: trip.crewPhotos ?? [],

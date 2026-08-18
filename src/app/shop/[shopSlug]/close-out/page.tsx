@@ -630,6 +630,7 @@ export default async function CloseOutPage({
                       toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
                       recapAutoSendAt={recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt)}
                       recapAutoSendPaused={departure.recapAutoSendPaused}
+                      recapFailed={departure.recapFailed}
                       recapNowMs={now.getTime()}
                       recapSentAt={departure.recapSentAt}
                       recapSentAtLabel={

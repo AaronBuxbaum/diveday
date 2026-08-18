@@ -66,9 +66,11 @@
     }
   },
   "recap": {
+    "heading": "Recap",
     "waiting": "Automatic recap sending begins in {remaining}.",
-    "due": "Automatic recap sending is due.",
+    "due": "Recaps will be sent within 1h.",
     "paused": "Automatic recap sending is paused.",
+    "failed": "Automatic recap sending failed.",
     "noScheduledReturn": "No scheduled return time. Recaps will not be sent automatically.",
     "send": "Send recap now",
     "sending": "Sending recap…",

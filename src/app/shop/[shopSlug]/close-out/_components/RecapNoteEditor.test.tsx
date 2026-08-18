@@ -57,7 +57,7 @@ describe("the close-out's post-trip recap note", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the automatic-send countdown without opening the recap editor", () => {
+  it("renders the recap send controls under the post-trip disclosure", () => {
     render(
       <RecapNoteEditor
         action={vi.fn()}
@@ -72,8 +72,10 @@ describe("the close-out's post-trip recap note", () => {
         recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
       />,
     );
+    expect(screen.getByText("Recap")).toBeInTheDocument();
     expect(screen.getByText("Automatic recap sending begins in 4h 00m.")).toBeInTheDocument();
-    expect(document.querySelector("details")?.open).toBe(false);
+    expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send recap now" })).toBeInTheDocument();
   });
 
   it("locks the note and photo controls after the recap is sent", () => {

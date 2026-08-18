@@ -28,11 +28,7 @@ import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
-import {
-  filterEligibleLastMinuteRecipients,
-  lastMinuteEntryMatchesTripDate,
-  orderLastMinuteRecipients,
-} from "@/lib/last-minute-list";
+import { lastMinuteEntryMatchesTripDate, orderLastMinuteRecipients } from "@/lib/last-minute-list";
 import { combineCertRequirements } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -271,23 +267,7 @@ async function TripGuestsBody({
     certification: preCertSummaries.get(m.person.id) ?? null,
   }));
 
-  const courseTargetInfo = trip.course
-    ? {
-        slug: trip.course.slug,
-        title: trip.course.title,
-        sourceTemplateSlug: trip.course.sourceTemplateSlug,
-        minimumCertificationLevel: trip.course.minimumCertificationLevel,
-        isIntroCourse: trip.course.isIntroCourse,
-      }
-    : null;
-
-  const eligibleMatches = filterEligibleLastMinuteRecipients(
-    rawMatchesWithCert,
-    dealRequirement,
-    courseTargetInfo,
-  );
-
-  const lastMinuteRecipients = orderLastMinuteRecipients(eligibleMatches, waitlistPersonIds);
+  const lastMinuteRecipients = orderLastMinuteRecipients(rawMatchesWithCert, waitlistPersonIds);
   const certificationSummaries = preCertSummaries;
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver

@@ -18,6 +18,7 @@ export type RecapSendControlCopy = {
   waiting: string;
   due: string;
   paused: string;
+  failed: string;
   noScheduledReturn: string;
   send: string;
   sending: string;
@@ -34,6 +35,7 @@ export function RecapSendControl({
   tripId,
   autoSendAt,
   paused,
+  failed,
   nowMs,
   copy,
 }: {
@@ -42,6 +44,7 @@ export function RecapSendControl({
   tripId: string;
   autoSendAt: string | null;
   paused: boolean;
+  failed?: boolean;
   /** Server-rendered start time keeps the first client render deterministic. */
   nowMs: number;
   copy: RecapSendControlCopy;
@@ -56,8 +59,12 @@ export function RecapSendControl({
   }, []);
 
   let statusText: string;
+  let isFailed = false;
   if (!autoSendAt || dueAtMs === null) {
     statusText = copy.noScheduledReturn;
+  } else if (failed) {
+    statusText = copy.failed;
+    isFailed = true;
   } else if (paused) {
     statusText = copy.paused;
   } else if (remainingMs !== null && remainingMs <= 0) {
@@ -74,8 +81,11 @@ export function RecapSendControl({
   const canTogglePause = autoSendAt !== null;
 
   return (
-    <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
-      <p aria-live="polite" className="text-sm text-muted">
+    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p
+        aria-live="polite"
+        className={`text-sm ${isFailed ? "font-medium text-danger" : "text-muted"}`}
+      >
         {statusText}
       </p>
       <div className="flex shrink-0 flex-wrap items-center gap-2">

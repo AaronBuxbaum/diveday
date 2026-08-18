@@ -10,8 +10,9 @@ afterEach(() => {
 
 const copy = {
   waiting: "Automatic recap sending begins in {remaining}.",
-  due: "Automatic recap sending is due.",
+  due: "Recaps will be sent within 1h.",
   paused: "Automatic recap sending is paused.",
+  failed: "Automatic recap sending failed.",
   noScheduledReturn: "No scheduled return time. Recaps will not be sent automatically.",
   send: "Send recap now",
   sending: "Sending recap…",
@@ -57,6 +58,23 @@ describe("RecapSendControl", () => {
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
   });
 
+  it("shows failed status when automatic sending failed", () => {
+    render(
+      <RecapSendControl
+        sendAction={vi.fn()}
+        togglePauseAction={vi.fn()}
+        tripId="trip-123"
+        autoSendAt="2026-08-16T16:00:00.000Z"
+        paused={false}
+        failed={true}
+        nowMs={new Date("2026-08-16T16:00:00.000Z").getTime()}
+        copy={copy}
+      />,
+    );
+    expect(screen.getByText("Automatic recap sending failed.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
+  });
+
   it("shows due status when autoSendAt has arrived", () => {
     render(
       <RecapSendControl
@@ -69,7 +87,7 @@ describe("RecapSendControl", () => {
         copy={copy}
       />,
     );
-    expect(screen.getByText("Automatic recap sending is due.")).toBeInTheDocument();
+    expect(screen.getByText("Recaps will be sent within 1h.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
   });

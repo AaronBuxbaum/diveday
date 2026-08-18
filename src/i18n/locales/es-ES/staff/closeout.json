@@ -66,9 +66,11 @@
     }
   },
   "recap": {
+    "heading": "Resumen",
     "waiting": "El envío automático del resumen comienza en {remaining}.",
-    "due": "El envío automático del resumen está listo.",
+    "due": "Los resúmenes se enviarán en 1 h.",
     "paused": "El envío automático del resumen está pausado.",
+    "failed": "Falló el envío automático del resumen.",
     "noScheduledReturn": "Sin hora de regreso programada. Los resúmenes no se enviarán automáticamente.",
     "send": "Enviar resumen ahora",
     "sending": "Enviando resumen…",
