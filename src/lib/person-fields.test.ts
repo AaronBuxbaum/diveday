@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   blankableDiverEmailSchema,
+  blankableDiverNameSchema,
   DIVER_EMAIL_MAX,
   DIVER_NAME_MAX,
   DIVER_PHONE_MAX,
@@ -24,6 +25,11 @@ describe("diver person-field fragments", () => {
   it("rejects an empty or whitespace-only name", () => {
     expect(diverNameSchema.safeParse("").success).toBe(false);
     expect(diverNameSchema.safeParse("   ").success).toBe(false);
+  });
+
+  it("allows a blank name for contact-first diver intake", () => {
+    expect(blankableDiverNameSchema.safeParse("").success).toBe(true);
+    expect(blankableDiverNameSchema.safeParse("  ").success).toBe(true);
   });
 
   it("accepts exactly the name bound and rejects one past it", () => {
@@ -74,6 +80,9 @@ describe("diverSearchPrefill", () => {
   it("extracts a phone number when the query looks like one", () => {
     expect(diverSearchPrefill(" +1 (305) 555-0231 ")).toEqual({
       phone: "+1 (305) 555-0231",
+    });
+    expect(diverSearchPrefill("+1\u00a0(305) 555-0231 ext. 4")).toEqual({
+      phone: "+1\u00a0(305) 555-0231 ext. 4",
     });
   });
 

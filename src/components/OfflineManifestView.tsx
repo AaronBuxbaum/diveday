@@ -720,7 +720,7 @@ export function OfflineManifestView() {
           <ul
             className={sectionCardClass({
               padding: "none",
-              className: "mt-6 divide-y divide-border",
+              className: "mt-6 divide-y divide-border overflow-hidden",
             })}
           >
             {savedTrips.map((saved) => {
@@ -1392,7 +1392,7 @@ export function OfflineManifestView() {
           tabIndex={-1}
           className={sectionCardClass({
             padding: "none",
-            className: "mt-4 divide-y divide-border outline-none",
+            className: "mt-4 divide-y divide-border overflow-hidden outline-none",
           })}
         >
           {manifest.divers.map((diver, index) => {

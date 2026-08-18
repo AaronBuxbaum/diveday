@@ -76,6 +76,12 @@ export type DiveSiteTemplateSnapshot = {
   creatures: MarineLifeSlug[];
 };
 
+/** One-time inverse of the most recent template pull, kept on the site row. */
+export type DiveSiteTemplateUndo = {
+  sourceTemplateVersion: number;
+  snapshot: DiveSiteTemplateSnapshot;
+};
+
 /** Structural shape accepted from an immutable catalog version. */
 export type DiveSiteTemplateSource = {
   description?: string;

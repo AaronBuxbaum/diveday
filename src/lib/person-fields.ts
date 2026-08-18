@@ -19,6 +19,7 @@ export const DIVER_EMAIL_MAX = 320;
 export const DIVER_PHONE_MAX = 40;
 
 export const diverNameSchema = z.string().trim().min(1).max(DIVER_NAME_MAX);
+export const blankableDiverNameSchema = z.string().trim().max(DIVER_NAME_MAX);
 export const diverEmailSchema = z.email().max(DIVER_EMAIL_MAX);
 export const diverPhoneSchema = z.string().trim().max(DIVER_PHONE_MAX);
 
@@ -46,7 +47,11 @@ export function diverSearchPrefill(query: string): {
     return { email: trimmed };
   }
   const digits = trimmed.replace(/\D/g, "");
-  if (digits.length >= 7 && /^[+\d() .-]+$/.test(trimmed)) {
+  // Allow the punctuation people commonly paste from contacts, including
+  // non-breaking spaces and an extension. Without `\s`, a copied phone from
+  // some mobile address books fell through as a diver's name and the Cmd-K
+  // create flow appeared not to work.
+  if (digits.length >= 7 && /^[+\d().\s/-]+(?:\s*(?:x|ext\.?)\s*\d+)?$/i.test(trimmed)) {
     return { phone: trimmed };
   }
   return { name: trimmed };

@@ -243,7 +243,6 @@
     "addToWaitlist": "Add to wait list",
     "noMatchesHeading": "No returning diver by that name",
     "addDiver": "Add diver",
-    "addDiverPrompt": "Not listed?",
     "addNewDiverAction": "Add diver"
   },
   "waitlist": {
@@ -509,7 +508,6 @@
     "scheduleAnotherDeparture": "Schedule another departure",
     "activityHeading": "Activity",
     "noActivity": "No staff activity recorded yet.",
-    "activityShowAll": "{count, plural, one {Show the full trail (# entry)} other {Show the full trail (# entries)}}",
     "promoteHeading": "Promote this trip",
     "promoteSentCount": "{count, plural, one {# deal sent} other {# deals sent}}"
   },

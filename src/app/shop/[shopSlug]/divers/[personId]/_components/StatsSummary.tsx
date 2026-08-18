@@ -32,6 +32,7 @@ function StatCard({
   value,
   detail,
   attention,
+  success,
   t,
 }: {
   label: string;
@@ -40,6 +41,8 @@ function StatCard({
   detail: ReactNode;
   /** Set when this card is holding something a staffer still has to do. */
   attention?: boolean;
+  /** Set for an affirmative status that deserves calm success chrome. */
+  success?: boolean;
   t: StaffTranslator;
 }) {
   return (
@@ -49,9 +52,11 @@ function StatCard({
       // attention" is a *tone* variant of that one geometry — same radius,
       // same padding, same elevation, only the border and fill change.
       className={
-        attention
-          ? "rounded-2xl border border-warning/40 bg-warning/5 p-4 shadow-sm sm:p-5"
-          : sectionCardClass()
+        success
+          ? "rounded-2xl border border-success/40 bg-success/5 p-4 shadow-sm sm:p-5"
+          : attention
+            ? "rounded-2xl border border-warning/40 bg-warning/5 p-4 shadow-sm sm:p-5"
+            : sectionCardClass()
       }
     >
       {/* `flex-wrap`, and the badge nowraps. Four of these sit in one `lg`
@@ -109,11 +114,12 @@ function WaiverStat({ diver, shop, locale }: { diver: DiverProfile; shop: Shop; 
     <StatCard
       t={t}
       label={t("divers.stats.waiver")}
-      // The status badge is this card's value — it already carries the tone and
-      // the glyph, so it needs no second "needs attention" pill beside it. What
-      // the tinted frame adds is that the *card* reads as work from across the
-      // row, the same as its three neighbours.
-      value={<Badge tone={tone}>{shopWaiverStatusText(t, waiver)}</Badge>}
+      attention={tone !== "success"}
+      success={tone === "success"}
+      // The card frame carries the tone. The status itself stays readable text,
+      // so a signed waiver says simply "Signed" rather than putting a second
+      // status pill inside a card that already says whether it needs attention.
+      value={shopWaiverStatusText(t, waiver)}
       detail={
         waiver.state === "current"
           ? t("divers.stats.waiverGoodUntil", { date: date(waiver.expiresAt) })
@@ -151,17 +157,19 @@ export function StatsSummary({
   const unpaid = unpaidBookingCount(diver);
   return (
     <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard
-        t={t}
-        label={t("divers.stats.cards")}
-        attention={needingLook > 0}
-        value={
-          diver.certifications.length +
-          diver.specialtyCertifications.length +
-          diver.nitroxCertifications.length
-        }
-        detail={t("divers.stats.needingLook", { count: needingLook })}
-      />
+      {needingLook > 0 ? (
+        <StatCard
+          t={t}
+          label={t("divers.stats.cards")}
+          attention
+          value={
+            diver.certifications.length +
+            diver.specialtyCertifications.length +
+            diver.nitroxCertifications.length
+          }
+          detail={t("divers.stats.needingLook", { count: needingLook })}
+        />
+      ) : null}
       <WaiverStat diver={diver} shop={shop} locale={locale} />
       <StatCard
         t={t}

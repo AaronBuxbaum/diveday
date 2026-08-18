@@ -19,6 +19,7 @@ import {
   tips,
   tripBlowoutDivers,
   tripBlowouts,
+  tripReviews,
   trips,
   userAccounts,
 } from "./schema";
@@ -64,6 +65,12 @@ describe("createDemoShop", () => {
     // It's seeded: real bookings, and the same friendly staff cast by role.
     const shopBookings = await db.select().from(bookings).where(eq(bookings.shopId, shop.id));
     expect(shopBookings.length).toBeGreaterThan(0);
+    expect((await db.select().from(tips).where(eq(tips.shopId, shop.id))).length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      (await db.select().from(tripReviews).where(eq(tripReviews.shopId, shop.id))).length,
+    ).toBeGreaterThan(0);
 
     const roles = await db
       .select({ role: personRoles.role })

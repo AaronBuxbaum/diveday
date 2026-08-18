@@ -51,7 +51,13 @@ export async function CertificationCards({
   // action row — and emphatically not opening the add-a-card form, which is a
   // different form entirely and had nothing to do with the submit.
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
-  const sectionStatus = numberError ? undefined : status;
+  // Success is page feedback, not add-card feedback. In particular, the
+  // Mark certified action returns here with a success notice; opening this
+  // disclosure for it made the unrelated add-certification form appear to
+  // have succeeded. Only a danger notice belonging to this exact form may
+  // open it or render beside its submit button.
+  const sectionStatus =
+    !numberError && status?.form === "cards" && status.tone === "danger" ? status : undefined;
   // The diver's own "I hold no card", still standing: set, never cleared by
   // staff, and not yet refuted by a card. `listCertificationSummaries` decides
   // the same thing for the send lists; here the list of cards below *is* the
@@ -71,25 +77,24 @@ export async function CertificationCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.certifications.description")}</p>
         </div>
-        {/* Opened by its own outcome: this form lives in a collapsed
-            `<details>`, and an answer rendered inside a shut disclosure is
-            worse than the page-top banner it replaces — invisible rather than
-            merely far away. */}
-        <details open={Boolean(sectionStatus)}>
-          {/* Through the wrapper, like every other button-shaped thing (see
-              divers/page.tsx and reviews/page.tsx): the hand-written string
-              this replaces was `buttonClass()`'s primary/md output copied out
-              by hand, so it drifted the moment either changed. `list-none` and
-              the WebKit marker rule are the `<summary>`-specific half the
-              wrapper does not own — a summary shows a disclosure triangle
-              otherwise. */}
-          <summary
-            className={buttonClass({
-              className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-            })}
-          >
-            {t("divers.certifications.addCard")}
-          </summary>
+        <button
+          type="button"
+          popoverTarget={`add-certification-${personId}`}
+          popoverTargetAction="toggle"
+          className={buttonClass()}
+        >
+          {t("divers.certifications.addCard")}
+        </button>
+        {sectionStatus ? (
+          <div className="basis-full">
+            <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
+          </div>
+        ) : null}
+        <div
+          id={`add-certification-${personId}`}
+          popover="auto"
+          className="m-0 max-w-[calc(100vw-2rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl"
+        >
           {/* No `encType`: a function `action` is a server action, not a
               native form post — React builds the `FormData` (files intact)
               and ships it over its own transport, so the browser never reads
@@ -143,10 +148,9 @@ export async function CertificationCards({
               >
                 {t("divers.certifications.captureForReview")}
               </SubmitButton>
-              <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
             </FieldActions>
           </FieldGrid>
-        </details>
+        </div>
       </div>
       {noCertificationDeclared ? (
         /* **The one statement on this record a staffer could not correct.**

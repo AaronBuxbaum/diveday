@@ -74,6 +74,7 @@ function reasonCopy(
  * "the shop's email is broken" or the reverse. */
 function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: WaiverSendCopy }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
+    sent: links.filter((link) => link.reason === "sent"),
     no_email: links.filter((link) => link.reason === "no_email"),
     no_app_origin: links.filter((link) => link.reason === "no_app_origin"),
     unconfigured: links.filter((link) => link.reason === "unconfigured"),
@@ -88,8 +89,10 @@ function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: Waiver
         return (
           <div key={reason} className="mt-2">
             <p className="text-muted">
-              {reasonCopy(copy, reason, group.length)} — share{" "}
-              {group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther}:
+              {reason === "sent"
+                ? fill(copy.sent, { names: group.map((link) => link.name).join(", ") })
+                : reasonCopy(copy, reason, group.length)}{" "}
+              — share {group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther}:
             </p>
             <div className="mt-2 flex flex-col gap-1.5">
               {group.map((link) => (
@@ -157,6 +160,7 @@ export function WaiverSendControl({
   confirmMessage,
   className,
   wrapperClassName,
+  exposeLink = false,
   copy,
 }: {
   shopSlug: string;
@@ -174,6 +178,8 @@ export function WaiverSendControl({
   className?: string;
   /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
   wrapperClassName?: string;
+  /** Show freshly issued private links even when email delivery succeeded. */
+  exposeLink?: boolean;
   copy: WaiverSendCopy;
 }) {
   const [state, formAction] = useActionState(
@@ -202,6 +208,7 @@ export function WaiverSendControl({
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
+        {exposeLink ? <input type="hidden" name="exposeLink" value="true" /> : null}
         {/* Resending is a send, not a reversible edit (principle 7,
             docs/design/principles.md) — a resend to someone who already got
             one guards with a real confirm, not an undo. */}

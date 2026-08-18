@@ -1442,8 +1442,8 @@ export function ScheduleBuilder({
                               <div
                                 className={`flex items-center gap-1 ${
                                   closingMenu === `menu:${trip.id}`
-                                    ? "pointer-events-none animate-scale-out"
-                                    : "animate-scale-in"
+                                    ? "pointer-events-none animate-board-menu-out"
+                                    : "animate-board-menu-in"
                                 }`}
                               >
                                 <button

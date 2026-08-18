@@ -17,6 +17,7 @@ import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "@/lib/dive-sit
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import {
+  type DiveSiteTemplateUndo,
   type DiveSiteTemplateUpdateMode,
   diveSiteTemplateDiff,
   diveSiteTemplateSnapshot,
@@ -326,6 +327,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       routeLabel: input.routeLabel || null,
       routeNote: input.routeNote || null,
       routeZoom: input.routeZoom ?? DEFAULT_ROUTE_ZOOM,
+      templateUpdateUndo: null,
     })
     .returning();
   if (!site) throw new Error("createDiveSite: insert returned no row");
@@ -374,6 +376,9 @@ export async function updateDiveSite(
       routeLabel: input.routeLabel || null,
       routeNote: input.routeNote || null,
       routeZoom: input.routeZoom ?? DEFAULT_ROUTE_ZOOM,
+      // A normal save supersedes the one-time inverse of a template pull. This
+      // prevents a later Undo from clobbering edits made after the pull.
+      templateUpdateUndo: null,
     })
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .returning();
@@ -864,12 +869,62 @@ export async function pullDiveSiteTemplateUpdates(
         requiredSpecialties: merged.requiredSpecialties,
         requiresNitrox: merged.requiresNitrox,
         sourceTemplateVersion: latest.version,
+        templateUpdateUndo: {
+          sourceTemplateVersion: site.sourceTemplateVersion,
+          snapshot: currentSnapshot,
+        } satisfies DiveSiteTemplateUndo,
       })
       .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
       .returning();
     if (!updated) return { status: "unavailable" as const };
     await replaceDiveSiteCreatures(tx, shopId, siteId, merged.creatures);
     return { status: "updated" as const, mode, diff, site: updated };
+  });
+}
+
+/** Restore the managed fields from the last template pull, once. */
+export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, siteId: string) {
+  return db.transaction(async (tx) => {
+    const [site] = await tx
+      .select()
+      .from(diveSites)
+      .where(
+        and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)),
+      )
+      .for("update");
+    const undo = site?.templateUpdateUndo;
+    if (!site || !undo) return { status: "unavailable" as const };
+
+    const [restored] = await tx
+      .update(diveSites)
+      .set({
+        description: undo.snapshot.description,
+        locationName: undo.snapshot.locationName,
+        forecastLatitude: undo.snapshot.forecastLatitude,
+        forecastLongitude: undo.snapshot.forecastLongitude,
+        marineLife: undo.snapshot.marineLife,
+        marineLifeDescription: undo.snapshot.marineLifeDescription,
+        difficultyLevel: undo.snapshot.difficultyLevel,
+        depthRange: undo.snapshot.depthRange,
+        maxDepthMeters: undo.snapshot.maxDepthMeters,
+        expectedBottomTimeMinutes: undo.snapshot.expectedBottomTimeMinutes,
+        currentNote: undo.snapshot.currentNote,
+        divePlan: undo.snapshot.divePlan,
+        fitTone: undo.snapshot.fitTone,
+        fitNote: undo.snapshot.fitNote,
+        fieldGuideTipsHeading: undo.snapshot.fieldGuideTipsHeading,
+        landmarks: undo.snapshot.landmarks,
+        minimumCertificationLevel: undo.snapshot.minimumCertificationLevel,
+        requiredSpecialties: undo.snapshot.requiredSpecialties,
+        requiresNitrox: undo.snapshot.requiresNitrox,
+        sourceTemplateVersion: undo.sourceTemplateVersion,
+        templateUpdateUndo: null,
+      })
+      .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId)))
+      .returning();
+    if (!restored) return { status: "unavailable" as const };
+    await replaceDiveSiteCreatures(tx, shopId, siteId, undo.snapshot.creatures);
+    return { status: "undone" as const, site: restored };
   });
 }
 

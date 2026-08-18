@@ -72,13 +72,6 @@ export const metadata: Metadata = {
   title: "Trip guests — DiveDay",
 };
 
-/**
- * How many activity entries show before the tail collapses behind "Show all":
- * enough to answer "what just happened on this trip" at a glance, few enough
- * that a season of history never buries the sections below.
- */
-const RECENT_ACTIVITY_COUNT = 3;
-
 type TripGuestsSearchParams = Promise<{
   notice?: string;
   bid?: string;
@@ -320,10 +313,6 @@ async function TripGuestsBody({
   // The roster is the spine of the diver section; waiver and readiness detail
   // hang off it by booking id so each diver renders as one consolidated card.
   const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
-  // The freshest entries answer "what just happened here"; the tail waits
-  // behind the disclosure below.
-  const recentActivity = activity.slice(0, RECENT_ACTIVITY_COUNT);
-  const olderActivity = activity.slice(RECENT_ACTIVITY_COUNT);
   const waiverByBooking = new Map(
     readinessRows.map(
       (row) =>
@@ -486,8 +475,11 @@ async function TripGuestsBody({
         />
       )}
 
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">{t("trips.guests.activityHeading")}</h2>
+      <details className="group mt-10">
+        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-lg font-semibold [&::-webkit-details-marker]:hidden hover:text-primary">
+          {t("trips.guests.activityHeading")}
+          <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
+        </summary>
         {activity.length === 0 ? (
           // The shared empty-section grammar, not a bare paragraph — the
           // roster above already wears the same dashed card for "nothing here"
@@ -496,55 +488,29 @@ async function TripGuestsBody({
             <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
           </EmptyState>
         ) : (
-          <>
-            {/* When it happened is a column, not a trailing clause. Set inline
-                after the sentence, the timestamps landed at a different x on
-                every row — the eye reads them as part of the message and then
-                has to re-find where the next one starts. Right-aligned they
-                form the scannable edge a log wants, and `items-baseline` keeps
-                the two texts on one line rather than one boxed above the other.
-                Below `sm` the time drops under its own message instead of
-                squeezing a name into two words. */}
-            <ol className="mt-4 grid gap-2">
-              {recentActivity.map((event) => (
-                <li
-                  key={event.id}
-                  className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
-                >
-                  <span className="min-w-0">{event.message}</span>
-                  <span className="shrink-0 text-muted tabular-nums">
-                    {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            {/* The tail waits behind a disclosure: the freshest entries answer
-                "what just happened here", while a season's history at equal
-                weight is noise (design/principles.md #9). */}
-            {olderActivity.length > 0 ? (
-              <details className="group mt-2">
-                <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden hover:underline">
-                  {t("trips.guests.activityShowAll", { count: activity.length })}
-                  <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-                </summary>
-                <ol className="mt-2 grid gap-2">
-                  {olderActivity.map((event) => (
-                    <li
-                      key={event.id}
-                      className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
-                    >
-                      <span className="min-w-0">{event.message}</span>
-                      <span className="shrink-0 text-muted tabular-nums">
-                        {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            ) : null}
-          </>
+          /* When it happened is a column, not a trailing clause. Set inline
+             after the sentence, the timestamps landed at a different x on
+             every row — the eye reads them as part of the message and then
+             has to re-find where the next one starts. Right-aligned they
+             form the scannable edge a log wants, and `items-baseline` keeps
+             the two texts on one line rather than one boxed above the other.
+             Below `sm` the time drops under its own message instead of
+             squeezing a name into two words. */
+          <ol className="mt-4 grid gap-2">
+            {activity.map((event) => (
+              <li
+                key={event.id}
+                className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+              >
+                <span className="min-w-0">{event.message}</span>
+                <span className="shrink-0 text-muted tabular-nums">
+                  {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
+                </span>
+              </li>
+            ))}
+          </ol>
         )}
-      </section>
+      </details>
 
       {/* The marketing blast collapses behind its own disclosure (task 156,
           UX persona lens 17) — Guests is "who is attending," not a promo

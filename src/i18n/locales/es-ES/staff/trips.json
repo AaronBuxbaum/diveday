@@ -243,7 +243,6 @@
     "addToWaitlist": "Añadir a la lista de espera",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
     "addDiver": "Añadir buceador",
-    "addDiverPrompt": "¿No aparece?",
     "addNewDiverAction": "Añadir buceador"
   },
   "waitlist": {
@@ -509,7 +508,6 @@
     "scheduleAnotherDeparture": "Programar otra salida",
     "activityHeading": "Actividad",
     "noActivity": "Todavía no hay actividad del personal registrada.",
-    "activityShowAll": "{count, plural, one {Ver el historial completo (# entrada)} other {Ver el historial completo (# entradas)}}",
     "promoteHeading": "Promocionar esta salida",
     "promoteSentCount": "{count, plural, one {# oferta enviada} other {# ofertas enviadas}}"
   },

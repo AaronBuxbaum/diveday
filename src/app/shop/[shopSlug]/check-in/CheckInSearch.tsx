@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
@@ -14,30 +14,50 @@ export function CheckInSearch({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hydrated, setHydrated] = useState(false);
+
+  const clearSearchTimer = useCallback(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = null;
+  }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
     setHydrated(true);
-  }, []);
+    return () => {
+      clearSearchTimer();
+    };
+  }, [clearSearchTimer]);
 
   /**
-   * Emptying the box is a filter change, not a half-typed query — so it applies
-   * itself. Nobody presses "Search" on an empty field, and until this fired the
-   * counter sat on the last search's two rows while the staffer looked at a
-   * blank box and a queue that was no longer the queue. Only on *empty*: every
-   * other keystroke still waits for the submit, because searching per character
-   * would re-render the queue under a scanner mid-barcode.
+   * Apply after a short pause so a typed no-match never leaves the full queue
+   * on screen. The delay is long enough for a scanner to finish its barcode,
+   * while ordinary typing still feels immediate; pressing Enter or the button
+   * continues to submit immediately through the real form.
    */
-  function applyWhenCleared(event: FormEvent<HTMLInputElement>) {
-    if (event.currentTarget.value === "" && query !== "") formRef.current?.requestSubmit();
+  function applySearchOnInput(event: FormEvent<HTMLInputElement>) {
+    clearSearchTimer();
+    const value = event.currentTarget.value.trim();
+    if (value === "") {
+      if (query !== "") formRef.current?.requestSubmit();
+      return;
+    }
+    if (value === query) return;
+    searchTimerRef.current = setTimeout(() => {
+      formRef.current?.requestSubmit();
+    }, 300);
   }
 
   // A router navigation, not a native GET submit — see `QueryForm`: the
   // counter searches with a boat waiting, and a full document reload put the
   // staffer back at the top of the page every time.
   return (
-    <QueryForm ref={formRef} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <QueryForm
+      ref={formRef}
+      onSubmitCapture={clearSearchTimer}
+      className="flex flex-col gap-3 sm:flex-row sm:items-end"
+    >
       {/* No hint line under the label. "A barcode scanner can type a booking
           ID here" said in prose what the label's own first word ("Scan") and
           the placeholder ("Name, email, or booking ID") already say between
@@ -52,7 +72,7 @@ export function CheckInSearch({
           inputMode="search"
           defaultValue={query}
           placeholder={copy.placeholder}
-          onInput={applyWhenCleared}
+          onInput={applySearchOnInput}
           // The e2e suite waits on this before relying on clear-to-apply — the
           // deterministic signal that the handler above is live.
           data-hydrated={hydrated ? "true" : undefined}

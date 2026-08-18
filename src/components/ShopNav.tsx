@@ -58,6 +58,7 @@ export function ShopNav({
   navCounts,
   locale,
   setLocale,
+  createDiverAction,
 }: {
   shopSlug: string;
   shopName: string;
@@ -75,6 +76,7 @@ export function ShopNav({
    * shop header, so one definition has to reach both from above.
    */
   setLocale: (locale: string) => Promise<void>;
+  createDiverAction: (formData: FormData) => Promise<void>;
 }) {
   const root = staffShopRoot(shopSlug);
   const t = staffTranslator(locale);
@@ -150,6 +152,7 @@ export function ShopNav({
               languages={languages}
               setLocaleAction={setLocale}
               signOutAction={signOutAction}
+              createDiverAction={createDiverAction}
               copy={{
                 language: t("shared.shopNav.language"),
                 groupSession: t("shared.commandPalette.groupSession"),

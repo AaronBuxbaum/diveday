@@ -19,7 +19,7 @@ export type WaiverFallbackLink = {
    * differently from a shop that has no email provider wired up at all, and
    * both read differently from a deployment with no `APP_HOST` to build the
    * link on. Each gap points at a different setting, so each gets its own word. */
-  reason: "no_email" | "no_app_origin" | "unconfigured" | "test_recipient" | "failed";
+  reason: "sent" | "no_email" | "no_app_origin" | "unconfigured" | "test_recipient" | "failed";
 };
 
 export type WaiverSendState = {

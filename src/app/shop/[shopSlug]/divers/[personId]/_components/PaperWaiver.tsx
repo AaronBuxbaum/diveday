@@ -1,5 +1,8 @@
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
@@ -34,12 +37,31 @@ export function PaperWaiver({
 }) {
   const outstanding = diver.waiver.state === "none" || diver.waiver.state === "expired";
   if (!outstanding) return null;
+  const t = staffTranslator(locale);
+  const bookingIds = diver.bookings
+    .filter(
+      ({ booking, trip }) =>
+        trip.status === "scheduled" && booking.status !== "cancelled" && trip.startsAt >= nowDate(),
+    )
+    .map(({ booking }) => booking.id);
+  const firstBooking = diver.bookings.find(({ booking }) => bookingIds.includes(booking.id));
   return (
     <div className="mt-3">
+      {bookingIds.length > 0 ? (
+        <WaiverSendControl
+          shopSlug={shopSlug}
+          surface="roster"
+          tripId={firstBooking?.trip.id}
+          bookingIds={bookingIds}
+          label={t("divers.stats.waiverSend")}
+          exposeLink
+          copy={waiverSendCopy(t)}
+        />
+      ) : null}
       <PaperWaiverControl
         action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-        t={staffTranslator(locale)}
-        className=""
+        t={t}
+        className="mt-3"
       />
       <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-2" />
     </div>

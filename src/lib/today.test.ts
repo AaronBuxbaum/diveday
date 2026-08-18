@@ -14,6 +14,7 @@ import {
   roleLensFor,
   rollCallGapUrgency,
   sortActions,
+  sortUrgencyActions,
   summarizeDay,
   type TodayAction,
   urgencyFor,
@@ -362,6 +363,27 @@ describe("groupActions", () => {
       action({ id: "s", urgency: "soon", dueAt: hoursFromNow(40) }),
     ]);
     expect(groups.map((group) => group.urgency)).toEqual(["imminent", "now", "soon", "later"]);
+  });
+
+  it("ranks critical work across trips inside one urgency band", () => {
+    const groups = groupActions([
+      action({ id: "prep", kind: "dive_prep", urgency: "now", dueAt: hoursFromNow(1) }),
+      action({ id: "medical", kind: "medical_review", urgency: "now", dueAt: hoursFromNow(5) }),
+    ]);
+    expect(groups[0]?.actions.map((entry) => entry.id)).toEqual(["medical", "prep"]);
+  });
+
+  it("ranks critical urgency work before routine work across trips", () => {
+    const sorted = sortUrgencyActions([
+      action({ id: "routine", kind: "payment", urgency: "now", dueAt: hoursFromNow(1) }),
+      action({
+        id: "critical",
+        kind: "roll_call_missing_diver",
+        urgency: "now",
+        dueAt: hoursFromNow(5),
+      }),
+    ]);
+    expect(sorted.map((entry) => entry.id)).toEqual(["critical", "routine"]);
   });
 
   it("returns nothing at all for an empty queue", () => {

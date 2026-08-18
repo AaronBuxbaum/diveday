@@ -493,6 +493,21 @@ summary {
   }
 }
 
+@keyframes board-menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-board-menu-in {
+  animation: board-menu-in 320ms var(--ease-out-soft) both;
+}
+
 .animate-fade-in {
   animation: fade-in 150ms var(--ease-out-soft) both;
 }
@@ -514,6 +529,21 @@ summary {
     opacity: 0;
     transform: scale(0.95);
   }
+}
+
+@keyframes board-menu-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.97);
+  }
+}
+
+.animate-board-menu-out {
+  animation: board-menu-out 240ms var(--ease-out-soft) both;
 }
 
 .animate-scale-out {

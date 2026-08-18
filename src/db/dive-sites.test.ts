@@ -16,6 +16,7 @@ import {
   pullDiveSiteTemplateUpdates,
   SITE_NAME_TAKEN,
   shopSearchAnchor,
+  undoDiveSiteTemplateUpdate,
   updateDiveSite,
   updateDiveSiteForForm,
 } from "./dive-sites";
@@ -96,6 +97,14 @@ describe("dive-site library", () => {
     const [updated] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
     expect(updated?.sourceTemplateVersion).toBe(3);
     expect(updated?.description).toBe("Our local briefing for this boat.");
+
+    const undone = await undoDiveSiteTemplateUpdate(db, shop.id, imported.id);
+    expect(undone.status).toBe("undone");
+    const [restored] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
+    expect(restored?.sourceTemplateVersion).toBe(catalogEntry.version.version);
+    expect(restored?.description).toBe("Our local briefing for this boat.");
+    expect(restored?.templateUpdateUndo).toBeNull();
+    expect((await undoDiveSiteTemplateUpdate(db, shop.id, imported.id)).status).toBe("unavailable");
   });
 
   /**

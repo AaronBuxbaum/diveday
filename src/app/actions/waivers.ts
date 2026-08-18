@@ -55,6 +55,7 @@ export async function sendWaiversAction(
     // and non-empty, so this can't misfire there.
     emptySelection: bookingIds.length === 0,
   };
+  const exposeLinks = formData.get("exposeLink") === "true";
 
   for (const bookingId of bookingIds) {
     const result = await issueAndDeliverWaiver(db, session.user.shopId, bookingId);
@@ -68,6 +69,9 @@ export async function sendWaiversAction(
     }
     if (result.delivery === "sent") {
       state.sent.push(result.diverName);
+      if (exposeLinks) {
+        state.links.push({ name: result.diverName, token: result.token, reason: "sent" });
+      }
     } else {
       state.links.push({ name: result.diverName, token: result.token, reason: result.delivery });
     }

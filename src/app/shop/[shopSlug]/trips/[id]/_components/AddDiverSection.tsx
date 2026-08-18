@@ -150,50 +150,33 @@ export function AddDiverSection({
 
           {searched ? (
             candidates.length > 0 ? (
-              <>
-                <PersonCandidateList
-                  className="mt-4"
-                  candidates={candidates}
-                  tripId={tripId}
-                  seatAction={addExistingDiverAction}
-                  inviteAction={inviteAction}
-                  personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
-                  rowClassName="bg-surface shadow-sm"
-                  // "Same as last time": the fit already on file carries onto the
-                  // trip, so staff confirm rather than re-enter.
-                  extraLine={({ rentalFit }) => (
-                    <p className="mt-0.5 text-xs text-muted">
-                      {rentalFit
-                        ? t("trips.addDiver.rentalFitOnFile", {
-                            fit: rentalFitLineText(t, locale, rentalFitLine(rentalFit)),
-                          })
-                        : t("trips.addDiver.noRentalFitYet")}
-                    </p>
-                  )}
-                  inviteLabel={t("trips.invitations.directInvite")}
-                  invitePendingLabel={t("trips.invitations.directInviting")}
-                  invitePersonAriaLabel={(name) =>
-                    t("trips.invitations.directInviteAria", { name })
-                  }
-                  addLabel={t("trips.addDiver.addToTrip")}
-                  pendingLabel={t("seatDiver.adding")}
-                  addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
-                  noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
-                />
-                <p className="rise-in mt-3 text-sm text-muted">
-                  {t("trips.addDiver.addDiverPrompt", { query })}{" "}
-                  <Link
-                    href={newDiverHref(shopSlug, {
-                      query,
-                      surface: "trip-guests",
-                      tripId,
-                    })}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {t("trips.addDiver.addDiver")}
-                  </Link>
-                </p>
-              </>
+              <PersonCandidateList
+                className="mt-4"
+                candidates={candidates}
+                tripId={tripId}
+                seatAction={addExistingDiverAction}
+                inviteAction={inviteAction}
+                personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
+                rowClassName="bg-surface shadow-sm"
+                // "Same as last time": the fit already on file carries onto the
+                // trip, so staff confirm rather than re-enter.
+                extraLine={({ rentalFit }) => (
+                  <p className="mt-0.5 text-xs text-muted">
+                    {rentalFit
+                      ? t("trips.addDiver.rentalFitOnFile", {
+                          fit: rentalFitLineText(t, locale, rentalFitLine(rentalFit)),
+                        })
+                      : t("trips.addDiver.noRentalFitYet")}
+                  </p>
+                )}
+                inviteLabel={t("trips.invitations.directInvite")}
+                invitePendingLabel={t("trips.invitations.directInviting")}
+                invitePersonAriaLabel={(name) => t("trips.invitations.directInviteAria", { name })}
+                addLabel={t("trips.addDiver.addToTrip")}
+                pendingLabel={t("seatDiver.adding")}
+                addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}
+                noEmailOnFile={t("trips.addDiver.noEmailOnFile")}
+              />
             ) : (
               <HandEntryPrompt
                 className="mt-4"

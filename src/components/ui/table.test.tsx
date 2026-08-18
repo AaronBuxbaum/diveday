@@ -28,11 +28,13 @@ describe("Table", () => {
     );
     const table = screen.getByRole("table");
     expect(table).toHaveClass("w-full");
-    // The shell scrolls; it never clips (overflow-hidden once swallowed the
-    // orders Amount column on a phone).
-    const shell = table.parentElement;
-    expect(shell).toHaveClass("overflow-x-auto");
-    expect(shell).not.toHaveClass("overflow-hidden");
+    // The inner region scrolls while the outer shell clips rounded corners;
+    // keeping those responsibilities separate prevents a first/last row
+    // hover from painting square beyond the card.
+    const scrollRegion = table.parentElement;
+    const shell = scrollRegion?.parentElement;
+    expect(scrollRegion).toHaveClass("overflow-x-auto");
+    expect(shell).toHaveClass("overflow-hidden");
     // Paper opts out of the scroll rule.
     expect(shell).toHaveClass("print:overflow-visible");
     // Semantics: a header cell that screen readers can map to its column.
@@ -50,14 +52,16 @@ describe("Table", () => {
         </TBody>
       </Table>,
     );
-    const shell = screen.getByRole("table").parentElement;
+    const scrollRegion = screen.getByRole("table").parentElement;
+    const shell = scrollRegion?.parentElement;
     // A flush table sits inside an existing card: elevation follows
     // containment, so it brings no border/background/shadow of its own...
     expect(shell).not.toHaveClass("border-border");
     expect(shell).not.toHaveClass("bg-surface");
     expect(shell).not.toHaveClass("shadow-sm");
     // ...but the sideways-scroll behavior is not chrome and never leaves.
-    expect(shell).toHaveClass("overflow-x-auto");
+    expect(scrollRegion).toHaveClass("overflow-x-auto");
+    expect(shell).toHaveClass("overflow-hidden");
     expect(shell).toHaveClass("print:overflow-visible");
   });
 
@@ -93,6 +97,7 @@ describe("Table", () => {
     const cell = screen.getByRole("cell", { name: "$120.00" });
     expect(cell).toHaveClass("text-right");
     expect(cell).toHaveClass("tabular-nums");
+    expect(cell).toHaveClass("overflow-hidden", "bg-clip-padding");
   });
 
   it("names a row's leading cell as that row's header, without the header row's voice", () => {

@@ -113,11 +113,16 @@ describe("DiverList empty state", () => {
   it("offers the way back out or to add the typed diver when search narrowed to nothing", () => {
     renderList({ query: "nobody" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add diver" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add diver" })).toHaveClass("animate-slide-in-right");
     expect(screen.getByRole("link", { name: "Show all divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers",
     );
+  });
+
+  it("keeps the search hint visible after the query reaches the URL", () => {
+    renderList({ query: "nobody" });
+    expect(screen.getByText("Search by name, email, or phone.")).toBeInTheDocument();
   });
 
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {

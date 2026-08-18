@@ -10,7 +10,7 @@ import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { getSeasonalBriefing, groupActions, groupByDeparture, type TodayAction } from "@/lib/today";
+import { getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import { KindChip } from "./KindChip";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import {
@@ -292,66 +292,26 @@ export function TodayQueue({
       ) : null}
       <div className="mt-5 flex flex-col gap-8">
         {groups.map((group, index) => {
-          // The band's rows, boat by boat: rows that hang off the same
-          // departure share one header card so the trip's name and time are
-          // said once, and each row keeps only what differs — the person, the
-          // problem, the fix (design/principles.md #9). Rows with no boat
-          // stand alone as their own cards.
+          // In urgency mode, every row competes across every trip. The row
+          // carries its own boat/time context, so a critical issue on a later
+          // boat can appear above routine prep on the next boat.
           const rows = (
-            <div className="mt-3 flex flex-col gap-3">
-              {groupByDeparture(group.actions).map((departureGroup) =>
-                departureGroup.label === null ? (
-                  <ul key={departureGroup.key} className="flex flex-col gap-3">
-                    {departureGroup.actions.map((action) => (
-                      <ActionRow
-                        key={action.id}
-                        action={action}
-                        shopSlug={shopSlug}
-                        shopName={shopName}
-                        inviteAction={inviteAction}
-                        waiverCopy={waiverCopy}
-                        resendCopy={resendCopy}
-                        inviteCopy={inviteCopy}
-                        paymentCopy={paymentCopy}
-                        t={t}
-                      />
-                    ))}
-                  </ul>
-                ) : (
-                  /* No hover chrome on the card itself: the card never
-                     navigates, and having just taught "tint = tappable" on
-                     the rows inside it, a scaling, border-tinting wrapper
-                     would be a false affordance. The rows carry their own. */
-                  <SectionCard
-                    as="div"
-                    key={departureGroup.key}
-                    padding="none"
-                    className="overflow-hidden"
-                  >
-                    <h4 className="border-b border-border bg-surface-sunken px-4 py-2 text-sm font-semibold sm:px-5">
-                      {departureGroup.label}
-                    </h4>
-                    <ul className="divide-y divide-border">
-                      {departureGroup.actions.map((action) => (
-                        <ActionRow
-                          key={action.id}
-                          action={action}
-                          grouped
-                          shopSlug={shopSlug}
-                          shopName={shopName}
-                          inviteAction={inviteAction}
-                          waiverCopy={waiverCopy}
-                          resendCopy={resendCopy}
-                          inviteCopy={inviteCopy}
-                          paymentCopy={paymentCopy}
-                          t={t}
-                        />
-                      ))}
-                    </ul>
-                  </SectionCard>
-                ),
-              )}
-            </div>
+            <ul className="mt-3 flex flex-col gap-3">
+              {group.actions.map((action) => (
+                <ActionRow
+                  key={action.id}
+                  action={action}
+                  shopSlug={shopSlug}
+                  shopName={shopName}
+                  inviteAction={inviteAction}
+                  waiverCopy={waiverCopy}
+                  resendCopy={resendCopy}
+                  inviteCopy={inviteCopy}
+                  paymentCopy={paymentCopy}
+                  t={t}
+                />
+              ))}
+            </ul>
           );
           // Visual weight follows urgency; horizon folds. Work a boat could
           // still be waiting on ("imminent"/"now") always renders in full,

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
@@ -17,6 +18,7 @@ import {
   listUpcomingTripsForSite,
   pullDiveSiteTemplateUpdates,
   SITE_NAME_TAKEN,
+  undoDiveSiteTemplateUpdate,
   updateDiveSiteForForm,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
@@ -67,6 +69,7 @@ const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   copied: "diveSites.edit.copiedNotice",
   "template-updated": "diveSites.edit.templateUpdates.updated",
   "template-replaced": "diveSites.edit.templateUpdates.replaced",
+  "template-undone": "diveSites.edit.templateUpdates.undone",
   "template-update-unavailable": "diveSites.edit.templateUpdates.unavailable",
 };
 
@@ -105,7 +108,7 @@ export default async function EditDiveSitePage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; undo?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id } = await params;
@@ -113,7 +116,7 @@ export default async function EditDiveSitePage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
-  const { notice, error } = await searchParams;
+  const { notice, error, undo } = await searchParams;
   const back = shopPath(shopSlug, "dive-sites");
   const db = await getDb();
   const [site, shop] = await Promise.all([
@@ -267,6 +270,20 @@ export default async function EditDiveSitePage({
             ? "template-replaced"
             : "template-updated"
           : "template-update-unavailable",
+        result.status === "updated" ? { undo: "true" } : undefined,
+      ),
+    );
+  }
+
+  async function undoTemplateAction() {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const result = await undoDiveSiteTemplateUpdate(await getDb(), activeSession.user.shopId, id);
+    revalidateAndRedirect(
+      `${back}/${id}`,
+      noticeUrl(
+        `${back}/${id}`,
+        result.status === "undone" ? "template-undone" : "template-update-unavailable",
       ),
     );
   }
@@ -276,7 +293,7 @@ export default async function EditDiveSitePage({
       {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
           refresh and back-navigation — the same one-shot rule the rest of
           `/shop/**` follows. */}
-      <FlashParams params={["notice", "error"]} />
+      <FlashParams params={["notice", "error", "undo"]} />
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         {t("diveSites.backToLibrary")}
       </Link>
@@ -304,6 +321,7 @@ export default async function EditDiveSitePage({
       (notice === "copied" ||
         notice === "template-updated" ||
         notice === "template-replaced" ||
+        notice === "template-undone" ||
         notice === "template-update-unavailable") ? (
         <p
           role={notice === "template-update-unavailable" ? "alert" : "status"}
@@ -315,6 +333,15 @@ export default async function EditDiveSitePage({
         >
           {t(noticeKey)}
         </p>
+      ) : null}
+      {undo === "true" && (notice === "template-updated" || notice === "template-replaced") ? (
+        <UndoToast
+          message={t("diveSites.edit.templateUpdates.undoMessage")}
+          action={undoTemplateAction}
+          fields={{}}
+          pendingLabel={t("diveSites.edit.templateUpdates.undoing")}
+          undoLabel={t("diveSites.edit.templateUpdates.undo")}
+        />
       ) : null}
       {templateUpdate ? (
         <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
@@ -351,32 +378,18 @@ export default async function EditDiveSitePage({
             </p>
           )}
           <p className="mt-4 text-sm text-muted">
-            {t("diveSites.edit.templateUpdates.keepEditsDescription")}
+            {t("diveSites.edit.templateUpdates.replaceCopyHint")}
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
-            <form action={pullTemplateAction} className="flex flex-col gap-1">
-              <input type="hidden" name="mode" value="preserve-shop-edits" />
-              <SubmitButton pendingLabel={t("diveSites.edit.templateUpdates.applying")}>
-                {t("diveSites.edit.templateUpdates.keepEdits")}
-              </SubmitButton>
-              <span className="text-xs text-muted">
-                {t("diveSites.edit.templateUpdates.keepEditsHint")}
-              </span>
-            </form>
-            <form action={pullTemplateAction} className="flex flex-col gap-1">
-              <input type="hidden" name="mode" value="replace-template-copy" />
-              <SubmitButton
-                pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
-                className={buttonClass({ variant: "secondary" })}
-                confirmMessage={t("diveSites.edit.templateUpdates.replaceConfirm")}
-              >
-                {t("diveSites.edit.templateUpdates.replaceCopy")}
-              </SubmitButton>
-              <span className="text-xs text-muted">
-                {t("diveSites.edit.templateUpdates.replaceCopyHint")}
-              </span>
-            </form>
-          </div>
+          <form action={pullTemplateAction} className="mt-5">
+            <input type="hidden" name="mode" value="replace-template-copy" />
+            <SubmitButton
+              pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
+              className={buttonClass()}
+              confirmMessage={t("diveSites.edit.templateUpdates.replaceConfirm")}
+            >
+              {t("diveSites.edit.templateUpdates.replaceCopy")}
+            </SubmitButton>
+          </form>
         </section>
       ) : null}
       {upcomingTrips.length > 0 ? (

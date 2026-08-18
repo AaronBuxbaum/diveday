@@ -62,6 +62,21 @@ import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 describe("person-first diver records", () => {
+  it("uses contact information as the temporary name for contact-first intake", async () => {
+    const { db, shop } = await seededShopContext();
+    const byEmail = await createDiver(db, {
+      shopId: shop.id,
+      email: "contact-first@example.com",
+    });
+    expect(byEmail?.fullName).toBe("contact-first@example.com");
+
+    const byPhone = await createDiver(db, {
+      shopId: shop.id,
+      phone: "+1 305 555 0188",
+    });
+    expect(byPhone?.fullName).toBe("+1 305 555 0188");
+  });
+
   it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
     const { db, shop } = await seededShopContext();
     const diver = await createDiver(db, {

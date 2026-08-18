@@ -33,6 +33,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
  */
 type PersonFieldTrioProps = {
   email: "required" | "optional";
+  name?: "required" | "optional";
   nameLabel: string;
   emailLabel: string;
   phoneLabel: string;
@@ -60,6 +61,7 @@ type PersonFieldTrioProps = {
 
 export function PersonFieldTrio({
   email,
+  name = "required",
   nameLabel,
   emailLabel,
   phoneLabel,
@@ -74,10 +76,10 @@ export function PersonFieldTrio({
 }: PersonFieldTrioProps) {
   return (
     <FieldGrid columns={3} className={className} as={as} {...rest}>
-      <Field label={nameLabel}>
+      <Field label={nameLabel} hint={name === "optional" ? optionalHint : undefined}>
         <input
           name="fullName"
-          required
+          required={name === "required"}
           defaultValue={defaultValues?.fullName}
           maxLength={120}
           autoComplete="name"

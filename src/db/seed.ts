@@ -429,6 +429,7 @@ async function insertDemoShop(db: DbExecutor) {
 
 export async function createDemoShop(
   db: DbExecutor,
+  opts: { history?: boolean } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -494,10 +495,11 @@ export async function createDemoShop(
     staff.map((person) => person.id),
   );
 
-  // A minted shop is a clean schedule fixture: private-shop tests own their
-  // configuration and should not inherit history-only trip-leg overrides or
-  // review/order rows from the canonical demo.
-  await seedDemoSchedule(db, shop.id, { history: false });
+  // A visitor's demo should carry the same owner-facing story as the
+  // canonical demo, including sailed trips, tips, and reviews. Test-only
+  // private shops can opt into the lean schedule when they need isolation
+  // from history-only rows.
+  await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -1044,7 +1046,10 @@ export async function resetDemoSchedule(
   // test minted is not seeded state and correctly does not come back.
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
-  await seedDemoSchedule(db, shopId, { history: opts.history !== false });
+  // The low-level reset stays lean by default so callers that are resetting a
+  // fixture do not unexpectedly recreate hundreds of historical tips/reviews.
+  // Full demo refreshes opt into the reporting story explicitly.
+  await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }
 
 /**

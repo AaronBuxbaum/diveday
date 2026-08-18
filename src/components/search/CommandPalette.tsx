@@ -6,7 +6,6 @@ import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
-import { newDiverHref } from "@/lib/person-fields";
 import {
   type StaffDestinationGates,
   type StaffDestinationLabels,
@@ -78,6 +77,7 @@ export function CommandPalette({
   languages,
   setLocaleAction,
   signOutAction,
+  createDiverAction,
   copy,
 }: {
   shopSlug: string;
@@ -94,6 +94,8 @@ export function CommandPalette({
   setLocaleAction: (locale: string) => Promise<void>;
   /** The same Server Action the shop-name menu's Sign out submits to. */
   signOutAction: () => Promise<void>;
+  /** Creates a typed search identity and lands on its Diver record. */
+  createDiverAction: (formData: FormData) => Promise<void>;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -163,7 +165,8 @@ export function CommandPalette({
   }, [query]);
 
   const groups = useMemo<PaletteGroup[]>(() => {
-    const q = query.trim().toLowerCase();
+    const rawQuery = query.trim();
+    const q = rawQuery.toLowerCase();
     const goto: PaletteItem[] = [];
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
       goto.push({ key: "goto:boarding", label: copy.goToBoarding, href: boatBoardingHref });
@@ -200,11 +203,13 @@ export function CommandPalette({
       href: `${root}/divers/${diver.id}`,
     }));
     if (q.length >= 2) {
+      const formData = new FormData();
+      formData.set("query", rawQuery);
       diverItems.push({
         key: "diver:add",
         label: copy.addDiver,
-        detail: q,
-        href: newDiverHref(shopSlug, { query: q }),
+        detail: rawQuery,
+        run: () => startTransition(() => createDiverAction(formData)),
       });
     }
     // Destination commands take precedence over the catch-all "add a diver"
@@ -323,13 +328,13 @@ export function CommandPalette({
     query,
     boatBoardingHref,
     root,
-    shopSlug,
     gates,
     copy,
     languages,
     locale,
     setLocaleAction,
     signOutAction,
+    createDiverAction,
   ]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);

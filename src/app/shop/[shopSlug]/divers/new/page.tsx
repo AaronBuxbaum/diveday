@@ -19,7 +19,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
-  diverNameSchema,
+  blankableDiverNameSchema,
   diverPhoneSchema,
   diverSearchPrefill,
 } from "@/lib/person-fields";
@@ -44,11 +44,13 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "diver-invalid": { tone: "danger", key: "divers.page.noticeInvalid" },
 };
 
-const diverSchema = z.object({
-  fullName: diverNameSchema,
-  email: blankableDiverEmailSchema,
-  phone: diverPhoneSchema,
-});
+const diverSchema = z
+  .object({
+    fullName: blankableDiverNameSchema,
+    email: blankableDiverEmailSchema,
+    phone: diverPhoneSchema,
+  })
+  .refine(({ fullName, email, phone }) => Boolean(fullName || email || phone));
 
 export default async function NewDiverPage({
   params,
@@ -320,6 +322,7 @@ export default async function NewDiverPage({
         <PersonFieldTrio
           as="form"
           action={createDiverFormAction}
+          name={surface ? "required" : "optional"}
           email={surface && SEAT_SURFACES[surface].email === "required" ? "required" : "optional"}
           nameLabel={t("divers.page.fullNameLabel")}
           emailLabel={t("divers.page.emailLabel")}
@@ -342,6 +345,9 @@ export default async function NewDiverPage({
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>
+            <Link href={backLink.href} className={buttonClass({ variant: "secondary" })}>
+              {t("divers.page.cancel")}
+            </Link>
           </FieldActions>
         </PersonFieldTrio>
       </SectionCard>

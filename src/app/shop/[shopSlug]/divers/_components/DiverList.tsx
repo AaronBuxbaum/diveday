@@ -313,7 +313,7 @@ export function DiverList({
               every view. */}
           {filter === "removed" ? (
             <p className="mt-1 text-sm text-muted">{copy.removedNote}</p>
-          ) : query ? null : (
+          ) : (
             <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
           )}
         </div>
@@ -338,7 +338,7 @@ export function DiverList({
                 pendingLabel={copy.addDiverLabel}
                 className={buttonClass({
                   variant: "primary",
-                  className: "whitespace-nowrap",
+                  className: "whitespace-nowrap animate-slide-in-right",
                 })}
               >
                 {fill(copy.addDiverWithName, { name: typed.trim() })}

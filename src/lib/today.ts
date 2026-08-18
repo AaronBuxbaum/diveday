@@ -533,6 +533,27 @@ export function sortActions(actions: readonly TodayAction[]): TodayAction[] {
 }
 
 /**
+ * The urgency view answers "what matters most across the shop?" rather than
+ * "which boat is next?". Time still chooses the band, then the event's actual
+ * criticality breaks ties across trips, and the departure time only breaks a
+ * tie between equally critical work. The by-departure view keeps the original
+ * chronological sort through `sortActions`.
+ */
+export function sortUrgencyActions(actions: readonly TodayAction[]): TodayAction[] {
+  return [...actions].sort((a, b) => {
+    const urgency = URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency];
+    if (urgency !== 0) return urgency;
+    const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
+    if (severity !== 0) return severity;
+    const due =
+      (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
+      (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
+    if (due !== 0) return due;
+    return a.subject.localeCompare(b.subject);
+  });
+}
+
+/**
  * `urgency` is the code the caller looks up in `src/i18n/today-labels.ts`'s
  * `URGENCY_KEYS` for the section heading; this module never renders the word.
  */
@@ -543,7 +564,7 @@ export type TodayActionGroup = {
 
 /** Only groups with work are returned; an empty heading is noise. */
 export function groupActions(actions: readonly TodayAction[]): TodayActionGroup[] {
-  const sorted = sortActions(actions);
+  const sorted = sortUrgencyActions(actions);
   return URGENCY_ORDER.map((urgency) => ({
     urgency,
     actions: sorted.filter((action) => action.urgency === urgency),

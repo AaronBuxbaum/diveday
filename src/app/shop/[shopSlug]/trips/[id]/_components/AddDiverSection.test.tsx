@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { BookableDiver } from "@/db/divers";
 import { AddDiverSection } from "./AddDiverSection";
 
 vi.mock("next/navigation", () => ({
@@ -76,5 +77,30 @@ describe("AddDiverSection", () => {
       "href",
       "/shop/blue-mantis/divers/new?name=Nobody+Here&surface=trip-guests&tripId=trip-1",
     );
+  });
+
+  it("keeps one add diver button when matching returning divers are listed", () => {
+    const candidate = {
+      person: { id: "person-1", fullName: "Avery Diver", email: "avery@example.com" },
+      rentalFit: null,
+    } as unknown as BookableDiver;
+
+    render(
+      <AddDiverSection
+        shopSlug="blue-mantis"
+        tripId="trip-1"
+        full={false}
+        query="Avery"
+        candidates={[candidate]}
+        addBookingAction={action}
+        addToWaitlistAction={action}
+        addExistingDiverAction={action}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByText("Avery Diver")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
+    expect(screen.queryByText("Not listed?")).toBeNull();
   });
 });

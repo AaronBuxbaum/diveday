@@ -161,7 +161,7 @@ export async function resetDemoAction() {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (shop?.isDemo) {
-    await resetDemoSchedule(db, shop.id);
+    await resetDemoSchedule(db, shop.id, { history: true });
   }
   redirect(`/shop/${session.user.shopSlug}?reset=1`);
 }

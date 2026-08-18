@@ -22,6 +22,7 @@ import type { CloseoutSnapshot } from "@/lib/closeout";
 import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
+import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
@@ -925,6 +926,8 @@ export const diveSites = pgTable(
       .references(() => shops.id),
     sourceTemplateId: uuid("source_template_id"),
     sourceTemplateVersion: integer("source_template_version"),
+    /** The last template pull's prior managed fields, for a one-time undo. */
+    templateUpdateUndo: jsonb("template_update_undo").$type<DiveSiteTemplateUndo>(),
     name: text("name").notNull(),
     description: text("description"),
     locationName: text("location_name"),

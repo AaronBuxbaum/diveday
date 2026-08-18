@@ -24,10 +24,9 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * for a visitor (`createDemoShop`) — deliberately, because blue-mantis is an
  * `isDemo` shop too, so every `shop.isDemo` branch in the app renders exactly
  * as the spec is used to. It carries the full seeded schedule but **no
- * back-filled history** (`seedDemoSchedule`'s `history: false`): `seedHistory`
- * pins globally-unique waiver token hashes and Stripe ids that would collide
- * with the canonical demo's. A spec that needs the trailing quarter of orders
- * therefore cannot use one of these.
+ * back-filled history** by opting out of the visitor demo's reporting seed:
+ * the browser fleet does not need the trailing quarter of orders, tips, or
+ * reviews and keeping it lean makes per-test minting faster.
  *
  * The `DELETE` below is the tidy way out, and the fixture calls it on teardown:
  * `/api/test/reset` would clear the shop anyway (it calls
@@ -47,7 +46,9 @@ export async function POST(request: Request) {
   const db = await getDb();
   // One transaction, like `enterDemoAction`: the cap eviction and the mint
   // commit together, and a half-seeded shop never becomes a test's fixture.
-  const { slug, ownerEmail } = await db.transaction(async (tx) => createDemoShop(tx));
+  const { slug, ownerEmail } = await db.transaction(async (tx) =>
+    createDemoShop(tx, { history: false }),
+  );
   return NextResponse.json({ slug, ownerEmail, password: DEMO_BYPASS_PASSWORD });
 }
 

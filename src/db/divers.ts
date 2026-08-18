@@ -41,7 +41,8 @@ import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
 
 export type NewDiver = {
   shopId: string;
-  fullName: string;
+  /** Contact-only intake may fill the display name from email or phone. */
+  fullName?: string;
   email?: string;
   phone?: string;
 };
@@ -57,6 +58,8 @@ export type NewDiver = {
  */
 export async function createDiver(db: AppDb, input: NewDiver) {
   const email = input.email?.trim().toLowerCase() || null;
+  const phone = input.phone?.trim() || null;
+  const fullName = input.fullName?.trim() || email || phone || "Unnamed diver";
   if (email) {
     const [existing] = await db
       .select({ id: people.id })
@@ -74,9 +77,9 @@ export async function createDiver(db: AppDb, input: NewDiver) {
         .insert(people)
         .values({
           shopId: input.shopId,
-          fullName: input.fullName.trim(),
+          fullName,
           email,
-          phone: input.phone?.trim() || null,
+          phone,
         })
         .returning();
       if (!person) throw new Error("createDiver: person insert returned no row");
