@@ -403,7 +403,7 @@ describe("urgency grouping and horizon folding (parity with the urgency queue)",
     );
 
     expect(screen.getByText("Next 3 hours")).toBeInTheDocument();
-    expect(screen.getByText("Before today’s boats")).toBeInTheDocument();
+    expect(screen.getByText("Within 24 hours")).toBeInTheDocument();
     // Neither band is folded — no <details> at all — and both departure
     // cards render in full.
     expect(container.querySelectorAll("details")).toHaveLength(0);
@@ -421,7 +421,7 @@ describe("urgency grouping and horizon folding (parity with the urgency queue)",
     );
 
     // Today's own band renders in full, outside any <details>.
-    expect(screen.getByText("Before today’s boats").closest("details")).toBeNull();
+    expect(screen.getByText("Within 24 hours").closest("details")).toBeNull();
     expect(screen.getByRole("link", { name: "Morning Reef" })).toBeInTheDocument();
 
     // The two horizon bands are folded, closed by default.

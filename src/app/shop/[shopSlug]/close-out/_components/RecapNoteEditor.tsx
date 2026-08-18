@@ -45,6 +45,7 @@ export function RecapNoteEditor({
   recapSendAction,
   toggleRecapAutoSendPauseAction,
   recapAutoSendAt,
+  recapAutoSendAtLabel,
   recapAutoSendPaused = false,
   recapFailed = false,
   recapNowMs,
@@ -77,6 +78,7 @@ export function RecapNoteEditor({
   recapSendAction?: (formData: FormData) => void;
   toggleRecapAutoSendPauseAction?: (formData: FormData) => void;
   recapAutoSendAt?: Date | null;
+  recapAutoSendAtLabel?: string;
   recapAutoSendPaused?: boolean;
   recapFailed?: boolean;
   recapNowMs?: number;
@@ -128,6 +130,7 @@ export function RecapNoteEditor({
             togglePauseAction={toggleRecapAutoSendPauseAction}
             tripId={tripId}
             autoSendAt={recapAutoSendAt ? recapAutoSendAt.toISOString() : null}
+            autoSendAtLabel={recapAutoSendAtLabel}
             paused={recapAutoSendPaused}
             failed={recapFailed}
             nowMs={recapNowMs}

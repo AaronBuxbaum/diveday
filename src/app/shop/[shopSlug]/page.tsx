@@ -596,6 +596,7 @@ async function TodayBody({
           timezone={shop.timezone}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
           locale={locale}
+          nowMs={now.getTime()}
           viewSwitch={queueSwitch}
         />
       )}

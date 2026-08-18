@@ -520,7 +520,7 @@ summary {
 }
 
 .animate-board-menu-in {
-  animation: board-menu-in 320ms var(--ease-out-soft) both;
+  animation: board-menu-in 500ms var(--ease-out-soft) both;
 }
 
 .animate-fade-in {
@@ -558,7 +558,7 @@ summary {
 }
 
 .animate-board-menu-out {
-  animation: board-menu-out 240ms var(--ease-out-soft) both;
+  animation: board-menu-out 360ms var(--ease-out-soft) both;
 }
 
 .animate-scale-out {

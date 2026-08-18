@@ -271,7 +271,7 @@
     },
     "urgency": {
       "imminent": "Próximas 3 horas",
-      "now": "Antes de las salidas de hoy",
+      "now": "En las próximas 24 horas",
       "soon": "Próximos 3 días",
       "later": "Esta semana"
     },

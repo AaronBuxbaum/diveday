@@ -37,6 +37,7 @@ export function RecapSendControl({
   paused,
   failed,
   nowMs,
+  autoSendAtLabel,
   copy,
 }: {
   sendAction: (formData: FormData) => void;
@@ -47,6 +48,8 @@ export function RecapSendControl({
   failed?: boolean;
   /** Server-rendered start time keeps the first client render deterministic. */
   nowMs: number;
+  /** The exact scheduled instant shown when staff hover the live duration. */
+  autoSendAtLabel?: string;
   copy: RecapSendControlCopy;
 }) {
   const dueAtMs = autoSendAt ? Date.parse(autoSendAt) : null;
@@ -70,10 +73,7 @@ export function RecapSendControl({
   } else if (remainingMs !== null && remainingMs <= 0) {
     statusText = copy.due;
   } else if (remainingMs !== null) {
-    statusText = copy.waiting.replace(
-      "{remaining}",
-      remainingLabel(remainingMs, copy.lessThanMinute),
-    );
+    statusText = copy.waiting;
   } else {
     statusText = copy.noScheduledReturn;
   }
@@ -86,7 +86,17 @@ export function RecapSendControl({
         aria-live="polite"
         className={`text-sm ${isFailed ? "font-medium text-danger" : "text-muted"}`}
       >
-        {statusText}
+        {statusText === copy.waiting && remainingMs !== null ? (
+          <>
+            {copy.waiting.split("{remaining}")[0]}
+            <span title={autoSendAtLabel} className="whitespace-nowrap">
+              {remainingLabel(remainingMs, copy.lessThanMinute)}
+            </span>
+            {copy.waiting.split("{remaining}").slice(1).join("{remaining}")}
+          </>
+        ) : (
+          statusText
+        )}
       </p>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         {canTogglePause && (

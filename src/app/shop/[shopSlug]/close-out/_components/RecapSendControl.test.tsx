@@ -31,12 +31,14 @@ describe("RecapSendControl", () => {
         togglePauseAction={vi.fn()}
         tripId="trip-123"
         autoSendAt="2026-08-16T16:00:00.000Z"
+        autoSendAtLabel="Aug 16, 2026, 12:00 PM EDT"
         paused={false}
         nowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
         copy={copy}
       />,
     );
-    expect(screen.getByText("Automatic recap sending begins in 4h 00m.")).toBeInTheDocument();
+    expect(screen.getByText("4h 00m")).toHaveAttribute("title", "Aug 16, 2026, 12:00 PM EDT");
+    expect(screen.getByText(/Automatic recap sending begins in/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
   });

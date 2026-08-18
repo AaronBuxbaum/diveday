@@ -44,7 +44,7 @@ import {
   type CloseoutDeparture,
   type LeftoverDecision,
 } from "@/lib/closeout";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -349,6 +349,12 @@ export default async function CloseOutPage({
       locale,
       shop.timezone,
     );
+  const recapDurationText = (durationMs: number) => {
+    const minutes = Math.max(1, Math.round(Math.abs(durationMs) / 60_000));
+    return minutes < 60
+      ? t("closeout.recap.aboutMinutes", { count: minutes })
+      : t("closeout.recap.aboutHours", { count: Math.max(1, Math.round(minutes / 60)) });
+  };
   const latestHasOutstanding = latest
     ? latest.outstanding.departures.length > 0 ||
       latest.outstanding.leftovers.length > 0 ||
@@ -548,8 +554,8 @@ export default async function CloseOutPage({
                 departure.diveNumber >= 1 ? `after_dive_${departure.diveNumber}` : "departure";
               const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
               const recapStatusSummary = departure.recapSentAt
-                ? t("closeout.recap.sent", {
-                    time: formatTime(departure.recapSentAt, locale, shop.timezone),
+                ? t("closeout.recap.summarySent", {
+                    duration: recapDurationText(now.getTime() - departure.recapSentAt.getTime()),
                   })
                 : departure.recapFailed
                   ? t("closeout.recap.summaryFailed")
@@ -559,7 +565,7 @@ export default async function CloseOutPage({
                       ? t("closeout.recap.summaryDue")
                       : autoSendAt
                         ? t("closeout.recap.summaryWaiting", {
-                            time: formatTime(autoSendAt, locale, shop.timezone),
+                            duration: recapDurationText(autoSendAt.getTime() - now.getTime()),
                           })
                         : t("closeout.recap.summaryNoScheduled");
               return (
@@ -645,6 +651,9 @@ export default async function CloseOutPage({
                       recapSendAction={sendRecapAction.bind(null, departure.tripId)}
                       toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
                       recapAutoSendAt={autoSendAt}
+                      recapAutoSendAtLabel={
+                        autoSendAt ? formatDateTimeTz(autoSendAt, locale, shop.timezone) : undefined
+                      }
                       recapAutoSendPaused={departure.recapAutoSendPaused}
                       recapFailed={departure.recapFailed}
                       recapNowMs={now.getTime()}

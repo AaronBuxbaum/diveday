@@ -204,19 +204,22 @@ export default async function DiverDetailPage({
         items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
-      <StatsSummary diver={diver} shop={shop} locale={locale} notesCount={notes.length} />
-      {/* Beside the stat row it answers, not filed under a section heading of
-          its own: the Waiver card is what tells a staffer the release is
-          outstanding, so the one thing they can do about it from this page
-          belongs directly beneath it. Renders nothing when there is nothing
-          to record. */}
-      <PaperWaiver
+      <StatsSummary
         diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
+        shop={shop}
         locale={locale}
-        timezone={shop.timezone}
-        status={noticeForForm(diverNotice, "waiver")}
+        notesCount={notes.length}
+        waiverCard={
+          <PaperWaiver
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            timezone={shop.timezone}
+            status={noticeForForm(diverNotice, "waiver")}
+            compact
+          />
+        }
       />
       <DiverSection id="cards">
         <CertificationCards
@@ -233,16 +236,6 @@ export default async function DiverDetailPage({
           shop={shop}
           locale={locale}
           status={noticeForForm(diverNotice, "specialty-cards")}
-        />
-      </DiverSection>
-      <DiverSection id="notes">
-        <DiverNotesSection
-          notes={notes}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-          status={notesStatus}
         />
       </DiverSection>
       <DiverSection id="fit">
@@ -295,6 +288,16 @@ export default async function DiverDetailPage({
           personId={personId}
           locale={locale}
           paymentsConnected={paymentsConnected}
+        />
+      </DiverSection>
+      <DiverSection id="notes">
+        <DiverNotesSection
+          notes={notes}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          status={notesStatus}
         />
       </DiverSection>
       <DiverSection id="history">

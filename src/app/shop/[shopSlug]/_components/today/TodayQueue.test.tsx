@@ -162,7 +162,7 @@ describe("TodayQueue horizon folding (visual weight follows urgency)", () => {
 
     // Today's group renders in full — no disclosure between a staffer and the
     // morning's blockers.
-    expect(screen.getByText("Before today’s boats").closest("details")).toBeNull();
+    expect(screen.getByText("Within 24 hours").closest("details")).toBeNull();
     // The horizon groups are folded to heading + count, closed by default.
     const folds = container.querySelectorAll("details");
     expect(folds).toHaveLength(2);

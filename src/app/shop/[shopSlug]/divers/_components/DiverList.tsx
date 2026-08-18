@@ -347,7 +347,13 @@ export function DiverList({
               value={typed}
               onChange={(event) => search(event.target.value)}
               placeholder={copy.searchPlaceholder}
-              className={`${controlClass} min-w-0`}
+              className={`${controlClass} min-w-0 ${
+                quickAddMode === "exiting"
+                  ? "animate-slide-out-right"
+                  : quickAddMode === "entering"
+                    ? "animate-slide-in-right"
+                    : ""
+              }`}
             />
           </div>
           {quickAddMode !== "hidden" && quickAddAction ? (
@@ -370,7 +376,7 @@ export function DiverList({
                   pendingLabel={copy.addDiverLabel}
                   className={buttonClass({
                     variant: "primary",
-                    className: "whitespace-nowrap animate-slide-in-right",
+                    className: "whitespace-nowrap",
                   })}
                 >
                   {fill(copy.addDiverWithName, { name: typed.trim() })}

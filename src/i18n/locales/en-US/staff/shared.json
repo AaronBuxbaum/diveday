@@ -271,7 +271,7 @@
     },
     "urgency": {
       "imminent": "Next 3 hours",
-      "now": "Before today’s boats",
+      "now": "Within 24 hours",
       "soon": "Next 3 days",
       "later": "This week"
     },

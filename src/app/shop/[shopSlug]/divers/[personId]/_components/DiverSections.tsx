@@ -21,10 +21,10 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  */
 export const DIVER_SECTIONS = [
   { id: "cards", labelKey: "divers.subNav.cards" },
-  { id: "notes", labelKey: "divers.subNav.notes" },
   { id: "fit", labelKey: "divers.subNav.fit" },
   { id: "payments", labelKey: "divers.subNav.payments" },
   { id: "trips", labelKey: "divers.subNav.trips" },
+  { id: "notes", labelKey: "divers.subNav.notes" },
   { id: "history", labelKey: "divers.subNav.history" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 

@@ -83,11 +83,13 @@ export function StatsSummary({
   shop,
   locale,
   notesCount,
+  waiverCard,
 }: {
   diver: DiverProfile;
   shop: Shop;
   locale: string;
   notesCount: number;
+  waiverCard?: ReactNode;
 }) {
   const t = staffTranslator(locale);
   const profile = diver.rentalFit;
@@ -117,6 +119,19 @@ export function StatsSummary({
           detail={t("divers.stats.needingLook", { count: needingLook })}
         />
       ) : null}
+      <StatCard
+        t={t}
+        label={t("divers.stats.bookings")}
+        attention={unpaid > 0}
+        value={totalBookings}
+        detail={
+          unpaid > 0
+            ? t("divers.stats.unpaidBookings", { count: unpaid })
+            : diver.priorVisits.length > 0
+              ? t("divers.stats.importedCount", { count: diver.priorVisits.length })
+              : null
+        }
+      />
       <StatCard t={t} label={t("divers.stats.notes")} value={notesCount} detail={null} />
       <StatCard
         t={t}
@@ -145,29 +160,7 @@ export function StatsSummary({
               : null
         }
       />
-      {/* Bookings, deliberately — not dives. The imported half of this number is
-          what a prior system recorded as booked (ADR 20260725-import-prior-visits),
-          which includes rows it also recorded as cancelled; counting those as
-          dives would invent trips the diver never made.
-          The sub-line says what the number *doesn't*: how much of it is owed
-          for, or how much of it predates this shop's records. It used to open
-          by restating the count in words — "3" over "3 bookings" — which is the
-          one thing a reader has already got from the digit above it
-          (principle 9). With neither an unpaid seat nor an import there is
-          nothing left to add, so the line is simply absent. */}
-      <StatCard
-        t={t}
-        label={t("divers.stats.bookings")}
-        attention={unpaid > 0}
-        value={totalBookings}
-        detail={
-          unpaid > 0
-            ? t("divers.stats.unpaidBookings", { count: unpaid })
-            : diver.priorVisits.length > 0
-              ? t("divers.stats.importedCount", { count: diver.priorVisits.length })
-              : null
-        }
-      />
+      {waiverCard}
     </div>
   );
 }

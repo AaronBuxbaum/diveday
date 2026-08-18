@@ -13,12 +13,15 @@ import { nowDate } from "@/lib/clock";
 import { getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import { KindChip } from "./KindChip";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
+import { RelativeDepartureTime } from "./RelativeDepartureTime";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
 import { UrgencyBand } from "./UrgencyBand";
 import { WaiverSendControl } from "./WaiverSendControl";
+
+const RELATIVE_DEPARTURE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
 export type TodayInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
@@ -34,6 +37,9 @@ function ActionRow({
   inviteCopy,
   paymentCopy,
   t,
+  locale,
+  timezone,
+  nowMs,
 }: {
   action: TodayAction;
   /** Inside a departure group the header already says the boat — the row must not repeat it. */
@@ -46,7 +52,14 @@ function ActionRow({
   inviteCopy: WaitlistInviteCopy;
   paymentCopy: PaymentActionCopy;
   t: StaffTranslator;
+  locale: string;
+  timezone: string;
+  nowMs?: number;
 }) {
+  const dueAt = action.dueAt;
+  const showRelativeDepartureTime = Boolean(
+    dueAt && Math.abs(dueAt.getTime() - (nowMs ?? Date.now())) <= RELATIVE_DEPARTURE_WINDOW_MS,
+  );
   // What the row itself has to say: the person it is about (unless the row is
   // about the boat, which the group header already names) and what is wrong.
   const lead = grouped ? (
@@ -54,6 +67,11 @@ function ActionRow({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <KindChip kind={action.kind} t={t} />
         {action.aboutDeparture ? null : <p className="font-semibold">{action.subject}</p>}
+        {showRelativeDepartureTime && dueAt ? (
+          <p className="text-sm text-muted">
+            <RelativeDepartureTime at={dueAt} locale={locale} timeZone={timezone} nowMs={nowMs} />
+          </p>
+        ) : null}
       </div>
       <p className="mt-1 text-muted">{action.detail}</p>
     </div>
@@ -63,6 +81,11 @@ function ActionRow({
         <KindChip kind={action.kind} t={t} />
         <p className="font-semibold">{action.subject}</p>
         {action.context ? <p className="text-sm text-muted">{action.context}</p> : null}
+        {showRelativeDepartureTime && dueAt ? (
+          <p className="text-sm text-muted">
+            <RelativeDepartureTime at={dueAt} locale={locale} timeZone={timezone} nowMs={nowMs} />
+          </p>
+        ) : null}
       </div>
       <p className="mt-1.5 text-muted">{action.detail}</p>
     </div>
@@ -174,6 +197,7 @@ export function TodayQueue({
   timezone,
   inviteAction,
   locale,
+  nowMs,
   viewSwitch,
 }: {
   actions: readonly TodayAction[];
@@ -183,6 +207,7 @@ export function TodayQueue({
   timezone: string;
   inviteAction: TodayInviteAction;
   locale: string;
+  nowMs?: number;
   /**
    * The urgency/by-departure switch, rendered on the queue's own heading row —
    * the control rides the thing it governs rather than floating above it.
@@ -259,8 +284,8 @@ export function TodayQueue({
     );
   }
 
-  // The morning's boats — "imminent" (next 3 hours) and "now" ("Before
-  // today's boats") — are the two urgency bands a diver could still be
+  // The morning's boats — "imminent" (next 3 hours) and "now" (within 24
+  // hours) — are the two urgency bands a diver could still be
   // standing at the dock for. Once neither has any work left but a later
   // group still does, that's a real earned moment: the last blocker of the
   // morning just cleared, not the whole queue (the 🤙 empty state above
@@ -309,6 +334,9 @@ export function TodayQueue({
                   inviteCopy={inviteCopy}
                   paymentCopy={paymentCopy}
                   t={t}
+                  locale={locale}
+                  timezone={timezone}
+                  nowMs={nowMs}
                 />
               ))}
             </ul>

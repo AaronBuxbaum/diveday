@@ -1,8 +1,10 @@
+import { notFound } from "next/navigation";
 import { getDb } from "@/db/client";
 import { countTripActivity } from "@/db/operations";
 import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { uuidParam } from "@/lib/uuid";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
 // Restored after CI. ARCH-7 removed this as provably-unread by
@@ -38,6 +40,10 @@ export default async function TripLayout({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const { shopSlug, id } = await params;
+  // The layout runs before every trip child page. Reject malformed ids here so
+  // the activity-count query never compares arbitrary text with a UUID column
+  // and turns a normal typo into the trip error boundary.
+  if (!uuidParam(id)) notFound();
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const activityCount = shop ? await countTripActivity(db, shop.id, id) : 0;
