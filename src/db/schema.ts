@@ -1893,6 +1893,33 @@ export const tripLastMinutePromos = pgTable(
   ],
 );
 
+/**
+ * Per-diver recipient audit log for last-minute promo blasts.
+ * Records who was sent which deal, when, and with what discount (via tripPromoId).
+ */
+export const tripLastMinutePromoRecipients = pgTable(
+  "trip_last_minute_promo_recipients",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripPromoId: uuid("trip_promo_id")
+      .notNull()
+      .references(() => tripLastMinutePromos.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    email: text("email").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_last_minute_promo_recipients_promo_idx").on(table.tripPromoId),
+    index("trip_last_minute_promo_recipients_person_idx").on(table.personId),
+    index("trip_last_minute_promo_recipients_shop_person_idx").on(table.shopId, table.personId),
+  ],
+);
+
 /** What a shop-wide promo code may be spent on; `all` is both. */
 export const shopPromoScope = pgEnum("shop_promo_scope", ["all", "trips", "courses"]);
 
@@ -4808,6 +4835,7 @@ export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
 export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
+export type TripLastMinutePromoRecipient = typeof tripLastMinutePromoRecipients.$inferSelect;
 export type BookingPayment = typeof bookingPayments.$inferSelect;
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 export type PaymentEventOperation = (typeof paymentEventOperation.enumValues)[number];

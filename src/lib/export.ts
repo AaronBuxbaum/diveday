@@ -64,6 +64,8 @@ export const EXPORT_FILE_NOTES = {
     "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
   "trip_last_minute_promos.csv":
     "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
+  "trip_last_minute_promo_recipients.csv":
+    "Per-diver recipient audit log for last-minute promo blasts: who was sent each deal, when, and their email on file.",
   "booking_payment_events.csv":
     "Every recorded change to a booking's payment state, oldest first — what it moved to, what it moved from, the amount and currency at that moment, and which operation caused it (a checkout settling, a staff mark, a refund). bookings.csv carries only where each booking's money stands *now*, and a refund overwrites that in place, so this is the file that says how it got there. It records transitions, not writes: a webhook redelivered twice appends nothing the second time, and a refused write appends nothing at all — so a row here always means the state genuinely changed.",
   "booking_checkouts.csv":

@@ -19,11 +19,15 @@ export function PersonCandidateList({
   candidates,
   tripId,
   seatAction,
+  inviteAction,
   personHref,
   extraLine,
   addLabel,
   pendingLabel,
   addPersonAriaLabel,
+  inviteLabel,
+  invitePendingLabel,
+  invitePersonAriaLabel,
   noEmailOnFile,
   rowClassName = "bg-surface-sunken",
   className = "",
@@ -37,14 +41,18 @@ export function PersonCandidateList({
    * walk-in, the global Add-booking door) where the boat is chosen in the form.
    */
   tripId: string;
-  seatAction: (formData: FormData) => void;
+  seatAction?: (formData: FormData) => void;
+  inviteAction?: (formData: FormData) => void;
   /** Link the name at a diver's record, or `null` to render it as plain text. */
   personHref?: ((personId: string) => string) | null;
   /** An extra line under the contact line, per candidate. */
   extraLine?: (candidate: BookableDiver) => ReactNode;
-  addLabel: string;
-  pendingLabel: string;
-  addPersonAriaLabel: (name: string) => string;
+  addLabel?: string;
+  pendingLabel?: string;
+  addPersonAriaLabel?: (name: string) => string;
+  inviteLabel?: string;
+  invitePendingLabel?: string;
+  invitePersonAriaLabel?: (name: string) => string;
   noEmailOnFile: string;
   rowClassName?: string;
   className?: string;
@@ -72,17 +80,39 @@ export function PersonCandidateList({
               <p className="text-sm text-muted">{person.email ?? noEmailOnFile}</p>
               {extraLine?.(candidate)}
             </div>
-            <form action={seatAction}>
-              <input type="hidden" name="tripId" value={tripId} />
-              <input type="hidden" name="personId" value={person.id} />
-              <SubmitButton
-                pendingLabel={pendingLabel}
-                ariaLabel={addPersonAriaLabel(person.fullName)}
-                className={buttonClass({ size: "sm" })}
-              >
-                {addLabel}
-              </SubmitButton>
-            </form>
+            <div className="flex flex-wrap items-center gap-2">
+              {inviteAction && inviteLabel ? (
+                <form action={inviteAction}>
+                  <input type="hidden" name="tripId" value={tripId} />
+                  <input type="hidden" name="personId" value={person.id} />
+                  <SubmitButton
+                    pendingLabel={invitePendingLabel ?? "Inviting…"}
+                    ariaLabel={
+                      invitePersonAriaLabel
+                        ? invitePersonAriaLabel(person.fullName)
+                        : `Invite ${person.fullName}`
+                    }
+                    disabled={!person.email}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {inviteLabel}
+                  </SubmitButton>
+                </form>
+              ) : null}
+              {seatAction && addLabel && pendingLabel && addPersonAriaLabel ? (
+                <form action={seatAction}>
+                  <input type="hidden" name="tripId" value={tripId} />
+                  <input type="hidden" name="personId" value={person.id} />
+                  <SubmitButton
+                    pendingLabel={pendingLabel}
+                    ariaLabel={addPersonAriaLabel(person.fullName)}
+                    className={buttonClass({ size: "sm" })}
+                  >
+                    {addLabel}
+                  </SubmitButton>
+                </form>
+              ) : null}
+            </div>
           </li>
         );
       })}

@@ -7,6 +7,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { TripLastMinutePromo } from "@/db/schema";
 import type { CertificationSummary } from "@/db/self-declared-cards";
+import type { TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
 import {
   CERTIFICATION_LEVEL_KEYS,
   certificationSummaryBelowRequirementText,
@@ -62,6 +63,7 @@ export function LastMinuteDealSection({
   openSeats,
   cancelled,
   promos,
+  promoRecipients,
   timezone,
   locale,
   status,
@@ -76,40 +78,12 @@ export function LastMinuteDealSection({
   status?: FormNotice;
   /** Only used by the cancelled empty state's way out, back to the board. */
   shopSlug: string;
-  /**
-   * Everyone this blast would mail, in send order. A **list**, not the count it
-   * used to be: the count could not tell a shop that half the people about to
-   * be offered a discount on a deep wreck are Open Water divers, which is the
-   * whole failure this panel now exists to prevent (FU-20260813).
-   *
-   * Nothing here filters the send. A level is at best something the diver typed
-   * about themselves on a marketing opt-in, and a gate built out of that would
-   * either trust a stranger's typing or exclude every diver the shop has not
-   * carded yet — which is most of the list. So the human decides, with the
-   * claim in front of them, and the blast keeps reaching everybody.
-   *
-   * Everyone, including the ones the panel does not draw: the display is capped
-   * at `LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT` and the remainder is counted, but
-   * the send and the button's own count are over this whole array.
-   */
   recipients: readonly LastMinuteDealRecipient[];
-  /**
-   * **The bar the list above has to be read against**, already folded: the
-   * trip's own requirement combined with every dive site it visits
-   * (`combineCertRequirements`), which is the same effective gate admission and
-   * readiness enforce. Null when the trip has no requirements row at all.
-   *
-   * It is here because without it the panel asked the impossible. A staffer was
-   * shown a column of certification levels and expected to compare each one
-   * against a number they had to remember from another screen — on a departure
-   * whose gate may come from a *site* they never chose (a two-tank day whose
-   * second tank is the Deep one). The requirement is a property of the trip, so
-   * it costs one line to say and removes the recall entirely.
-   */
   requirement: CertRequirementSource | null;
   openSeats: number;
   cancelled: boolean;
   promos: TripLastMinutePromo[];
+  promoRecipients?: TripLastMinutePromoRecipientItem[];
   timezone: string;
   locale: string;
   sendAction: (formData: FormData) => void;
@@ -237,21 +211,18 @@ export function LastMinuteDealSection({
               {review.shown.map(({ recipient, belowRequirement }) => (
                 <li
                   key={recipient.personId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm"
                 >
-                  <span className="font-medium">{recipient.fullName}</span>
-                  {/* Two facts, deliberately carried by two different things.
-                      The **tone** answers "has anybody seen this card?" and
-                      nothing else — that is the whole argument for it in ADR
-                      20260814-self-declared-cards, and a second reason to turn
-                      a row warm would make the mark mean "unverified, or
-                      under-certified, or both". So "below this departure's
-                      level" is a **word** on the row instead: it has to reach
-                      the verified Open Water diver on an Advanced charter, who
-                      is calm muted text and was the quietest thing on this
-                      screen until it did. Colour is never the only carrier
-                      (design/principles.md #6). Neither one filters, reorders
-                      or disables the send. */}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      name="recipientPersonIds"
+                      value={recipient.personId}
+                      defaultChecked
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="font-medium">{recipient.fullName}</span>
+                  </label>
                   <span
                     className={
                       certificationSummaryUnchecked(recipient.certification)
@@ -365,26 +336,35 @@ export function LastMinuteDealSection({
             className: "mt-4 divide-y divide-border",
           })}
         >
-          {promos.map((promo) => (
-            <li
-              key={promo.id}
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-            >
-              <div className="min-w-0">
-                <p className="font-medium">
-                  {t("trips.lastMinute.percentOff", { percent: promo.discountPercent })} ·{" "}
-                  <span className="font-mono">{promo.code}</span>
-                </p>
-                <p className="text-muted">
-                  {t("trips.lastMinute.sentTo", {
-                    date: formatDateTimeTz(promo.createdAt, locale, timezone),
-                    count: promo.recipientCount,
-                  })}
-                </p>
-              </div>
-              <Badge tone={STATUS_TONE[promo.status]}>{t(STATUS_KEYS[promo.status])}</Badge>
-            </li>
-          ))}
+          {promos.map((promo) => {
+            const sentRecipients = promoRecipients?.filter((r) => r.promoId === promo.id) ?? [];
+            return (
+              <li key={promo.id} className="flex flex-col gap-2 px-4 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {t("trips.lastMinute.percentOff", { percent: promo.discountPercent })} ·{" "}
+                      <span className="font-mono">{promo.code}</span>
+                    </p>
+                    <p className="text-muted">
+                      {t("trips.lastMinute.sentTo", {
+                        date: formatDateTimeTz(promo.createdAt, locale, timezone),
+                        count: promo.recipientCount,
+                      })}
+                    </p>
+                  </div>
+                  <Badge tone={STATUS_TONE[promo.status]}>{t(STATUS_KEYS[promo.status])}</Badge>
+                </div>
+                {sentRecipients.length > 0 ? (
+                  <p className="text-xs text-muted">
+                    {t("trips.lastMinute.recipients", {
+                      names: sentRecipients.map((r) => r.fullName).join(", "),
+                    })}
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
         </ol>
       ) : null}
     </section>

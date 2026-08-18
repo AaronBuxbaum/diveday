@@ -59,6 +59,7 @@ import {
   tripBlowouts,
   tripDives,
   tripInvitations,
+  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripRecapPhotos,
   tripRequirements,
@@ -814,6 +815,9 @@ export async function resetDemoSchedule(
   // this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
   // comment above already walks).
+  await db
+    .delete(tripLastMinutePromoRecipients)
+    .where(eq(tripLastMinutePromoRecipients.shopId, shopId));
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
   // Before the entries they point at. Added with Leo's self-serve unsubscribe
   // (docs ADR 20260731-self-serve-unsubscribe) but not to this ordering, which

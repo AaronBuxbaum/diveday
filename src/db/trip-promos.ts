@@ -1,24 +1,34 @@
 import { and, asc, count, desc, eq, gt, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
+  filterEligibleLastMinuteRecipients,
   generateLastMinutePromoCode,
   isValidLastMinuteDiscountPercent,
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
 } from "@/lib/last-minute-list";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import {
   type PromotionProvider,
   promotionProviderFromEnvironment,
 } from "@/lib/payments/promotions";
 import { publicTripPath } from "@/lib/public-routes";
+import { combineCertRequirements } from "@/lib/readiness";
 import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { offsetPage } from "./paging";
-import { type TripLastMinutePromo, tripLastMinutePromos, trips } from "./schema";
+import { getTripRequirements, getTripSiteRequirement } from "./readiness";
+import {
+  people,
+  type TripLastMinutePromo,
+  tripLastMinutePromoRecipients,
+  tripLastMinutePromos,
+  trips,
+} from "./schema";
+import { listCertificationSummaries } from "./self-declared-cards";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWaitlist, getTripWithBooked } from "./trips";
@@ -29,6 +39,7 @@ export type SendLastMinuteDealInput = {
   tripId: string;
   discountPercent: number;
   createdByPersonId?: string;
+  recipientPersonIds?: string[];
 };
 
 export type SendLastMinuteDealOutcome =
@@ -57,15 +68,18 @@ export async function sendLastMinuteDealBlast(
   db: AppDb,
   input: SendLastMinuteDealInput,
   promotions: PromotionProvider = promotionProviderFromEnvironment(),
+  notifications?: NotificationProvider,
 ): Promise<SendLastMinuteDealOutcome> {
   if (!isValidLastMinuteDiscountPercent(input.discountPercent)) {
     return { ok: false, reason: "invalid_discount" };
   }
 
-  const [shop, tripRow, account] = await Promise.all([
+  const [shop, tripRow, account, tripRequirement, siteRequirement] = await Promise.all([
     getShopById(db, input.shopId),
     getTripWithBooked(db, input.shopId, input.tripId),
     getShopStripeAccount(db, input.shopId),
+    getTripRequirements(db, input.shopId, input.tripId),
+    getTripSiteRequirement(db, input.shopId, input.tripId),
   ]);
   if (!shop || !tripRow || tripRow.status !== "scheduled" || tripRow.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
@@ -76,12 +90,52 @@ export async function sendLastMinuteDealBlast(
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
 
   const tripDateIso = toDateInputValue(utcToWallTime(tripRow.startsAt, shop.timezone));
-  const matches = (await listLastMinuteList(db, input.shopId)).filter(
+  const rawMatches = (await listLastMinuteList(db, input.shopId)).filter(
     ({ entry, person }) =>
       Boolean(person.email) && lastMinuteEntryMatchesTripDate(entry, tripDateIso),
   );
 
-  if (matches.length === 0) return { ok: false, reason: "no_recipients" };
+  if (rawMatches.length === 0) return { ok: false, reason: "no_recipients" };
+
+  const certSummaries = await listCertificationSummaries(
+    db,
+    input.shopId,
+    rawMatches.map((m) => m.person.id),
+  );
+  const matchesWithCert = rawMatches.map((m) => ({
+    ...m,
+    certification: certSummaries.get(m.person.id) ?? null,
+  }));
+
+  const dealRequirement = combineCertRequirements(
+    tripRequirement ?? {
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    },
+    siteRequirement,
+  );
+
+  let eligibleMatches = filterEligibleLastMinuteRecipients(
+    matchesWithCert,
+    dealRequirement,
+    tripRow.course
+      ? {
+          slug: tripRow.course.slug,
+          title: tripRow.course.title,
+          sourceTemplateSlug: tripRow.course.sourceTemplateSlug,
+          minimumCertificationLevel: tripRow.course.minimumCertificationLevel,
+          isIntroCourse: tripRow.course.isIntroCourse,
+        }
+      : null,
+  );
+
+  if (input.recipientPersonIds && input.recipientPersonIds.length > 0) {
+    const allowed = new Set(input.recipientPersonIds);
+    eligibleMatches = eligibleMatches.filter((m) => allowed.has(m.person.id));
+  }
+
+  if (eligibleMatches.length === 0) return { ok: false, reason: "no_recipients" };
 
   // A diver already waiting on this exact trip has told the shop they want
   // this departure, and the deal can otherwise sell the seat out from under
@@ -91,7 +145,7 @@ export async function sendLastMinuteDealBlast(
   // (ADR 20260813-wait-list-is-a-lead-list).
   const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
   const orderedMatches = orderLastMinuteRecipients(
-    matches,
+    eligibleMatches,
     waitlist.map(({ person }) => person.id),
   );
 
@@ -141,6 +195,7 @@ export async function sendLastMinuteDealBlast(
             entryId: entry.id,
           });
           return {
+            personId: person.id,
             kind: "last_minute_deal" as const,
             shopId: input.shopId,
             // Filtered above; non-null for every entry that reaches here.
@@ -160,8 +215,26 @@ export async function sendLastMinuteDealBlast(
           };
         }),
     );
-    const deliveries = await sendNotificationBatch(db, recipients, notificationProviderForDb());
-    sentCount = deliveries.filter((delivery) => delivery.status === "sent").length;
+    const deliveries = await sendNotificationBatch(
+      db,
+      recipients.map(({ personId: _pid, ...payload }) => payload),
+      notificationProviderForDb(notifications),
+    );
+    const successfulRecipients = recipients.filter(
+      (_, index) => deliveries[index]?.status === "sent",
+    );
+    sentCount = successfulRecipients.length;
+
+    if (recipients.length > 0) {
+      await db.insert(tripLastMinutePromoRecipients).values(
+        recipients.map((r) => ({
+          shopId: input.shopId,
+          tripPromoId: pendingRow.id,
+          personId: r.personId,
+          email: r.to,
+        })),
+      );
+    }
   }
 
   await db
@@ -188,6 +261,45 @@ export async function listTripLastMinutePromos(
     .from(tripLastMinutePromos)
     .where(and(eq(tripLastMinutePromos.shopId, shopId), eq(tripLastMinutePromos.tripId, tripId)))
     .orderBy(desc(tripLastMinutePromos.createdAt));
+}
+
+export type TripLastMinutePromoRecipientItem = {
+  promoId: string;
+  personId: string;
+  fullName: string;
+  email: string;
+  createdAt: Date;
+};
+
+/**
+ * Returns who has been sent deals for this trip, with their name, email, promoId, and timestamp.
+ */
+export async function listTripLastMinutePromoRecipients(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<TripLastMinutePromoRecipientItem[]> {
+  return db
+    .select({
+      promoId: tripLastMinutePromoRecipients.tripPromoId,
+      personId: tripLastMinutePromoRecipients.personId,
+      fullName: people.fullName,
+      email: tripLastMinutePromoRecipients.email,
+      createdAt: tripLastMinutePromoRecipients.createdAt,
+    })
+    .from(tripLastMinutePromoRecipients)
+    .innerJoin(
+      tripLastMinutePromos,
+      eq(tripLastMinutePromoRecipients.tripPromoId, tripLastMinutePromos.id),
+    )
+    .innerJoin(people, eq(tripLastMinutePromoRecipients.personId, people.id))
+    .where(
+      and(
+        eq(tripLastMinutePromoRecipients.shopId, shopId),
+        eq(tripLastMinutePromos.tripId, tripId),
+      ),
+    )
+    .orderBy(asc(tripLastMinutePromoRecipients.createdAt), asc(people.fullName));
 }
 
 export type OutstandingLastMinutePromo = TripLastMinutePromo & {

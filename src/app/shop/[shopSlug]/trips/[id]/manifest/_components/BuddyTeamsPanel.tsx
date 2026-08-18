@@ -114,7 +114,7 @@ export function BuddyTeamsPanel({
           <ul
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 max-w-4xl divide-y divide-border",
+              className: "mt-3 max-w-4xl divide-y divide-border overflow-hidden",
             })}
           >
             {buddyTeamsList.map((team, index) => {

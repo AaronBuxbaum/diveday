@@ -180,6 +180,122 @@ export function ranksBelow(
   return certificationRank(level) < certificationRank(requiredLevel);
 }
 
+export type CourseTargetInfo = {
+  slug?: string | null;
+  title?: string | null;
+  sourceTemplateSlug?: string | null;
+  minimumCertificationLevel?: CertificationLevel | null;
+  isIntroCourse?: boolean | null;
+};
+
+/**
+ * Returns the target certification level a course confers, or "intro" / "specialty" / null.
+ */
+export function courseTargetCertificationLevel(
+  course: CourseTargetInfo,
+): CertificationLevel | "intro" | "specialty" | null {
+  const slug = (course.sourceTemplateSlug || course.slug || "").toLowerCase();
+  const title = (course.title || "").toLowerCase();
+
+  if (
+    course.isIntroCourse ||
+    slug.includes("discover-scuba") ||
+    title.includes("discover scuba") ||
+    title.includes("try scuba")
+  ) {
+    return "intro";
+  }
+  if (
+    slug === "open-water-diver" ||
+    slug.startsWith("open-water") ||
+    (title.includes("open water") && !title.includes("advanced"))
+  ) {
+    return "open_water";
+  }
+  if (
+    slug === "advanced-open-water-diver" ||
+    slug.startsWith("advanced-open-water") ||
+    title.includes("advanced open water")
+  ) {
+    return "advanced_open_water";
+  }
+  if (slug === "rescue-diver" || slug.startsWith("rescue") || title.includes("rescue")) {
+    return "rescue";
+  }
+  if (slug === "divemaster" || title.includes("divemaster")) {
+    return "divemaster";
+  }
+  if (slug === "instructor" || title.includes("instructor")) {
+    return "instructor";
+  }
+  return "specialty";
+}
+
+/**
+ * Whether a last-minute list recipient is eligible to receive a deal for a departure.
+ *
+ * - Non-course departures: Never sent to someone below the departure's minimum.
+ * - Courses: ONLY sent to those who would achieve the level if they took the course
+ *   (e.g., Open Water -> only uncertified divers; Advanced -> only Open Water divers; Rescue -> only Advanced divers).
+ */
+export function isRecipientEligibleForDeal(
+  recipient: LastMinuteRecipientLevel,
+  requirement: LastMinuteDepartureBar | null,
+  course?: CourseTargetInfo | null,
+): boolean {
+  const level = recipient.certification?.level ?? null;
+  const noCert = recipient.certification?.noCertificationDeclared === true || level === null;
+
+  if (course) {
+    const target = courseTargetCertificationLevel(course);
+    if (target === "intro" || target === "open_water") {
+      // Intro courses and Open Water certification courses are only for uncertified divers
+      return noCert;
+    }
+    if (target === "advanced_open_water") {
+      // Advanced Open Water: only for divers with Open Water certification
+      return level === "open_water";
+    }
+    if (target === "rescue") {
+      // Rescue Diver: only for divers with Advanced Open Water certification
+      return level === "advanced_open_water";
+    }
+    if (target === "divemaster") {
+      // Divemaster: only for divers with Rescue Diver certification
+      return level === "rescue";
+    }
+    if (target === "instructor") {
+      // Instructor: only for divers with Divemaster certification
+      return level === "divemaster";
+    }
+    // Specialty courses or custom courses: diver must meet any required prerequisites
+    return !ranksBelow(recipient, requirement);
+  }
+
+  // Non-course departure: diver must not be below minimum requirement
+  if (requirement?.minimumCertificationLevel) {
+    if (noCert) return false;
+    return certificationRank(level) >= certificationRank(requirement.minimumCertificationLevel);
+  }
+  if (demandsAnything(requirement) && recipient.certification?.noCertificationDeclared === true) {
+    return false;
+  }
+  return !ranksBelow(recipient, requirement);
+}
+
+/**
+ * Filters a list of last-minute recipients to only those eligible for the departure / course.
+ */
+export function filterEligibleLastMinuteRecipients<T extends LastMinuteRecipientLevel>(
+  recipients: readonly T[],
+  requirement: LastMinuteDepartureBar | null,
+  course?: CourseTargetInfo | null,
+): T[] {
+  return recipients.filter((recipient) =>
+    isRecipientEligibleForDeal(recipient, requirement, course),
+  );
+}
+
 /**
  * **What the staffer needs to know about this blast before they send it**, as
  * one fold: who to draw first, which of them is under the departure's bar, how

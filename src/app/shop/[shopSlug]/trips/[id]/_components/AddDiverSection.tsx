@@ -30,6 +30,7 @@ export function AddDiverSection({
   addBookingAction,
   addToWaitlistAction,
   addExistingDiverAction,
+  inviteAction,
   status,
   locale,
   confirmName,
@@ -38,13 +39,6 @@ export function AddDiverSection({
   confirmMatches,
 }: {
   shopSlug: string;
-  /**
-   * Submitted as a hidden field rather than bound into the action: seating a
-   * diver goes through the shared `seatNewDiverAction`/`seatExistingDiverAction`
-   * (src/app/actions/seat-diver.ts), and every door hands them the same
-   * `tripId` + diver shape — including the trip-first ones (the counter
-   * walk-in, the global Add-booking door) where the boat is chosen in the form.
-   */
   tripId: string;
   full: boolean;
   query: string;
@@ -52,6 +46,7 @@ export function AddDiverSection({
   addBookingAction: (formData: FormData) => void;
   addToWaitlistAction: (formData: FormData) => void;
   addExistingDiverAction: (formData: FormData) => void;
+  inviteAction?: (formData: FormData) => void;
   /**
    * What the last seating attempt did — sat them, wait-listed them, or refused
    * on a cert gate. Section-level rather than on one of the three forms below,
@@ -161,6 +156,7 @@ export function AddDiverSection({
                   candidates={candidates}
                   tripId={tripId}
                   seatAction={addExistingDiverAction}
+                  inviteAction={inviteAction}
                   personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
                   rowClassName="bg-surface shadow-sm"
                   // "Same as last time": the fit already on file carries onto the
@@ -174,6 +170,11 @@ export function AddDiverSection({
                         : t("trips.addDiver.noRentalFitYet")}
                     </p>
                   )}
+                  inviteLabel={t("trips.invitations.directInvite")}
+                  invitePendingLabel={t("trips.invitations.directInviting")}
+                  invitePersonAriaLabel={(name) =>
+                    t("trips.invitations.directInviteAria", { name })
+                  }
                   addLabel={t("trips.addDiver.addToTrip")}
                   pendingLabel={t("seatDiver.adding")}
                   addPersonAriaLabel={(name) => t("trips.addDiver.addPersonAriaLabel", { name })}

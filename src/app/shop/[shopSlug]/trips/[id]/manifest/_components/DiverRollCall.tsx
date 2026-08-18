@@ -273,7 +273,10 @@ export function DiverRollCall({
         )}
       </div>
       <ul
-        className={sectionCardClass({ padding: "none", className: "mt-4 divide-y divide-border" })}
+        className={sectionCardClass({
+          padding: "none",
+          className: "mt-4 divide-y divide-border overflow-hidden",
+        })}
       >
         {divers.map((diver, index) => {
           const diverStatus = diver.readiness.status;

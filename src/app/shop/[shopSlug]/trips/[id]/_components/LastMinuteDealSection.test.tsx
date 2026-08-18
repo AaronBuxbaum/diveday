@@ -212,7 +212,7 @@ describe("LastMinuteDealSection recipient review", () => {
       "Not certified yet — diver's word · below this departure's minimum",
     );
     // Nobody has seen anything, so the row wears the same tone a claim does.
-    expect(rows[0]?.querySelector("span:last-child")?.className).toContain("text-warning");
+    expect(rows[0]?.querySelector(":scope > span")?.className).toContain("text-warning");
   });
 
   it("still says nothing about a bar the departure does not set, for an uncertified joiner", () => {
@@ -275,9 +275,7 @@ describe("LastMinuteDealSection recipient review", () => {
       requires("advanced_open_water"),
     );
 
-    const tones = [...container.querySelectorAll("li span:last-child")].map(
-      (span) => span.className,
-    );
+    const tones = [...container.querySelectorAll("li > span")].map((span) => span.className);
     // Both are below the bar. Only the unverified one is warm — a second
     // reason to turn a row warm would make the mark mean "unverified, or
     // under-certified, or both" (ADR 20260814-self-declared-cards).

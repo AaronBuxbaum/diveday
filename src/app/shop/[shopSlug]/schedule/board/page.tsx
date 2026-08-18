@@ -22,6 +22,7 @@ import {
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { maxConcurrentTrips } from "@/lib/boats";
 import { nowDate } from "@/lib/clock";
 import {
   formatDayParts,
@@ -466,6 +467,8 @@ export default async function ScheduleBoardPage({
       dateIso,
       startTime: toTimeInputValue(wall),
       timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, tz),
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
       capacity: trip.capacity,
       booked: trip.booked,
       courseTitle: trip.courseTitle,
@@ -528,10 +531,16 @@ export default async function ScheduleBoardPage({
 
   if (shopBoats.length > 0) {
     for (const day of builderDays) {
-      const boatTrips = day.trips.filter((t) => (t.diveMode ?? "boat") === "boat");
-      if (boatTrips.length > shopBoats.length) {
+      const boatTrips = day.trips.filter(
+        (t): t is typeof t & { startsAt: Date; endsAt: Date } =>
+          (t.diveMode ?? "boat") === "boat" &&
+          t.startsAt instanceof Date &&
+          t.endsAt instanceof Date,
+      );
+      const peakConcurrent = maxConcurrentTrips(boatTrips);
+      if (peakConcurrent > shopBoats.length) {
         day.boatWarning = st("boats.concurrencyWarning", {
-          tripCount: boatTrips.length,
+          tripCount: peakConcurrent,
           boatCount: shopBoats.length,
         });
       }

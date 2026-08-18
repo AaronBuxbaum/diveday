@@ -809,12 +809,14 @@ export async function sendLastMinuteDealAction(
   if (!isValidLastMinuteDiscountPercent(discountPercent)) {
     redirect(noticeUrl(`${back}${anchor}`, "last-minute-invalid-discount"));
   }
+  const recipientPersonIds = formData.getAll("recipientPersonIds").map(String).filter(Boolean);
   const outcome = await sendLastMinuteDealBlast(await getDb(), {
     shopId: s.user.shopId,
     shopSlug,
     tripId,
     discountPercent,
     createdByPersonId: s.user.personId,
+    recipientPersonIds: recipientPersonIds.length > 0 ? recipientPersonIds : undefined,
   });
   if (outcome.ok) {
     // Today's nudge disappears once any blast has been sent, so refresh it

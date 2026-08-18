@@ -65,6 +65,7 @@ import {
   tripAssignments,
   tripDives,
   tripInvitations,
+  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripRecapPhotos,
   tripRequirements,
@@ -286,6 +287,15 @@ export async function loadShopExportBundleInput(
         .from(tripLastMinutePromos)
         .where(eq(tripLastMinutePromos.shopId, shopId))
         .orderBy(asc(tripLastMinutePromos.createdAt), asc(tripLastMinutePromos.id));
+
+      const lastMinutePromoRecipientRows = await tx
+        .select()
+        .from(tripLastMinutePromoRecipients)
+        .where(eq(tripLastMinutePromoRecipients.shopId, shopId))
+        .orderBy(
+          asc(tripLastMinutePromoRecipients.createdAt),
+          asc(tripLastMinutePromoRecipients.id),
+        );
 
       const orderRows = await tx
         .select()
@@ -1369,6 +1379,19 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_last_minute_promos.csv"],
+        },
+        {
+          file: "trip_last_minute_promo_recipients.csv",
+          header: ["id", "trip_promo_id", "person_id", "person_name", "email", "created_at"],
+          rows: lastMinutePromoRecipientRows.map((row) => [
+            row.id,
+            row.tripPromoId,
+            row.personId,
+            personName.get(row.personId),
+            row.email,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_last_minute_promo_recipients.csv"],
         },
         {
           file: "booking_payment_events.csv",
@@ -2546,6 +2569,12 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(tripLastMinutePromos)
         .where(eq(tripLastMinutePromos.shopId, shopId)),
+    ),
+    "trip_last_minute_promo_recipients.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(tripLastMinutePromoRecipients)
+        .where(eq(tripLastMinutePromoRecipients.shopId, shopId)),
     ),
     "roll_call_events.csv": await countOf(
       db.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.shopId, shopId)),

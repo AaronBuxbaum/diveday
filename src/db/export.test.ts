@@ -45,6 +45,7 @@ const EXPECTED_FILES = [
   "trip_invitations.csv",
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
+  "trip_last_minute_promo_recipients.csv",
   "booking_payment_events.csv",
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
@@ -104,6 +105,7 @@ const EXPORTED_TABLES = [
   "trip_invitations",
   "last_minute_list_entries",
   "trip_last_minute_promos",
+  "trip_last_minute_promo_recipients",
   "roll_call_events",
   "roll_call_crew_events",
   "buddy_pair_members",
@@ -264,6 +266,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",
   ],
+  trip_last_minute_promo_recipients: ["shop_id"],
   roll_call_events: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),

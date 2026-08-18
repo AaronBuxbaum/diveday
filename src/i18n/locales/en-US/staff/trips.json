@@ -325,7 +325,8 @@
     "recipientsSummaryNoLevelButCards": "This departure asks for {list} rather than a certification level, and this list can't tell you who has those certifications.",
     "recipientsSummaryNotSaid": "{count, plural, one {# said nothing about their level.} other {# said nothing about their level.}}",
     "recipientsMore": "{count, plural, one {# more isn't shown — anyone below the requirement is listed first.} other {# more aren't shown — anyone below the requirement is listed first.}}",
-    "recipientsMoreNoRequirement": "{count, plural, one {# more isn't shown.} other {# more aren't shown.}}"
+    "recipientsMoreNoRequirement": "{count, plural, one {# more isn't shown.} other {# more aren't shown.}}",
+    "recipients": "Recipients: {names}"
   },
   "roster": {
     "waiverSend": "Send waiver",

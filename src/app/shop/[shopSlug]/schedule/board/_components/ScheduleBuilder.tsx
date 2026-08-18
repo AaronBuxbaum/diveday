@@ -57,6 +57,8 @@ export type BuilderTrip = {
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
   diveMode?: "boat" | "shore" | "pool";
   boatName?: string | null;
+  startsAt?: Date;
+  endsAt?: Date;
 };
 
 export type BuilderDay = {

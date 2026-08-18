@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { DiveSpecialty } from "@/db/schema";
 import {
+  filterEligibleLastMinuteRecipients,
   generateLastMinutePromoCode,
+  isRecipientEligibleForDeal,
   isValidLastMinuteDiscountPercent,
   LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT,
   lastMinuteEntryMatchesTripDate,
@@ -352,5 +354,68 @@ describe("generateLastMinutePromoCode", () => {
   it("generates distinct codes across calls", () => {
     const codes = new Set(Array.from({ length: 20 }, () => generateLastMinutePromoCode(25)));
     expect(codes.size).toBe(20);
+  });
+});
+
+describe("isRecipientEligibleForDeal & filterEligibleLastMinuteRecipients", () => {
+  const uncert = uncertified("Aria");
+  const ow = recipient("Ben", "open_water");
+  const aow = recipient("Chloe", "advanced_open_water");
+  const rescue = recipient("David", "rescue");
+  const dm = recipient("Elena", "divemaster");
+
+  it("filters non-course departures so divers below the minimum are never eligible", () => {
+    const req = requires("advanced_open_water");
+    expect(isRecipientEligibleForDeal(uncert, req)).toBe(false);
+    expect(isRecipientEligibleForDeal(ow, req)).toBe(false);
+    expect(isRecipientEligibleForDeal(aow, req)).toBe(true);
+    expect(isRecipientEligibleForDeal(rescue, req)).toBe(true);
+    expect(isRecipientEligibleForDeal(dm, req)).toBe(true);
+  });
+
+  it("allows all divers for a non-course departure with no minimum requirements", () => {
+    expect(isRecipientEligibleForDeal(uncert, null)).toBe(true);
+    expect(isRecipientEligibleForDeal(ow, null)).toBe(true);
+  });
+
+  it("Open Water course: only sends to uncertified divers, not divers with OW or higher", () => {
+    const course = { slug: "open-water-diver", title: "Open Water Diver" };
+    expect(isRecipientEligibleForDeal(uncert, null, course)).toBe(true);
+    expect(isRecipientEligibleForDeal(recipient("Anon", null), null, course)).toBe(true);
+    expect(isRecipientEligibleForDeal(ow, null, course)).toBe(false);
+    expect(isRecipientEligibleForDeal(aow, null, course)).toBe(false);
+  });
+
+  it("Advanced Open Water course: only sends to Open Water divers, not uncertified or AOW+", () => {
+    const course = { slug: "advanced-open-water-diver", title: "Advanced Open Water Diver" };
+    expect(isRecipientEligibleForDeal(uncert, null, course)).toBe(false);
+    expect(isRecipientEligibleForDeal(ow, null, course)).toBe(true);
+    expect(isRecipientEligibleForDeal(aow, null, course)).toBe(false);
+    expect(isRecipientEligibleForDeal(rescue, null, course)).toBe(false);
+  });
+
+  it("Rescue Diver course: only sends to Advanced Open Water divers", () => {
+    const course = { slug: "rescue-diver", title: "Rescue Diver" };
+    expect(isRecipientEligibleForDeal(uncert, null, course)).toBe(false);
+    expect(isRecipientEligibleForDeal(ow, null, course)).toBe(false);
+    expect(isRecipientEligibleForDeal(aow, null, course)).toBe(true);
+    expect(isRecipientEligibleForDeal(rescue, null, course)).toBe(false);
+  });
+
+  it("Discover Scuba / intro course: only sends to uncertified divers", () => {
+    const course = {
+      slug: "discover-scuba-diving",
+      title: "Discover Scuba Diving",
+      isIntroCourse: true,
+    };
+    expect(isRecipientEligibleForDeal(uncert, null, course)).toBe(true);
+    expect(isRecipientEligibleForDeal(ow, null, course)).toBe(false);
+  });
+
+  it("filterEligibleLastMinuteRecipients returns only eligible recipients", () => {
+    const list = [uncert, ow, aow, rescue];
+    const aowCourse = { slug: "advanced-open-water-diver", title: "Advanced Open Water Diver" };
+    const eligible = filterEligibleLastMinuteRecipients(list, null, aowCourse);
+    expect(eligible.map((r) => r.name)).toEqual(["Ben"]);
   });
 });

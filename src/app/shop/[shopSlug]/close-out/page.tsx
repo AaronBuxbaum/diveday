@@ -290,9 +290,7 @@ export default async function CloseOutPage({
     }
     revalidateAndRedirect(
       closeOut,
-      noticeUrl(closeOut, result.summary.failed > 0 ? "recap-send-attention" : "recap-sent", {
-        noted: tripId,
-      }),
+      noticeUrl(closeOut, result.summary.failed > 0 ? "recap-send-attention" : "recap-sent"),
     );
   }
 
@@ -309,7 +307,7 @@ export default async function CloseOutPage({
     } else {
       await unpauseTripRecapAutoSend(db, staff.user.shopId, tripId);
     }
-    revalidateAndRedirect(closeOut, `${closeOut}?noted=${encodeURIComponent(tripId)}`);
+    revalidateAndRedirect(closeOut);
   }
 
   /** Retry every ended departure represented by the failed close-out task. */

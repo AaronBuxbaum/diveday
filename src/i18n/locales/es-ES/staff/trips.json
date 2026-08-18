@@ -325,7 +325,8 @@
     "recipientsSummaryNoLevelButCards": "Esta salida exige {list} en vez de un nivel de certificación, y esta lista no puede decirte quién tiene esas certificaciones.",
     "recipientsSummaryNotSaid": "{count, plural, one {# no indicó su nivel.} other {# no indicaron su nivel.}}",
     "recipientsMore": "{count, plural, one {No se muestra # más — quienes están por debajo del requisito aparecen primero.} other {No se muestran # más — quienes están por debajo del requisito aparecen primero.}}",
-    "recipientsMoreNoRequirement": "{count, plural, one {No se muestra # más.} other {No se muestran # más.}}"
+    "recipientsMoreNoRequirement": "{count, plural, one {No se muestra # más.} other {No se muestran # más.}}",
+    "recipients": "Destinatarios: {names}"
   },
   "roster": {
     "waiverSend": "Enviar exención",

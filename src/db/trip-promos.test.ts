@@ -156,12 +156,11 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     if (!toCancel) throw new Error("expected an existing booking to free a seat");
     await cancelBooking(db, shop.id, toCancel.booking.id);
 
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     await joinLastMinuteList(db, {
       shopId: shop.id,
       fullName: "Wren Ostrowski",
       email: "wren@example.com",
-      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
+      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: false },
     });
 
     const outcome = await sendLastMinuteDealBlast(
@@ -169,10 +168,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: fullTrip.id, discountPercent: 25 },
       fakePromotions(),
     );
-    // Both the wait-listed diver and the unrelated last-minute-list entry
-    // still get the code — the reordering (unit-tested directly against
-    // orderLastMinuteRecipients in src/lib/last-minute-list.test.ts) changes
-    // who hears about it first, never who's included.
+    // The wait-listed diver who meets the requirement gets the code
     expect(outcome).toMatchObject({ ok: true, recipientCount: 0 });
   });
 
@@ -213,7 +209,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     expect(promo?.status).toBe("failed");
   });
 
-  it("sends the blast successfully even when the only matching recipient is uncertified", async () => {
+  it("refuses when matching recipients are below the departure's minimum", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
     await joinLastMinuteList(db, {
@@ -227,7 +223,47 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
     );
+    expect(outcome).toEqual({ ok: false, reason: "no_recipients" });
+  });
+
+  it("supports recipientPersonIds filter to send deals to only selected people", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Selected Diver",
+      email: "selected@example.com",
+      declaration: { level: "open_water", noCertification: false, nitrox: false },
+    });
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Unselected Diver",
+      email: "unselected@example.com",
+      declaration: { level: "open_water", noCertification: false, nitrox: false },
+    });
+
+    const { people } = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    const [person1] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, "selected@example.com"));
+
+    const outcome = await sendLastMinuteDealBlast(
+      db,
+      {
+        shopId: shop.id,
+        shopSlug: "blue-mantis",
+        tripId: openTrip.id,
+        discountPercent: 25,
+        recipientPersonIds: [person1.id],
+      },
+      fakePromotions(),
+    );
     expect(outcome.ok).toBe(true);
+    const { listTripLastMinutePromoRecipients } = await import("./trip-promos");
+    const sentRecipients = await listTripLastMinutePromoRecipients(db, shop.id, openTrip.id);
+    expect(sentRecipients.map((r) => r.email)).toEqual(["selected@example.com"]);
   });
 });
 

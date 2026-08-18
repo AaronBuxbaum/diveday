@@ -142,7 +142,7 @@ export function CrewRollCall({
           <ul
             className={sectionCardClass({
               padding: "none",
-              className: "mt-3 divide-y divide-border",
+              className: "mt-3 divide-y divide-border overflow-hidden",
             })}
           >
             {crew.map((member) => {
