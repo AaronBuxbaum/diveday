@@ -9,6 +9,7 @@ import {
   passwordResetEmail,
   tripBlowoutEmail,
   tripConditionsHoldEmail,
+  tripInvitationEmail,
   tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
@@ -71,6 +72,24 @@ describe("tripConditionsHoldEmail", () => {
     expect(email.text).toContain("Your seat is still held");
     expect(email.text).toContain("passing squall");
     expect(email.html).toContain("See the live trip update");
+  });
+});
+
+describe("tripInvitationEmail", () => {
+  it("includes the invitation details and escapes staff-entered text", () => {
+    const email = tripInvitationEmail({
+      ...base,
+      shopName: "Blue Mantis & Co.",
+      tripTitle: '<Reef "Special">',
+      bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
+    });
+
+    expect(email.subject).toContain('<Reef "Special">');
+    expect(email.text).toContain("This is an invitation, not a booking");
+    expect(email.text).toContain("https://diveday.example/s/blue-mantis/trips/trip-1");
+    expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-1"');
+    expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
+    expect(email.html).toContain("Blue Mantis &amp; Co.");
   });
 });
 

@@ -1,4 +1,5 @@
 import { getDb } from "@/db/client";
+import { countTripActivity } from "@/db/operations";
 import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -39,6 +40,7 @@ export default async function TripLayout({
   const { shopSlug, id } = await params;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
+  const activityCount = shop ? await countTripActivity(db, shop.id, id) : 0;
   // Staff read the nav in the language their own device asks for, same
   // negotiation as every trip page (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
@@ -53,7 +55,13 @@ export default async function TripLayout({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
       <div className="mb-6 print:hidden">
-        <TripSubNav shopSlug={shopSlug} tripId={id} copy={subNavCopy} className="w-full" />
+        <TripSubNav
+          shopSlug={shopSlug}
+          tripId={id}
+          activityCount={activityCount}
+          copy={subNavCopy}
+          className="w-full"
+        />
       </div>
       {children}
     </main>

@@ -3042,6 +3042,12 @@
       "claimLink": "Claim your spot",
       "footer": "The seat isn't held for you, so don't wait too long. See you on the boat!"
     },
+    "tripInvitation": {
+      "subject": "An invitation from {shopName}: {tripTitle}",
+      "body": "{shopName} has planned {tripTitle} and would like to invite you.",
+      "note": "This is an invitation, not a booking, so no seat is held yet.",
+      "link": "See the trip and book your spot"
+    },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% off {tripTitle} — last-minute deal",
       "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",

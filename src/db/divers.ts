@@ -37,7 +37,11 @@ import {
   specialtyCertifications,
   trips,
 } from "./schema";
-import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
+import {
+  getCurrentWaiverTemplate,
+  getDiverWaiverRequestStatus,
+  listSignedWaiversByPerson,
+} from "./waivers";
 
 export type NewDiver = {
   shopId: string;
@@ -236,7 +240,7 @@ export async function isDiverRemoved(db: AppDb, shopId: string, personId: string
   return Boolean(row?.deletedAt);
 }
 
-export const DIVER_PAGE_SIZE = 20;
+export const DIVER_PAGE_SIZE = 10;
 
 /**
  * The diver roster stays server-fed: search is indexed `ilike` over the
@@ -745,6 +749,7 @@ export async function getDiverProfile(
     visitRows,
     signedWaivers,
     waiverTemplate,
+    waiverRequest,
   ] = await Promise.all([
     db
       .select({ card: certifications, reviewedByName: levelReviewer.fullName })
@@ -813,6 +818,7 @@ export async function getDiverProfile(
     // sizes, rather than reconstructed per booking by whoever needs it.
     listSignedWaiversByPerson(db, shopId, [personId]),
     getCurrentWaiverTemplate(db, shopId),
+    getDiverWaiverRequestStatus(db, shopId, personId),
   ]);
 
   return {
@@ -841,6 +847,7 @@ export async function getDiverProfile(
       personSignedWaivers: signedWaivers.get(personId) ?? [],
       currentTemplateVersion: waiverTemplate?.version ?? null,
     }),
+    waiverRequest,
   };
 }
 

@@ -54,10 +54,9 @@ export async function CertificationCards({
   // Success is page feedback, not add-card feedback. In particular, the
   // Mark certified action returns here with a success notice; opening this
   // disclosure for it made the unrelated add-certification form appear to
-  // have succeeded. Only a danger notice belonging to this exact form may
-  // open it or render beside its submit button.
-  const sectionStatus =
-    !numberError && status?.form === "cards" && status.tone === "danger" ? status : undefined;
+  // have succeeded. Render the notice beside the cards, never inside the
+  // popover, regardless of its tone.
+  const sectionStatus = !numberError && status?.form === "cards" ? status : undefined;
   // The diver's own "I hold no card", still standing: set, never cleared by
   // staff, and not yet refuted by a card. `listCertificationSummaries` decides
   // the same thing for the send lists; here the list of cards below *is* the

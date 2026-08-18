@@ -15,9 +15,22 @@ export default function OrdersIndexLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
 
-        <div className={sectionCardClass({ padding: "none", className: "mt-8 h-24" })} />
+        <div className={sectionCardClass({ padding: "md", className: "h-40" })}>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((field) => (
+              <div key={field}>
+                <div className="h-4 w-24 rounded bg-surface-sunken" />
+                <div className="mt-2 h-11 rounded-lg bg-surface-sunken" />
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <div className={sectionCardClass({ padding: "none", className: "mt-6 h-72" })} />
+        <div className={sectionCardClass({ padding: "none", className: "mt-6" })}>
+          {[0, 1, 2, 3, 4, 5].map((row) => (
+            <div key={row} className="h-16 border-b border-border last:border-b-0" />
+          ))}
+        </div>
       </div>
     </main>
   );

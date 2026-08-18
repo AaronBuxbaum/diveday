@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
@@ -102,7 +102,7 @@ export async function addDiverNote(
       tripId: null,
       bookingId: null,
       actorPersonId: input.actorPersonId,
-      message: `${actor.name} added a diver note about ${diver.name}`,
+      message: `${actor.name} added a private note about ${diver.name}`,
       occurredAt: nowDate(),
     });
     return note ?? null;
@@ -217,7 +217,7 @@ export async function deleteDiverNote(
       tripId: null,
       bookingId: null,
       actorPersonId: input.actorPersonId,
-      message: `${actor.name} deleted a diver note about ${note.diverName}`,
+      message: `${actor.name} deleted a private note about ${note.diverName}`,
       occurredAt: nowDate(),
     });
     return { deleted: true, body: note.body };
@@ -317,6 +317,15 @@ export async function listTripActivity(db: AppDb, shopId: string, tripId: string
     .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)))
     .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
     .limit(50);
+}
+
+/** Count every activity line so the Guests tab can advertise what its collapsed log contains. */
+export async function countTripActivity(db: AppDb, shopId: string, tripId: string) {
+  const [row] = await db
+    .select({ count: count() })
+    .from(activityEvents)
+    .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)));
+  return row?.count ?? 0;
 }
 
 export async function recordTripActivity(

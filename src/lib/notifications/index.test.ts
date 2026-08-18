@@ -34,6 +34,22 @@ const booking = {
   timezone: "America/New_York",
 };
 
+const tripInvitation = {
+  kind: "trip_invitation" as const,
+  invitationId: "00000000-0000-4000-8000-000000000002",
+  shopId: "00000000-0000-4000-8000-000000000010",
+  to: "delivered+invitation@dive.day",
+  locale: "en-US" as const,
+  diverName: "Nora Quinn",
+  shopName: "Blue Mantis",
+  tripTitle: "Two-Tank Reef",
+  startsAt: new Date("2026-08-01T12:00:00.000Z"),
+  endsAt: new Date("2026-08-01T15:00:00.000Z"),
+  timezone: "America/New_York",
+  bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
+  invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+};
+
 describe("bookingConfirmationEmail", () => {
   it("folds the readiness link into the confirmation when one is supplied", () => {
     const email = bookingConfirmationEmail({
@@ -68,6 +84,26 @@ describe("notify", () => {
       Content: {
         Simple: {
           Subject: { Data: "You're on the boat — Two-Tank Reef", Charset: "UTF-8" },
+        },
+      },
+    });
+  });
+
+  it("sends a trip invitation through SES with its invitation subject", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-invitation-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(tripInvitation, provider)).resolves.toEqual({
+      status: "sent",
+      providerMessageId: "ses-invitation-id",
+    });
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input).toMatchObject({
+      Destination: { ToAddresses: ["delivered+invitation@dive.day"] },
+      Content: {
+        Simple: {
+          Subject: { Data: "An invitation from Blue Mantis: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });
@@ -278,6 +314,28 @@ describe("the demo-try alert's schema (docs ADR 20260805-demo-try-alerts)", () =
 
   it("refuses a role outside the demo roster", () => {
     expect(() => notificationSchema.parse({ ...alert, role: "regulator" })).toThrow();
+  });
+});
+
+describe("the trip invitation notification schema", () => {
+  it("accepts a shop-scoped invitation payload for SES delivery", () => {
+    const notification = {
+      kind: "trip_invitation" as const,
+      invitationId: "00000000-0000-4000-8000-000000000002",
+      shopId: "00000000-0000-4000-8000-000000000010",
+      to: "nora@dive.day",
+      locale: "en-US" as const,
+      diverName: "Nora Quinn",
+      shopName: "Blue Mantis",
+      tripTitle: "Two-Tank Reef",
+      startsAt: new Date("2026-08-01T12:00:00.000Z"),
+      endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      timezone: "America/New_York",
+      bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
+      invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+    };
+
+    expect(notificationSchema.parse(notification)).toMatchObject(notification);
   });
 });
 

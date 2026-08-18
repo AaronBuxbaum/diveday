@@ -3,8 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { shopWaiverStatusText, shopWaiverStatusTone } from "@/i18n/waiver-labels";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { cardsNeedingLookCount, type DiverProfile, type Shop, unpaidBookingCount } from "./shared";
@@ -80,67 +78,16 @@ function StatCard({
   );
 }
 
-/**
- * The diver's standing with the shop's release.
- *
- * It sits up here, beside cards and sizes, because that is what it is: a fact
- * about this person and this shop, signed once and carried across every
- * booking they have here. Before this card the answer to "has she signed?"
- * existed only inside individual bookings, so a staffer on the phone had to
- * open a *trip* to learn something about a *diver* — and if she had no booking
- * yet, they could not find out at all.
- *
- * Dates only. The signed medical answers stay on the waiver surfaces built to
- * review them; what belongs at a glance is when the signature happened and
- * when it stops counting.
- */
-function WaiverStat({ diver, shop, locale }: { diver: DiverProfile; shop: Shop; locale: string }) {
-  const t = staffTranslator(locale);
-  const waiver = diver.waiver;
-  const tone = shopWaiverStatusTone(waiver);
-  /**
-   * Resolved in the shop's own timezone, not the server's — a window that ends
-   * at 01:00 UTC is the 4th in Key Largo and the 3rd further west, and the shop
-   * reading this card is the one whose calendar decides.
-   *
-   * **With the year**, unlike most dates in this app. Every date on this card
-   * is about a year from today, and the app's usual short format has no year:
-   * "Good until Tue, Aug 3" on the 4th of August reads as *yesterday*, which
-   * is the opposite of what it means.
-   */
-  const date = (value: Date) =>
-    formatCalendarDate(calendarDateInTimezone(value, shop.timezone), locale);
-  return (
-    <StatCard
-      t={t}
-      label={t("divers.stats.waiver")}
-      attention={tone !== "success"}
-      success={tone === "success"}
-      // The card frame carries the tone. The status itself stays readable text,
-      // so a signed waiver says simply "Signed" rather than putting a second
-      // status pill inside a card that already says whether it needs attention.
-      value={shopWaiverStatusText(t, waiver)}
-      detail={
-        waiver.state === "current"
-          ? t("divers.stats.waiverGoodUntil", { date: date(waiver.expiresAt) })
-          : waiver.state === "expired"
-            ? t("divers.stats.waiverLastSigned", { date: date(waiver.signedAt) })
-            : waiver.state === "medical_review"
-              ? t("divers.stats.waiverHeldSince", { date: date(waiver.at) })
-              : null
-      }
-    />
-  );
-}
-
 export function StatsSummary({
   diver,
   shop,
   locale,
+  notesCount,
 }: {
   diver: DiverProfile;
   shop: Shop;
   locale: string;
+  notesCount: number;
 }) {
   const t = staffTranslator(locale);
   const profile = diver.rentalFit;
@@ -170,7 +117,7 @@ export function StatsSummary({
           detail={t("divers.stats.needingLook", { count: needingLook })}
         />
       ) : null}
-      <WaiverStat diver={diver} shop={shop} locale={locale} />
+      <StatCard t={t} label={t("divers.stats.notes")} value={notesCount} detail={null} />
       <StatCard
         t={t}
         label={t("divers.stats.rentalFit")}

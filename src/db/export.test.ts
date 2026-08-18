@@ -330,6 +330,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "source_template_id", // provenance into DiveDay's catalog, not the shop's
     "source_template_version",
+    // A one-time rollback snapshot for the template-apply interaction. It is
+    // DiveDay's temporary UI bookkeeping, not part of the site's portable
+    // briefing and must never be restored by an import.
+    "template_update_undo",
   ],
   dive_site_creatures: ["shop_id"],
   dive_site_moments: ["shop_id"],

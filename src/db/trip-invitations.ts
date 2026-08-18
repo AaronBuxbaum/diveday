@@ -1,7 +1,15 @@
 import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
-import { bookings, courseInquiries, people, personRoles, tripInvitations, trips } from "./schema";
+import {
+  bookings,
+  courseInquiries,
+  people,
+  personRoles,
+  shops,
+  tripInvitations,
+  trips,
+} from "./schema";
 
 export type CreateTripRequestInvitationsInput = {
   shopId: string;
@@ -153,6 +161,49 @@ export async function listTripInvitations(db: AppDb, shopId: string, tripId: str
     )
     .where(and(eq(tripInvitations.shopId, shopId), eq(tripInvitations.tripId, tripId)))
     .orderBy(asc(tripInvitations.createdAt));
+}
+
+/** The shop-scoped recipient and trip facts needed to send one invitation. */
+export async function getTripInvitation(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  invitationId: string,
+) {
+  const [row] = await db
+    .select({
+      invitation: tripInvitations,
+      request: courseInquiries,
+      person: people,
+      trip: trips,
+      shop: shops,
+    })
+    .from(tripInvitations)
+    .innerJoin(trips, and(eq(trips.id, tripInvitations.tripId), eq(trips.shopId, shopId)))
+    .innerJoin(shops, eq(shops.id, shopId))
+    .leftJoin(
+      courseInquiries,
+      and(
+        eq(courseInquiries.id, tripInvitations.courseInquiryId),
+        eq(courseInquiries.shopId, shopId),
+      ),
+    )
+    .leftJoin(
+      people,
+      and(
+        or(eq(people.id, tripInvitations.personId), eq(people.id, courseInquiries.personId)),
+        eq(people.shopId, shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(tripInvitations.id, invitationId),
+        eq(tripInvitations.shopId, shopId),
+        eq(tripInvitations.tripId, tripId),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
 }
 
 /** Records a staff outreach attempt, regardless of whether it used email or a composer. */

@@ -25,7 +25,7 @@ export function TripInvitationSection({
   tripTitle: string;
   tripStartsAt: Date;
   timezone: string;
-  inviteAction: (invitationId: string) => Promise<"fallback">;
+  inviteAction: (invitationId: string) => Promise<"sent" | "fallback">;
   locale: string;
 }) {
   const t = staffTranslator(locale);

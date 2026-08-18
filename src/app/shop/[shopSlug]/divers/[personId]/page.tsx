@@ -204,7 +204,7 @@ export default async function DiverDetailPage({
         items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
-      <StatsSummary diver={diver} shop={shop} locale={locale} />
+      <StatsSummary diver={diver} shop={shop} locale={locale} notesCount={notes.length} />
       {/* Beside the stat row it answers, not filed under a section heading of
           its own: the Waiver card is what tells a staffer the release is
           outstanding, so the one thing they can do about it from this page
@@ -215,6 +215,7 @@ export default async function DiverDetailPage({
         shopSlug={shopSlug}
         personId={personId}
         locale={locale}
+        timezone={shop.timezone}
         status={noticeForForm(diverNotice, "waiver")}
       />
       <DiverSection id="cards">

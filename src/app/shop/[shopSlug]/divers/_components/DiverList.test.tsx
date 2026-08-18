@@ -125,6 +125,24 @@ describe("DiverList empty state", () => {
     expect(screen.getByText("Search by name, email, or phone.")).toBeInTheDocument();
   });
 
+  it("slides the add diver action away when the search is cleared", () => {
+    vi.useFakeTimers();
+    try {
+      renderList({ query: "nobody" });
+      const search = screen.getByRole("searchbox", { name: "Search divers" });
+      fireEvent.change(search, { target: { value: "" } });
+      const button = screen.getByRole("button", { name: "Add diver" });
+      const animationShell = button.closest("div");
+      expect(animationShell).toHaveClass("animate-slide-out-right");
+
+      fireEvent.animationEnd(animationShell as HTMLElement, { animationName: "slide-out-right" });
+      act(() => vi.advanceTimersByTime(250));
+      expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {
     renderList({ filter: "needs_attention" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();

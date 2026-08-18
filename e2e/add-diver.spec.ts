@@ -1,6 +1,13 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openTripFromBoard } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  openTripActivity,
+  openTripFromBoard,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -96,6 +103,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .toBeLessThan(100);
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
+  await openTripActivity(page);
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
 
   // Deleting a note is a purely reversible edit (docs/design/principles.md
@@ -252,6 +260,7 @@ test("booking a diver from their record issues their waiver, like every other do
   await expect(page.getByText("Waiver sent").first()).toBeVisible();
   // ...and the seating reaches the trip's activity trail, which this door also
   // used to skip.
+  await openTripActivity(page);
   await expect(page.getByText(/added Priya Sharma to the trip/)).toBeVisible();
 });
 

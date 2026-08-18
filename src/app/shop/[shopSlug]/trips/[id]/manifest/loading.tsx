@@ -18,11 +18,13 @@ export default function ManifestLoading() {
         meta={<div className="h-6 w-56 max-w-full rounded bg-surface-sunken" />}
       />
       <div className="mt-6 h-12 w-full rounded-xl bg-surface-sunken" />
+      <div className={sectionCardClass({ padding: "md", className: "mt-6 h-36" })} />
       <ul className="mt-6 flex flex-col gap-3">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
           <li key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
         ))}
       </ul>
+      <div className={sectionCardClass({ padding: "md", className: "mt-8 h-28" })} />
     </div>
   );
 }

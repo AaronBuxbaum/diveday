@@ -349,6 +349,17 @@ export async function openRosterNotes(row: Locator): Promise<void> {
   );
 }
 
+/** Open the Guests page activity log when a spec needs to inspect its audit trail. */
+export async function openTripActivity(page: Page): Promise<void> {
+  await openIfClosed(
+    page
+      .locator("details")
+      .filter({ hasText: /^Activity/ })
+      .filter({ visible: true })
+      .first(),
+  );
+}
+
 /**
  * Native `open` is DOM state React never touches, so check before toggling.
  *

@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openTripActivity,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -128,6 +129,7 @@ test.describe("refunds", () => {
     // ("… removed Nora Quinn from the trip"), so the name legitimately stays
     // on the page — what must be gone is her seat.
     await expect(page.locator("#roster").getByText("Nora Quinn")).toHaveCount(0);
+    await openTripActivity(page);
     await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 
@@ -163,6 +165,7 @@ test.describe("refunds", () => {
     // Same roster scoping as above: the activity trail now names the removed
     // diver on purpose.
     await expect(page.locator("#roster").getByText("Nora Quinn")).toHaveCount(0);
+    await openTripActivity(page);
     await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 });

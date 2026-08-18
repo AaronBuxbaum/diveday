@@ -11,6 +11,7 @@ import {
   staffInviteEmail,
   tripBlowoutEmail,
   tripConditionsHoldEmail,
+  tripInvitationEmail,
   tripMinimumNotMetEmail,
   tripRecapEmail,
   tripReminderEmail,
@@ -45,6 +46,7 @@ export function messageFor(notification: Notification): NotificationEmail {
 function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
   if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
+  if (notification.kind === "trip_invitation") return tripInvitationEmail(notification);
   if (notification.kind === "trip_reminder_7d") {
     return tripReminderEmail({ ...notification, lead: "week" });
   }

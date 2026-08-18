@@ -482,6 +482,21 @@ summary {
   }
 }
 
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 250ms var(--ease-out-soft) both;
+}
+
 @keyframes scale-in {
   from {
     opacity: 0;

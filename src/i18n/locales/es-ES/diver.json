@@ -3042,6 +3042,12 @@
       "claimLink": "Reservar tu plaza",
       "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!"
     },
+    "tripInvitation": {
+      "subject": "Una invitación de {shopName}: {tripTitle}",
+      "body": "{shopName} ha programado {tripTitle} y quiere invitarte.",
+      "note": "Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada.",
+      "link": "Ver la salida y reservar tu plaza"
+    },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% de descuento en {tripTitle} — oferta de última hora",
       "body": "{shopName} acaba de abrir un {discountPercent}% de descuento en {tripTitle}.",

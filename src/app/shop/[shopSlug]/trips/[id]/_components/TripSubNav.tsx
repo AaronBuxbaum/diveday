@@ -45,17 +45,35 @@ const TAB_ORDER: {
 export function TripSubNav({
   shopSlug,
   tripId,
+  activityCount = 0,
   copy,
   className = "",
 }: {
   shopSlug: string;
   tripId: string;
+  activityCount?: number;
   copy: TripSubNavCopy;
   className?: string;
 }) {
   const root = `/shop/${shopSlug}/trips/${tripId}`;
   const pathname = usePathname();
-  const TABS = TAB_ORDER.map((tab) => ({ ...tab, label: copy[tab.copyKey] }));
+  const TABS = TAB_ORDER.map((tab) => ({
+    ...tab,
+    label:
+      tab.page === "guests" ? (
+        <span className="inline-flex items-center gap-1.5">
+          <span>{copy[tab.copyKey]}</span>
+          <span
+            aria-hidden="true"
+            className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs tabular-nums text-primary"
+          >
+            {activityCount}
+          </span>
+        </span>
+      ) : (
+        copy[tab.copyKey]
+      ),
+  }));
   // Overview is the bare trip route; any suffixed surface wins over it. Match on
   // the exact segment (or a deeper path under it) so a query string never throws
   // the highlight off. A path that matches no tab (e.g. the departure log) highlights

@@ -46,12 +46,9 @@ export function SpecialtyCards({
   // on this section that asks for a number a staffer reads off a card.
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
   // Mark certified and capture success notices belong to the card row, never
-  // to this add-specialty form. Keep this disclosure closed unless this exact
-  // form has an actionable validation/error message.
-  const sectionStatus =
-    !numberError && status?.form === "specialty-cards" && status.tone === "danger"
-      ? status
-      : undefined;
+  // to this add-specialty form. Render all feedback beside the cards so the
+  // disclosure itself never claims an unrelated action succeeded.
+  const sectionStatus = !numberError && status?.form === "specialty-cards" ? status : undefined;
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">

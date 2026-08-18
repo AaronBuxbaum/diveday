@@ -43,7 +43,7 @@ test("the diver roster offers role-view chips that drive the filter", { tag: REA
   await expect(page).toHaveURL(/filter=missing_contact/);
   await expect(page.getByRole("heading", { name: /People/ })).toBeVisible();
   // Each diver is looked for by name rather than scanned for in the list: the
-  // roster is alphabetical and pages at 20 (DIVER_PAGE_SIZE), so "is this
+  // roster is alphabetical and pages at 10 (DIVER_PAGE_SIZE), so "is this
   // diver in this view" is only a decidable question when the view is narrowed
   // to them. Search and filter share one URL builder (DiverList's `hrefFor`),
   // which is what keeps the chip's filter on through each search below.

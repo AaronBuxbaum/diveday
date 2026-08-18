@@ -1,5 +1,12 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripActivity,
+  signInAsOwner,
+  signOut,
+} from "./helpers";
 
 /**
  * The group-organizer loop (docs ADR 20260804-seat-claim-links): one
@@ -118,6 +125,7 @@ test.describe("seat claim links", () => {
       .getByRole("link", { name: "Guests" })
       .click();
     await expect(page.locator("#roster").getByText("Sam Reyes").first()).toBeVisible();
+    await openTripActivity(page);
     await expect(page.getByText(/Sam Reyes claimed their seat/)).toBeVisible();
   });
 });

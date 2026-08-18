@@ -58,6 +58,17 @@ type WaitlistInviteEmailInput = {
   unsubscribeUrl: string;
 };
 
+type TripInvitationEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  bookingUrl: string;
+};
+
 type LastMinuteDealEmailInput = {
   locale: DiverLocale;
   diverName: string;
@@ -496,6 +507,37 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
     subject: t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.waitlistInvite.claimLink")}</a></p><p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+  };
+}
+
+export function tripInvitationEmail(input: TripInvitationEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
+  const title = escapeHtml(input.tripTitle);
+  const url = escapeHtml(input.bookingUrl);
+  const body = t("notifications.tripInvitation.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+  });
+  const bodyHtml = t("notifications.tripInvitation.body", {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${title}</strong>`,
+  });
+  const note = t("notifications.tripInvitation.note");
+  const link = t("notifications.tripInvitation.link");
+  const greeting = t("notifications.common.greeting", { firstName });
+  const greetingHtml = t("notifications.common.greeting", {
+    firstName: escapeHtml(firstName),
+  });
+  return {
+    subject: t("notifications.tripInvitation.subject", {
+      shopName: input.shopName,
+      tripTitle: input.tripTitle,
+    }),
+    text: [greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n"),
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p><p><a href="${url}">${link}</a></p>`,
   };
 }
 

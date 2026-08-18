@@ -17,6 +17,7 @@ import type { CertificationLevel } from "@/lib/readiness";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
+type QuickAddMode = "hidden" | "entering" | "visible" | "exiting";
 
 /**
  * Every value is a plain string — never a function. This is a client
@@ -202,6 +203,9 @@ export function DiverList({
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
+  const [quickAddMode, setQuickAddMode] = useState<QuickAddMode>(
+    query.trim() ? "entering" : "hidden",
+  );
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce: the
@@ -212,7 +216,13 @@ export function DiverList({
   useEffect(() => {
     if (debounce.current) return;
     setTyped(query);
+    setQuickAddMode(query.trim() ? "visible" : "hidden");
   }, [query]);
+  useEffect(() => {
+    if (quickAddMode !== "exiting") return;
+    const timer = setTimeout(() => setQuickAddMode("hidden"), 250);
+    return () => clearTimeout(timer);
+  }, [quickAddMode]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
@@ -246,6 +256,15 @@ export function DiverList({
 
   const search = (value: string) => {
     setTyped(value);
+    setQuickAddMode((mode) =>
+      value.trim()
+        ? mode === "hidden" || mode === "exiting"
+          ? "entering"
+          : "visible"
+        : mode === "hidden"
+          ? "hidden"
+          : "exiting",
+    );
     cancelPendingSearch();
     debounce.current = setTimeout(() => {
       // Cleared before the replace so the navigation this triggers is free to
@@ -331,19 +350,33 @@ export function DiverList({
               className={`${controlClass} min-w-0`}
             />
           </div>
-          {typed.trim() && quickAddAction ? (
-            <form action={quickAddAction} onSubmit={cancelPendingSearch}>
-              <input type="hidden" name="query" value={typed.trim()} />
-              <SubmitButton
-                pendingLabel={copy.addDiverLabel}
-                className={buttonClass({
-                  variant: "primary",
-                  className: "whitespace-nowrap animate-slide-in-right",
-                })}
-              >
-                {fill(copy.addDiverWithName, { name: typed.trim() })}
-              </SubmitButton>
-            </form>
+          {quickAddMode !== "hidden" && quickAddAction ? (
+            <div
+              className={
+                quickAddMode === "exiting"
+                  ? "animate-slide-out-right"
+                  : quickAddMode === "entering"
+                    ? "animate-slide-in-right"
+                    : undefined
+              }
+              onAnimationEnd={() => {
+                if (quickAddMode === "exiting") setQuickAddMode("hidden");
+                if (quickAddMode === "entering") setQuickAddMode("visible");
+              }}
+            >
+              <form action={quickAddAction} onSubmit={cancelPendingSearch}>
+                <input type="hidden" name="query" value={typed.trim()} />
+                <SubmitButton
+                  pendingLabel={copy.addDiverLabel}
+                  className={buttonClass({
+                    variant: "primary",
+                    className: "whitespace-nowrap animate-slide-in-right",
+                  })}
+                >
+                  {fill(copy.addDiverWithName, { name: typed.trim() })}
+                </SubmitButton>
+              </form>
+            </div>
           ) : null}
         </div>
       </div>

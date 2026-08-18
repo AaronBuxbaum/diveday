@@ -13,6 +13,7 @@ export default function CheckInLoading() {
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
+        <div className="h-11 w-full max-w-xl rounded-lg bg-surface-sunken" />
         <div className="mt-8 flex flex-col gap-6">
           {[0, 1].map((group) => (
             <div key={group} className={sectionCardClass({ padding: "none" })}>
@@ -21,7 +22,7 @@ export default function CheckInLoading() {
                 <div className="mt-1.5 h-4 w-40 rounded bg-surface-sunken" />
               </div>
               <div className="divide-y divide-border">
-                {[0, 1, 2].map((row) => (
+                {[0, 1, 2, 3].map((row) => (
                   <div key={row} className="flex items-center justify-between px-4 py-3">
                     <div className="h-5 w-44 rounded bg-surface-sunken" />
                     <div className="h-9 w-24 rounded-lg bg-surface-sunken" />

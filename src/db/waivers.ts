@@ -16,7 +16,15 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage } from "./paging";
 import type { MedicalAnswers } from "./schema";
-import { bookings, people, shops, trips, waiverRecords, waiverTemplates } from "./schema";
+import {
+  bookings,
+  notificationDeliveries,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
@@ -671,6 +679,54 @@ export async function listSignedWaiversByPerson(
     byPerson.set(row.personId, list);
   }
   return byPerson;
+}
+
+export type DiverWaiverRequestStatus = "not_sent" | "failed" | "not_signed";
+
+/**
+ * The delivery state of the latest outstanding waiver request for one diver.
+ * A missing delivery row is treated as a failed handoff: the waiver record
+ * can exist even when there was no usable email/origin to attempt delivery.
+ */
+export async function getDiverWaiverRequestStatus(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<DiverWaiverRequestStatus> {
+  const [row] = await db
+    .select({
+      deliveryStatus: notificationDeliveries.status,
+      providerStatus: notificationDeliveries.providerStatus,
+    })
+    .from(waiverRecords)
+    .leftJoin(
+      notificationDeliveries,
+      and(
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.bookingId, waiverRecords.bookingId),
+        eq(notificationDeliveries.kind, "waiver_request"),
+      ),
+    )
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "pending"),
+        isNull(waiverRecords.supersededAt),
+      ),
+    )
+    .orderBy(desc(waiverRecords.createdAt))
+    .limit(1);
+
+  if (!row) return "not_sent";
+  const failedProviderStatuses = new Set(["bounced", "complained", "failed", "suppressed"]);
+  if (
+    row.deliveryStatus !== "sent" ||
+    (row.providerStatus !== null && failedProviderStatuses.has(row.providerStatus))
+  ) {
+    return "failed";
+  }
+  return "not_signed";
 }
 
 export type InPersonWaiverOutcome =

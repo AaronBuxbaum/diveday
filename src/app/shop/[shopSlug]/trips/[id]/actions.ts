@@ -13,6 +13,7 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
@@ -21,7 +22,12 @@ import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/d
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
-import { createDirectTripInvitation, recordTripInvitation } from "@/db/trip-invitations";
+import {
+  createDirectTripInvitation,
+  getTripInvitation,
+  listTripInvitations,
+  recordTripInvitation,
+} from "@/db/trip-invitations";
 import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
@@ -50,7 +56,7 @@ import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
@@ -760,15 +766,17 @@ export async function recordTripInvitationAction(
   shopSlug: string,
   tripId: string,
   invitationId: string,
-): Promise<"fallback"> {
+): Promise<"sent" | "fallback"> {
   const s = (await requireShopSurface(shopSlug)).session;
-  await recordTripInvitation(await getDb(), {
+  const db = await getDb();
+  const result = await sendTripInvitation(db, {
     shopId: s.user.shopId,
+    shopSlug,
     tripId,
     invitationId,
   });
   revalidatePath(guestsPath(shopSlug, tripId));
-  return "fallback";
+  return result;
 }
 
 /** Invites an existing diver without seating them on the departure. */
@@ -781,14 +789,66 @@ export async function createDirectTripInvitationAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
   if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
-  await createDirectTripInvitation(await getDb(), {
+  const db = await getDb();
+  const created = await createDirectTripInvitation(db, {
     shopId: s.user.shopId,
     tripId,
     personId: parsed.data.personId,
     createdByPersonId: s.user.personId,
   });
+  if (created) {
+    const invitation = (await listTripInvitations(db, s.user.shopId, tripId)).find(
+      ({ invitation }) =>
+        invitation.source === "direct" && invitation.personId === parsed.data.personId,
+    );
+    if (invitation) {
+      await sendTripInvitation(db, {
+        shopId: s.user.shopId,
+        shopSlug,
+        tripId,
+        invitationId: invitation.invitation.id,
+      });
+    }
+  }
   revalidatePath(guests);
   redirect(`${guests}#invitations`);
+}
+
+type TripInvitationDelivery = "sent" | "fallback";
+
+async function sendTripInvitation(
+  db: Awaited<ReturnType<typeof getDb>>,
+  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
+): Promise<TripInvitationDelivery> {
+  const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
+  if (!context) return "fallback";
+  const invitedAt = nowDate();
+  const recorded = await recordTripInvitation(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    invitationId: input.invitationId,
+    now: invitedAt,
+  });
+  if (!recorded) return "fallback";
+  const email = context.person?.email ?? context.request?.email ?? null;
+  const origin = publicAppUrl();
+  if (!email || !origin) return "fallback";
+  const delivery = await sendNotification(db, {
+    kind: "trip_invitation",
+    invitationId: context.invitation.id,
+    shopId: input.shopId,
+    to: email,
+    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
+    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
+    shopName: context.shop.name,
+    tripTitle: context.trip.title,
+    startsAt: context.trip.startsAt,
+    endsAt: context.trip.endsAt,
+    timezone: context.shop.timezone,
+    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
+    invitedAt,
+  });
+  return delivery.status === "sent" ? "sent" : "fallback";
 }
 
 /**
