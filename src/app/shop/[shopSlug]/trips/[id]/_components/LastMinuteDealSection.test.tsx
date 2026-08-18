@@ -101,6 +101,21 @@ describe("LastMinuteDealSection recipient review", () => {
     expect(send).toHaveTextContent("Send to 1 diver");
   });
 
+  it("disables send when no recipients are selected", () => {
+    renderSection(
+      [recipient("Ravi Menon", "open_water"), recipient("Hana Kobayashi", "open_water")],
+      null,
+    );
+
+    const send = screen.getByRole("button", { name: "Send to 2 divers" });
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      fireEvent.click(checkbox);
+    }
+
+    expect(send).toHaveTextContent("Send to 0 divers");
+    expect(send).toBeDisabled();
+  });
+
   it("does not repeat the departure requirement above the list", () => {
     const { container } = renderSection(
       [recipient("Ravi Menon", "advanced_open_water")],

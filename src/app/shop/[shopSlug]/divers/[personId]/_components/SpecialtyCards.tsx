@@ -58,7 +58,7 @@ export function SpecialtyCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
-        <details open={Boolean(numberError)} className="relative ml-auto shrink-0">
+        <details className="relative ml-auto shrink-0">
           <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
             {t("divers.specialty.addSpecialty")}
           </summary>

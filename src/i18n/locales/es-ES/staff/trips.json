@@ -317,7 +317,7 @@
     "noneAroundHeading": "Todavía no hay a quién enviárselo",
     "noneAroundAction": "Añade tú a alguien",
     "recipientsHeading": "A quién le llega",
-    "recipientsMore": "{count, plural, one {No se muestra # más — quienes están por debajo del requisito aparecen primero.} other {No se muestran # más — quienes están por debajo del requisito aparecen primero.}}",
+    "recipientsMore": "{count, plural, one {No se muestra # persona elegible más.} other {No se muestran # personas elegibles más.}}",
     "recipientsMoreNoRequirement": "{count, plural, one {No se muestra # más.} other {No se muestran # más.}}",
     "recipients": "Destinatarios: {names}"
   },

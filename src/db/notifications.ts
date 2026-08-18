@@ -648,6 +648,7 @@ export async function applyProviderEmailEvent(
     .where(
       and(
         eq(waiverRecords.deliveryProviderMessageId, input.providerMessageId),
+        ...(input.shopId ? [eq(waiverRecords.shopId, input.shopId)] : []),
         or(
           isNull(waiverRecords.deliveryProviderStatusAt),
           lte(waiverRecords.deliveryProviderStatusAt, input.occurredAt),
@@ -666,7 +667,17 @@ export async function applyProviderEmailEvent(
     .from(notificationDeliveries)
     .where(eq(notificationDeliveries.providerMessageId, input.providerMessageId))
     .limit(1);
-  return existing ? "stale" : "unknown_message";
+  const [existingIndependent] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.deliveryProviderMessageId, input.providerMessageId),
+        ...(input.shopId ? [eq(waiverRecords.shopId, input.shopId)] : []),
+      ),
+    )
+    .limit(1);
+  return existing || existingIndependent ? "stale" : "unknown_message";
 }
 
 /**

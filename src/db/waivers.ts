@@ -319,7 +319,9 @@ export async function issueWaiverRequest(
       .where(
         and(
           eq(waiverRecords.shopId, input.shopId),
-          booking ? eq(waiverRecords.bookingId, booking.id) : eq(waiverRecords.personId, personId),
+          booking
+            ? eq(waiverRecords.bookingId, booking.id)
+            : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
           isNull(waiverRecords.supersededAt),
         ),
       );
@@ -342,7 +344,7 @@ export async function issueWaiverRequest(
             eq(waiverRecords.shopId, input.shopId),
             booking
               ? eq(waiverRecords.bookingId, booking.id)
-              : eq(waiverRecords.personId, personId),
+              : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
             isNull(waiverRecords.supersededAt),
           ),
         );

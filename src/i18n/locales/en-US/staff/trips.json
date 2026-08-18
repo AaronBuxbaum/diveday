@@ -317,7 +317,7 @@
     "noneAroundHeading": "Nobody to send this to yet",
     "noneAroundAction": "Seat someone yourself",
     "recipientsHeading": "Who this goes to",
-    "recipientsMore": "{count, plural, one {# more isn't shown — anyone below the requirement is listed first.} other {# more aren't shown — anyone below the requirement is listed first.}}",
+    "recipientsMore": "{count, plural, one {# more eligible recipient isn't shown.} other {# more eligible recipients aren't shown.}}",
     "recipientsMoreNoRequirement": "{count, plural, one {# more isn't shown.} other {# more aren't shown.}}",
     "recipients": "Recipients: {names}"
   },
