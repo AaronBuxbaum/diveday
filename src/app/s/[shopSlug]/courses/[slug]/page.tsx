@@ -188,7 +188,6 @@ export default async function CoursePage({
       <CourseHero
         course={course}
         totalCents={courseTotalCents(course)}
-        inquiryHref={inquiryHref}
         currency={toShopCurrency(shop.currency)}
         locale={locale}
         t={t}
@@ -208,7 +207,6 @@ export default async function CoursePage({
       <CourseSchedule days={course.scheduleDays} locale={locale} t={t} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
-        isPrivate={course.isPrivate}
         sessions={sessions}
         shopSlug={shopSlug}
         timezone={shop.timezone}

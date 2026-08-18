@@ -1,3 +1,4 @@
+import { and, eq, isNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
@@ -5,7 +6,8 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
 import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
+import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
+import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -134,6 +136,55 @@ export default async function DiversPage({
     revalidateAndRedirect(roster, noticeUrl(roster, restored ? "restored" : "restore-refused"));
   }
 
+  async function quickAddDiverAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const activeDb = await getDb();
+    const roster = shopPath(staff.user.shopSlug, "divers");
+    const rawQuery = String(formData.get("query") ?? "").trim();
+    if (!rawQuery) return;
+
+    let fullName = rawQuery;
+    let email: string | null = null;
+    let phone: string | null = null;
+
+    if (rawQuery.includes("@")) {
+      email = rawQuery;
+      const local = rawQuery.split("@")[0];
+      fullName = local.charAt(0).toUpperCase() + local.slice(1);
+    } else if (/^[\d\s+\-().]{7,}$/.test(rawQuery) && /\d{3,}/.test(rawQuery)) {
+      phone = rawQuery;
+      fullName = rawQuery;
+    }
+
+    const person = await createDiver(activeDb, {
+      shopId: staff.user.shopId,
+      fullName,
+      email: email ?? undefined,
+      phone: phone ?? undefined,
+    });
+    let personId = person?.id;
+    if (!person && email) {
+      const [existing] = await activeDb
+        .select({ id: people.id })
+        .from(people)
+        .where(
+          and(
+            eq(people.shopId, staff.user.shopId),
+            eq(people.email, email.toLowerCase().trim()),
+            isNull(people.deletedAt),
+          ),
+        )
+        .limit(1);
+      personId = existing?.id;
+    }
+    if (personId) {
+      revalidateAndRedirect(roster, `/shop/${staff.user.shopSlug}/divers/${personId}?edit=1`);
+    } else {
+      revalidateAndRedirect(roster, noticeUrl(roster, "invalid"));
+    }
+  }
+
   /**
    * The shop's one level vocabulary, resolved once and handed to the roster as
    * plain strings: it names a diver's level with the same words the diver
@@ -193,6 +244,7 @@ export default async function DiversPage({
         filter={filter}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         restoreAction={canDelete ? restoreDiverAction : null}
+        quickAddAction={quickAddDiverAction}
         pager={
           <Pager
             page={diverPage.page}
@@ -229,7 +281,6 @@ export default async function DiversPage({
           noDiversOnFile: t("divers.list.noDiversOnFile"),
           tryDifferentSearch: t("divers.list.tryDifferentSearch"),
           addOneHere: t("divers.list.addOneHere"),
-          emptyAddAction: t("divers.list.emptyAddAction"),
           emptyShowAll: t("divers.list.emptyShowAll"),
           emptyImportBody: t("divers.list.emptyImportBody"),
           emptyImportAction: t("divers.list.emptyImportAction"),

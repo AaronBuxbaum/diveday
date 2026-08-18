@@ -46,7 +46,6 @@ const copy = {
   noDiversOnFile: t("divers.list.noDiversOnFile"),
   tryDifferentSearch: t("divers.list.tryDifferentSearch"),
   addOneHere: t("divers.list.addOneHere"),
-  emptyAddAction: t("divers.list.emptyAddAction"),
   emptyShowAll: t("divers.list.emptyShowAll"),
   emptyImportBody: t("divers.list.emptyImportBody"),
   emptyImportAction: t("divers.list.emptyImportAction"),
@@ -73,6 +72,7 @@ function renderList({
   // Owner/manager by default — the roster hands this down only to whoever may
   // unarchive, and it is what makes the Archived view exist at all.
   restoreAction = (() => {}) as ((formData: FormData) => void) | null,
+  quickAddAction = (() => {}) as ((formData: FormData) => void) | null,
   copyOverrides = {} as Partial<typeof copy>,
 } = {}) {
   return render(
@@ -83,27 +83,17 @@ function renderList({
       filter={filter}
       importHref={importHref}
       restoreAction={restoreAction}
+      quickAddAction={quickAddAction}
       copy={{ ...copy, ...copyOverrides }}
     />,
   );
 }
 
 describe("DiverList empty state", () => {
-  it("offers the add-diver page as a direct action link", () => {
+  it("does not offer a separate add diver button before typing", () => {
     renderList();
     expect(screen.getByText("No divers on file yet.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add your first diver" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers/new",
-    );
-  });
-
-  it("offers the add-diver button in the search toolbar", () => {
-    renderList();
-    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers/new",
-    );
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
   });
 
   it("offers a bulk import to whoever may run one", () => {
@@ -123,10 +113,7 @@ describe("DiverList empty state", () => {
   it("offers the way back out or to add the typed diver when search narrowed to nothing", () => {
     renderList({ query: "nobody" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Add “nobody” as a diver" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers/new?name=nobody",
-    );
+    expect(screen.getByRole("button", { name: "Add “nobody” as a diver" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show all divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers",

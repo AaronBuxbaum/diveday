@@ -200,6 +200,7 @@
     "errorInvalid": "That didn't save. Check the name and links, then try again.",
     "certificationDescription": "What this site itself demands. Every trip that visits enforces at least this — when the trip asks for more, the stricter rule wins.",
     "requiredSpecialties": "Required specialties",
+    "scheduleDeparture": "Schedule departure",
     "saveBriefing": "Save dive site",
     "templateUpdates": {
       "title": "A newer DiveDay template is ready",

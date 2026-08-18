@@ -25,10 +25,10 @@ export type NewCourse = {
   slug?: string;
   priceCents?: number | null;
   eLearningPriceCents?: number | null;
+  privatePriceCents?: number | null;
   minimumCertificationLevel?: CertificationLevel | null;
   /** Whether a session of this course may run on enriched air — see the column's own note. */
   nitroxCompatible?: boolean;
-  isPrivate?: boolean;
 } & Partial<CourseContent>;
 
 /**
@@ -40,7 +40,7 @@ export type NewCourse = {
  */
 export type CoursePatch = Pick<
   NewCourse,
-  "priceCents" | "eLearningPriceCents" | "nitroxCompatible" | "isPrivate"
+  "priceCents" | "eLearningPriceCents" | "privatePriceCents" | "nitroxCompatible"
 >;
 
 /**
@@ -268,12 +268,12 @@ export async function updateCourse(
     .set({
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
+      privatePriceCents: input.privatePriceCents ?? null,
       // A checkbox that arrives absent means unticked, never "leave it alone" —
       // the editor always renders the control, so an omitted key is a form that
       // did not have it and the column keeps its own default rather than
       // silently flipping.
       ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
-      ...(input.isPrivate === undefined ? {} : { isPrivate: input.isPrivate }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

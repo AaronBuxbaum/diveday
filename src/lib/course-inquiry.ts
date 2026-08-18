@@ -81,7 +81,6 @@ export interface DateRequestCopy {
   preferredDate: string;
   alternateDate: string;
   datesHint: string;
-  dateFlexible: string;
   whenSuits: string;
   whenSuitsHint: string;
   whenSuitsPlaceholder: string;

@@ -1,6 +1,8 @@
+import { and, eq, ilike, isNull, notInArray, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
 import { EmptyState } from "@/components/EmptyState";
@@ -8,12 +10,14 @@ import { FlashParams } from "@/components/FlashParams";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
-import { listCheckInQueue } from "@/db/check-in";
+import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
+import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { upcomingScheduleStats } from "@/db/trips";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
@@ -181,6 +185,34 @@ export default async function CheckInPage({
   // else still pending elsewhere.
   const cleared = !query && allDiversCheckedIn(queue);
 
+  const bookedPersonIds = new Set(queue.map((row) => row.personId));
+  const otherMatchingDivers = query
+    ? await db
+        .select({
+          id: people.id,
+          fullName: people.fullName,
+          email: people.email,
+          phone: people.phone,
+        })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            eq(people.shopId, shop.id),
+            eq(personRoles.role, "diver"),
+            isNull(people.deletedAt),
+            bookedPersonIds.size > 0 ? notInArray(people.id, [...bookedPersonIds]) : undefined,
+            or(
+              ilike(people.fullName, `%${query}%`),
+              ilike(people.email, `%${query}%`),
+              ilike(people.phone, `%${query}%`),
+            ),
+          ),
+        )
+        .limit(5)
+    : [];
+  const openDepartures = query ? await listWalkInTrips(db, shop.id) : [];
+
   // One departure, said once. The queue arrives ordered by departure then
   // name, so grouping is a single pass — and the group header is where the
   // trip's title, time, and "4 of 9 checked in" progress live, leaving each
@@ -221,17 +253,6 @@ export default async function CheckInPage({
               ahead: ARRIVALS_AHEAD_HOURS,
             })}
           </p>
-        }
-        actions={
-          // Secondary, and a verb: the page's action is the queue itself —
-          // every ready row is one tap — so the rare walk-in door at the top
-          // never competes at primary weight (design principle 8).
-          <Link
-            href={`/shop/${shopSlug}/check-in/walk-in`}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("checkIn.walkInAction")}
-          </Link>
         }
       />
 
@@ -558,6 +579,71 @@ export default async function CheckInPage({
             })}
           </div>
         )}
+
+        {otherMatchingDivers.length > 0 ? (
+          <div className="mt-8">
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold">{t("checkIn.otherDiversHeading")}</h3>
+              <p className="text-sm text-muted">{t("checkIn.otherDiversDescription")}</p>
+            </div>
+            <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+              {otherMatchingDivers.map((diver) => (
+                <li
+                  key={diver.id}
+                  className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.id}`}
+                      className="font-medium text-foreground hover:underline"
+                    >
+                      {diver.fullName}
+                    </Link>
+                    <p className="text-sm text-muted">
+                      {[diver.email, diver.phone].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  {openDepartures.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      {openDepartures.map((departure) => (
+                        <form
+                          key={departure.tripId}
+                          action={seatExistingDiverAction.bind(null, "walk-in", shopSlug)}
+                        >
+                          <input type="hidden" name="personId" value={diver.id} />
+                          <input type="hidden" name="tripId" value={departure.tripId} />
+                          <SubmitButton
+                            pendingLabel={t("checkIn.addingToDeparture")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                            ariaLabel={t("checkIn.addToDepartureFor", {
+                              departure: departure.title,
+                            })}
+                          >
+                            {t("checkIn.addToDepartureFor", { departure: departure.title })}
+                          </SubmitButton>
+                        </form>
+                      ))}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {query ? (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-surface-sunken/40 p-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{t("checkIn.addWalkInAction", { query })}</p>
+            </div>
+            <Link
+              href={`/shop/${shopSlug}/check-in/walk-in?diverq=${encodeURIComponent(query)}`}
+              className={buttonClass({ size: "sm" })}
+            >
+              {t("checkIn.walkInAction")}
+            </Link>
+          </div>
+        ) : null}
       </section>
     </main>
   );

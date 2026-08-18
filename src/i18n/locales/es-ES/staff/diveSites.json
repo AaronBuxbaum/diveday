@@ -198,8 +198,9 @@
     "copiedNotice": "Copia independiente lista para adaptar.",
     "savedNotice": "Sitio de buceo guardado.",
     "errorInvalid": "Eso no se guardó. Revisa el nombre y los enlaces e inténtalo de nuevo.",
-    "certificationDescription": "Lo que exige el propio sitio. Toda salida que lo visite exige al menos esto — cuando la salida exige más, gana la regla más estricta.",
+    "certificationDescription": "Requisitos que impone el sitio. Cada salida que lo visite exigirá al menos esto; si la salida exige más, prevalece la regla más estricta.",
     "requiredSpecialties": "Especialidades requeridas",
+    "scheduleDeparture": "Programar salida",
     "saveBriefing": "Guardar sitio de buceo",
     "templateUpdates": {
       "title": "Hay una plantilla de DiveDay más nueva",

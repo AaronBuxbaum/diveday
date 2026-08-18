@@ -62,7 +62,7 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" });
   await expect(
-    openTankCard.getByText(/^Dive site · Benwood Wreck · 1 more dive to be confirmed$/),
+    openTankCard.getByText(/^Dive site · Benwood Wreck · \+ 1 more dive site$/),
   ).toHaveCount(1);
 
   // A multi-dive trip's public page presents every dive briefing.

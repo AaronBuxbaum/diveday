@@ -13,7 +13,6 @@ import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill } from "@/i18n/fill";
-import { newDiverHref } from "@/lib/person-fields";
 import type { CertificationLevel } from "@/lib/readiness";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
@@ -52,7 +51,6 @@ export interface DiverListCopy {
   noDiversOnFile: string;
   tryDifferentSearch: string;
   addOneHere: string;
-  emptyAddAction: string;
   emptyShowAll: string;
   emptyImportBody: string;
   emptyImportAction: string;
@@ -156,6 +154,7 @@ export function DiverList({
   filter,
   importHref,
   restoreAction,
+  quickAddAction,
   copy,
   pager,
 }: {
@@ -172,6 +171,8 @@ export function DiverList({
    * 20260724-role-gated-surfaces-hide-not-explain).
    */
   restoreAction: ((formData: FormData) => void) | null;
+  /** Quick-creates a diver by query string (name/email/phone) and redirects to edit mode. */
+  quickAddAction?: ((formData: FormData) => void) | null;
   copy: DiverListCopy;
   /**
    * The roster's `<Pager>`, rendered by the Server Component above this one.
@@ -330,13 +331,20 @@ export function DiverList({
               className={`${controlClass} min-w-0`}
             />
           </div>
-          <Link
-            href={newDiverHref(shopSlug, { query: typed })}
-            id="add-diver"
-            className={buttonClass({ variant: "primary", className: "whitespace-nowrap" })}
-          >
-            {copy.addDiverLabel}
-          </Link>
+          {typed.trim() && quickAddAction ? (
+            <form action={quickAddAction}>
+              <input type="hidden" name="query" value={typed.trim()} />
+              <SubmitButton
+                pendingLabel={copy.addDiverLabel}
+                className={buttonClass({
+                  variant: "primary",
+                  className: "whitespace-nowrap",
+                })}
+              >
+                {fill(copy.addDiverWithName, { name: typed.trim() })}
+              </SubmitButton>
+            </form>
+          ) : null}
         </div>
       </div>
       {divers.length === 0 ? (
@@ -349,14 +357,6 @@ export function DiverList({
               so they get different doors: widen the view, or start the roster. */}
           {narrowed ? (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              {typed.trim() ? (
-                <Link
-                  href={newDiverHref(shopSlug, { query: typed.trim() })}
-                  className={buttonClass({ size: "sm" })}
-                >
-                  {fill(copy.addDiverWithName, { name: typed.trim() })}
-                </Link>
-              ) : null}
               <Link
                 href={hrefFor("", "all")}
                 scroll={false}
@@ -369,28 +369,21 @@ export function DiverList({
                 {copy.emptyShowAll}
               </Link>
             </div>
-          ) : (
+          ) : importHref ? (
             <>
-              <Link href={newDiverHref(shopSlug)} className={buttonClass({ className: "mt-4" })}>
-                {copy.emptyAddAction}
+              <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+              <Link
+                href={importHref}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "mt-2",
+                })}
+              >
+                {copy.emptyImportAction}
               </Link>
-              {importHref ? (
-                <>
-                  <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
-                  <Link
-                    href={importHref}
-                    className={buttonClass({
-                      variant: "secondary",
-                      size: "sm",
-                      className: "mt-2",
-                    })}
-                  >
-                    {copy.emptyImportAction}
-                  </Link>
-                </>
-              ) : null}
             </>
-          )}
+          ) : null}
         </EmptyState>
       ) : (
         <>

@@ -63,7 +63,6 @@ const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
 export function CourseHero({
   course,
   totalCents,
-  inquiryHref,
   currency,
   locale,
   t,
@@ -71,11 +70,6 @@ export function CourseHero({
 }: {
   course: Course;
   totalCents: number | null;
-  /** Anchor to "Get in touch", shown as the hero's fallback CTA when there's
-   * no open session to book yet — otherwise a diver landing here has no
-   * visible next step until they scroll the whole page (design/principles.md
-   * #2). */
-  inquiryHref?: string | null;
   /** The shop's currency — a Cozumel shop's course price is pesos, not dollars. */
   currency: ShopCurrency;
   /** The shop's locale — money and dates on a public page follow it, not the server's. */
@@ -129,13 +123,6 @@ export function CourseHero({
           title={course.title}
           description={course.summary ?? undefined}
         />
-        {course.isPrivate ? (
-          <div className="mt-3">
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-              {t("course.privateCourse")}
-            </span>
-          </div>
-        ) : null}
         <div className="mt-4 flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
@@ -143,11 +130,6 @@ export function CourseHero({
               <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
           )}
-          {inquiryHref ? (
-            <Link href={inquiryHref} className={buttonClass({ variant: "secondary", size: "cta" })}>
-              {t("course.askAboutDates")}
-            </Link>
-          ) : null}
         </div>
       </div>
       {facts.length > 0 ? (
@@ -425,7 +407,6 @@ function sessionFacts(
  * to the trip page that already owns capacity, readiness, and payment.
  */
 export function CourseSessions({
-  isPrivate = false,
   sessions,
   shopSlug,
   timezone,
@@ -433,7 +414,6 @@ export function CourseSessions({
   inquiryHref,
   t,
 }: {
-  isPrivate?: boolean;
   sessions: Array<{
     id: string;
     title: string;
@@ -467,21 +447,7 @@ export function CourseSessions({
     <section id="dates" className="mt-14 scroll-mt-8">
       <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
         <h2 className="text-2xl font-semibold tracking-tight">{t("course.datesHeading")}</h2>
-        {isPrivate ? (
-          <p className="mt-4 max-w-2xl text-muted">
-            {t("course.privateCourseDatesLead")}{" "}
-            {inquiryHref ? (
-              <>
-                <Link href={inquiryHref} className="font-medium text-primary hover:underline">
-                  {t("course.requestDateLink")}
-                </Link>
-                .
-              </>
-            ) : (
-              ` ${t("course.orGetInTouch")}`
-            )}
-          </p>
-        ) : !next ? (
+        {!next ? (
           <p className="mt-4 max-w-2xl text-muted">
             {t("course.noDatesLead")}{" "}
             <Link

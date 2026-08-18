@@ -72,7 +72,11 @@ export default async function WalkInPage({
    * 500'd the page — the same hazard `./[tripId]`'s `gate` param and
    * `/sign-in`'s `callbackUrl` are already typed for (security review finding).
    */
-  searchParams: Promise<{ tripId?: string | string[]; notice?: string | string[] }>;
+  searchParams: Promise<{
+    tripId?: string | string[];
+    notice?: string | string[];
+    diverq?: string | string[];
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
@@ -83,6 +87,7 @@ export default async function WalkInPage({
     typeof value === "string" ? value : undefined;
   const tripId = one(query.tripId);
   const notice = one(query.notice);
+  const diverq = one(query.diverq);
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop || shop.id !== session.user.shopId) notFound();
@@ -97,7 +102,8 @@ export default async function WalkInPage({
   // given a banner to close.
   if (tripId) {
     const step = shopPath(shop.slug, "check-in", "walk-in", tripId);
-    redirect(notice === undefined ? step : noticeUrl(step, notice));
+    const target = diverq ? `${step}?diverq=${encodeURIComponent(diverq)}` : step;
+    redirect(notice === undefined ? target : noticeUrl(target, notice));
   }
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -144,7 +150,7 @@ export default async function WalkInPage({
               className="mt-3"
               options={trips.map((trip) => ({
                 id: trip.tripId,
-                href: `${self}/${trip.tripId}`,
+                href: `${self}/${trip.tripId}${diverq ? `?diverq=${encodeURIComponent(diverq)}` : ""}`,
                 // JSX rather than template literals, for the same reason the
                 // Add-booking picker keeps its own: text is shaped per DOM text
                 // node, so joining these into single strings re-kerns across the

@@ -80,6 +80,7 @@ async function createCourse(db: AppDb, input: NewCourse) {
       slug: input.slug ?? courseSlug(title),
       priceCents: input.priceCents ?? null,
       eLearningPriceCents: input.eLearningPriceCents ?? null,
+      privatePriceCents: input.privatePriceCents ?? null,
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
       summary: input.summary ?? null,
       overview: input.overview ?? null,
@@ -95,7 +96,6 @@ async function createCourse(db: AppDb, input: NewCourse) {
       scheduleDays: input.scheduleDays ?? [],
       faqs: input.faqs ?? [],
       isIntroCourse: input.isIntroCourse ?? false,
-      isPrivate: input.isPrivate ?? false,
     })
     .returning();
   return course ?? null;
@@ -1530,43 +1530,27 @@ describe("course template updates", () => {
     });
   });
 
-  it("stores a private course and retrieves its private status", async () => {
+  it("stores a private-session price without hiding the course definition", async () => {
     const { db, shop } = await seededShopContext();
     const course = await createCourse(db, {
       shopId: shop.id,
       title: "Private Navigation",
       slug: "private-navigation",
-      isPrivate: true,
+      privatePriceCents: 65000,
     });
     if (!course) throw new Error("course not created");
-    expect(course.isPrivate).toBe(true);
+    expect(course.privatePriceCents).toBe(65000);
 
     const fetched = await getCourseBySlug(db, shop.id, "private-navigation");
-    expect(fetched?.isPrivate).toBe(true);
+    expect(fetched?.privatePriceCents).toBe(65000);
 
     const activeList = await listActiveCourses(db, shop.id);
     const found = activeList.find((c) => c.slug === "private-navigation");
-    expect(found?.isPrivate).toBe(true);
+    expect(found?.privatePriceCents).toBe(65000);
 
-    // Change isPrivate from true to false
-    const updatedToFalse = await updateCourse(db, shop.id, course.id, {
-      isPrivate: false,
+    const updated = await updateCourse(db, shop.id, course.id, {
+      privatePriceCents: 72000,
     });
-    expect(updatedToFalse?.isPrivate).toBe(false);
-
-    // Omit isPrivate (which is undefined) and verify it preserves the stored false value
-    const updatedOmittedFalse = await updateCourse(db, shop.id, course.id, {
-      priceCents: 15000,
-    });
-    expect(updatedOmittedFalse?.isPrivate).toBe(false);
-
-    // Change isPrivate back to true
-    await updateCourse(db, shop.id, course.id, { isPrivate: true });
-
-    // Omit isPrivate (which is undefined) and verify it preserves the stored true value
-    const updatedOmittedTrue = await updateCourse(db, shop.id, course.id, {
-      priceCents: 20000,
-    });
-    expect(updatedOmittedTrue?.isPrivate).toBe(true);
+    expect(updated?.privatePriceCents).toBe(72000);
   });
 });

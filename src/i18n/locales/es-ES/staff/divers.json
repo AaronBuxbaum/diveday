@@ -140,7 +140,6 @@
     "noDiversOnFile": "Aún no hay buceadores registrados.",
     "tryDifferentSearch": "Prueba una búsqueda o vista distinta, o añade un nuevo buceador arriba.",
     "addOneHere": "Añade uno aquí o acepta una reserva para crear su registro de persona.",
-    "emptyAddAction": "Añadir tu primer buceador",
     "emptyShowAll": "Ver todos los buceadores",
     "emptyImportBody": "¿Vienes de una hoja de cálculo o de otro sistema? Trae toda la lista de una vez.",
     "emptyImportAction": "Importar tu lista",
@@ -294,14 +293,12 @@
     "partial": "Incompleto",
     "fitMissingSizes": "Sin talla registrada para {items}",
     "fitNeedsStaffFit": "Marcado para ajuste en persona al registrarse",
-    "reusableForFuture": "Reutilizable para futuras reservas",
     "unpaidBookings": "{count, plural, one {# reserva sigue debiendo dinero} other {# reservas siguen debiendo dinero}}",
     "importedCount": "{count, plural, one {# reserva importada de un sistema anterior} other {# reservas importadas de un sistema anterior}}",
     "waiver": "Exención",
     "waiverGoodUntil": "Válido hasta el {date}",
     "waiverLastSigned": "Firmado por última vez el {date}",
     "waiverHeldSince": "En espera desde el {date}",
-    "waiverSignsOnce": "Se firma una vez y vale para todo el centro",
     "bookings": "Reservas"
   },
   "notices": {

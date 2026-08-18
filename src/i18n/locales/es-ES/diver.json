@@ -68,7 +68,7 @@
     "courseSession": "Sesión de curso",
     "diveSite": "Sitio de buceo",
     "diveSites": "Sitios de buceo",
-    "moreDivesToConfirm": "{count, plural, one {# inmersión más por confirmar} other {# inmersiones más por confirmar}}",
+    "moreDivesToConfirm": "{count, plural, one {+ # sitio de buceo más} other {+ # sitios de buceo más}}",
     "twoTank": "Salida de dos inmersiones",
     "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
     "diveCount": "{count, plural, other {# inmersiones}}",
@@ -358,7 +358,6 @@
       "feet": "{value} pies"
     },
     "seeDates": "Ver fechas",
-    "askAboutDates": "Consultar fechas",
     "whoCanEnroll": "Quién puede matricularse",
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
@@ -366,7 +365,6 @@
     "photoAltFallback": "{course} — foto {n}",
     "datesHeading": "Próximas fechas",
     "noDatesLead": "Ahora mismo no hay fechas programadas — este curso se organiza bajo petición.",
-    "privateCourseDatesLead": "Este es un curso privado y se realiza bajo petición para tu grupo.",
     "seeFullSchedule": "Ver el calendario completo",
     "orAskUs": "pídenos que programemos una",
     "requestDifferentDateLead": "¿Buscas otra fecha?",
@@ -400,9 +398,7 @@
     "nextDate": "Próxima fecha",
     "nextOpenDate": "Próxima fecha disponible",
     "moreDates": "Más fechas",
-    "agesAndUp": "A partir de {age} años",
-    "privateCourse": "Curso privado",
-    "privateCourseBadge": "Privado"
+    "agesAndUp": "A partir de {age} años"
   },
   "courses": {
     "index": {
@@ -1636,7 +1632,6 @@
     "preferredDate": "Fecha que prefieres",
     "alternateDate": "O esta fecha",
     "datesHint": "Es una petición, no una reserva — te diremos qué podemos organizar.",
-    "dateFlexible": "Cualquiera de esas fechas, o unos días antes o después, me sirve",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",

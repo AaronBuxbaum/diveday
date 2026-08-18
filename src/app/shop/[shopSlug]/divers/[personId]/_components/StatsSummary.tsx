@@ -113,7 +113,6 @@ function WaiverStat({ diver, shop, locale }: { diver: DiverProfile; shop: Shop; 
       // the glyph, so it needs no second "needs attention" pill beside it. What
       // the tinted frame adds is that the *card* reads as work from across the
       // row, the same as its three neighbours.
-      attention={tone !== "success"}
       value={<Badge tone={tone}>{shopWaiverStatusText(t, waiver)}</Badge>}
       detail={
         waiver.state === "current"
@@ -122,7 +121,7 @@ function WaiverStat({ diver, shop, locale }: { diver: DiverProfile; shop: Shop; 
             ? t("divers.stats.waiverLastSigned", { date: date(waiver.signedAt) })
             : waiver.state === "medical_review"
               ? t("divers.stats.waiverHeldSince", { date: date(waiver.at) })
-              : t("divers.stats.waiverSignsOnce")
+              : null
       }
     />
   );
@@ -188,7 +187,7 @@ export function StatsSummary({
               })
             : profile?.needsStaffFitAt
               ? t("divers.stats.fitNeedsStaffFit")
-              : t("divers.stats.reusableForFuture")
+              : null
         }
       />
       {/* Bookings, deliberately — not dives. The imported half of this number is

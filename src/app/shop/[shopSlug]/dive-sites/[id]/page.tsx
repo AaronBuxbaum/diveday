@@ -286,6 +286,14 @@ export default async function EditDiveSitePage({
           title={site.name}
           description={t("diveSites.edit.description")}
           align="start"
+          actions={
+            <Link
+              href={`/shop/${shopSlug}/schedule/board?add=1&site=${site.id}`}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("diveSites.edit.scheduleDeparture")}
+            </Link>
+          }
         />
       </div>
       {/* Only "copied" is genuinely about the page: it lands the staffer on a

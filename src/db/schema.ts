@@ -696,6 +696,8 @@ export const courses = pgTable(
      */
     priceCents: integer("price_cents"),
     eLearningPriceCents: integer("e_learning_price_cents"),
+    /** Optional private course price when a session is run as a private group. */
+    privatePriceCents: integer("private_price_cents"),
     /**
      * Set by the certifying agency, not the shop: null means an uncertified
      * participant may enroll (for example, DSD/OW). Staff read it; nothing in
@@ -719,7 +721,6 @@ export const courses = pgTable(
      * about itself while editing marketing copy.
      */
     isIntroCourse: boolean("is_intro_course").notNull().default(false),
-    isPrivate: boolean("is_private").notNull().default(false),
     /**
      * Whether a diver may request an enriched-air fill on a session of this
      * course — the shop's answer to "can we run this one on nitrox?", set per

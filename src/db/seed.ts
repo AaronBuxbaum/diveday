@@ -96,6 +96,7 @@ import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
 import { seedPromos } from "./seed-promos";
+import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedTripLegs } from "./seed-trip-legs";
@@ -612,6 +613,7 @@ export async function seedDemoSchedule(
   // shops (see callers); on for the demo shop and the e2e fleet.
   if (opts.history !== false) {
     await seedHistory(db, shopId, instructor.id);
+    await seedRecentRecaps(db, shopId);
     // The billing states that back-fill never produces: it invoices a paid trip
     // fee or a paid deposit and nothing else, so "Refunded", "Void",
     // "Uncollectible" and every retail line kind were unreachable from a shop
@@ -1042,7 +1044,7 @@ export async function resetDemoSchedule(
   // test minted is not seeded state and correctly does not come back.
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
-  await seedDemoSchedule(db, shopId, { history: opts.history === true });
+  await seedDemoSchedule(db, shopId, { history: opts.history !== false });
 }
 
 /**

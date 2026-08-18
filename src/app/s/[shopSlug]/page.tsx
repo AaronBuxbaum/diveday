@@ -181,13 +181,14 @@ export default async function SchedulePage({
   // reviews are a slower, independent read the shell and trip list never
   // needed to wait behind (docs task 119 follow-up: streaming the schedule).
   const [range, { trips: upcoming, nextCursor }] = await Promise.all([
-    upcomingScheduleRange(db, shop.id, now),
+    upcomingScheduleRange(db, shop.id, now, { publicOnly: true }),
     pagedUpcomingTripsWithCounts(db, shop.id, {
       cursor: after,
       now,
       ...listMonthBounds,
       hasSpace: hasSpaceFilter ? true : undefined,
       tripType: tripTypeFilter,
+      publicOnly: true,
     }),
   ]);
   const hasUpcoming = range.first !== null;

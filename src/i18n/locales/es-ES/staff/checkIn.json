@@ -27,6 +27,11 @@
   "undoing": "Deshaciendo…",
   "departureProgress": "{checkedIn} de {total} registrados",
   "walkInAction": "Añadir un walk-in",
+  "otherDiversHeading": "Otros buceadores en el sistema",
+  "otherDiversDescription": "Encontrados en los registros de la tienda — no reservados en las salidas de hoy",
+  "addToDepartureFor": "Añadir a {departure}",
+  "addingToDeparture": "Añadiendo…",
+  "addWalkInAction": "Añadir a “{query}” sin reserva",
   "search": {
     "label": "Escanear o buscar buceador",
     "placeholder": "Nombre, correo o ID de reserva",

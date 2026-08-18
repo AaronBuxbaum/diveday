@@ -255,6 +255,11 @@ export type BuilderInitialCourse = {
   requirement: string;
 };
 
+export type BuilderInitialSite = {
+  id: string;
+  name: string;
+};
+
 /**
  * Lead context handed from Requests to the one trip-creation form. Checked
  * rows become invitations only; they do not become bookings or consume seats.
@@ -318,6 +323,7 @@ function AddPanel({
   copy,
   more,
   initialCourse,
+  initialSite,
   requestPlan,
   startExpanded,
   onAdd,
@@ -330,6 +336,7 @@ function AddPanel({
   copy: BuilderCopy;
   more: BuilderMoreOptions;
   initialCourse: BuilderInitialCourse | null;
+  initialSite?: BuilderInitialSite | null;
   requestPlan?: BuilderRequestPlan | null;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
@@ -356,7 +363,7 @@ function AddPanel({
    * open More options, and still be scheduling three dives.
    */
   const [plannedDives, setPlannedDives] = useState(2);
-  const [diveSiteId, setDiveSiteId] = useState("");
+  const [diveSiteId, setDiveSiteId] = useState(initialSite?.id ?? "");
   /**
    * The dive plan is mounted from the first expansion onward and only hidden
    * afterwards — never unmounted, because React drops an unmounted subtree's
@@ -365,7 +372,7 @@ function AddPanel({
    * would overwrite the cards with the quick row again.
    */
   const [diveSeed, setDiveSeed] = useState<{ count: number; siteId: string } | null>(
-    startExpanded ? { count: 2, siteId: "" } : null,
+    startExpanded || initialSite ? { count: 2, siteId: initialSite?.id ?? "" } : null,
   );
   const toggleExpanded = () => {
     setExpanded((current) => {
@@ -799,6 +806,9 @@ function AddPanel({
             className={controlClass}
           >
             <option value="">{copy.decideLater}</option>
+            {initialSite && options === null ? (
+              <option value={initialSite.id}>{initialSite.name}</option>
+            ) : null}
             {options === null ? (
               <option value="" disabled>
                 {copy.optionsLoading}
@@ -930,6 +940,7 @@ export function ScheduleBuilder({
   copy,
   more,
   initialCourse,
+  initialSite,
   requestPlan,
   openAdd,
 }: {
@@ -946,6 +957,8 @@ export function ScheduleBuilder({
   more: BuilderMoreOptions;
   /** Set when the board was reached from a course's "schedule a session" control. */
   initialCourse: BuilderInitialCourse | null;
+  /** Set when the board was reached from a dive site's "schedule departure" control. */
+  initialSite?: BuilderInitialSite | null;
   /** Requests selected from the Requests page, or null for an ordinary add. */
   requestPlan?: BuilderRequestPlan | null;
   /**
@@ -978,7 +991,7 @@ export function ScheduleBuilder({
   const cancelTopAdd = () => {
     setOpen(null);
     const params = new URLSearchParams(searchParams);
-    for (const key of ["add", "date", "course", "requests"]) params.delete(key);
+    for (const key of ["add", "date", "course", "requests", "site"]) params.delete(key);
     router.replace(`${pathname}${params.size > 0 ? `?${params}` : ""}`, { scroll: false });
     document.querySelector<HTMLElement>("[data-board-add]")?.focus();
   };
@@ -1112,6 +1125,7 @@ export function ScheduleBuilder({
           copy={copy}
           more={more}
           initialCourse={initialCourse}
+          initialSite={initialSite}
           requestPlan={requestPlan}
           startExpanded={openAdd === "expanded"}
           onAdd={actions.add}

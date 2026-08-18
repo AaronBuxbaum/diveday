@@ -1057,6 +1057,19 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.getByText(/No existing C-card required · add an instructor/)).toBeInTheDocument();
   });
 
+  it("opens already pointed at the dive site a library link named", async () => {
+    const { container } = renderBuilder({
+      openAdd: "quick",
+      initialSite: {
+        id: "site-1",
+        name: "Molasses Reef",
+      },
+    });
+
+    const site = container.querySelector('select[name="diveSiteId"]');
+    expect(site).toHaveValue("site-1");
+  });
+
   it("opens at full depth for a link that meant the whole form", async () => {
     renderBuilder({ openAdd: "expanded" });
     expect(await screen.findByLabelText("How often")).toBeInTheDocument();

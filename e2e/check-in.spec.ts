@@ -79,7 +79,11 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
   await page.goto("/shop/blue-mantis/check-in");
-  await page.getByRole("link", { name: "Add a walk-in" }).click();
+  const queueSearch = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await queueSearch.fill("Zzyzx No Such Diver");
+  await queueSearch.press("Enter");
+  await expect(page.getByRole("heading", { name: "No one matches that scan" })).toBeVisible();
+  await page.getByRole("link", { name: "Add “Zzyzx No Such Diver” as a walk-in" }).click();
   await expect(page.getByRole("heading", { name: "Walk-in", level: 1 })).toBeVisible();
 
   const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
@@ -97,9 +101,9 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(page.getByText(tripTitle, { exact: false }).first()).toBeVisible();
 
   // A search for someone who isn't on file falls through to adding a diver.
-  const search = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
-  await search.fill("Zzyzx No Such Diver");
-  await search.press("Enter");
+  const walkInSearch = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
+  await walkInSearch.fill("Zzyzx No Such Diver");
+  await walkInSearch.press("Enter");
   await expect(page.getByText(/No matches for/)).toBeVisible();
 
   await page.getByRole("link", { name: "Add “Zzyzx No Such Diver” as a diver" }).click();

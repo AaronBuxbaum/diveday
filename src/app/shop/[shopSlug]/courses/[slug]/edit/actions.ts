@@ -65,6 +65,7 @@ const contentSchemaFor = (currency: string) =>
     faqs: z.string().max(COURSE_CONTENT_LIMITS.faqs),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
+    privatePrice: moneyFor(currency),
   });
 
 /** Upload one picked file; an empty file input is "no change", not a failure. */
@@ -203,8 +204,8 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   await updateCourse(db, staff.user.shopId, course.id, {
     priceCents: centsFromAmount(value.price, currency),
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
+    privatePriceCents: centsFromAmount(value.privatePrice, currency),
     nitroxCompatible: formData.get("nitroxCompatible") === "true",
-    isPrivate: formData.get("isPrivate") === "true",
   });
 
   // Once the content row is durably saved, any photo it no longer references

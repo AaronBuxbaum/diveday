@@ -140,7 +140,6 @@
     "noDiversOnFile": "No divers on file yet.",
     "tryDifferentSearch": "Try a different search or view, or add a new diver above.",
     "addOneHere": "Add one here or accept a booking to create their person record.",
-    "emptyAddAction": "Add your first diver",
     "emptyShowAll": "Show all divers",
     "emptyImportBody": "Coming from a spreadsheet or another system? Bring the whole roster over in one go.",
     "emptyImportAction": "Import your roster",
@@ -294,14 +293,12 @@
     "partial": "Partial",
     "fitMissingSizes": "No size on file for {items}",
     "fitNeedsStaffFit": "Flagged for hands-on fitting at check-in",
-    "reusableForFuture": "Reusable for future bookings",
     "unpaidBookings": "{count, plural, one {# booking still owes money} other {# bookings still owe money}}",
     "importedCount": "{count, plural, one {# booking imported from a prior system} other {# bookings imported from a prior system}}",
     "waiver": "Waiver",
     "waiverGoodUntil": "Good until {date}",
     "waiverLastSigned": "Last signed {date}",
     "waiverHeldSince": "Held since {date}",
-    "waiverSignsOnce": "Signed once, good for the whole shop",
     "bookings": "Bookings"
   },
   "notices": {

@@ -27,6 +27,11 @@
   "undoing": "Undoing…",
   "departureProgress": "{checkedIn} of {total} checked in",
   "walkInAction": "Add a walk-in",
+  "otherDiversHeading": "Other divers in system",
+  "otherDiversDescription": "Found in shop records — not booked on today’s departures",
+  "addToDepartureFor": "Add to {departure}",
+  "addingToDeparture": "Adding…",
+  "addWalkInAction": "Add “{query}” as a walk-in",
   "search": {
     "label": "Scan or search diver",
     "placeholder": "Name, email, or booking ID",

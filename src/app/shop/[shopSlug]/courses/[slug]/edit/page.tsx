@@ -300,6 +300,15 @@ export default async function EditCoursePage({
                 currency={currency}
                 locale={locale}
               />
+              <PriceField
+                id="privatePrice"
+                name="privatePrice"
+                label={t("courses.edit.privatePriceLabel")}
+                hint={t("courses.edit.privatePriceHint")}
+                cents={course.privatePriceCents}
+                currency={currency}
+                locale={locale}
+              />
             </FieldGrid>
           </fieldset>
 
@@ -465,18 +474,6 @@ export default async function EditCoursePage({
               {t("courses.edit.nitroxCompatibleLabel")}
             </label>
             <p className="mt-1 text-sm text-muted">{t("courses.edit.nitroxCompatibleHint")}</p>
-
-            <label className="mt-5 flex min-h-11 items-center gap-2 text-sm border-t border-border/40 pt-4">
-              <input
-                type="checkbox"
-                name="isPrivate"
-                value="true"
-                defaultChecked={course.isPrivate}
-                className="size-4"
-              />
-              {t("courses.edit.isPrivateLabel")}
-            </label>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.isPrivateHint")}</p>
           </fieldset>
 
           <fieldset className="rounded-2xl border border-border p-4 sm:p-5">

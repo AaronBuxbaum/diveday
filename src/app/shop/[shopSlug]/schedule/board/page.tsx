@@ -10,6 +10,7 @@ import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
+import { listDiveSites } from "@/db/dive-sites";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { openAfterDiveRollCalls } from "@/db/today";
@@ -49,6 +50,7 @@ import {
   type BuilderCopy,
   type BuilderDay,
   type BuilderInitialCourse,
+  type BuilderInitialSite,
   type BuilderMoreOptions,
   type BuilderPriceInput,
   type BuilderRequestPlan,
@@ -134,11 +136,14 @@ export default async function ScheduleBoardPage({
     course?: string;
     /** Comma-separated request ids carried from the Requests planning link. */
     requests?: string;
+    /** Opens the add panel pointed at a dive site (the library's own control). */
+    site?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder, created, series, add, date, course, requests } = await searchParams;
+  const { after, back, builder, created, series, add, date, course, requests, site } =
+    await searchParams;
   const requestIds = [
     ...new Set(
       (requests ?? "")
@@ -205,6 +210,11 @@ export default async function ScheduleBoardPage({
   // shop, so a `?course=` from another tenant simply resolves to nothing.
   const requestedCourse = course
     ? ((await listActiveCourses(db, shop.id)).find((row) => row.id === course) ?? null)
+    : null;
+
+  // A dive site the library sent us here to schedule.
+  const requestedSite = site
+    ? ((await listDiveSites(db, shop.id)).find((row) => row.id === site) ?? null)
     : null;
 
   // Request details are contact information. Only the same live report gate
@@ -405,7 +415,8 @@ export default async function ScheduleBoardPage({
 
   // `?course=` always implies an open panel: it would otherwise land on a board
   // that silently swallowed the course the link named.
-  const addPanelState = add === "full" ? "expanded" : add || requestedCourse ? "quick" : "closed";
+  const addPanelState =
+    add === "full" ? "expanded" : add || requestedCourse || requestedSite ? "quick" : "closed";
 
   const initialCourse: BuilderInitialCourse | null = requestedCourse
     ? {
@@ -416,6 +427,13 @@ export default async function ScheduleBoardPage({
               level: st(CERTIFICATION_LEVEL_KEYS[requestedCourse.minimumCertificationLevel]),
             })
           : st("schedule.builder.courseNoCardRequired"),
+      }
+    : null;
+
+  const initialSite: BuilderInitialSite | null = requestedSite
+    ? {
+        id: requestedSite.id,
+        name: requestedSite.name,
       }
     : null;
 
@@ -637,6 +655,7 @@ export default async function ScheduleBoardPage({
         copy={builderCopy}
         more={builderMore}
         initialCourse={initialCourse}
+        initialSite={initialSite}
         requestPlan={requestPlan}
         openAdd={addPanelState}
         actions={{

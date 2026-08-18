@@ -68,7 +68,7 @@
     "courseSession": "Course session",
     "diveSite": "Dive site",
     "diveSites": "Dive sites",
-    "moreDivesToConfirm": "{count, plural, one {# more dive to be confirmed} other {# more dives to be confirmed}}",
+    "moreDivesToConfirm": "{count, plural, one {+ # more dive site} other {+ # more dive sites}}",
     "twoTank": "Two-tank trip",
     "twoTankHint": "A boat trip with two separate dives, back to back, with a rest break (a surface interval) in between — not two tanks worn at once.",
     "diveCount": "{count, plural, other {# dives}}",
@@ -358,7 +358,6 @@
       "feet": "{value} feet"
     },
     "seeDates": "See dates",
-    "askAboutDates": "Ask about dates",
     "whoCanEnroll": "Who can enroll",
     "fromTheShop": "From the shop",
     "feeCovers": "What the fee covers",
@@ -366,7 +365,6 @@
     "photoAltFallback": "{course} — photo {n}",
     "datesHeading": "Upcoming dates",
     "noDatesLead": "No dates on the books right now — this course runs on request.",
-    "privateCourseDatesLead": "This is a private course and runs on request for your group.",
     "seeFullSchedule": "See the full schedule",
     "orAskUs": "ask us to set one",
     "requestDifferentDateLead": "Looking for a different date?",
@@ -400,9 +398,7 @@
     "nextDate": "Next date",
     "nextOpenDate": "Next open date",
     "moreDates": "More dates",
-    "agesAndUp": "Ages {age} and up",
-    "privateCourse": "Private course",
-    "privateCourseBadge": "Private"
+    "agesAndUp": "Ages {age} and up"
   },
   "courses": {
     "index": {
@@ -1636,7 +1632,6 @@
     "preferredDate": "Date you’d like",
     "alternateDate": "Or this date",
     "datesHint": "A request, not a booking — we’ll tell you what we can run.",
-    "dateFlexible": "Either of those, or a few days either side, works for me",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",

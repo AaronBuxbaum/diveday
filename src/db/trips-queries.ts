@@ -163,11 +163,13 @@ function upcomingTripScope(
     from: Date;
     monthEnd?: Date;
     tripType?: "fun_dive" | "course";
+    publicOnly?: boolean;
   },
 ) {
   return and(
     eq(trips.shopId, shopId),
     eq(trips.status, "scheduled"),
+    bounds.publicOnly ? eq(trips.isPrivate, false) : undefined,
     gte(trips.startsAt, bounds.from),
     bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,
     bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
@@ -212,6 +214,8 @@ export async function pagedUpcomingTripsWithCounts(
     hasSpace?: boolean;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
+    /** Hide private charters/sessions (e.g. for public storefront schedule). */
+    publicOnly?: boolean;
   } = {},
 ): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
   const now = options.now ?? nowDate();
@@ -239,6 +243,7 @@ export async function pagedUpcomingTripsWithCounts(
           from: lowerBound,
           monthEnd: options.monthEnd,
           tripType: options.tripType,
+          publicOnly: options.publicOnly,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(
@@ -513,6 +518,7 @@ export async function upcomingScheduleRange(
   db: AppDb,
   shopId: string,
   now: Date = nowDate(),
+  options: { publicOnly?: boolean } = {},
 ): Promise<{ first: Date | null; last: Date | null }> {
   const [range] = await db
     .select({
@@ -524,6 +530,7 @@ export async function upcomingScheduleRange(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
+        options.publicOnly ? eq(trips.isPrivate, false) : undefined,
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     );
@@ -654,6 +661,7 @@ export async function listUpcomingSessionsForCourse(
         eq(trips.shopId, shopId),
         eq(trips.courseId, courseId),
         eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     )
