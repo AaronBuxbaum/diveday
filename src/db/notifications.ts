@@ -27,6 +27,7 @@ import {
   people,
   shops,
   trips,
+  waiverRecords,
 } from "./schema";
 
 const RETRY_QUEUE_LIMIT = 100;
@@ -317,6 +318,15 @@ export async function drainNotificationRetries(
         });
       }
     }
+    try {
+      await recordIndependentWaiverDelivery(db, notification, delivery);
+    } catch (error) {
+      console.error("Independent waiver delivery status could not be recorded", {
+        waiverRecordId:
+          notification.kind === "waiver_request" ? notification.waiverRecordId : undefined,
+        error: error instanceof Error ? error.message : "unknown_error",
+      });
+    }
 
     if (delivery.status === "sent") {
       await db
@@ -373,7 +383,7 @@ export async function drainNotificationRetries(
  * not a `notification_deliveries` row.
  */
 type TrackedNotification = Extract<Notification, { bookingId: string }>;
-type TrackedNotificationKind = TrackedNotification["kind"];
+type TrackedNotificationKind = TrackedNotification["kind"] | "waiver_request";
 
 type RecordNotificationDeliveryInput = {
   shopId: string;
@@ -382,6 +392,29 @@ type RecordNotificationDeliveryInput = {
   delivery: NotificationDelivery;
   isRetry?: boolean;
 };
+
+async function recordIndependentWaiverDelivery(
+  db: AppDb,
+  notification: Notification,
+  delivery: NotificationDelivery,
+) {
+  if (notification.kind !== "waiver_request" || notification.bookingId) return;
+  await db
+    .update(waiverRecords)
+    .set({
+      deliveryStatus:
+        delivery.status === "sent"
+          ? "sent"
+          : delivery.status === "not_configured"
+            ? "not_configured"
+            : "failed",
+      deliveryProviderMessageId: delivery.status === "sent" ? delivery.providerMessageId : null,
+      deliveryProviderStatus: null,
+      deliveryProviderStatusAt: null,
+      deliveryError: delivery.status === "failed" ? (delivery.detail ?? null) : null,
+    })
+    .where(eq(waiverRecords.id, notification.waiverRecordId));
+}
 
 /**
  * Keep the last delivery result for each booking and purpose, and append the
@@ -454,7 +487,7 @@ export async function recordNotificationDelivery(
  */
 export async function sendAndRecordNotification(
   db: AppDb,
-  input: TrackedNotification,
+  input: Notification,
   options: { isRetry?: boolean; provider?: NotificationProvider } = {},
 ) {
   let delivery: NotificationDelivery;
@@ -464,19 +497,22 @@ export async function sendAndRecordNotification(
     delivery = { status: "failed" };
   }
 
-  try {
-    await recordNotificationDelivery(db, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-      kind: input.kind,
-      delivery,
-      isRetry: options.isRetry,
-    });
-  } catch {
-    console.error("Notification delivery status could not be recorded", {
-      bookingId: input.bookingId,
-      kind: input.kind,
-    });
+  if ("bookingId" in input && input.bookingId) {
+    const tracked = input as TrackedNotification;
+    try {
+      await recordNotificationDelivery(db, {
+        shopId: tracked.shopId,
+        bookingId: tracked.bookingId,
+        kind: tracked.kind,
+        delivery,
+        isRetry: options.isRetry,
+      });
+    } catch {
+      console.error("Notification delivery status could not be recorded", {
+        bookingId: input.bookingId,
+        kind: input.kind,
+      });
+    }
   }
   return delivery;
 }
@@ -601,6 +637,25 @@ export async function applyProviderEmailEvent(
     )
     .returning({ id: notificationDeliveries.id });
   if (updated) return "applied";
+
+  const [updatedIndependent] = await db
+    .update(waiverRecords)
+    .set({
+      deliveryProviderStatus: input.status,
+      deliveryProviderStatusAt: input.occurredAt,
+      deliveryError: input.detail,
+    })
+    .where(
+      and(
+        eq(waiverRecords.deliveryProviderMessageId, input.providerMessageId),
+        or(
+          isNull(waiverRecords.deliveryProviderStatusAt),
+          lte(waiverRecords.deliveryProviderStatusAt, input.occurredAt),
+        ),
+      ),
+    )
+    .returning({ id: waiverRecords.id });
+  if (updatedIndependent) return "applied";
 
   // The condition filtered zero rows either because no delivery row carries
   // this provider message id, or because one exists but already holds a

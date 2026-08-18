@@ -2,6 +2,7 @@
   "subNav": {
     "ariaLabel": "Ficha del buceador",
     "cards": "Titulaciones",
+    "waiver": "Exención",
     "notes": "Notas",
     "fit": "Tallas",
     "payments": "Pagos",
@@ -149,6 +150,8 @@
     "toConfirmText": "{count} por confirmar",
     "tableHeaderPerson": "Persona",
     "tableHeaderLevel": "Nivel",
+    "tableHeaderAttention": "Requiere atención",
+    "noAttention": "Ninguna",
     "noCertificationLevel": "Sin certificación vigente",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
@@ -299,9 +302,11 @@
     "importedCount": "{count, plural, one {# reserva importada de un sistema anterior} other {# reservas importadas de un sistema anterior}}",
     "waiver": "Exención",
     "waiverSend": "Enviar / reenviar exención y obtener enlace",
+    "waiverResend": "Reenviar exención",
     "waiverNotSent": "No enviada",
     "waiverFailed": "No se pudo entregar",
     "waiverNotSigned": "Sin firmar",
+    "waiverSent": "Exención enviada; pendiente de firma",
     "waiverSigned": "Firmada",
     "waiverMedicalReview": "Revisión médica",
     "waiverGoodUntil": "Válido hasta el {date}",

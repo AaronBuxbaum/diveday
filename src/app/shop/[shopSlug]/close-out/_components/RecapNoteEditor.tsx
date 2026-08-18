@@ -92,6 +92,11 @@ export function RecapNoteEditor({
     (recapLocked && recapSentAt && recapSentAtLabel
       ? t("closeout.recap.sent", { time: recapSentAtLabel })
       : t("trips.recapNote.description"));
+  const recapSummary =
+    recapStatusSummary ??
+    (recapLocked && recapSentAt && recapSentAtLabel
+      ? t("closeout.recap.sent", { time: recapSentAtLabel })
+      : t("trips.recapNote.emptySummary"));
   return (
     <details open={saved} className="group/recap mt-3 border-t border-border pt-3">
       {/* Stacked below `sm`, one line from there. Inline at phone width the
@@ -110,9 +115,7 @@ export function RecapNoteEditor({
             form. `min-w-0 truncate` so a long note ellipses instead of pushing
             the row wider than the card; `pl-5` on the stacked layout keeps it
             under the label rather than under the caret. */}
-        <span className="min-w-0 truncate pl-5 text-muted sm:pl-0">
-          {shoutout ?? t("trips.recapNote.emptySummary")}
-        </span>
+        <span className="min-w-0 truncate pl-5 text-muted sm:pl-0">{recapSummary}</span>
       </summary>
       <p className="mt-2 max-w-2xl text-sm text-muted">{statusSummary}</p>
 

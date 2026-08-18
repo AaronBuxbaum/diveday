@@ -633,9 +633,9 @@
     "medicalReview": "Medical review"
   },
   "certificationSummary": {
-    "selfDeclared": "{value} — diver's word, no certification record",
+    "selfDeclared": "{value} — unconfirmed",
     "levelNotSaid": "Level not said",
-    "notCertified": "Not certified yet — diver's word",
+    "notCertified": "Not certified yet — unconfirmed",
     "nitrox": "Nitrox",
     "belowRequirement": "{value} · below this departure's minimum"
   }

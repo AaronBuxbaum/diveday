@@ -236,7 +236,13 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
  * it controls are always siblings, never the same component) picks up the
  * change without a reload.
  */
-export function WaterLockerToggle({ copy }: { copy: WaterLockerToggleCopy }) {
+export function WaterLockerToggle({
+  copy,
+  className = "",
+}: {
+  copy: WaterLockerToggleCopy;
+  className?: string;
+}) {
   const [disabled, setDisabled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -264,12 +270,13 @@ export function WaterLockerToggle({ copy }: { copy: WaterLockerToggleCopy }) {
   if (!mounted) return null;
 
   return (
-    <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground print:hidden">
-      <input
-        type="checkbox"
-        checked={disabled}
-        onChange={handleChange}
-        className="size-4 accent-primary"
+    <label
+      className={`group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface-sunken p-3 text-sm font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground print:hidden ${className}`.trim()}
+    >
+      <input type="checkbox" checked={disabled} onChange={handleChange} className="peer sr-only" />
+      <span
+        aria-hidden="true"
+        className="relative h-6 w-11 shrink-0 rounded-full bg-border transition-colors after:absolute after:top-1 after:left-1 after:size-4 after:rounded-full after:bg-surface after:shadow-sm after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
       />
       {copy.disableToggleLabel}
     </label>

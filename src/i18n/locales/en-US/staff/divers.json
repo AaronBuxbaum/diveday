@@ -2,6 +2,7 @@
   "subNav": {
     "ariaLabel": "Diver record",
     "cards": "Certifications",
+    "waiver": "Waiver",
     "notes": "Notes",
     "fit": "Fit",
     "payments": "Payments",
@@ -149,6 +150,8 @@
     "toConfirmText": "{count} to confirm",
     "tableHeaderPerson": "Person",
     "tableHeaderLevel": "Level",
+    "tableHeaderAttention": "Needs attention",
+    "noAttention": "None",
     "noCertificationLevel": "No current certification",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
@@ -299,9 +302,11 @@
     "importedCount": "{count, plural, one {# booking imported from a prior system} other {# bookings imported from a prior system}}",
     "waiver": "Waiver",
     "waiverSend": "Send / resend waiver and get link",
+    "waiverResend": "Resend waiver",
     "waiverNotSent": "Not sent",
     "waiverFailed": "Failed to deliver",
     "waiverNotSigned": "Not signed",
+    "waiverSent": "Waiver sent; awaiting signature",
     "waiverSigned": "Signed",
     "waiverMedicalReview": "Medical review",
     "waiverGoodUntil": "Good until {date}",

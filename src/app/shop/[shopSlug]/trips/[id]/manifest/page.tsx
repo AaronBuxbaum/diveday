@@ -523,9 +523,19 @@ export default async function TripManifestPage({
             and put a settings toggle in the one row a captain taps to change
             what the page is showing — and then spent a while as a lone checkbox
             below the offline card, which is what this group fixes. */}
-        <div className="mt-4 border-t border-border pt-4 empty:hidden">
+        <div className="mt-4 grid gap-3 border-t border-border pt-4 print:hidden sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
           <WaterLockerToggle
             copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+            className="h-full"
+          />
+          <AmbientContrastControl
+            className="rounded-xl border border-border bg-surface-sunken p-3"
+            copy={{
+              modeLabel: t("shared.boatMode.modeLabel"),
+              labelAuto: t("shared.boatMode.labelAuto"),
+              labelLand: t("shared.boatMode.labelLand"),
+              labelBoat: t("shared.boatMode.labelBoat"),
+            }}
           />
         </div>
       </section>
@@ -565,16 +575,6 @@ export default async function TripManifestPage({
           message: t("shared.subSurfaceRipple.message"),
         }}
       />
-      <div className="mt-8 flex justify-end print:hidden">
-        <AmbientContrastControl
-          copy={{
-            modeLabel: t("shared.boatMode.modeLabel"),
-            labelAuto: t("shared.boatMode.labelAuto"),
-            labelLand: t("shared.boatMode.labelLand"),
-            labelBoat: t("shared.boatMode.labelBoat"),
-          }}
-        />
-      </div>
     </div>
   );
 }

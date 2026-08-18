@@ -159,10 +159,10 @@ export default async function DiverDetailPage({
         // straight away, so a reload or a shared link is the ordinary
         // collapsed page.
         //
-        // A details-form outcome opens it too: the form lives in a collapsed
-        // `<details>`, and a refusal rendered inside a shut disclosure is worse
-        // than the banner it replaced — invisible rather than merely far away.
-        editOpen={edit === "1" || Boolean(detailsStatus)}
+        // Keep the editor open for a refused save so the staffer can correct
+        // the fields in place. A successful save closes it; the saved notice
+        // remains visible above the editor.
+        editOpen={edit === "1" || detailsStatus?.tone === "danger"}
       />
       {removed ? (
         <RestoreDiver
@@ -204,23 +204,17 @@ export default async function DiverDetailPage({
         items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
-      <StatsSummary
-        diver={diver}
-        shop={shop}
-        locale={locale}
-        notesCount={notes.length}
-        waiverCard={
-          <PaperWaiver
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            timezone={shop.timezone}
-            status={noticeForForm(diverNotice, "waiver")}
-            compact
-          />
-        }
-      />
+      <StatsSummary diver={diver} shop={shop} locale={locale} notesCount={notes.length} />
+      <DiverSection id="waiver">
+        <PaperWaiver
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          status={noticeForForm(diverNotice, "waiver")}
+        />
+      </DiverSection>
       <DiverSection id="cards">
         <CertificationCards
           diver={diver}

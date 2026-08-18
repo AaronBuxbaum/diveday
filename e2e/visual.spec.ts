@@ -2207,7 +2207,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        await page.getByText("Open Water — diver's word, no certification record").waitFor();
+        await page.getByText("Open Water — unconfirmed").waitFor();
         await capture(page, "trip-guests-deal-recipients", scheme);
       });
 

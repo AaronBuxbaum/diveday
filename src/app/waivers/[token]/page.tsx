@@ -23,9 +23,10 @@ import { getTripDiveSitesPeek } from "@/db/trips";
 import {
   completeWaiver,
   getEmergencyContactForBooking,
+  getEmergencyContactForPerson,
   getWaiverForToken,
-  requireTokenBookingId,
   saveBookingEmergencyContact,
+  savePersonEmergencyContact,
   saveWaiverDraft,
   staleWaiverRecordForToken,
 } from "@/db/waivers";
@@ -272,21 +273,25 @@ export default async function WaiverPage({
 
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
-    const bookingId = requireTokenBookingId(state.record);
-    const booking = await db
-      .select({ tripId: bookings.tripId })
-      .from(bookings)
-      .where(eq(bookings.id, bookingId))
-      .limit(1)
-      .then((rows) => rows[0]);
+    const bookingId = state.record.bookingId;
+    const booking = bookingId
+      ? await db
+          .select({ tripId: bookings.tripId })
+          .from(bookings)
+          .where(eq(bookings.id, bookingId))
+          .limit(1)
+          .then((rows) => rows[0])
+      : null;
 
     const diveSitesList = booking?.tripId ? await getTripDiveSitesPeek(db, booking.tripId) : [];
 
-    const readyCapability = await issueBookingCapability(db, {
-      shopId: state.record.shopId,
-      bookingId,
-      purpose: "readiness",
-    });
+    const readyCapability = bookingId
+      ? await issueBookingCapability(db, {
+          shopId: state.record.shopId,
+          bookingId,
+          purpose: "readiness",
+        })
+      : null;
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     // The `<main>` below wears the same gutter as the signing form this diver
     // just came from: the outcome screen used to sit on a taller `py-16` on a
@@ -367,8 +372,10 @@ export default async function WaiverPage({
   }
 
   const { record } = state;
-  const recordBookingId = requireTokenBookingId(record);
-  const emergencyContact = await getEmergencyContactForBooking(db, recordBookingId);
+  const recordBookingId = record.bookingId;
+  const emergencyContact = recordBookingId
+    ? await getEmergencyContactForBooking(db, recordBookingId)
+    : await getEmergencyContactForPerson(db, record.shopId, record.personId);
   // The name this release has to be signed under (`completeWaiver` refuses
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
@@ -390,13 +397,15 @@ export default async function WaiverPage({
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
-  const tripHeader = await db
-    .select({ title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(eq(bookings.id, recordBookingId))
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
+  const tripHeader = recordBookingId
+    ? await db
+        .select({ title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+        .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(eq(bookings.id, recordBookingId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
   const errorText =
     error === "invalid" && !signatureCardError
       ? t(fieldError?.textKey ?? "waiver.incomplete")
@@ -444,12 +453,21 @@ export default async function WaiverPage({
     // never overwrite what's on file.
     const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
     if (savedDraft && contact.success) {
-      await saveBookingEmergencyContact(db, {
-        shopId: record.shopId,
-        bookingId: recordBookingId,
-        name: contact.data.emergencyContactName,
-        phone: contact.data.emergencyContactPhone,
-      });
+      if (recordBookingId) {
+        await saveBookingEmergencyContact(db, {
+          shopId: record.shopId,
+          bookingId: recordBookingId,
+          name: contact.data.emergencyContactName,
+          phone: contact.data.emergencyContactPhone,
+        });
+      } else {
+        await savePersonEmergencyContact(db, {
+          shopId: record.shopId,
+          personId: record.personId,
+          name: contact.data.emergencyContactName,
+          phone: contact.data.emergencyContactPhone,
+        });
+      }
     }
     revalidateAndRedirect(
       `/waivers/${token}`,
@@ -512,12 +530,21 @@ export default async function WaiverPage({
         medicalAnswers: answers,
       });
       if (contact.success) {
-        await saveBookingEmergencyContact(db, {
-          shopId: record.shopId,
-          bookingId: recordBookingId,
-          name: contact.data.emergencyContactName,
-          phone: contact.data.emergencyContactPhone,
-        });
+        if (recordBookingId) {
+          await saveBookingEmergencyContact(db, {
+            shopId: record.shopId,
+            bookingId: recordBookingId,
+            name: contact.data.emergencyContactName,
+            phone: contact.data.emergencyContactPhone,
+          });
+        } else {
+          await savePersonEmergencyContact(db, {
+            shopId: record.shopId,
+            personId: record.personId,
+            name: contact.data.emergencyContactName,
+            phone: contact.data.emergencyContactPhone,
+          });
+        }
       }
       if (outcome.reason === "name_mismatch") {
         redirect(refusedSubmitPath(token, "signerNameMismatch"));
@@ -536,11 +563,13 @@ export default async function WaiverPage({
     // completed-state render below still shows that page for anyone who
     // revisits this token afterward.
     const db = await getDb();
-    const readyCapability = await issueBookingCapability(db, {
-      shopId: record.shopId,
-      bookingId: recordBookingId,
-      purpose: "readiness",
-    });
+    const readyCapability = recordBookingId
+      ? await issueBookingCapability(db, {
+          shopId: record.shopId,
+          bookingId: recordBookingId,
+          purpose: "readiness",
+        })
+      : null;
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
     revalidateAndRedirect(`/waivers/${token}`, readyPath ?? `/waivers/${token}`);
   }

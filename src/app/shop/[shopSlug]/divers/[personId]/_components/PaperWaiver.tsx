@@ -4,7 +4,6 @@ import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
@@ -13,10 +12,10 @@ function statusToneClass(
   state: DiverProfile["waiver"]["state"],
   requestStatus: DiverProfile["waiverRequest"],
 ) {
-  if (state === "current") return "border-success/40 bg-success/5";
-  if (state === "medical_review" || requestStatus === "failed") {
+  if (requestStatus === "failed" || state === "medical_review") {
     return "border-danger/40 bg-danger/5";
   }
+  if (state === "current") return "border-success/40 bg-success/5";
   return "border-warning/40 bg-warning/5";
 }
 
@@ -39,19 +38,19 @@ function waiverStatusCopy(
       detail: t("divers.stats.waiverHeldSince", { date: date(diver.waiver.at) }),
     };
   }
+  if (diver.waiverRequest === "failed") {
+    return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverFailed") };
+  }
   if (diver.waiver.state === "expired") {
     return {
       label: t("divers.stats.waiverNotSigned"),
       detail: t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) }),
     };
   }
-  if (diver.waiverRequest === "failed") {
-    return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverFailed") };
-  }
   if (diver.waiverRequest === "not_signed") {
-    return { label: t("divers.stats.waiverNotSigned"), detail: null };
+    return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverSent") };
   }
-  return { label: t("divers.stats.waiverNotSigned"), detail: null };
+  return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverNotSent") };
 }
 
 /** One waiver card for status, delivery actions, private-link copying, and paper signatures. */
@@ -62,7 +61,6 @@ export function PaperWaiver({
   locale,
   status,
   timezone,
-  compact = false,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -71,76 +69,39 @@ export function PaperWaiver({
   timezone: string;
   /** This form's own outcome, rendered inside the card rather than page-top. */
   status?: DiverNotice;
-  /** Render as one of the diver record's top-line stat cards. */
-  compact?: boolean;
 }) {
   const t = staffTranslator(locale);
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
-  const bookingIds = diver.bookings
-    .filter(
-      ({ booking, trip }) =>
-        trip.status === "scheduled" && booking.status !== "cancelled" && trip.startsAt >= nowDate(),
-    )
-    .map(({ booking }) => booking.id);
-  const firstBooking = diver.bookings.find(({ booking }) => bookingIds.includes(booking.id));
-
-  const content = (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p className={compact ? "mt-1 text-2xl font-semibold" : "text-lg font-semibold"}>
-          {state.label}
-        </p>
-        {state.detail ? <p className="text-sm text-muted">{state.detail}</p> : null}
-      </div>
-      {!compact && needsAction ? (
-        <div className="flex w-full flex-wrap items-start gap-2">
-          {bookingIds.length > 0 ? (
+  const isResend = diver.waiverRequest !== "not_sent";
+  const confirmResend = diver.waiverRequest === "not_signed";
+  const waiverActionLabel = t(isResend ? "divers.stats.waiverResend" : "divers.stats.waiverSend");
+  const waiverConfirmMessage = confirmResend
+    ? t("trips.roster.confirmResendWaiver", { name: diver.person.fullName })
+    : undefined;
+  return (
+    <SectionCard
+      className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
+      title={t("divers.stats.waiver")}
+    >
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-lg font-semibold">{state.label}</p>
+          {state.detail ? <p className="text-sm text-muted">{state.detail}</p> : null}
+        </div>
+        {needsAction ? (
+          <div className="flex flex-wrap items-start gap-2 sm:justify-end">
             <WaiverSendControl
               shopSlug={shopSlug}
-              surface="roster"
-              tripId={firstBooking?.trip.id}
-              bookingIds={bookingIds}
-              label={t("divers.stats.waiverSend")}
+              surface="diver"
+              bookingIds={[]}
+              personId={personId}
+              label={waiverActionLabel}
+              confirmMessage={waiverConfirmMessage}
               exposeLink
               wrapperClassName=""
               copy={waiverSendCopy(t)}
             />
-          ) : null}
-          <PaperWaiverControl
-            action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-            t={t}
-            className="w-full sm:w-auto"
-          />
-        </div>
-      ) : null}
-    </div>
-  );
-
-  if (compact) {
-    return (
-      <div
-        className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${statusToneClass(
-          diver.waiver.state,
-          diver.waiverRequest,
-        )}`}
-      >
-        <p className="text-sm text-muted">{t("divers.stats.waiver")}</p>
-        {content}
-        {needsAction ? (
-          <div className="mt-3 flex w-full flex-wrap items-start gap-2">
-            {bookingIds.length > 0 ? (
-              <WaiverSendControl
-                shopSlug={shopSlug}
-                surface="roster"
-                tripId={firstBooking?.trip.id}
-                bookingIds={bookingIds}
-                label={t("divers.stats.waiverSend")}
-                exposeLink
-                wrapperClassName=""
-                copy={waiverSendCopy(t)}
-              />
-            ) : null}
             <PaperWaiverControl
               action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
               t={t}
@@ -148,17 +109,7 @@ export function PaperWaiver({
             />
           </div>
         ) : null}
-        <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
       </div>
-    );
-  }
-
-  return (
-    <SectionCard
-      className={`mt-3 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
-      title={t("divers.stats.waiver")}
-    >
-      {content}
       <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
     </SectionCard>
   );

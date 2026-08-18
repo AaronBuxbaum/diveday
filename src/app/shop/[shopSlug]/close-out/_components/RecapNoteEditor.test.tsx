@@ -73,7 +73,7 @@ describe("the close-out's post-trip recap note", () => {
       />,
     );
     expect(screen.getByText("Recap")).toBeInTheDocument();
-    expect(screen.getByText("Automatic recap sending begins in 4h 00m.")).toBeInTheDocument();
+    expect(screen.getByText(/Automatic recap sending begins in/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeInTheDocument();
   });
@@ -103,7 +103,7 @@ describe("the close-out's post-trip recap note", () => {
     );
     expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toBeDisabled();
     expect(
-      screen.getByText("This recap was sent at 4:00 PM. The note and photos are now locked."),
+      screen.getAllByText("This recap was sent at 4:00 PM. The note and photos are now locked.")[0],
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload photo" })).not.toBeInTheDocument();

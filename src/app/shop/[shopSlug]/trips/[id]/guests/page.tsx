@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
@@ -28,7 +27,11 @@ import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
-import { lastMinuteEntryMatchesTripDate, orderLastMinuteRecipients } from "@/lib/last-minute-list";
+import {
+  filterEligibleLastMinuteRecipients,
+  lastMinuteEntryMatchesTripDate,
+  orderLastMinuteRecipients,
+} from "@/lib/last-minute-list";
 import { combineCertRequirements } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -255,12 +258,27 @@ async function TripGuestsBody({
     siteRequirement,
   );
 
+  const courseTarget = trip.course
+    ? {
+        slug: trip.course.slug,
+        title: trip.course.title,
+        sourceTemplateSlug: trip.course.sourceTemplateSlug,
+        minimumCertificationLevel: trip.course.minimumCertificationLevel,
+        isIntroCourse: trip.course.isIntroCourse,
+      }
+    : null;
+
   const rawMatchesWithCert = lastMinuteMatched.map((m) => ({
     ...m,
     certification: preCertSummaries.get(m.person.id) ?? null,
   }));
 
-  const lastMinuteRecipients = orderLastMinuteRecipients(rawMatchesWithCert, waitlistPersonIds);
+  const eligibleMatches = filterEligibleLastMinuteRecipients(
+    rawMatchesWithCert,
+    dealRequirement,
+    courseTarget,
+  );
+  const lastMinuteRecipients = orderLastMinuteRecipients(eligibleMatches, waitlistPersonIds);
   const certificationSummaries = preCertSummaries;
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
@@ -475,43 +493,6 @@ async function TripGuestsBody({
         />
       )}
 
-      <details className="group mt-10">
-        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-lg font-semibold [&::-webkit-details-marker]:hidden hover:text-primary">
-          {t("trips.guests.activityHeading")}
-          <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-        </summary>
-        {activity.length === 0 ? (
-          // The shared empty-section grammar, not a bare paragraph — the
-          // roster above already wears the same dashed card for "nothing here"
-          // (design/principles.md #4).
-          <EmptyState className="mt-4">
-            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
-          </EmptyState>
-        ) : (
-          /* When it happened is a column, not a trailing clause. Set inline
-             after the sentence, the timestamps landed at a different x on
-             every row — the eye reads them as part of the message and then
-             has to re-find where the next one starts. Right-aligned they
-             form the scannable edge a log wants, and `items-baseline` keeps
-             the two texts on one line rather than one boxed above the other.
-             Below `sm` the time drops under its own message instead of
-             squeezing a name into two words. */
-          <ol className="mt-4 grid gap-2">
-            {activity.map((event) => (
-              <li
-                key={event.id}
-                className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
-              >
-                <span className="min-w-0">{event.message}</span>
-                <span className="shrink-0 text-muted tabular-nums">
-                  {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </details>
-
       {/* The marketing blast collapses behind its own disclosure (task 156,
           UX persona lens 17) — Guests is "who is attending," not a promo
           console. Collapsed by default; the trip's own recipient count still
@@ -558,6 +539,7 @@ async function TripGuestsBody({
                 certification: certificationSummaries.get(person.id) ?? null,
               }))}
               requirement={dealRequirement}
+              course={courseTarget}
               openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
               cancelled={cancelled}
               promos={lastMinutePromos}
@@ -569,6 +551,37 @@ async function TripGuestsBody({
           </div>
         </AutoOpenDetails>
       ) : null}
+
+      <details
+        className={sectionCardClass({
+          padding: "none",
+          className: "group mt-10",
+        })}
+      >
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span>{t("trips.guests.activityHeading")}</span>
+          <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-border p-4">
+          {activity.length === 0 ? (
+            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
+          ) : (
+            <ol className="grid gap-2">
+              {activity.map((event) => (
+                <li
+                  key={event.id}
+                  className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+                >
+                  <span className="min-w-0">{event.message}</span>
+                  <span className="shrink-0 text-muted tabular-nums">
+                    {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </details>
     </div>
   );
 }
