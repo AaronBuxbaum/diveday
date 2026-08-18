@@ -280,6 +280,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
+    // Delivery plumbing is provider-specific operational state. The signed
+    // waiver remains portable; a destination can issue its own link and
+    // delivery attempt rather than importing stale provider ids or outcomes.
+    "delivery_status",
+    "delivery_provider_message_id",
+    "delivery_provider_status",
+    "delivery_provider_status_at",
+    "delivery_error",
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.

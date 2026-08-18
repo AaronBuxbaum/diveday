@@ -2070,7 +2070,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await openDiverProfile(page, "Nadia", "Nadia Petrov", "NP");
-        await page.getByText("Not certified yet — diver's word").waitFor();
+        await page.getByText("Not certified yet — unconfirmed").waitFor();
         await capture(page, "diver-profile-not-certified", scheme);
       });
 
@@ -2212,20 +2212,12 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The same panel on the day it has something to say.**
+       * **The same panel when nobody is eligible.**
        *
-       * The capture above can never reach this state: the reef charter asks for
-       * Open Water, the bottom rung, so on it nobody is below anything and the
-       * summary reads "nobody". Here the departure is raised to Advanced Open
-       * Water first, and the list underneath it becomes two divers under the
-       * bar — one carded, one who merely said so — and one who said nothing at
-       * all. That is the sentence the whole panel is now built around, and the
-       * three treatments it distinguishes.
-       *
-       * It is also the only capture of the risk ordering. Wes joins the list
-       * *before* Tess and is drawn *after* her, because the list is capped and
-       * a cap that could hide someone below the requirement behind someone who
-       * clears it would be worse than the unbounded version it replaced.
+       * The reef departure is raised to Advanced Open Water first. The newly
+       * added no-certification and Open Water joiners are then filtered out of
+       * the send list instead of being shown with a warning that could be
+       * overlooked.
        */
       test(`the deal panel weighs the list against the bar (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
@@ -2259,11 +2251,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        // Not "said a level below": the summary dropped that word on
-        // 2026-08-15, when "not certified yet" became an answer a diver can
-        // give. One of the counted may hold no certification at all, so there
-        // is no level for the sentence to name.
-        await page.getByText(/\d+ of \d+ are below this departure's requirement\./).waitFor();
+        await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -2280,11 +2268,10 @@ for (const scheme of ["light", "dark"] as const) {
        * where a real one has two rows worth pausing over.
        *
        * `src/db/seed-self-declared.ts` puts them there, and this is the baseline
-       * that proves they arrive: one claim marked warning-toned on both halves
-       * (Rowan Feld, level and enriched air, each carrying its own mark), and one
-       * "Not certified yet — diver's word" lifted above the rest because it is
-       * below every bar there is (Selah Mbeki). Ten recipients, none hidden, so
-       * the cap's own boundary is on a baseline too.
+       * that proves the eligible declaration arrives: Rowan Feld's level and
+       * enriched-air claims each carry their own unconfirmed mark. Selah Mbeki,
+       * who has no certification declaration, is correctly absent from the
+       * send list.
        *
        * The night charter still carries both seeded joiners, while Selah also
        * starts today so the headline reef departure has one marked row when a
@@ -2295,11 +2282,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        // The seeded row that is both unchecked *and* under the bar — the one
-        // state this whole panel exists to put in front of a staffer.
-        await page
-          .getByText(/Not certified yet — diver's word · below this departure's minimum/)
-          .waitFor();
+        await page.getByText(/Open Water — unconfirmed/).waitFor();
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
 

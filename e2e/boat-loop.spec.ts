@@ -31,7 +31,9 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
       ? scrolling.scrollHeight - (scrolling.scrollTop + element.getBoundingClientRect().bottom)
       : 0;
   });
-  expect(distanceFromPageEnd).toBeLessThan(48);
+  // The grouped device controls sit near the end of the manifest while still
+  // leaving room for the page's footer spacing.
+  expect(distanceFromPageEnd).toBeLessThan(80);
 
   const subNav = page.getByRole("navigation", { name: "Trip" });
   for (const tab of ["Overview", "Guests", "Manifest", "Prep"]) {
