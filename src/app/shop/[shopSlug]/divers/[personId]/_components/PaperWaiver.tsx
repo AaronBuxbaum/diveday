@@ -72,6 +72,12 @@ export function PaperWaiver({
   const t = staffTranslator(locale);
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
+  
+  // Pre-translate strings for WaiverActionButtons (Client Component)
+  const emailButtonLabel = t("divers.stats.sendWaiverViaEmail");
+  const smsButtonLabel = t("divers.stats.sendWaiverViaSms");
+  const linkButtonLabel = t("divers.stats.copyWaiverLink");
+  
   return (
     <SectionCard
       className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
@@ -84,7 +90,14 @@ export function PaperWaiver({
         </div>
         {needsAction ? (
           <div className="flex flex-col gap-3 sm:items-start">
-            <WaiverActionButtons diver={diver} shopSlug={shopSlug} personId={personId} t={t} />
+            <WaiverActionButtons
+              diver={diver}
+              shopSlug={shopSlug}
+              personId={personId}
+              emailButtonLabel={emailButtonLabel}
+              smsButtonLabel={smsButtonLabel}
+              linkButtonLabel={linkButtonLabel}
+            />
             <PaperWaiverControl
               action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
               t={t}

@@ -5,14 +5,18 @@ import { IDLE_WAIVER_SEND_STATE, type WaiverSendState } from "@/app/actions/waiv
 import { sendWaiversAction } from "@/app/actions/waivers";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DiverProfile } from "./shared";
 
 interface WaiverActionButtonsProps {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
-  t: StaffTranslator;
+  /** Pre-translated aria-label for email button */
+  emailButtonLabel: string;
+  /** Pre-translated aria-label for SMS button */
+  smsButtonLabel: string;
+  /** Pre-translated aria-label for link copy button */
+  linkButtonLabel: string;
   /** Callback to receive state updates (for feedback display) */
   onStateChange?: (state: WaiverSendState) => void;
 }
@@ -22,7 +26,9 @@ export function WaiverActionButtons({
   diver,
   shopSlug,
   personId,
-  t,
+  emailButtonLabel,
+  smsButtonLabel,
+  linkButtonLabel,
   onStateChange,
 }: WaiverActionButtonsProps) {
   const hasEmail = Boolean(diver.person.email);
@@ -47,7 +53,7 @@ export function WaiverActionButtons({
           <input type="hidden" name="personId" value={personId} />
           <SubmitButton
             className={buttonClass({ variant: "secondary", size: "icon" })}
-            ariaLabel={t("divers.stats.sendWaiverViaEmail")}
+            ariaLabel={emailButtonLabel}
             pendingLabel="…"
           >
             <EmailIcon />
@@ -60,8 +66,8 @@ export function WaiverActionButtons({
         <button
           type="button"
           className={buttonClass({ variant: "secondary", size: "icon" })}
-          aria-label={t("divers.stats.sendWaiverViaSms")}
-          title={t("divers.stats.sendWaiverViaSms")}
+          aria-label={smsButtonLabel}
+          title={smsButtonLabel}
           disabled
         >
           <PhoneIcon />
@@ -74,7 +80,7 @@ export function WaiverActionButtons({
         <input type="hidden" name="exposeLink" value="true" />
         <SubmitButton
           className={buttonClass({ variant: "secondary", size: "icon" })}
-          ariaLabel={t("divers.stats.copyWaiverLink")}
+          ariaLabel={linkButtonLabel}
           pendingLabel="…"
         >
           <LinkIcon />
