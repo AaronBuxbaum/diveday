@@ -2,10 +2,11 @@ import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
-import { WaiverActionButtons } from "./WaiverActionButtons";
 
 function statusToneClass(
   state: DiverProfile["waiver"]["state"],
@@ -73,10 +74,13 @@ export function PaperWaiver({
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
   
-  // Pre-translate strings for WaiverActionButtons (Client Component)
-  const emailButtonLabel = t("divers.stats.sendWaiverViaEmail");
-  const smsButtonLabel = t("divers.stats.sendWaiverViaSms");
-  const linkButtonLabel = t("divers.stats.copyWaiverLink");
+  // Get the waiver send copy for the control
+  const copy = waiverSendCopy(t);
+  
+  // Determine the button label based on waiver state
+  const buttonLabel = diver.waiver.state === "expired" 
+    ? t("divers.stats.waiverResend")
+    : t("divers.stats.waiverSend");
   
   return (
     <SectionCard
@@ -90,13 +94,16 @@ export function PaperWaiver({
         </div>
         {needsAction ? (
           <div className="flex flex-col gap-3 sm:items-start">
-            <WaiverActionButtons
-              diver={diver}
+            <WaiverSendControl
               shopSlug={shopSlug}
+              surface="diver"
               personId={personId}
-              emailButtonLabel={emailButtonLabel}
-              smsButtonLabel={smsButtonLabel}
-              linkButtonLabel={linkButtonLabel}
+              bookingIds={[]}
+              label={buttonLabel}
+              exposeLink={true}
+              copy={copy}
+              wrapperClassName=""
+              className="inline-flex"
             />
             <PaperWaiverControl
               action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
