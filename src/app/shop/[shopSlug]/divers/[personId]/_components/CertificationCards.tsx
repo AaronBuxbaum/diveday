@@ -80,7 +80,7 @@ export async function CertificationCards({
           <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
             {t("divers.certifications.addCard")}
           </summary>
-          <div className="absolute top-full right-0 z-30 mt-2 max-w-[calc(100vw-2rem)]">
+          <div className="absolute top-full right-0 z-20 mt-2 max-w-[calc(100vw-2rem)]">
             {/* No `encType`: a function `action` is a server action, not a
                 native form post — React builds the `FormData` (files intact)
                 and ships it over its own transport, so the browser never reads

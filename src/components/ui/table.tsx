@@ -91,7 +91,8 @@ export function Table({
     >
       <div className="overflow-x-auto print:overflow-visible">
         <table
-          className={`w-full text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}
+          className={`w-full table-layout-fixed text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}
+          style={{ tableLayout: "fixed" }}
         >
           {children}
         </table>
