@@ -310,7 +310,11 @@ async function TripGuestsBody({
   // received it. Today's own "fill these seats" row is gated on the same reach
   // (src/db/today.ts), so its `#last-minute-deal` anchor cannot point at a
   // section this hides.
-  const showPromote = lastMinuteRecipients.length > 0 || lastMinutePromos.length > 0;
+  // The panel is shown if there are people on the last-minute list whose date
+  // range covers this trip (even if they don't meet current requirements) OR if
+  // there are promos (history of blasts sent). This allows the empty state
+  // "Nobody to send this to yet" to render when requirements are raised.
+  const showPromote = lastMinuteMatched.length > 0 || lastMinutePromos.length > 0;
   // The deal panel, when shown, is inside a <details> whose `#last-minute-deal`
   // landing auto-opens; the add-diver section is not rendered on a cancelled
   // departure, so its notices fall back to the banner — as do the deal's own on
