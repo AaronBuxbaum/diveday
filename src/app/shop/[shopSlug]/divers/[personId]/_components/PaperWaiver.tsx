@@ -1,9 +1,9 @@
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
-import { waiverSendCopy } from "@/app/actions/waiver-send-types";
-import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
@@ -73,15 +73,16 @@ export function PaperWaiver({
   const t = staffTranslator(locale);
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
-  
+
   // Get the waiver send copy for the control
   const copy = waiverSendCopy(t);
-  
+
   // Determine the button label based on waiver state
-  const buttonLabel = diver.waiver.state === "expired" 
-    ? t("divers.stats.waiverResend")
-    : t("divers.stats.waiverSend");
-  
+  const buttonLabel =
+    diver.waiver.state === "expired"
+      ? t("divers.stats.waiverResend")
+      : t("divers.stats.waiverSend");
+
   return (
     <SectionCard
       className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
