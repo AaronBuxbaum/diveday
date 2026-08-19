@@ -312,6 +312,9 @@
     "waiverGoodUntil": "Good until {date}",
     "waiverLastSigned": "Last signed {date}",
     "waiverHeldSince": "Held since {date}",
+    "sendWaiverViaEmail": "Email waiver",
+    "sendWaiverViaSms": "Text waiver",
+    "copyWaiverLink": "Copy link",
     "bookings": "Bookings"
   },
   "notices": {
