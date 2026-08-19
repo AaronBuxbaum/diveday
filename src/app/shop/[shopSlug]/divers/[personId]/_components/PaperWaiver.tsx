@@ -1,5 +1,3 @@
-import { waiverSendCopy } from "@/app/actions/waiver-send-types";
-import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -7,6 +5,7 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
+import { WaiverActionButtons } from "./WaiverActionButtons";
 
 function statusToneClass(
   state: DiverProfile["waiver"]["state"],
@@ -73,12 +72,6 @@ export function PaperWaiver({
   const t = staffTranslator(locale);
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
-  const isResend = diver.waiverRequest !== "not_sent";
-  const confirmResend = diver.waiverRequest === "not_signed";
-  const waiverActionLabel = t(isResend ? "divers.stats.waiverResend" : "divers.stats.waiverSend");
-  const waiverConfirmMessage = confirmResend
-    ? t("trips.roster.confirmResendWaiver", { name: diver.person.fullName })
-    : undefined;
   return (
     <SectionCard
       className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
@@ -90,22 +83,12 @@ export function PaperWaiver({
           {state.detail ? <p className="text-sm text-muted">{state.detail}</p> : null}
         </div>
         {needsAction ? (
-          <div className="flex flex-wrap items-start gap-2 sm:justify-end">
-            <WaiverSendControl
-              shopSlug={shopSlug}
-              surface="diver"
-              bookingIds={[]}
-              personId={personId}
-              label={waiverActionLabel}
-              confirmMessage={waiverConfirmMessage}
-              exposeLink
-              wrapperClassName=""
-              copy={waiverSendCopy(t)}
-            />
+          <div className="flex flex-col gap-3 sm:items-start">
+            <WaiverActionButtons diver={diver} shopSlug={shopSlug} personId={personId} t={t} />
             <PaperWaiverControl
               action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
               t={t}
-              className="w-full sm:w-auto"
+              className=""
             />
           </div>
         ) : null}

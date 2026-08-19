@@ -1,10 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  IDLE_WAIVER_SEND_STATE,
-  type WaiverSendCopy,
-} from "@/app/actions/waiver-send-types";
+import { IDLE_WAIVER_SEND_STATE, type WaiverSendState } from "@/app/actions/waiver-send-types";
 import { sendWaiversAction } from "@/app/actions/waivers";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -16,7 +13,8 @@ interface WaiverActionButtonsProps {
   shopSlug: string;
   personId: string;
   t: StaffTranslator;
-  copy: WaiverSendCopy;
+  /** Callback to receive state updates (for feedback display) */
+  onStateChange?: (state: WaiverSendState) => void;
 }
 
 /** Icon-based waiver action buttons arranged horizontally */
@@ -25,14 +23,19 @@ export function WaiverActionButtons({
   shopSlug,
   personId,
   t,
-  copy,
+  onStateChange,
 }: WaiverActionButtonsProps) {
   const hasEmail = Boolean(diver.person.email);
   const hasPhone = Boolean(diver.person.phone);
-  const [_state, formAction] = useActionState(
+  const [state, formAction] = useActionState(
     sendWaiversAction.bind(null, shopSlug, "diver", undefined),
     IDLE_WAIVER_SEND_STATE,
   );
+
+  // Notify parent of state changes
+  if (onStateChange) {
+    onStateChange(state);
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -42,8 +45,7 @@ export function WaiverActionButtons({
           <input type="hidden" name="personId" value={personId} />
           <SubmitButton
             className={buttonClass({ variant: "secondary", size: "icon" })}
-            aria-label={t("divers.stats.sendWaiverViaEmail")}
-            title={t("divers.stats.sendWaiverViaEmail")}
+            ariaLabel={t("divers.stats.sendWaiverViaEmail")}
             pendingLabel="…"
           >
             <EmailIcon />
@@ -70,8 +72,7 @@ export function WaiverActionButtons({
         <input type="hidden" name="exposeLink" value="true" />
         <SubmitButton
           className={buttonClass({ variant: "secondary", size: "icon" })}
-          aria-label={t("divers.stats.copyWaiverLink")}
-          title={t("divers.stats.copyWaiverLink")}
+          ariaLabel={t("divers.stats.copyWaiverLink")}
           pendingLabel="…"
         >
           <LinkIcon />
