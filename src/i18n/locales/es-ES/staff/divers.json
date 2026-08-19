@@ -312,6 +312,9 @@
     "waiverGoodUntil": "Válido hasta el {date}",
     "waiverLastSigned": "Firmado por última vez el {date}",
     "waiverHeldSince": "En espera desde el {date}",
+    "sendWaiverViaEmail": "Enviar exención por correo",
+    "sendWaiverViaSms": "Enviar exención por texto",
+    "copyWaiverLink": "Copiar enlace",
     "bookings": "Reservas"
   },
   "notices": {

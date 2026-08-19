@@ -73,12 +73,16 @@ export function PaperWaiver({
   const t = staffTranslator(locale);
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
-  const isResend = diver.waiverRequest !== "not_sent";
-  const confirmResend = diver.waiverRequest === "not_signed";
-  const waiverActionLabel = t(isResend ? "divers.stats.waiverResend" : "divers.stats.waiverSend");
-  const waiverConfirmMessage = confirmResend
-    ? t("trips.roster.confirmResendWaiver", { name: diver.person.fullName })
-    : undefined;
+
+  // Get the waiver send copy for the control
+  const copy = waiverSendCopy(t);
+
+  // Determine the button label based on waiver state
+  const buttonLabel =
+    diver.waiver.state === "expired"
+      ? t("divers.stats.waiverResend")
+      : t("divers.stats.waiverSend");
+
   return (
     <SectionCard
       className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
@@ -90,22 +94,22 @@ export function PaperWaiver({
           {state.detail ? <p className="text-sm text-muted">{state.detail}</p> : null}
         </div>
         {needsAction ? (
-          <div className="flex flex-wrap items-start gap-2 sm:justify-end">
+          <div className="flex flex-col gap-3 sm:items-start">
             <WaiverSendControl
               shopSlug={shopSlug}
               surface="diver"
-              bookingIds={[]}
               personId={personId}
-              label={waiverActionLabel}
-              confirmMessage={waiverConfirmMessage}
-              exposeLink
+              bookingIds={[]}
+              label={buttonLabel}
+              exposeLink={true}
+              copy={copy}
               wrapperClassName=""
-              copy={waiverSendCopy(t)}
+              className="inline-flex"
             />
             <PaperWaiverControl
               action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
               t={t}
-              className="w-full sm:w-auto"
+              className=""
             />
           </div>
         ) : null}
