@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { IDLE_WAIVER_SEND_STATE, type WaiverSendState } from "@/app/actions/waiver-send-types";
 import { sendWaiversAction } from "@/app/actions/waivers";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -32,10 +32,12 @@ export function WaiverActionButtons({
     IDLE_WAIVER_SEND_STATE,
   );
 
-  // Notify parent of state changes
-  if (onStateChange) {
-    onStateChange(state);
-  }
+  // Notify parent of state changes when state actually changes
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange(state);
+    }
+  }, [state, onStateChange]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
