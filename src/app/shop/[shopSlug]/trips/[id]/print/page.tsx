@@ -45,7 +45,7 @@ export default async function TripPrintPage({
     ManageTripPage({ params: safeParams, searchParams }),
     TripGuestsPage({ params: safeParams, searchParams }),
     TripManifestPage({ params: safeParams, searchParams: manifestSearchParams }),
-    TripPrepPage({ params: safeParams }),
+    TripPrepPage({ params: safeParams, searchParams }),
   ]);
 
   return (

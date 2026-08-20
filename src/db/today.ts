@@ -1,9 +1,14 @@
 import { and, asc, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   emailDeliveryDetailText,
   emailResendActionText,
   failedPhotoDeletionDetailText,
+  gearDueBackDetailText,
+  gearNeverPickedUpDetailText,
+  gearOverdueDetailText,
+  gearServiceDueDetailText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
@@ -12,6 +17,8 @@ import {
   missingContactNamedDetailText,
   missingFitDetailText,
   openDataSettingsActionText,
+  openGearRegisterActionText,
+  openGearUnitActionText,
   openGuestsActionText,
   openOrdersActionText,
   openPrepListActionText,
@@ -29,6 +36,7 @@ import {
   ungatedNitroxDetailText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
+import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
@@ -46,9 +54,10 @@ import {
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
-import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
+import { listGearDueBack, listGearServiceDue, listOverdueGearReservations } from "./gear";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureBoardedByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -1453,6 +1462,95 @@ export async function getTodayWork(
       actionLabel: openReviewsActionText(t),
       href: `/shop/${shopSlug}/reviews`,
       dueAt: null,
+    });
+  }
+
+  // The gear register's chase list (ADR 20260815-minimal-gear-register): what
+  // never came home, what is due back before tonight, and which bench clock
+  // runs out this week. Mirrored here, not owned here — the register readers
+  // are the owning surface's own, so the queue and the register can never
+  // disagree — and self-gating: a shop with no fleet produces no rows.
+  const todayLocal = calendarDateInTimezone(now, timeZone);
+  const [overdueGear, dueBackGear, gearServiceDueRows] = await Promise.all([
+    listOverdueGearReservations(db, shopId, todayLocal),
+    listGearDueBack(db, shopId, todayLocal),
+    // Six days, not seven: dueAt below is the *shop-local* midnight of the due
+    // date, and the queue's one-week-horizon invariant is measured in flat UTC
+    // hours — a seventh local day can poke past it by a DST hour.
+    listGearServiceDue(db, shopId, todayLocal, 6),
+  ]);
+  // A calendar date's instant on the shop's own clock — midnight opening the
+  // day (a service deadline), or midnight closing it (a return due by tonight).
+  const localMidnight = (day: string, plusDays = 0) => {
+    const [year, month, dayOfMonth] = day.split("-").map(Number);
+    return wallTimeToUtc(
+      { year: year ?? 0, month: month ?? 1, day: (dayOfMonth ?? 1) + plusDays, hour: 0, minute: 0 },
+      timeZone,
+    );
+  };
+  for (const row of overdueGear) {
+    actions.push({
+      id: `gear-overdue:${row.reservationId}`,
+      kind: "gear_overdue",
+      // Forced: the window already closed, so there is no future instant to
+      // derive urgency from — this is today's work however old the date is.
+      urgency: "now",
+      subject: row.personName,
+      context: row.tripTitle,
+      // Two different chases wearing one kind: a checked-out unit is out
+      // with a diver (a phone call), a never-collected one hangs on the
+      // wall and wants its stale claim released — saying "out with" about
+      // the second would teach staff to skim the rows that matter.
+      detail: row.checkedOutAt
+        ? gearOverdueDetailText(t, {
+            unitLabel: row.label,
+            dueOn: formatCalendarDate(row.reservedUntil, locale),
+          })
+        : gearNeverPickedUpDetailText(t, {
+            unitLabel: row.label,
+            dueOn: formatCalendarDate(row.reservedUntil, locale),
+          }),
+      actionLabel: openGearRegisterActionText(t),
+      href: `/shop/${shopSlug}/gear`,
+      // The closed window's end, in the past — the longest-out unit leads.
+      dueAt: localMidnight(row.reservedUntil, 1),
+    });
+  }
+  for (const row of dueBackGear) {
+    // Due by the end of the shop's own day: "now" all day, sharpening to
+    // "imminent" as the evening runs out.
+    const dueAt = localMidnight(row.reservedUntil, 1);
+    actions.push({
+      id: `gear-due-back:${row.reservationId}`,
+      kind: "gear_due_back",
+      urgency: urgencyFor(dueAt, now),
+      subject: row.personName,
+      context: row.tripTitle,
+      detail: gearDueBackDetailText(t, { unitLabel: row.label }),
+      actionLabel: openGearRegisterActionText(t),
+      href: `/shop/${shopSlug}/gear`,
+      dueAt,
+    });
+  }
+  for (const row of gearServiceDueRows) {
+    if (row.state.state !== "overdue" && row.state.state !== "due_soon") continue;
+    const dueAt = localMidnight(row.state.nextDueOn);
+    actions.push({
+      id: `gear-service:${row.gearItemId}`,
+      kind: "gear_service_due",
+      // An expired clock has no future instant to derive urgency from; it is
+      // counter work today, never "imminent" — that band means boats and people.
+      urgency: row.state.state === "overdue" ? "now" : urgencyFor(dueAt, now),
+      subject: row.label,
+      context: null,
+      detail: gearServiceDueDetailText(t, {
+        clockLabel: gearServiceKindLabel(t, row.state.kind),
+        overdue: row.state.state === "overdue",
+        dueOn: formatCalendarDate(row.state.nextDueOn, locale),
+      }),
+      actionLabel: openGearUnitActionText(t),
+      href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
+      dueAt,
     });
   }
 

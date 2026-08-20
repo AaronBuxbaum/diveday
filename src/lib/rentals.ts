@@ -298,8 +298,10 @@ export type CoreRentalKind = (typeof CORE_RENTAL_KINDS)[number];
 /**
  * A shop's rental price list, all in minor units (cents). Nothing here is an
  * inventory or an allocation — it is only what a diver is quoted for the gear
- * they choose. Every field is optional: a shop that prices nothing online keeps
- * the "ask the shop" behaviour, and an item with no price simply isn't quoted.
+ * they choose (the fleet itself lives on the gear register, `src/lib/gear.ts`,
+ * and never feeds a quote). Every field is optional: a shop that prices
+ * nothing online keeps the "ask the shop" behaviour, and an item with no
+ * price simply isn't quoted.
  */
 export type RentalPricing = {
   /** Price for the full core set (all of {@link CORE_RENTAL_KINDS}). null = no set price. */

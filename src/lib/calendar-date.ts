@@ -65,6 +65,21 @@ export function shiftCalendarDate(date: CalendarDate, days: number): CalendarDat
   return toDateInputValue(utcToWallTimeParts(Date.UTC(year, month - 1, day + days)));
 }
 
+/**
+ * The same calendar date `months` later, clamped to the destination month's
+ * last day ("Jan 31" + 1 month → "Feb 28", never a rollover into March).
+ * Pure calendar arithmetic like `shiftCalendarDate` — no instants involved.
+ * Used for service-clock suggestions (annual service, five-year hydro).
+ */
+export function shiftCalendarDateMonths(date: CalendarDate, months: number): CalendarDate {
+  const [year, month, day] = date.split("-").map(Number);
+  const targetMonthIndex = month - 1 + months;
+  const lastDayOfTarget = new Date(Date.UTC(year, targetMonthIndex + 1, 0)).getUTCDate();
+  return toDateInputValue(
+    utcToWallTimeParts(Date.UTC(year, targetMonthIndex, Math.min(day, lastDayOfTarget))),
+  );
+}
+
 /** Whole calendar days from `from` to `to` — negative when `to` is earlier. */
 export function calendarDaysBetween(from: CalendarDate, to: CalendarDate): number {
   const ms = calendarDateToUtcMidnight(to).getTime() - calendarDateToUtcMidnight(from).getTime();

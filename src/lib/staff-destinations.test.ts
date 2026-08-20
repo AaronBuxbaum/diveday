@@ -142,6 +142,7 @@ describe("what each consumer derives", () => {
       "staffing",
       "courses",
       "diveSites",
+      "gear",
       "waivers",
       "reviews",
       "requests",

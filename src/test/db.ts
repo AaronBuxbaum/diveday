@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
@@ -80,7 +81,7 @@ export async function seededTestDb(options: { history?: boolean } = {}): Promise
   }
   const client = new PGlite({
     loadDataDir: templateBlob(variant, bytes),
-    extensions: { pg_trgm },
+    extensions: { pg_trgm, btree_gist },
   });
   closeWhenTestFinishes(client);
   return drizzle({ client });

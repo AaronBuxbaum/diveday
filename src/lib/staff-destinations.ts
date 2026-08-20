@@ -93,6 +93,7 @@ export type StaffDestinationId =
   | "addBooking"
   | "staffing"
   | "diveSites"
+  | "gear"
   | "courses"
   | "reviews"
   | "requests"
@@ -199,6 +200,13 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
   { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },
   { id: "diveSites", suffix: "/dive-sites", navGroup: "daily", inPalette: true },
+  // The rental fleet register (ADR 20260815-minimal-gear-register). "Run the
+  // shop" work like the site library beside it — packing, handing over, and
+  // chasing returns is the day's rhythm, not configuration. Ungated: gear is
+  // any-staff work (H-06 already lets any staff member substitute a real
+  // available item, "because that is the day's work"). Its pending-work
+  // signal is Today's gear rows, never a nav badge — same rule as Reviews.
+  { id: "gear", suffix: "/gear", navGroup: "daily", inPalette: true },
   // The waiver template and signature log — owner/manager work, and part of
   // running the shop rather than setting it up: the log is where a signature
   // question gets answered on a working day.

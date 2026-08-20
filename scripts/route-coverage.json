@@ -205,6 +205,14 @@
     "e2e": ["dive-sites.spec.ts"],
     "visual": []
   },
+  "/shop/[shopSlug]/gear": {
+    "e2e": ["gear.spec.ts"],
+    "visual": ["gear-register", "gear-register-trouble"]
+  },
+  "/shop/[shopSlug]/gear/[id]": {
+    "e2e": ["gear.spec.ts"],
+    "visual": ["gear-unit"]
+  },
   "/shop/[shopSlug]/divers": {
     "e2e": [
       "certifications.spec.ts",
@@ -432,8 +440,8 @@
     ]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
-    "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
-    "visual": ["prep", "prep-no-nitrox"]
+    "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "gear.spec.ts", "nitrox.spec.ts"],
+    "visual": ["prep", "prep-no-nitrox", "prep-assignments"]
   },
   "/shop/[shopSlug]/trips/[id]/print": {
     "e2e": ["trips.spec.ts"],

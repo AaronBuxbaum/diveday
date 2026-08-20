@@ -17,7 +17,7 @@ the same morning instead of with a month of modeling arguments.
 DiveDay has no boat entity — **a trip *is* the boat-day**. Two roadmap items block on that one
 missing model:
 
-- [roadmap §5 — Multi-boat / multi-shop configuration](../product/features/roadmap.md#5-multi-boat--multi-shop-configuration):
+- [roadmap §4 — Multi-boat / multi-shop configuration](../product/features/roadmap.md#4-multi-boat--multi-shop-configuration):
   a shop running several boats can see all departures, move divers and crew carefully, and avoid
   collisions ([brainstorm: multi-boat day orchestration](../product/features/brainstorm.md#staff-operations)).
 - [roadmap — Private / buyout charters](../product/features/roadmap.md#private--buyout-charters):

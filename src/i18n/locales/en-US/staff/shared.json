@@ -177,6 +177,7 @@
     "addBooking": "Add a booking",
     "staffing": "Staffing",
     "diveSites": "Dive sites",
+    "gear": "Gear",
     "courses": "Courses",
     "reviews": "Reviews",
     "requests": "Requests",
@@ -299,7 +300,10 @@
       "stuckPaymentOperation": "Stripe",
       "failedPhotoDeletion": "Cleanup",
       "owedRefund": "Refund owed",
-      "reviewsPending": "Reviews"
+      "reviewsPending": "Reviews",
+      "gearOverdue": "Gear overdue",
+      "gearDueBack": "Gear due back",
+      "gearServiceDue": "Gear service"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -402,7 +406,9 @@
       "resendConfirmation": "Resend confirmation",
       "openOrders": "Review in Orders",
       "openDataSettings": "Review in Settings",
-      "openReviews": "Open reviews"
+      "openReviews": "Open reviews",
+      "openGearRegister": "Open gear register",
+      "openGearUnit": "Open unit record"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
@@ -446,6 +452,13 @@
     "reviewsPending": {
       "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
       "detail": "Divers wrote about their trips — publish the good words or quietly hide the rest."
+    },
+    "gear": {
+      "overdueDetail": "{unitLabel} was due back {dueOn} and is still out.",
+      "dueBackDetail": "{unitLabel} is due back today.",
+      "serviceDueDetail": "{clockLabel} is due {dueOn}.",
+      "serviceOverdueDetail": "{clockLabel} was due {dueOn}.",
+      "neverPickedUpDetail": "{unitLabel} was reserved until {dueOn} and never picked up — release it."
     }
   },
   "tripDiveFields": {

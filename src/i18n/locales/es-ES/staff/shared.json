@@ -177,6 +177,7 @@
     "addBooking": "Añadir una reserva",
     "staffing": "Personal",
     "diveSites": "Sitios de buceo",
+    "gear": "Equipo",
     "courses": "Cursos",
     "reviews": "Reseñas",
     "requests": "Peticiones",
@@ -299,7 +300,10 @@
       "stuckPaymentOperation": "Stripe",
       "failedPhotoDeletion": "Limpieza",
       "owedRefund": "Reembolso pendiente",
-      "reviewsPending": "Reseñas"
+      "reviewsPending": "Reseñas",
+      "gearOverdue": "Equipo atrasado",
+      "gearDueBack": "Devolución hoy",
+      "gearServiceDue": "Mantenimiento"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -402,7 +406,9 @@
       "resendConfirmation": "Reenviar confirmación",
       "openOrders": "Revisar en Pedidos",
       "openDataSettings": "Revisar en Ajustes",
-      "openReviews": "Ver reseñas"
+      "openReviews": "Ver reseñas",
+      "openGearRegister": "Abrir registro de equipo",
+      "openGearUnit": "Abrir ficha de la unidad"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
@@ -446,6 +452,13 @@
     "reviewsPending": {
       "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
       "detail": "Los buceadores escribieron sobre sus salidas — publica las buenas palabras u oculta el resto con discreción."
+    },
+    "gear": {
+      "overdueDetail": "{unitLabel} debía devolverse el {dueOn} y sigue fuera.",
+      "dueBackDetail": "{unitLabel} debe devolverse hoy.",
+      "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
+      "serviceOverdueDetail": "{clockLabel} venció el {dueOn}.",
+      "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió — libéralo."
     }
   },
   "tripDiveFields": {

@@ -18,7 +18,7 @@ DiveDay has no boat entity: **a trip *is* the boat-day**. Capacity lives on the 
 (`src/db/bookings.ts`), and every scheduled trip is publicly for sale — there is no visibility
 concept. Two deferred roadmap items block on this one gap, and the roadmap instructs that they be
 designed together
-([roadmap §5](../../product/features/roadmap.md#5-multi-boat--multi-shop-configuration),
+([roadmap §4](../../product/features/roadmap.md#4-multi-boat--multi-shop-configuration),
 [Private / buyout charters](../../product/features/roadmap.md#private--buyout-charters)):
 a shop running several boats cannot see or avoid same-hull collisions, and a group cannot buy out
 a departure (quote → deposit → withdrawn from public sale).

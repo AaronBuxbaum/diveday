@@ -83,6 +83,12 @@ export const EXPORT_FILE_NOTES = {
   "waiver_records.csv":
     "Issued and signed waiver evidence; the signed text is the referenced template version. Only status 'completed' satisfies the waiver gate, and only while current (within a year of signing, against the shop's current release). 'medical_review' means a physician's sign-off is still outstanding — that diver is blocked from boarding, not merely flagged, even though the signature fields are filled in. signature_method 'imported' means the record was trusted from a prior shop's own acceptance during a contact import, never reviewed by this shop — imported_from_label and the import_source_*_url columns carry that record's provenance; only 'imported' rows ever populate them. integrity_hash and integrity_version carry the independent signed-metadata audit seal when present; unsealed legacy rows remain explicitly identifiable.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",
+  "gear_items.csv":
+    "The shop's own rental fleet, one row per physical unit — the shop's tag, kind, size, serial number, and whether it is in service, pulled for service, or retired. Status is the shop's own operational call, never a certification of anything.",
+  "gear_service_events.csv":
+    "Each unit's care history, oldest first: manufacturer services, tank hydrostatic tests and visual inspections, O2-clean renewals, and dated condition notes, each with the deadline staff set for that clock. The newest event of a kind is that clock's current state. This is the shop's own maintenance record — proof of care for a unit, not a work order.",
+  "gear_reservations.csv":
+    "Which unit was assigned to which booking and for what dates, with the handover and return stamps. A reservation is fulfillment, never money: the rental charge lives in order_line_items.csv and booking_checkout_bookings.csv. A row with an empty returned_at is a unit still out.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say cancelled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "imported_payment_history.csv":

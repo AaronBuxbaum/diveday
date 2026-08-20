@@ -45,6 +45,9 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   failed_photo_deletion: "shared.today.actionKind.failedPhotoDeletion",
   owed_refund: "shared.today.actionKind.owedRefund",
   reviews_pending: "shared.today.actionKind.reviewsPending",
+  gear_overdue: "shared.today.actionKind.gearOverdue",
+  gear_due_back: "shared.today.actionKind.gearDueBack",
+  gear_service_due: "shared.today.actionKind.gearServiceDue",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -484,6 +487,47 @@ export function emailResendActionText(t: StaffTranslator, isWaiver: boolean): st
       ? "shared.today.actionLabel.resendWaiverLink"
       : "shared.today.actionLabel.resendConfirmation",
   );
+}
+
+/**
+ * The gear register's queue rows (ADR 20260815-minimal-gear-register). The
+ * diver's name is an overdue/due-back row's subject, so the detail carries
+ * the unit and the window; a service row's subject is the unit itself.
+ */
+export function gearOverdueDetailText(
+  t: StaffTranslator,
+  input: { unitLabel: string; dueOn: string },
+): string {
+  return t("shared.today.gear.overdueDetail", input);
+}
+
+export function gearDueBackDetailText(t: StaffTranslator, input: { unitLabel: string }): string {
+  return t("shared.today.gear.dueBackDetail", input);
+}
+
+export function gearNeverPickedUpDetailText(
+  t: StaffTranslator,
+  input: { unitLabel: string; dueOn: string },
+): string {
+  return t("shared.today.gear.neverPickedUpDetail", input);
+}
+
+export function gearServiceDueDetailText(
+  t: StaffTranslator,
+  input: { clockLabel: string; overdue: boolean; dueOn: string },
+): string {
+  return t(
+    input.overdue ? "shared.today.gear.serviceOverdueDetail" : "shared.today.gear.serviceDueDetail",
+    { clockLabel: input.clockLabel, dueOn: input.dueOn },
+  );
+}
+
+export function openGearRegisterActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openGearRegister");
+}
+
+export function openGearUnitActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openGearUnit");
 }
 
 /** The one-line "how's my day?" headline, resolved from `summarizeDay`'s code. */

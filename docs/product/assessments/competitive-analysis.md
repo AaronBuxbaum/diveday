@@ -72,11 +72,13 @@ In rough order of how often it would kill the deal:
    24-hour pre-trip reminders via an idempotent cron endpoint
    ([ADR](../../architecture/decisions/20260721-scheduled-reminder-cadence.md)), both off until their
    env is set. Still open: the H-09 consent/copy/sender ownership policy.
-3. **No equipment inventory or service tracking.** Rental *fit* (sizes) is genuinely useful, but
-   "who has what, what's due for service" is table stakes for gear-heavy shops — DiveAdmin,
-   Bloowatch, DiveShop360, and EVE all have it. We removed it (M5). For dive *charter* ops we can
-   position around it; for the classic shop it is a disqualifier. A lightweight who-has-what +
-   service-due register (not a POS) is likely the minimum re-entry.
+3. ✅ **Equipment tracking answered (2026-08-20).** "Who has what, what's due for service" was
+   table stakes for gear-heavy shops — DiveAdmin, Bloowatch, DiveShop360, and EVE all have it —
+   and a disqualifier after the M5 removal. The gear register shipped as the re-entry
+   ([20260815-minimal-gear-register](../../architecture/decisions/20260815-minimal-gear-register.md)):
+   tagged units, per-unit service clocks (tank hydro/VIP included), date-ranged reservations with
+   a database-level double-booking guard, and export CSVs — still not a POS, still no work
+   orders (those stay on the "explicitly fine to not have" list below).
 4. **No agency-ecosystem hooks.** Buyers ask "does it talk to PADI?" DiveShop360 sells PADI
    eLearning code integration; DiveAdmin advertises a mySSI connection. We have neither — no agency
    exposes a usable C-card API (H-10), so certification is a manual staff lookup, and there are no
@@ -127,7 +129,7 @@ H-12.
 | Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; no rosters/progress/eLearning | Critical — partial |
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
-| Rental equipment tracking | Universal | ❌ Sizes only, no inventory/service | Critical — gap |
+| Rental equipment tracking | Universal | ✅ Gear register: units, reservations, service clocks (2026-08-20) | Critical — done |
 | Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email everywhere via one seam (confirmation, waiver, wait-list invite); scheduled 7-day/24-hour reminders add courtesy SMS via AWS SNS. No WhatsApp path — SNS has none, and nothing has asked for it | Critical — email + reminder SMS done; consent/copy (H-09) open |
 | Owner reporting | Expected | ✅ "How's your month" dashboard ([shipped 2026-07-23](../../architecture/decisions/20260723-owner-reporting.md)) | Critical-lite — done |
 | Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
@@ -159,7 +161,7 @@ with one material re-ranking from the buyer's chair:
 3. Field-validate the manifest (V-02) before marketing leans on safety.
 4. ✅ **Pricing posture decided (H-12, 2026-07-24)** — $99 flat per location/month, published on the
    pricing and home pages; see [Pricing posture](#pricing-posture).
-5. Re-scope a *minimal* gear register (who-has-what + service-due, not POS) as the answer to the
-   equipment disqualifier — an ADR-worthy reversal of the M5 removal, deliberately smaller.
+5. ✅ **Gear register shipped (2026-08-20)** — the equipment disqualifier is answered; see
+   [shipped.md](../shipped.md) and ADR 20260815-minimal-gear-register.
 6. Keep the cut list cut: dive-site CMS/global catalog and per-agency verification plumbing add
    nothing a buyer asks for; DiveAdmin's feature breadth is not the model to chase.
