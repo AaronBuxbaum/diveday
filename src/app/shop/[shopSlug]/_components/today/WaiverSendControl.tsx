@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverFallbackLink,
+  type WaiverSendChannel,
   type WaiverSendCopy,
   type WaiverSendState,
   type WaiverSendSurface,
@@ -15,7 +16,16 @@ import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { fill, pluralForm } from "@/i18n/fill";
 
-function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: WaiverSendCopy }) {
+function CopyLink({
+  link,
+  copy: copyText,
+  autoCopy,
+}: {
+  link: WaiverFallbackLink;
+  copy: WaiverSendCopy;
+  /** True when the staffer's tap *was* "copy the link" — see `Copyable`. */
+  autoCopy?: boolean;
+}) {
   const url =
     typeof window === "undefined"
       ? ""
@@ -34,6 +44,7 @@ function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: Wa
         <span aria-hidden="true">🔗</span>
         <Copyable
           layout="inline"
+          autoCopy={autoCopy}
           value={url || `/waivers/${link.token}`}
           copyLabel={copyText.copyLink}
           copiedLabel={copyText.copied}
@@ -44,11 +55,18 @@ function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: Wa
   );
 }
 
-/** Why staff must hand the link over themselves, phrased for one diver or several. */
-function reasonCopy(
+/**
+ * Why staff must hand the link over themselves, phrased for one diver or
+ * several — and, for the two reasons whose wording names a channel, phrased for
+ * the channel the tap actually used. "Email could not be delivered" about a text
+ * points a shop at the wrong setting, which is the confusion `no_app_origin`
+ * already exists to prevent.
+ */
+export function reasonCopy(
   copy: WaiverSendCopy,
   reason: WaiverFallbackLink["reason"],
   count: number,
+  channel: WaiverSendChannel = "email",
 ): string {
   const values = { count };
   if (reason === "no_email") {
@@ -57,9 +75,23 @@ function reasonCopy(
       values,
     );
   }
+  if (reason === "no_phone") {
+    return fill(
+      pluralForm(count, { one: copy.reasonNoPhoneOne, other: copy.reasonNoPhoneOther }),
+      values,
+    );
+  }
+  if (reason === "link_only") {
+    return fill(
+      pluralForm(count, { one: copy.reasonLinkOnlyOne, other: copy.reasonLinkOnlyOther }),
+      values,
+    );
+  }
   if (reason === "failed") {
     return fill(
-      pluralForm(count, { one: copy.reasonFailedOne, other: copy.reasonFailedOther }),
+      channel === "text"
+        ? pluralForm(count, { one: copy.reasonTextFailedOne, other: copy.reasonTextFailedOther })
+        : pluralForm(count, { one: copy.reasonFailedOne, other: copy.reasonFailedOther }),
       values,
     );
   }
@@ -70,15 +102,28 @@ function reasonCopy(
     );
   }
   if (reason === "no_app_origin") return copy.reasonNoAppOrigin;
-  return copy.reasonUnconfigured;
+  return channel === "text" ? copy.reasonTextUnconfigured : copy.reasonUnconfigured;
 }
 
 /** One paragraph per delivery reason, so "no address on file" never reads as
  * "the shop's email is broken" or the reverse. */
-function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: WaiverSendCopy }) {
+function LinkGroups({
+  links,
+  copy,
+  channel,
+  autoCopy,
+}: {
+  links: WaiverFallbackLink[];
+  copy: WaiverSendCopy;
+  /** Which button produced these — the two channel-named reasons read off it. */
+  channel: WaiverSendChannel;
+  autoCopy?: boolean;
+}) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     sent: links.filter((link) => link.reason === "sent"),
+    link_only: links.filter((link) => link.reason === "link_only"),
     no_email: links.filter((link) => link.reason === "no_email"),
+    no_phone: links.filter((link) => link.reason === "no_phone"),
     no_app_origin: links.filter((link) => link.reason === "no_app_origin"),
     unconfigured: links.filter((link) => link.reason === "unconfigured"),
     test_recipient: links.filter((link) => link.reason === "test_recipient"),
@@ -92,14 +137,16 @@ function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: Waiver
         return (
           <div key={reason} className="mt-2">
             <p className="text-muted">
-              {reason === "sent"
-                ? fill(copy.sent, { names: group.map((link) => link.name).join(", ") })
-                : reasonCopy(copy, reason, group.length)}{" "}
-              — share {group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther}:
+              {fill(group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther, {
+                reason:
+                  reason === "sent"
+                    ? fill(copy.sent, { names: group.map((link) => link.name).join(", ") })
+                    : reasonCopy(copy, reason, group.length, channel),
+              })}
             </p>
             <div className="mt-2 flex flex-col gap-1.5">
               {group.map((link) => (
-                <CopyLink key={link.token} link={link} copy={copy} />
+                <CopyLink key={link.token} link={link} copy={copy} autoCopy={autoCopy} />
               ))}
             </div>
           </div>
@@ -109,7 +156,13 @@ function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: Waiver
   );
 }
 
-function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSendCopy }) {
+/**
+ * What the tap did, in place. Exported because the diver record's action row
+ * drives the same server action from three buttons and must report its outcome
+ * the same way — one vocabulary for "sent", "already signed", "here is the
+ * link", wherever staff tapped.
+ */
+export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSendCopy }) {
   if (state.status !== "done") return null;
   const nothing =
     state.sent.length === 0 &&
@@ -137,7 +190,18 @@ function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSen
           })}
         </p>
       ) : null}
-      {state.links.length > 0 ? <LinkGroups links={state.links} copy={copy} /> : null}
+      {state.links.length > 0 ? (
+        // Only a deliberate "Copy link" writes to the clipboard. A fallback link
+        // shown *because* an email bounced is information, not a copy the
+        // staffer asked for, and silently overwriting their clipboard for it
+        // would be a side effect nobody chose.
+        <LinkGroups
+          links={state.links}
+          copy={copy}
+          channel={state.channel}
+          autoCopy={state.channel === "link"}
+        />
+      ) : null}
       {state.errors.length > 0 ? (
         <p className="mt-1 text-danger">{fill(copy.errors, { names: state.errors.join(", ") })}</p>
       ) : null}

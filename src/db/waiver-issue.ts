@@ -1,6 +1,9 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
+import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
 import type { AppDb } from "./client";
 import { sendAndRecordNotification, sendNotification } from "./notifications";
 import { getBookingReadiness } from "./readiness";
@@ -12,6 +15,7 @@ import {
   recordWaiverDelivery,
   staleWaiverRecordForToken,
 } from "./waivers";
+import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
  * The one place that issues a waiver link *and* delivers it. Both the trip
@@ -24,6 +28,16 @@ import {
  */
 
 /**
+ * Which way the shop asked DiveDay to hand the link over.
+ *
+ * `link` is not a degraded email: it is the staffer saying "give me the URL and
+ * I will pass it on myself" — the counter conversation where the diver is
+ * standing there with their phone out. So it attempts no delivery at all rather
+ * than mailing a copy nobody asked for on its way to the clipboard.
+ */
+export type WaiverSendChannel = "email" | "text" | "link";
+
+/**
  * How the diver actually got (or did not get) their link. Anything that is not
  * `sent` means staff must hand over the fallback link themselves, so the UI
  * shows it rather than silently claiming an email is on its way.
@@ -31,11 +45,100 @@ import {
 export type WaiverDelivery =
   | "sent"
   | "no_email"
+  /** Asked to text, but the record carries no internationally dialable number. */
+  | "no_phone"
   /** No `APP_HOST`, so there is no origin to build the link on — nothing was attempted. */
   | "no_app_origin"
   | "unconfigured"
   | "test_recipient"
-  | "failed";
+  | "failed"
+  /** The `link` channel: issued on purpose with nothing sent, so staff can pass it on. */
+  | "link_only";
+
+/**
+ * The shop's own text senders, resolved once per send.
+ *
+ * Injectable so a test can drive both halves without AWS or Meta credentials,
+ * and so the one rule that prefers a shop's own WhatsApp over platform SMS
+ * (`sendCourtesyMessage`) stays in the one place that owns it.
+ */
+export async function waiverTextProviders(db: AppDb, shopId: string): Promise<CourtesyProviders> {
+  const senders = await whatsAppProvidersForShops(db, [shopId]);
+  return { sms: smsProviderFromEnvironment(), whatsapp: senders.get(shopId) ?? null };
+}
+
+/**
+ * The text a diver reads on their phone, in their own language.
+ *
+ * Composed here rather than returned as a code because nothing downstream picks
+ * words for a sent text — the same terminal-renderer exception `reminderSmsBody`
+ * takes (docs ADR 20260731-notification-locale).
+ */
+function waiverTextBody(
+  t: DiverTranslator,
+  input: { shopName: string; tripTitle?: string; completionUrl: string },
+): string {
+  return input.tripTitle
+    ? t("notifications.sms.waiverForTrip", {
+        shopName: input.shopName,
+        tripTitle: input.tripTitle,
+        url: input.completionUrl,
+      })
+    : t("notifications.sms.waiver", { shopName: input.shopName, url: input.completionUrl });
+}
+
+/**
+ * Text one diver their waiver link over the shop's own WhatsApp when it has
+ * connected one, and platform SMS otherwise — one message either way, never
+ * both (`src/lib/notifications/courtesy.ts`).
+ */
+async function textWaiverLink(
+  db: AppDb,
+  input: {
+    shopId: string;
+    phone: string | null;
+    shopName: string;
+    tripTitle?: string;
+    locale: string;
+    completionUrl: string;
+    providers?: CourtesyProviders;
+  },
+): Promise<{ delivery: WaiverDelivery; providerMessageId?: string }> {
+  const to = smsRecipient(input.phone);
+  if (!to) return { delivery: "no_phone" };
+  const providers = input.providers ?? (await waiverTextProviders(db, input.shopId));
+  const { delivery } = await sendCourtesyMessage(
+    {
+      to,
+      shopName: input.shopName,
+      body: waiverTextBody(diverTranslator(input.locale), {
+        shopName: input.shopName,
+        tripTitle: input.tripTitle,
+        completionUrl: input.completionUrl,
+      }),
+    },
+    providers,
+  );
+  if (delivery.status === "sent") {
+    return { delivery: "sent", providerMessageId: delivery.providerMessageId };
+  }
+  return { delivery: delivery.status === "not_configured" ? "unconfigured" : "failed" };
+}
+
+/**
+ * What a `link`/`text` send should write to the record's delivery columns.
+ *
+ * A copied link is recorded `sent`: those columns answer "does the diver have a
+ * live link", and a staffer taking the URL to hand over *is* that handover. The
+ * alternative — leaving them null — makes `getDiverWaiverRequestStatus` report a
+ * failed delivery, so the card would show "Failed to deliver" about a send
+ * nobody attempted or wanted.
+ */
+function recordedDeliveryStatus(delivery: WaiverDelivery): "sent" | "failed" | "not_configured" {
+  if (delivery === "sent" || delivery === "link_only") return "sent";
+  if (delivery === "unconfigured") return "not_configured";
+  return "failed";
+}
 
 export type IssueAndDeliverWaiverResult =
   | {
@@ -58,16 +161,25 @@ export type PersonWaiverResult =
   | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: true }>, "bookingId"> & { bookingId: null })
   | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: false }>, "bookingId"> & { bookingId: null });
 
+/** Which channel to hand the link over on, plus test seams for the text one. */
+export type WaiverDeliveryOptions = {
+  /** Defaults to `email`, which is every caller that predates the channel. */
+  channel?: WaiverSendChannel;
+  /** Injected text senders, so a test never needs AWS or Meta credentials. */
+  textProviders?: CourtesyProviders;
+};
+
 /**
- * Issue a fresh waiver link for a booking and email it when we can. Emailing is
- * best-effort: a missing address, missing app origin, or a failed/disabled
- * provider all resolve to a non-`sent` delivery so the caller surfaces the
- * private link instead of pretending mail went out.
+ * Issue a fresh waiver link for a booking and hand it over on the asked-for
+ * channel. Delivery is best-effort: a missing address or number, missing app
+ * origin, or a failed/disabled provider all resolve to a non-`sent` delivery so
+ * the caller surfaces the private link instead of pretending anything went out.
  */
 export async function issueAndDeliverWaiver(
   db: AppDb,
   shopId: string,
   bookingId: string,
+  options: WaiverDeliveryOptions = {},
 ): Promise<IssueAndDeliverWaiverResult> {
   const [ctx] = await db
     .select({ person: people, trip: trips, shop: shops })
@@ -100,18 +212,40 @@ export async function issueAndDeliverWaiver(
   const diverName = ctx?.person.fullName ?? "";
   const email = ctx?.person.email ?? null;
   const origin = publicAppUrl();
+  const channel = options.channel ?? "email";
+  const completionUrl = origin
+    ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
+    : null;
 
-  // Two different "we could not mail this" states that used to collapse into
-  // one. `unconfigured` means no email provider; `no_app_origin` means the
+  // Two different "we could not send this" states that used to collapse into
+  // one. `unconfigured` means no provider; `no_app_origin` means the
   // provider may be fine but `APP_HOST` is unset, so there is no origin to
   // build the diver's link on and nothing is attempted. Telling a shop "no
   // email provider configured" when the actual gap is a missing APP_HOST sends
   // them to look at the wrong setting.
   let delivery: WaiverDelivery = "no_app_origin";
   let providerMessageId: string | undefined;
-  if (!email) {
+  if (channel === "link") {
+    delivery = completionUrl ? "link_only" : "no_app_origin";
+  } else if (channel === "text") {
+    if (!completionUrl || !ctx) {
+      delivery = "no_app_origin";
+    } else {
+      const result = await textWaiverLink(db, {
+        shopId,
+        phone: ctx.person.phone,
+        shopName: ctx.shop.name,
+        tripTitle: ctx.trip.title,
+        locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+        completionUrl,
+        providers: options.textProviders,
+      });
+      delivery = result.delivery;
+      providerMessageId = result.providerMessageId;
+    }
+  } else if (!email) {
     delivery = "no_email";
-  } else if (origin && ctx) {
+  } else if (completionUrl && ctx) {
     const result = await sendAndRecordNotification(db, {
       kind: "waiver_request",
       waiverRecordId: outcome.recordId,
@@ -122,7 +256,7 @@ export async function issueAndDeliverWaiver(
       diverName: ctx.person.fullName,
       shopName: ctx.shop.name,
       tripTitle: ctx.trip.title,
-      completionUrl: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+      completionUrl,
       expiresAt: outcome.expiresAt,
       timezone: ctx.shop.timezone,
     });
@@ -138,11 +272,7 @@ export async function issueAndDeliverWaiver(
   }
   await recordWaiverDelivery(db, {
     waiverRecordId: outcome.recordId,
-    delivery: {
-      status:
-        delivery === "sent" ? "sent" : delivery === "unconfigured" ? "not_configured" : "failed",
-      providerMessageId,
-    },
+    delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
   });
 
   return { ok: true, bookingId, diverName, token: outcome.token, delivery };
@@ -153,6 +283,7 @@ export async function issueAndDeliverPersonWaiver(
   db: AppDb,
   shopId: string,
   personId: string,
+  options: WaiverDeliveryOptions = {},
 ): Promise<PersonWaiverResult> {
   const [ctx] = await db
     .select({ person: people, shop: shops })
@@ -170,9 +301,35 @@ export async function issueAndDeliverPersonWaiver(
     };
   }
   const origin = publicAppUrl();
+  const channel = options.channel ?? "email";
+  const completionUrl = origin
+    ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
+    : null;
   let delivery: WaiverDelivery = "no_app_origin";
   let providerMessageId: string | undefined;
-  if (ctx?.person.email && origin) {
+  if (!completionUrl) {
+    delivery = "no_app_origin";
+  } else if (!ctx) {
+    // `issueWaiverRequest` already validated the person, so this is only
+    // reachable if the row went away mid-issue. Nothing was attempted, and
+    // there is a token to hand over either way.
+    delivery = "failed";
+  } else if (channel === "link") {
+    delivery = "link_only";
+  } else if (channel === "text") {
+    const result = await textWaiverLink(db, {
+      shopId,
+      phone: ctx.person.phone,
+      shopName: ctx.shop.name,
+      locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+      completionUrl,
+      providers: options.textProviders,
+    });
+    delivery = result.delivery;
+    providerMessageId = result.providerMessageId;
+  } else if (!ctx.person.email) {
+    delivery = "no_email";
+  } else {
     const result = await sendNotification(db, {
       kind: "waiver_request",
       waiverRecordId: outcome.recordId,
@@ -181,7 +338,7 @@ export async function issueAndDeliverPersonWaiver(
       locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
       diverName: ctx.person.fullName,
       shopName: ctx.shop.name,
-      completionUrl: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+      completionUrl,
       expiresAt: outcome.expiresAt,
       timezone: ctx.shop.timezone,
     });
@@ -194,18 +351,11 @@ export async function issueAndDeliverPersonWaiver(
           : result.errorCode === "invalid_test_recipient"
             ? "test_recipient"
             : "failed";
-    await recordWaiverDelivery(db, {
-      waiverRecordId: outcome.recordId,
-      delivery: { ...result, providerMessageId },
-    });
-  } else {
-    const reason = !ctx?.person.email ? "no_email" : !origin ? "no_app_origin" : "failed";
-    delivery = reason;
-    await recordWaiverDelivery(db, {
-      waiverRecordId: outcome.recordId,
-      delivery: { status: "failed" },
-    });
   }
+  await recordWaiverDelivery(db, {
+    waiverRecordId: outcome.recordId,
+    delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+  });
   return {
     ok: true,
     bookingId: null,

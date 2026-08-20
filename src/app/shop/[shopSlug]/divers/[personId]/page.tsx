@@ -27,7 +27,6 @@ import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
-import { PaperWaiver } from "./_components/PaperWaiver";
 import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RentalFit } from "./_components/RentalFit";
@@ -36,6 +35,7 @@ import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
 import { UpcomingTripsSection } from "./_components/UpcomingTripsSection";
+import { WaiverSection } from "./_components/WaiverSection";
 import { restoreCardAction, restoreDiverNoteAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -206,7 +206,7 @@ export default async function DiverDetailPage({
       />
       <StatsSummary diver={diver} shop={shop} locale={locale} notesCount={notes.length} />
       <DiverSection id="waiver">
-        <PaperWaiver
+        <WaiverSection
           diver={diver}
           shopSlug={shopSlug}
           personId={personId}

@@ -306,7 +306,7 @@
     "waiverNotSent": "No enviada",
     "waiverFailed": "No se pudo entregar",
     "waiverNotSigned": "Sin firmar",
-    "waiverSent": "Exención enviada; pendiente de firma",
+    "waiverSent": "Enlace enviado; esperando la firma",
     "waiverSigned": "Firmada",
     "waiverMedicalReview": "Revisión médica",
     "waiverGoodUntil": "Válido hasta el {date}",

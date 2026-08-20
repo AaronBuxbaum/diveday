@@ -211,6 +211,105 @@ describe("issueAndDeliverWaiver", () => {
     expect(result).toMatchObject({ ok: true, delivery: "no_email" });
   });
 
+  it("texts the link over the shop's own WhatsApp when it has connected one", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop, trip, bookingId } = await seededBooking();
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!row) throw new Error("booking row missing");
+    await db.update(people).set({ phone: "+13055550142" }).where(eq(people.id, row.personId));
+
+    const whatsapp = {
+      send: vi.fn().mockResolvedValue({ status: "sent", providerMessageId: "wa" }),
+    };
+    const sms = { send: vi.fn() };
+    const result = await issueAndDeliverWaiver(db, shop.id, bookingId, {
+      channel: "text",
+      textProviders: { whatsapp, sms },
+    });
+
+    expect(result).toMatchObject({ ok: true, delivery: "sent" });
+    // One message, never both — the courtesy rule, exercised through the send
+    // rather than trusted.
+    expect(sms.send).not.toHaveBeenCalled();
+    expect(whatsapp.send).toHaveBeenCalledOnce();
+    // Nothing left the building by email: a "Text waiver" tap must not also mail
+    // a copy the shop did not ask to send.
+    expect(sesSend).not.toHaveBeenCalled();
+    const body = whatsapp.send.mock.calls[0]?.[0]?.body ?? "";
+    expect(body).toContain(`https://diveday.example/waivers/${result.ok ? result.token : ""}`);
+    // The departure is named: a diver with two boats this week needs to know
+    // which release this is.
+    expect(body).toContain(trip.title);
+  });
+
+  it("falls back to SMS, and reports no_phone when there is no dialable number", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop } = await seededShopContext();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Textable Diver", phone: "+13055550143" })
+      .returning();
+    if (!person) throw new Error("person insert failed");
+
+    const sms = { send: vi.fn().mockResolvedValue({ status: "sent", providerMessageId: "sns" }) };
+    const texted = await issueAndDeliverPersonWaiver(db, shop.id, person.id, {
+      channel: "text",
+      textProviders: { whatsapp: null, sms },
+    });
+    expect(texted).toMatchObject({ ok: true, delivery: "sent" });
+    expect(sms.send).toHaveBeenCalledOnce();
+
+    // A local number has no unambiguous country code, so nothing is attempted
+    // rather than texting whoever holds it in the wrong country.
+    await db.update(people).set({ phone: "555-0143" }).where(eq(people.id, person.id));
+    sms.send.mockClear();
+    const refused = await issueAndDeliverPersonWaiver(db, shop.id, person.id, {
+      channel: "text",
+      textProviders: { whatsapp: null, sms },
+    });
+    expect(refused).toMatchObject({ ok: true, delivery: "no_phone" });
+    expect(sms.send).not.toHaveBeenCalled();
+  });
+
+  it("issues a link with nothing sent on the link channel, and records it as handed over", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "ses-id" });
+
+    const { db, shop } = await seededShopContext();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Counter Diver", email: "counter@dive.day" })
+      .returning();
+    if (!person) throw new Error("person insert failed");
+
+    const result = await issueAndDeliverPersonWaiver(db, shop.id, person.id, { channel: "link" });
+
+    expect(result).toMatchObject({ ok: true, delivery: "link_only" });
+    // A staffer asking for the URL is not asking for an email as well.
+    expect(sesSend).not.toHaveBeenCalled();
+    // Recorded as handed over, so the diver's record reads "awaiting signature"
+    // rather than claiming a delivery failed that nobody attempted.
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.personId, person.id),
+          eq(waiverRecords.status, "pending"),
+          isNull(waiverRecords.supersededAt),
+        ),
+      );
+    expect(record).toMatchObject({ deliveryStatus: "sent", deliveryProviderMessageId: null });
+  });
+
   it("does not reissue over a signed waiver", async () => {
     const { db, shop, bookingId } = await seededBooking();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });

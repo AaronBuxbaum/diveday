@@ -5,6 +5,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
+import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -655,7 +656,7 @@ export function RosterSection({
                     <PaperWaiverControl
                       action={markWaiverInPersonAction}
                       bookingId={booking.id}
-                      t={t}
+                      copy={paperWaiverCopy(t)}
                     />
                   </div>
                 ) : null}

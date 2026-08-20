@@ -306,7 +306,7 @@
     "waiverNotSent": "Not sent",
     "waiverFailed": "Failed to deliver",
     "waiverNotSigned": "Not signed",
-    "waiverSent": "Waiver sent; awaiting signature",
+    "waiverSent": "Link sent; awaiting signature",
     "waiverSigned": "Signed",
     "waiverMedicalReview": "Medical review",
     "waiverGoodUntil": "Good until {date}",
