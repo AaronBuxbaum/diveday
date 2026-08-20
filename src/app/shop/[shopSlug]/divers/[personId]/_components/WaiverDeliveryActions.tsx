@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverSendChannel,
   type WaiverSendCopy,
+  type WaiverSendState,
 } from "@/app/actions/waiver-send-types";
 import { sendWaiversAction } from "@/app/actions/waivers";
-import { ResultNotice } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
+import { copyToClipboard } from "@/components/Copyable";
+import { Toast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 import {
   WaiverActionIcon,
@@ -17,6 +19,7 @@ import {
   type WaiverDeliveryMarkName,
 } from "@/components/WaiverActionIcon";
 import type { WaiverChannelDeliveryState, WaiverChannelDeliveryStates } from "@/db/waivers";
+import { fill } from "@/i18n/fill";
 
 /** The words on the three delivery buttons, resolved server-side. */
 export type WaiverDeliveryCopy = {
@@ -52,6 +55,24 @@ function stateWord(state: WaiverChannelDeliveryState, copy: WaiverDeliveryCopy):
   if (state === "sent") return copy.stateSent;
   if (state === "failed") return copy.stateFailed;
   if (state === "not_configured") return copy.stateUnavailable;
+  return null;
+}
+
+/**
+ * The one-line toast for an outcome the buttons' own rings can't carry: a
+ * genuine send (names who it reached), a double-tap that changed nothing, or
+ * a hard failure unrelated to any one channel. `null` for everything a
+ * ring/mark already says (sent/failed/unavailable) or that the caller handles
+ * itself (the "Copy link" clipboard write, which needs its own async result).
+ */
+function outcomeToast(state: WaiverSendState, copy: WaiverSendCopy): string | null {
+  if (state.sent.length > 0) return fill(copy.sent, { names: state.sent.join(", ") });
+  if (state.alreadyDone.length > 0) {
+    return fill(state.alreadyDone.length === 1 ? copy.alreadyDoneOne : copy.alreadyDoneOther, {
+      names: state.alreadyDone.join(", "),
+    });
+  }
+  if (state.errors.length > 0) return fill(copy.errors, { names: state.errors.join(", ") });
   return null;
 }
 
@@ -178,17 +199,45 @@ export function WaiverDeliveryActions({
     IDLE_WAIVER_SEND_STATE,
   );
   const [tapped, setTapped] = useState<WaiverSendChannel | null>(null);
-  // Bumped on every tap purely to re-key the result below. Now that a live link
-  // is reused rather than reissued (ADR
-  // 20260820-waiver-links-are-reused-not-reissued), a second "Copy link" comes
-  // back with the *same* URL — so `Copyable`'s auto-copy effect, which is keyed
-  // on the value, would not fire and the tap would look like it did nothing.
-  // Remounting the strip makes each tap put the link on the clipboard again.
+  // Bumped on every tap so a repeat of the same outcome still remounts the
+  // toast below instead of sitting inert as an unchanged prop.
   const [attempt, setAttempt] = useState(0);
   const tap = (channel: WaiverSendChannel) => {
     setTapped(channel);
     setAttempt((count) => count + 1);
   };
+
+  const [toast, setToast] = useState<{ attempt: number; message: string } | null>(null);
+  useEffect(() => {
+    if (state.status !== "done") return;
+    const message = outcomeToast(state, sendCopy);
+    if (message) {
+      setToast({ attempt, message });
+      return;
+    }
+    // The one outcome with no trace elsewhere on screen: a deliberate "Copy
+    // link" tap has no ring of its own (see the comment below), so this is
+    // the only place the clipboard write gets acknowledged. An email/text
+    // fallback link — the send failed, or the channel isn't configured —
+    // stays silent here on purpose: the button's own ring already says so,
+    // and "Copy link" is the button right next to it. Clearing any standing
+    // toast rather than merely skipping matters here: a tap that lands while
+    // an earlier tap's toast is still up (well within its four seconds) must
+    // not leave that older, now-unrelated message sitting on screen looking
+    // like it answers this one.
+    if (state.channel !== "link" || !state.links[0]) {
+      setToast(null);
+      return;
+    }
+    const url = new URL(`/waivers/${state.links[0].token}`, window.location.origin).toString();
+    let alive = true;
+    void copyToClipboard(url).then((ok) => {
+      if (alive) setToast({ attempt, message: ok ? sendCopy.copied : sendCopy.copyFailed });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [state, sendCopy, attempt]);
 
   return (
     <>
@@ -234,7 +283,7 @@ export function WaiverDeliveryActions({
         </form>
         {children}
       </div>
-      <ResultNotice key={attempt} state={state} copy={sendCopy} />
+      {toast ? <Toast key={toast.attempt} message={toast.message} /> : null}
     </>
   );
 }

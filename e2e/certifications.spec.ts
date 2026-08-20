@@ -38,7 +38,6 @@ test("staff captures and verifies level and specialty certifications before eith
   await form.locator('select[name="level"]').selectOption("advanced_open_water");
   await form.getByLabel("Certification number").fill(`PADI-AOW-${e2eNow().getTime()}`);
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("pending");
 
   const pendingRow = page
     .locator("li")
@@ -56,7 +55,6 @@ test("staff captures and verifies level and specialty certifications before eith
   await specialty.locator('select[name="specialty"]').selectOption("wreck");
   await specialty.getByLabel("Certification number").fill(cardNo);
   await specialty.getByRole("button", { name: "Capture specialty for review" }).click();
-  await expect(page.getByRole("status")).toContainText("pending");
 
   // Scope to this card's row by its unique number; the specialty card shows
   // "<agency> · <specialty>", not the literal word "specialty".

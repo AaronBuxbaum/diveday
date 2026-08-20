@@ -37,7 +37,6 @@ test.describe("staff", () => {
       .selectOption("nitrox");
     await specialtyForm.locator('input[name="identifier"]').filter({ visible: true }).fill(cardNo);
     await page.getByRole("button", { name: "Capture specialty for review" }).click();
-    await expect(page.getByRole("status")).toContainText("captured");
 
     const card = page.locator("li").filter({ hasText: cardNo });
     await card.getByRole("button", { name: "Mark certified" }).click();

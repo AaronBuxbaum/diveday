@@ -15,6 +15,8 @@ test.describe("staff", () => {
   test("adds a unit to the register and finds it in the fleet", async ({ page }) => {
     const tag = `BCD E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
+    // "Add a unit" is a closed disclosure at rest; the header's own door opens it.
+    await page.getByRole("button", { name: "Add gear" }).click();
     await page.getByLabel("Tag").fill(tag);
     await page.getByLabel("Size").first().fill("M");
     await page.getByRole("button", { name: "Add to the register" }).click();
@@ -26,10 +28,15 @@ test.describe("staff", () => {
   test("refuses a duplicate tag beside the field, not in a page banner", async ({ page }) => {
     const tag = `Reg E2E-${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/gear");
+    // "Add a unit" is a closed disclosure at rest; the header's own door opens it.
+    await page.getByRole("button", { name: "Add gear" }).click();
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
     await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
 
+    // A successful add redirects with `?notice=added` — a real navigation
+    // that remounts the page, so the disclosure is closed again.
+    await page.getByRole("button", { name: "Add gear" }).click();
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
     // The refusal lands on the Tag field itself (role="alert" via Field's

@@ -9,7 +9,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -36,6 +37,8 @@ import {
 } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { AddUnitDetails } from "./_components/AddUnitDetails";
+import { AddUnitLink } from "./_components/AddUnitLink";
 import {
   checkOutGearReservationAction,
   createGearItemAction,
@@ -176,9 +179,9 @@ export default async function GearRegisterPage({
         actions={
           fleetTotal === 0 ? undefined : (
             // Secondary: the form below carries the page's one primary.
-            <a href="#add-unit" className={buttonClass({ variant: "secondary" })}>
+            <AddUnitLink className={buttonClass({ variant: "secondary" })}>
               <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
-            </a>
+            </AddUnitLink>
           )
         }
       />
@@ -254,9 +257,9 @@ export default async function GearRegisterPage({
             <h2 className="font-semibold">{t("gear.empty.heading")}</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("gear.empty.body")}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <a href="#add-unit" className={buttonClass()}>
+              <AddUnitLink className={buttonClass()}>
                 <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
-              </a>
+              </AddUnitLink>
             </div>
           </EmptyState>
         ) : (
@@ -335,74 +338,92 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        <SectionCard
-          id="add-unit"
-          className="scroll-mt-24"
-          padding="lg"
-          title={t("gear.addUnit.title")}
-          description={t("gear.addUnit.description")}
+        {/* `AddUnitDetails` rather than `SectionCard as="details"` (the shared
+            component has no `open` prop, a closed set on purpose) or a plain
+            `<details>` (its own React state is what lets `AddUnitLink`
+            elsewhere on the page open it reliably — see both components'
+            comments). `initialOpen` layers a second, independent reason to
+            start open: a refusal from this form to show. */}
+        <AddUnitDetails
+          className={sectionCardClass({
+            padding: "none",
+            className: "group/add-unit scroll-mt-24",
+          })}
+          initialOpen={Boolean(addStatus)}
         >
-          <FieldGrid as="form" action={createGearItemAction} columns={2}>
-            <Field label={t("gear.form.kind")}>
-              <select name="kind" className={controlClass} defaultValue="bcd">
-                {GEAR_KIND_ORDER.map((option) => (
-                  <option key={option} value={option}>
-                    {gearItemKindLabel(t, option)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field
-              label={t("gear.form.label")}
-              hint={t("gear.form.labelHint")}
-              error={fieldError("label")}
-            >
-              <input
-                name="label"
-                required
-                maxLength={80}
-                placeholder={t("gear.form.labelPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
-              <input
-                name="size"
-                maxLength={40}
-                placeholder={t("gear.form.sizePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.form.serialNumber")} hint={t("gear.form.optionalHint")}>
-              <input name="serialNumber" maxLength={80} className={controlClass} />
-            </Field>
-            <Field label={t("gear.form.brandModel")} hint={t("gear.form.optionalHint")}>
-              <input
-                name="brandModel"
-                maxLength={120}
-                placeholder={t("gear.form.brandModelPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field
-              label={t("gear.form.purchasedOn")}
-              hint={t("gear.form.optionalHint")}
-              error={fieldError("purchasedOn")}
-            >
-              <input type="date" name="purchasedOn" className={controlClass} />
-            </Field>
-            <FieldActions>
-              <SubmitButton pendingLabel={t("gear.addUnit.pending")} className={buttonClass()}>
-                {t("gear.addUnit.submit")}
-              </SubmitButton>
-              <FormStatus tone={addStatus?.tone}>
-                {addStatus && !noticeField ? t(addStatus.key) : null}
-              </FormStatus>
-            </FieldActions>
-          </FieldGrid>
-          {/* Keyed on the notice so a repeated refusal re-fires the focus. */}
-          <FieldErrorFocus key={notice} scope="add-unit" />
-        </SectionCard>
+          <summary
+            id="add-unit"
+            className="flex min-h-11 scroll-mt-24 cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden sm:p-6"
+          >
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">{t("gear.addUnit.title")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("gear.addUnit.description")}</p>
+            </div>
+            <DisclosureCaret className="size-4 shrink-0 text-muted group-open/add-unit:rotate-90" />
+          </summary>
+          <div className="border-t border-border p-5 sm:p-6">
+            <FieldGrid as="form" action={createGearItemAction} columns={2}>
+              <Field label={t("gear.form.kind")}>
+                <select name="kind" className={controlClass} defaultValue="bcd">
+                  {GEAR_KIND_ORDER.map((option) => (
+                    <option key={option} value={option}>
+                      {gearItemKindLabel(t, option)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                label={t("gear.form.label")}
+                hint={t("gear.form.labelHint")}
+                error={fieldError("label")}
+              >
+                <input
+                  name="label"
+                  required
+                  maxLength={80}
+                  placeholder={t("gear.form.labelPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
+                <input
+                  name="size"
+                  maxLength={40}
+                  placeholder={t("gear.form.sizePlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("gear.form.serialNumber")} hint={t("gear.form.optionalHint")}>
+                <input name="serialNumber" maxLength={80} className={controlClass} />
+              </Field>
+              <Field label={t("gear.form.brandModel")} hint={t("gear.form.optionalHint")}>
+                <input
+                  name="brandModel"
+                  maxLength={120}
+                  placeholder={t("gear.form.brandModelPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("gear.form.purchasedOn")}
+                hint={t("gear.form.optionalHint")}
+                error={fieldError("purchasedOn")}
+              >
+                <input type="date" name="purchasedOn" className={controlClass} />
+              </Field>
+              <FieldActions>
+                <SubmitButton pendingLabel={t("gear.addUnit.pending")} className={buttonClass()}>
+                  {t("gear.addUnit.submit")}
+                </SubmitButton>
+                <FormStatus tone={addStatus?.tone}>
+                  {addStatus && !noticeField ? t(addStatus.key) : null}
+                </FormStatus>
+              </FieldActions>
+            </FieldGrid>
+            {/* Keyed on the notice so a repeated refusal re-fires the focus. */}
+            <FieldErrorFocus key={notice} scope="add-unit" />
+          </div>
+        </AddUnitDetails>
       </div>
     </main>
   );

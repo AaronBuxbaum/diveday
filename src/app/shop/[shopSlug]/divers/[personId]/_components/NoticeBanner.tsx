@@ -35,11 +35,26 @@ type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
  */
 const NOTICE_KEYS: Record<
   string,
-  { form: string; tone: "success" | "danger" | "warning"; key: StaffMessageKey; field?: string }
+  {
+    form: string;
+    tone: "success" | "danger" | "warning";
+    /** Absent only when `silent` is — nothing renders, so there is nothing to say. */
+    key?: StaffMessageKey;
+    field?: string;
+    /**
+     * A pure "it worked" outcome the surface already shows on its own: a
+     * captured card lands in the list right below as a new pending row, so a
+     * banner repeating "captured as pending" would be a caption on a
+     * photograph of itself (copy-restraint, deletion #1). Routing (`form`)
+     * still resolves normally — only the text is withheld, by both
+     * `DiverFormStatus` and `NoticeBanner`.
+     */
+    silent?: true;
+  }
 > = {
   // Cards — the two card sections emit the same codes, so their actions stamp
   // an explicit `?form=`; these defaults are what an old link still resolves to.
-  captured: { form: "cards", tone: "success", key: "divers.notices.captured" },
+  captured: { form: "cards", tone: "success", silent: true },
   verified: { form: "cards", tone: "success", key: "divers.notices.verified" },
   "card-restored": { form: "cards", tone: "success", key: "divers.notices.cardRestored" },
   "card-restore-conflict": {
@@ -298,7 +313,7 @@ function diverNoticeForm(param: string | undefined, fallback: string): string {
  * things this page's notices carry that the shared shape does not — a link to
  * the screen that fixes it, and the id of the control it belongs on.
  */
-export type DiverNotice = FormNotice & { link?: NoticeLink; field?: string };
+export type DiverNotice = FormNotice & { link?: NoticeLink; field?: string; silent?: true };
 
 /** Only `payment-not-connected` has somewhere to send someone. */
 const NOTICE_LINKS: Record<string, NoticeLink> = {
@@ -358,9 +373,14 @@ export function resolveDiverNotice({
   return {
     form: diverNoticeForm(form, banner.form),
     tone: banner.tone,
-    text: refusal ? tripAdmissionRefusalText(t, refusal, locale) : t(banner.key),
+    text: banner.silent
+      ? ""
+      : refusal
+        ? tripAdmissionRefusalText(t, refusal, locale)
+        : t(banner.key as StaffMessageKey),
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,
+    silent: banner.silent,
   };
 }
 
@@ -383,7 +403,7 @@ export function DiverFormStatus({
   locale: string;
   className?: string;
 }) {
-  if (!status) return null;
+  if (!status || status.silent) return null;
   const t = staffTranslator(locale);
   return (
     <FormStatus tone={status.tone} className={className}>
@@ -416,7 +436,7 @@ export function NoticeBanner({
   shopSlug: string;
   locale: string;
 }) {
-  if (!notice) return null;
+  if (!notice || notice.silent) return null;
   const t = staffTranslator(locale);
   return (
     <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)} className="mt-6">

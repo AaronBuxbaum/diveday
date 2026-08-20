@@ -114,10 +114,20 @@ export function RecapNoteEditor({
             needs is "is there one, and does it still read right", not the
             form. `min-w-0 truncate` so a long note ellipses instead of pushing
             the row wider than the card; `pl-5` on the stacked layout keeps it
-            under the label rather than under the caret. */}
-        <span className="min-w-0 truncate pl-5 text-muted sm:pl-0">{recapSummary}</span>
+            under the label rather than under the caret. Hidden once open: the
+            body below says the same thing at least once already (the
+            paragraph when the recap already went out, "Recap sending"'s own
+            line otherwise), and a passing-glance summary has nothing left to
+            add beside its own open form. */}
+        <span className="min-w-0 truncate pl-5 text-muted group-open/recap:hidden sm:pl-0">
+          {recapSummary}
+        </span>
       </summary>
-      <p className="mt-2 max-w-2xl text-sm text-muted">{statusSummary}</p>
+      {/* Only for a recap that already went out: nothing below restates it in
+          that case. A recap still waiting to send drops this paragraph
+          entirely — "Recap sending" right underneath says the identical
+          thing, with the live countdown and the controls to act on it. */}
+      {recapLocked ? <p className="mt-2 max-w-2xl text-sm text-muted">{statusSummary}</p> : null}
 
       {!recapLocked &&
       recapSendAction &&

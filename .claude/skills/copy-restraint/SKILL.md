@@ -39,6 +39,18 @@ caption on a photograph of itself.
 Test: cover the sentence. Does a competent user of this screen now get something wrong? If not,
 it was decoration.
 
+The same failure shows up as a *banner* instead of a static caption: an action lands, and the
+surface it changed already says what happened — a new pending card row with its own "Pending"
+badge, a button whose ring and mark just switched to "sent" — but a confirmation box renders
+anyway, one beat later, saying the identical thing in a sentence. Cover the fresh row/badge/ring
+instead of the sentence for this variant of the test: if the reader can still see the outcome
+without the banner, delete the banner, not just shorten it. `divers.notices.captured`
+("Certification captured as pending. Look the number up...") was this exactly — the new card row
+appears directly beneath it on the same render, already reading "Pending." See
+[forms-and-controls.md](../../../docs/design/forms-and-controls.md)'s "Ephemeral acknowledgement"
+section for what to reach for instead (the control's own face, then `Toast`, then `FormStatus` —
+in that order) when the tap genuinely needs *something* said.
+
 ### 2. It explains the mechanism
 
 The reader gets the outcome; the sentence describes the rule that produced it. This is the most
