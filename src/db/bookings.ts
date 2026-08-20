@@ -98,6 +98,28 @@ export type BookingRequest = {
    * stranger's safety record by failing.
    */
   declared?: BookingDeclaration;
+  /**
+   * What to do when the trip's own certification gate is not satisfied.
+   *
+   * `"enforce"` (the default, and every caller that does not say otherwise)
+   * refuses with `trip_prerequisite`. `"advise"` sells the seat and hands the
+   * unmet requirement back on the success as `admissionAdvisory`.
+   *
+   * **Only the public booking form advises**, because only it asks each diver
+   * what they hold and can warn them as they answer. The three callers that
+   * keep the refusal are the ones with nowhere to put a warning and something
+   * worse to lose by proceeding:
+   *
+   * - **Reschedule** moves a seat the diver already has. Silently landing them
+   *   on a departure they cannot dive is a worse outcome than the refusal, and
+   *   they did not ask for it — the picker on `/ready` offers qualifying trips,
+   *   so this is a backstop rather than the first line.
+   * - **Seat claims** run the gate for the claimant on a seat somebody else
+   *   bought (ADR 20260804-seat-claim-links); there is no form and no answer.
+   * - **Staff seating** is a person at a counter who can read the refusal and
+   *   act on it, which is exactly the conversation the gate is for.
+   */
+  admissionGate?: "enforce" | "advise";
 } & BookingPerson;
 
 /**
@@ -125,12 +147,75 @@ export type BookingRefusal =
     }
   | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
 
-export type BookingOutcome =
-  | { ok: true; bookingId: string; personId: string; personName: string }
-  | BookingRefusal;
+/**
+ * What the trip asks for that this diver's record does not yet answer, on a
+ * booking that **went through anyway**.
+ *
+ * Not a refusal, and deliberately a different field from `BookingRefusal`'s
+ * `refusal` so the two can never be confused at a call site: one means the seat
+ * was not sold, this one means it was. The sale-time certification gate informs
+ * (see `createBookingRecord`); readiness still decides boarding.
+ */
+export type BookingAdmissionAdvisory = TripAdmissionRefusal;
+
+/**
+ * **Whether this particular shortfall may be advised rather than refused.**
+ *
+ * Three conditions, and each one is load-bearing:
+ *
+ * 1. **The caller asked** (`admissionGate: "advise"`). Only the public booking
+ *    form does; reschedule, seat claims and staff seating keep the stop.
+ *
+ * 2. **The shortfall rests on what this submitter just typed**, not on the
+ *    shop's own record. H-30 is a *Chosen* decision that kept the refusal and
+ *    rejected "sell the seat and let readiness catch it" outright — but its own
+ *    text draws this line: "the common refusal is a response to what this
+ *    submitter just typed rather than a disclosure about somebody on file".
+ *    A diver who leaves the select alone and is short on their *record* is
+ *    H-30's case exactly — nothing was said to them as they filled the form,
+ *    so a silent sale would charge a carded regular in full and hand them a
+ *    refund conversation at the dock. They still get the refusal.
+ *
+ * 3. **The unmet requirement is the level.** A specialty or nitrox gate is not
+ *    something a diver can assert on this form — there is no field for either —
+ *    so it is the one arm of this gate nobody could ever talk past, and
+ *    switching it off would buy nothing the warning can replace.
+ *
+ * What is left is precisely the case FU-20260820-the-sale-gate-bites-only-the-
+ * honest was about: a diver who answered truthfully and short, told so as they
+ * answered, and refused anyway while "Rather not say" and an inflated rung both
+ * walked through.
+ */
+function advisable(req: BookingRequest, refusal: TripAdmissionRefusal): boolean {
+  return (
+    req.admissionGate === "advise" &&
+    Boolean(req.declared?.level) &&
+    Boolean(refusal.requiredLevel) &&
+    refusal.missingSpecialties.length === 0 &&
+    !refusal.nitroxRequired
+  );
+}
+
+export type BookingSuccess = {
+  ok: true;
+  bookingId: string;
+  personId: string;
+  personName: string;
+  admissionAdvisory?: BookingAdmissionAdvisory;
+};
+
+export type BookingOutcome = BookingSuccess | BookingRefusal;
 
 export type BookingPartyOutcome =
-  | { ok: true; bookings: Array<{ bookingId: string; personId: string; personName: string }> }
+  | {
+      ok: true;
+      bookings: Array<{
+        bookingId: string;
+        personId: string;
+        personName: string;
+        admissionAdvisory?: BookingAdmissionAdvisory;
+      }>;
+    }
   | (BookingRefusal & {
       /**
        * Which request in the submitted array the rollback happened on
@@ -163,7 +248,12 @@ export async function createBookingParty(
   if (requests.length === 0) return { ok: false, reason: "trip_unavailable", failedIndex: -1 };
   return db
     .transaction(async (tx) => {
-      const created: Array<{ bookingId: string; personId: string; personName: string }> = [];
+      const created: Array<{
+        bookingId: string;
+        personId: string;
+        personName: string;
+        admissionAdvisory?: BookingAdmissionAdvisory;
+      }> = [];
       for (const [index, request] of requests.entries()) {
         const outcome = await createBookingRecord(tx, request);
         if (!outcome.ok) throw new PartyBookingError(outcome, index);
@@ -535,6 +625,28 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
   // one stands down — continuing education dives at the sites it certifies
   // people for, so the itinerary's own gate would refuse the students the
   // course exists to create (`TripAdmissionInput.courseSession`).
+  // **The sale-time certification gate informs; it does not refuse.**
+  //
+  // It used to return `trip_prerequisite` here and lose the sale. Three answers
+  // reached this line on a gated charter: a rung at or above the requirement
+  // (admitted), the select's own "Rather not say" default (admitted, since the
+  // field is optional), and an honest lower rung — refused. So the only diver
+  // it stopped was the one who answered truthfully and short, and the refusal
+  // handed them the answer to give on the next attempt, which then persisted an
+  // inflated claim onto their record. A gate that can be talked past has to
+  // earn its refusals, and that one was punishing honesty
+  // (FU-20260820-the-sale-gate-bites-only-the-honest, product owner 2026-08-20).
+  //
+  // The disclosure half is what does the work now, and it is stronger than the
+  // stop ever was: the requirement is stated above the form, and each diver's
+  // own answer is measured against it as they give it
+  // (`BookingSections.tsx`'s `belowRequirementFor`).
+  //
+  // **Nothing about boarding changes.** `calculateReadiness` still clears on a
+  // sighted card and nothing else, so this decides who may *buy* a seat, never
+  // who may get on the boat. The advisory is carried out so a caller can say
+  // what the trip asks; `blowout.ts` and `seat-claims.ts` still read
+  // `decideTripAdmission` as a predicate and are untouched.
   const admission = await tripAdmissionFor(
     tx,
     req.shopId,
@@ -544,9 +656,10 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     Boolean(trip.courseId),
     req.declared,
   );
-  if (!admission.admitted) {
+  if (!admission.admitted && !advisable(req, admission.refusal)) {
     return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
   }
+  const admissionAdvisory = admission.admitted ? undefined : admission.refusal;
 
   if (!person && pendingInsert) {
     if (pendingInsert.email) {
@@ -611,7 +724,13 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
       })
       .where(eq(bookings.id, existing.id));
     await persistDeclaration(tx, req, person.id, identityUnconfirmed);
-    return { ok: true, bookingId: existing.id, personId: person.id, personName: person.fullName };
+    return {
+      ok: true,
+      bookingId: existing.id,
+      personId: person.id,
+      personName: person.fullName,
+      admissionAdvisory,
+    };
   }
 
   const [created] = await tx
@@ -627,7 +746,13 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
   await persistDeclaration(tx, req, person.id, identityUnconfirmed);
-  return { ok: true, bookingId: created.id, personId: person.id, personName: person.fullName };
+  return {
+    ok: true,
+    bookingId: created.id,
+    personId: person.id,
+    personName: person.fullName,
+    admissionAdvisory,
+  };
 }
 
 /**

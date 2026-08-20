@@ -91,19 +91,48 @@ export function DiveDeclarationFields({ showNitrox = true }: { showNitrox?: bool
   );
 }
 
-/** The level field shared by the broad deal list and trip wait lists. */
+/**
+ * The level field shared by the broad deal list, the trip wait lists, and —
+ * once per diver — the booking form's party fieldsets.
+ *
+ * `name` is a parameter because the booking form asks this of up to six people
+ * at once and each answer has to arrive separately (`certificationLevel-0`…).
+ * The two wait lists ask one person and keep the bare name.
+ */
 export function DiveCertificationField({
   answer,
   onAnswerChange,
+  name = "certificationLevel",
+  belowRequirement,
 }: {
   answer?: string;
   onAnswerChange?: (value: string) => void;
+  name?: string;
+  /**
+   * Shown under the select when this diver's own answer ranks below what the
+   * departure asks for. **A warning, never a stop** — the seat is still theirs
+   * to buy (product owner, 2026-08-20, closing
+   * FU-20260820-the-sale-gate-bites-only-the-honest). Absent on the wait lists,
+   * which gate on nothing.
+   */
+  belowRequirement?: string | null;
 }) {
   const t = useTranslations();
   return (
     <Field
       label={t("common.certification.level")}
       hint={t("common.optional")}
+      description={
+        // `role="status"` because the sentence appears *while the select still
+        // has focus* — a bare `aria-describedby` string is not announced when
+        // it materialises under the control the reader is already on, so the
+        // sighted diver would see it and the screen-reader diver would not.
+        // Polite rather than an alert: nothing is wrong, and it must not
+        // interrupt the reader mid-option.
+        <span role="status" aria-live="polite" className="text-sm text-warning-strong">
+          {belowRequirement ?? ""}
+        </span>
+      }
       aside={
         <InfoHint
           label={t("common.certification.levelInfoLabel")}
@@ -112,7 +141,7 @@ export function DiveCertificationField({
       }
     >
       <select
-        name="certificationLevel"
+        name={name}
         {...(answer === undefined
           ? { defaultValue: "" }
           : {

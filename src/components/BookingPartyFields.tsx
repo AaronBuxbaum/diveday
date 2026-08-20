@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { DiveCertificationField } from "@/components/DiveDeclarationFields";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
@@ -34,6 +35,8 @@ export function BookingPartyFields({
   onSizeChange,
   contactEmail,
   contactPhone,
+  askCertification = false,
+  belowRequirementFor,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
@@ -52,6 +55,19 @@ export function BookingPartyFields({
    * hasn't set one. */
   contactEmail?: string | null;
   contactPhone?: string | null;
+  /**
+   * Ask each diver what they hold. On for the booking form, off for both wait
+   * lists — those ask the joiner once, in their own `DiveDeclarationFields`,
+   * because a wait list is a marketing opt-in with no party to speak for.
+   */
+  askCertification?: boolean;
+  /**
+   * Given one diver's answer, the warning to show under their select, or null.
+   * A function rather than a value because each diver is judged on their own
+   * answer. Supplied by the booking form, which knows the departure's
+   * requirement; never by a wait list, which gates on nothing.
+   */
+  belowRequirementFor?: (level: string) => string | null;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -72,6 +88,11 @@ export function BookingPartyFields({
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
   // party" test).
   const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
+  // Per-diver declared level, kept here so a failed server parse re-renders
+  // with every answer still in place — the same reason names and emails are
+  // controlled. Keyed by slot index, not by member, because raising the party
+  // size must not shuffle anyone's answer onto somebody else.
+  const [levels, setLevels] = useState<Record<number, string>>({});
   const limit = Math.max(1, Math.min(6, maxPartySize));
   useEffect(() => setHydrated(true), []);
   useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
@@ -242,6 +263,25 @@ export function BookingPartyFields({
                   className={controlClass}
                 />
               </Field>
+              {/* **Asked of every diver, not just the booker.** A party
+                  booking sells up to six seats and used to ask this once, so
+                  the gate screened one seat in four on the commonest shape at
+                  a Florida shop (ADR
+                  20260820-attested-at-booking-verified-at-boarding). Priya
+                  books for her two kids and herself; those are three different
+                  cards. */}
+              {askCertification ? (
+                <div className="sm:col-span-2">
+                  <DiveCertificationField
+                    name={`certificationLevel-${index}`}
+                    answer={levels[index] ?? ""}
+                    onAnswerChange={(value) =>
+                      setLevels((current) => ({ ...current, [index]: value }))
+                    }
+                    belowRequirement={belowRequirementFor?.(levels[index] ?? "") ?? null}
+                  />
+                </div>
+              ) : null}
               {index > 0 ? (
                 <label className="flex min-h-11 items-center gap-2 text-sm text-muted sm:col-span-2">
                   <input

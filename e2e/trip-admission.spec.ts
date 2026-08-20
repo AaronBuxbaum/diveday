@@ -85,6 +85,39 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
   });
 
+  test("a diver who says a lower rung is warned under their own answer and still gets the seat", async ({
+    page,
+  }) => {
+    // The other half of the test above, and the line H-30's amendment draws.
+    // There, the shortfall rests on the shop's *record* and the diver typed
+    // nothing, so nothing could have warned them and the refusal stands. Here
+    // the diver says it themselves, is told at the moment they say it, and buys
+    // the charter anyway — the case FU-20260820-the-sale-gate-bites-only-the-
+    // honest was about, where the only person the gate stopped was the one who
+    // answered truthfully and short.
+    test.setTimeout(30_000);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
+    await page.context().clearCookies();
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+
+    // A diver the shop holds nothing for, so the only fact in play is the one
+    // they type.
+    await page.getByLabel("Name", { exact: true }).fill("Wren Halloway");
+    await page.getByLabel("Email", { exact: true }).fill(`wren-${e2eNow().getTime()}@example.com`);
+    await page.locator('select[name="certificationLevel-0"]').selectOption("open_water");
+
+    // Said as they answer, not after the money moves.
+    await expect(page.getByText(/bring your certification card/)).toBeVisible();
+
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Wren/ })).toBeVisible();
+    // And the old refusal is not what happened.
+    await expect(
+      page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
+    ).toHaveCount(0);
+  });
+
   test("the Guests tab names the level the charter wants and the level the diver holds", async ({
     page,
   }) => {

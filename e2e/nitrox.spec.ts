@@ -253,11 +253,18 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   const nitrox = page.locator('input[name="nitrox"]').filter({ visible: true });
   await expect(nitrox).toHaveCount(1);
   await nitrox.check();
+
+  // Ticking it asks for the card rather than explaining why we can't reserve
+  // one. Both fields optional: wanting nitrox never needs the card to hand.
+  await expect(page.getByLabel("Nitrox card number")).toBeVisible();
+  await page.getByLabel("Nitrox agency").selectOption("padi");
+  await page.getByLabel("Nitrox card number").fill("EANX-E2E-001");
   await page.getByRole("button", { name: "Save rental fit" }).click();
 
-  // The request stuck (checkbox stays on) and the flag still explains what's needed.
+  // The request stuck, and the card the diver typed is now on the record — so
+  // the ask is gone and the checkbox is still on.
   await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
-  await expect(page.getByText("Your Nitrox request is on file")).toBeVisible();
+  await expect(page.getByLabel("Nitrox card number")).toHaveCount(0);
 });
 
 test("a course taught on air offers no nitrox request, at the same shop that fills it", async ({

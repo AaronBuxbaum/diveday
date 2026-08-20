@@ -28,7 +28,9 @@ import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
+  type DiveDeclaration,
   diveDeclarationInput,
+  diveDeclarationInputAt,
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
@@ -43,6 +45,7 @@ import {
 } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import type { CertificationLevel } from "@/lib/readiness";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import {
   hasAnyRentalPricing,
@@ -139,6 +142,22 @@ const bookSchema = z.object({
 });
 
 const emailField = diverEmailSchema;
+
+/**
+ * One diver's parsed answer, narrowed to the two things a booking may carry:
+ * the rung they named, or the statement that they hold no card at all. A
+ * declaration with neither is dropped to `undefined` — the same as "Rather not
+ * say" — so an empty select never writes a row.
+ */
+function declarationFor(
+  declared: DiveDeclaration | null,
+): { level?: CertificationLevel; noCertification?: boolean } | undefined {
+  if (declared?.level) {
+    return { level: declared.level, noCertification: declared.noCertification };
+  }
+  if (declared?.noCertification) return { noCertification: true };
+  return undefined;
+}
 
 const rentalFitSchema = z.object({
   bcd: z.string().optional(),
@@ -292,12 +311,18 @@ export async function bookSpot(
     }
   }
 
-  // What the lead booker said about their own diving, read for this decision and
-  // written only if the booking completes (`persistDeclaration`). It describes
-  // the person filling the form in, so it travels with the lead's seat and never
-  // with a party member whose card nobody asked about.
-  const declaredParsed = diveDeclarationSchema.safeParse(diveDeclarationInput(formData));
-  const declared = declaredParsed.success ? toDiveDeclaration(declaredParsed.data) : null;
+  // **What each diver said about their own diving**, read for this decision and
+  // written only if the booking completes (`persistDeclaration`). One answer
+  // per seat, because a party booking is several people and the question used
+  // to be asked once — leaving every seat but the lead's screened by nothing.
+  //
+  // A slot whose answer is unparseable or absent contributes `undefined`, which
+  // is the same as "Rather not say": a malformed value must never be read as a
+  // claim, and must never fail the booking for the other five people either.
+  const declaredByIndex = validParty.map((_, index) => {
+    const parsed = diveDeclarationSchema.safeParse(diveDeclarationInputAt(formData, index));
+    return parsed.success ? toDiveDeclaration(parsed.data) : null;
+  });
 
   const outcome = await createBookingParty(
     dbi,
@@ -306,18 +331,19 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
-      // Only what the form actually renders. `DiveDeclarationFields` is mounted
-      // `showNitrox={false}` on both public forms, so a `nitroxCertified=on`
-      // arriving here is hand-crafted — and honouring it would clear a
-      // nitrox-gated sale by a route no honest diver on this page has, and plant
-      // an enriched-air claim on their record besides. Same discipline the gear
-      // checkboxes above are held to. The level is the whole question here.
-      declared:
-        index === 0 && declared?.level
-          ? { level: declared.level, noCertification: declared.noCertification }
-          : index === 0 && declared?.noCertification
-            ? { noCertification: true }
-            : undefined,
+      // Only what the form actually renders. The nitrox tick appears on no
+      // public form, so `diveDeclarationInputAt` never reads one — honouring a
+      // hand-crafted `nitroxCertified=on` would clear a nitrox-gated sale by a
+      // route no honest diver on this page has, and plant an enriched-air claim
+      // on their record besides. Same discipline the gear checkboxes are held
+      // to. The level is the whole question here.
+      declared: declarationFor(declaredByIndex[index] ?? null),
+      // The one caller that advises rather than refuses: this form asks each
+      // diver what they hold and warns them, as they answer, when it is below
+      // what the departure asks for — so the stop earned nothing and only ever
+      // caught the diver who answered honestly and short. Readiness still
+      // decides who boards. See `BookingRequest.admissionGate`.
+      admissionGate: "advise" as const,
       // Empty for any non-lead diver who left the field to the "use the main
       // contact's email" checkbox — never the lead's own address (see the
       // comment above the loop that builds `validParty`).

@@ -46,6 +46,57 @@ describe("BookingPartyFields", () => {
     expect(email2).toBeRequired();
   });
 
+  it("asks every diver what they hold, not just the booker", () => {
+    // A party booking sells up to six seats and used to ask this once, so the
+    // gate screened one seat in four (ADR
+    // 20260820-attested-at-booking-verified-at-boarding's amendment).
+    renderDiver(<BookingPartyFields maxPartySize={3} askCertification />);
+    fireEvent.change(screen.getByRole("combobox", { name: /number of divers/i }), {
+      target: { value: "3" },
+    });
+    const selects = document.querySelectorAll<HTMLSelectElement>(
+      'select[name^="certificationLevel-"]',
+    );
+    expect(Array.from(selects, (select) => select.name)).toEqual([
+      "certificationLevel-0",
+      "certificationLevel-1",
+      "certificationLevel-2",
+    ]);
+  });
+
+  it("leaves the question off the wait lists, which gate on nothing", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} />);
+    expect(document.querySelector('select[name^="certificationLevel"]')).toBeNull();
+  });
+
+  it("warns the diver whose own answer is short, and never blocks the form", () => {
+    renderDiver(
+      <BookingPartyFields
+        maxPartySize={2}
+        askCertification
+        belowRequirementFor={(level) =>
+          level === "open_water" ? "This trip is set for Rescue." : null
+        }
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: /number of divers/i }), {
+      target: { value: "2" },
+    });
+    const [first] = document.querySelectorAll<HTMLSelectElement>(
+      'select[name^="certificationLevel-"]',
+    );
+    if (!first) throw new Error("expected a certification select");
+
+    expect(screen.queryByText("This trip is set for Rescue.")).not.toBeInTheDocument();
+    fireEvent.change(first, { target: { value: "open_water" } });
+
+    // Said once, under the diver who said it — not once for the whole party.
+    expect(screen.getAllByText("This trip is set for Rescue.")).toHaveLength(1);
+    // And it is a warning: the select is still free, and nothing is disabled.
+    expect(first).not.toBeDisabled();
+    expect(first).not.toBeRequired();
+  });
+
   it("shows the big-group escape hatch once the party cap is below 6 (task 24)", () => {
     renderDiver(
       <BookingPartyFields maxPartySize={3} contactEmail="dive@example.com" contactPhone={null} />,

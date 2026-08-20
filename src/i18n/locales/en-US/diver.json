@@ -253,6 +253,8 @@
     "sailedForNext": "for the next departure.",
     "holdHeading": "Nothing to book here yet",
     "holdBody": "See the conditions update above. Divers who already booked keep their seats and can follow it live here.",
+    "certBelowRequirement": "This trip is for {required} divers — bring your certification card and we'll check it at the shop.",
+    "certNoneOnGatedTrip": "This trip is for certified divers. Book if you like, then talk to the shop — they run courses and easier dives too.",
     "confirmedHeading": "You’re on the boat, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — be at the dock {minutes} minutes early and we’ll take it from there.",
     "allSet": "You’re all set — nothing left but to show up.",
@@ -766,6 +768,7 @@
     "nitroxReserveWithPrice": "I’d like nitrox — {price} per dive",
     "nitroxReserveNoPrice": "I’d like nitrox — charged per dive",
     "nitroxVerifiedNote": "The crew will set aside nitrox-compatible tanks. You'll analyze your own tanks and sign for the mix at the fill station, as always.",
+    "nitroxCardOnFile": "The crew will check your nitrox card before the dive.",
     "nitroxAgency": "Nitrox agency",
     "nitroxAgencyChoose": "Choose",
     "nitroxNumber": "Nitrox card number",
@@ -2736,10 +2739,6 @@
         "workOrders": {
           "title": "A repair shop",
           "detail": "Keep whatever tracks your workshop today. DiveDay doesn't run repair tickets, parts, or labor — it tracks what a diver rents from you, not what you fix for them."
-        },
-        "gearSerials": {
-          "title": "Gear serial numbers",
-          "detail": "DiveDay tracks every diver's sizes and builds the trip's packing list. It doesn't track individual rental units or service history today."
         },
         "agencyLine": {
           "title": "A live line to PADI or SSI",

@@ -112,6 +112,7 @@ export function BookingConfirmation({
   fitRef,
   rentalFit,
   nitroxCardVerified,
+  nitroxCardOnFile,
   fitSaved,
   payment,
   payCancelled,
@@ -131,6 +132,8 @@ export function BookingConfirmation({
   fitRef: RentalFitRef;
   rentalFit: RentalFit;
   nitroxCardVerified: boolean;
+  /** Whether a live nitrox card exists at all — not a gate, see RentalFitForm. */
+  nitroxCardOnFile: boolean;
   fitSaved: boolean;
   payment: PaymentPanel;
   payCancelled: boolean;
@@ -290,6 +293,7 @@ export function BookingConfirmation({
         pricing={shop.rentalPricing}
         wantsNitrox={confirmed.booking.wantsNitrox}
         nitroxCardVerified={nitroxCardVerified}
+        nitroxCardOnFile={nitroxCardOnFile}
         plannedDives={trip.plannedDives}
         saved={fitSaved}
         currency={toShopCurrency(shop.currency)}

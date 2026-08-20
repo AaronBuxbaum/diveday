@@ -69,6 +69,7 @@ function renderConfirmation(
       }}
       rentalFit={null}
       nitroxCardVerified={false}
+      nitroxCardOnFile={false}
       fitSaved={false}
       payment={payment}
       payCancelled={false}

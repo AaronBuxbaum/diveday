@@ -14,7 +14,7 @@ import {
 } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { verifiedNitroxPersonIds } from "@/db/nitrox";
+import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "@/db/nitrox";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getBookingPayment } from "@/db/payments";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
@@ -290,20 +290,23 @@ export default async function TripDetailPage({
   // rule on its own page, and its itinerary's gate is deliberately *not* a
   // booking gate (src/lib/trip-admission.ts) — repeating the site's demand here
   // would read as a bar on the very students the course exists to create.
-  const requirementNote = trip.course
+  const combinedRequirement = trip.course
     ? null
-    : tripRequirementList(
-        t,
-        combineCertRequirements(
-          requirement ?? {
-            minimumCertificationLevel: null,
-            requiredSpecialties: [],
-            requiresNitrox: false,
-          },
-          siteRequirement,
-        ),
-        locale,
+    : combineCertRequirements(
+        requirement ?? {
+          minimumCertificationLevel: null,
+          requiredSpecialties: [],
+          requiresNitrox: false,
+        },
+        siteRequirement,
       );
+  const requirementNote = combinedRequirement
+    ? tripRequirementList(t, combinedRequirement, locale)
+    : null;
+  // The bare level code, for the per-diver warning under each certification
+  // select. A property of the *trip*, exactly like `requirementNote` above, so
+  // it is safe to send to an anonymous page — it says nothing about any reader.
+  const requiredLevel = combinedRequirement?.minimumCertificationLevel ?? undefined;
 
   // The confirmed-booking panels draw on several more independent queries — batch them.
   const [
@@ -311,6 +314,7 @@ export default async function TripDetailPage({
     readiness,
     rentalFit,
     nitroxCardVerified,
+    nitroxCardOnFile,
     readinessCapability,
     emailsOnTheWay,
     partySeatClaims,
@@ -329,6 +333,10 @@ export default async function TripDetailPage({
         // component, so staff-only fit columns must not ship to the browser.
         getRentalFit(db, shop.id, confirmed.person.id).then(toDiverRentalFit),
         verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
+        // Not a gate — only whether the fit form should still ask for a card
+        // number, so a diver who typed one at 9pm is not asked again while it
+        // sits `pending` (src/db/nitrox.ts).
+        nitroxCardOnFilePersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
         issueBookingCapability(db, {
           shopId: shop.id,
           bookingId: confirmed.booking.id,
@@ -344,7 +352,7 @@ export default async function TripDetailPage({
         // non-party confirmation gets an empty list and no panel.
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: confirmed.booking.id }),
       ])
-    : [null, null, null, false, null, false, []];
+    : [null, null, null, false, false, null, false, []];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
   // Absolute when a canonical origin is configured — these URLs exist to be
   // pasted into a group chat — with the same-relative fallback the readiness
@@ -515,6 +523,7 @@ export default async function TripDetailPage({
             }}
             rentalFit={rentalFit}
             nitroxCardVerified={nitroxCardVerified}
+            nitroxCardOnFile={nitroxCardOnFile}
             fitSaved={fit === "saved"}
             payment={payment}
             payCancelled={pay === "cancelled"}
@@ -550,6 +559,7 @@ export default async function TripDetailPage({
             tripRef={tripRef}
             remaining={remaining}
             errorMessage={errorMessage}
+            minimumCertificationLevel={requiredLevel}
             requirementHeading={requirementNote ? t("trip.requirementHeading") : undefined}
             requirementNote={
               requirementNote ? t("trip.requirementNote", { list: requirementNote }) : undefined

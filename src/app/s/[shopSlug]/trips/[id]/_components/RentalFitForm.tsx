@@ -80,6 +80,7 @@ export function RentalFitForm({
   pricing,
   wantsNitrox,
   nitroxCardVerified,
+  nitroxCardOnFile = false,
   plannedDives,
   saved,
   currency,
@@ -96,6 +97,12 @@ export function RentalFitForm({
   pricing: RentalPricing;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
+  /**
+   * A live nitrox card exists for this diver, sighted or not. Decides only
+   * whether this form still asks for a number — never whether a tank gets
+   * enriched air, which stays `authorizesNitroxFill`.
+   */
+  nitroxCardOnFile?: boolean;
   plannedDives: number;
   saved: boolean;
   /**
@@ -327,6 +334,13 @@ export function RentalFitForm({
             {nitroxRequested ? (
               nitroxCardVerified ? (
                 <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
+              ) : nitroxCardOnFile ? (
+                // Already answered. Asking again would be the ask-and-discard
+                // failure ADR 20260814-self-declared-cards was written against
+                // — a diver types their card, saves, and is shown the same
+                // empty boxes because the row landed `pending` rather than
+                // `verified`.
+                <p className="mt-2 text-sm text-muted">{t("rental.nitroxCardOnFile")}</p>
               ) : (
                 // **Ask for the card instead of explaining why we can't reserve
                 // one.** This used to be a paragraph telling the diver to

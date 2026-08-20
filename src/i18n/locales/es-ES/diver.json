@@ -253,6 +253,8 @@
     "sailedForNext": "para la próxima salida.",
     "holdHeading": "Aquí todavía no hay nada que reservar",
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
+    "certBelowRequirement": "Esta salida es para buceadores {required}: trae tu tarjeta de certificación y la comprobamos en el centro.",
+    "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
     "confirmedHeading": "¡Estás a bordo, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — preséntate en el muelle {minutes} minutos antes y nos encargamos del resto.",
     "allSet": "Lo tienes todo listo — solo queda presentarte.",
@@ -766,6 +768,7 @@
     "nitroxReserveWithPrice": "Me gustaría nitrox — {price} por inmersión",
     "nitroxReserveNoPrice": "Me gustaría nitrox — se cobra por inmersión",
     "nitroxVerifiedNote": "La tripulación reservará tanques compatibles con nitrox. Analizarás tus propios tanques y firmarás la mezcla en la estación de llenado, como siempre.",
+    "nitroxCardOnFile": "La tripulación comprobará tu tarjeta de nitrox antes de la inmersión.",
     "nitroxAgency": "Agencia de nitrox",
     "nitroxAgencyChoose": "Elige",
     "nitroxNumber": "Número de la tarjeta de nitrox",
@@ -2736,10 +2739,6 @@
         "workOrders": {
           "title": "Un taller de reparaciones",
           "detail": "Conserva lo que ya usas para tu taller. DiveDay no lleva órdenes de reparación, piezas ni mano de obra — rastrea lo que un buceador alquila contigo, no lo que le reparas."
-        },
-        "gearSerials": {
-          "title": "Números de serie del equipo",
-          "detail": "DiveDay rastrea las tallas de cada buceador y arma la lista de equipo del viaje. Hoy todavía no registra unidades de alquiler individuales ni su historial de mantenimiento."
         },
         "agencyLine": {
           "title": "Una línea directa con PADI o SSI",

@@ -16,6 +16,13 @@ export type NewNitroxCertification = {
   personId: string;
   agency: CertificationAgency;
   identifier: string;
+  /**
+   * The diver typed this about themselves — see `NewCertification.selfDeclaredAt`.
+   * `reviewNitroxCertification` below demands a card sighting before promoting
+   * a row carrying it, which is the whole reason a diver-facing nitrox form can
+   * exist at all.
+   */
+  selfDeclaredAt?: Date;
 };
 
 /**
@@ -38,6 +45,7 @@ export async function createNitroxCertification(db: AppDb, input: NewNitroxCerti
         personId: input.personId,
         agency: input.agency,
         identifier: input.identifier.trim(),
+        ...(input.selfDeclaredAt ? { selfDeclaredAt: input.selfDeclaredAt } : {}),
       })
       .returning();
     return certification ?? null;
@@ -237,6 +245,31 @@ export async function verifiedNitroxPersonIds(db: AppDb, shopId: string): Promis
     .select({ personId: nitroxCertifications.personId })
     .from(nitroxCertifications)
     .where(and(eq(nitroxCertifications.shopId, shopId), authorizesNitroxFill));
+  return new Set(rows.map((r) => r.personId));
+}
+
+/**
+ * The set of personIds this shop holds *any* live nitrox card for, sighted or
+ * not — deliberately **not** a gate, and never to be mistaken for one.
+ *
+ * It answers one question, for one surface: has this diver already given us
+ * their card? The rental-fit form asks for a nitrox number when a diver ticks
+ * "I'd like nitrox", and without this it would go on asking after they had
+ * answered — a card typed at 9pm lands `pending`, and a form that reads only
+ * `authorizesNitroxFill` cannot tell "we have it, a staffer will check it"
+ * apart from "we have nothing", so it would show the same empty boxes on the
+ * next page load. That is the ask-and-discard failure ADR
+ * 20260814-self-declared-cards exists against.
+ *
+ * Every fill, boarding and readiness decision still reads
+ * `authorizesNitroxFill` above. This one only decides which sentence a diver
+ * sees.
+ */
+export async function nitroxCardOnFilePersonIds(db: AppDb, shopId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ personId: nitroxCertifications.personId })
+    .from(nitroxCertifications)
+    .where(and(eq(nitroxCertifications.shopId, shopId), isNull(nitroxCertifications.deletedAt)));
   return new Set(rows.map((r) => r.personId));
 }
 

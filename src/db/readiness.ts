@@ -187,6 +187,19 @@ export type NewCertification = {
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
   expiresAt?: CalendarDate;
+  /**
+   * **The diver typed this about themselves.** Set only by the diver-facing
+   * entry form on `/ready/[token]`; a staff capture leaves it unset, because a
+   * staffer is looking at the card.
+   *
+   * It is not decoration. `reviewCertification` asks for the agency and number
+   * off the physical card before it will promote a row `isUnsightedSelfDeclaration`
+   * is true of, and without this stamp a number typed on a phone would inherit
+   * the one-tap "Mark certified" a colleague's transcription gets — laundering
+   * an invented card into `verified`, which is the state readiness, the fill
+   * gate and every depth ceiling read (`security-reviewer`, 2026-08-20).
+   */
+  selfDeclaredAt?: Date;
 };
 
 /**
