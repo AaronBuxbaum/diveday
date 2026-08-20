@@ -328,7 +328,9 @@ export const ENV_GROUPS = [
         key: "SECRET_ENCRYPTION_KEY",
         from: "derived",
         targets: LOCAL_AND_VERCEL,
-        absent: "the WhatsApp settings page says so and refuses to store anything",
+        absent:
+          "the WhatsApp settings page says so and refuses to store anything, and a waiver link is " +
+          "minted fresh on every send instead of the diver being handed the one they already have",
       },
     ],
   },

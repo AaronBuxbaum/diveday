@@ -15,8 +15,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and twenty-five key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 500 screenshots per run (see
+ * Visual regression coverage. A hundred and twenty-six key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 504 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -28,11 +28,11 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Three more come from the `print` block at the bottom: the manifest, prep,
- * and departure-log pages as they render for the printer. Print is its own
- * concern, not a light/dark one — the `@media print` token override collapses
- * both schemes to one black-and-white palette — so each is captured once, at a
- * US-Letter width, via `capturePrint()`. That brings the run to 447
+ * Four more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, and departure-log pages as they render for the printer. Print
+ * is its own concern, not a light/dark one — the `@media print` token override
+ * collapses both schemes to one black-and-white palette — so each is captured
+ * once, at a US-Letter width, via `capturePrint()`. That brings the run to 508
  * screenshots.
  *
  * ## One surface, one `test()`
@@ -2055,6 +2055,30 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
         await capture(page, "diver-profile", scheme);
+      });
+
+      /**
+       * The waiver card with its paper attestation open — the one state on this
+       * record that no baseline had ever looked at, because it used to live
+       * behind a `<details>` that only opens on a click.
+       *
+       * It is worth its own capture rather than a note on `diver-profile`:
+       * these are the four ways a shop gets a release signed, they have to read
+       * as one control group at both widths, and the panel that drops out of
+       * that row carries the medical attestation a staffer is putting their
+       * name to. A row that wraps badly or a panel that reads as a different
+       * kind of object is exactly the drift a screenshot catches and a
+       * functional assertion cannot.
+       */
+      test(`the waiver card's paper attestation renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
+        await page.getByRole("button", { name: "Mark signed on paper" }).click();
+        // The panel itself, not the trigger that opened it — so the capture can
+        // never photograph the row mid-swap.
+        await page.getByRole("button", { name: "Record paper signature" }).waitFor();
+        await capture(page, "diver-profile-paper-waiver", scheme);
       });
 
       /**

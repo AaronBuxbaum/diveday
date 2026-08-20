@@ -133,7 +133,7 @@ describe("post-deploy wizard", () => {
           "v=spf1 include:amazonses.com ~all",
         ],
       ],
-      ["pnpm", ["exec", "vercel", "--prod"]],
+      ["pnpm", ["exec", "vercel", "--prod", "--archive=tgz"]],
     ]);
   });
 
@@ -162,8 +162,19 @@ describe("post-deploy wizard", () => {
       );
     };
 
-    expect((await vercelDeploy(true)).arguments_).toEqual(["exec", "vercel", "--prod", "--yes"]);
-    expect((await vercelDeploy(false)).arguments_).toEqual(["exec", "vercel", "--prod"]);
+    expect((await vercelDeploy(true)).arguments_).toEqual([
+      "exec",
+      "vercel",
+      "--prod",
+      "--archive=tgz",
+      "--yes",
+    ]);
+    expect((await vercelDeploy(false)).arguments_).toEqual([
+      "exec",
+      "vercel",
+      "--prod",
+      "--archive=tgz",
+    ]);
   });
 
   it("keeps the Vercel production deploy last even when DNS is skipped", async () => {
@@ -181,7 +192,9 @@ describe("post-deploy wizard", () => {
       log: () => {},
     });
 
-    expect(commands).toEqual([{ command: "pnpm", arguments_: ["exec", "vercel", "--prod"] }]);
+    expect(commands).toEqual([
+      { command: "pnpm", arguments_: ["exec", "vercel", "--prod", "--archive=tgz"] },
+    ]);
   });
 
   it("does not ask about handoffs that are already current", async () => {

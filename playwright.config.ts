@@ -66,6 +66,10 @@ const serverEnv = {
   // 20260802-whatsapp-cloud-api-per-shop). A fixed value, not a secret: these
   // servers hold only seeded demo data. Without it the page correctly refuses
   // to save, and the flow has nothing to exercise.
+  // It also seals the live copy of a waiver link, which is what lets a second
+  // send hand back the same URL instead of minting one (ADR
+  // 20260820-waiver-links-are-reused-not-reissued) — so waivers.spec.ts's
+  // "the same link comes back" assertion depends on this being set too.
   SECRET_ENCRYPTION_KEY: "ZGl2ZWRheS1lMmUtZW5jcnlwdGlvbi1rZXktMzJieXQ=",
   // Same reasoning as SECRET_ENCRYPTION_KEY above: fixed, non-secret values so
   // the manifest's Web Push opt-in renders at all (ADR

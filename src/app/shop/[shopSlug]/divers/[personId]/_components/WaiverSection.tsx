@@ -1,12 +1,14 @@
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
-import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
+import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { smsRecipient } from "@/lib/notifications/sms";
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
+import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
 
 function statusToneClass(
   state: DiverProfile["waiver"]["state"],
@@ -53,8 +55,24 @@ function waiverStatusCopy(
   return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverNotSent") };
 }
 
-/** One waiver card for status, delivery actions, private-link copying, and paper signatures. */
-export function PaperWaiver({
+/**
+ * The waiver card on a diver's record: what they have signed, and — when there
+ * is something outstanding — every way to get it signed, as one row of peers.
+ *
+ * Four routes, not one send button with the rest disclosed underneath. A
+ * staffer with an unsigned release in front of them is choosing between the
+ * diver's inbox, the diver's phone, a link they will paste into a conversation
+ * of their own, and the sheet of paper already in the diver's hand — and which
+ * of those is right is a fact about the person standing there, not a fallback
+ * order DiveDay can rank for them. Email and text appear only when the record
+ * carries what they need; the link and the paper attestation always do.
+ *
+ * Nothing renders below the status for a diver who is already covered: a
+ * current signature has nothing to send (`issueWaiverRequest` refuses it as
+ * `already_completed`), and a medical hold is resolved in review, not by mailing
+ * another link.
+ */
+export function WaiverSection({
   diver,
   shopSlug,
   personId,
@@ -74,46 +92,44 @@ export function PaperWaiver({
   const state = waiverStatusCopy(diver, t, locale, timezone);
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
 
-  // Get the waiver send copy for the control
-  const copy = waiverSendCopy(t);
-
-  // Determine the button label based on waiver state
-  const buttonLabel =
-    diver.waiver.state === "expired"
-      ? t("divers.stats.waiverResend")
-      : t("divers.stats.waiverSend");
-
   return (
     <SectionCard
       className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
       title={t("divers.stats.waiver")}
     >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-lg font-semibold">{state.label}</p>
-          {state.detail ? <p className="text-sm text-muted">{state.detail}</p> : null}
-        </div>
-        {needsAction ? (
-          <div className="flex flex-col gap-3 sm:items-start">
-            <WaiverSendControl
-              shopSlug={shopSlug}
-              surface="diver"
-              personId={personId}
-              bookingIds={[]}
-              label={buttonLabel}
-              exposeLink={true}
-              copy={copy}
-              wrapperClassName=""
-              className="inline-flex"
-            />
-            <PaperWaiverControl
-              action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-              t={t}
-              className=""
-            />
-          </div>
-        ) : null}
-      </div>
+      <p className="text-lg font-semibold">{state.label}</p>
+      {state.detail ? <p className="mt-0.5 text-sm text-muted">{state.detail}</p> : null}
+      {needsAction ? (
+        <WaiverDeliveryActions
+          shopSlug={shopSlug}
+          personId={personId}
+          hasEmail={Boolean(diver.person.email)}
+          // The same rule the send itself applies: a number with no unambiguous
+          // country code cannot be texted, so offering the button would only
+          // ever produce "no number we can text".
+          hasPhone={Boolean(smsRecipient(diver.person.phone))}
+          copy={{
+            email: t("divers.stats.sendWaiverViaEmail"),
+            text: t("divers.stats.sendWaiverViaSms"),
+            link: t("divers.stats.copyWaiverLink"),
+          }}
+          sendCopy={waiverSendCopy(t)}
+        >
+          <PaperWaiverControl
+            action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
+            copy={paperWaiverCopy(t)}
+            variant="secondary"
+            className=""
+            // A refused attestation lands back here with its notice; re-open
+            // the form so the staffer can tick the box rather than hunt for the
+            // trigger again. Any non-success notice on this card is one of the
+            // two refusals `markWaiverInPersonAction` can produce — the missing
+            // attestation is `warning`, not `danger`, because it is a step the
+            // staffer skipped rather than something that broke.
+            defaultOpen={Boolean(status) && status?.tone !== "success"}
+          />
+        </WaiverDeliveryActions>
+      ) : null}
       <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
     </SectionCard>
   );

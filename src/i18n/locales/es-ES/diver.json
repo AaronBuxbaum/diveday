@@ -3135,7 +3135,9 @@
       "body": "{shopName}: {tripTitle} sale {when} — {date}, {time}. Preséntate en el muelle {minutes} min antes.",
       "contact": "¿Preguntas? Escríbenos al {phone}.",
       "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico",
-      "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}"
+      "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
+      "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
+      "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}"
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",

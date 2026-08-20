@@ -11,19 +11,50 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 /** Where the send happened, so the right route is revalidated after it lands. */
 export type WaiverSendSurface = "today" | "blockers" | "check_in" | "roster" | "diver";
 
-/** A private fallback link staff must hand over when email did not go out. */
+/**
+ * Which way the shop asked DiveDay to hand the link over. Structurally the same
+ * union as `WaiverSendChannel` in `src/db/waiver-issue.ts`, declared again here
+ * because `src/db` may not import from `src/app` and this value has to be
+ * readable by a Client Component (`pnpm check:architecture`). The two are
+ * assigned across in `sendWaiversAction`, so a drift is a type error there
+ * rather than a channel that silently means nothing.
+ */
+export const WAIVER_SEND_CHANNELS = ["email", "text", "link"] as const;
+export type WaiverSendChannel = (typeof WAIVER_SEND_CHANNELS)[number];
+
+export function isWaiverSendChannel(value: unknown): value is WaiverSendChannel {
+  return (WAIVER_SEND_CHANNELS as readonly unknown[]).includes(value);
+}
+
+/** A private fallback link staff must hand over when a send did not go out. */
 export type WaiverFallbackLink = {
   name: string;
   token: string;
   /** Why staff must hand this over themselves — a missing address reads very
    * differently from a shop that has no email provider wired up at all, and
    * both read differently from a deployment with no `APP_HOST` to build the
-   * link on. Each gap points at a different setting, so each gets its own word. */
-  reason: "sent" | "no_email" | "no_app_origin" | "unconfigured" | "test_recipient" | "failed";
+   * link on. Each gap points at a different setting, so each gets its own word.
+   * `link_only` is not a gap at all: it is the staffer having asked for the URL
+   * to pass on themselves. */
+  reason:
+    | "sent"
+    | "link_only"
+    | "no_email"
+    | "no_phone"
+    | "no_app_origin"
+    | "unconfigured"
+    | "test_recipient"
+    | "failed";
 };
 
 export type WaiverSendState = {
   status: "idle" | "done";
+  /**
+   * Which button produced this outcome. The diver record's action row reads it
+   * to decide whether to put the fresh link on the clipboard — a copy the
+   * staffer asked for, never a surprise write behind an email send.
+   */
+  channel: WaiverSendChannel;
   /** Divers the email actually reached. */
   sent: string[];
   /** Divers with no email / no delivery configured — link shown to copy. */
@@ -41,6 +72,7 @@ export type WaiverSendState = {
 
 export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
   status: "idle",
+  channel: "email",
   sent: [],
   links: [],
   alreadyDone: [],
@@ -59,12 +91,32 @@ export type WaiverSendCopy = {
   copyFailed: string;
   reasonNoEmailOne: string;
   reasonNoEmailOther: string;
+  reasonNoPhoneOne: string;
+  reasonNoPhoneOther: string;
+  /** The `link` channel's own line: nothing was sent because nothing was asked to be. */
+  reasonLinkOnlyOne: string;
+  reasonLinkOnlyOther: string;
   reasonFailedOne: string;
   reasonFailedOther: string;
+  /**
+   * The same two gaps, worded for the text channel. `failed` and `unconfigured`
+   * are the only reasons whose wording has to name a channel — "Email could not
+   * be delivered" about a text nobody emailed sends a shop to check the wrong
+   * setting, which is the mistake `reasonNoAppOrigin` already exists to avoid.
+   */
+  reasonTextFailedOne: string;
+  reasonTextFailedOther: string;
   reasonTestRecipientOne: string;
   reasonTestRecipientOther: string;
   reasonUnconfigured: string;
+  reasonTextUnconfigured: string;
   reasonNoAppOrigin: string;
+  /**
+   * The whole outcome line — `"{reason} — share this private link:"`. It carries
+   * the reason rather than being glued after one at the call site, because a
+   * dash and the words either side of it are a sentence, and a sentence
+   * assembled in JSX cannot be reordered by a translator.
+   */
   sharePrivateLinkOne: string;
   sharePrivateLinkOther: string;
   /** "Waiver sent to {names}." */
@@ -91,14 +143,21 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     copyFailed: t("shared.waiverSend.copyFailed"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
     reasonNoEmailOther: t.raw("shared.waiverSend.reasonNoEmailOther"),
+    reasonNoPhoneOne: t("shared.waiverSend.reasonNoPhoneOne"),
+    reasonNoPhoneOther: t.raw("shared.waiverSend.reasonNoPhoneOther"),
+    reasonLinkOnlyOne: t("shared.waiverSend.reasonLinkOnlyOne"),
+    reasonLinkOnlyOther: t.raw("shared.waiverSend.reasonLinkOnlyOther"),
     reasonFailedOne: t("shared.waiverSend.reasonFailedOne"),
     reasonFailedOther: t.raw("shared.waiverSend.reasonFailedOther"),
+    reasonTextFailedOne: t("shared.waiverSend.reasonTextFailedOne"),
+    reasonTextFailedOther: t.raw("shared.waiverSend.reasonTextFailedOther"),
     reasonTestRecipientOne: t("shared.waiverSend.reasonTestRecipientOne"),
     reasonTestRecipientOther: t.raw("shared.waiverSend.reasonTestRecipientOther"),
     reasonUnconfigured: t("shared.waiverSend.reasonUnconfigured"),
+    reasonTextUnconfigured: t("shared.waiverSend.reasonTextUnconfigured"),
     reasonNoAppOrigin: t("shared.waiverSend.reasonNoAppOrigin"),
-    sharePrivateLinkOne: t("shared.waiverSend.sharePrivateLinkOne"),
-    sharePrivateLinkOther: t("shared.waiverSend.sharePrivateLinkOther"),
+    sharePrivateLinkOne: t.raw("shared.waiverSend.sharePrivateLinkOne"),
+    sharePrivateLinkOther: t.raw("shared.waiverSend.sharePrivateLinkOther"),
     sent: t.raw("shared.waiverSend.sent"),
     alreadyDoneOne: t.raw("shared.waiverSend.alreadyDoneOne"),
     alreadyDoneOther: t.raw("shared.waiverSend.alreadyDoneOther"),

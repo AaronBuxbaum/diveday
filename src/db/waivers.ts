@@ -3,6 +3,7 @@ import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { personNamesMatch } from "@/lib/person-name";
+import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
@@ -246,7 +247,19 @@ export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInp
 }
 
 export type IssueWaiverOutcome =
-  | { ok: true; token: string; expiresAt: Date; recordId: string }
+  | {
+      ok: true;
+      token: string;
+      expiresAt: Date;
+      recordId: string;
+      /**
+       * True when this handed back the link the diver already had rather than
+       * minting one. Callers do not branch on it — a reused link and a fresh
+       * one are the same URL to send — but it is what a test asserts, and what
+       * tells you at a glance whether the deployment has a sealing key.
+       */
+      reused: boolean;
+    }
   | {
       ok: false;
       reason:
@@ -258,9 +271,31 @@ export type IssueWaiverOutcome =
     };
 
 /**
- * Creates a new pending record from the shop default rather than accepting a
- * caller-selected template. Reissuing
- * a pending link supersedes it, so an old token can never complete later.
+ * Issue the diver's waiver link — **the same one they already have**, whenever
+ * they still have one that works.
+ *
+ * A shop reaches for this several times in one conversation: copy the link,
+ * paste it into their own WhatsApp, then tap "Text waiver" to be sure. Every
+ * one of those used to mint a fresh token and supersede the last, so the URL
+ * just pasted was dead, and a diver part-way through signing online lost the
+ * draft with it. So a live pending link is reused and its clock refreshed
+ * (ADR 20260820-waiver-links-are-reused-not-reissued).
+ *
+ * "Live" is narrow, and each condition is load-bearing:
+ *
+ * - **Pending and not superseded.** A completed record has nothing to hand out.
+ * - **Not expired.** The TTL stays a real bound; a link that already died is
+ *   not resurrected, because reviving a months-old URL is exactly what a leak
+ *   would want. A fresh one is minted instead.
+ * - **Snapshotted from the template that is current now.** A shop that edited
+ *   its release since has different terms, and letting the old link stand would
+ *   collect a signature against wording the shop has withdrawn.
+ * - **Openable.** Without `SECRET_ENCRYPTION_KEY` there is no readable copy of
+ *   the token, so this falls back to minting — the behaviour it had before.
+ *
+ * When none of that holds it does what it always did: mint, supersede whatever
+ * was pending, and insert. So an old token still cannot complete later; it just
+ * stops being the *usual* outcome of asking twice.
  */
 export async function issueWaiverRequest(
   db: AppDb,
@@ -271,6 +306,8 @@ export async function issueWaiverRequest(
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
   const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+  const keyResult = secretKeyFromEnvironment();
+  const sealingKey = keyResult.status === "ok" ? keyResult.key : null;
 
   return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
     const booking = input.bookingId
@@ -335,10 +372,45 @@ export async function issueWaiverRequest(
     if (alreadyStanding) {
       return { ok: false, reason: "already_completed" };
     }
+
+    // The link this diver already holds, if it is still one they can sign.
+    const live = sealingKey
+      ? current.find(
+          (record) =>
+            record.status === "pending" &&
+            record.supersededAt === null &&
+            record.expiresAt > now &&
+            record.templateId === template.id &&
+            record.templateVersion === template.version &&
+            record.tokenSealed,
+        )
+      : undefined;
+    const reusedToken =
+      live?.tokenSealed && sealingKey ? openSecret(live.tokenSealed, sealingKey) : null;
+    if (live && reusedToken) {
+      // Same record, same URL, fresh clock: whoever was just handed this link
+      // gets the full window to sign, and the copy already pasted somewhere
+      // keeps working. Nothing is superseded, so a half-filled draft on this
+      // record survives being sent again.
+      const refreshedExpiry = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
+      await tx
+        .update(waiverRecords)
+        .set({ expiresAt: refreshedExpiry })
+        .where(eq(waiverRecords.id, live.id));
+      return {
+        ok: true,
+        token: reusedToken,
+        expiresAt: refreshedExpiry,
+        recordId: live.id,
+        reused: true,
+      };
+    }
+
     if (current.length > 0) {
       await tx
         .update(waiverRecords)
-        .set({ supersededAt: now })
+        // The old link is dead, so its openable copy has no reason to exist.
+        .set({ supersededAt: now, tokenSealed: null })
         .where(
           and(
             eq(waiverRecords.shopId, input.shopId),
@@ -361,11 +433,12 @@ export async function issueWaiverRequest(
         templateVersion: template.version,
         templateBody: template.body,
         tokenHash,
+        tokenSealed: sealingKey ? sealSecret(token, sealingKey) : null,
         expiresAt,
       })
       .returning();
     if (!record) throw new Error("issueWaiverRequest: insert returned no row");
-    return { ok: true, token, expiresAt, recordId: record.id };
+    return { ok: true, token, expiresAt, recordId: record.id, reused: false };
   });
 }
 
@@ -701,6 +774,10 @@ export async function completeWaiver(
       medicalAnswers: input.medicalAnswers,
       medicalReviewRequired,
       completedAt: now,
+      // Signed: the link has done its job, so the openable copy goes. The token
+      // still *resolves* (a diver revisiting sees their signed release) — it
+      // just can no longer be read back out of the database and re-sent.
+      tokenSealed: null,
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });
@@ -1125,7 +1202,7 @@ export async function recordInPersonWaiver(
     if (signer.bookingId) {
       await tx
         .update(waiverRecords)
-        .set({ supersededAt: now })
+        .set({ supersededAt: now, tokenSealed: null })
         .where(
           and(
             eq(waiverRecords.bookingId, signer.bookingId),

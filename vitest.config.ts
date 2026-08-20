@@ -24,20 +24,44 @@ export default defineConfig({
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,
-    // Vitest 4's default. This ran on `pool: "threads"` for a while (~13%
-    // faster full suite locally — worker_threads reuse one process instead of
-    // repaying Node startup per fork), with a written caveat to revisit if
-    // PGlite ever showed a worker_threads-specific failure. One surfaced on
-    // 2026-08-20: a CI unit shard died mid-run with a V8 fatal —
-    // `Check failed: jit_page_->allocations_.erase(addr) == 1` in
-    // `ThreadIsolation::UnregisterWasmAllocation`, SIGILL — the known V8 race
-    // in cross-thread WASM JIT-page bookkeeping, on the shard where every
-    // PGlite instance loads two WASM extensions (pg_trgm + btree_gist). The
-    // same shard passed locally and on re-runs; it is a probabilistic crash,
-    // not a failing test. Forks give each worker its own V8, which removes
-    // the cross-thread race entirely and contains any future WASM crash to
-    // one worker instead of killing the whole run. Don't switch back to
-    // "threads" while the suite runs WASM Postgres in workers.
+    // Back to Vitest 4's own default after a worker_threads-specific PGlite
+    // failure finally surfaced — the exact condition the "threads" note here
+    // named as the one reason to revisit.
+    //
+    // The symptom is not a test failure. A random one of CI's four shards dies
+    // outright:
+    //
+    //     # Check failed: jit_page_->allocations_.erase(addr) == 1.
+    //     v8::internal::ThreadIsolation::UnregisterWasmAllocation(...)
+    //     Command was killed with SIGILL (Invalid machine instruction)
+    //
+    // `ThreadIsolation` is V8's *cross-thread* protection for JIT and WASM code
+    // pages, and `jit_page_->allocations_` is one process-global map shared by
+    // every thread in the isolate group. Under "threads" all of a worker's test
+    // files run in one process, and the only WASM here is PGlite — which every
+    // db-backed test instantiates and closes (~900 open/close cycles a run,
+    // hundreds per shard, several threads at once). That map is what the CHECK
+    // guards, and freeing WASM code from several threads is what trips it.
+    // Forks give each file its own process, so there is no shared page table to
+    // disagree about.
+    //
+    // Seen on main at c72ef6d (shard 3/4), on PR #573 at cf14914 (shard 2/4),
+    // and on PR #574 at 2b44612 (shard 4/4, where the gear register also loads
+    // btree_gist into every test PGlite beside pg_trgm — one more WASM module
+    // churning per instance) — different shards each time, so not a test's
+    // fault; it never reproduced locally, which is why the fix is reasoned
+    // from the crash site rather than from a red run on this machine.
+    //
+    // The cost is real, and larger than the old note's 13% — measured on this
+    // branch rather than inherited: 792s and 802s under "threads", 947s under
+    // "forks", so about +20%, or two and a half minutes on a full local run.
+    // CI shards four ways, so it lands as ~40s a shard. That buys a signal that
+    // means what it says, which is worth more than the minutes: a SIGILL is
+    // indistinguishable from a flake, and "just re-run it" is exactly the habit
+    // this repo refuses everywhere else.
+    //
+    // Do not reach for `isolate: false` to win the time back — module mocks are
+    // per-file here, and a shared registry across files is a different bug.
     pool: "forks",
     // `pnpm test:changed` (and `vitest related`) selects tests by walking the
     // *import* graph, and the Drizzle migrations are never imported — they are
@@ -66,6 +90,13 @@ export default defineConfig({
       // real Sentry and reports its own deliberate failures to the production
       // project. `pnpm e2e:build` switches it off the same way.
       NEXT_PUBLIC_SENTRY_DSN: "",
+      // A throwaway sealing key, so the suite runs the path a deployment runs.
+      // Without one `secretKeyFromEnvironment()` reports "unset" and every
+      // sealing caller degrades — waiver links would go back to being reissued
+      // on every send, and the tests would be proving the fallback rather than
+      // the behaviour. Not a secret: it seals nothing outside a test database,
+      // and production derives its own from the stack seed.
+      SECRET_ENCRYPTION_KEY: "ZGl2ZWRheS10ZXN0LW9ubHktc2VhbGluZy1rZXktMDE=",
       DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
     },
   },

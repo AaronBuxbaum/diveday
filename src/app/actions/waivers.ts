@@ -2,10 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
-import { issueAndDeliverPersonWaiver, issueAndDeliverWaiver } from "@/db/waiver-issue";
+import {
+  type WaiverSendChannel as DbWaiverSendChannel,
+  issueAndDeliverPersonWaiver,
+  issueAndDeliverWaiver,
+} from "@/db/waiver-issue";
 import { trackEvent } from "@/lib/analytics";
 import { requireStaffSession } from "@/lib/session";
-import type { WaiverSendState, WaiverSendSurface } from "./waiver-send-types";
+import {
+  isWaiverSendChannel,
+  type WaiverSendChannel,
+  type WaiverSendState,
+  type WaiverSendSurface,
+} from "./waiver-send-types";
 
 /**
  * One-tap waiver send, shared by the Today queue, the Blockers page, and
@@ -44,10 +53,20 @@ export async function sendWaiversAction(
   const session = await requireStaffSession();
   const bookingIds = [...new Set(formData.getAll("bookingId").map(String).filter(Boolean))];
   const personId = String(formData.get("personId") ?? "").trim() || undefined;
+  // The diver record's three delivery buttons are three submitters on **one**
+  // form, so the channel arrives as the submitter's own name/value pair. An
+  // unrecognised (or absent) value is email — the behaviour of every caller
+  // that predates the channel, and the safe default for a stray submit.
+  const rawChannel = formData.get("channel");
+  const channel: WaiverSendChannel = isWaiverSendChannel(rawChannel) ? rawChannel : "email";
+  // The two unions are declared separately (see `waiver-send-types`); this
+  // assignment is what fails the build if they ever drift apart.
+  const dbChannel: DbWaiverSendChannel = channel;
   const db = await getDb();
 
   const state: WaiverSendState = {
     status: "done",
+    channel,
     sent: [],
     links: [],
     alreadyDone: [],
@@ -66,8 +85,12 @@ export async function sendWaiversAction(
   for (const target of results) {
     const result =
       target.kind === "person"
-        ? await issueAndDeliverPersonWaiver(db, session.user.shopId, target.personId)
-        : await issueAndDeliverWaiver(db, session.user.shopId, target.bookingId);
+        ? await issueAndDeliverPersonWaiver(db, session.user.shopId, target.personId, {
+            channel: dbChannel,
+          })
+        : await issueAndDeliverWaiver(db, session.user.shopId, target.bookingId, {
+            channel: dbChannel,
+          });
     if (!result.ok) {
       if (result.reason === "already_completed") {
         state.alreadyDone.push(result.diverName ?? "A diver");
