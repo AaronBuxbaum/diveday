@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -74,7 +75,7 @@ async function inputsFingerprint(): Promise<string> {
 
 /** Migrate + seed one variant in a throwaway PGlite and return its data-directory dump. */
 async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
-  const client = new PGlite({ extensions: { pg_trgm } });
+  const client = new PGlite({ extensions: { pg_trgm, btree_gist } });
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
   // The `lean` fixture has no trailing-quarter back-fill. That history is for

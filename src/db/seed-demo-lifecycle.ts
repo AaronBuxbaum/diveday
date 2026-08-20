@@ -21,6 +21,9 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
   importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
@@ -179,6 +182,12 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Buddy pairs reference bookings, so they go before the bookings delete
   // (ADR 20260804-buddy-teams).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
+  // The gear register, children first: reservations reference gear_items and
+  // bookings, service events reference gear_items and people
+  // (ADR 20260815-minimal-gear-register).
+  await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
+  await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
+  await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // Before the series it points at, and after the trips: a skip is the

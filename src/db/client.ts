@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
@@ -110,6 +111,20 @@ export function sqlStateOf(error: unknown): string | undefined {
 export function violatesUniqueIndex(error: unknown, indexName: string): boolean {
   for (const link of errorChain(error)) {
     if (link.code === "23505" && link.constraint === indexName) return true;
+  }
+  return false;
+}
+
+/**
+ * True for an exclusion-constraint violation (SQLSTATE 23P01) raised by one
+ * **named** constraint. The sibling of `violatesUniqueIndex` for the other
+ * constraint family: the gear-reservation double-booking guard is an
+ * `EXCLUDE USING gist`, whose refusal a caller turns into a worded outcome
+ * rather than a 500 (ADR 20260815-minimal-gear-register).
+ */
+export function violatesExclusionConstraint(error: unknown, constraintName: string): boolean {
+  for (const link of errorChain(error)) {
+    if (link.code === "23P01" && link.constraint === constraintName) return true;
   }
   return false;
 }
@@ -254,13 +269,15 @@ async function init(): Promise<AppDb> {
   }
 
   const dataDir = process.env.PGLITE_DATA_DIR ?? ".pglite";
-  // pg_trgm backs the trigram GIN search indexes (CR-018) — PGlite bundles
-  // the extension's wasm but only loads it when explicitly requested here,
-  // unlike Neon/real Postgres where CREATE EXTENSION alone is enough.
+  // pg_trgm backs the trigram GIN search indexes (CR-018) and btree_gist the
+  // gear-reservation exclusion constraint (ADR 20260815-minimal-gear-register)
+  // — PGlite bundles each extension's wasm but only loads it when explicitly
+  // requested here, unlike Neon/real Postgres where CREATE EXTENSION alone is
+  // enough.
   const client =
     dataDir === "memory"
-      ? new PGlite({ extensions: { pg_trgm } })
-      : new PGlite(dataDir, { extensions: { pg_trgm } });
+      ? new PGlite({ extensions: { pg_trgm, btree_gist } })
+      : new PGlite(dataDir, { extensions: { pg_trgm, btree_gist } });
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
   // PGlite is single-connection (no cross-process race to guard against, so
@@ -274,7 +291,7 @@ async function init(): Promise<AppDb> {
 
 /** Fresh in-memory database for tests: migrated, unseeded, isolated per call. */
 export async function createTestDb(): Promise<AppDb> {
-  const db = drizzle({ client: new PGlite({ extensions: { pg_trgm } }) });
+  const db = drizzle({ client: new PGlite({ extensions: { pg_trgm, btree_gist } }) });
   await migrate(db, { migrationsFolder: "drizzle" });
   return db;
 }

@@ -1,8 +1,10 @@
 /**
  * Trip prep: what the shop lays out before a boat leaves, derived purely from
- * each diver's rental fit and the trip's planned dives. The shop tracks no
- * equipment inventory, so this is a checklist to pack against, never an
- * allocation — nothing here reserves a particular item.
+ * each diver's rental fit and the trip's planned dives. This is a checklist
+ * to pack against, never an allocation — nothing *here* reserves a particular
+ * item. Reserving is the gear register's separate, opt-in act (`src/lib/gear.ts`,
+ * `gear_reservations`; ADR 20260815-minimal-gear-register), layered beside
+ * this checklist without changing a line of its math.
  *
  * Safety invariants (docs/product/glossary.md — Rental fit, Nitrox):
  *   - one tank per diver per planned dive, always, so the tank count can never

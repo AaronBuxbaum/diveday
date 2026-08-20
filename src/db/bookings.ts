@@ -14,6 +14,7 @@ import {
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
+import { releaseUnclaimedGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
@@ -765,6 +766,11 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
     // change back too, instead of leaving a cancelled booking whose
     // capabilities are still live.
     await revokeBookingCapabilities(tx, { shopId, bookingId });
+    // And the units the diver never collected: a cancelled booking must not
+    // keep tagged gear reserved against the divers who are actually coming
+    // (ADR 20260815-minimal-gear-register). Checked-out units stay — they are
+    // physically with someone, and the register's overdue chase brings those home.
+    await releaseUnclaimedGearReservations(tx, { shopId, bookingId });
     return booking;
   });
 }
@@ -842,6 +848,12 @@ export async function selfCancelBooking(
     if (!cancelled) return { ok: false, reason: "not_cancellable" };
     // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
     await revokeBookingCapabilities(tx, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+    });
+    // Same rule as the staff cancel: un-collected units go back on the wall
+    // with the seat (ADR 20260815-minimal-gear-register).
+    await releaseUnclaimedGearReservations(tx, {
       shopId: input.shopId,
       bookingId: input.bookingId,
     });
@@ -1072,6 +1084,12 @@ export async function rescheduleBooking(
         .returning({ id: bookings.id });
       if (!cancelled) return { ok: false, reason: "not_cancellable" };
       await revokeBookingCapabilities(tx, {
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+      });
+      // Same rule as the staff cancel above: un-collected units go back on
+      // the wall with the seat (ADR 20260815-minimal-gear-register).
+      await releaseUnclaimedGearReservations(tx, {
         shopId: input.shopId,
         bookingId: input.bookingId,
       });

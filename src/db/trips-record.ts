@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { AppDb, DbExecutor } from "./client";
+import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import type { Trip } from "./schema";
 import {
   bookings,
@@ -320,6 +321,14 @@ export async function setTripStatus(
     .set({ status, cancelledAt: status === "cancelled" ? now : null })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
     .returning();
+  // A cancelled departure keeps its bookings, so the booking cascade never
+  // frees the gear reserved against it — release the un-collected units here,
+  // on the same executor (and so inside the blow-out's transaction when there
+  // is one). Reinstating does not resurrect them: the units went back on the
+  // wall, and prep re-assigns from what is actually free.
+  if (trip && status === "cancelled") {
+    await releaseUnclaimedGearReservationsForTrips(db, { shopId, tripIds: [tripId] });
+  }
   return trip ?? null;
 }
 

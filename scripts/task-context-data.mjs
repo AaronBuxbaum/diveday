@@ -86,7 +86,7 @@ export const areas = {
     ],
     tests: ["src/lib/dive-prep.test.ts", "src/db/nitrox.test.ts", "e2e/nitrox.spec.ts"],
     invariants: [
-      "DiveDay tracks no equipment inventory: a fit is a size record, never an allocation.",
+      "A fit is a size record, never an allocation — only a gear-register reservation reserves a unit, and a shop with no register keeps sizes-only prep untouched.",
       "One tank per diver per planned dive — the count is never short of the dive plan.",
       "A nitrox request requires a verified card at write time, and is re-checked on every read.",
       "A diver with no fit on file is named on the prep list, never silently omitted.",
@@ -95,6 +95,40 @@ export const areas = {
       "pnpm test src/lib/dive-prep.test.ts --reporter=dot",
       "pnpm check",
       "pnpm e2e e2e/nitrox.spec.ts --reporter=line",
+    ],
+  },
+  gear: {
+    goal: "Extend the gear register: the shop's own fleet as tagged units, per-unit service clocks, and date-ranged reservations against bookings.",
+    docs: [
+      "docs/product/glossary.md",
+      "docs/architecture/decisions/20260815-minimal-gear-register.md",
+      "docs/design/principles.md",
+    ],
+    code: [
+      "src/db/schema.ts",
+      "src/db/gear.ts",
+      "src/lib/gear.ts",
+      "src/i18n/gear-labels.ts",
+      "src/app/shop/[shopSlug]/gear",
+      "src/app/shop/[shopSlug]/trips/[id]/prep",
+    ],
+    tests: [
+      "src/lib/gear.test.ts",
+      "src/db/gear.test.ts",
+      "src/db/gear-reservations.postgres.test.ts",
+      "e2e/gear.spec.ts",
+    ],
+    invariants: [
+      "Opt-in by presence: a shop with zero gear_items rows sees no gear UI and its prep flow is untouched — never a settings flag.",
+      "Double-booking is refused by the database (the gear_reservations_no_overlap exclusion constraint), never only by an application-level check.",
+      "Service clocks inform, never gate — an overdue unit can still be handed over, because the dock decides.",
+      "Rental only: no retail POS, no repair work orders — both stay declined (vision non-goals).",
+      "rental_fit_profiles stays the universal always-on layer; the register never answers what size a diver needs.",
+    ],
+    validate: [
+      "pnpm test src/lib/gear.test.ts src/db/gear.test.ts src/db/gear-reservations.postgres.test.ts --reporter=dot",
+      "pnpm check",
+      "pnpm e2e e2e/gear.spec.ts --reporter=line",
     ],
   },
   manifests: {

@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "2a1f801a-8a05-4c30-9705-12f58b1740c9",
+  "id": "3778b202-b19d-43fe-92a3-cb5984d59eaa",
   "prevIds": [
-    "181f63d6-875b-4cd9-bef5-95d83da00341"
+    "509b41a7-1b06-4784-a53c-5c90dd7ac243"
   ],
   "ddl": [
     {
@@ -205,6 +205,45 @@
         "drysuit"
       ],
       "name": "dive_specialty",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "bcd",
+        "regulator",
+        "wetsuit",
+        "boots",
+        "mask_fins",
+        "weights",
+        "dive_computer",
+        "gopro",
+        "tank",
+        "other"
+      ],
+      "name": "gear_item_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "in_service",
+        "needs_service",
+        "retired"
+      ],
+      "name": "gear_item_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "service",
+        "hydro_test",
+        "visual_inspection",
+        "o2_clean",
+        "note"
+      ],
+      "name": "gear_service_kind",
       "entityType": "enums",
       "schema": "public"
     },
@@ -661,6 +700,24 @@
     {
       "isRlsEnabled": false,
       "name": "dive_sites",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "gear_items",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "gear_reservations",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "gear_service_events",
       "entityType": "tables",
       "schema": "public"
     },
@@ -4073,6 +4130,409 @@
       "entityType": "columns",
       "schema": "public",
       "table": "dive_sites"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "gear_item_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "label",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "size",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "serial_number",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "brand_model",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "purchased_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "gear_item_status",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'in_service'",
+      "generated": null,
+      "identity": null,
+      "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "service_note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "booking_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reserved_from",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reserved_until",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "checked_out_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "returned_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "return_note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "gear_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "gear_service_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "serviced_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "next_due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "recorded_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "gear_service_events"
     },
     {
       "type": "uuid",
@@ -13209,6 +13669,181 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "label",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_items_shop_label_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "kind",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_items_shop_kind_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_reservations_item_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "booking_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_reservations_booking_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "reserved_until",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_reservations_shop_until_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "gear_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "serviced_on",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_service_events_item_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "gear_service_events_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "global_dive_site_id",
           "isExpression": false,
           "asc": true,
@@ -17066,6 +17701,125 @@
     {
       "nameExplicit": false,
       "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_items_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_items"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_reservations_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "gear_reservations_gear_item_id_gear_items_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "booking_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "bookings",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "gear_reservations_booking_id_bookings_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_service_events_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "gear_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "gear_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "gear_service_events_gear_item_id_gear_items_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "recorded_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "gear_service_events_recorded_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "gear_service_events"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "global_dive_site_id"
       ],
       "schemaTo": "public",
@@ -19609,6 +20363,36 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "gear_items_pkey",
+      "schema": "public",
+      "table": "gear_items",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "gear_reservations_pkey",
+      "schema": "public",
+      "table": "gear_reservations",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "gear_service_events_pkey",
+      "schema": "public",
+      "table": "gear_service_events",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "global_dive_site_versions_pkey",
       "schema": "public",
       "table": "global_dive_site_versions",
@@ -20350,6 +21134,20 @@
       "entityType": "checks",
       "schema": "public",
       "table": "dive_sites"
+    },
+    {
+      "value": "\"reserved_until\" >= \"reserved_from\"",
+      "name": "gear_reservations_window",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "gear_reservations"
+    },
+    {
+      "value": "\"next_due_on\" is null or \"next_due_on\" > \"serviced_on\"",
+      "name": "gear_service_events_due_after_service",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "gear_service_events"
     },
     {
       "value": "\"amount_cents\" IS NULL OR \"amount_cents\" >= 0",

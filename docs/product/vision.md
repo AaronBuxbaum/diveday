@@ -26,9 +26,12 @@ concretely here.
 3. **Cert checks** — record divers' agency cards (PADI, SSI, NAUI, …), verify levels against a
    trip's requirements up front, so the dock stays drama-free.
 4. **Gear** — rental *fit*: the sizes each diver takes from the shop, feeding trip prep and
-   packing lists. (Item-level inventory, booking assignment, and service history were deliberately
-   removed as a half-maintained duplicate; a lightweight who-has-what / service-due register may
-   return — see [features/roadmap.md](features/roadmap.md).)
+   packing lists. Beneath it, opt-in by presence, the **gear register**: the shop's own fleet as
+   tagged units, per-unit service clocks (tank hydro/VIP, regulator service), and date-ranged
+   reservations with a database-level double-booking guard — rental only, never selling or
+   repairing (see the non-goals;
+   [20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)).
+   A shop with no tracked fleet sees none of it.
 5. **Boat manifests** — who's aboard, who's certified for the sites, roll call before departure
    and after every dive. A safety document first, a UI second.
 
@@ -48,7 +51,7 @@ concretely here.
   POS stays authoritative for both. DiveDay only ever emits data outward, never reads another
   system's — the read API + webhooks
   ([features/roadmap.md](features/roadmap.md#1-data-portability-follow-ons-the-wedge)) is how a
-  shop's own POS or accounting tool pulls DiveDay's booking, waiver, and (once built) gear-register
+  shop's own POS or accounting tool pulls DiveDay's booking, waiver, and gear-register
   data instead of double entry; no incumbent is expected to build the other end of that pipe
   themselves (see the roadmap item), so the realistic path is a no-code bridge (Zapier/Make) the
   shop wires up, not a DiveDay-built connector per target system.

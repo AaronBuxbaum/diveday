@@ -1,15 +1,16 @@
 # 20260815-minimal-gear-register — Add an opt-in, presence-based gear register beneath rental fit, never replacing it
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-08-20)
 - **Date:** 2026-08-15
 
-**Proposed, deliberately.** This is [roadmap §3](../../product/features/roadmap.md#3-minimal-gear-register-an-m5-reversal-deliberately-smaller),
-which the roadmap already marks **ADR required** because it reverses a shipped decision (M5,
-[shipped.md](../../product/shipped.md#rental-fit-and-trip-prep-m5)). Accepting it is a
-product-owner decision. Scope with
+**Accepted 2026-08-20** by product-owner instruction ("I want to build the Gear system…
+having all the features a dive ship might care about"), which is the roadmap-§3 reversal this
+record existed to put in front of him. Built the same day; the **2026-08-20 amendment** at the
+bottom records where the build deliberately extended or corrected this record. Scope with
 [20260815-outbound-integration-webhooks-and-zapier](20260815-outbound-integration-webhooks-and-zapier.md)
 in mind — the register is designed to be that ADR's first genuinely new payload, not built in
-isolation and retrofitted onto it later.
+isolation and retrofitted onto it later; that ADR's `gear_item.*` events remain gated on its own
+acceptance.
 
 ## Context
 
@@ -81,9 +82,12 @@ gear_reservations
 ### The pieces, mapped to what was actually asked for
 
 - **Manage and track rental reservations** — `gear_items` + `gear_reservations`, above. A staff
-  surface at `/shop/[shopSlug]/gear` (new feature module, per
-  [20260730-feature-module-contracts](20260730-feature-module-contracts.md)) lists items, their
-  current reservation if any, and status.
+  surface at `/shop/[shopSlug]/gear` lists items, their current reservation if any, and status.
+  (The sketch here originally said "new feature module, per
+  [20260730-feature-module-contracts](20260730-feature-module-contracts.md)" — superseded by the
+  build amendment below: the shipped boundary is `src/lib/gear.ts` + `src/db/gear.ts`, no
+  `src/features/gear`, because Today's gear rows live in `src/db/today.ts` and `src/db` may not
+  import `src/features`.)
 - **Payments** — no new payment machinery. A reservation attaches to the same
   `order_line_items` row (`kind: "rental"`) the booking already creates; the reservation is a
   *fulfillment* record, never a billing record. Nothing here touches Stripe.
@@ -136,3 +140,55 @@ gear_reservations
   ever adopts it, the cost of leaving is two dormant tables.
 - **On acceptance (not before):** move roadmap §3 from "open work" to "in progress," and add
   `gear_items.csv` / `gear_reservations.csv` to `src/lib/export.ts`'s manifest.
+
+## 2026-08-20 amendment — what the build extended or corrected
+
+Accepted and built in one stroke; five places the shipped shape deliberately differs from the
+schema sketch above, each for a reason worth keeping:
+
+- **A service *history*, not a flag.** `gear_item_status`'s `needs_service` + note survive as the
+  "pulled off the wall" state, but the register's real service answer is a third table,
+  `gear_service_events` — append-only care events (`service` | `hydro_test` | `visual_inspection`
+  | `o2_clean` | `note`), each carrying the `next_due_on` deadline staff set for that clock. The
+  newest event of a kind *is* that clock; nothing is denormalized onto the item row. This is what
+  "what's due for service" actually means for a dive fleet: a tank runs two independent
+  compliance clocks (US DOT hydro every five years, annual VIP) plus an O2-clean renewal, and a
+  shop wants the printable history as proof of care. Still deliberately not a work order — no
+  parts, no labor, no billing (`src/lib/gear.ts` holds the interval conventions; the form
+  suggests, staff decide).
+- **Two more kinds.** `gear_item_kind` is the prep list's eight (including `boots`, which the
+  original sketch's "reuse `RentableItemKind`" would have dropped) plus `tank` — the most
+  numerous, most compliance-bound unit a shop owns, absent from the rentable catalog because a
+  fit never mentions gas — and `other` for the odd tagged thing (torch, SMB, camera tray).
+- **`shop_id` on every table.** The sketch's `gear_reservations` had none; every domain table
+  carries it (tenancy + the delete-path coverage tests force the decision anyway).
+- **No feature module.** The sketch said `src/features/gear`; the shipped shape is
+  `src/lib/gear.ts` + `src/db/gear.ts`, because the Today queue's gear rows live in
+  `src/db/today.ts`, and `src/db` may not import `src/features` (the one-way layering
+  `pnpm check:architecture` enforces). The surface is ordinary app routes at
+  `/shop/[shopSlug]/gear`, like every other pillar's.
+- **Reservations cascade from bookings and items** (`ON DELETE CASCADE`) rather than blocking
+  them — a deleted booking frees its units, and pre-pilot (H-49) nothing mourns the row. A
+  unit's own delete is offered only as the mistyped-row eraser, with an undo toast; the register's
+  history-preserving exit stays `retired`.
+
+Same-day review findings folded in before merge (dive-domain + security reviews, 2026-08-20):
+a lapsed window splits on the handover stamp — a checked-out unit reads **overdue** (a phone
+call) while a never-collected one reads **never picked up** and is closed by *release*, never a
+fabricated return; the prep picker refuses to offer a unit that is physically out on a lapsed
+window (it isn't on the wall) while a never-collected claim doesn't block; cancelling a booking
+releases its un-collected units in the same transaction as the capability revoke; check-out is
+conditional on the stamp being empty so a double-tap cannot rewrite when a unit left; the prep
+picker words a unit's lapsed or looming bench clock in the option itself (informing at the
+moment of the pick); and the assign action pins the booking to its trip so a stale tab cannot
+bind another departure's booking to this one's window.
+
+What shipped beyond the sketch's list, all inside its bounds: check-out/return stamps on the
+reservation (`checked_out_at` / `returned_at`, so "reserved" and "out the door" stay
+distinguishable and the returns panel has something to close), the prep page's assignment panel
+(size-ranked suggestions from the diver's own fit; the window derived server-side from the trip),
+three Today rows (`gear_overdue`, `gear_due_back`, `gear_service_due` — close-out leftovers come
+free), `gear_service_events.csv` beside the two CSVs named above, and the seeded demo fleet.
+The printable per-booking rental ticket named under "The pieces" was **not** built — the prep
+page's assignment list prints with the packing list, and a per-booking ticket is filed as a
+follow-up rather than silently dropped.

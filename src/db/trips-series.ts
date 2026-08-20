@@ -18,6 +18,7 @@ import {
 } from "@/lib/recurrence";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type AppDb, type AppTransaction, queryAll } from "./client";
+import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import {
   bookings,
   rollCallEvents,
@@ -742,27 +743,35 @@ export async function cancelOffCadenceSeriesTrips(
 ): Promise<number> {
   const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
   if (stale.length === 0) return 0;
-  const cancelled = await db
-    .update(trips)
-    // Same stamp as any other cancellation. An off-cadence occurrence being
-    // taken off the board *is* the shop calling that departure off -- it can
-    // carry booked, paid seats, which is exactly why narrowing a cadence lists
-    // the orphaned dates with their head counts before doing it -- so the money
-    // it leaves behind is owed from this instant like any other.
-    .set({ status: "cancelled", cancelledAt: now })
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        eq(trips.seriesId, seriesId),
-        eq(trips.status, "scheduled"),
-        inArray(
-          trips.id,
-          stale.map((trip) => trip.id),
+  return db.transaction(async (tx) => {
+    const cancelled = await tx
+      .update(trips)
+      // Same stamp as any other cancellation. An off-cadence occurrence being
+      // taken off the board *is* the shop calling that departure off -- it can
+      // carry booked, paid seats, which is exactly why narrowing a cadence lists
+      // the orphaned dates with their head counts before doing it -- so the money
+      // it leaves behind is owed from this instant like any other.
+      .set({ status: "cancelled", cancelledAt: now })
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          eq(trips.seriesId, seriesId),
+          eq(trips.status, "scheduled"),
+          inArray(
+            trips.id,
+            stale.map((trip) => trip.id),
+          ),
         ),
-      ),
-    )
-    .returning({ id: trips.id });
-  return cancelled.length;
+      )
+      .returning({ id: trips.id });
+    // The cancelled dates keep their bookings, so the booking cascade never
+    // frees the gear reserved against them.
+    await releaseUnclaimedGearReservationsForTrips(tx, {
+      shopId,
+      tripIds: cancelled.map((trip) => trip.id),
+    });
+    return cancelled.length;
+  });
 }
 
 export type SeriesCadencePatch = {
@@ -885,18 +894,27 @@ export async function cancelFutureSeriesTrips(
   seriesId: string,
   now: Date = nowDate(),
 ): Promise<number> {
-  const cancelled = await db
-    .update(trips)
-    .set({ status: "cancelled", cancelledAt: now })
-    .where(
-      and(
-        eq(trips.seriesId, seriesId),
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        gte(trips.startsAt, now),
-      ),
-    )
-    .returning({ id: trips.id });
+  const cancelled = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(trips)
+      .set({ status: "cancelled", cancelledAt: now })
+      .where(
+        and(
+          eq(trips.seriesId, seriesId),
+          eq(trips.shopId, shopId),
+          eq(trips.status, "scheduled"),
+          gte(trips.startsAt, now),
+        ),
+      )
+      .returning({ id: trips.id });
+    // The cancelled dates keep their bookings, so the booking cascade never
+    // frees the gear reserved against them.
+    await releaseUnclaimedGearReservationsForTrips(tx, {
+      shopId,
+      tripIds: rows.map((trip) => trip.id),
+    });
+    return rows;
+  });
   await setSeriesRepeat(db, shopId, seriesId, false, now);
   return cancelled.length;
 }

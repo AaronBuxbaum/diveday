@@ -49,6 +49,7 @@ test.describe("owner", () => {
       "Staffing",
       "Courses",
       "Dive sites",
+      "Gear",
       "Waivers",
       "Reviews",
       "Requests",
@@ -140,6 +141,7 @@ test.describe("captain", () => {
       "Staffing",
       "Courses",
       "Dive sites",
+      "Gear",
       "Reviews",
       "Orders",
     ]);
@@ -235,8 +237,12 @@ test.describe("phone dock", () => {
     await expect(page.getByRole("list", { name: "Run the shop" })).toBeVisible();
     // A tap on the dimmed page above the sheet just closes it — no second
     // tap owed. Coordinates, because what a finger actually hits there is
-    // the scrim, not a control.
-    await page.mouse.click(195, 120);
+    // the scrim, not a control — derived from the sheet's own top edge, so
+    // the sheet growing a row (as it did when Gear joined the register)
+    // cannot move it up underneath a hard-coded point.
+    const sheetBox = await page.getByRole("dialog", { name: "More" }).boundingBox();
+    if (!sheetBox) throw new Error("sheet has no box");
+    await page.mouse.click(195, Math.max(16, sheetBox.y - 40));
     await expect(page.getByRole("list", { name: "Run the shop" })).toHaveCount(0);
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   });

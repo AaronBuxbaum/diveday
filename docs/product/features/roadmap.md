@@ -41,9 +41,10 @@ notifications with scheduled reminders, the Today work queue, owner reporting, a
 palette), the growth layer (reviews, promo codes, SEO, embed), and full diver **and** staff copy
 localization. See [../shipped.md](../shipped.md).
 
-The next arc is **not new pillars.** It is finishing the data-portability wedge, closing the
-production-readiness gaps, and answering the buyer objection that still loses deals (no gear
-register). Breadth is done; depth and proof are the work.
+The next arc is **not new pillars.** It is finishing the data-portability wedge and closing the
+production-readiness gaps. The buyer objection that was losing deals — no gear register — was
+answered 2026-08-20 ([../shipped.md](../shipped.md); ADR 20260815-minimal-gear-register).
+Breadth is done; depth and proof are the work.
 
 ## Open work, in priority order
 
@@ -57,10 +58,12 @@ export to shop-owned storage have shipped (see [../shipped.md](../shipped.md)); 
 - **Read API + webhooks**, every tier — token-scoped reads over the export schema plus
   booking/waiver/manifest events. **ADR required** before building. This is the concrete mechanism
   behind "keep your existing retail POS, DiveDay runs the boat day" (see the vision non-goals) — it
-  has real payload today (bookings, waivers, `rental_fit.csv`) and gains its most-asked-for one once
-  §3's gear register ships. Scope the two as one ADR rather than sequencing them independently: an
-  API with nothing new to read, or a register with no way out, each only answers half the question a
-  retail-heavy shop actually asks. **One-directional by design** — DiveDay emits, it never
+  has real payload today (bookings, waivers, `rental_fit.csv`, and since 2026-08-20 the gear
+  register's `gear_items.csv` / `gear_service_events.csv` / `gear_reservations.csv` — the
+  most-asked-for one, so the register-with-no-way-out half of the old objection is closed and only
+  the API half remains). The Proposed
+  [20260815-outbound-integration-webhooks-and-zapier](../../architecture/decisions/20260815-outbound-integration-webhooks-and-zapier.md)
+  already sketches the `gear_item.*` events. **One-directional by design** — DiveDay emits, it never
   consumes another system's API; a direct competitor (DiveShop360) has no reason to build the
   receiving end itself, so the intended shape is DiveDay's webhooks feeding a no-code bridge (a
   published Zapier/Make integration) a shop or its own tooling wires to whatever it already runs
@@ -73,27 +76,16 @@ providers only). A vendor adapter behind the existing `SignatureProvider` seam i
 gated on the H-01/H-03 legal decisions
 ([waiver-signature-retention](../../architecture/decisions/20260718-waiver-signature-retention.md)).
 
-### 3. Minimal gear register (an M5 reversal, deliberately smaller)
+### 3. Nitrox fill / analysis log (open question)
 
-M5 removed equipment inventory on purpose, but "who has what, what's due for service" is table stakes
-for gear-heavy shops and a disqualifier for the classic retail shop
-([competitive-analysis.md](../assessments/competitive-analysis.md#what-blocks-the-purchase) #3). The re-entry is a
-lightweight who-has-what + service-due register — **not** a POS, and **not** the deleted assignment
-model. **ADR required** (it reverses a shipped decision). A real DiveShop360-shop inquiry
-(2026-08-15) named exactly this gap unprompted, alongside modules DiveDay is declining (work orders,
-retail inventory/POS — see the competitive-analysis "explicitly fine to not have" list) — the first
-concrete buyer evidence behind this item, not just the audit finding. Scope with §1's read API as
-one slice; the item table above it (`gear_items`) is the register's likely shape: physical units,
-an assignment/reservation per booking date range (the double-booking guard the inquiry asked for by
-name), and a service-due flag, kept separate from `rental_fit_profiles` rather than replacing it.
+The analyzed-fill log was retired with M5's gear inventory (it referenced a tracked cylinder).
+The gear register (shipped 2026-08-20,
+[20260815-minimal-gear-register](../../architecture/decisions/20260815-minimal-gear-register.md))
+tracks cylinders again — including their O2-clean clocks — but deliberately holds no fill record
+of any kind: whether one should return remains gated on the nitrox policy decision — V-05 and
+H-11 in [../human-decisions.md](../human-decisions.md).
 
-### 4. Nitrox fill / analysis log (open question)
-
-The analyzed-fill log was retired with gear inventory (it referenced a tracked cylinder). Whether a
-fill/analysis record should return in some tank-free form is genuinely open, gated on the nitrox
-policy decision — V-05 and H-11 in [../human-decisions.md](../human-decisions.md).
-
-### 5. Multi-boat / multi-shop configuration
+### 4. Multi-boat / multi-shop configuration
 
 Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** — a trip is the
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
@@ -161,7 +153,7 @@ A group buys out a whole departure: proposal, contract, deposit, and the boat of
   from public sale — and the resource it blocks. There is still no boat entity; a trip *is* the
   boat-day.
 - **Why it isn't scheduled:** it depends on the boat/resource modeling that
-  [§5 above](#5-multi-boat--multi-shop-configuration) already holds open, and should be designed
+  [§4 above](#4-multi-boat--multi-shop-configuration) already holds open, and should be designed
   together with it rather than as a separate effort. **ADR required.** The joint design is now
   written as the Proposed ADR
   [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md)

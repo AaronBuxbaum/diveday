@@ -33,6 +33,7 @@ import courses from "./courses.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import feed from "./feed.json";
+import gear from "./gear.json";
 import incidentExport from "./incidentExport.json";
 import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
@@ -56,6 +57,7 @@ const staff = {
   calendar,
   staffing,
   feed,
+  gear,
   divers,
   courses,
   diveSites,

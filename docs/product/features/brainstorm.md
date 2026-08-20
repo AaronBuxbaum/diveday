@@ -134,4 +134,4 @@ Completed work does not live here. Use these records instead:
   first-timer night-before brief; [../shipped.md](../shipped.md#rental-fit-and-trip-prep-m5) covers the
   rental-fit prep work that the gear-status indicator builds on.
 - Superseded gear-inventory ideas are represented by the smaller gear-register question in
-  [roadmap.md](roadmap.md#3-minimal-gear-register-an-m5-reversal-deliberately-smaller).
+  [shipped.md](../shipped.md) — the gear register shipped 2026-08-20 (ADR 20260815-minimal-gear-register).
