@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type CertificationLevel,
@@ -179,11 +179,17 @@ export async function recordSelfDeclaredCards(
 /**
  * True when this shop holds a card for this person in either of the two tables
  * {@link recordLevel} does not read — a nitrox card a staffer sighted, or any
- * specialty row at all. Shared with `recordNoCertification`'s own guard, which
- * has always asked the wider question.
+ * specialty row at all.
+ *
+ * `recordNoCertification` asks the identical question inline rather than
+ * through here, because it needs the nitrox *rows* a second time to archive the
+ * diver's own earlier claims; this answers existence and stops. The two must
+ * stay in step — the whole reason this exists is that they were not
+ * (`security-reviewer`, 2026-08-20).
  *
  * `specialty_certifications` has no `self_declared_at` column, so every row
- * there is staff-captured or imported and its existence alone settles it.
+ * there is staff-captured or imported and its existence alone settles it — the
+ * only one of the three tables where a row's mere presence is the answer.
  */
 async function holdsRealCardOutsideLevels(
   tx: DbExecutor,
@@ -191,21 +197,26 @@ async function holdsRealCardOutsideLevels(
 ): Promise<boolean> {
   // Sequential, never `Promise.all`: this runs inside the caller's transaction,
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
-  const liveNitrox = await tx
-    .select({
-      id: nitroxCertifications.id,
-      status: nitroxCertifications.status,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
-    })
+  // "Not a still-unsighted self-declaration", pushed into SQL so this stops at
+  // the first row rather than loading a diver's whole nitrox history to run a
+  // predicate over it. Same two conditions `isUnsightedSelfDeclaration` uses,
+  // negated: a verified row is real, and a row nobody declared is real.
+  const [realNitrox] = await tx
+    .select({ id: nitroxCertifications.id })
     .from(nitroxCertifications)
     .where(
       and(
         eq(nitroxCertifications.shopId, input.shopId),
         eq(nitroxCertifications.personId, input.personId),
         isNull(nitroxCertifications.deletedAt),
+        or(
+          eq(nitroxCertifications.status, "verified"),
+          isNull(nitroxCertifications.selfDeclaredAt),
+        ),
       ),
-    );
-  if (liveNitrox.some((card) => !isUnsightedSelfDeclaration(card))) return true;
+    )
+    .limit(1);
+  if (realNitrox) return true;
 
   const [liveSpecialty] = await tx
     .select({ id: specialtyCertifications.id })
@@ -244,6 +255,11 @@ async function recordNoCertification(
     );
   if (liveLevels.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
 
+  // Nitrox is read in full rather than through `holdsRealCardOutsideLevels`,
+  // because this function needs the rows twice: once as the guard, and again
+  // below to archive the diver's *own* earlier claims. The helper answers
+  // "does any real card exist" and deliberately stops there.
+  //
   // Sequential, never `Promise.all`: this runs inside the join's transaction,
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
   const liveNitrox = await tx
