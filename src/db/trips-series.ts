@@ -39,6 +39,7 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
+import { liveTrip } from "./trips-live";
 
 /**
  * Recurring series: a `trip_series` row plus one fully-formed, independent trip
@@ -134,7 +135,7 @@ async function loadTemplate(
   const [trip] = await tx
     .select()
     .from(trips)
-    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(desc(trips.startsAt))
     .limit(1);
   if (!trip) return null;
@@ -215,6 +216,11 @@ async function materializeWindow(
       tx
         .select({ date: trips.seriesOccurrenceDate })
         .from(trips)
+        // diveday:allow-deleted-trips: this asks whether the cadence slot has ever
+        // been materialized, not whether it is on the board. A deleted instance
+        // also leaves a `trip_series_skips` row, so the roll is refused that date
+        // twice over — and reading the tombstone is the half that survives
+        // somebody deleting the skip.
         .where(and(eq(trips.seriesId, series.id), eq(trips.shopId, series.shopId))),
     () =>
       tx
@@ -608,7 +614,7 @@ export async function getTripSeriesSummary(
     .select({ series: tripSeries })
     .from(trips)
     .innerJoin(tripSeries, eq(tripSeries.id, trips.seriesId))
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   if (!row) return null;
   const [counts] = await db
@@ -619,7 +625,7 @@ export async function getTripSeriesSummary(
     .from(trips)
     // Same reasoning as the skips read above: the shop condition travels with
     // the query, not with the caller's confidence in the series id.
-    .where(and(eq(trips.seriesId, row.series.id), eq(trips.shopId, shopId)));
+    .where(and(eq(trips.seriesId, row.series.id), eq(trips.shopId, shopId), liveTrip()));
   return {
     ...row.series,
     scheduledCount: counts?.scheduled ?? 0,
@@ -642,7 +648,7 @@ export async function getLatestSeriesInstance(db: AppDb, shopId: string, seriesI
   const [row] = await db
     .select()
     .from(trips)
-    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.seriesId, seriesId), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(desc(trips.startsAt))
     .limit(1);
   return row ?? null;
@@ -702,6 +708,7 @@ export async function listOffCadenceSeriesTrips(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.seriesId, seriesId),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
@@ -900,6 +907,7 @@ export async function cancelFutureSeriesTrips(
       .set({ status: "cancelled", cancelledAt: now })
       .where(
         and(
+          liveTrip(),
           eq(trips.seriesId, seriesId),
           eq(trips.shopId, shopId),
           eq(trips.status, "scheduled"),
@@ -943,7 +951,12 @@ export async function applyDetailsToFutureSeries(
       .select()
       .from(trips)
       .where(
-        and(eq(trips.id, sourceTripId), eq(trips.shopId, shopId), eq(trips.seriesId, seriesId)),
+        and(
+          eq(trips.id, sourceTripId),
+          eq(trips.shopId, shopId),
+          eq(trips.seriesId, seriesId),
+          liveTrip(),
+        ),
       )
       .limit(1);
     if (!source) return null;
@@ -966,6 +979,7 @@ export async function applyDetailsToFutureSeries(
       .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
       .where(
         and(
+          liveTrip(),
           eq(trips.seriesId, seriesId),
           eq(trips.shopId, shopId),
           eq(trips.status, "scheduled"),

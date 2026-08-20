@@ -6,6 +6,7 @@ import { sendWebPush, type WebPushTarget, webPushConfig } from "@/lib/notificati
 import { isInPushWindow } from "@/lib/push-window";
 import type { AppDb } from "./client";
 import { people, pushSubscriptions, shops, tripScheduleDays, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Who gets woken when a trip's roll call changes, and how often (ADR
@@ -74,7 +75,7 @@ export async function savePushSubscription(
   const [trip] = await db
     .select({ startsAt: trips.startsAt })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return { ok: false, reason: "not_found" };
 
@@ -308,7 +309,7 @@ export async function pushManifestChanged(
     const [trip] = await db
       .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1);
     if (!trip) return;
     // Read as typed columns and compared in JS rather than as one `greatest(…)`

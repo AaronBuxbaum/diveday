@@ -83,6 +83,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { listStaff } from "./trips";
+import { liveTrip } from "./trips-live";
 
 /**
  * Today's boat: the trip id staff would check in for right now, or null on a
@@ -110,6 +111,7 @@ export async function todayNextDepartureTripId(
     .from(trips)
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, scan.from),
@@ -366,6 +368,7 @@ export async function listRollCallGaps(
     .from(trips)
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         // A cancelled trip never sailed, so it has nobody to count back.
         eq(trips.status, "scheduled"),
@@ -890,6 +893,7 @@ export async function courseCrewCountsByTrip(
     .leftJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
         inArray(tripAssignments.tripId, tripIds),

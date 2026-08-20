@@ -119,7 +119,7 @@ export async function reviewNitroxCertification(
         and(
           eq(nitroxCertifications.id, input.certificationId),
           eq(nitroxCertifications.shopId, input.shopId),
-          // An archived card never comes back through a review — same rule the
+          // A deleted card never comes back through a review — same rule the
           // specialty path applies, and this one authorizes a gas fill.
           isNull(nitroxCertifications.deletedAt),
         ),
@@ -133,13 +133,13 @@ export async function reviewNitroxCertification(
 }
 
 /**
- * Soft-archive a nitrox card: the row is kept for safety history but drops out
- * of every read (ADR 20260719-crud-archive-semantics). Shop-scoped. Safe by
+ * Delete a nitrox card: the row is kept for safety history but drops out of
+ * every read (ADR 20260820-every-delete-is-soft). Shop-scoped. Safe by
  * construction: the fill gate (`verifiedNitroxPersonIds`, `setBookingNitrox`)
  * and the manifest read the card live, so a booking that requested enriched air
- * fails closed the moment its backing card is archived.
+ * fails closed the moment its backing card is deleted.
  */
-export async function archiveNitroxCertification(
+export async function deleteNitroxCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
@@ -161,14 +161,14 @@ export async function archiveNitroxCertification(
 }
 
 /**
- * Undo a nitrox-card soft-archive, mirroring `restoreCertification`. Refuses when
+ * Undo a nitrox-card delete, mirroring `restoreCertification`. Refuses when
  * a live card already holds the same shop/agency/identifier (partial unique index).
  */
 export async function restoreNitroxCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string },
 ) {
-  const [archived] = await db
+  const [deleted] = await db
     .select()
     .from(nitroxCertifications)
     .where(
@@ -178,15 +178,15 @@ export async function restoreNitroxCertification(
       ),
     )
     .limit(1);
-  if (!archived || archived.deletedAt === null) return false;
+  if (!deleted || deleted.deletedAt === null) return false;
   const [conflict] = await db
     .select({ id: nitroxCertifications.id })
     .from(nitroxCertifications)
     .where(
       and(
         eq(nitroxCertifications.shopId, input.shopId),
-        eq(nitroxCertifications.agency, archived.agency),
-        sql`lower(${nitroxCertifications.identifier}) = lower(${archived.identifier})`,
+        eq(nitroxCertifications.agency, deleted.agency),
+        sql`lower(${nitroxCertifications.identifier}) = lower(${deleted.identifier})`,
         isNull(nitroxCertifications.deletedAt),
       ),
     )

@@ -1,6 +1,10 @@
 # FU-20260820-copy-restraint-rejected-findings — Decide the 160 copy trims the sweep proposed and the verifiers refused
 
-- **Status:** Open
+- **Status:** Parked
+- **Parked:** 2026-08-20 by the product owner, deferred on first triage. Un-parked by an hour with the
+  app and the refusal list open — it is the product owner's voice being decided, so it cannot be
+  delegated, and nothing degrades while it waits. The `ready.*` / `booking.errors.*` apology family
+  (six strings, all on a diver's own screen) is where to start if the hour is short.
 - **Raised:** 2026-08-20 — the app-wide copy-restraint sweep on the `ux-refinements` branch
 - **Kind:** question
 - **Effort:** M

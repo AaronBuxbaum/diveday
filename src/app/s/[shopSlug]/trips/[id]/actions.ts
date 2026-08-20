@@ -286,6 +286,13 @@ export async function bookSpot(
     }
   }
 
+  // What the lead booker said about their own diving, read for this decision and
+  // written only if the booking completes (`persistDeclaration`). It describes
+  // the person filling the form in, so it travels with the lead's seat and never
+  // with a party member whose card nobody asked about.
+  const declaredParsed = diveDeclarationSchema.safeParse(diveDeclarationInput(formData));
+  const declared = declaredParsed.success ? toDiveDeclaration(declaredParsed.data) : null;
+
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
@@ -293,6 +300,10 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
+      declared:
+        index === 0 && declared && (declared.level || declared.nitrox)
+          ? { level: declared.level, nitrox: declared.nitrox }
+          : undefined,
       // Empty for any non-lead diver who left the field to the "use the main
       // contact's email" checkbox — never the lead's own address (see the
       // comment above the loop that builds `validParty`).

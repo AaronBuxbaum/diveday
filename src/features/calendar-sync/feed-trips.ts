@@ -1,6 +1,7 @@
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
 import { courses, diveSites, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
+import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
 import type { FeedTrip } from "./feed-document";
 import type { FeedScope } from "./feed-store";
@@ -68,7 +69,7 @@ export async function listFeedTrips(
     .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
     .leftJoin(tripAssignments, eq(tripAssignments.tripId, trips.id))
     .leftJoin(people, eq(people.id, tripAssignments.personId))
-    .where(and(...conditions))
+    .where(and(...conditions, liveTrip()))
     .orderBy(asc(trips.startsAt), asc(tripScheduleDays.dayNumber), asc(people.fullName));
 
   // A row is (trip × day × crew member), so fold back to one entry per

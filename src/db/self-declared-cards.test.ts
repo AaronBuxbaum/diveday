@@ -6,9 +6,9 @@ import { seededShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import { findOrCreatePerson } from "./people";
 import {
-  archiveCertification,
   createCertification,
   createSpecialtyCertification,
+  deleteCertification,
   reviewCertification,
 } from "./readiness";
 import { certifications, nitroxCertifications, people, shops } from "./schema";
@@ -757,12 +757,18 @@ describe("recordSelfDeclaredCards", () => {
 
 describe("self-declared cards and the booking gate", () => {
   /**
-   * `decideTripAdmission`'s docstring required exactly this the moment cards
-   * became diver-writable: without it, a diver refused an Advanced-only charter
-   * could type "Instructor" into a marketing opt-in and be admitted on the next
-   * attempt, having asserted nothing.
+   * **Reversed 2026-08-20 (H-27/H-29).** These three tests used to pin the
+   * opposite rule — that a claim lifts nothing and clears nothing at booking.
+   * The product owner's call is that before a trip an attested card is taken at
+   * its word, and the sighting is required at *boarding* instead
+   * (`certificationBlocker` still clears on `verified` alone, and
+   * `readiness.test.ts` holds that line).
+   *
+   * The self-attestation the old rule guarded against is real and is now
+   * accepted with open eyes: a diver who wants past this gate can type a
+   * different rung. It was never the gate that keeps them off the boat.
    */
-  it("a self-declared level does not lift the diver past a trip's requirement", async () => {
+  it("a self-declared level is believed, even beside a lower card the shop verified", async () => {
     const { db, shop, person } = await joiner();
     const verified = await createCertification(db, {
       shopId: shop.id,
@@ -805,14 +811,13 @@ describe("self-declared cards and the booking gate", () => {
       evidence,
     });
 
-    expect(decision.admitted).toBe(false);
-    if (decision.admitted) return;
-    expect(decision.refusal.requiredLevel).toBe("advanced_open_water");
-    // The level the *shop* has evidence for, not the one the diver typed.
-    expect(decision.refusal.heldLevel).toBe("open_water");
+    // The declared Instructor is the highest rung on the record, so it answers
+    // the Advanced gate. What the shop *verified* is Open Water, and that is
+    // still the only thing readiness will accept at the dock.
+    expect(decision.admitted).toBe(true);
   });
 
-  it("a self-declared nitrox tick does not clear a nitrox-gated trip", async () => {
+  it("a self-declared nitrox tick clears the sale on a nitrox-gated trip", async () => {
     const { db, shop, person } = await joiner();
     const verified = await createCertification(db, {
       shopId: shop.id,
@@ -846,12 +851,13 @@ describe("self-declared cards and the booking gate", () => {
       },
     });
 
-    expect(decision.admitted).toBe(false);
-    if (decision.admitted) return;
-    expect(decision.refusal.nitroxRequired).toBe(true);
+    // The seat is sellable; the fill is not. `verifiedNitroxPersonIds` and the
+    // manifest still read a sighted card, so this diver cannot be given enriched
+    // air on the strength of a tick.
+    expect(decision.admitted).toBe(true);
   });
 
-  it("admits a diver the shop knows nothing about but a claim, rather than refusing them", async () => {
+  it("refuses a diver whose own claim puts them below the trip's rung", async () => {
     const { db, shop, person } = await joiner();
     await recordSelfDeclaredCards(db, {
       shopId: shop.id,
@@ -873,9 +879,37 @@ describe("self-declared cards and the booking gate", () => {
       },
     });
 
-    // Absence of evidence has never been a refusal here, and a stranger's
-    // typing must not turn "unknown" into "known and too junior" — that would
-    // let this feature *cost* somebody a seat they could have had.
+    // This is the case the reversal deliberately costs: a diver who says Open
+    // Water on an Advanced charter is now told so at the sale rather than at the
+    // dock. It is the refusal H-27 wanted — the one that reaches somebody while
+    // they can still book the trip they can dive — and the notice names the
+    // trip's requirement and the shop's contact address.
+    expect(decision.admitted).toBe(false);
+    if (decision.admitted) return;
+    expect(decision.refusal.requiredLevel).toBe("advanced_open_water");
+    expect(decision.refusal.heldLevel).toBe("open_water");
+  });
+
+  it("still admits a diver who has said nothing at all — H-08's fail-open promise", async () => {
+    const { db, shop, person } = await joiner();
+
+    const decision = decideTripAdmission({
+      requirement: {
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+      },
+      siteRequirement: null,
+      evidence: {
+        certifications: (await liveCards(db, shop.id)).filter((row) => row.personId === person.id),
+        specialtyCertifications: [],
+        nitroxCertifications: [],
+      },
+    });
+
+    // Zero rows is the fail-open case and it did not move: every genuinely new
+    // customer still books. Believing a claim only ever judges a diver who
+    // volunteered something.
     expect(decision.admitted).toBe(true);
   });
 });
@@ -976,9 +1010,7 @@ describe("reviewCertification on a self-declared card", () => {
     });
     const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
     if (!card) throw new Error("setup: declaration not recorded");
-    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
+    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
 
     const outcome = await reviewCertification(db, {
       shopId: shop.id,

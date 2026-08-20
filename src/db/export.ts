@@ -316,6 +316,11 @@ export async function loadShopExportBundleInput(
           asc(orderLineItems.id),
         );
 
+      // diveday:allow-deleted-trips: the bundle is the shop taking everything it
+      // has, tombstones included — a departure they deleted is still a row they
+      // own, and a backup that quietly drops rows is not a backup. The same
+      // applies to the three child joins below, which read through this bundle's
+      // own trip set rather than the board.
       const tripRows = await tx
         .select()
         .from(trips)
@@ -762,7 +767,7 @@ export async function loadShopExportBundleInput(
             "waiver_accepted",
             "waiver_signed_at",
             "waiver_source_name",
-            "archived_at",
+            "deleted_at",
             "created_at",
           ],
           rows: peopleRows.map((row) => {
@@ -1043,6 +1048,11 @@ export async function loadShopExportBundleInput(
             "conditions_updated_at",
             "description",
             "is_private",
+            // The bundle carries deleted departures (they are still the shop's
+            // rows), so it has to carry the stamp that says which — a file that
+            // hands back a deleted departure looking live is worse than one
+            // that left it out.
+            "deleted_at",
             "created_at",
           ],
           rows: tripRows.map((row) => [
@@ -1075,6 +1085,7 @@ export async function loadShopExportBundleInput(
             row.conditionsUpdatedAt,
             row.description,
             row.isPrivate,
+            row.deletedAt,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trips.csv"],
@@ -1653,12 +1664,12 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "waiver_templates.csv",
-          header: ["id", "title", "version", "archived_at", "created_at", "body"],
+          header: ["id", "title", "version", "deleted_at", "created_at", "body"],
           rows: templateRows.map((row) => [
             row.id,
             row.title,
             row.version,
-            row.archivedAt,
+            row.deletedAt,
             row.createdAt,
             row.body,
           ]),
@@ -1822,6 +1833,7 @@ export async function loadShopExportBundleInput(
             "kind",
             "serviced_on",
             "next_due_on",
+            "next_due_dives",
             "note",
             "recorded_by_person_id",
             "recorded_by_name",
@@ -1834,6 +1846,7 @@ export async function loadShopExportBundleInput(
             row.kind,
             row.servicedOn,
             row.nextDueOn,
+            row.nextDueDives,
             row.note,
             row.recordedByPersonId,
             row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
@@ -2597,6 +2610,9 @@ export async function loadShopExportCounts(
         .from(nitroxCertifications)
         .where(eq(nitroxCertifications.shopId, shopId)),
     ),
+    // diveday:allow-deleted-trips: this counts what the bundle above writes, and
+    // the bundle writes every row the shop owns. A count that filtered would
+    // disagree with its own file.
     "trips.csv": await countOf(
       db.select({ n: count() }).from(trips).where(eq(trips.shopId, shopId)),
     ),

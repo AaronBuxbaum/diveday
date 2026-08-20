@@ -22,6 +22,7 @@ import type { BookingCheckout } from "./schema";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
 import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
+import { liveTrip } from "./trips-live";
 
 export type StartCheckoutInput = {
   shopId: string;
@@ -121,7 +122,7 @@ export async function startBookingCheckout(
     .select({ trip: trips, course: courses })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!tripRow) return { ok: false, reason: "invalid" };
   const charge = checkoutCharge(tripRow.trip, tripRow.course);
@@ -432,7 +433,7 @@ export async function retirePendingCheckoutIfRepriced(
     .select({ trip: trips, course: courses })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
-    .where(and(eq(trips.id, existing.tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, existing.tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   // No trip, or a trip that no longer prices at all: nothing to compare
   // against, and inventing a mismatch out of missing data would retire a

@@ -91,6 +91,45 @@ do those now first."
 - If you left your current system tomorrow, what would you lose?
 - Who would have to agree to a change — you, a partner, a manager, an accountant?
 
+### C3. Who is on the boat, and what the gear does between trips
+
+Four open decisions wait on the answers here, and all four are currently parked on a guess. Ask
+these as "last Saturday" questions like everything else — the numbers matter less than whether the
+shop reaches for an example without pausing.
+
+**Who else comes.** DiveDay models one kind of passenger: a diver. Every shop's rate card implies
+more.
+
+- On last Saturday's boat, was everyone diving? Who else was aboard?
+- Do you sell a snorkel spot on a dive charter? What do you charge for it?
+- What about somebody who just rides along — a partner, a parent? Do they pay, and do they sign
+  anything?
+- How do those people end up on the list the boat leaves with?
+
+*(Feeds [../features/participant-types.md](../features/participant-types.md), whose price and waiver
+assumptions are inferred from published rate cards and nothing else. A shop that says "everyone dives,
+always" is a finding too — it demotes the whole subsystem.)*
+
+**Renting to somebody who is not on a boat.** DiveDay ties a gear reservation to a booking, so a
+counter rental has nowhere to live.
+
+- Do you rent gear to people who aren't diving with you that day? How often — every day, or a few
+  times a season?
+- Who tracks when it comes back?
+
+*(Un-parks FU-20260820-walk-in-gear-rentals-without-a-booking. "A few times a season" closes it;
+"every day in summer" makes it a schema change.)*
+
+**How gear service is actually tracked.** DiveDay can count a unit's dives from the reservations it
+already holds — but only as well as the shop keeps them.
+
+- How do you know when a regulator is due for service — a date, a dive count, or somebody's memory?
+- Does anyone write down which unit went out with which diver? Every trip, or when they remember?
+- Has a unit ever gone out overdue? How did you find out?
+
+*(Feeds the dual-clock service intervals in `src/lib/gear.ts`. If nobody logs which unit went out, a
+derived dive count is decoration — that is the finding, and it is worth more than the feature.)*
+
 ### C2. If they run the boat themselves: the sea-state bands
 
 Only for someone who actually reads the water and calls a day off — a captain or a working

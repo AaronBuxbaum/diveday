@@ -571,3 +571,37 @@ stranger typing on a public form — that distinction is the whole reason `impor
 `self_declared_at` are separate columns — and quietly turning a CSV cell into a diver's
 self-declaration blurs exactly that line. If it ever round-trips it must write through
 `recordSelfDeclaredCards` so the anti-displacement guard still applies.
+
+## Amendment 2026-08-20 — who may sight a card: any staff
+
+H-48 asked whether the sighting — the act that turns a diver's own typing into `verified` — should
+be pulled up to owner/manager the way H-14 pulled refunds, diver deletion and erasure. **It should
+not.** Sighting stays open to every staff role, and `reviewAction` keeps its `requireStaffSession()`
+gate with no role predicate (product owner, 2026-08-20).
+
+The reasoning, recorded here so the next reviewer does not re-raise it:
+
+- **The card is held by crew, at the dock.** The staffer physically looking at a plastic card on a
+  boat ramp is a captain or a divemaster far more often than an owner at a desk. A gate they cannot
+  pass does not make the sighting more careful — it makes it happen later, from memory, or not at
+  all, and a claim that quietly stays a claim while a boat fills is the exact failure this ADR was
+  written to end.
+- **It is a weaker act than the gated set.** H-14's boundary is around authority that outlives the
+  day and cannot be undone by the next person to look: money leaving the shop, a diver's record
+  being destroyed. A sighting records what somebody's eyes saw; it is corrigible by the next staffer
+  who looks at the same card, and the ADR's own eraser (the 2026-08-15 second amendment) is what
+  makes that true.
+- **The capture beside it was never gated.** `createCertification` — a staffer typing a card
+  straight onto a record — has always been open to every role, and the sighting form deliberately
+  mirrors that act. Gating the mirror and not the original would move the work rather than protect
+  anything.
+
+**The live-role half of H-48 is a separate question and it is already closed.** Every card action on
+this route runs through `requireDiverActionContext`, which calls `isLiveStaff` before the action's
+own gate, so a demoted, disabled or removed account loses sighting the moment the roles table says
+so rather than at JWT expiry (`security-reviewer`, 2026-08-15). "Any staff" means *any current
+staff*, checked live, not any bearer of a token that used to say staff.
+
+Revisit if a pilot shop reports a sighting somebody was not entitled to make. Nothing about this
+decision blocks narrowing later: the predicate would be one `canPersonSightCard` in `src/db/authz.ts`
+and one call, and the form already has a place to say so.

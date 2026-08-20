@@ -126,6 +126,8 @@ export default async function ScheduleBoardPage({
     builder?: string;
     /** The departure just created, named so the notice can say which. */
     created?: string;
+    /** Gear assignments a move had to release — see `moveTrip`. */
+    gear?: string;
     /** How many dates a repeating submission put up. */
     series?: string;
     /** Arrive with the add panel open: `1` quick, `full` already expanded. */
@@ -142,7 +144,7 @@ export default async function ScheduleBoardPage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder, created, series, add, date, course, requests, site } =
+  const { after, back, builder, created, gear, series, add, date, course, requests, site } =
     await searchParams;
   const requestIds = [
     ...new Set(
@@ -255,11 +257,17 @@ export default async function ScheduleBoardPage({
   // The named form whenever the action passed a title back; the anonymous
   // "It's on the board" survives for a URL that carries none.
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
+  // A move that could not carry its gear onto the new dates reports what it let
+  // go of, and in a warning tone rather than the plain success one: the schedule
+  // edit worked, and somebody now has kit to reassign on the prep page.
+  const gearReleased = gear ? Number.parseInt(gear, 10) : 0;
+  const movedWithGear = builderNoticeEntry?.key === "schedule.notices.moved" && gearReleased > 0;
   const builderNotice = builderNoticeEntry
     ? {
-        tone: builderNoticeEntry.tone,
-        message:
-          builderNoticeEntry.key === "schedule.notices.added" && created
+        tone: movedWithGear ? ("warning" as const) : builderNoticeEntry.tone,
+        message: movedWithGear
+          ? st("schedule.notices.movedGearReleased", { count: gearReleased })
+          : builderNoticeEntry.key === "schedule.notices.added" && created
             ? seriesCount > 1
               ? st("schedule.notices.addedSeries", { title: created, count: seriesCount })
               : st("schedule.notices.addedNamed", { title: created })

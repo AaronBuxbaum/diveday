@@ -35,6 +35,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Reading the board: the schedule lists, their aggregates, and the calendar
@@ -56,7 +57,10 @@ import {
  * cancelled one, means the shop has had this moment already.
  */
 export async function countShopTrips(db: DbExecutor, shopId: string): Promise<number> {
-  const [row] = await db.select({ total: count() }).from(trips).where(eq(trips.shopId, shopId));
+  const [row] = await db
+    .select({ total: count() })
+    .from(trips)
+    .where(and(eq(trips.shopId, shopId), liveTrip()));
   return row?.total ?? 0;
 }
 
@@ -96,6 +100,7 @@ export async function upcomingTripsWithCounts(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
@@ -130,6 +135,7 @@ export async function listTripIdsInOfflineManifestWindow(
     .from(trips)
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         gte(trips.endsAt, new Date(now.getTime() - 60 * 60 * 1000)),
@@ -239,6 +245,7 @@ export async function pagedUpcomingTripsWithCounts(
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
+        liveTrip(),
         upcomingTripScope(shopId, {
           from: lowerBound,
           monthEnd: options.monthEnd,
@@ -324,7 +331,7 @@ export async function offsetUpcomingTripsWithCounts(
         .select({ id: trips.id })
         .from(trips)
         .leftJoin(bookings, liveBookingJoin)
-        .where(scope)
+        .where(and(scope, liveTrip()))
         .groupBy(trips.id)
         .having(having)
         .as("matching_trips");
@@ -343,7 +350,7 @@ export async function offsetUpcomingTripsWithCounts(
         .leftJoin(courses, eq(courses.id, trips.courseId))
         .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
         .leftJoin(bookings, liveBookingJoin)
-        .where(scope)
+        .where(and(scope, liveTrip()))
         .groupBy(trips.id, courses.id, diveSites.id)
         .having(having)
         .orderBy(asc(trips.startsAt), asc(trips.id))
@@ -408,7 +415,7 @@ export async function tripDiveSiteSummaries(
     .leftJoin(tripDives, eq(tripDives.tripId, trips.id))
     .leftJoin(diveSite, and(eq(diveSite.id, tripDives.diveSiteId), eq(diveSite.shopId, shopId)))
     .leftJoin(tripSite, and(eq(tripSite.id, trips.diveSiteId), eq(tripSite.shopId, shopId)))
-    .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId)))
+    .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(asc(trips.id), asc(tripDives.diveNumber));
 
   const byTrip = new Map<string, TripDiveSiteRef[]>();
@@ -483,6 +490,7 @@ export async function upcomingScheduleStats(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
@@ -528,6 +536,7 @@ export async function upcomingScheduleRange(
     .from(trips)
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         options.publicOnly ? eq(trips.isPrivate, false) : undefined,
@@ -585,6 +594,7 @@ export async function upcomingStaffSchedule(
     .leftJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         gte(trips.endsAt, new Date(now.getTime() - 60 * 60 * 1000)),
@@ -658,6 +668,7 @@ export async function listUpcomingSessionsForCourse(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.courseId, courseId),
         eq(trips.status, "scheduled"),

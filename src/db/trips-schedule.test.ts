@@ -1,9 +1,19 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { rollCallCrewEvents } from "./schema";
-import { createTrip, deleteTrip, duplicateTrip, listTripScheduleDays, moveTrip } from "./trips";
+import { rollCallCrewEvents, tripDives, trips } from "./schema";
+import {
+  createTrip,
+  deleteTrip,
+  duplicateTrip,
+  getTripWithBooked,
+  listTripScheduleDays,
+  moveTrip,
+  pagedUpcomingTripsWithCounts,
+  upcomingTripsWithCounts,
+} from "./trips";
 
 describe("moveTrip / duplicateTrip across a DST transition", () => {
   // The seeded blue-mantis shop is America/New_York. Spring-forward in 2026
@@ -285,5 +295,79 @@ describe("schedule edits after roll-call evidence", () => {
     });
     if (!untouched) throw new Error("failed to create untouched trip");
     expect(await deleteTrip(db, shop.id, untouched.id)).toEqual({ ok: true });
+  });
+
+  it("stamps a deleted departure instead of removing it, and takes it off every board read", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Deleted departure",
+      startsAt: new Date("2099-07-02T13:00:00.000Z"),
+      endsAt: new Date("2099-07-02T17:00:00.000Z"),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create trip");
+
+    const before = await listTripScheduleDays(db, shop.id, trip.id);
+    expect(await deleteTrip(db, shop.id, trip.id)).toEqual({ ok: true });
+
+    // The row survives, stamped. This is the half that makes the delete
+    // reversible; everything below is the half that makes it invisible.
+    const [row] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(row?.deletedAt).toBeInstanceOf(Date);
+
+    // The children stay attached — they were hard-deleted before this change,
+    // which is exactly what made putting a departure back a rebuild.
+    expect(await db.select().from(tripDives).where(eq(tripDives.tripId, trip.id))).not.toHaveLength(
+      0,
+    );
+    expect(before.length).toBeGreaterThan(0);
+
+    // And no board read finds it: the staff schedule, the public schedule, and
+    // the resolver the trip page and the public booking page both go through.
+    expect(await getTripWithBooked(db, shop.id, trip.id)).toBeNull();
+    const upcoming = await upcomingTripsWithCounts(
+      db,
+      shop.id,
+      new Date("2099-07-01T00:00:00.000Z"),
+    );
+    expect(upcoming.map((row) => row.id)).not.toContain(trip.id);
+    const publicBoard = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      now: new Date("2099-07-01T00:00:00.000Z"),
+      publicOnly: true,
+      limit: 50,
+    });
+    expect(publicBoard.trips.map((row) => row.id)).not.toContain(trip.id);
+  });
+
+  it("answers not_found on a second delete, and leaves the first stamp alone", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Deleted once",
+      startsAt: new Date("2099-07-03T13:00:00.000Z"),
+      endsAt: new Date("2099-07-03T17:00:00.000Z"),
+      capacity: 8,
+      plannedDives: 1,
+    });
+    if (!trip) throw new Error("failed to create trip");
+
+    expect(await deleteTrip(db, shop.id, trip.id)).toEqual({ ok: true });
+    const [first] = await db.select().from(trips).where(eq(trips.id, trip.id));
+
+    // The guard read at the top of `deleteTrip` filters deleted rows like every
+    // other resolver, so a replayed submit finds nothing rather than re-stamping
+    // a later time over the moment the departure actually came off the board.
+    expect(await deleteTrip(db, shop.id, trip.id)).toEqual({ ok: false, reason: "not_found" });
+    const [second] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(second?.deletedAt?.getTime()).toBe(first?.deletedAt?.getTime());
+
+    // Same reasoning for the move beside it: a deleted departure is not on the
+    // board, so it is not a schedule edit to make.
+    expect(await moveTrip(db, shop.id, trip.id, new Date("2099-07-04T13:00:00.000Z"))).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
   });
 });

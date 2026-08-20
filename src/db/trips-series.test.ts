@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
@@ -68,10 +68,15 @@ async function occurrenceDatesOf(
   db: Awaited<ReturnType<typeof seededShopContext>>["db"],
   seriesId: string,
 ) {
+  // Live rows only: this asks what is *on the board* for the series, and a
+  // deleted departure keeps its row and its occurrence date (ADR
+  // 20260820-every-delete-is-soft). Reading the tombstone here would make the
+  // deleted-date test pass for the wrong reason — and, worse, hide the roll
+  // inserting a fresh live row for the same date, which is the thing it guards.
   const rows = await db
     .select({ date: trips.seriesOccurrenceDate })
     .from(trips)
-    .where(eq(trips.seriesId, seriesId));
+    .where(and(eq(trips.seriesId, seriesId), isNull(trips.deletedAt)));
   return rows
     .map((row) => row.date)
     .filter((date): date is string => date !== null)

@@ -1389,11 +1389,32 @@ export const trips = pgTable(
      * (e.g. after being unpaused, to the later of original time or 1 hour from unpause).
      */
     recapAutoSendAt: timestamp("recap_auto_send_at", { withTimezone: true }),
+    /**
+     * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
+     *
+     * `deleteTrip` still refuses a departure with any roster, wait-list entry or
+     * roll-call evidence, so a row carrying this stamp is one nobody ever
+     * boarded — but the children it used to hard-delete (its dive plan, its
+     * crew, its requirements, its schedule days) now stay attached, which is
+     * what makes restoring it a single column write rather than a rebuild.
+     *
+     * Every read of this table that means "the board" filters on it through
+     * {@link liveTrips}. A miss on the public schedule or the sitemap shows a
+     * diver a departure the shop took off the board, which is the failure this
+     * column's index exists to make cheap to avoid.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // Partial, over the live rows only: every listing read carries
+    // `deleted_at is null`, and a deleted departure is rare enough that
+    // indexing the tombstones alongside them would pay for nothing.
+    index("trips_shop_live_starts_idx")
+      .on(table.shopId, table.startsAt)
+      .where(sql`${table.deletedAt} is null`),
     // The daily cron's two cross-shop window scans (DATA-M2). Both sweep every
     // shop at once, so `trips_shop_starts_idx` above cannot serve either — its
     // leading column is the one column these two do not constrain.
@@ -3175,7 +3196,8 @@ export const waiverTemplates = pgTable(
     title: text("title").notNull(),
     version: integer("version").notNull(),
     body: text("body").notNull(),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Soft delete, spelled the one way every other entity spells it (ADR 20260820-every-delete-is-soft). */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -4131,6 +4153,19 @@ export const gearServiceEvents = pgTable(
      * Null for events with no clock, e.g. a condition note.
      */
     nextDueOn: date("next_due_on"),
+    /**
+     * The *other* clock: how many dives this unit may make before the same work
+     * comes round again. Manufacturers publish both and mean "whichever comes
+     * first" — ScubaPro's regulators are 24 months **or** 100 dives — and a
+     * rental fleet in season reaches the dive number long before the date.
+     *
+     * Null is the ordinary case and means only the date clock applies. The
+     * count it is compared against is **derived, never stored**
+     * (`divesSinceServiceByUnit`), so it can never disagree with the
+     * reservations it is read from — and it is honest about being a floor
+     * rather than a fact: it counts the dives this shop wrote down.
+     */
+    nextDueDives: integer("next_due_dives"),
     note: text("note"),
     /**
      * Who recorded it. A service history a shop may lean on as evidence
@@ -4146,6 +4181,13 @@ export const gearServiceEvents = pgTable(
     check(
       "gear_service_events_due_after_service",
       sql`${table.nextDueOn} is null or ${table.nextDueOn} > ${table.servicedOn}`,
+    ),
+    // A dive clock of zero or less is not a shorter interval, it is a typo:
+    // it would read as overdue the instant it was written, on a unit nobody
+    // has dived since.
+    check(
+      "gear_service_events_due_dives_positive",
+      sql`${table.nextDueDives} is null or ${table.nextDueDives} > 0`,
     ),
   ],
 );

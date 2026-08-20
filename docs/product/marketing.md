@@ -17,6 +17,26 @@ has no separate team, tooling, or CMS: copy is code, reviewed like code, tested 
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
 
+## The homepage breadth band is four cards, numbered (decided 2026-08-20)
+
+The four-card band under "Instead of a whiteboard, a clipboard, and three apps that don't talk to
+each other" stays four cards, and this is now settled rather than deferred (FU-20260813, closed).
+It had been held open twice waiting for funnel numbers that never arrived: the predecessor door
+`home-mid` retired without ever accumulating a single `demo_entered`/`trial_started` pair, and
+waiting on a measurement nobody is generating is not waiting, it is stalling.
+
+**Why the cards beat imagery.** Four screens say "DiveDay has four screens." Four assertions say
+"DiveDay covers the whole day," which is the one thing a buyer comparing feature pages is looking for
+at that moment. A photograph or a mockup costs exactly that, and breadth is the argument this band
+exists to make.
+
+**What changed instead.** The band is more visual without becoming a picture. The four groups are the
+phases of one shop's day in the order it happens — welcome a diver, get them ready, run the day, hand
+it off — so they are now an ordered list, each card carrying a numbered badge, with a rule linking
+them across the row at `xl`. The sequence was always in the copy; rendering it as four equal boxes
+threw it away. It costs no words, it adds the one thing four assertions could not say on their own,
+and it reads as a track rather than a shelf.
+
 ## The positioning spine
 
 We are late to the market with zero customers, so the pages cannot argue from social proof. They

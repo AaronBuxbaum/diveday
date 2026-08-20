@@ -16,6 +16,7 @@ import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./clie
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
 import { bookings, certifications, courses, people, shops, trips, waiverRecords } from "./schema";
+import { liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
 
 /**
@@ -180,7 +181,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   const [trip] = await tx
     .select()
     .from(trips)
-    .where(and(eq(trips.id, booking.tripId), eq(trips.shopId, capability.shopId)))
+    .where(and(eq(trips.id, booking.tripId), eq(trips.shopId, capability.shopId), liveTrip()))
     .limit(1);
   if (!trip || !claimableNow(booking, trip, now)) return { ok: false, reason: "invalid" };
 

@@ -4,6 +4,7 @@ import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/mi
 import type { AppDb } from "./client";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { bookings, people, shops, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * The minimum-head-count sweep: cancel every departure whose decision moment
@@ -84,6 +85,7 @@ export async function listDeparturesAwaitingMinimumDecision(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.status, "scheduled"),
         isNotNull(trips.minimumBookings),
         // Not yet departed. A trip that already left is not a decision anybody

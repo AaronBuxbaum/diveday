@@ -117,7 +117,9 @@
     "duplicateLabel": "Otra unidad ya lleva esa etiqueta.",
     "invalidDate": "Esa fecha no existe — revísala.",
     "dueNotAfterService": "La próxima fecha de vencimiento tiene que ser posterior a la del servicio.",
-    "allHome": "Todo en casa — cada unidad está de vuelta en la pared."
+    "allHome": "Todo en casa — cada unidad está de vuelta en la pared.",
+    "invalidDives": "Las inmersiones tienen que ser un número entero mayor que cero.",
+    "divesNeedADate": "Un número de inmersiones necesita una fecha al lado — la unidad vence con lo que ocurra primero."
   },
   "unit": {
     "backToRegister": "← Registro de equipo",
@@ -137,6 +139,9 @@
       "servicedOn": "Hecho el",
       "nextDueOn": "Próximo vencimiento",
       "nextDueHint": "Cuándo vence este plazo. El servicio anual y las inspecciones suelen ser a un año; la hidrostática a cinco.",
+      "nextDueDives": "O después de estas inmersiones",
+      "nextDueDivesHint": "Los fabricantes publican ambos — 24 meses o 100 inmersiones. También necesita una fecha.",
+      "diveClock": "al menos {since} de {due} inmersiones",
       "note": "Nota",
       "notePlaceholder": "Asiento de alta presión nuevo, probado en banco",
       "returnToService": "Devolverla al servicio",
@@ -180,6 +185,7 @@
     "noneFree": "No hay {kindLabel} libre para estas fechas.",
     "assign": "Asignar",
     "assigning": "Asignando…",
+    "ticketDoor": "Boleta de alquiler",
     "notice": {
       "assigned": "Asignado.",
       "released": "Asignación liberada.",
@@ -190,5 +196,11 @@
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",
     "pickUnit": "Elige una unidad…"
+  },
+  "ticket": {
+    "eyebrow": "Alquiler",
+    "backToPrep": "Volver a preparación",
+    "unitsHeading": "Lo que llevas",
+    "dueBack": "Devolver antes del {date}."
   }
 }

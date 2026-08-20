@@ -9,6 +9,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type CheckInQueueRow = {
   bookingId: string;
@@ -135,6 +136,7 @@ export async function listWalkInTrips(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         // A walk-in can only be seated on a departure that has not started.

@@ -117,7 +117,9 @@
     "duplicateLabel": "Another unit already wears that tag.",
     "invalidDate": "That date doesn't exist — check it.",
     "dueNotAfterService": "The next due date has to come after the service date.",
-    "allHome": "All home — every unit is back on the wall."
+    "allHome": "All home — every unit is back on the wall.",
+    "invalidDives": "Dives has to be a whole number above zero.",
+    "divesNeedADate": "A dive count needs a due date beside it — the unit is due at whichever comes first."
   },
   "unit": {
     "backToRegister": "← Gear register",
@@ -137,6 +139,9 @@
       "servicedOn": "Done on",
       "nextDueOn": "Next due",
       "nextDueHint": "When this clock runs out. Annual service and inspections usually a year out; hydro five.",
+      "nextDueDives": "Or after this many dives",
+      "nextDueDivesHint": "Manufacturers publish both — 24 months or 100 dives. Needs a next-due date too.",
+      "diveClock": "at least {since} of {due} dives",
       "note": "Note",
       "notePlaceholder": "New HP seat, bench-tested",
       "returnToService": "Put it back in service",
@@ -180,6 +185,7 @@
     "noneFree": "No {kindLabel} free for these dates.",
     "assign": "Assign",
     "assigning": "Assigning…",
+    "ticketDoor": "Rental ticket",
     "notice": {
       "assigned": "Assigned.",
       "released": "Assignment released.",
@@ -190,5 +196,11 @@
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",
     "pickUnit": "Pick a unit…"
+  },
+  "ticket": {
+    "eyebrow": "Rental",
+    "backToPrep": "Back to prep",
+    "unitsHeading": "What you have",
+    "dueBack": "Back by {date}."
   }
 }

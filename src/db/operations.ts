@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export async function addInternalNote(
   db: AppDb,
@@ -340,6 +341,7 @@ export async function recordTripActivity(
     .innerJoin(people, eq(people.id, input.actorPersonId))
     .where(
       and(
+        liveTrip(),
         eq(trips.id, input.tripId),
         eq(trips.shopId, input.shopId),
         eq(people.shopId, input.shopId),

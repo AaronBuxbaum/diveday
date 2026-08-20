@@ -72,6 +72,22 @@ delete, and the 49 archive-vocabulary strings (plus their `es-ES` pairs and the 
 on them) become delete-vocabulary. Renaming those buttons moves pixels in the visual spec, so that
 change carries its own triage.
 
+**Amendment 2026-08-20 — `deleteTrip` is migrated, and the audit is now a build gate.** `trips`
+carries `deleted_at`, `deleteTrip` stamps it instead of removing six rows, and the five child tables
+it used to delete stay attached — which is what makes putting a departure back a single column write.
+The interesting half was never the write. `trips` is read from 91 places: the public schedule, the
+sitemap, the board, the manifest, the series roll, the report. A reader that forgets the filter does
+not throw and does not fail a test written before the column existed; it shows an anonymous visitor a
+departure the shop took off the board. So the audit is not a promise in a commit message —
+`scripts/check-live-trips.mjs` fails the build on any read of `trips`, or any join from a child table
+that now survives a delete, that neither carries `liveTrip()` (`src/db/trips-live.ts`) nor says
+`diveday:allow-deleted-trips: <why>`. Joins from `bookings`, `tripWaitlistEntries` and the roll-call
+tables are deliberately outside the gate: `deleteTrip` still refuses a departure carrying any of
+those, so no such row exists to arrive through. Three reads are exempt and each is a different kind:
+the export bundle (a shop taking everything it owns, tombstones included), the series horizon roll's
+"has this cadence slot ever been materialized?" (which wants the tombstone — it is the half that
+survives somebody deleting the skip row), and the seeds.
+
 ## Alternatives considered
 
 - **Keep "Archive" as the visible word.** Rejected: it is our storage model on a shop's screen. The

@@ -21,20 +21,20 @@ import {
   updateDiver,
 } from "@/db/divers";
 import {
-  archiveNitroxCertification,
   createNitroxCertification,
+  deleteNitroxCertification,
   restoreNitroxCertification,
   reviewNitroxCertification,
 } from "@/db/nitrox";
 import { addDiverNote, deleteDiverNote } from "@/db/operations";
 import { refundOrder } from "@/db/orders";
 import {
-  archiveCertification,
-  archiveSpecialtyCertification,
   type CardSighting,
   type CertificationReviewRefusal,
   createCertification,
   createSpecialtyCertification,
+  deleteCertification,
+  deleteSpecialtyCertification,
   type LevelCardSighting,
   restoreCertification,
   restoreSpecialtyCertification,
@@ -675,7 +675,7 @@ export async function deleteCertificationAction(
   const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
   const deleted = certificationId
-    ? await archiveCertification(db, {
+    ? await deleteCertification(db, {
         shopId: staff.user.shopId,
         certificationId,
         deletedByPersonId: staff.user.personId,
@@ -711,12 +711,12 @@ export async function deleteSpecialtyAction(
   const cardType = formData.get("cardType") === "nitrox" ? "nitrox" : "specialty";
   const deleted = certificationId
     ? cardType === "nitrox"
-      ? await archiveNitroxCertification(db, {
+      ? await deleteNitroxCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
           deletedByPersonId: staff.user.personId,
         })
-      : await archiveSpecialtyCertification(db, {
+      : await deleteSpecialtyCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
           deletedByPersonId: staff.user.personId,

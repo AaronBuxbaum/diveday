@@ -32,6 +32,7 @@ import { listCertificationSummaries } from "./self-declared-cards";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWaitlist, getTripWithBooked } from "./trips";
+import { liveTrip } from "./trips-live";
 
 export type SendLastMinuteDealInput = {
   shopId: string;
@@ -357,7 +358,7 @@ export async function listOutstandingLastMinutePromos(
         .select({ total: count() })
         .from(tripLastMinutePromos)
         .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
-        .where(scope);
+        .where(and(scope, liveTrip()));
       return counted?.total ?? 0;
     },
     fetchRows: async (offset, limit) =>
@@ -369,7 +370,7 @@ export async function listOutstandingLastMinutePromos(
         })
         .from(tripLastMinutePromos)
         .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
-        .where(scope)
+        .where(and(scope, liveTrip()))
         .orderBy(asc(tripLastMinutePromos.expiresAt), asc(tripLastMinutePromos.id))
         .limit(limit)
         .offset(offset),

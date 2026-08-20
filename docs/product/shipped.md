@@ -24,6 +24,13 @@ free; three export CSVs riding every bundle and backup; and the seeded demo flee
 never retail POS or repair work orders (vision non-goals), and `rental_fit_profiles` stays the
 universal always-on layer beneath it.
 
+Two later pieces the same day (its 2026-08-20 amendment, second half): a **printable per-booking
+rental slip** at `/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]` — what a diver has and when
+it is due back, with deliberately no signature line and no money on it — and **dual-clocked service
+intervals**, where a service event may carry `next_due_dives` beside `next_due_on` and a unit falls
+due at whichever comes first. The dive count is derived from the departures a unit came back from,
+presents itself as "at least N", and only ever escalates a clock.
+
 ## Imported payment and receipt history remains evidence, not a synthetic order (delivered 2026-08-16)
 
 The contact importer can now carry a prior system's payment, refund, receipt, and source Stripe

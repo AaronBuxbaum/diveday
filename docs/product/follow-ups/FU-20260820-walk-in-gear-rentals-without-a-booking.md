@@ -1,6 +1,11 @@
 # FU-20260820-walk-in-gear-rentals-without-a-booking — Decide whether a gear reservation can exist without a booking
 
-- **Status:** Open
+- **Status:** Parked
+- **Parked:** 2026-08-20 by the product owner, deferred on first triage. Un-parked by a pilot
+  shop saying, in a recorded call, that renting gear to somebody who is not on a boat that day is
+  ordinary counter work rather than a rarity — the question is how often it really happens, and
+  nobody here can answer that. Add it to [the first-call script](../pilot-kit/first-call-script.md)
+  if it is not there when you next read this.
 - **Raised:** 2026-08-20 — the gear-register build (ADR 20260815-minimal-gear-register, branch claude/dive-ship-gear-system-95gz3s)
 - **Kind:** question
 - **Effort:** M
