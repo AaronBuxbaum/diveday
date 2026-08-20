@@ -214,6 +214,7 @@ export function DiverList({
     query.trim() ? "entering" : "hidden",
   );
   const quickAddRef = useRef<HTMLDivElement>(null);
+  const quickAddFormRef = useRef<HTMLFormElement>(null);
   const [quickAddShift, setQuickAddShift] = useState(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
@@ -297,6 +298,34 @@ export function DiverList({
     }, 250);
   };
 
+  /**
+   * Enter is the fast path past whatever the debounce hasn't caught up to yet.
+   * A pending keystroke (`typed !== query`) gets flushed immediately rather
+   * than acted on blind — the visible `divers` still answer the *previous*
+   * query, so a match count read off them now would be stale. Once the URL
+   * is current, one match opens straight to that diver's record; no match at
+   * all reaches for the same quick-add the button beside the box already
+   * offers, so typing a new name and hitting Enter never requires the mouse.
+   */
+  const submitSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const value = typed.trim();
+    if (!value) return;
+    if (typed !== query) {
+      cancelPendingSearch();
+      router.replace(hrefFor(typed, filter));
+      return;
+    }
+    if (page.total === 1 && page.divers[0]) {
+      router.push(`/shop/${shopSlug}/divers/${page.divers[0].person.id}`);
+      return;
+    }
+    if (quickAddMode !== "hidden" && quickAddAction) {
+      quickAddFormRef.current?.requestSubmit();
+    }
+  };
+
   const { divers } = page;
   /** A search box or a view chip is on, so "nothing here" is a filter result. */
   const narrowed = Boolean(query) || filter !== "all";
@@ -372,6 +401,7 @@ export function DiverList({
               type="search"
               value={typed}
               onChange={(event) => search(event.target.value)}
+              onKeyDown={submitSearch}
               placeholder={copy.searchPlaceholder}
               className={`${controlClass} min-w-0 ${
                 quickAddMode === "exiting"
@@ -397,7 +427,7 @@ export function DiverList({
                 if (quickAddMode === "entering") setQuickAddMode("visible");
               }}
             >
-              <form action={quickAddAction} onSubmit={cancelPendingSearch}>
+              <form ref={quickAddFormRef} action={quickAddAction} onSubmit={cancelPendingSearch}>
                 <input type="hidden" name="query" value={typed.trim()} />
                 <SubmitButton
                   pendingLabel={copy.addDiverLabel}

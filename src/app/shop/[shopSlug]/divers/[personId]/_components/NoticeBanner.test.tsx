@@ -235,8 +235,7 @@ describe("resolveDiverNotice", () => {
   it("lets an action name the form when the code alone cannot", () => {
     // The level-card form and the specialty form emit the same codes; only the
     // action that ran knows which list the staffer was looking at.
-    expect(resolve("captured")?.form).toBe("cards");
-    expect(resolve("captured", { form: "specialty-cards" })?.form).toBe("specialty-cards");
+    expect(resolve("verified")?.form).toBe("cards");
     expect(resolve("verified", { form: "specialty-cards" })?.form).toBe("specialty-cards");
     expect(resolve("card-restore-conflict", { form: "specialty-cards" })?.form).toBe(
       "specialty-cards",
@@ -253,7 +252,18 @@ describe("resolveDiverNotice", () => {
     // renders, which would lose it entirely.
     expect(resolve("invalid", { form: "constructor" })?.form).toBe("page");
     expect(resolve("person-saved", { form: "../../etc" })?.form).toBe("details");
-    expect(resolve("captured", { form: "__proto__" })?.form).toBe("cards");
+    expect(resolve("verified", { form: "__proto__" })?.form).toBe("cards");
+  });
+
+  /**
+   * A pure "it worked" — the new pending row is the confirmation, so the code
+   * still routes (`form`/`tone` resolve normally, `?form=` still overrides)
+   * but carries nothing to say (copy-restraint deletion #1).
+   */
+  it("keeps captured's routing but withholds its text", () => {
+    expect(resolve("captured")).toMatchObject({ form: "cards", tone: "success", silent: true });
+    expect(resolve("captured")?.text).toBe("");
+    expect(resolve("captured", { form: "specialty-cards" })?.form).toBe("specialty-cards");
   });
 
   it("puts the refusals that belong to one box on that box", () => {

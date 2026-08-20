@@ -317,7 +317,6 @@
     "bookings": "Reservas"
   },
   "notices": {
-    "captured": "Certificación capturada como pendiente. Busca el número con la agencia, luego márcala como verificada antes de que pueda dejar listo a este buceador.",
     "verified": "Certificación marcada como verificada. Ahora cuenta para la disposición.",
     "cardDeleted": "Certificación eliminada. Ya no cuenta para la disposición; su historial se conserva para los registros.",
     "cardRestored": "Certificación restaurada. Vuelve a contar para la disposición.",

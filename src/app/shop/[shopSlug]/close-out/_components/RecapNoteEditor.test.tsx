@@ -78,6 +78,32 @@ describe("the close-out's post-trip recap note", () => {
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeInTheDocument();
   });
 
+  it("says the recap is waiting to send exactly once, open or closed", () => {
+    // The close-out page always passes `recapStatusSummary` — the same
+    // status text the summary row and "Recap sending"'s own line would
+    // otherwise both say. Closed, only the summary row's line is visible;
+    // open, "Recap sending" (with the live countdown and Send/Pause) is the
+    // one place saying it — the plain paragraph in between is gone.
+    render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout={null}
+        saved
+        t={t}
+        tripId="trip-123"
+        recapSendAction={vi.fn()}
+        toggleRecapAutoSendPauseAction={vi.fn()}
+        recapAutoSendAt={new Date("2026-08-16T16:00:00.000Z")}
+        recapAutoSendPaused={false}
+        recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
+        recapStatusSummary="This recap will go out automatically in about 1 hour."
+      />,
+    );
+    expect(
+      screen.getAllByText("This recap will go out automatically in about 1 hour."),
+    ).toHaveLength(1);
+  });
+
   it("locks the note and photo controls after the recap is sent", () => {
     render(
       <RecapNoteEditor

@@ -317,7 +317,6 @@
     "bookings": "Bookings"
   },
   "notices": {
-    "captured": "Certification captured as pending. Look the number up with the agency, then mark it verified before it can make this diver ready.",
     "verified": "Certification marked verified. It counts toward readiness.",
     "cardDeleted": "Certification removed. It no longer counts toward readiness; its history is kept for records.",
     "cardRestored": "Certification restored. It counts toward readiness again.",

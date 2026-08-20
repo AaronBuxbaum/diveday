@@ -209,6 +209,63 @@ import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/comp
 
 Both render nothing when there is no message, so a form's resting layout is unchanged.
 
+### A tap never sends the page back to the top
+
+A same-page action — a form submit, a server action, a resend — never scrolls the reader back to
+the top of a long page and never falls back to a full browser navigation/reload. Both read as the
+same bug from the reader's chair: they tapped a button two screens down and lost their place.
+
+`PreserveFormScroll` (`src/components/PreserveFormScroll.tsx`, mounted once in each shop shell
+layout) is the fix, and it is already global: it remembers `window.scrollY` on every real `<form>`
+`submit` event and restores it once the server action's `revalidatePath`/redirect lands back on the
+same pathname. A form that posts through this pattern gets scroll preservation for free — nothing
+to add at the call site. What still breaks it:
+
+- **A client-side navigation instead of a same-page action.** `router.push`/`router.replace` (and
+  `<Link>`, which uses the same mechanism) default to `scroll: true` — a genuine route change, so
+  scrolling to the top is often *right*, but a control that merely wants to refresh data or swap a
+  view on the page it's already on must pass `scroll: false` (`SegmentedControl`'s `?view=`/
+  `?checkpoint=` options are the worked example) or, if it's really a form outcome, go through a
+  server action instead so `PreserveFormScroll` covers it.
+- **A control that isn't a real `<form>` submit.** `PreserveFormScroll` listens for the `submit`
+  DOM event; a button wired to a plain `onClick` that calls a server action directly (rather than
+  as a `<form action={...}>`'s submit) never fires that event and is invisible to it.
+- **A JS-disabled or pre-hydration fallback that posts natively.** A real HTML form submission is a
+  full navigation and always lands at the top — the reason every mutating control here is a real
+  `<form>`, so the no-JS path still works, but also why it must actually be one, not a `<button
+  onClick>` standing in for it.
+
+A control that must deliberately jump — following a `#fragment` link into a fresh `<details>`, an
+explicit "jump to" control — sets `form.dataset.scrollReset = "true"` (`RoleOrientationCard`,
+`ShopIdentityMenu`) to opt that one submit out, or is simply not a form at all. Everything else
+inherits the preservation; the anti-pattern to watch for in review is a *new* client-side
+navigation call standing in for what should have been a server action or an in-place `router.replace(
+..., { scroll: false })`.
+
+### Ephemeral acknowledgement: a control's own face first, `Toast` second
+
+Three ways to say what a tap did, cheapest first:
+
+1. **The control's own face.** A ring, a mark, a swapped label (`Copyable`'s button text becoming
+   "Copied") — anything already on screen that visibly changes. If the control can carry its own
+   outcome, nothing else should say it too; the diver record's three waiver-delivery buttons wear
+   a ring and a mark for exactly this reason; a bordered box repeating "sent"/"failed" underneath
+   them was a caption on a photograph of itself (copy-restraint).
+2. **`Toast`** (`src/components/Toast.tsx`) — a brief, auto-dismissing line for an action that
+   leaves no other trace: a clipboard write is the case it exists for. Not for anything reversible
+   or that offers a next step (that's `UndoToast`), and never a substitute for state a control
+   already shows on its own face — reach for it only once you've confirmed step 1 has nothing to
+   say.
+3. **`FormStatus`**, inline beside the form — for an outcome nothing else on screen carries: a
+   genuine refusal, a batch result naming several people. This is still "beside the form, never a
+   banner the length of the page away" from the section above; the difference from `Toast` is
+   permanence — `FormStatus` sits in the form's resting layout and reappears on every render of
+   that state, where `Toast` fires once and is gone.
+
+Never reach for a box or a banner to restate what a fresh row, a badge, or a ring elsewhere on the
+page already shows the instant the action lands — see copy-restraint's deletion #1 for the general
+rule this is one instance of.
+
 ### Routing a `?notice=` to the right form
 
 Most staff surfaces answer a save by redirecting back with a `?notice=` code. On a page with more
