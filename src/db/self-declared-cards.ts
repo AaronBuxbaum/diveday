@@ -177,6 +177,27 @@ export async function recordSelfDeclaredCards(
  *   certified two-tank charter.
  */
 /**
+ * **`isUnsightedSelfDeclaration`, negated, in SQL.**
+ *
+ * The same question the TypeScript predicate answers over a row already in
+ * memory — *is this a card somebody actually stood behind?* — expressed as a
+ * `where` condition so an existence check can stop at the first match instead
+ * of loading a diver's whole history to filter it.
+ *
+ * **Two spellings of one rule is the exact shape that caused the bug this file
+ * was just fixed for**, so they are not merely kept in step by attention:
+ * `self-declared-cards.test.ts` walks every combination of `status` and
+ * `self_declared_at` through both and fails if they ever disagree. Change one
+ * and that test tells you about the other.
+ *
+ * A row is real when a staffer verified it, **or** when nobody ever declared it
+ * — a staff capture and a CSV import both land with a null stamp.
+ */
+function isRealCard(table: typeof certifications | typeof nitroxCertifications) {
+  return or(eq(table.status, "verified"), isNull(table.selfDeclaredAt));
+}
+
+/**
  * True when this shop holds a card for this person in either of the two tables
  * {@link recordLevel} does not read — a nitrox card a staffer sighted, or any
  * specialty row at all.
@@ -197,10 +218,6 @@ async function holdsRealCardOutsideLevels(
 ): Promise<boolean> {
   // Sequential, never `Promise.all`: this runs inside the caller's transaction,
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
-  // "Not a still-unsighted self-declaration", pushed into SQL so this stops at
-  // the first row rather than loading a diver's whole nitrox history to run a
-  // predicate over it. Same two conditions `isUnsightedSelfDeclaration` uses,
-  // negated: a verified row is real, and a row nobody declared is real.
   const [realNitrox] = await tx
     .select({ id: nitroxCertifications.id })
     .from(nitroxCertifications)
@@ -209,10 +226,7 @@ async function holdsRealCardOutsideLevels(
         eq(nitroxCertifications.shopId, input.shopId),
         eq(nitroxCertifications.personId, input.personId),
         isNull(nitroxCertifications.deletedAt),
-        or(
-          eq(nitroxCertifications.status, "verified"),
-          isNull(nitroxCertifications.selfDeclaredAt),
-        ),
+        isRealCard(nitroxCertifications),
       ),
     )
     .limit(1);
