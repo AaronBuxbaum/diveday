@@ -168,6 +168,8 @@
       "gearSetup": "Set up your gear",
       "briefing": "Crew briefing",
       "departure": "Departure",
+      "departureShore": "Head to the entry",
+      "departurePool": "Into the pool",
       "boatRide": "{number, plural, =1 {Ride out to the site} other {Ride to the next site}}",
       "dive": "Dive {number}",
       "surfaceInterval": "Surface interval",

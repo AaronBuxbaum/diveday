@@ -198,12 +198,29 @@ function travelForLeg(
     : rhythm.boatRideMinutes;
 }
 
+/**
+ * **The ride out only exists on a boat.** A shore entry walks to the water and
+ * a pool session is already at it, so for those two the `boatRide` beat is not
+ * a shorter ride — it is not a beat at all, and neither is the run between
+ * sites: a shore day's gap between dives is the surface interval and nothing
+ * else. Passing the mode is how the timeline stops narrating a boat to a diver
+ * standing on a beach.
+ *
+ * The shop-level `boatRideMinutes` is left alone rather than forced to zero for
+ * these: it is the shop's number for the boat days it may also run, and a
+ * settings value that silently changed meaning per departure would be worse
+ * than one that is simply not consulted here.
+ */
+export type DiveMode = "boat" | "shore" | "pool";
+
 export function dockDayOffsets(
   rhythm: DockDayRhythm,
   plannedDives = 2,
   siteBottomTimes?: SiteBottomTimes,
   legTravelTimes?: LegTravelTimes,
+  diveMode: DiveMode = "boat",
 ): DockDayOffset[] {
+  const afloat = diveMode === "boat";
   const beforeDeparture: DockDayOffset[] = [
     { step: "arrive", minutesFromDeparture: -rhythm.dockCallMinutes },
   ];
@@ -225,7 +242,7 @@ export function dockDayOffsets(
   let cursor = 0;
   const dives = Math.max(1, Math.trunc(plannedDives));
   for (let number = 1; number <= dives; number++) {
-    const travel = travelForLeg(rhythm, legTravelTimes, number);
+    const travel = afloat ? travelForLeg(rhythm, legTravelTimes, number) : 0;
     if (number === 1) {
       // The ride out. Its own leg, so a departure that opens with the house
       // reef ten minutes off the dock stops borrowing the shop's ninety.
@@ -291,9 +308,16 @@ export function dockDayTimeline(
   plannedDives = 2,
   siteBottomTimes?: SiteBottomTimes,
   legTravelTimes?: LegTravelTimes,
+  diveMode: DiveMode = "boat",
 ): Array<{ step: DockDayStep; number?: number; at: Date }> {
   const beats: Array<{ step: DockDayStep; number?: number; at: Date }> = [];
-  for (const offset of dockDayOffsets(rhythm, plannedDives, siteBottomTimes, legTravelTimes)) {
+  for (const offset of dockDayOffsets(
+    rhythm,
+    plannedDives,
+    siteBottomTimes,
+    legTravelTimes,
+    diveMode,
+  )) {
     // By step, never by "offset > 0" — a shore-entry shop's Dive 1 sits at
     // offset zero alongside the departure itself, and it is still a beat on the
     // water that only a stated return time can bound.

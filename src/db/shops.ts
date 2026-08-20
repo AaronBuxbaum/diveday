@@ -280,7 +280,13 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
 export async function setShopDivingOptions(
   db: AppDb,
   shopId: string,
-  options: { hasShoreDiving: boolean; hasPoolDiving: boolean },
+  options: {
+    hasBoatDiving: boolean;
+    hasShoreDiving: boolean;
+    hasPoolDiving: boolean;
+    /** Only meaningful with boat diving off; null means "we have not said". */
+    shoreGroupSize?: number | null;
+  },
 ) {
   const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
   return shop ?? null;

@@ -168,6 +168,8 @@
       "gearSetup": "Monta tu equipo",
       "briefing": "Briefing de la tripulación",
       "departure": "Salida",
+      "departureShore": "Camino a la entrada",
+      "departurePool": "Al agua",
       "boatRide": "{number, plural, =1 {Trayecto hasta el sitio} other {Trayecto al siguiente sitio}}",
       "dive": "Inmersión {number}",
       "surfaceInterval": "Intervalo de superficie",

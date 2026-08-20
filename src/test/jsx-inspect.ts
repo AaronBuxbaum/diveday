@@ -90,6 +90,23 @@ export function ariaLabelsIn(node: unknown, found: string[] = []): string[] {
  * Every `name` on a hidden input anywhere in a tree — which rows offered a
  * control, since a form that acts on a row id always carries that id hidden.
  */
+/** Every `name` on an `<input>` anywhere in a tree, hidden ones included. */
+export function inputNamesIn(node: unknown, found: string[] = []): string[] {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) inputNamesIn(child, found);
+    return found;
+  }
+  if ("type" in node && "props" in node) {
+    const element = node as ReactElement<{ name?: unknown; children?: unknown }>;
+    if (element.type === "input" && typeof element.props?.name === "string") {
+      found.push(element.props.name);
+    }
+    inputNamesIn(element.props?.children, found);
+  }
+  return found;
+}
+
 export function hiddenInputNamesIn(node: unknown, found: string[] = []): string[] {
   if (node === null || typeof node !== "object") return found;
   if (Array.isArray(node)) {

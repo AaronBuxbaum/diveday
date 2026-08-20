@@ -95,6 +95,7 @@ export async function loadBuilderOptionsAction() {
       courses: [],
       diveSites: [],
       boats: [],
+      hasBoatDiving: true,
       hasShoreDiving: false,
       hasPoolDiving: false,
     };
@@ -112,7 +113,12 @@ export async function loadBuilderOptionsAction() {
   return {
     courses,
     diveSites,
-    boats,
+    // A shop with boat diving off keeps its hull rows — turning the option back
+    // on should restore the fleet, not ask for it again — but the builder must
+    // not offer them, or a departure lands on a boat the shop has said it does
+    // not run.
+    boats: shop?.hasBoatDiving === false ? [] : boats,
+    hasBoatDiving: shop?.hasBoatDiving ?? true,
     hasShoreDiving: shop?.hasShoreDiving ?? false,
     hasPoolDiving: shop?.hasPoolDiving ?? false,
   };

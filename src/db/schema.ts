@@ -94,8 +94,32 @@ export const shops = pgTable(
      * set to feet, so no existing shop's reading changed on the day it landed.
      */
     temperatureUnit: temperatureUnit("temperature_unit").notNull().default("celsius"),
+    /**
+     * **Boat diving is the default because the product was built assuming it.**
+     * `trips.dive_mode` still defaults to `boat`, the schedule builder still
+     * opens on it, and a shop that never touches this settings row keeps the
+     * behaviour it had — which is why this column defaults true where its two
+     * siblings default false.
+     *
+     * Turning it off is a real statement: a shore-and-pool operation has no
+     * hull, so the Boats row disappears from settings, `boat` leaves the
+     * builder's dive-mode choices, and the Requests planner stops sizing a day
+     * against a boat it does not have (`src/lib/request-advisor.ts`). It does
+     * **not** rewrite departures already on the board — an existing boat trip
+     * keeps its mode and still renders, because a settings tick is not a
+     * schedule edit.
+     */
+    hasBoatDiving: boolean("has_boat_diving").notNull().default(true),
     hasShoreDiving: boolean("has_shore_diving").notNull().default(false),
     hasPoolDiving: boolean("has_pool_diving").notNull().default(false),
+    /**
+     * How many divers this shop puts on one departure when there is no hull to
+     * ask. Only consulted by the Requests planner, and only for a shop with
+     * boat diving off — a boat shop's answer is the boat's capacity, which is a
+     * fact rather than a preference. Null means "we have not said", and the
+     * planner falls back to `DEFAULT_DEPARTURE_CAPACITY`.
+     */
+    shoreGroupSize: integer("shore_group_size"),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -202,6 +226,16 @@ export const shops = pgTable(
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
     check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
     check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
+    check("shops_shore_group_size_positive", sql`${table.shoreGroupSize} > 0`),
+    /**
+     * A shop that runs no dives at all cannot schedule one, and every create
+     * path defaults to `boat`, so an all-false row would leave the builder with
+     * nothing to offer and a departure whose mode the shop has disowned.
+     */
+    check(
+      "shops_offers_some_dive_mode",
+      sql`${table.hasBoatDiving} or ${table.hasShoreDiving} or ${table.hasPoolDiving}`,
+    ),
   ],
 );
 

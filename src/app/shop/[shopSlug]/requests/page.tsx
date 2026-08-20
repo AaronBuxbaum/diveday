@@ -14,7 +14,7 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type DateRequestMatch, groupDateRequests } from "@/lib/date-requests";
 import { formatShortDate } from "@/lib/format";
-import { adviseRequests } from "@/lib/request-advisor";
+import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -220,7 +220,12 @@ export default async function RequestsPage({
     }),
     listBoats(db, shop.id),
   ]);
-  const boatInputs = shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity }));
+  // A boat shop plans a day against its hulls; a shore-and-pool shop plans it
+  // against the group size it stated, and is never shown a boat it hasn't got.
+  const departureShape = departureShapeFor(
+    shop,
+    shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
+  );
   const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
   const base = `/shop/${shopSlug}/requests`;
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
@@ -250,7 +255,7 @@ export default async function RequestsPage({
                     experienceLevel: request.experienceLevel,
                     courseId: request.courseId,
                   })),
-                  boatInputs,
+                  departureShape,
                 );
                 const params = new URLSearchParams({
                   add: "full",

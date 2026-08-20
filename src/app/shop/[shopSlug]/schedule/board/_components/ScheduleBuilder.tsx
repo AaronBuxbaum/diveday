@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
@@ -87,10 +87,14 @@ export type BuilderBoatOption = { id: string; name: string; capacity: number };
  * props on every board render: a shop's whole course catalogue and every dive
  * site it dives, shipped to a browser for two controls behind a closed panel.
  */
+/** The three kinds of departure a shop can run, in the order the select offers them. */
+export type DiveMode = "boat" | "shore" | "pool";
+
 export type BuilderOptions = {
   courses: BuilderCourseOption[];
   diveSites: BuilderOption[];
   boats?: BuilderBoatOption[];
+  hasBoatDiving?: boolean;
   hasShoreDiving?: boolean;
   hasPoolDiving?: boolean;
 };
@@ -350,7 +354,32 @@ function AddPanel({
   const [courseId, setCourseId] = useState(initialCourse?.id ?? "");
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
 
-  const [diveMode, setDiveMode] = useState<"boat" | "shore" | "pool">("boat");
+  // **What this shop actually runs, in the order the select offers it.** Boat
+  // is no longer assumed: a shore-and-pool operation must not be able to put a
+  // departure on a hull it has told us it does not have, and its form should
+  // open on the mode it does run rather than on one it has to change away from
+  // every time. `options` is undefined until the board's lazy fetch lands, and
+  // boat-only is the right stand-in for that beat because it is the default a
+  // fresh shop carries.
+  const offeredModes: DiveMode[] = useMemo(
+    () =>
+      options
+        ? ([
+            options.hasBoatDiving ? "boat" : null,
+            options.hasShoreDiving ? "shore" : null,
+            options.hasPoolDiving ? "pool" : null,
+          ].filter(Boolean) as DiveMode[])
+        : ["boat"],
+    [options],
+  );
+  const defaultMode: DiveMode = offeredModes[0] ?? "boat";
+  const [diveMode, setDiveMode] = useState<DiveMode>(defaultMode);
+  // The options arrive after first paint, so a shop whose first offered mode is
+  // not `boat` would otherwise sit on a stale default until somebody touched
+  // the select — and submit `boat` if they never did.
+  useEffect(() => {
+    setDiveMode((current) => (offeredModes.includes(current) ? current : defaultMode));
+  }, [offeredModes, defaultMode]);
   const [selectedBoatId, setSelectedBoatId] = useState<string>("");
   const [capacity, setCapacity] = useState<number>(requestPlan?.suggestedCapacity ?? 12);
 
@@ -545,29 +574,30 @@ function AddPanel({
           className={`${controlClass} tabular-nums sm:w-40`}
         />
       </Field>
-      {options?.hasShoreDiving ||
-      options?.hasPoolDiving ||
-      (options?.boats && options.boats.length > 0) ? (
+      {offeredModes.length > 1 || (options?.boats && options.boats.length > 0) ? (
         <FieldGrid columns={2} className="gap-y-4">
-          {options?.hasShoreDiving || options?.hasPoolDiving ? (
+          {offeredModes.length > 1 ? (
             <Field label={copy.diveModeLabel ?? "Dive mode"}>
               <select
                 name="diveMode"
                 value={diveMode}
-                onChange={(event) => setDiveMode(event.target.value as "boat" | "shore" | "pool")}
+                onChange={(event) => setDiveMode(event.target.value as DiveMode)}
                 className={controlClass}
               >
-                <option value="boat">{copy.modeBoat ?? "Boat dive"}</option>
-                {options.hasShoreDiving ? (
+                {offeredModes.includes("boat") ? (
+                  <option value="boat">{copy.modeBoat ?? "Boat dive"}</option>
+                ) : null}
+                {offeredModes.includes("shore") ? (
                   <option value="shore">{copy.modeShore ?? "Shore dive"}</option>
                 ) : null}
-                {options.hasPoolDiving ? (
+                {offeredModes.includes("pool") ? (
                   <option value="pool">{copy.modePool ?? "Pool session"}</option>
                 ) : null}
               </select>
             </Field>
           ) : (
-            <input type="hidden" name="diveMode" value="boat" />
+            // One mode on offer is not a choice — it is submitted, not asked.
+            <input type="hidden" name="diveMode" value={offeredModes[0] ?? "boat"} />
           )}
           {diveMode === "boat" && options?.boats && options.boats.length > 0 ? (
             <Field label={copy.boatSelectLabel ?? "Assigned boat"} hint={copy.optional}>
@@ -593,7 +623,7 @@ function AddPanel({
           ) : null}
         </FieldGrid>
       ) : (
-        <input type="hidden" name="diveMode" value="boat" />
+        <input type="hidden" name="diveMode" value={offeredModes[0] ?? "boat"} />
       )}
       <FieldGrid columns={2} className="gap-y-4">
         <Field label={copy.seats}>

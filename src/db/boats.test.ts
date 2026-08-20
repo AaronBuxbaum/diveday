@@ -68,6 +68,7 @@ describe("boats database operations", () => {
     expect(shop.hasPoolDiving).toBe(true);
 
     const updated = await setShopDivingOptions(db, shop.id, {
+      hasBoatDiving: true,
       hasShoreDiving: false,
       hasPoolDiving: false,
     });
