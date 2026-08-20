@@ -176,6 +176,51 @@ export async function recordSelfDeclaredCards(
  *   as "Level not said" and the shop mails a Discover Scuba customer a
  *   certified two-tank charter.
  */
+/**
+ * True when this shop holds a card for this person in either of the two tables
+ * {@link recordLevel} does not read — a nitrox card a staffer sighted, or any
+ * specialty row at all. Shared with `recordNoCertification`'s own guard, which
+ * has always asked the wider question.
+ *
+ * `specialty_certifications` has no `self_declared_at` column, so every row
+ * there is staff-captured or imported and its existence alone settles it.
+ */
+async function holdsRealCardOutsideLevels(
+  tx: DbExecutor,
+  input: { shopId: string; personId: string },
+): Promise<boolean> {
+  // Sequential, never `Promise.all`: this runs inside the caller's transaction,
+  // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
+  const liveNitrox = await tx
+    .select({
+      id: nitroxCertifications.id,
+      status: nitroxCertifications.status,
+      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+    })
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.shopId, input.shopId),
+        eq(nitroxCertifications.personId, input.personId),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    );
+  if (liveNitrox.some((card) => !isUnsightedSelfDeclaration(card))) return true;
+
+  const [liveSpecialty] = await tx
+    .select({ id: specialtyCertifications.id })
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.shopId, input.shopId),
+        eq(specialtyCertifications.personId, input.personId),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(liveSpecialty);
+}
+
 async function recordNoCertification(
   tx: DbExecutor,
   input: RecordSelfDeclaredCardsInput,
@@ -386,6 +431,26 @@ async function recordLevel(
   // its agency, its real card number and its `reviewedAt`. That is an anonymous
   // escalation to Instructor on evidence the shop believes it checked.
   if (live.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
+
+  // **And any real card in the other two tables settles it too.**
+  //
+  // Reading only `certifications` was a gap with no teeth while a claim was
+  // inert: a diver whose shop had captured their verified nitrox card but never
+  // typed a level card — an ordinary state, since the rung is the one a
+  // divemaster eyeballs and does not transcribe — had an empty level table, so
+  // an anonymous poster could write a level onto their record. Harmless while
+  // `decideTripAdmission` ignored the row; not harmless from the moment it
+  // started believing it (ADR 20260820-attested-at-booking-verified-at-boarding,
+  // `security-reviewer`, 2026-08-20). It now refuses that diver's *next*
+  // booking on a stranger's typing, which is precisely the exposure the ADR
+  // claims cannot happen.
+  //
+  // So the trigger is what the sibling `recordNoCertification` already uses:
+  // does this shop hold **real evidence of any kind** about this person? If it
+  // does, an anonymous form does not get to add to the picture. The cost is a
+  // genuine level statement dropped for a diver the shop half-knows, and they
+  // can still tell a staffer; the alternative is a stranger moving a gate.
+  if (await holdsRealCardOutsideLevels(tx, input)) return "card_on_file";
 
   // `find`, not `live[0]`: every row here passed the guard above, but choosing
   // by predicate rather than by position means a record that somehow holds more

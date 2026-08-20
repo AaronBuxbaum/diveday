@@ -71,9 +71,10 @@ export type IncidentCertificationEvidence = {
    */
   imported: boolean;
   /**
-   * **The diver said so; nobody checked.** The card came from one of the two
-   * public "tell me when something comes up" opt-ins, where a joiner may name
-   * their own level (FU-20260813). It is the weakest thing in this file and has
+   * **The diver said so; nobody checked.** The card came from one of the three
+   * public forms where a diver may name their own level — the deal list, a
+   * trip's wait list, or the booking form (FU-20260813, ADR
+   * 20260820-attested-at-booking-verified-at-boarding). It is the weakest thing in this file and has
    * to read that way — an investigator must never mistake it for a card the
    * shop sighted. True only while it is still unsighted: a self-declaration a
    * staffer later verified off the real card is a sighting, and reads as one.

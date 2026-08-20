@@ -2979,6 +2979,8 @@
       "certificationMissing": "Envía a tu centro los datos de tu certificación",
       "certificationExpired": "Consulta con tu centro la fecha de renovación de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con el centro",
+      "certificationSelfDeclared": "Trae tu certificación para que la tienda pueda verla",
+      "nitroxSelfDeclared": "Trae tu certificación de nitrox para que la tienda pueda verla",
       "specialtyMissing": "Envía a tu centro los datos de tu certificación de especialidad",
       "specialtyExpired": "Actualiza tu certificación de especialidad con el centro",
       "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",

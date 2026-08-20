@@ -2979,6 +2979,8 @@
       "certificationMissing": "Send your shop your certification details",
       "certificationExpired": "Check on your shop's refresher date for your certification",
       "certificationInsufficient": "Check your certification level with the shop",
+      "certificationSelfDeclared": "Bring your certification card so the shop can check it",
+      "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
       "specialtyMissing": "Send your shop your specialty certification details",
       "specialtyExpired": "Update your specialty certification with the shop",
       "nitroxMissing": "Send your shop your nitrox certification details",

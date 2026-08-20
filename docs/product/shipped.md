@@ -577,6 +577,14 @@ diver the shop has never carded is not refused, which is why the trip's requirem
 above the public booking form and why H-27 through H-30 exist.
 See [20260803-trip-admission-at-booking](../architecture/decisions/20260803-trip-admission-at-booking.md).
 
+**Reversed in part on 2026-08-20 (H-27/H-29, all four rows now decided).** The sale-time gate
+believes every certification on the record — staff-typed, imported, or the diver's own words — and
+the booking form asks the question. Only the *boat* requires a sighting. That makes the sale gate
+talk-past-able on purpose: it was never what keeps a diver out of the water, and refusing a shop's
+own carded regulars to hold a line it could not hold was the worse trade. The weaker-than-readiness
+invariant above still holds and its property test now covers declarations too. See
+[20260820-attested-at-booking-verified-at-boarding](../architecture/decisions/20260820-attested-at-booking-verified-at-boarding.md).
+
 **Architecture.** The four files every feature touched are split (ARCH-3): `src/db/seed.ts`
 4,650 → a 740-line orchestrator over 14 scenario modules, `src/db/trips.ts` 2,003 → a 94-line barrel
 over six, `notifications/index.ts` 731 → a 77-line surface over five, and `SettingsPage.tsx`'s

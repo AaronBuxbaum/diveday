@@ -16,6 +16,7 @@ import {
   decideTripAdmission,
   decodeTripAdmissionRefusal,
   encodeTripAdmissionRefusal,
+  type SelfDeclaration,
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
@@ -759,47 +760,73 @@ describe("admission is monotone with respect to readiness", () => {
     },
   ];
 
-  it("never refuses a seat readiness would clear, across every requirement × evidence", () => {
+  /**
+   * The claims a booker can make on the form, including the ones that pull in
+   * opposite directions — a rung *below* what the record holds, and a nitrox
+   * tick from somebody with no card at all.
+   *
+   * Added 2026-08-20 with the H-27/H-29 reversal. The invariant survives it by
+   * construction — readiness clears only on a verified card, which
+   * `highestLevelOnFile` already sees, so believing a claim can only make
+   * admission *more* permissive — but "by construction" is exactly the argument
+   * this describe block exists to stop anyone making. A declaration is now an
+   * input to the gate, so it belongs in the matrix.
+   */
+  const declarationCases: Array<{ name: string; declared: SelfDeclaration | undefined }> = [
+    { name: "said nothing", declared: undefined },
+    { name: "claimed Open Water", declared: { level: "open_water" } },
+    { name: "claimed Instructor", declared: { level: "instructor" } },
+    { name: "ticked nitrox only", declared: { nitrox: true } },
+    {
+      name: "claimed Open Water and ticked nitrox",
+      declared: { level: "open_water", nitrox: true },
+    },
+  ];
+
+  it("never refuses a seat readiness would clear, across every requirement × evidence × claim", () => {
     const now = new Date("2026-08-03T12:00:00Z");
     let refusals = 0;
     for (const level of levels) {
       for (const specialties of specialtySets) {
         for (const requiresNitrox of [false, true]) {
           for (const { name, evidence: held } of evidenceCases) {
-            const source: CertRequirementSource = {
-              minimumCertificationLevel: level,
-              requiredSpecialties: specialties,
-              requiresNitrox,
-            };
-            const admission = decideTripAdmission({
-              requirement: source,
-              siteRequirement: null,
-              evidence: held,
-            });
-            if (admission.admitted) continue;
-            refusals += 1;
-            // Everything readiness needs beyond the cert gates is set to its
-            // cleared state on purpose: this asserts the *certification* gates
-            // alone are enough to block, not that some unrelated blocker
-            // happens to be raised too.
-            const readiness = calculateReadiness({
-              requirement: {
-                ...source,
-                requiresWaiver: false,
-                requiresPayment: false,
-              } as TripRequirement,
-              siteRequirement: null,
-              waiver: null,
-              certifications: held.certifications,
-              specialtyCertifications: held.specialtyCertifications,
-              nitroxCertifications: held.nitroxCertifications,
-              now,
-              timezone: "UTC",
-            });
-            expect(
-              readiness.status,
-              `admission refused (${level ?? "no level"} / ${specialties.join("+") || "no specialty"} / nitrox ${requiresNitrox}) for a diver with ${name}, but readiness cleared them`,
-            ).toBe("blocked");
+            for (const { name: claim, declared } of declarationCases) {
+              const source: CertRequirementSource = {
+                minimumCertificationLevel: level,
+                requiredSpecialties: specialties,
+                requiresNitrox,
+              };
+              const admission = decideTripAdmission({
+                requirement: source,
+                siteRequirement: null,
+                evidence: held,
+                declared,
+              });
+              if (admission.admitted) continue;
+              refusals += 1;
+              // Everything readiness needs beyond the cert gates is set to its
+              // cleared state on purpose: this asserts the *certification* gates
+              // alone are enough to block, not that some unrelated blocker
+              // happens to be raised too.
+              const readiness = calculateReadiness({
+                requirement: {
+                  ...source,
+                  requiresWaiver: false,
+                  requiresPayment: false,
+                } as TripRequirement,
+                siteRequirement: null,
+                waiver: null,
+                certifications: held.certifications,
+                specialtyCertifications: held.specialtyCertifications,
+                nitroxCertifications: held.nitroxCertifications,
+                now,
+                timezone: "UTC",
+              });
+              expect(
+                readiness.status,
+                `admission refused (${level ?? "no level"} / ${specialties.join("+") || "no specialty"} / nitrox ${requiresNitrox}) for a diver with ${name} who ${claim}, but readiness cleared them`,
+              ).toBe("blocked");
+            }
           }
         }
       }

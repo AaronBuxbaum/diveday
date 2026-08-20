@@ -109,8 +109,14 @@ export type TripAdmissionRefusal = {
   /** Nitrox demanded with no enriched-air card on file at all. */
   nitroxRequired: boolean;
   /**
-   * The highest rung anything in this diver's record reaches, whatever its
-   * status or refresher date — the honest complement of "nothing on file
+   * The highest rung this decision saw, whatever its status or refresher date:
+   * the record, **or the claim this submitter just typed**, whichever is higher.
+   *
+   * On a refusal nothing is persisted, so a declared rung here is in no record
+   * at all — a surface that words this as "on file" would be wrong. The one that
+   * does (`staff/shared.json`'s level refusal) is only reachable from staff
+   * doors, and no staff door passes a declaration today; if one ever does, that
+   * copy needs a variant before it. The honest complement of "nothing on file
    * reaches {requiredLevel}". Null only when the refusal is about a specialty
    * or nitrox card rather than the ladder.
    */

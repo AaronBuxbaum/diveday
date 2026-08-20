@@ -54,6 +54,17 @@ export type BookingPerson =
   | { personId: string }
   | { fullName: string; email?: string; phone?: string };
 
+/**
+ * What the booker said about their own diving, as the booking path carries it.
+ *
+ * Wider than {@link SelfDeclaration}, which is only the part the *gate* reads.
+ * "I'm not certified yet" is deliberately not in that half: it is recorded but
+ * it never refuses a sale, because a diver must not be able to talk themselves
+ * out of a seat a staffer could have cleared them for — the rule
+ * `self-declared-cards.test.ts` has pinned since this answer existed.
+ */
+export type BookingDeclaration = SelfDeclaration & { noCertification?: boolean };
+
 export type BookingRequest = {
   shopId: string;
   tripId: string;
@@ -86,7 +97,7 @@ export type BookingRequest = {
    * anybody's row — which is what keeps an anonymous form from editing a
    * stranger's safety record by failing.
    */
-  declared?: SelfDeclaration;
+  declared?: BookingDeclaration;
 } & BookingPerson;
 
 /**
@@ -645,12 +656,18 @@ async function persistDeclaration(
 ): Promise<void> {
   const declared = req.declared;
   if (!declared || identityUnconfirmed) return;
-  if (!declared.level && !declared.nitrox) return;
+  if (!declared.level && !declared.nitrox && !declared.noCertification) return;
   await recordSelfDeclaredCards(tx, {
     shopId: req.shopId,
     personId,
     level: declared.level ?? undefined,
     nitrox: declared.nitrox,
+    // The answer the form was asking for all along. Dropping it here was the
+    // "ask a question and discard the answer" failure ADR
+    // 20260814-self-declared-cards exists against — and it is the *commonest*
+    // answer at a shop selling Discover Scuba, so the silence it left looked
+    // exactly like a diver nobody had asked.
+    noCertification: declared.noCertification,
   });
 }
 

@@ -755,6 +755,74 @@ describe("recordSelfDeclaredCards", () => {
   });
 });
 
+describe("the anti-displacement rule reaches every table", () => {
+  it("drops a level claim for a diver whose only real card is a sighted nitrox one", async () => {
+    const { db, shop, person } = await joiner();
+    const card = await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId: person.id,
+      agency: "padi",
+      identifier: "EAN-4242",
+    });
+    if (!card) throw new Error("setup: nitrox card not created");
+    await reviewNitroxCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+    });
+
+    // The level table is empty, which used to be the whole test — so an
+    // anonymous poster could write a rung onto a diver this shop demonstrably
+    // knows. Inert while the gate ignored claims; a refusal on somebody else's
+    // typing from the moment it believed them (security review, 2026-08-20).
+    expect(
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      }),
+    ).toMatchObject({ level: "card_on_file" });
+
+    const rows = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, person.id));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("drops a level claim for a diver whose only real card is a specialty", async () => {
+    const { db, shop, person } = await joiner();
+    const specialty = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: person.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "DEEP-77",
+    });
+    if (!specialty) throw new Error("setup: specialty card not created");
+
+    expect(
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      }),
+    ).toMatchObject({ level: "card_on_file" });
+  });
+
+  it("still records a level for a diver the shop holds nothing for", async () => {
+    // The guard must not swallow the ordinary case it exists around.
+    const { db, shop, person } = await joiner();
+    expect(
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      }),
+    ).toMatchObject({ level: "recorded" });
+  });
+});
+
 describe("self-declared cards and the booking gate", () => {
   /**
    * **Reversed 2026-08-20 (H-27/H-29).** These three tests used to pin the
