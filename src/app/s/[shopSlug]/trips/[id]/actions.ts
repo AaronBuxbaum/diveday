@@ -7,11 +7,12 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
-import { setBookingNitrox } from "@/db/nitrox";
+import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
+import { certificationAgency } from "@/db/schema";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -148,6 +149,11 @@ const rentalFitSchema = z.object({
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
   nitrox: z.string().optional(),
+  // The nitrox card, asked for beside the request. Optional in both halves: a
+  // diver who wants nitrox but hasn't got the card to hand still gets the
+  // request recorded, which is what the crew plans against.
+  nitroxAgency: z.string().optional(),
+  nitroxIdentifier: z.string().trim().max(60).optional(),
   bcdSize: z.string().trim().max(20),
   wetsuitSize: z.string().trim().max(20),
   finSize: z.string().trim().max(20),
@@ -788,11 +794,30 @@ export async function saveRentalFitRequest(
     getTripWithBooked(ctx.db, ctx.capability.shopId, tripId),
   ]);
   if (shop && nitroxAvailableOn(shop.rentalItems, tripForFit?.course)) {
+    const wantsNitrox = parsed.data.nitrox === "on";
     await setBookingNitrox(ctx.db, {
       shopId: ctx.capability.shopId,
       bookingId: ctx.capability.bookingId,
-      wantsNitrox: parsed.data.nitrox === "on",
+      wantsNitrox,
     });
+    // The card typed beside the request. Same four refusals as the readiness
+    // page's copy of this: no request, unknown agency, an incomplete pair, or a
+    // row that already exists. Files `pending`; only a staffer sets `verified`,
+    // which is what `authorizesNitroxFill` reads.
+    const agency = parsed.data.nitroxAgency?.trim() ?? "";
+    const identifier = parsed.data.nitroxIdentifier?.trim() ?? "";
+    if (
+      wantsNitrox &&
+      identifier.length >= 2 &&
+      (certificationAgency.enumValues as readonly string[]).includes(agency)
+    ) {
+      await createNitroxCertification(ctx.db, {
+        shopId: ctx.capability.shopId,
+        personId: ctx.confirmed.person.id,
+        agency: agency as (typeof certificationAgency.enumValues)[number],
+        identifier,
+      });
+    }
   }
   const result = saved ? "fit=saved" : "error=fit";
   revalidateAndRedirect(base, `${base}?booking=${token}&${result}${embedParam(embed, "&")}`);

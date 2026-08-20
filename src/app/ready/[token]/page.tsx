@@ -23,7 +23,7 @@ import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { certificationAgency, certificationLevel } from "@/db/schema";
+import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
@@ -33,6 +33,7 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
+  DIVER_SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
@@ -58,6 +59,8 @@ import {
   saveCertificationFromReady,
   saveEmergencyContactFromReady,
   saveFitFromReady,
+  saveNitroxCertificationFromReady,
+  saveSpecialtyFromReady,
   signWaiverFromReady,
 } from "./actions";
 
@@ -169,6 +172,69 @@ const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
 ]);
 
 /**
+ * A specialty card the diver can send: the trip named one and nothing on file
+ * answers it. `specialty_import_unconfirmed` and `specialty_pending` are absent
+ * for the same reason `certification_pending` is — a real card is already with
+ * the shop, and asking again would tell a diver to re-send what they already
+ * sent.
+ */
+const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>([
+  "specialty_missing",
+  "specialty_expired",
+]);
+
+/**
+ * A nitrox card, likewise. `nitrox_self_declared` is here because a claim is
+ * exactly the state a number resolves; `nitrox_pending` is not, because it
+ * means a staffer already holds one.
+ */
+const NITROX_ENTRY_CODES = new Set<ReadinessBlockerCode>([
+  "nitrox_missing",
+  "nitrox_self_declared",
+]);
+
+/**
+ * **Every card the trip is still waiting on, each with its own form.**
+ *
+ * The certification row is one *line* but can be several *jobs*: a diver short
+ * a level card, a Deep card and a nitrox card used to get one form, file it,
+ * reload, and discover a second thing they had no way to see. `actionable`
+ * carries every blocker that is on the diver, so all of them are answerable in
+ * one sitting.
+ */
+function CertificationEntries({
+  token,
+  item,
+  t,
+}: {
+  token: string;
+  item: DiverChecklistItem;
+  t: DiverTranslator;
+}) {
+  const forms = item.actionable.flatMap((blocker) => {
+    if (CERT_ENTRY_CODES.has(blocker.code)) {
+      return [<CertificationEntry key={blocker.code} token={token} t={t} />];
+    }
+    if (SPECIALTY_ENTRY_CODES.has(blocker.code) && blocker.params?.specialty) {
+      return [
+        <SpecialtyEntry
+          key={`${blocker.code}-${blocker.params.specialty}`}
+          token={token}
+          specialty={blocker.params.specialty}
+          t={t}
+        />,
+      ];
+    }
+    if (NITROX_ENTRY_CODES.has(blocker.code)) {
+      return [<NitroxEntry key={blocker.code} token={token} t={t} />];
+    }
+    return [];
+  });
+  if (forms.length === 0) return null;
+  return <div className="flex flex-col gap-3">{forms}</div>;
+}
+
+/**
  * The diver's own card, typed in.
  *
  * **Capture, never clearance.** The card lands `pending` and a staff review is
@@ -249,6 +315,130 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
 }
 
 /**
+ * A specialty card, typed in. Same contract as the level card above — the row
+ * lands `pending` and only a staff sighting makes it count — with one
+ * difference the schema enforces rather than the form: the number is required,
+ * because `specialty_certifications.identifier` is `NOT NULL` and that table
+ * carries no self-declaration column. A specialty is what authorizes a
+ * materially riskier dive, so there is no version of it that is only a claim.
+ *
+ * The specialty itself is fixed by the blocker, not chosen: the trip asked for
+ * Deep, so this is the Deep form. Offering a picker would invite a diver to
+ * file the card they have instead of the one they were asked for.
+ */
+function SpecialtyEntry({
+  token,
+  specialty,
+  t,
+}: {
+  token: string;
+  specialty: DiveSpecialty;
+  t: DiverTranslator;
+}) {
+  const specialtyName = t(DIVER_SPECIALTY_KEYS[specialty]);
+  return (
+    <form
+      action={saveSpecialtyFromReady.bind(null, token)}
+      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
+    >
+      <input type="hidden" name="specialty" value={specialty} />
+      <h4 className="text-base font-semibold">
+        {t("ready.specialtyHeading", { specialty: specialtyName })}
+      </h4>
+      <FieldGrid columns={2}>
+        <Field label={t("ready.certAgency")}>
+          <select name="agency" required defaultValue="" className={controlClass}>
+            <option value="" disabled>
+              {t("ready.certChoose")}
+            </option>
+            {certificationAgency.enumValues.map((agency) => (
+              <option key={agency} value={agency}>
+                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("ready.certNumber")}>
+          <input
+            name="identifier"
+            required
+            minLength={2}
+            maxLength={60}
+            autoComplete="off"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            className={controlClass}
+          />
+        </Field>
+        <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
+          <input name="expiresAt" type="date" className={controlClass} />
+        </Field>
+      </FieldGrid>
+      <div>
+        <SubmitButton
+          pendingLabel={t("ready.certSubmitting")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("ready.certSubmit")}
+        </SubmitButton>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * A nitrox card, typed in. No level and no expiry — a nitrox card is a yes/no
+ * qualification and `nitrox_certifications` has no expiry state at all
+ * (`src/lib/readiness.ts` raises no `nitrox_expired`).
+ */
+function NitroxEntry({ token, t }: { token: string; t: DiverTranslator }) {
+  return (
+    <form
+      action={saveNitroxCertificationFromReady.bind(null, token)}
+      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
+    >
+      <h4 className="text-base font-semibold">{t("ready.nitroxCertHeading")}</h4>
+      <FieldGrid columns={2}>
+        <Field label={t("ready.certAgency")}>
+          <select name="agency" required defaultValue="" className={controlClass}>
+            <option value="" disabled>
+              {t("ready.certChoose")}
+            </option>
+            {certificationAgency.enumValues.map((agency) => (
+              <option key={agency} value={agency}>
+                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("ready.certNumber")}>
+          <input
+            name="identifier"
+            required
+            minLength={2}
+            maxLength={60}
+            autoComplete="off"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            className={controlClass}
+          />
+        </Field>
+      </FieldGrid>
+      <div>
+        <SubmitButton
+          pendingLabel={t("ready.certSubmitting")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("ready.certSubmit")}
+        </SubmitButton>
+      </div>
+    </form>
+  );
+}
+
+/**
  * Which single-button action a checklist item answers with, if any. The one
  * source of truth for `itemAction`'s button branches *and* for choosing the
  * page's primary — one function so the two can never drift apart. The
@@ -308,10 +498,7 @@ function itemAction(
       </form>
     );
   }
-  if (item.code && CERT_ENTRY_CODES.has(item.code)) {
-    return <CertificationEntry token={token} t={t} />;
-  }
-  return null;
+  return <CertificationEntries token={token} item={item} t={t} />;
 }
 
 /**

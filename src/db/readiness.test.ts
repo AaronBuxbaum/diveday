@@ -187,6 +187,64 @@ describe("trip readiness (in-memory PGlite)", () => {
     });
   });
 
+  it("takes a diver's own specialty and nitrox cards without letting either clear a gate", async () => {
+    // The readiness page now offers an entry form for *every* card the trip is
+    // still waiting on, not only the level card. This is the property that lets
+    // it: what a diver types lands `pending`, and `pending` blocks — so a
+    // bearer link can put a number on the record and can never put a diver on a
+    // boat. The equivalent for level cards is pinned by the test above.
+    const { db, shop, reef } = await readinessContext();
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: null,
+      requiredSpecialties: ["deep"],
+      requiresNitrox: true,
+      requiresPayment: false,
+    });
+
+    // Not the first diver on the roster: the seed gives them a *verified*
+    // nitrox card, so their nitrox gate is legitimately already open and would
+    // prove nothing here. This is a diver the trip is genuinely waiting on for
+    // both cards, which is the state the entry forms exist for.
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    let subject: (typeof roster)[number] | undefined;
+    for (const entry of roster) {
+      const readiness = await getBookingReadiness(db, shop.id, entry.booking.id);
+      const codes = readiness?.blockers.map((blocker) => blocker.code) ?? [];
+      if (codes.includes("specialty_missing") && codes.includes("nitrox_missing")) {
+        subject = entry;
+        break;
+      }
+    }
+    if (!subject) throw new Error("expected a diver short both a specialty and a nitrox card");
+
+    const specialty = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: subject.person.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "PADI-DEEP-TYPED",
+    });
+    const nitrox = await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId: subject.person.id,
+      agency: "padi",
+      identifier: "PADI-EANX-TYPED",
+    });
+    if (!specialty || !nitrox) throw new Error("expected both cards to insert");
+    expect(specialty.status).toBe("pending");
+    expect(nitrox.status).toBe("pending");
+
+    const after = await getBookingReadiness(db, shop.id, subject.booking.id);
+    expect(after?.status).toBe("blocked");
+    // Both moved from "we have nothing" to "a staffer has something to check",
+    // which is the whole value of the form — and neither cleared.
+    expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "specialty_pending" }));
+    expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "nitrox_pending" }));
+  });
+
   it("opens a depth gate only when a staffer says they've seen the imported card", async () => {
     // The whole point of H-23's posture: an imported specialty card is verified,
     // and the deep dive still waits. H-24 adds that the tap which opens it has to
