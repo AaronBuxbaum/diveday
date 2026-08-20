@@ -405,6 +405,19 @@ export async function reserveGearUnit(
 
   try {
     return await db.transaction(async (tx) => {
+      // Serialize same-unit writers before anything else. Two concurrent
+      // inserts both add their tuple and then each waits on the *other's*
+      // uncommitted tuple to decide the EXCLUDE check — Postgres breaks that
+      // cycle by killing one with a deadlock (40P01) instead of the worded
+      // refusal (seen on CI's real-Postgres job, 2026-08-20). Behind this
+      // transaction-scoped advisory lock the second writer waits until the
+      // first commits, so the constraint only ever judges committed rows and
+      // the loser reads back 23P01 → unit_unavailable, as designed. A
+      // hashtext collision between two units merely serializes unrelated
+      // reservations for a moment — never a wrong outcome.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('gear_reservations'), hashtext(${input.gearItemId}))`,
+      );
       const [item] = await tx
         .select({ id: gearItems.id, status: gearItems.status })
         .from(gearItems)
