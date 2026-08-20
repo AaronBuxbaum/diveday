@@ -929,6 +929,14 @@ function AddPanel({
  * conditions, prices, the roster — stays on the trip's own page, one click away
  * on the title. This surface is deliberately shallow.
  */
+/**
+ * How long the row menu's fold runs before React unmounts it. It must outlast
+ * the slowest child of `.animate-board-menu-out` in `globals.css` — the last
+ * button's 100ms stagger plus its 280ms fold — or the fold is cut off partway.
+ * Change one and change the other.
+ */
+const MENU_CLOSE_MS = 390;
+
 export function ScheduleBuilder({
   shopSlug,
   days,
@@ -1011,7 +1019,7 @@ export function ScheduleBuilder({
     menuCloseTimer.current = setTimeout(() => {
       setOpen((current) => (current === menuKey ? null : current));
       setClosingMenu((current) => (current === menuKey ? null : current));
-    }, 450);
+    }, MENU_CLOSE_MS);
   }, []);
 
   useEffect(() => {

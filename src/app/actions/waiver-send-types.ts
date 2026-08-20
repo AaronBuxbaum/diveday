@@ -35,9 +35,8 @@ export type WaiverFallbackLink = {
    * both read differently from a deployment with no `APP_HOST` to build the
    * link on. Each gap points at a different setting, so each gets its own word.
    * `link_only` is not a gap at all: it is the staffer having asked for the URL
-   * to pass on themselves. */
+   * to pass on themselves, so it renders the copy control and no sentence. */
   reason:
-    | "sent"
     | "link_only"
     | "no_email"
     | "no_phone"
@@ -93,9 +92,6 @@ export type WaiverSendCopy = {
   reasonNoEmailOther: string;
   reasonNoPhoneOne: string;
   reasonNoPhoneOther: string;
-  /** The `link` channel's own line: nothing was sent because nothing was asked to be. */
-  reasonLinkOnlyOne: string;
-  reasonLinkOnlyOther: string;
   reasonFailedOne: string;
   reasonFailedOther: string;
   /**
@@ -111,14 +107,6 @@ export type WaiverSendCopy = {
   reasonUnconfigured: string;
   reasonTextUnconfigured: string;
   reasonNoAppOrigin: string;
-  /**
-   * The whole outcome line — `"{reason} — share this private link:"`. It carries
-   * the reason rather than being glued after one at the call site, because a
-   * dash and the words either side of it are a sentence, and a sentence
-   * assembled in JSX cannot be reordered by a translator.
-   */
-  sharePrivateLinkOne: string;
-  sharePrivateLinkOther: string;
   /** "Waiver sent to {names}." */
   sent: string;
   /** "{names} already has a signed waiver — nothing reissued." */
@@ -145,8 +133,6 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     reasonNoEmailOther: t.raw("shared.waiverSend.reasonNoEmailOther"),
     reasonNoPhoneOne: t("shared.waiverSend.reasonNoPhoneOne"),
     reasonNoPhoneOther: t.raw("shared.waiverSend.reasonNoPhoneOther"),
-    reasonLinkOnlyOne: t("shared.waiverSend.reasonLinkOnlyOne"),
-    reasonLinkOnlyOther: t.raw("shared.waiverSend.reasonLinkOnlyOther"),
     reasonFailedOne: t("shared.waiverSend.reasonFailedOne"),
     reasonFailedOther: t.raw("shared.waiverSend.reasonFailedOther"),
     reasonTextFailedOne: t("shared.waiverSend.reasonTextFailedOne"),
@@ -156,8 +142,6 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     reasonUnconfigured: t("shared.waiverSend.reasonUnconfigured"),
     reasonTextUnconfigured: t("shared.waiverSend.reasonTextUnconfigured"),
     reasonNoAppOrigin: t("shared.waiverSend.reasonNoAppOrigin"),
-    sharePrivateLinkOne: t.raw("shared.waiverSend.sharePrivateLinkOne"),
-    sharePrivateLinkOther: t.raw("shared.waiverSend.sharePrivateLinkOther"),
     sent: t.raw("shared.waiverSend.sent"),
     alreadyDoneOne: t.raw("shared.waiverSend.alreadyDoneOne"),
     alreadyDoneOther: t.raw("shared.waiverSend.alreadyDoneOther"),

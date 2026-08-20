@@ -27,6 +27,7 @@ import {
   people,
   shops,
   trips,
+  waiverDeliveries,
   waiverRecords,
 } from "./schema";
 
@@ -618,6 +619,31 @@ export async function applyProviderEmailEvent(
     shopId?: string;
   },
 ): Promise<ApplyProviderEmailEventResult> {
+  // Run first and unconditionally, because it is the only row that answers a
+  // question the others cannot: which *channel* this verdict belongs to. A
+  // booking-scoped waiver email writes both a `notification_deliveries` row and
+  // a `waiver_deliveries` one, and the branch below returns as soon as the
+  // first of those updates — so folding this in there would mean a bounce on a
+  // booking's waiver never reached the button that offered to send it.
+  const [updatedChannel] = await db
+    .update(waiverDeliveries)
+    .set({
+      providerStatus: input.status,
+      providerStatusAt: input.occurredAt,
+      detail: input.detail,
+    })
+    .where(
+      and(
+        eq(waiverDeliveries.providerMessageId, input.providerMessageId),
+        ...(input.shopId ? [eq(waiverDeliveries.shopId, input.shopId)] : []),
+        or(
+          isNull(waiverDeliveries.providerStatusAt),
+          lte(waiverDeliveries.providerStatusAt, input.occurredAt),
+        ),
+      ),
+    )
+    .returning({ id: waiverDeliveries.id });
+
   const [updated] = await db
     .update(notificationDeliveries)
     .set({
@@ -636,7 +662,7 @@ export async function applyProviderEmailEvent(
       ),
     )
     .returning({ id: notificationDeliveries.id });
-  if (updated) return "applied";
+  if (updated || updatedChannel) return "applied";
 
   const [updatedIndependent] = await db
     .update(waiverRecords)
@@ -677,7 +703,17 @@ export async function applyProviderEmailEvent(
       ),
     )
     .limit(1);
-  return existing || existingIndependent ? "stale" : "unknown_message";
+  const [existingChannel] = await db
+    .select({ id: waiverDeliveries.id })
+    .from(waiverDeliveries)
+    .where(
+      and(
+        eq(waiverDeliveries.providerMessageId, input.providerMessageId),
+        ...(input.shopId ? [eq(waiverDeliveries.shopId, input.shopId)] : []),
+      ),
+    )
+    .limit(1);
+  return existing || existingIndependent || existingChannel ? "stale" : "unknown_message";
 }
 
 /**

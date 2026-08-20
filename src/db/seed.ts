@@ -69,6 +69,7 @@ import {
   trips,
   tripWaitlistEntries,
   userAccounts,
+  waiverDeliveries,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -772,6 +773,8 @@ export async function resetDemoSchedule(
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Per-channel delivery state hangs off the waiver record, so it goes first.
+  await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.

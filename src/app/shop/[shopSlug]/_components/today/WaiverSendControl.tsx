@@ -16,6 +16,16 @@ import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { fill, pluralForm } from "@/i18n/fill";
 
+/**
+ * The diver's name and a control that puts their link on the clipboard.
+ *
+ * **The URL itself is never rendered.** It used to be — truncated, as a live
+ * anchor, under a sentence suggesting the staffer share it — and that was three
+ * mistakes at once: a bearer credential on screen at rest, a link the shop
+ * could tap by accident and consume, and a paragraph telling them to do what
+ * the button beside it already does. The tap is the way to the link; there is
+ * no reading it off the page (docs/design/accessibility-tradeoffs.md, A11Y-02).
+ */
 function CopyLink({
   link,
   copy: copyText,
@@ -28,29 +38,20 @@ function CopyLink({
 }) {
   const url =
     typeof window === "undefined"
-      ? ""
+      ? `/waivers/${link.token}`
       : new URL(`/waivers/${link.token}`, window.location.origin).toString();
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="font-medium">{link.name}:</span>
-      <a
-        href={`/waivers/${link.token}`}
-        className="max-w-[16rem] truncate font-medium text-primary hover:underline"
-      >
-        /waivers/{link.token.slice(0, 8)}…
-      </a>
-      <span className="inline-flex items-center gap-1">
-        <span aria-hidden="true">🔗</span>
-        <Copyable
-          layout="inline"
-          autoCopy={autoCopy}
-          value={url || `/waivers/${link.token}`}
-          copyLabel={copyText.copyLink}
-          copiedLabel={copyText.copied}
-          failedLabel={copyText.copyFailed}
-        />
-      </span>
+      <span className="font-medium">{link.name}</span>
+      <Copyable
+        layout="inline"
+        autoCopy={autoCopy}
+        value={url}
+        copyLabel={copyText.copyLink}
+        copiedLabel={copyText.copied}
+        failedLabel={copyText.copyFailed}
+      />
     </div>
   );
 }
@@ -81,12 +82,6 @@ export function reasonCopy(
       values,
     );
   }
-  if (reason === "link_only") {
-    return fill(
-      pluralForm(count, { one: copy.reasonLinkOnlyOne, other: copy.reasonLinkOnlyOther }),
-      values,
-    );
-  }
   if (reason === "failed") {
     return fill(
       channel === "text"
@@ -105,8 +100,15 @@ export function reasonCopy(
   return channel === "text" ? copy.reasonTextUnconfigured : copy.reasonUnconfigured;
 }
 
-/** One paragraph per delivery reason, so "no address on file" never reads as
- * "the shop's email is broken" or the reverse. */
+/**
+ * One line per delivery reason, so "no address on file" never reads as "the
+ * shop's email is broken" or the reverse — and under it, a way to take the
+ * link for each diver it applies to.
+ *
+ * The reason stands alone. It used to be glued into "{reason} — share this
+ * private link:", which spent a clause telling a staffer to do the thing the
+ * control under it was already offering.
+ */
 function LinkGroups({
   links,
   copy,
@@ -120,7 +122,6 @@ function LinkGroups({
   autoCopy?: boolean;
 }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
-    sent: links.filter((link) => link.reason === "sent"),
     link_only: links.filter((link) => link.reason === "link_only"),
     no_email: links.filter((link) => link.reason === "no_email"),
     no_phone: links.filter((link) => link.reason === "no_phone"),
@@ -136,14 +137,12 @@ function LinkGroups({
         if (group.length === 0) return null;
         return (
           <div key={reason} className="mt-2">
-            <p className="text-muted">
-              {fill(group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther, {
-                reason:
-                  reason === "sent"
-                    ? fill(copy.sent, { names: group.map((link) => link.name).join(", ") })
-                    : reasonCopy(copy, reason, group.length, channel),
-              })}
-            </p>
+            {/* `link_only` is the staffer's own "Copy link" tap: nothing failed,
+                nothing needs explaining, and the control below says what
+                happened. Every other reason is a gap they have to know about. */}
+            {reason === "link_only" ? null : (
+              <p className="text-muted">{reasonCopy(copy, reason, group.length, channel)}</p>
+            )}
             <div className="mt-2 flex flex-col gap-1.5">
               {group.map((link) => (
                 <CopyLink key={link.token} link={link} copy={copy} autoCopy={autoCopy} />
@@ -212,7 +211,7 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
 /**
  * The one-tap waiver send used on Today and Blockers. It posts the shared server
  * action in place and renders the outcome inline — "Waiver sent to Diego", or a
- * copyable private link when there is no email — so the label never lies about
+ * a way to copy the private link when there is no email — so the label never lies about
  * what the tap did and staff never leave the queue. Falls back to a plain form
  * post (the send still happens) before hydration.
  */
@@ -228,7 +227,6 @@ export function WaiverSendControl({
   confirmMessage,
   className,
   wrapperClassName,
-  exposeLink = false,
   copy,
 }: {
   shopSlug: string;
@@ -248,8 +246,6 @@ export function WaiverSendControl({
   className?: string;
   /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
   wrapperClassName?: string;
-  /** Show freshly issued private links even when email delivery succeeded. */
-  exposeLink?: boolean;
   copy: WaiverSendCopy;
 }) {
   const [state, formAction] = useActionState(
@@ -279,7 +275,6 @@ export function WaiverSendControl({
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
         {personId ? <input type="hidden" name="personId" value={personId} /> : null}
-        {exposeLink ? <input type="hidden" name="exposeLink" value="true" /> : null}
         {/* Resending is a send, not a reversible edit (principle 7,
             docs/design/principles.md) — a resend to someone who already got
             one guards with a real confirm, not an undo. */}

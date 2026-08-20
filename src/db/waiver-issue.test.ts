@@ -1,9 +1,11 @@
 import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { and, eq, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { WAIVER_LINK_TTL_MS } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
+import { applyProviderEmailEvent } from "./notifications";
 import type { MedicalAnswers } from "./schema";
 import { bookings, notificationDeliveries, people, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
@@ -13,7 +15,13 @@ import {
   issueAndDeliverWaiver,
   issueWaiverOnJoin,
 } from "./waiver-issue";
-import { completeWaiver, getWaiverForToken, issueWaiverRequest, saveWaiverDraft } from "./waivers";
+import {
+  completeWaiver,
+  getDiverWaiverChannelStates,
+  getWaiverForToken,
+  issueWaiverRequest,
+  saveWaiverDraft,
+} from "./waivers";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
 vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
@@ -515,5 +523,84 @@ describe("issueWaiverOnJoin", () => {
     });
     const result = await issueWaiverOnJoin(db, shop.id, bookingId);
     expect(result).toBeNull();
+  });
+});
+
+/**
+ * What the diver record's three delivery buttons wear.
+ *
+ * The point of the per-channel record, and the thing the single
+ * `waiver_records.delivery_status` column could never do: a shop that emails a
+ * diver and then texts them has two facts to show, not one, and neither may
+ * quietly overwrite the other.
+ */
+describe("getDiverWaiverChannelStates", () => {
+  async function personWithNoWaiver() {
+    const { db, shop, bookingId } = await seededBooking();
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!row) throw new Error("test setup: booking has no person");
+    return { db, shop, personId: row.personId };
+  }
+
+  it("knows nothing about a diver with no outstanding link", async () => {
+    const { db, shop, personId } = await personWithNoWaiver();
+    await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toEqual({
+      email: "unknown",
+      text: "unknown",
+      link: "unknown",
+    });
+  });
+
+  it("keeps each channel's outcome when a second channel is tried", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "");
+    vi.stubEnv("SES_FROM_EMAIL", "");
+    const { db, shop, personId } = await personWithNoWaiver();
+
+    // No provider wired up, so the email cannot go out.
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "email" });
+    await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
+      email: "not_configured",
+      text: "unknown",
+    });
+
+    // Taking the link is a different act on the same record, and it must not
+    // erase what we already knew about the mail.
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "link" });
+    await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
+      email: "not_configured",
+      link: "sent",
+    });
+  });
+
+  it("lets a provider's verdict outrank our own send result", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "ses-bounced" });
+
+    const { db, shop, personId } = await personWithNoWaiver();
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "email" });
+    await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
+      email: "sent",
+    });
+
+    // "We handed it to SES" and "SES says it bounced" are both true; only the
+    // second one helps a staffer decide to try another way.
+    await applyProviderEmailEvent(db, {
+      providerMessageId: "ses-bounced",
+      status: "bounced",
+      detail: "mailbox does not exist",
+      occurredAt: nowDate(),
+    });
+    await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
+      email: "failed",
+    });
   });
 });

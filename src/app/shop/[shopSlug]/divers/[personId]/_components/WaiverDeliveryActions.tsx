@@ -10,14 +10,50 @@ import {
 import { sendWaiversAction } from "@/app/actions/waivers";
 import { ResultNotice } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
-import { WaiverActionIcon, type WaiverActionIconName } from "@/components/WaiverActionIcon";
+import {
+  WaiverActionIcon,
+  type WaiverActionIconName,
+  WaiverDeliveryMark,
+  type WaiverDeliveryMarkName,
+} from "@/components/WaiverActionIcon";
+import type { WaiverChannelDeliveryState, WaiverChannelDeliveryStates } from "@/db/waivers";
 
 /** The words on the three delivery buttons, resolved server-side. */
 export type WaiverDeliveryCopy = {
   email: string;
   text: string;
   link: string;
+  /** What each channel's last outcome is called, for the button's own name. */
+  stateSent: string;
+  stateFailed: string;
+  stateUnavailable: string;
 };
+
+/**
+ * How a button wears what we last knew about its channel: a ring the eye
+ * catches from across a counter, and a mark whose *shape* says the same thing
+ * for anyone the ring's hue does not reach.
+ *
+ * `unknown` — nobody has tried this way on this link — deliberately draws
+ * nothing. An "untried" badge on every button on every unsigned waiver would be
+ * the absence of information formatted as information (design principle 9), and
+ * it would make the one button that *has* something to say invisible.
+ */
+const CHANNEL_STATE: Record<
+  Exclude<WaiverChannelDeliveryState, "unknown">,
+  { ring: string; ink: string; mark: WaiverDeliveryMarkName }
+> = {
+  sent: { ring: "ring-2 ring-success/50", ink: "text-success", mark: "sent" },
+  failed: { ring: "ring-2 ring-danger/55", ink: "text-danger", mark: "failed" },
+  not_configured: { ring: "ring-2 ring-warning/55", ink: "text-warning", mark: "unavailable" },
+};
+
+function stateWord(state: WaiverChannelDeliveryState, copy: WaiverDeliveryCopy): string | null {
+  if (state === "sent") return copy.stateSent;
+  if (state === "failed") return copy.stateFailed;
+  if (state === "not_configured") return copy.stateUnavailable;
+  return null;
+}
 
 /**
  * One button per way of handing a release over, all three submitting the **same
@@ -36,6 +72,8 @@ function ChannelButton({
   icon,
   label,
   pendingLabel,
+  state = "unknown",
+  stateLabel,
   tapped,
   onTap,
 }: {
@@ -43,12 +81,17 @@ function ChannelButton({
   icon: WaiverActionIconName;
   label: string;
   pendingLabel: string;
+  /** What we last knew about this channel on the diver's outstanding link. */
+  state?: WaiverChannelDeliveryState;
+  /** That state in words — the button's accessible name carries it. */
+  stateLabel?: string | null;
   /** Which button started the submit that is in flight, so only it swaps label. */
   tapped: WaiverSendChannel | null;
   onTap: (channel: WaiverSendChannel) => void;
 }) {
   const { pending } = useFormStatus();
   const busy = pending && tapped === channel;
+  const mark = state === "unknown" ? null : CHANNEL_STATE[state];
   return (
     <button
       type="submit"
@@ -59,7 +102,16 @@ function ChannelButton({
       disabled={pending}
       aria-busy={busy}
       onClick={() => onTap(channel)}
-      className={buttonClass({ variant: "secondary", size: "sm", busy: true, className: "gap-2" })}
+      // The ring, not a border or a text colour: `secondary` already owns both
+      // of those, and two utilities for one property resolve by stylesheet
+      // order rather than by which one you wrote last (see `ui/button.ts`).
+      // Nothing here competes with the variant.
+      className={buttonClass({
+        variant: "secondary",
+        size: "sm",
+        busy: true,
+        className: mark ? `gap-2 ${mark.ring}` : "gap-2",
+      })}
     >
       {busy ? (
         pendingLabel
@@ -67,6 +119,14 @@ function ChannelButton({
         <>
           <WaiverActionIcon name={icon} />
           {label}
+          {mark ? (
+            <span className={mark.ink}>
+              <WaiverDeliveryMark name={mark.mark} />
+            </span>
+          ) : null}
+          {/* Free to add and invisible to everyone else, so it is never the
+              thing traded away (docs/design/accessibility-tradeoffs.md). */}
+          {stateLabel ? <span className="sr-only">{stateLabel}</span> : null}
         </>
       )}
     </button>
@@ -87,6 +147,7 @@ export function WaiverDeliveryActions({
   personId,
   hasEmail,
   hasPhone,
+  channelStates,
   copy,
   sendCopy,
   children,
@@ -95,6 +156,12 @@ export function WaiverDeliveryActions({
   personId: string;
   hasEmail: boolean;
   hasPhone: boolean;
+  /**
+   * What each way of sending last did on this diver's outstanding link. Read
+   * from the server on every render — the send action revalidates this page —
+   * so a button's ring is the truth after the tap, not an optimistic guess.
+   */
+  channelStates: WaiverChannelDeliveryStates;
   copy: WaiverDeliveryCopy;
   sendCopy: WaiverSendCopy;
   /**
@@ -128,17 +195,14 @@ export function WaiverDeliveryActions({
       <div className="mt-5 flex flex-wrap items-start gap-2">
         <form action={formAction} className="contents">
           <input type="hidden" name="personId" value={personId} />
-          {/* Every send exposes the link. Staff on this page are as often reading
-            the URL out loud as relying on delivery, and the link is the one
-            artefact all three buttons produce — the same one each time, since a
-            live link is reused rather than replaced. */}
-          <input type="hidden" name="exposeLink" value="true" />
           {hasEmail ? (
             <ChannelButton
               channel="email"
               icon="email"
               label={copy.email}
               pendingLabel={sendCopy.sending}
+              state={channelStates.email}
+              stateLabel={stateWord(channelStates.email, copy)}
               tapped={tapped}
               onTap={tap}
             />
@@ -149,10 +213,16 @@ export function WaiverDeliveryActions({
               icon="text"
               label={copy.text}
               pendingLabel={sendCopy.sending}
+              state={channelStates.text}
+              stateLabel={stateWord(channelStates.text, copy)}
               tapped={tapped}
               onTap={tap}
             />
           ) : null}
+          {/* No ring on the link. Taking a URL is not a delivery that can fail,
+              and "you copied this once" is not a state anyone needs a mark for
+              — the control's own "Copied" already said so at the moment it
+              mattered (design principle 9). */}
           <ChannelButton
             channel="link"
             icon="link"

@@ -609,7 +609,6 @@ export default async function ManageTripPage({
         updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
         copy={{
           heading: t("trips.crew.heading"),
-          description: t("trips.crew.description"),
           courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
           overRatioWarning,
           noStaff: t("trips.crew.noCrew"),

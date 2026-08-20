@@ -146,11 +146,14 @@ export function RequirementsSection({
   return (
     <section className="mt-10">
       <h2 className="text-lg font-semibold">{t("trips.requirements.heading")}</h2>
-      <p className="mt-1 text-sm text-muted">
-        {trip.course
-          ? t("trips.requirements.courseDescription")
-          : t("trips.requirements.tripDescription")}
-      </p>
+      {/* A course session keeps the rules it was created with, which is a fact
+          about *this* session that nothing else on screen carries. An ordinary
+          trip's subtitle used to sit here too, restating the heading as a
+          sentence ("A diver stays blocked until every one of them checks out"),
+          and it is gone — the list below is the answer. */}
+      {trip.course ? (
+        <p className="mt-1 text-sm text-muted">{t("trips.requirements.courseDescription")}</p>
+      ) : null}
       {trip.course ? (
         <>
           {requirementSummary}
@@ -218,9 +221,6 @@ export function RequirementsSection({
                 <legend className="text-sm font-medium">
                   {t("trips.requirements.requiredSpecialtiesLegend")}
                 </legend>
-                <p className="mt-1 text-sm text-muted">
-                  {t("trips.requirements.requiredSpecialtiesDescription")}
-                </p>
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
                     <label

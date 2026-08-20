@@ -3188,6 +3188,14 @@ export const waiverTemplates = pgTable(
   ],
 );
 
+/**
+ * The ways a shop can hand a waiver link over. `link` is not a delivery in the
+ * postal sense — nothing was sent — but it is still a fact worth keeping: the
+ * staffer took the URL and is passing it on themselves, and the record of that
+ * is what stops the diver's record reading "never sent".
+ */
+export const waiverDeliveryChannel = pgEnum("waiver_delivery_channel", ["email", "text", "link"]);
+
 export const waiverRecordStatus = pgEnum("waiver_record_status", [
   "pending",
   "completed",
@@ -3336,6 +3344,61 @@ export const waiverRecords = pgTable(
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
     // The per-person carry-forward lookup: a diver's completed releases at a shop.
     index("waiver_records_shop_person_status_idx").on(table.shopId, table.personId, table.status),
+  ],
+);
+
+/**
+ * What we know about each *way* a waiver link was handed over — one row per
+ * record per channel, holding the current state of that channel.
+ *
+ * It sits beside `waiver_records.delivery_*` rather than replacing it, and the
+ * split is the same one `notification_deliveries` and
+ * `notification_delivery_attempts` already draw: the record's own columns are
+ * the **latest attempt on this link, whichever channel it used** — what the
+ * webhook keys on and what `getDiverWaiverRequestStatus` answers "has this
+ * diver been reached at all?" from — while these rows are **per channel**, and
+ * exist because the two questions have different answers the moment a shop
+ * emails a diver and then texts them. Without the split, tapping Text erases
+ * everything we knew about the email.
+ *
+ * That is not a nicety: the diver record offers email, text, and link as four
+ * peers, and each button wears its own last outcome. A single latest-attempt
+ * column can only ever light one of them.
+ *
+ * Deliberately out of the export bundle (`src/db/export.test.ts`): the outcome
+ * a destination system could use is already on `waiver_records.csv`; this is
+ * the per-channel mechanics behind it, exactly like
+ * `notification_delivery_attempts`.
+ */
+export const waiverDeliveries = pgTable(
+  "waiver_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    waiverRecordId: uuid("waiver_record_id")
+      .notNull()
+      .references(() => waiverRecords.id),
+    channel: waiverDeliveryChannel("channel").notNull(),
+    status: notificationDeliveryStatus("status").notNull(),
+    providerMessageId: text("provider_message_id"),
+    /** Null until a delivery webhook says otherwise, which is the steady state. */
+    providerStatus: notificationProviderStatus("provider_status"),
+    providerStatusAt: timestamp("provider_status_at", { withTimezone: true }),
+    /** The provider's own words for a bounce or failure. */
+    detail: text("detail"),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Current state, not history: a second email on the same link replaces the
+    // row rather than stacking one. The unique index is what the upsert's
+    // `onConflictDoUpdate` targets, so it is load-bearing, not a hint.
+    uniqueIndex("waiver_deliveries_record_channel_unique").on(table.waiverRecordId, table.channel),
+    // The delivery webhook's only entry point: an event names a message id.
+    index("waiver_deliveries_provider_message_idx").on(table.providerMessageId),
+    index("waiver_deliveries_shop_record_idx").on(table.shopId, table.waiverRecordId),
   ],
 );
 

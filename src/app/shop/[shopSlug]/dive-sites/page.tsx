@@ -40,7 +40,7 @@ import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/sta
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
  * attacker-supplied (src/lib/staff-notices.ts). */
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  archived: { tone: "success", key: "diveSites.list.siteArchivedNotice" },
+  deleted: { tone: "success", key: "diveSites.list.siteDeletedNotice" },
 };
 
 // `instant = true` asserts that navigating *into* this page paints

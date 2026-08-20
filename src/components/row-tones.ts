@@ -81,13 +81,11 @@ export const CHECK_IN_ROW_TONE = {
   /** Transparent, not absent: the rule holds the text aligned across states. */
   awaiting: "border-transparent",
   blocked: ROLL_CALL_ROW_TONE.blocked,
-} as const;
-
-/** A visible edge for the counter queue, strengthened on hover by the row. */
-export const CHECK_IN_STATUS_BAR_TONE = {
-  checkedIn: "bg-success",
-  awaiting: "bg-border-strong",
-  blocked: "bg-danger",
+  // One rule per row, and this is it. A second, absolutely-positioned bar used
+  // to sit on top of this border at the same 4px width — two edges of slightly
+  // different colours overlapping, the top one fading on hover while the one
+  // underneath did not. The border carries both the edge and the fill, which
+  // is why it is the half that survived.
 } as const;
 
 /**

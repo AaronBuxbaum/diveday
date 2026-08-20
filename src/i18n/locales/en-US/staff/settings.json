@@ -329,7 +329,7 @@
       "changesSaved": "Team changes saved.",
       "reactivated": "Account re-enabled.",
       "disabled": "Account disabled — they can no longer sign in.",
-      "removed": "Archived — they keep their record and history, and can no longer sign in.",
+      "removed": "Deleted — they're off your team and can no longer sign in.",
       "restored": "Team access restored.",
       "restoreFailed": "Couldn't restore that person's access — check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
@@ -368,7 +368,7 @@
     },
     "current": {
       "heading": "Current team",
-      "description": "Enable, disable, and archive take effect immediately. Role changes below wait for Save changes.",
+      "description": "Enable, disable, and delete take effect immediately. Role changes below wait for Save changes.",
       "empty": "No staff invited yet.",
       "emptyAction": "Invite a teammate",
       "save": "Save changes",
@@ -381,12 +381,12 @@
       "disable": "Disable",
       "enabling": "Enabling…",
       "disabling": "Disabling…",
-      "archive": "Archive",
-      "archiving": "Archiving…",
+      "delete": "Delete",
+      "deleting": "Deleting…",
       "enableAriaLabel": "Enable {name}",
       "disableAriaLabel": "Disable {name}",
-      "archiveAriaLabel": "Archive {name}",
-      "archivedToast": "Archived {name}. Their record and history stay."
+      "deleteAriaLabel": "Delete {name}",
+      "deletedToast": "Deleted {name}."
     },
     "emergencyContact": {
       "summaryOnFile": "Emergency contact: {name}",
@@ -408,7 +408,7 @@
     "bundle": {
       "heading": "What's in the bundle",
       "fileCount": "{count, plural, one {# file, with a row count for each} other {# files, with a row count for each}}",
-      "description": "One ZIP with a README and a CSV per record type. Every date carries its timezone, money is in cents, and archived history comes along too."
+      "description": "One ZIP with a README and a CSV per record type. Every date carries its timezone, money is in cents, and deleted records come along too."
     },
     "rowCount": "{count, plural, one {# row} other {# rows}}",
     "notIncluded": {

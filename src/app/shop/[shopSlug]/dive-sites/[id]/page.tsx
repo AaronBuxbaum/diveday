@@ -241,7 +241,7 @@ export default async function EditDiveSitePage({
     const deleted = await deleteDiveSite(await getDb(), activeSession.user.shopId, id);
     revalidateAndRedirect(
       back,
-      deleted ? noticeUrl(back, "archived") : `${back}/${id}?error=invalid`,
+      deleted ? noticeUrl(back, "deleted") : `${back}/${id}?error=invalid`,
     );
   }
 
@@ -451,20 +451,20 @@ export default async function EditDiveSitePage({
         className="mt-10 rounded-2xl border border-danger/30 bg-danger/5"
       >
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-semibold text-danger [&::-webkit-details-marker]:hidden sm:px-5">
-          <span>{t("diveSites.edit.archiveSite")}</span>
+          <span>{t("diveSites.edit.deleteSite")}</span>
           <span aria-hidden="true" className="text-lg font-normal">
             +
           </span>
         </summary>
         <div className="border-t border-danger/20 p-4 text-sm sm:p-5">
-          <h2 className="font-semibold">{t("diveSites.edit.archiveConfirmTitle")}</h2>
-          <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
+          <h2 className="font-semibold">{t("diveSites.edit.deleteConfirmTitle")}</h2>
+          <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.deleteConfirmBody")}</p>
           <form action={deleteAction} className="mt-4">
             <SubmitButton
-              pendingLabel={t("diveSites.edit.archiving")}
+              pendingLabel={t("diveSites.edit.deleting")}
               className={buttonClass({ variant: "danger-solid" })}
             >
-              {t("diveSites.edit.archiveSite")}
+              {t("diveSites.edit.deleteSite")}
             </SubmitButton>
             <FormStatus tone="danger" className="mt-2">
               {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}

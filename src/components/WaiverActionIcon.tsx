@@ -62,3 +62,45 @@ export function WaiverActionIcon({ name }: { name: WaiverActionIconName }) {
     </svg>
   );
 }
+
+/**
+ * The mark a delivery button wears for what we last knew about that channel:
+ * a tick for a send that left, a cross for one that did not, a bar for a
+ * channel this deployment cannot use at all.
+ *
+ * Three *shapes*, not three colours. The ring around the button is the thing a
+ * staffer notices across a counter, and it is colour — so the mark inside has
+ * to survive being read in grey (design principle 6). Drawn on the same 24px
+ * grid at the same stroke weight as the channel icons beside them, at two
+ * thirds the size, so a button reads as one object with a state rather than two
+ * pictures.
+ */
+export type WaiverDeliveryMarkName = "sent" | "failed" | "unavailable";
+
+const MARK_PATHS: Record<WaiverDeliveryMarkName, React.ReactNode> = {
+  sent: <path d="m5 12.5 4.5 4.5L19 7" />,
+  failed: (
+    <>
+      <path d="m6 6 12 12" />
+      <path d="m18 6-12 12" />
+    </>
+  ),
+  unavailable: <path d="M5 12h14" />,
+};
+
+export function WaiverDeliveryMark({ name }: { name: WaiverDeliveryMarkName }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-3 shrink-0"
+    >
+      {MARK_PATHS[name]}
+    </svg>
+  );
+}

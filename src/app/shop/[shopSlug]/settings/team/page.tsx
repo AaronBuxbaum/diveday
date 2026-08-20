@@ -296,22 +296,23 @@ function StaffRow({
                     docs/design/principles.md) — the toast on the next render
                     carries what's needed to hand back to setStaffRoles.
 
-                    "Archive", not "Delete": nothing is deleted. `removeStaffMember`
-                    strips staff roles, disables the login, and revokes the
-                    person's push subscriptions — the `people` row, and every
-                    booking, manifest and signature attached to it, deliberately
-                    survives. Calling that Delete promised an erasure the button
-                    does not perform and made a reversible edit read as the one
-                    irreversible act on the page (ADR 20260719-crud-archive-semantics
-                    is the vocabulary the rest of the app already uses). */}
+                    The button says "Delete" and the deletion is soft, which is
+                    the rule everywhere (ADR 20260820-every-delete-is-soft).
+                    `removeStaffMember` strips staff roles, disables the login,
+                    and revokes the person's push subscriptions — the `people`
+                    row, and every booking, manifest and signature attached to
+                    it, deliberately survives. The reader is never told that:
+                    reversibility is a promise we keep, not a concept they hold,
+                    and this page's one irreversible act is erasure, which says
+                    so itself. */}
                 <SubmitButton
-                  pendingLabel={t("settings.team.staffRow.archiving")}
-                  ariaLabel={t("settings.team.staffRow.archiveAriaLabel", {
+                  pendingLabel={t("settings.team.staffRow.deleting")}
+                  ariaLabel={t("settings.team.staffRow.deleteAriaLabel", {
                     name: member.fullName,
                   })}
                   className={buttonClass({ variant: "danger", size: "sm" })}
                 >
-                  {t("settings.team.staffRow.archive")}
+                  {t("settings.team.staffRow.delete")}
                 </SubmitButton>
               </form>
             ) : null}
@@ -393,7 +394,7 @@ export default async function TeamSettingsPage({
 
       {notice === "removed" && undoPersonId && undoUserAccountId && undoRoles ? (
         <UndoToast
-          message={t("settings.team.staffRow.archivedToast", { name: undoName ?? "" })}
+          message={t("settings.team.staffRow.deletedToast", { name: undoName ?? "" })}
           action={restoreStaffAction}
           fields={{
             personId: undoPersonId,

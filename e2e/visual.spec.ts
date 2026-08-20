@@ -2039,15 +2039,15 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers", scheme);
       });
 
-      // The roster's one view that leaves the active list behind: where an
-      // archived diver can be found and unarchived, once the undo toast is
-      // long gone. The demo shop archives nobody, so this photographs the
-      // view's own chrome — the chip row with "Archived" on it, the line
-      // saying what archiving means, and the way back out.
-      test(`the archived-divers view renders true to the design (${scheme})`, async ({ page }) => {
+      // The roster's one view that leaves the active list behind: where a
+      // deleted diver can be found and restored, once the undo toast is long
+      // gone. The demo shop deletes nobody, so this photographs the view's own
+      // chrome — the chip row with "Deleted" on it, the line saying what the
+      // view holds, and the way back out.
+      test(`the deleted-divers view renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/divers?filter=removed");
         await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
-        await page.getByRole("link", { name: "Archived", exact: true }).waitFor();
+        await page.getByRole("link", { name: "Deleted", exact: true }).waitFor();
         await capture(page, "divers-removed", scheme);
       });
 
@@ -2079,6 +2079,30 @@ for (const scheme of ["light", "dark"] as const) {
         // never photograph the row mid-swap.
         await page.getByRole("button", { name: "Record paper signature" }).waitFor();
         await capture(page, "diver-profile-paper-waiver", scheme);
+      });
+
+      /**
+       * The same delivery row on a day when one of the ways failed: each button
+       * wearing what we last knew about *its own* channel — a refused email
+       * beside a text that landed.
+       *
+       * Test-only for the reason the whole trouble-states route exists: a
+       * delivery outcome needs a provider, the demo shop has none, and seeding
+       * a permanent failure would make the calm capture next door a lie. The
+       * ring is colour and the mark beside it is a shape, so this is also the
+       * only baseline that can catch the two drifting apart.
+       */
+      test(`a waiver's per-channel delivery states render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states");
+        await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
+        // The ringed button itself, so the capture can never land before the
+        // server data that rings it has arrived.
+        await page.getByRole("button", { name: /Email waiver/ }).waitFor();
+        await page.getByText("Didn’t go out").waitFor({ state: "attached" });
+        await capture(page, "diver-profile-waiver-delivery", scheme);
       });
 
       /**

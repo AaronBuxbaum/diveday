@@ -39,7 +39,6 @@ export function RemoveDiver({
           action={deletePersonAction.bind(null, shopSlug, personId)}
           className="mt-3 flex flex-wrap items-center gap-3"
         >
-          <p className="text-sm text-muted">{t("divers.remove.addAgainNote")}</p>
           <SubmitButton
             pendingLabel={t("divers.remove.removing")}
             className={buttonClass({ variant: "danger-solid" })}

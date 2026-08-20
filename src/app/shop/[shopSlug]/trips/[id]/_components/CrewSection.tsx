@@ -14,7 +14,6 @@ import type { StaffList } from "./types";
 
 export type CrewSectionCopy = {
   heading: string;
-  description: string;
   /** Shown when the course has zero instructors assigned (`courseCrewGap` "no_instructor"). */
   courseNeedsInstructor: string;
   /** Pre-rendered — already carries the booked/capacity numbers — or null when the gap isn't `over_ratio`. */
@@ -176,10 +175,7 @@ export function CrewSection({
   return (
     <section id="crew" className="mt-10 scroll-mt-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{copy.heading}</h2>
-          <p className="mt-1 text-sm text-muted">{copy.description}</p>
-        </div>
+        <h2 className="text-lg font-semibold">{copy.heading}</h2>
         <Link
           href={`/shop/${shopSlug}/staffing`}
           className="text-sm font-medium text-primary hover:underline"

@@ -78,10 +78,10 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(page).toHaveURL(/#cards$/);
   await expect(page.getByRole("heading", { name: "Certification records" })).toBeInViewport();
 
-  // The destructive tail is deliberately not a sub-nav target: archiving a
+  // The destructive tail is deliberately not a sub-nav target: deleting a
   // diver and erasing their personal data cost a scroll, on purpose.
   await expect(subNav.getByRole("link")).toHaveCount(7);
-  await expect(subNav.getByRole("link", { name: /Erase|Archive/ })).toHaveCount(0);
+  await expect(subNav.getByRole("link", { name: /Erase|Delete/ })).toHaveCount(0);
 });
 
 test("a diver note is shared with the live boat manifest", async ({ page }) => {
@@ -296,23 +296,23 @@ test.describe("on a phone", () => {
 });
 
 /**
- * **Archive → find → unarchive.**
+ * **Delete → find → restore.**
  *
- * Archiving has always been reversible in the data, and until the Archived
- * view existed it was not reversible in the product: the roster's undo toast
- * was twelve seconds long, and after that the diver matched no search, sat in
- * no view, and their record 404'd. A shop owner who archived the wrong person
- * on Tuesday had no way to put them back on Wednesday — which is the round
- * trip this spec walks, deliberately *without* touching the toast.
+ * Deletion has always been soft in the data (ADR 20260820-every-delete-is-soft),
+ * and until the Deleted view existed it was not reversible in the product: the
+ * roster's undo toast was twelve seconds long, and after that the diver matched
+ * no search, sat in no view, and their record 404'd. A shop owner who deleted
+ * the wrong person on Tuesday had no way to put them back on Wednesday — which
+ * is the round trip this spec walks, deliberately *without* touching the toast.
  */
-test("staff archive a diver, find them again in the Archived view, and unarchive them", async ({
+test("staff delete a diver, find them again in the Deleted view, and restore them", async ({
   page,
 }) => {
-  // Three navigations, an archive, a filtered search, and an unarchive — past
+  // Three navigations, a delete, a filtered search, and a restore — past
   // the suite's 15s default, which is sized for a single flow.
   test.setTimeout(30_000);
   const stamp = e2eNow().getTime();
-  const diverName = `Archivable Diver ${stamp}`;
+  const diverName = `Deletable Diver ${stamp}`;
 
   await page.goto(`/shop/${SHOP}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
@@ -321,13 +321,13 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
   await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
   const recordUrl = page.url().split("?")[0] ?? "";
 
-  // Archive them from their own record.
-  await page.getByText(`Archive ${diverName}`).click();
-  await page.getByRole("button", { name: "Archive diver" }).click();
+  // Delete them from their own record.
+  await page.getByText(`Delete ${diverName}`).click();
+  await page.getByRole("button", { name: "Delete diver" }).click();
   // The land-then-undo toast, the app's one undo affordance — deliberately
   // left alone from here: the point of this spec is the path that still works
   // once it is gone.
-  await expect(page.getByText("Diver archived.")).toBeVisible();
+  await expect(page.getByText("Diver deleted.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
 
   // Gone from the active roster, and not findable by searching it.
@@ -335,20 +335,20 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
   await expect(page.getByText("No divers match this view.")).toBeVisible();
 
-  // The Archived view is where they are, and search works inside it.
-  await page.getByRole("link", { name: "Archived", exact: true }).click();
+  // The Deleted view is where they are, and search works inside it.
+  await page.getByRole("link", { name: "Deleted", exact: true }).click();
   await expect(page).toHaveURL(/filter=removed/);
   const row = page.getByRole("row").filter({ hasText: diverName });
   await expect(row).toBeVisible();
 
-  // Their record still opens — the unarchive has to have somewhere to live.
+  // Their record still opens — the restore has to have somewhere to live.
   await page.goto(recordUrl);
   await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
-  await expect(page.getByText("This diver is archived")).toBeVisible();
+  await expect(page.getByText("This diver is deleted")).toBeVisible();
 
-  // Unarchive from the record, and they are back on the active roster.
-  await page.getByRole("button", { name: "Unarchive diver" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Diver unarchived" })).toBeVisible();
+  // Restore from the record, and they are back on the active roster.
+  await page.getByRole("button", { name: "Restore diver" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Diver restored" })).toBeVisible();
   await page.goto(`/shop/${SHOP}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
   await expect(page.getByRole("row").filter({ hasText: diverName })).toBeVisible();

@@ -39,6 +39,7 @@ import {
 } from "./schema";
 import {
   getCurrentWaiverTemplate,
+  getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
   listSignedWaiversByPerson,
 } from "./waivers";
@@ -750,6 +751,7 @@ export async function getDiverProfile(
     signedWaivers,
     waiverTemplate,
     waiverRequest,
+    waiverChannels,
   ] = await Promise.all([
     db
       .select({ card: certifications, reviewedByName: levelReviewer.fullName })
@@ -819,6 +821,7 @@ export async function getDiverProfile(
     listSignedWaiversByPerson(db, shopId, [personId]),
     getCurrentWaiverTemplate(db, shopId),
     getDiverWaiverRequestStatus(db, shopId, personId),
+    getDiverWaiverChannelStates(db, shopId, personId),
   ]);
 
   return {
@@ -848,6 +851,12 @@ export async function getDiverProfile(
       currentTemplateVersion: waiverTemplate?.version ?? null,
     }),
     waiverRequest,
+    /**
+     * What we know about each way of handing this diver's outstanding link
+     * over, so the delivery buttons can wear their own last outcome instead of
+     * all three claiming the same one.
+     */
+    waiverChannels,
   };
 }
 

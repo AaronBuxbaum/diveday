@@ -74,6 +74,21 @@
   /* Shape & motion */
   --radius: 0.75rem;
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  /*
+   * The mirror of `--ease-out-soft`, for motion that *leaves*. An exit on an
+   * ease-out curve spends three quarters of its duration barely moving, so the
+   * eye reads the whole thing as an instant jump followed by a pause and then a
+   * hard cut — which is how the board's row menu managed to feel simultaneously
+   * too fast to see and 450ms long. Slow off the mark, then away.
+   */
+  --ease-in-soft: cubic-bezier(0.55, 0, 0.85, 0.3);
+  /*
+   * A curve that overshoots its target and settles back (the y > 1 control
+   * point). Rationed like `--accent`: a spring says "this thing has weight",
+   * which is a claim worth making when something unfolds on request and a lie
+   * on anything that merely appears.
+   */
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
 
   /*
    * Tell the browser which way our palette runs, so the parts of a form we do
@@ -506,17 +521,44 @@ summary {
   }
 }
 
+/*
+ * The schedule board's row menu: Move / Copy / Remove unfolding beside the "⋯"
+ * that revealed them, and folding back into it.
+ *
+ * The animation sits on the *children*, not the container, so the three
+ * buttons can arrive one after another — a fan opening from its hinge rather
+ * than a block sliding sideways. The stagger is the whole effect; without it
+ * this is a 16px nudge nobody notices.
+ *
+ * Both halves scale from `left center`, which is the edge nearest the "⋯", so
+ * the motion reads as coming out of that button and going back into it.
+ */
 @keyframes board-menu-in {
   from {
-    transform: translateX(-1rem);
+    opacity: 0;
+    transform: translateX(-0.6rem) scale(0.88);
+  }
+  55% {
+    opacity: 1;
   }
   to {
-    transform: translateX(0);
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 
-.animate-board-menu-in {
-  animation: board-menu-in 450ms var(--ease-out-soft) both;
+.animate-board-menu-in > * {
+  transform-origin: left center;
+  animation: board-menu-in 260ms var(--ease-spring) both;
+}
+
+/* Nearest the "⋯" first, so the row unrolls outward. */
+.animate-board-menu-in > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.animate-board-menu-in > *:nth-child(3) {
+  animation-delay: 100ms;
 }
 
 .animate-fade-in {
@@ -542,17 +584,44 @@ summary {
   }
 }
 
+/*
+ * The fold. It opens with a beat of wind-up *away* from the "⋯" before it
+ * retracts — the anticipation that makes a pull-back read as deliberate rather
+ * than as something being yanked offstage — and then accelerates in and down
+ * on `--ease-in-soft`.
+ *
+ * `MENU_CLOSE_MS` in ScheduleBuilder.tsx is what actually unmounts the row, and
+ * it has to outlast the last child's delay + duration (100 + 280). Shorten
+ * either number here and that constant moves with it, or the last button
+ * disappears mid-fold.
+ */
 @keyframes board-menu-out {
   from {
-    transform: translateX(0);
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(0.2rem) scale(1.03);
   }
   to {
-    transform: translateX(-1rem);
+    opacity: 0;
+    transform: translateX(-1.3rem) scale(0.8);
   }
 }
 
-.animate-board-menu-out {
-  animation: board-menu-out 450ms var(--ease-out-soft) both;
+.animate-board-menu-out > * {
+  transform-origin: left center;
+  animation: board-menu-out 280ms var(--ease-in-soft) both;
+}
+
+/* Reverse order: the far end leaves first, so the row rolls back up into the "⋯". */
+.animate-board-menu-out > *:nth-last-child(2) {
+  animation-delay: 50ms;
+}
+
+.animate-board-menu-out > *:nth-last-child(3) {
+  animation-delay: 100ms;
 }
 
 .animate-scale-out {
@@ -686,6 +755,15 @@ summary {
     animation-duration: 0.01ms !important;
     /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
     animation-iteration-count: 1 !important;
+    /*
+     * Delay, not just duration. A staggered entrance (the board's row menu)
+     * carries its stagger in `animation-delay`, which the duration override
+     * does not touch — so without this line a reduced-motion reader would still
+     * watch three buttons arrive one at a time, each holding its `both`-filled
+     * opacity: 0 until its turn came.
+     */
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    animation-delay: 0s !important;
     /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }

@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
-import { CHECK_IN_ROW_TONE, CHECK_IN_STATUS_BAR_TONE } from "@/components/row-tones";
+import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -456,7 +456,7 @@ export default async function CheckInPage({
                         <article
                           key={row.bookingId}
                           data-testid={`check-in-card-${row.bookingId}`}
-                          className={`group relative border-l-4 ${
+                          className={`border-l-4 ${
                             checkedIn
                               ? CHECK_IN_ROW_TONE.checkedIn
                               : ready
@@ -464,16 +464,6 @@ export default async function CheckInPage({
                                 : CHECK_IN_ROW_TONE.blocked
                           }`}
                         >
-                          <span
-                            aria-hidden="true"
-                            className={`pointer-events-none absolute inset-y-0 left-0 w-1 opacity-75 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 ${
-                              checkedIn
-                                ? CHECK_IN_STATUS_BAR_TONE.checkedIn
-                                : ready
-                                  ? CHECK_IN_STATUS_BAR_TONE.awaiting
-                                  : CHECK_IN_STATUS_BAR_TONE.blocked
-                            }`}
-                          />
                           {ready && !checkedIn ? (
                             <CheckInActionForm
                               action={checkInAction.bind(null, shopSlug)}

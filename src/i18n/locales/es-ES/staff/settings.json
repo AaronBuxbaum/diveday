@@ -329,7 +329,7 @@
       "changesSaved": "Cambios del equipo guardados.",
       "reactivated": "Cuenta reactivada.",
       "disabled": "Cuenta deshabilitada — ya no puede iniciar sesión.",
-      "removed": "Archivado: conserva su ficha y su historial, y ya no puede iniciar sesión.",
+      "removed": "Eliminado: está fuera de tu equipo y ya no puede iniciar sesión.",
       "restored": "Acceso al equipo restaurado.",
       "restoreFailed": "No se pudo restaurar el acceso de esa persona — revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
@@ -368,7 +368,7 @@
     },
     "current": {
       "heading": "Equipo actual",
-      "description": "Habilitar, deshabilitar y archivar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
+      "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
       "empty": "Todavía no se ha invitado a nadie.",
       "emptyAction": "Invitar a un compañero",
       "save": "Guardar cambios",
@@ -381,12 +381,12 @@
       "disable": "Deshabilitar",
       "enabling": "Habilitando…",
       "disabling": "Deshabilitando…",
-      "archive": "Archivar",
-      "archiving": "Archivando…",
+      "delete": "Eliminar",
+      "deleting": "Eliminando…",
       "enableAriaLabel": "Habilitar a {name}",
       "disableAriaLabel": "Deshabilitar a {name}",
-      "archiveAriaLabel": "Archivar a {name}",
-      "archivedToast": "Se archivó a {name}. Su ficha y su historial se conservan."
+      "deleteAriaLabel": "Eliminar a {name}",
+      "deletedToast": "Se eliminó a {name}."
     },
     "emergencyContact": {
       "summaryOnFile": "Contacto de emergencia: {name}",
@@ -408,7 +408,7 @@
     "bundle": {
       "heading": "Qué contiene el paquete",
       "fileCount": "{count, plural, one {# archivo, con el número de filas de cada uno} other {# archivos, con el número de filas de cada uno}}",
-      "description": "Un ZIP con un README y un CSV por tipo de registro. Cada fecha lleva su zona horaria, el dinero va en centavos y el historial archivado también viene."
+      "description": "Un ZIP con un README y un CSV por tipo de registro. Cada fecha lleva su zona horaria, el dinero va en centavos y los registros eliminados también vienen."
     },
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {

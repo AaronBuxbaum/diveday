@@ -16,6 +16,7 @@ function diver(overrides: {
   phone?: string | null;
   waiver?: DiverProfile["waiver"];
   waiverRequest?: DiverProfile["waiverRequest"];
+  waiverChannels?: Partial<DiverProfile["waiverChannels"]>;
 }): DiverProfile {
   return {
     person: {
@@ -26,6 +27,12 @@ function diver(overrides: {
     },
     waiver: overrides.waiver ?? { state: "none" },
     waiverRequest: overrides.waiverRequest ?? "not_sent",
+    waiverChannels: {
+      email: "unknown",
+      text: "unknown",
+      link: "unknown",
+      ...overrides.waiverChannels,
+    },
   } as unknown as DiverProfile;
 }
 
@@ -108,6 +115,44 @@ describe("WaiverSection", () => {
     expect(screen.getByText("Signed")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Mark signed on paper" })).toBeNull();
+  });
+
+  /**
+   * Each button wears what we last knew about *its own* channel. Before the
+   * per-channel record existed there was one delivery status per link, so a
+   * text send overwrote everything known about the email — and the row could
+   * only ever have lit all three buttons the same way, or none.
+   */
+  it("marks each channel with its own last outcome, and leaves untried ones bare", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        phone: "+13055550142",
+        waiverChannels: { email: "failed", text: "sent" },
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: /Email waiver/ }).textContent).toContain(
+      "Didn’t go out",
+    );
+    expect(screen.getByRole("button", { name: /Text waiver/ }).textContent).toContain("Sent");
+    // Nothing has been tried on the link, and "untried" is not a state worth a
+    // mark on every unsigned waiver in the shop.
+    expect(screen.getByRole("button", { name: "Copy link" }).textContent).toBe("Copy link");
+  });
+
+  /**
+   * The outline is what a staffer sees across a counter, and it is colour. The
+   * mark beside the label is the same fact in a *shape*, so the state never
+   * rests on hue alone (design principle 6).
+   */
+  it("never carries a channel's state in colour alone", () => {
+    renderCard(diver({ email: "priya@dive.day", waiverChannels: { email: "failed" } }));
+
+    const button = screen.getByRole("button", { name: /Email waiver/ });
+    expect(button.className).toContain("ring-danger");
+    expect(button.querySelector("svg[aria-hidden='true'] path")).toBeTruthy();
+    expect(button.textContent).toContain("Didn’t go out");
   });
 
   /**

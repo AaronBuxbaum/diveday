@@ -89,6 +89,33 @@ test("the command palette also finds dive sites, courses, and every gated nav de
   }
 });
 
+/**
+ * "Add diver" matches every query by construction — it offers to create a
+ * person named whatever you typed — so left in the Divers group it outranked
+ * real commands: typing "Sign out" proposed creating a diver called "Sign out"
+ * above the actual Sign out row, and Enter took it.
+ */
+test("the command palette keeps Add diver last, under every real match", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("button", { name: "Search" }).click();
+  const box = page.getByRole("combobox", { name: /Search divers/ });
+  // Scoped to the palette: the shop home's own `<select>` controls contribute
+  // native `<option>` elements, which carry the same implicit role.
+  const options = page.getByRole("dialog").getByRole("option");
+
+  await box.fill("Sign out");
+  await expect(options.last()).toHaveAccessibleName("Add diver");
+  await expect(options.first()).toHaveAccessibleName("Sign out");
+
+  // A query that matches a real diver puts them above it too, so the first
+  // Enter never lands on "create a second Priya".
+  await box.fill("Priya");
+  await expect(options.first()).toHaveAccessibleName(/Priya Sharma/);
+  await expect(options.last()).toHaveAccessibleName("Add diver");
+});
+
 test("the divers list filters live as you type, no submit", { tag: READ_ONLY }, async ({
   page,
 }) => {
