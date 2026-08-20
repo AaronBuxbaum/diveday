@@ -428,6 +428,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         // the expiry is pulled back to now, and any still-live record is marked
         // superseded.
         tokenHash: hashWaiverToken(createWaiverToken()),
+        // ...and the openable copy goes with it, so the erased record cannot
+        // hand its link back out through the reuse path either.
+        tokenSealed: null,
         expiresAt: now,
         startedAt: null,
         supersededAt: record.supersededAt ?? (record.status === "pending" ? now : null),

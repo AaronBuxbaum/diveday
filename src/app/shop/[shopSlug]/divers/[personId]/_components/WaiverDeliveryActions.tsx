@@ -111,15 +111,27 @@ export function WaiverDeliveryActions({
     IDLE_WAIVER_SEND_STATE,
   );
   const [tapped, setTapped] = useState<WaiverSendChannel | null>(null);
+  // Bumped on every tap purely to re-key the result below. Now that a live link
+  // is reused rather than reissued (ADR
+  // 20260820-waiver-links-are-reused-not-reissued), a second "Copy link" comes
+  // back with the *same* URL — so `Copyable`'s auto-copy effect, which is keyed
+  // on the value, would not fire and the tap would look like it did nothing.
+  // Remounting the strip makes each tap put the link on the clipboard again.
+  const [attempt, setAttempt] = useState(0);
+  const tap = (channel: WaiverSendChannel) => {
+    setTapped(channel);
+    setAttempt((count) => count + 1);
+  };
 
   return (
     <>
       <div className="mt-5 flex flex-wrap items-start gap-2">
         <form action={formAction} className="contents">
           <input type="hidden" name="personId" value={personId} />
-          {/* Every send exposes its fresh link. Staff on this page are as often
-            reading the URL out loud as relying on delivery, and the link is the
-            one artefact all three buttons produce. */}
+          {/* Every send exposes the link. Staff on this page are as often reading
+            the URL out loud as relying on delivery, and the link is the one
+            artefact all three buttons produce — the same one each time, since a
+            live link is reused rather than replaced. */}
           <input type="hidden" name="exposeLink" value="true" />
           {hasEmail ? (
             <ChannelButton
@@ -128,7 +140,7 @@ export function WaiverDeliveryActions({
               label={copy.email}
               pendingLabel={sendCopy.sending}
               tapped={tapped}
-              onTap={setTapped}
+              onTap={tap}
             />
           ) : null}
           {hasPhone ? (
@@ -138,7 +150,7 @@ export function WaiverDeliveryActions({
               label={copy.text}
               pendingLabel={sendCopy.sending}
               tapped={tapped}
-              onTap={setTapped}
+              onTap={tap}
             />
           ) : null}
           <ChannelButton
@@ -147,12 +159,12 @@ export function WaiverDeliveryActions({
             label={copy.link}
             pendingLabel={sendCopy.sending}
             tapped={tapped}
-            onTap={setTapped}
+            onTap={tap}
           />
         </form>
         {children}
       </div>
-      <ResultNotice state={state} copy={sendCopy} />
+      <ResultNotice key={attempt} state={state} copy={sendCopy} />
     </>
   );
 }

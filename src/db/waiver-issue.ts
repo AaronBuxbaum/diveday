@@ -167,13 +167,25 @@ export type WaiverDeliveryOptions = {
   channel?: WaiverSendChannel;
   /** Injected text senders, so a test never needs AWS or Meta credentials. */
   textProviders?: CourtesyProviders;
+  /**
+   * The instant to issue against, threaded down to `issueWaiverRequest`.
+   *
+   * It matters now that a live link is reused rather than replaced: whether the
+   * diver already holds a signable link is a question about a moment, and a
+   * caller that has one (`emailFreshWaiverLink` decides "is this URL stale?"
+   * against its own `now`) must not have the issuing half silently answer it
+   * against a different one. Defaults to the clock, which is every other caller.
+   */
+  now?: Date;
 };
 
 /**
- * Issue a fresh waiver link for a booking and hand it over on the asked-for
- * channel. Delivery is best-effort: a missing address or number, missing app
- * origin, or a failed/disabled provider all resolve to a non-`sent` delivery so
- * the caller surfaces the private link instead of pretending anything went out.
+ * Get this booking's waiver link — the one the diver already holds when it is
+ * still live, a fresh one otherwise (`issueWaiverRequest`) — and hand it over on
+ * the asked-for channel. Delivery is best-effort: a missing address or number,
+ * missing app origin, or a failed/disabled provider all resolve to a non-`sent`
+ * delivery so the caller surfaces the private link instead of pretending
+ * anything went out.
  */
 export async function issueAndDeliverWaiver(
   db: AppDb,
@@ -196,7 +208,7 @@ export async function issueAndDeliverWaiver(
     )
     .limit(1);
 
-  const outcome = await issueWaiverRequest(db, { shopId, bookingId });
+  const outcome = await issueWaiverRequest(db, { shopId, bookingId, now: options.now });
   if (!outcome.ok) {
     return {
       ok: false,
@@ -285,7 +297,10 @@ export async function issueAndDeliverWaiver(
   return { ok: true, bookingId, diverName, token: outcome.token, delivery };
 }
 
-/** Issue and deliver a waiver directly to a diver, with no booking or schedule required. */
+/**
+ * The same, for a diver directly, with no booking or schedule required — so two
+ * sends from their record hand over one link rather than two.
+ */
 export async function issueAndDeliverPersonWaiver(
   db: AppDb,
   shopId: string,
@@ -298,7 +313,7 @@ export async function issueAndDeliverPersonWaiver(
     .innerJoin(shops, eq(shops.id, people.shopId))
     .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
     .limit(1);
-  const outcome = await issueWaiverRequest(db, { shopId, personId });
+  const outcome = await issueWaiverRequest(db, { shopId, personId, now: options.now });
   if (!outcome.ok) {
     return {
       ok: false,
@@ -420,13 +435,18 @@ export type WaiverLinkRescue =
  * a bearer of a dead link can do here is *trigger a delivery to its owner*,
  * which is exactly the affordance staff already had and no more.
  *
- * Repeat taps are safe by construction, and by one explicit refusal. Issuing
- * supersedes *every* non-superseded pending record for the booking, so a rescue
- * fired while a fresher link is still live would kill that live link and take
- * the diver's saved draft with it — a stale URL in the wrong hands would be a
- * remote "wipe this diver's half-filled waiver" button. `hasLiveWaiverRequest`
- * is the guard: when the booking already has a signable link, this reports
- * `current_link_live` and issues nothing. Otherwise `staleWaiverRecordForToken`
+ * Repeat taps are safe by construction, and by one explicit refusal.
+ * `hasLiveWaiverRequest` is the guard: when the booking already has a signable
+ * link, this reports `current_link_live` and issues nothing.
+ *
+ * That guard used to be load-bearing for a second reason that no longer holds
+ * — issuing superseded every pending record, so a rescue fired against a live
+ * link was a remote "wipe this diver's half-filled waiver" button. Reuse ended
+ * that (ADR 20260820-waiver-links-are-reused-not-reissued): a live link is now
+ * handed back rather than replaced. The refusal stays on the narrower argument
+ * it always also had, which is enough on its own: whoever holds a *dead* URL
+ * should not be able to drive a delivery on the live one, however harmless the
+ * issuing side has become. Otherwise `staleWaiverRecordForToken`
  * keeps resolving the original token after a send, so a second tap on a link
  * whose replacement has since aged out replaces it again rather than failing.
  * A cancelled booking or a sailed trip is refused by the same issuing
@@ -446,8 +466,8 @@ export async function emailFreshWaiverLink(
     return "current_link_live";
   }
   const outcome = stale.bookingId
-    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId)
-    : await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId);
+    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId, { now })
+    : await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, { now });
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
   if (outcome.delivery === "no_email") return "no_email";

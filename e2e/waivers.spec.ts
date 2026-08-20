@@ -511,11 +511,31 @@ test("a diver without a booking can receive an independent waiver from their rec
   await expect(page.getByRole("button", { name: "Email waiver" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Text waiver" })).toBeVisible();
 
-  // "Copy link" is the one that never depends on a provider: it mints the
+  // "Copy link" is the one that never depends on a provider: it issues the
   // private link and hands it straight back, with nothing sent.
   await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByRole("status")).toContainText("share");
-  await expect(page.getByRole("link", { name: /\/waivers\// })).toBeVisible();
+  const firstLink = page.getByRole("link", { name: /\/waivers\// });
+  await expect(firstLink).toBeVisible();
+  const firstHref = await firstLink.getAttribute("href");
+  expect(firstHref).toMatch(/^\/waivers\//);
+
+  /**
+   * The whole point of the row: a staffer who copies the link and then sends it
+   * must be handing over one URL, not two of which only the last one works
+   * (ADR 20260820-waiver-links-are-reused-not-reissued). Tapping a *different*
+   * channel is the real shape of the mistake — copy it, then text it.
+   */
+  await page.getByRole("button", { name: "Text waiver" }).click();
+  await expect(page.getByRole("status")).toContainText("share");
+  await expect(page.getByRole("link", { name: /\/waivers\// })).toHaveAttribute(
+    "href",
+    firstHref ?? "",
+  );
+
+  // And it is the diver's live link, not a stale echo: it still opens.
+  await page.goto(firstHref ?? "/");
+  await expect(page.getByLabel("Type your full name")).toBeVisible();
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
