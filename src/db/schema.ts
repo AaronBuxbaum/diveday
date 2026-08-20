@@ -3369,6 +3369,8 @@ export const waiverRecords = pgTable(
  * a destination system could use is already on `waiver_records.csv`; this is
  * the per-channel mechanics behind it, exactly like
  * `notification_delivery_attempts`.
+ *
+ * ADR 20260820-waiver-delivery-is-per-channel.
  */
 export const waiverDeliveries = pgTable(
   "waiver_deliveries",
