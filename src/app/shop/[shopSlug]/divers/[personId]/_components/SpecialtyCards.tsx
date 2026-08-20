@@ -140,6 +140,10 @@ export function SpecialtyCards({
           {diver.specialtyCertifications.map((card) => {
             const display = heldCardDisplayStatus(card, todayLocal);
             const expired = display === "expired";
+            // A card the diver typed on their own readiness link. This tap opens
+            // a depth gate past 18 m, so it asks for the card in the staffer's
+            // hand rather than taking the diver's word twice.
+            const selfDeclared = isUnsightedSelfDeclaration(card);
             return (
               <li key={card.id} className="px-4 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -183,7 +187,14 @@ export function SpecialtyCards({
                         beside it has always had. An imported card's confirm no
                         longer opens a disclosure holding an attestation
                         checkbox (ADR 20260814-one-tap-imported-card-confirm). */}
-                    {card.status === "pending" || needsImportConfirm(card) ? (
+                    {selfDeclared ? (
+                      <CardSightingForm
+                        t={t}
+                        action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                        certificationId={card.id}
+                        numberError={numberError}
+                      />
+                    ) : card.status === "pending" || needsImportConfirm(card) ? (
                       <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <SubmitButton
