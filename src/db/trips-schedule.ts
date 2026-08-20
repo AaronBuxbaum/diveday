@@ -1,7 +1,9 @@
 import { and, asc, count, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
+import { rewindowTripGearReservations } from "./gear";
 import type { Trip } from "./schema";
 import {
   bookings,
@@ -53,7 +55,18 @@ function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: stri
 }
 
 export type MoveTripOutcome =
-  | { ok: true; trip: Trip }
+  | {
+      ok: true;
+      trip: Trip;
+      /**
+       * Gear reservations the move could not carry onto the new dates, because
+       * the unit is already spoken for there. Released rather than left
+       * pointing at days the departure no longer occupies — and counted here
+       * because the board has to say so: a silently released reservation is a
+       * unit somebody thinks is packed (`rewindowTripGearReservations`).
+       */
+      gearReleased: number;
+    }
   | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" };
 
 /**
@@ -130,7 +143,8 @@ export async function moveTrip(
       return { ok: false, reason: "already_sailed" };
     }
 
-    if (startsAt.getTime() === existing.startsAt.getTime()) return { ok: true, trip: existing };
+    if (startsAt.getTime() === existing.startsAt.getTime())
+      return { ok: true, trip: existing, gearReleased: 0 };
 
     const [shop] = await tx
       .select({ timezone: shops.timezone })
@@ -157,7 +171,17 @@ export async function moveTrip(
         .set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })
         .where(eq(tripScheduleDays.id, day.id));
     }
-    return { ok: true, trip };
+
+    // The gear goes with the departure. A reservation's window is derived from
+    // the trip's dates at assign time and never re-read, so without this the
+    // boat leaves on Thursday with kit the register still believes is out on
+    // Tuesday — free to be double-assigned, and overdue on the wrong day.
+    const gear = await rewindowTripGearReservations(tx, {
+      shopId,
+      tripId,
+      window: tripReservationWindow(trip, shop.timezone),
+    });
+    return { ok: true, trip, gearReleased: gear.released };
   });
 }
 

@@ -27,6 +27,7 @@ import {
   type GearServiceState,
   gearServiceState,
   pickDisplayReservation,
+  type ReservationWindow,
 } from "@/lib/gear";
 import {
   type AppDb,
@@ -602,6 +603,75 @@ export async function releaseUnclaimedGearReservationsForTrips(
       ),
     ),
   );
+}
+
+/**
+ * Slide a departure's unclaimed gear reservations onto its new dates.
+ *
+ * A reservation's window is derived from the trip at assign time
+ * (`tripReservationWindow`), never re-read, so a departure that moves used to
+ * leave every unit spoken for on the old days: the boat left on Thursday with
+ * kit the register still believed was out on Tuesday, the units read free for
+ * Thursday and could be double-assigned, and Today's due-back and overdue rows
+ * — which are window-driven — pointed at the wrong day.
+ *
+ * **Checked-out units are deliberately left alone.** Their window describes a
+ * physical handover that has already happened; the diver has the regulator, and
+ * the return is the honest close for it wherever the departure ends up.
+ *
+ * **A collision releases the loser, and says so.** The new window can overlap
+ * another reservation of the same unit — the `gear_reservations_no_overlap`
+ * exclusion constraint refuses it, correctly — and the alternatives are worse
+ * than releasing: keeping the stale window is the bug this function exists to
+ * fix, and refusing the whole move would let one gear assignment veto a schedule
+ * edit the crew has already agreed with a customer. So the reservation is
+ * released and the count travels back in the move outcome, for the board to say
+ * "2 gear assignments released — reassign on prep". Releasing without saying so
+ * would be the actual failure: silence there is a unit somebody thinks is packed.
+ *
+ * Each update runs in its own savepoint. On real Postgres a failed statement
+ * aborts the enclosing transaction block, so a plain try/catch would poison the
+ * caller's transaction — `moveTrip`'s — for every row after the first collision
+ * (the same reasoning as `findOrCreatePerson`).
+ */
+export async function rewindowTripGearReservations(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; window: ReservationWindow },
+): Promise<{ moved: number; released: number }> {
+  const open = await tx
+    .select({ id: gearReservations.id })
+    .from(gearReservations)
+    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    .where(
+      and(
+        eq(gearReservations.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        isNull(gearReservations.checkedOutAt),
+        isNull(gearReservations.returnedAt),
+      ),
+    )
+    .orderBy(asc(gearReservations.id));
+
+  let moved = 0;
+  let released = 0;
+  // Sequential, never a fan-out: this runs inside `moveTrip`'s transaction,
+  // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
+  for (const reservation of open) {
+    try {
+      await tx.transaction(async (sp) => {
+        await sp
+          .update(gearReservations)
+          .set({ reservedFrom: input.window.from, reservedUntil: input.window.until })
+          .where(eq(gearReservations.id, reservation.id));
+      });
+      moved += 1;
+    } catch (error) {
+      if (!violatesExclusionConstraint(error, "gear_reservations_no_overlap")) throw error;
+      await tx.delete(gearReservations).where(eq(gearReservations.id, reservation.id));
+      released += 1;
+    }
+  }
+  return { moved, released };
 }
 
 async function reservationStamps(

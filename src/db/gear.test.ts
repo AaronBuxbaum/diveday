@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { tripReservationWindow } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -23,8 +25,8 @@ import {
   setGearItemStatus,
   updateGearItem,
 } from "./gear";
-import { shops } from "./schema";
-import { setTripStatus } from "./trips";
+import { gearReservations, shops, trips } from "./schema";
+import { moveTrip, setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
 const TODAY = "2026-08-20";
@@ -856,5 +858,122 @@ describe("gear register readers", () => {
     const page = await listGearItems(db, shop.id, { todayLocal: TODAY });
     const overdueRow = page.rows.find((row) => row.item.id === overdue.id);
     expect(overdueRow?.reservation?.reservedUntil).toBe("2026-08-15");
+  });
+});
+
+describe("a departure that moves takes its gear with it", () => {
+  /**
+   * The window is derived from the trip at assign time and never re-read, so
+   * before `rewindowTripGearReservations` the boat left on the new day with kit
+   * the register still believed was out on the old one — free to be
+   * double-assigned, and overdue on the wrong date.
+   */
+  it("slides unclaimed reservations onto the new dates", async () => {
+    const { db, shop } = await gearShopContext();
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #7", size: "M" }),
+    );
+    const window = tripReservationWindow(maya.trip, shop.timezone);
+    expect(
+      await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: bcd.id,
+        bookingId: maya.bookingId,
+        reservedFrom: window.from,
+        reservedUntil: window.until,
+      }),
+    ).toMatchObject({ ok: true });
+
+    const moved = await moveTrip(db, shop.id, maya.trip.id, new Date("2026-09-08T12:00:00Z"));
+    expect(moved).toMatchObject({ ok: true, gearReleased: 0 });
+
+    const [row] = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.gearItemId, bcd.id));
+    expect(row?.reservedFrom).toBe("2026-09-08");
+    expect(row?.reservedUntil).toBe("2026-09-08");
+  });
+
+  it("leaves a checked-out unit's window alone — that handover already happened", async () => {
+    const { db, shop } = await gearShopContext();
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const reg = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "REG #3" }),
+    );
+    const window = tripReservationWindow(maya.trip, shop.timezone);
+    const reserved = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      bookingId: maya.bookingId,
+      reservedFrom: window.from,
+      reservedUntil: window.until,
+    });
+    if (!reserved.ok) throw new Error("reserve refused");
+    expect(
+      await checkOutGearReservation(db, {
+        shopId: shop.id,
+        reservationId: reserved.reservation.id,
+      }),
+    ).toEqual({ ok: true });
+
+    expect(
+      await moveTrip(db, shop.id, maya.trip.id, new Date("2026-09-08T12:00:00Z")),
+    ).toMatchObject({ ok: true, gearReleased: 0 });
+
+    const [row] = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.id, reserved.reservation.id));
+    expect(row?.reservedFrom).toBe(window.from);
+  });
+
+  it("releases a reservation the new dates collide with, and counts it", async () => {
+    const { db, shop } = await gearShopContext();
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const jonah = await shopBooking(db, shop.id, "Jonah Pike");
+    const tank = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-77" }),
+    );
+
+    // Maya's departure holds the unit on Sep 1. Jonah's booking holds the same
+    // unit on Sep 8 — the day Maya's departure is about to move onto.
+    const mayaWindow = tripReservationWindow(maya.trip, shop.timezone);
+    const mayaReservation = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: tank.id,
+      bookingId: maya.bookingId,
+      reservedFrom: mayaWindow.from,
+      reservedUntil: mayaWindow.until,
+    });
+    if (!mayaReservation.ok) throw new Error("reserve refused");
+    expect(
+      await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: tank.id,
+        bookingId: jonah.bookingId,
+        reservedFrom: "2026-09-08",
+        reservedUntil: "2026-09-08",
+      }),
+    ).toMatchObject({ ok: true });
+
+    const moved = await moveTrip(db, shop.id, maya.trip.id, new Date("2026-09-08T12:00:00Z"));
+    expect(moved).toMatchObject({ ok: true, gearReleased: 1 });
+
+    // Maya's is gone; Jonah's — which was there first and is not moving — is
+    // untouched. The count is what the board turns into a sentence, and the
+    // reason the release is not silent.
+    const rows = await db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.gearItemId, tank.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.bookingId).toBe(jonah.bookingId);
+
+    // The move itself still happened — one gear collision must not veto a
+    // schedule edit the crew has already agreed with a customer.
+    const [trip] = await db.select().from(trips).where(eq(trips.id, maya.trip.id));
+    expect(trip?.startsAt.toISOString()).toBe("2026-09-08T12:00:00.000Z");
   });
 });

@@ -6,6 +6,7 @@
   "notices": {
     "added": "Ya está en el calendario.",
     "moved": "Movida.",
+    "movedGearReleased": "Movida — se {count, plural, one {liberó # asignación de equipo} other {liberaron # asignaciones de equipo}}. Vuelve a asignarlas en la página de preparación.",
     "copied": "Copiada.",
     "removed": "Quitada del calendario.",
     "invalid": "No se guardó — revisa la fecha, las horas y las plazas, e inténtalo de nuevo.",
