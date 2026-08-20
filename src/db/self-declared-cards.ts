@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type CertificationLevel,
@@ -177,13 +177,40 @@ export async function recordSelfDeclaredCards(
  *   certified two-tank charter.
  */
 /**
+ * **`isUnsightedSelfDeclaration`, negated, in SQL.**
+ *
+ * The same question the TypeScript predicate answers over a row already in
+ * memory — *is this a card somebody actually stood behind?* — expressed as a
+ * `where` condition so an existence check can stop at the first match instead
+ * of loading a diver's whole history to filter it.
+ *
+ * **Two spellings of one rule is the exact shape that caused the bug this file
+ * was just fixed for**, so they are not merely kept in step by attention:
+ * `self-declared-cards.test.ts` walks every combination of `status` and
+ * `self_declared_at` through both and fails if they ever disagree. Change one
+ * and that test tells you about the other.
+ *
+ * A row is real when a staffer verified it, **or** when nobody ever declared it
+ * — a staff capture and a CSV import both land with a null stamp.
+ */
+function isRealCard(table: typeof certifications | typeof nitroxCertifications) {
+  return or(eq(table.status, "verified"), isNull(table.selfDeclaredAt));
+}
+
+/**
  * True when this shop holds a card for this person in either of the two tables
  * {@link recordLevel} does not read — a nitrox card a staffer sighted, or any
- * specialty row at all. Shared with `recordNoCertification`'s own guard, which
- * has always asked the wider question.
+ * specialty row at all.
+ *
+ * `recordNoCertification` asks the identical question inline rather than
+ * through here, because it needs the nitrox *rows* a second time to archive the
+ * diver's own earlier claims; this answers existence and stops. The two must
+ * stay in step — the whole reason this exists is that they were not
+ * (`security-reviewer`, 2026-08-20).
  *
  * `specialty_certifications` has no `self_declared_at` column, so every row
- * there is staff-captured or imported and its existence alone settles it.
+ * there is staff-captured or imported and its existence alone settles it — the
+ * only one of the three tables where a row's mere presence is the answer.
  */
 async function holdsRealCardOutsideLevels(
   tx: DbExecutor,
@@ -191,21 +218,19 @@ async function holdsRealCardOutsideLevels(
 ): Promise<boolean> {
   // Sequential, never `Promise.all`: this runs inside the caller's transaction,
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
-  const liveNitrox = await tx
-    .select({
-      id: nitroxCertifications.id,
-      status: nitroxCertifications.status,
-      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
-    })
+  const [realNitrox] = await tx
+    .select({ id: nitroxCertifications.id })
     .from(nitroxCertifications)
     .where(
       and(
         eq(nitroxCertifications.shopId, input.shopId),
         eq(nitroxCertifications.personId, input.personId),
         isNull(nitroxCertifications.deletedAt),
+        isRealCard(nitroxCertifications),
       ),
-    );
-  if (liveNitrox.some((card) => !isUnsightedSelfDeclaration(card))) return true;
+    )
+    .limit(1);
+  if (realNitrox) return true;
 
   const [liveSpecialty] = await tx
     .select({ id: specialtyCertifications.id })
@@ -244,6 +269,11 @@ async function recordNoCertification(
     );
   if (liveLevels.some((card) => !isUnsightedSelfDeclaration(card))) return "card_on_file";
 
+  // Nitrox is read in full rather than through `holdsRealCardOutsideLevels`,
+  // because this function needs the rows twice: once as the guard, and again
+  // below to archive the diver's *own* earlier claims. The helper answers
+  // "does any real card exist" and deliberately stops there.
+  //
   // Sequential, never `Promise.all`: this runs inside the join's transaction,
   // which is one checked-out client (`scripts/check-db-concurrency.mjs`).
   const liveNitrox = await tx

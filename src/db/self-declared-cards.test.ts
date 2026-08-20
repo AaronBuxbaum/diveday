@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
 import { seededShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
@@ -753,6 +754,59 @@ describe("recordSelfDeclaredCards", () => {
       expect(rows[0]).toEqual(before);
     });
   });
+});
+
+describe('the SQL and TypeScript spellings of "a real card" agree', () => {
+  /**
+   * `isUnsightedSelfDeclaration` (TypeScript, over a row in memory) and
+   * `isRealCard` (SQL, inside an existence query) are the same rule written
+   * twice, and two spellings of one rule is precisely the shape that produced
+   * the anti-displacement bug this file was fixed for. So the agreement is
+   * asserted rather than maintained by care: every combination of the two
+   * columns that decide it goes through both paths.
+   */
+  const shapes = [
+    { name: "verified with a declaration stamp", status: "verified", declared: true, real: true },
+    { name: "verified with no stamp", status: "verified", declared: false, real: true },
+    {
+      name: "pending with no stamp (a staff capture)",
+      status: "pending",
+      declared: false,
+      real: true,
+    },
+    { name: "pending with a stamp (a live claim)", status: "pending", declared: true, real: false },
+  ] as const;
+
+  for (const shape of shapes) {
+    it(`treats a nitrox card that is ${shape.name} as ${shape.real ? "real" : "a claim"}`, async () => {
+      const { db, shop, person } = await joiner();
+      await db.insert(nitroxCertifications).values({
+        shopId: shop.id,
+        personId: person.id,
+        agency: "padi",
+        identifier: `EAN-${shape.status}-${shape.declared}`,
+        status: shape.status,
+        selfDeclaredAt: shape.declared ? new Date("2026-08-14T00:00:00Z") : null,
+      });
+
+      // The TypeScript side, over the row itself.
+      const [row] = await db
+        .select()
+        .from(nitroxCertifications)
+        .where(eq(nitroxCertifications.personId, person.id));
+      if (!row) throw new Error("setup: nitrox row not written");
+      expect(!isUnsightedSelfDeclaration(row)).toBe(shape.real);
+
+      // The SQL side, read through the guard that uses it: a real card blocks a
+      // level claim, a live claim does not.
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      });
+      expect(outcome.level).toBe(shape.real ? "card_on_file" : "recorded");
+    });
+  }
 });
 
 describe("the anti-displacement rule reaches every table", () => {
