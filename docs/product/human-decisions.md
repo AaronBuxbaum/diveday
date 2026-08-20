@@ -141,8 +141,8 @@ source of approval work; each row here maps to the H-row that must sign it off.
 
 - **Starting form shape:** liability release / assumption of risk / non-agency acknowledgement plus
   the 2026 UHMS/DMSC Diver Medical Participant Questionnaire. DiveDay models its conditional
-  result exactly: questions 3, 5, and 10 (or an affirmative answer in an applicable Box or the
-  page-two dental question) require physician evaluation; a question 1 yes followed by all Box A
+  result exactly: questions 3, 5, and 10 (or an affirmative answer in an applicable Box)
+  require physician evaluation; a question 1 yes followed by all Box A
   no answers is clear. The shop must still obtain the H-01/H-03 specialist sign-off before it
   sends a real waiver.
 - **Starting signature:** typed full name, explicit agreement, timestamp, immutable template

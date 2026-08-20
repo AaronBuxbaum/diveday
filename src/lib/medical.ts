@@ -64,19 +64,26 @@ const box = (
 });
 
 /**
- * Version 2 is the 2026-01-01 Diver Medical Participant Questionnaire
+ * Version 3 is the 2026-01-01 Diver Medical Participant Questionnaire
  * published by UHMS/DMSC. A primary yes is not itself a referral unless the
  * form marks it with an asterisk (questions 3, 5 and 10); it opens the
- * corresponding Box, whose yes answers are referrals. The dental question is
- * on page 2 and is always applicable.
+ * corresponding Box, whose yes answers are referrals.
+ *
+ * **Transcribed from the published PDF on 2026-08-20**, product 10346 EN,
+ * version date 2026-01-01, sha256
+ * `a02cbc5e415a2882cfa2df47b081e2e123ef208c55c3e3bf1b9e26e6a417e960`. Checked
+ * question by question against pages 1-2; boxes A, B, D, E, F and G matched
+ * what v2 already held, and the dental item did not — see
+ * `RSTC_QUESTIONNAIRE_V2` below for what it got wrong and why the version
+ * moved rather than the row.
  */
 export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
   id: "rstc",
-  version: 2,
+  version: 3,
   jurisdiction: "rstc",
   title: "Diver Medical | Participant Questionnaire",
   intro:
-    "Answer all 10 questions. If you answer NO to all 10, a medical evaluation is not required. A YES to questions 3, 5 or 10, or to any question in an applicable Box or the dental question, requires physician evaluation.",
+    "Answer all 10 questions. If you answer NO to all 10, a medical evaluation is not required. A YES to questions 3, 5 or 10, or to any question in an applicable Box, requires physician evaluation.",
   questions: [
     primary(
       "q1",
@@ -159,6 +166,7 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
     box("box_c", "q4", 2, "Ear disease or ear surgery, hearing loss, or problems with balance."),
     box("box_c", "q4", 3, "Recurrent sinusitis within the past 12 months."),
     box("box_c", "q4", 4, "Eye surgery within the past 3 months."),
+    box("box_c", "q4", 5, "Still healing / recovering from recent dental / oral procedure."),
 
     box("box_d", "q6", 1, "Head injury with loss of consciousness within the past 5 years."),
     box(
@@ -253,13 +261,6 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
     ),
     box("box_g", "q9", 5, "Active or uncontrolled ulcerative colitis or Crohn's disease."),
     box("box_g", "q9", 6, "Bariatric surgery within the last 12 months."),
-
-    {
-      id: "dental_recovery",
-      prompt: "Still healing/recovering from a recent dental/oral procedure.",
-      section: "dental",
-      referral: true,
-    },
   ],
   boxes: [
     { section: "box_a", title: "BOX A - I HAVE/HAVE HAD:" },
@@ -270,6 +271,45 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
     { section: "box_f", title: "BOX F - I HAVE/HAVE HAD:" },
     { section: "box_g", title: "BOX G - I HAVE HAD:" },
   ],
+};
+
+/**
+ * **v2 got the dental item wrong, and is retained so no signed record is
+ * re-read under the corrected rule.** It carried "still healing/recovering
+ * from a recent dental/oral procedure" as a standalone question asked of
+ * every diver. On the published form that sentence is the *fifth item of Box
+ * C*, reached only by answering yes to question 4 (eyes/ears/sinuses/teeth) —
+ * confirmed against the 2026-01-01 PDF on 2026-08-20.
+ *
+ * Retaining it is the whole point of stamping a version onto
+ * `waiver_records.medical_answers` (ADR 20260805-rstc-medical-questionnaire).
+ * A v2 record answering `q4: false, dental_recovery: true` is a diver who
+ * declared a healing extraction and was sent to a physician. Read under v3's
+ * question set that answer is not applicable, `calculateMedicalResult` returns
+ * `clear`, and the boarding hold in `certificationBlocker`'s sibling
+ * `medical_review` branch lifts — silently, with no migration and no failing
+ * test. So v2 stays for as long as a v2 record can exist, and only the
+ * *current* questionnaire is ever rendered to a diver.
+ *
+ * Everything except that one question is identical to v3, and it is spelled as
+ * a transformation rather than a second copy of the legal prose so the two
+ * versions cannot drift in any other respect.
+ */
+const RSTC_QUESTIONNAIRE_V2: MedicalQuestionnaire = {
+  ...RSTC_QUESTIONNAIRE,
+  version: 2,
+  intro:
+    "Answer all 10 questions. If you answer NO to all 10, a medical evaluation is not required. A YES to questions 3, 5 or 10, or to any question in an applicable Box or the dental question, requires physician evaluation.",
+  questions: RSTC_QUESTIONNAIRE.questions.map((question) =>
+    question.id === "box_c_5"
+      ? {
+          id: "dental_recovery",
+          prompt: "Still healing/recovering from a recent dental/oral procedure.",
+          section: "dental" as const,
+          referral: true,
+        }
+      : question,
+  ),
 };
 
 /** The v1 paraphrase is retained only to interpret already-signed records. */
@@ -339,7 +379,10 @@ const LEGACY_RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
 
 const CURRENT_QUESTIONNAIRES: readonly MedicalQuestionnaire[] = [RSTC_QUESTIONNAIRE];
 const BY_KEY = new Map(
-  [RSTC_QUESTIONNAIRE, LEGACY_RSTC_QUESTIONNAIRE].map((q) => [`${q.id}:${q.version}`, q]),
+  [RSTC_QUESTIONNAIRE, RSTC_QUESTIONNAIRE_V2, LEGACY_RSTC_QUESTIONNAIRE].map((q) => [
+    `${q.id}:${q.version}`,
+    q,
+  ]),
 );
 
 /**

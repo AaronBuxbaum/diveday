@@ -16,7 +16,6 @@ export type MedicalQuestionnaireCopy = {
   referralReassurance: string;
   /** Shown under a yes that only opens a Box of follow-up questions. */
   followUpReassurance: string;
-  dentalHeading: string;
   outcomeClear: string;
   outcomeReferral: string;
   outcomeFollowUpsOpen: string;
@@ -133,7 +132,6 @@ export function MedicalQuestionnaireFields({
     ...(initialResponses ?? {}),
   }));
   const primary = questionnaire.questions.filter((question) => question.section === "primary");
-  const dental = questionnaire.questions.filter((question) => question.section === "dental");
   const byParent = useMemo(() => {
     const result = new Map<string, MedicalQuestion[]>();
     for (const question of questionnaire.questions) {
@@ -194,24 +192,6 @@ export function MedicalQuestionnaireFields({
   return (
     <div className="mt-4 flex flex-col gap-3">
       {primary.map(renderQuestion)}
-      {dental.length ? (
-        // Named, rather than appearing as an unlabelled extra box after a
-        // divider: it belongs to the published form's second page, not to the
-        // ten numbered questions above, and reading as an eleventh of those was
-        // exactly the count confusion the 2026-08-06 review reported.
-        <section className="mt-3 flex flex-col gap-3 border-t border-border pt-4">
-          <h3 className="text-sm font-semibold tracking-wide text-muted">{copy.dentalHeading}</h3>
-          {dental.map((question) => (
-            <RadioQuestion
-              key={question.id}
-              question={question}
-              answer={responses[question.id]}
-              copy={copy}
-              onAnswer={answer}
-            />
-          ))}
-        </section>
-      ) : null}
       <QuestionnaireOutcome questionnaire={questionnaire} responses={responses} copy={copy} />
     </div>
   );
