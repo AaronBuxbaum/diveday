@@ -31,6 +31,7 @@ import {
   tripBlowouts,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 import { setTripStatus } from "./trips-record";
 
 /**
@@ -101,7 +102,7 @@ export async function callTripBlowout(
     const [trip] = await tx
       .select()
       .from(trips)
-      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!trip) return { ok: false as const, reason: "not_found" as const };
@@ -256,6 +257,7 @@ async function blowoutCandidates(
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         gt(trips.startsAt, now),
@@ -336,6 +338,7 @@ async function sendPendingBlowoutMessages(
         .from(trips)
         .where(
           and(
+            liveTrip(),
             eq(trips.shopId, input.shopId),
             inArray(
               trips.id,
@@ -575,7 +578,7 @@ export async function getTripBlowout(
     ? await db
         .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
         .from(trips)
-        .where(and(eq(trips.shopId, shopId), inArray(trips.id, offeredIds)))
+        .where(and(eq(trips.shopId, shopId), inArray(trips.id, offeredIds), liveTrip()))
     : [];
   const offeredById = new Map(offeredTrips.map((trip) => [trip.id, trip]));
 

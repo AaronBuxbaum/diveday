@@ -12,6 +12,7 @@ specialist audit's ML & data section.
 | [roadmap.md](roadmap.md) | **The most authoritative file here** — sequenced open work, unscheduled candidate subsystems, the engineering-enablement backlog, north-star measures, and human-owned production gates | scope shifts; when an item ships, move it to [../shipped.md](../shipped.md) |
 | [story-backlog.md](story-backlog.md) | Open, partial, or review-blocked tickets carried out of the 2026-07-30 persona review, cross-referenced to the persona/lens each serves | a ticket is picked up (close it out) or a new gap is found against [../personas.md](../personas.md) |
 | [brainstorm.md](brainstorm.md) | Non-canonical idea backlog — raw, unfiltered opportunity notes that don't require AI. Nothing here is approved scope | you want to record a feature idea; never cite it as a decision |
+| [participant-types.md](participant-types.md) | One scoped-but-unscheduled subsystem: snorkellers and boat riders on a diver's departure — different prices, different gates, the same head count | the scope changes, or a pilot shop's answer to the C3 call-script questions moves an assumption in it |
 | [ai-ml.md](ai-ml.md) | Every AI/ML-shaped idea in one place — raw brainstorm assistants alongside the specialist audit's eight prompt-ready ML & data tasks | you have an idea that needs AI, model-based extraction, or natural-language generation — do not start a second AI-ideas file elsewhere |
 
 ## How the four files relate

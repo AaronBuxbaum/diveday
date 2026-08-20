@@ -7,6 +7,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
 import { shops, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export async function getShopBySlug(db: AppDb, slug: string) {
   const [shop] = await db.select().from(shops).where(eq(shops.slug, slug)).limit(1);
@@ -46,7 +47,7 @@ export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string }[]
           db
             .select({ one: trips.id })
             .from(trips)
-            .where(and(eq(trips.shopId, shops.id), eq(trips.status, "scheduled"))),
+            .where(and(eq(trips.shopId, shops.id), eq(trips.status, "scheduled"), liveTrip())),
         ),
       ),
     );

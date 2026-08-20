@@ -23,6 +23,7 @@ import {
   type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
+import { liveTrip } from "./trips-live";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -43,7 +44,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .groupBy(trips.id, courses.id, diveSites.id)
     .limit(1);
   const row = rows[0];
@@ -71,7 +72,7 @@ export async function getShopTripTitle(
   const [row] = await db
     .select({ title: trips.title })
     .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   return row?.title ?? null;
 }
@@ -109,7 +110,7 @@ export async function getTripDiveSitesPeek(
     .select(peekColumns)
     .from(trips)
     .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .where(eq(trips.id, tripId))
+    .where(and(eq(trips.id, tripId), liveTrip()))
     .limit(1);
   const multiDiveSites = await db
     .select(peekColumns)
@@ -179,7 +180,7 @@ export async function updateTrip(
     const [existing] = await tx
       .select({ id: trips.id })
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
@@ -255,7 +256,7 @@ export async function listTripDives(db: AppDb, shopId: string, tripId: string) {
     .from(tripDives)
     .innerJoin(trips, eq(trips.id, tripDives.tripId))
     .leftJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
-    .where(and(eq(tripDives.tripId, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(tripDives.tripId, tripId), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(asc(tripDives.diveNumber));
 }
 
@@ -278,7 +279,7 @@ export async function updateTripConditions(
     const [before] = await tx
       .select({ conditionsHold: trips.conditionsHold })
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!before) return { trip: null, holdStarted: false };
@@ -337,7 +338,7 @@ export async function listTripScheduleDays(db: DbExecutor, shopId: string, tripI
     .select({ day: tripScheduleDays })
     .from(tripScheduleDays)
     .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .orderBy(asc(tripScheduleDays.dayNumber));
   return rows.map((row) => row.day);
 }

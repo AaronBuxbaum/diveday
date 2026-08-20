@@ -316,6 +316,11 @@ export async function loadShopExportBundleInput(
           asc(orderLineItems.id),
         );
 
+      // diveday:allow-deleted-trips: the bundle is the shop taking everything it
+      // has, tombstones included — a departure they deleted is still a row they
+      // own, and a backup that quietly drops rows is not a backup. The same
+      // applies to the three child joins below, which read through this bundle's
+      // own trip set rather than the board.
       const tripRows = await tx
         .select()
         .from(trips)
@@ -2597,6 +2602,9 @@ export async function loadShopExportCounts(
         .from(nitroxCertifications)
         .where(eq(nitroxCertifications.shopId, shopId)),
     ),
+    // diveday:allow-deleted-trips: this counts what the bundle above writes, and
+    // the bundle writes every row the shop owns. A count that filtered would
+    // disagree with its own file.
     "trips.csv": await countOf(
       db.select({ n: count() }).from(trips).where(eq(trips.shopId, shopId)),
     ),

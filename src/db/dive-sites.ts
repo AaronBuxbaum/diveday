@@ -39,6 +39,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type DiveSiteInput = {
   shopId: string;
@@ -951,6 +952,7 @@ export async function listUpcomingTripsForSite(
     .innerJoin(trips, eq(trips.id, tripDives.tripId))
     .where(
       and(
+        liveTrip(),
         eq(tripDives.diveSiteId, diveSiteId),
         eq(trips.shopId, shopId),
         ne(trips.status, "cancelled"),

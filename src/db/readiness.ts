@@ -29,6 +29,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverTemplate,
   listSignedWaiversByPerson,
@@ -61,7 +62,7 @@ export async function upsertTripRequirements(
   const [trip] = await db
     .select({ id: trips.id })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return null;
   const [requirement] = await db
@@ -112,7 +113,14 @@ function tripVisitedSites(db: DbExecutor, shopId: string, tripId: string) {
       // `dive_sites.shop_id` as well as the trip's: the join above reaches sites
       // through two paths, so shop ownership is proven on the query rather than
       // assumed from the trip's pointer (the CR-007 house rule).
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)))
+      .where(
+        and(
+          eq(trips.id, tripId),
+          eq(trips.shopId, shopId),
+          eq(diveSites.shopId, shopId),
+          liveTrip(),
+        ),
+      )
   );
 }
 
@@ -165,7 +173,9 @@ export async function getTripMaxDepthMeters(
     // through two paths, and proving the row belongs to this shop on the query
     // beats relying on the invariant that a trip never points at a foreign
     // site (the CR-007 house rule).
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)));
+    .where(
+      and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId), liveTrip()),
+    );
   return row?.maxDepth ?? null;
 }
 
@@ -648,7 +658,7 @@ export async function listTripReadiness(
       db
         .select({ startsAt: trips.startsAt })
         .from(trips)
-        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
         .limit(1),
   ]);
   const [shop] = shopRow;
@@ -815,7 +825,7 @@ export async function listTripsReadiness(
           .select({ id: trips.id, startsAt: trips.startsAt, minimumAge: courses.minimumAge })
           .from(trips)
           .leftJoin(courses, eq(courses.id, trips.courseId))
-          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
+          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip())),
     ]);
 
   const [shop] = shopRow;

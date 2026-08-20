@@ -33,6 +33,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -341,7 +342,7 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
   const [trip] = await tx
     .select()
     .from(trips)
-    .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
+    .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
     .limit(1)
     .for("update");
   if (
@@ -700,7 +701,7 @@ export async function restoreBooking(
     const [trip] = await tx
       .select()
       .from(trips)
-      .where(eq(trips.id, booking.tripId))
+      .where(and(eq(trips.id, booking.tripId), liveTrip()))
       .limit(1)
       .for("update");
     if (!trip) return "not_found";
@@ -828,7 +829,7 @@ export async function selfCancelBooking(
     const [trip] = await tx
       .select({ startsAt: trips.startsAt })
       .from(trips)
-      .where(eq(trips.id, row.tripId))
+      .where(and(eq(trips.id, row.tripId), liveTrip()))
       .limit(1);
     if (trip && new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
       return { ok: false, reason: "trip_departed" };
@@ -954,7 +955,7 @@ export async function rescheduleBooking(
       const [oldTrip] = await tx
         .select({ startsAt: trips.startsAt })
         .from(trips)
-        .where(eq(trips.id, row.tripId))
+        .where(and(eq(trips.id, row.tripId), liveTrip()))
         .limit(1);
       if (oldTrip && new Date(oldTrip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
         return { ok: false, reason: "trip_departed" };

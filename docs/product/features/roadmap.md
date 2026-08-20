@@ -159,6 +159,22 @@ A group buys out a whole departure: proposal, contract, deposit, and the boat of
   [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md)
   (buyout = slices 3–4 there); this entry stays unscheduled until that ADR is accepted.
 
+### Participants who are not divers
+
+A snorkeller and a boat rider on a diver's departure — different prices, different gates, the same
+head count.
+
+- **Exists:** one kind of passenger. A `bookings` row *is* a diver seat: it consumes trip capacity,
+  admission gates it on certification, readiness asks it for a card, and it is priced at the trip's
+  one `price_cents`.
+- **Missing:** a participant type on the booking, a second capacity limit (bodies aboard is not the
+  same number as divers to kit out), per-type pricing, and a head count that counts everyone.
+- **Why it isn't scheduled:** four slices, one of which reaches into `bookSpot`'s capacity
+  transaction and the manifest — both safety-critical. Its price and waiver assumptions are inferred
+  from published rate cards rather than from a shop, and the questions that would settle them are now
+  in the first-call script (§C3). **ADR required.** Scoped in full at
+  [participant-types.md](participant-types.md) (product owner, 2026-08-20).
+
 ### Smaller follow-ons live with their ADRs
 
 These are per-feature rough edges on shipped work, not future subsystems. They are recorded in the

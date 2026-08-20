@@ -14,6 +14,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Buddy teams on a departure (ADR 20260804-buddy-teams). Staff group the
@@ -126,7 +127,14 @@ async function requireScheduledTrip(tx: Tx, shopId: string, tripId: string): Pro
   const [trip] = await tx
     .select({ id: trips.id })
     .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(trips.status, "scheduled")))
+    .where(
+      and(
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+      ),
+    )
     .limit(1);
   return Boolean(trip);
 }
@@ -196,6 +204,7 @@ async function resolveMembers(
           .innerJoin(people, eq(people.id, tripAssignments.personId))
           .where(
             and(
+              liveTrip(),
               inArray(tripAssignments.personId, crewIds),
               eq(tripAssignments.tripId, tripId),
               eq(trips.shopId, shopId),

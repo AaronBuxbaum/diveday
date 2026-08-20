@@ -40,6 +40,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
+import { liveTrip } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /** A diver's own recap photo, as the recap page renders it. */
@@ -455,7 +456,7 @@ export async function canAddCrewRecapPhoto(
   const [trip] = await db
     .select({ endsAt: trips.endsAt, status: trips.status })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
   if (trip.endsAt > now) return { ok: false, reason: "not_ended" };
@@ -492,7 +493,7 @@ export async function addCrewRecapPhoto(
     const [trip] = await tx
       .select({ endsAt: trips.endsAt, status: trips.status })
       .from(trips)
-      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" } as const;
@@ -656,7 +657,7 @@ export async function unpauseTripRecapAutoSend(
   const [trip] = await db
     .select({ id: trips.id, endsAt: trips.endsAt, status: trips.status })
     .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
 
   if (trip?.status !== "scheduled") {
@@ -688,7 +689,7 @@ export async function sendTripRecaps(
   const [trip] = await db
     .select({ id: trips.id, endsAt: trips.endsAt, status: trips.status })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (trip?.status !== "scheduled") return { ok: false, reason: "not_found" };
   return {

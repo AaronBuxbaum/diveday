@@ -23,6 +23,7 @@ import {
   shops,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /** One cron tick's worth of work — keeps a growing backlog from starving the other jobs on the same daily run. */
 const BATCH_LIMIT = 200;
@@ -284,7 +285,7 @@ export async function sendDueCheckoutRecoveries(
     const [freshTrip] = await db
       .select({ status: trips.status })
       .from(trips)
-      .where(eq(trips.id, trip.id))
+      .where(and(eq(trips.id, trip.id), liveTrip()))
       .limit(1);
     if (freshTrip?.status !== "scheduled") {
       await markCheckoutExpiredBySessionId(db, checkout.stripeSessionId);

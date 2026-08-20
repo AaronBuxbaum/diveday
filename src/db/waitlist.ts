@@ -9,6 +9,7 @@ import { sendNotification } from "./notifications";
 import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
+import { liveTrip } from "./trips-live";
 
 /**
  * Stamp a wait-list entry as invited, so the roster shows "Invited 2h ago" and
@@ -158,7 +159,7 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     const [trip] = await tx
       .select()
       .from(trips)
-      .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId)))
+      .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
