@@ -24,16 +24,43 @@ export default defineConfig({
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,
-    // Vitest 4 defaults to the "forks" pool: one child process per test file,
-    // each repaying Node's full startup and re-importing the whole module
-    // graph (Next, Drizzle, PGlite's WASM) from scratch. "threads" reuses one
-    // process across files instead — per-file isolation is unaffected
-    // (`isolate` still gives every file a fresh module registry/vm context;
-    // that guarantee is orthogonal to the pool) — and measured a repeatable
-    // ~13% faster full-suite run locally (~218s -> ~190s wall clock, three
-    // clean runs, same 1449/1449 passing). Revisit only if PGlite ever shows a
-    // worker_threads-specific failure; none has surfaced in this repo's use.
-    pool: "threads",
+    // Back to Vitest 4's own default after a worker_threads-specific PGlite
+    // failure finally surfaced — the exact condition the "threads" note here
+    // named as the one reason to revisit.
+    //
+    // The symptom is not a test failure. A random one of CI's four shards dies
+    // outright:
+    //
+    //     # Check failed: jit_page_->allocations_.erase(addr) == 1.
+    //     v8::internal::ThreadIsolation::UnregisterWasmAllocation(...)
+    //     Command was killed with SIGILL (Invalid machine instruction)
+    //
+    // `ThreadIsolation` is V8's *cross-thread* protection for JIT and WASM code
+    // pages, and `jit_page_->allocations_` is one process-global map shared by
+    // every thread in the isolate group. Under "threads" all of a worker's test
+    // files run in one process, and the only WASM here is PGlite — which every
+    // db-backed test instantiates and closes (~900 open/close cycles a run,
+    // hundreds per shard, several threads at once). That map is what the CHECK
+    // guards, and freeing WASM code from several threads is what trips it.
+    // Forks give each file its own process, so there is no shared page table to
+    // disagree about.
+    //
+    // Seen on main at c72ef6d (shard 3/4) and on PR #573 at cf14914 (shard
+    // 2/4) — different shards, so not a test's fault; it never reproduced
+    // locally, which is why the fix is reasoned from the crash site rather than
+    // from a red run on this machine.
+    //
+    // The cost is real, and larger than the old note's 13% — measured on this
+    // branch rather than inherited: 792s and 802s under "threads", 947s under
+    // "forks", so about +20%, or two and a half minutes on a full local run.
+    // CI shards four ways, so it lands as ~40s a shard. That buys a signal that
+    // means what it says, which is worth more than the minutes: a SIGILL is
+    // indistinguishable from a flake, and "just re-run it" is exactly the habit
+    // this repo refuses everywhere else.
+    //
+    // Do not reach for `isolate: false` to win the time back — module mocks are
+    // per-file here, and a shared registry across files is a different bug.
+    pool: "forks",
     // `pnpm test:changed` (and `vitest related`) selects tests by walking the
     // *import* graph, and the Drizzle migrations are never imported — they are
     // read off disk at runtime by `migrate(db, { migrationsFolder: "drizzle" })`.
@@ -61,6 +88,13 @@ export default defineConfig({
       // real Sentry and reports its own deliberate failures to the production
       // project. `pnpm e2e:build` switches it off the same way.
       NEXT_PUBLIC_SENTRY_DSN: "",
+      // A throwaway sealing key, so the suite runs the path a deployment runs.
+      // Without one `secretKeyFromEnvironment()` reports "unset" and every
+      // sealing caller degrades — waiver links would go back to being reissued
+      // on every send, and the tests would be proving the fallback rather than
+      // the behaviour. Not a secret: it seals nothing outside a test database,
+      // and production derives its own from the stack seed.
+      SECRET_ENCRYPTION_KEY: "ZGl2ZWRheS10ZXN0LW9ubHktc2VhbGluZy1rZXktMDE=",
       DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
     },
   },

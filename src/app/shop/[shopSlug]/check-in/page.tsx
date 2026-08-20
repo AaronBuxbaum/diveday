@@ -8,6 +8,7 @@ import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/Blocked
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
+import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { CHECK_IN_ROW_TONE, CHECK_IN_STATUS_BAR_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -570,7 +571,7 @@ export default async function CheckInPage({
                                     <PaperWaiverControl
                                       action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
                                       bookingId={row.bookingId}
-                                      t={t}
+                                      copy={paperWaiverCopy(t)}
                                       className="mt-2"
                                     />
                                   ) : null

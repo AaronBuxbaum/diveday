@@ -277,6 +277,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
     "token_hash", // bearer credential — never exported
+    // The openable copy of that same credential, kept only while the link is
+    // live (ADR 20260820-waiver-links-are-reused-not-reissued). Excluded for a
+    // stronger reason than the hash: this one *can* be opened, and an export
+    // bundle leaves DiveDay's custody entirely — to a shop's own S3, a laptop,
+    // an email attachment. A destination issues its own links.
+    "token_sealed",
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
@@ -768,6 +774,7 @@ describe("full-shop export dataset", () => {
     expect(records.header).toContain("recorded_by_name");
     expect(records.header).toContain("started_at");
     expect(records.header).not.toContain("token_hash");
+    expect(records.header).not.toContain("token_sealed");
   });
 
   it("round-trips an imported waiver's provenance through waiver_records.csv, contacts.csv, and the photo bundle (ADR 20260724-import-waiver-acceptance)", async () => {

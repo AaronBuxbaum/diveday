@@ -441,11 +441,18 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
   await expect(page.getByRole("heading", { name: "Priya Sharma", level: 1 })).toBeVisible();
-  // The Waiver stat card is what sends anyone looking for this control.
+  // The Waiver card is what sends anyone looking for this control, and it offers
+  // every route to a signature as a peer of the others rather than one send
+  // button with the rest folded away behind a disclosure.
   await expect(page.getByText("Not signed")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Resend waiver" })).toBeVisible();
+  const waiverCard = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Waiver" }) })
+    .filter({ visible: true });
+  await expect(waiverCard.getByRole("button", { name: "Email waiver" })).toBeVisible();
+  await expect(waiverCard.getByRole("button", { name: "Copy link" })).toBeVisible();
 
-  await page.getByText("Mark signed on paper").click();
+  await page.getByRole("button", { name: "Mark signed on paper" }).click();
   // The medical attestation is the control, not a buried confirm. The browser's
   // own `required` blocks an unchecked submit; strip it to prove the *server*
   // refuses too, rather than trusting client convenience with a signed release
@@ -463,7 +470,8 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // long (docs/design/forms-and-controls.md).
   await expect(page.getByText("Not signed")).toBeVisible();
 
-  await page.getByText("Mark signed on paper").click();
+  // The refused attestation left the form standing rather than collapsing over
+  // its own error: the box is right there to tick.
   await page.getByLabel("I have this diver's signed release on file", { exact: false }).check();
   await page.getByRole("button", { name: "Record paper signature" }).click();
 
@@ -473,6 +481,7 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await expect(page.getByText("Not signed")).toHaveCount(0);
   await expect(page.getByText(/Good until/)).toBeVisible();
   await expect(page.getByText("Mark signed on paper")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Email waiver" })).toHaveCount(0);
 
   // And it is genuinely gone rather than merely hidden — the counter, which
   // reads the same evidence through readiness, now offers her a check-in.
@@ -490,19 +499,43 @@ test("a diver without a booking can receive an independent waiver from their rec
   await page.goto("/shop/blue-mantis/divers/new");
   await page.getByLabel("Full name").fill(`Unscheduled E2E Diver ${stamp}`);
   await page.getByLabel("Email").fill(`unscheduled-${stamp}@example.com`);
+  await page.getByLabel("Phone").fill("+13055550188");
   await page.getByRole("button", { name: "Add diver" }).click();
   await page.waitForURL(/\/shop\/blue-mantis\/divers\/[^/]+$/);
 
   await expect(
     page.getByRole("heading", { name: `Unscheduled E2E Diver ${stamp}`, level: 1 }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Send / resend waiver and get link" }),
-  ).toBeVisible();
+  // A diver with both an address and a textable number is offered both, beside
+  // the link every record always carries.
+  await expect(page.getByRole("button", { name: "Email waiver" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Text waiver" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Send / resend waiver and get link" }).click();
+  // "Copy link" is the one that never depends on a provider: it issues the
+  // private link and hands it straight back, with nothing sent.
+  await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByRole("status")).toContainText("share");
-  await expect(page.getByRole("link", { name: /\/waivers\// })).toBeVisible();
+  const firstLink = page.getByRole("link", { name: /\/waivers\// });
+  await expect(firstLink).toBeVisible();
+  const firstHref = await firstLink.getAttribute("href");
+  expect(firstHref).toMatch(/^\/waivers\//);
+
+  /**
+   * The whole point of the row: a staffer who copies the link and then sends it
+   * must be handing over one URL, not two of which only the last one works
+   * (ADR 20260820-waiver-links-are-reused-not-reissued). Tapping a *different*
+   * channel is the real shape of the mistake — copy it, then text it.
+   */
+  await page.getByRole("button", { name: "Text waiver" }).click();
+  await expect(page.getByRole("status")).toContainText("share");
+  await expect(page.getByRole("link", { name: /\/waivers\// })).toHaveAttribute(
+    "href",
+    firstHref ?? "",
+  );
+
+  // And it is the diver's live link, not a stale echo: it still opens.
+  await page.goto(firstHref ?? "/");
+  await expect(page.getByLabel("Type your full name")).toBeVisible();
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {

@@ -2058,6 +2058,30 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * The waiver card with its paper attestation open — the one state on this
+       * record that no baseline had ever looked at, because it used to live
+       * behind a `<details>` that only opens on a click.
+       *
+       * It is worth its own capture rather than a note on `diver-profile`:
+       * these are the four ways a shop gets a release signed, they have to read
+       * as one control group at both widths, and the panel that drops out of
+       * that row carries the medical attestation a staffer is putting their
+       * name to. A row that wraps badly or a panel that reads as a different
+       * kind of object is exactly the drift a screenshot catches and a
+       * functional assertion cannot.
+       */
+      test(`the waiver card's paper attestation renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
+        await page.getByRole("button", { name: "Mark signed on paper" }).click();
+        // The panel itself, not the trigger that opened it — so the capture can
+        // never photograph the row mid-swap.
+        await page.getByRole("button", { name: "Record paper signature" }).waitFor();
+        await capture(page, "diver-profile-paper-waiver", scheme);
+      });
+
+      /**
        * The diver record on the day somebody says they hold no card: a
        * warning-toned correction panel, not a certification row. The state is
        * test-only because the demo shop should not permanently claim that a

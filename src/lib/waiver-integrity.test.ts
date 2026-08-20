@@ -23,6 +23,7 @@ const record = {
   deliveryProviderStatusAt: null,
   deliveryError: null,
   tokenHash: "token",
+  tokenSealed: null,
   expiresAt: new Date("2026-07-29T00:00:00.000Z"),
   startedAt: null,
   supersededAt: null,

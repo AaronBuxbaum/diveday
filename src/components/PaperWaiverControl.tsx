@@ -1,6 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { PaperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import type { StaffTranslator } from "@/i18n/staff-messages";
+import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
  * "This diver signed on paper" — the escape hatch for a signature the app
@@ -16,12 +20,23 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * One component rather than a per-surface copy: the roster grew this control
  * first, and the check-in counter — where a diver is standing in front of you
  * holding the paper — had no way to record it at all.
+ *
+ * It was a `<details>` until 2026-08-20, which is why it is a Client Component
+ * now. A disclosure triangle is a *reading* affordance — "there is more text
+ * here" — and this is a two-field form with a real refusal, so the native
+ * summary gave it a caret nobody asked for, no way to back out once open, and a
+ * trigger that could never sit level with the sibling actions it belongs beside
+ * on the diver record. An explicit open/cancel pair says what it is, and
+ * `defaultOpen` lets a refused submit come back with the form still standing
+ * rather than collapsed over its own error.
  */
 export function PaperWaiverControl({
   action,
   bookingId,
-  t,
+  copy,
   className = "mt-2",
+  variant = "link",
+  defaultOpen = false,
 }: {
   // i18n-exempt: type annotation, not copy.
   action: (formData: FormData) => void | Promise<void>;
@@ -31,30 +46,76 @@ export function PaperWaiverControl({
    * record is the same either way (ADR 20260811-person-scoped-paper-waivers).
    */
   bookingId?: string;
-  t: StaffTranslator;
+  copy: PaperWaiverCopy;
   className?: string;
+  /**
+   * Two genuinely different jobs, not two skins. On the roster row and the
+   * check-in card this sits *under* the primary "send the link" action, because
+   * attesting to paper is the fallback there — `link` keeps it quiet. On the
+   * diver record it is one of four peer ways to get a release signed, so
+   * `secondary` lets it stand level with the other three.
+   */
+  variant?: "link" | "secondary";
+  /** Open on mount — for a refusal landing back on the form that produced it. */
+  defaultOpen?: boolean;
 }) {
-  return (
-    <details className={className}>
-      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-        {t("shared.paperWaiver.markSignedOnPaper")}
-      </summary>
-      <form
-        action={action}
-        className="mt-2 max-w-md rounded-lg border border-border bg-surface-sunken/50 p-3"
+  const [open, setOpen] = useState(defaultOpen);
+
+  // A fresh refusal has to re-open the form even when this component survived
+  // the navigation that carried it (the notice arrives as a `?notice=` on the
+  // same route, so React may keep the instance and its `useState` initial value
+  // is long spent).
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+
+  // No wrapper element in either state: on the diver record this control is one
+  // item of a wrapping flex row of peer actions, and a wrapper would take the
+  // trigger out of that row. The open panel is `w-full` so it drops onto its own
+  // line there, and reads as the plain `max-w-md` box everywhere else.
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={buttonClass({
+          variant,
+          size: "sm",
+          flush: variant === "link",
+          className: `gap-2 ${className}`,
+        })}
       >
-        {bookingId ? <input type="hidden" name="bookingId" value={bookingId} /> : null}
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="medicalAttested" required className="mt-1 size-4 shrink-0" />
-          <span>{t("shared.paperWaiver.medicalAttestationLabel")}</span>
-        </label>
+        <WaiverActionIcon name="paper" />
+        {copy.markSignedOnPaper}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={action}
+      className={`${className} w-full max-w-md rounded-xl border border-border bg-surface-sunken p-4`}
+    >
+      {bookingId ? <input type="hidden" name="bookingId" value={bookingId} /> : null}
+      <label className="flex items-start gap-2.5 text-sm">
+        <input type="checkbox" name="medicalAttested" required className="mt-0.5 size-4 shrink-0" />
+        <span>{copy.medicalAttestationLabel}</span>
+      </label>
+      <div className="mt-4 flex flex-wrap gap-2">
         <SubmitButton
-          pendingLabel={t("shared.paperWaiver.recording")}
-          className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+          pendingLabel={copy.recording}
+          className={buttonClass({ variant: "primary", size: "sm" })}
         >
-          {t("shared.paperWaiver.recordPaperSignature")}
+          {copy.recordPaperSignature}
         </SubmitButton>
-      </form>
-    </details>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {copy.neverMind}
+        </button>
+      </div>
+    </form>
   );
 }
