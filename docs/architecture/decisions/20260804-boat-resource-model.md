@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-08-04
 
-**Proposed, deliberately.** Roadmap §5 (multi-boat) and the buyout-charter candidate stay
+**Proposed, deliberately.** Roadmap §4 (multi-boat) and the buyout-charter candidate stay
 *deferred until a real operator needs them* — accepting this ADR is a human decision, and the
 deferral stands either way. This record exists so that the day an operator does need it,
 implementation starts from here instead of from a month of modeling arguments. The full design
@@ -18,7 +18,7 @@ DiveDay has no boat entity: **a trip *is* the boat-day**. Capacity lives on the 
 (`src/db/bookings.ts`), and every scheduled trip is publicly for sale — there is no visibility
 concept. Two deferred roadmap items block on this one gap, and the roadmap instructs that they be
 designed together
-([roadmap §5](../../product/features/roadmap.md#5-multi-boat--multi-shop-configuration),
+([roadmap §4](../../product/features/roadmap.md#4-multi-boat--multi-shop-configuration),
 [Private / buyout charters](../../product/features/roadmap.md#private--buyout-charters)):
 a shop running several boats cannot see or avoid same-hull collisions, and a group cannot buy out
 a departure (quote → deposit → withdrawn from public sale).
@@ -92,7 +92,7 @@ settings visual capture. **Nothing else changes**: booking transaction, readines
 pages, seed, and all existing baselines untouched. A boat-less shop sees nothing new outside the
 optional picker.
 
-**Slice 2 — the board sees boats (roadmap §5's ask).** Boat chip on schedule-board cards
+**Slice 2 — the board sees boats (roadmap §4's ask).** Boat chip on schedule-board cards
 (`ScheduleBuilder.tsx`), Today's by-departure headers (`BlockerGroups.tsx`), calendar-feed event
 titles (`src/features/calendar-sync`), offline-manifest header (`src/lib/offline-manifests.ts`),
 trips CSV export column (`src/db/export.ts` — added here, *before* the read-API ADR freezes the
@@ -127,7 +127,7 @@ clears.
   repainted. Fails the deferral posture; its vessel-ceiling insight survives as slice 1's
   `max_passengers` warning. (Dossier design B, judged 47/80 vs the winner's 66/80.)
 - **Charter-first (quote/contract pipeline as the primary object; boats fall out as a sales
-  catalog)** — models the buyout workflow best, but is the most new UI for the least §5 coverage,
+  catalog)** — models the buyout workflow best, but is the most new UI for the least §4 coverage,
   its centerpiece contract is legally gated (H-01/H-03) anyway, and orchestration stays an
   afterthought. Its withdrawal semantics and `course_inquiries` precedent survive as slices 3–4.
   (Dossier design C, 51/80.)
@@ -136,7 +136,7 @@ clears.
   hidden trips by obscurity) becomes data this migration has to clean. Writing the design down now
   is the cheap middle.
 - **A `location`/marina dimension alongside boats** — deliberately not spent here; multi-location
-  views are the other half of roadmap §5 and deserve their own decision when a real split-site
+  views are the other half of roadmap §4 and deserve their own decision when a real split-site
   operator exists.
 
 ## Consequences
@@ -156,5 +156,5 @@ clears.
   NULL — roughly the cost of dossier design B's phases 2–3, paid only when earned. If instead the
   whole area stays unneeded, the cost of leaving is two dormant nullable columns and one small
   table.
-- **On acceptance (not before):** glossary entries for **boat** and **buyout**, and roadmap §5 /
+- **On acceptance (not before):** glossary entries for **boat** and **buyout**, and roadmap §4 /
   the charter entry move from "design open" to "design settled, implementation unscheduled".

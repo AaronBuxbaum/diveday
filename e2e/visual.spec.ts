@@ -15,8 +15,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and fourteen key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 456 screenshots per run (see
+ * Visual regression coverage. A hundred and twenty-six key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 504 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -28,11 +28,11 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Three more come from the `print` block at the bottom: the manifest, prep,
- * and departure-log pages as they render for the printer. Print is its own
- * concern, not a light/dark one — the `@media print` token override collapses
- * both schemes to one black-and-white palette — so each is captured once, at a
- * US-Letter width, via `capturePrint()`. That brings the run to 447
+ * Four more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, and departure-log pages as they render for the printer. Print
+ * is its own concern, not a light/dark one — the `@media print` token override
+ * collapses both schemes to one black-and-white palette — so each is captured
+ * once, at a US-Letter width, via `capturePrint()`. That brings the run to 508
  * screenshots.
  *
  * ## One surface, one `test()`
@@ -2396,6 +2396,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep", scheme);
       });
 
+      // The prep page's rental-assignments panel in its lived-in state: the
+      // wreck trip ships with seeded units already assigned (seed-gear.ts),
+      // so the frame holds assigned chips with their Release taps beside
+      // open pickers — the grammar the reef trip's all-unassigned capture
+      // above can't show (ADR 20260815-minimal-gear-register).
+      test(`the prep page's rental assignments render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+        await page.getByRole("heading", { name: "Rental assignments" }).waitFor();
+        await capture(page, "prep-assignments", scheme);
+      });
+
       // The offline shell's list view — every trip currently saved on this
       // device, reachable at dive.day root as well as `/offline-manifest`
       // directly (see ADR 20260726-shopwide-offline-manifest-priming). Visiting
@@ -3248,6 +3262,46 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites");
         await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
         await capture(page, "dive-sites-library", scheme);
+      });
+
+      // The gear register (ADR 20260815-minimal-gear-register): stats, the
+      // kind filter band, the fleet table with the seeded reservations'
+      // "where it is" column, and the add-a-unit form.
+      test(`the gear register renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear");
+        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
+        // The last seeded tank's row — the table below the fold has settled.
+        await page.getByRole("link", { name: "AL63-02" }).waitFor();
+        await capture(page, "gear-register", scheme);
+      });
+
+      // One unit's record — chosen for the tank whose seeded visual
+      // inspection lands inside the due-soon window, so the clock grammar
+      // (amber state line + per-clock list) is in frame alongside the
+      // service log form and history.
+      test(`a gear unit's record renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear");
+        await page.getByRole("link", { name: "AL80-03" }).click();
+        await page.getByRole("heading", { level: 1, name: "AL80-03" }).waitFor();
+        await capture(page, "gear-unit", scheme);
+      });
+
+      // The register on its worst day, through /api/test/seed-trouble-states
+      // (never seeded into blue-mantis): a checked-out unit gone overdue puts
+      // the returns panel into its amber "was due" state, and a lapsed tank
+      // inspection puts the overdue grammar in the service column — the
+      // warning-toned states a shop only meets when something already went
+      // wrong, which is exactly the class of surface that ships broken when
+      // nothing photographs it.
+      test(`the gear register's overdue states render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states");
+        await page.goto("/shop/blue-mantis/gear");
+        await page.getByRole("heading", { level: 1, name: "Gear" }).waitFor();
+        await page.getByText("Was due", { exact: false }).first().waitFor();
+        await capture(page, "gear-register-trouble", scheme);
       });
 
       // A site's own briefing form, which is where the route a shop draws is

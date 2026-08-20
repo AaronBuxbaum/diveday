@@ -45,10 +45,12 @@ export default defineConfig({
     // Forks give each file its own process, so there is no shared page table to
     // disagree about.
     //
-    // Seen on main at c72ef6d (shard 3/4) and on PR #573 at cf14914 (shard
-    // 2/4) — different shards, so not a test's fault; it never reproduced
-    // locally, which is why the fix is reasoned from the crash site rather than
-    // from a red run on this machine.
+    // Seen on main at c72ef6d (shard 3/4), on PR #573 at cf14914 (shard 2/4),
+    // and on PR #574 at 2b44612 (shard 4/4, where the gear register also loads
+    // btree_gist into every test PGlite beside pg_trgm — one more WASM module
+    // churning per instance) — different shards each time, so not a test's
+    // fault; it never reproduced locally, which is why the fix is reasoned
+    // from the crash site rather than from a red run on this machine.
     //
     // The cost is real, and larger than the old note's 13% — measured on this
     // branch rather than inherited: 792s and 802s under "threads", 947s under

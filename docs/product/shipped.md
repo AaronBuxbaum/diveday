@@ -7,6 +7,23 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The gear register — the shop's own fleet, reservations, and service clocks (delivered 2026-08-20)
+
+Roadmap §3's M5 reversal, accepted and built on the product owner's instruction
+([20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md) and
+its 2026-08-20 amendment). Opt-in by presence — a shop with zero `gear_items` rows sees no gear UI
+and keeps sizes-only prep. What shipped: the fleet register at `/shop/[shopSlug]/gear` (tagged
+units, kind/size/serial, retire-not-delete lifecycle) with a per-unit record page; append-only
+service clocks (`gear_service_events` — annual service, tank hydro/VIP, O2-clean, condition
+notes) that inform and never gate; date-ranged per-booking reservations whose double-booking
+guard is a database `EXCLUDE USING gist` constraint (raced under real Postgres in
+`gear-reservations.postgres.test.ts`), with check-out/return stamps and a returns panel; the prep
+page's assignment panel suggesting free units ranked by the diver's own fit sizes; three Today
+rows (`gear_overdue`, `gear_due_back`, `gear_service_due`) that flow into close-out leftovers for
+free; three export CSVs riding every bundle and backup; and the seeded demo fleet. Rental only —
+never retail POS or repair work orders (vision non-goals), and `rental_fit_profiles` stays the
+universal always-on layer beneath it.
+
 ## Imported payment and receipt history remains evidence, not a synthetic order (delivered 2026-08-16)
 
 The contact importer can now carry a prior system's payment, refund, receipt, and source Stripe

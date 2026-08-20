@@ -3891,10 +3891,13 @@ export const tripRequirements = pgTable(
 
 /**
  * A diver's reusable rental fit at one shop: which pieces of kit they take
- * from the shop and what size each is. Deliberately a storage concept — the
- * shop tracks no equipment inventory, so this is what a diver needs prepared,
- * never a reservation of a particular item or a substitute for a dock-side
- * fit check. The trip prep checklist is derived entirely from these rows.
+ * from the shop and what size each is. Deliberately a storage concept — this
+ * is what a diver needs prepared, never a reservation of a particular item or
+ * a substitute for a dock-side fit check. The trip prep checklist is derived
+ * entirely from these rows. The gear register (`gear_items`, below) sits
+ * strictly beneath this layer: a shop that tracks physical units may reserve
+ * one against a booking, but a fit alone still reserves nothing
+ * (ADR 20260815-minimal-gear-register).
  */
 export const rentalFitProfiles = pgTable(
   "rental_fit_profiles",
@@ -3944,6 +3947,185 @@ export const rentalFitProfiles = pgTable(
   (table) => [
     uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
     index("rental_fit_profiles_shop_person_idx").on(table.shopId, table.personId),
+  ],
+);
+
+/**
+ * What a tracked unit of rental gear is. Mirrors the prep list's
+ * `RentalItemKind` (the seven rentable kinds plus `boots`) and adds the two
+ * kinds a fleet has that a fit never mentions: `tank` — the compliance-heavy
+ * unit with its own hydro/VIP clocks — and `other` for the odd tagged thing
+ * (torch, SMB, camera tray) a shop still wants on the register. Keep aligned
+ * with `GearItemKind` in `src/lib/gear.ts`.
+ */
+export const gearItemKind = pgEnum("gear_item_kind", [
+  "bcd",
+  "regulator",
+  "wetsuit",
+  "boots",
+  "mask_fins",
+  "weights",
+  "dive_computer",
+  "gopro",
+  "tank",
+  "other",
+]);
+
+/**
+ * A unit's fitness for renting. `needs_service` pulls it out of the
+ * assignable pool without losing it; `retired` is the non-destructive end of
+ * life that preserves its service and rental history (the register's escape
+ * hatch — retiring every unit returns a shop to sizes-only prep).
+ */
+export const gearItemStatus = pgEnum("gear_item_status", [
+  "in_service",
+  "needs_service",
+  "retired",
+]);
+
+/**
+ * What kind of care a service event records. `service` is the manufacturer
+ * service (regulators, BCDs, computers); `hydro_test` and `visual_inspection`
+ * are a tank's two independent compliance clocks; `o2_clean` is the nitrox
+ * cleanliness renewal; `note` is a dated condition observation with no clock
+ * of its own. Deliberately not a work order: no parts, no labor, no billing
+ * (vision non-goal — DiveDay never repairs customer gear).
+ */
+export const gearServiceKind = pgEnum("gear_service_kind", [
+  "service",
+  "hydro_test",
+  "visual_inspection",
+  "o2_clean",
+  "note",
+]);
+
+/**
+ * One physical unit of the shop's own rental fleet — "BCD #14". The gear
+ * register is opt-in by presence: a shop with zero rows sees no gear UI and
+ * its prep list is generated exactly as before (ADR
+ * 20260815-minimal-gear-register). This never replaces `rental_fit_profiles`:
+ * a fit says what a diver needs, a unit says what the shop owns, and a
+ * reservation (below) is the only thing that joins them.
+ */
+export const gearItems = pgTable(
+  "gear_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    kind: gearItemKind("kind").notNull(),
+    /**
+     * The shop's own tag, exactly as written on the unit ("BCD #14",
+     * "AL80-023"). Unique per shop because the tag is how a wet hand finds
+     * the row — two units sharing a tag is a labeling bug worth refusing.
+     */
+    label: text("label").notNull(),
+    /** Optional; mirrors the fit profile's free-text sizes ("M", "10", "3mm L"). */
+    size: text("size"),
+    serialNumber: text("serial_number"),
+    /** One free-text field ("ScubaPro MK25 EVO / S600") — never a catalog. */
+    brandModel: text("brand_model"),
+    purchasedOn: date("purchased_on"),
+    status: gearItemStatus("status").notNull().default("in_service"),
+    /** Staff free text set alongside `needs_service` ("inflator sticks"). */
+    serviceNote: text("service_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("gear_items_shop_label_unique").on(table.shopId, table.label),
+    index("gear_items_shop_kind_idx").on(table.shopId, table.kind),
+  ],
+);
+
+/**
+ * The append-only care history of one unit: services, a tank's hydro and
+ * visual-inspection clocks, O2-clean renewals, and dated condition notes.
+ * `next_due_on` is where the unit's "due for service" state comes from — the
+ * latest event of each kind carries the next deadline for that clock, so the
+ * history is the single source of truth and nothing is denormalized onto the
+ * item row. Never a work order (no parts, labor, or billing).
+ */
+export const gearServiceEvents = pgTable(
+  "gear_service_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    gearItemId: uuid("gear_item_id")
+      .notNull()
+      .references(() => gearItems.id, { onDelete: "cascade" }),
+    kind: gearServiceKind("kind").notNull(),
+    /** The day the work happened (shop-local calendar date, no instant in it). */
+    servicedOn: date("serviced_on").notNull(),
+    /**
+     * When this clock next runs out, staff's call at record time (the UI
+     * suggests the conventional interval — annual service, five-year hydro).
+     * Null for events with no clock, e.g. a condition note.
+     */
+    nextDueOn: date("next_due_on"),
+    note: text("note"),
+    /**
+     * Who recorded it. A service history a shop may lean on as evidence
+     * should not be anonymous — same reasoning as `needs_staff_fit_by`.
+     * Attribution only; nulled if the person is ever erased.
+     */
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("gear_service_events_item_idx").on(table.gearItemId, table.servicedOn),
+    index("gear_service_events_shop_idx").on(table.shopId),
+    check(
+      "gear_service_events_due_after_service",
+      sql`${table.nextDueOn} is null or ${table.nextDueOn} > ${table.servicedOn}`,
+    ),
+  ],
+);
+
+/**
+ * One unit assigned to one booking for a date range — the fulfillment record
+ * behind "who has what and when is it due back". Never a billing record:
+ * rental money stays where it already lives (checkout gear lines, staff
+ * invoices). The double-booking guard is the database's, not the app's: an
+ * `EXCLUDE USING gist` constraint (hand-added in the migration — drizzle-kit
+ * cannot express it) refuses two open reservations of the same unit with
+ * overlapping inclusive date ranges, so two staff racing each other cannot
+ * both win (ADR 20260815-minimal-gear-register). `returned_at` closes the
+ * reservation and frees the window; `checked_out_at` records the handover so
+ * "reserved" and "actually out the door" stay distinguishable.
+ */
+export const gearReservations = pgTable(
+  "gear_reservations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    gearItemId: uuid("gear_item_id")
+      .notNull()
+      .references(() => gearItems.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    /** Inclusive shop-local calendar dates — a rental window, not an instant. */
+    reservedFrom: date("reserved_from").notNull(),
+    reservedUntil: date("reserved_until").notNull(),
+    /** When the unit physically left the counter; null while merely reserved. */
+    checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
+    /** When it came home. Non-null ends the reservation and frees the window. */
+    returnedAt: timestamp("returned_at", { withTimezone: true }),
+    /** Condition on return, when worth writing down ("torn strap, needs look"). */
+    returnNote: text("return_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("gear_reservations_item_idx").on(table.gearItemId),
+    index("gear_reservations_booking_idx").on(table.bookingId),
+    index("gear_reservations_shop_until_idx").on(table.shopId, table.reservedUntil),
+    check("gear_reservations_window", sql`${table.reservedUntil} >= ${table.reservedFrom}`),
   ],
 );
 
@@ -4905,3 +5087,10 @@ export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[numb
 export type BlowoutMessageStatus = (typeof blowoutMessageStatus.enumValues)[number];
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+export type GearItem = typeof gearItems.$inferSelect;
+export type GearItemKindValue = (typeof gearItemKind.enumValues)[number];
+export type GearItemStatus = (typeof gearItemStatus.enumValues)[number];
+export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
+export type GearServiceKindValue = (typeof gearServiceKind.enumValues)[number];
+export type GearReservation = typeof gearReservations.$inferSelect;

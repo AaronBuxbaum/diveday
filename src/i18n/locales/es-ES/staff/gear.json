@@ -1,0 +1,194 @@
+{
+  "eyebrow": "Operar el centro",
+  "title": "Equipo",
+  "description": "Tu propia flota de alquiler — quién tiene qué, cuándo vuelve y qué mantenimiento toca.",
+  "itemKinds": {
+    "tank": "Tanque",
+    "other": "Otro"
+  },
+  "status": {
+    "inService": "En servicio",
+    "needsService": "Necesita mantenimiento",
+    "retired": "Retirado"
+  },
+  "serviceKinds": {
+    "service": "Servicio",
+    "hydroTest": "Prueba hidrostática",
+    "visualInspection": "Inspección visual",
+    "o2Clean": "Limpieza de O2",
+    "note": "Nota de estado"
+  },
+  "serviceState": {
+    "ok": "{clockLabel} al día hasta el {dueOn}",
+    "dueSoon": "{clockLabel} vence el {dueOn}",
+    "overdue": "{clockLabel} venció el {dueOn}"
+  },
+  "phase": {
+    "reserved": "Reservado",
+    "out": "Fuera",
+    "dueBackToday": "Vuelve hoy",
+    "overdue": "Atrasado",
+    "returned": "Devuelto",
+    "neverPickedUp": "Nunca recogido"
+  },
+  "overviewAriaLabel": "Resumen de la flota",
+  "stats": {
+    "outNow": "Fuera con buceadores",
+    "outNowDetail": "Entregado y aún sin volver",
+    "dueBack": "Por devolver",
+    "dueBackDetail": "Ventanas que terminan hoy",
+    "dueBackOverdueDetail": "{count, plural, one {# ya atrasado} other {# ya atrasados}}",
+    "serviceDue": "Mantenimiento",
+    "serviceDueDetail": "Plazos que vencen en {days} días"
+  },
+  "returns": {
+    "title": "Por devolver",
+    "description": "Todo lo que debería entrar hoy por la puerta — cierra cada una cuando vuelva.",
+    "holder": "Con {name}",
+    "holderWithTrip": "Con {name} · {tripTitle}",
+    "wasDue": "Debía volver el {dueOn}",
+    "dueToday": "Vuelve hoy",
+    "checkOut": "Entregar",
+    "checkingOut": "Entregando…",
+    "markReturned": "Marcar devuelto",
+    "returning": "Marcando devuelto…",
+    "neverPickedUp": "Nunca recogido · vencía el {dueOn}"
+  },
+  "empty": {
+    "heading": "Aún no hay equipo en el registro",
+    "body": "Agrega tu primera unidad etiquetada — un chaleco, un regulador, un tanque — y DiveDay registrará quién la tiene, cuándo vuelve y cuándo toca mantenimiento. Un centro que no rastrea unidades no pierde nada: las tallas y la lista de preparación siguen igual que siempre."
+  },
+  "fleet": {
+    "ariaLabel": "La flota",
+    "filterAriaLabel": "Filtrar por tipo",
+    "filterAll": "Todo ({count})",
+    "filterKind": "{label} ({count})",
+    "columns": {
+      "unit": "Unidad",
+      "kind": "Tipo",
+      "size": "Talla",
+      "service": "Mantenimiento",
+      "where": "Dónde está"
+    },
+    "inShop": "En el centro",
+    "outWith": "Con {name} · vuelve el {dueOn}",
+    "overdueWith": "Con {name} · debía volver el {dueOn}",
+    "reservedFor": "Reservado para {name} · desde el {from}",
+    "pagination": {
+      "total": "{count, plural, one {# unidad} other {# unidades}}"
+    },
+    "neverPickedUp": "Reservado para {name} · nunca recogido"
+  },
+  "addUnit": {
+    "door": "Agregar equipo",
+    "title": "Agregar una unidad",
+    "description": "Una fila por cada cosa física en la pared, etiquetada como la dirías en voz alta.",
+    "submit": "Agregar al registro",
+    "pending": "Agregando…"
+  },
+  "form": {
+    "kind": "Tipo",
+    "label": "Etiqueta",
+    "labelHint": "(única)",
+    "labelPlaceholder": "Chaleco #7",
+    "size": "Talla",
+    "sizePlaceholder": "M, 10, 3mm L…",
+    "serialNumber": "Número de serie",
+    "brandModel": "Marca y modelo",
+    "brandModelPlaceholder": "ScubaPro MK11 / C370",
+    "purchasedOn": "Fecha de compra",
+    "optionalHint": "(opcional)"
+  },
+  "notice": {
+    "added": "En el registro.",
+    "restored": "Unidad restaurada.",
+    "updated": "Guardado.",
+    "deleted": "Unidad eliminada.",
+    "deletedToast": "Unidad eliminada. Su historial de mantenimiento y alquiler se fue con ella.",
+    "serviceLogged": "Registrado.",
+    "returned": "Marcado como devuelto — la unidad está en casa.",
+    "checkedOut": "Entregado.",
+    "released": "Asignación liberada.",
+    "alreadyReturned": "Esa reserva ya estaba cerrada.",
+    "alreadyCheckedOut": "Esa unidad ya salió por la puerta — márcala como devuelta en su lugar.",
+    "notFound": "Ese registro ya no está aquí.",
+    "invalid": "No se guardó — revisa el formulario e inténtalo de nuevo.",
+    "emptyLabel": "Dale una etiqueta a la unidad — así la encontrarás con las manos mojadas.",
+    "duplicateLabel": "Otra unidad ya lleva esa etiqueta.",
+    "invalidDate": "Esa fecha no existe — revísala.",
+    "dueNotAfterService": "La próxima fecha de vencimiento tiene que ser posterior a la del servicio.",
+    "allHome": "Todo en casa — cada unidad está de vuelta en la pared."
+  },
+  "unit": {
+    "backToRegister": "← Registro de equipo",
+    "where": {
+      "title": "Dónde está",
+      "inShop": "En el centro — sin reservas.",
+      "window": "{from} – {until}",
+      "release": "Liberar",
+      "releasing": "Liberando…"
+    },
+    "service": {
+      "title": "Mantenimiento",
+      "clock": "último {servicedOn} · vence el {dueOn}",
+      "clockNoDue": "último {servicedOn}",
+      "noClocks": "Aún no hay mantenimiento registrado — anota el primero abajo y los plazos corren desde ahí.",
+      "kind": "Qué se hizo",
+      "servicedOn": "Hecho el",
+      "nextDueOn": "Próximo vencimiento",
+      "nextDueHint": "Cuándo vence este plazo. El servicio anual y las inspecciones suelen ser a un año; la hidrostática a cinco.",
+      "note": "Nota",
+      "notePlaceholder": "Asiento de alta presión nuevo, probado en banco",
+      "returnToService": "Devolverla al servicio",
+      "log": "Registrarlo",
+      "logging": "Registrando…"
+    },
+    "history": {
+      "title": "Historial ({count})",
+      "nextDue": "vence el {dueOn}",
+      "recordedBy": "Registrado por {name}"
+    },
+    "rentals": {
+      "title": "Historial de alquiler"
+    },
+    "details": {
+      "title": "Detalles",
+      "description": "La etiqueta, talla y número de serie con los que el registro lista esta unidad.",
+      "save": "Guardar cambios",
+      "saving": "Guardando…"
+    },
+    "status": {
+      "title": "Estado",
+      "pull": "Enviar a mantenimiento",
+      "pulling": "Enviando…",
+      "pullNote": "Por qué sale de la pared",
+      "pullNotePlaceholder": "El inflador se atasca",
+      "reinstate": "Devolver al servicio",
+      "reinstating": "Devolviendo…",
+      "retire": "Retirar definitivamente",
+      "retiring": "Retirando…",
+      "delete": "Eliminar unidad",
+      "deleting": "Eliminando…",
+      "deleteWarning": "Eliminarla borra también su historial de mantenimiento y alquiler. Una unidad que cumplió su vida se retira, no se elimina."
+    }
+  },
+  "prep": {
+    "heading": "Asignaciones de alquiler",
+    "description": "Qué unidad etiquetada se lleva cada buceador que alquila. Asignarla aquí la reserva para las fechas de la salida — dos buceadores no pueden recibir la misma.",
+    "outLabel": "fuera",
+    "kindWithSize": "{kindLabel} · {size}",
+    "noneFree": "No hay {kindLabel} libre para estas fechas.",
+    "assign": "Asignar",
+    "assigning": "Asignando…",
+    "notice": {
+      "assigned": "Asignado.",
+      "released": "Asignación liberada.",
+      "unitUnavailable": "Alguien tomó esa unidad primero — elige otra.",
+      "unitOutOfService": "Esa unidad está fuera de la pared por mantenimiento.",
+      "alreadyCheckedOut": "Esa unidad ya salió del mostrador — márcala como devuelta desde el registro."
+    },
+    "optionServiceOverdue": "mantenimiento vencido",
+    "optionServiceDueSoon": "mantenimiento por vencer",
+    "pickUnit": "Elige una unidad…"
+  }
+}

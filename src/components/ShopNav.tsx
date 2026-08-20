@@ -37,6 +37,7 @@ function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestina
     addBooking: t("shared.shopNavLinks.addBooking"),
     staffing: t("shared.shopNavLinks.staffing"),
     diveSites: t("shared.shopNavLinks.diveSites"),
+    gear: t("shared.shopNavLinks.gear"),
     courses: t("shared.shopNavLinks.courses"),
     reviews: t("shared.shopNavLinks.reviews"),
     requests: t("shared.shopNavLinks.requests"),

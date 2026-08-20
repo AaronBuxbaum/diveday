@@ -1,0 +1,194 @@
+{
+  "eyebrow": "Run the shop",
+  "title": "Gear",
+  "description": "Your own rental fleet — who has what, when it's due back, and what's due for service.",
+  "itemKinds": {
+    "tank": "Tank",
+    "other": "Other"
+  },
+  "status": {
+    "inService": "In service",
+    "needsService": "Needs service",
+    "retired": "Retired"
+  },
+  "serviceKinds": {
+    "service": "Service",
+    "hydroTest": "Hydro test",
+    "visualInspection": "Visual inspection",
+    "o2Clean": "O2 clean",
+    "note": "Condition note"
+  },
+  "serviceState": {
+    "ok": "{clockLabel} good through {dueOn}",
+    "dueSoon": "{clockLabel} due {dueOn}",
+    "overdue": "{clockLabel} was due {dueOn}"
+  },
+  "phase": {
+    "reserved": "Reserved",
+    "out": "Out",
+    "dueBackToday": "Due back today",
+    "overdue": "Overdue",
+    "returned": "Returned",
+    "neverPickedUp": "Never picked up"
+  },
+  "overviewAriaLabel": "Fleet overview",
+  "stats": {
+    "outNow": "Out with divers",
+    "outNowDetail": "Checked out and not yet home",
+    "dueBack": "Due back",
+    "dueBackDetail": "Windows ending today",
+    "dueBackOverdueDetail": "{count, plural, one {# already overdue} other {# already overdue}}",
+    "serviceDue": "Service due",
+    "serviceDueDetail": "Clocks running out within {days} days"
+  },
+  "returns": {
+    "title": "Due back",
+    "description": "Everything that should come through the door today — close each one out as it comes home.",
+    "holder": "With {name}",
+    "holderWithTrip": "With {name} · {tripTitle}",
+    "wasDue": "Was due {dueOn}",
+    "dueToday": "Due today",
+    "checkOut": "Check out",
+    "checkingOut": "Checking out…",
+    "markReturned": "Mark returned",
+    "returning": "Marking returned…",
+    "neverPickedUp": "Never picked up · was due {dueOn}"
+  },
+  "empty": {
+    "heading": "No gear on the register yet",
+    "body": "Add your first tagged unit — a BCD, a regulator, a tank — and DiveDay will track who has it, when it's due back, and when it needs service. Shops that don't track units lose nothing: sizes and the prep list work exactly as before."
+  },
+  "fleet": {
+    "ariaLabel": "The fleet",
+    "filterAriaLabel": "Filter by kind",
+    "filterAll": "All ({count})",
+    "filterKind": "{label} ({count})",
+    "columns": {
+      "unit": "Unit",
+      "kind": "Kind",
+      "size": "Size",
+      "service": "Service",
+      "where": "Where it is"
+    },
+    "inShop": "In the shop",
+    "outWith": "Out with {name} · due back {dueOn}",
+    "overdueWith": "Out with {name} · was due {dueOn}",
+    "reservedFor": "Reserved for {name} · from {from}",
+    "pagination": {
+      "total": "{count, plural, one {# unit} other {# units}}"
+    },
+    "neverPickedUp": "Reserved for {name} · never picked up"
+  },
+  "addUnit": {
+    "door": "Add gear",
+    "title": "Add a unit",
+    "description": "One row per physical thing on the wall, tagged the way you'd say it out loud.",
+    "submit": "Add to the register",
+    "pending": "Adding…"
+  },
+  "form": {
+    "kind": "Kind",
+    "label": "Tag",
+    "labelHint": "(unique)",
+    "labelPlaceholder": "BCD #7",
+    "size": "Size",
+    "sizePlaceholder": "M, 10, 3mm L…",
+    "serialNumber": "Serial number",
+    "brandModel": "Brand & model",
+    "brandModelPlaceholder": "ScubaPro MK11 / C370",
+    "purchasedOn": "Purchased on",
+    "optionalHint": "(optional)"
+  },
+  "notice": {
+    "added": "On the register.",
+    "restored": "Unit restored.",
+    "updated": "Saved.",
+    "deleted": "Unit deleted.",
+    "deletedToast": "Unit deleted. Its service and rental history went with it.",
+    "serviceLogged": "Logged.",
+    "returned": "Marked returned — the unit is home.",
+    "checkedOut": "Checked out.",
+    "released": "Assignment released.",
+    "alreadyReturned": "That reservation was already closed.",
+    "alreadyCheckedOut": "That unit is already out the door — mark it returned instead.",
+    "notFound": "That record isn't here anymore.",
+    "invalid": "That didn't save — check the form and try again.",
+    "emptyLabel": "Give the unit a tag — it's how you'll find it with wet hands.",
+    "duplicateLabel": "Another unit already wears that tag.",
+    "invalidDate": "That date doesn't exist — check it.",
+    "dueNotAfterService": "The next due date has to come after the service date.",
+    "allHome": "All home — every unit is back on the wall."
+  },
+  "unit": {
+    "backToRegister": "← Gear register",
+    "where": {
+      "title": "Where it is",
+      "inShop": "In the shop — nothing reserved.",
+      "window": "{from} – {until}",
+      "release": "Release",
+      "releasing": "Releasing…"
+    },
+    "service": {
+      "title": "Service",
+      "clock": "last {servicedOn} · next due {dueOn}",
+      "clockNoDue": "last {servicedOn}",
+      "noClocks": "No service on record yet — log the first one below and the clocks start from there.",
+      "kind": "What was done",
+      "servicedOn": "Done on",
+      "nextDueOn": "Next due",
+      "nextDueHint": "When this clock runs out. Annual service and inspections usually a year out; hydro five.",
+      "note": "Note",
+      "notePlaceholder": "New HP seat, bench-tested",
+      "returnToService": "Put it back in service",
+      "log": "Log it",
+      "logging": "Logging…"
+    },
+    "history": {
+      "title": "History ({count})",
+      "nextDue": "next due {dueOn}",
+      "recordedBy": "Logged by {name}"
+    },
+    "rentals": {
+      "title": "Rental history"
+    },
+    "details": {
+      "title": "Details",
+      "description": "The tag, size, and serial the register lists this unit by.",
+      "save": "Save changes",
+      "saving": "Saving…"
+    },
+    "status": {
+      "title": "Status",
+      "pull": "Pull for service",
+      "pulling": "Pulling…",
+      "pullNote": "Why it's coming off the wall",
+      "pullNotePlaceholder": "Inflator sticks",
+      "reinstate": "Return to service",
+      "reinstating": "Returning…",
+      "retire": "Retire",
+      "retiring": "Retiring…",
+      "delete": "Delete unit",
+      "deleting": "Deleting…",
+      "deleteWarning": "Deleting removes its service and rental history too. A unit that earned its keep gets retired instead."
+    }
+  },
+  "prep": {
+    "heading": "Rental assignments",
+    "description": "Which tagged unit each renting diver takes. Assigning here reserves it for the departure's dates — two divers can't be promised the same one.",
+    "outLabel": "out",
+    "kindWithSize": "{kindLabel} · {size}",
+    "noneFree": "No {kindLabel} free for these dates.",
+    "assign": "Assign",
+    "assigning": "Assigning…",
+    "notice": {
+      "assigned": "Assigned.",
+      "released": "Assignment released.",
+      "unitUnavailable": "Somebody got that unit first — pick another.",
+      "unitOutOfService": "That unit is off the wall for service.",
+      "alreadyCheckedOut": "That unit already left the counter — mark it returned from the register instead."
+    },
+    "optionServiceOverdue": "service overdue",
+    "optionServiceDueSoon": "service due soon",
+    "pickUnit": "Pick a unit…"
+  }
+}

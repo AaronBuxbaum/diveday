@@ -487,7 +487,7 @@
       },
       "serviceHistory": {
         "what": "Historial de mantenimiento de equipo",
-        "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
+        "detail": "Se queda fuera — el importador trae fichas de buceadores, nunca el registro de equipo de otro sistema. Los plazos de mantenimiento de tu flota empiezan de cero en el registro de equipo."
       },
       "diverNotes": {
         "what": "Notas internas y del buceador",

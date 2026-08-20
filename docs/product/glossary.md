@@ -1061,9 +1061,38 @@ new domain concept, define it here in the same PR.
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
   and in *what size* (BCD, wetsuit, boot, fin, usual weighting, plus the dive-computer/GoPro add-ons).
-  It is a storage concept: DiveDay tracks no equipment inventory, so a fit never reserves an item, is
-  never evidence, and never replaces a dock-side fit check. It is the single input to the trip prep
-  list.
+  It is a storage concept: a fit never reserves an item, is never evidence, and never replaces a
+  dock-side fit check. It is the single input to the trip prep list. Reserving a particular unit is
+  the **gear register**'s separate act (below) — a shop that keeps no register still has fits, and a
+  fit alone still reserves nothing.
+- **Gear register** — the shop's own rental fleet as physical units (`gear_items`), opt-in **by
+  presence**: a shop with zero units sees no gear UI anywhere and its prep flow is untouched, and
+  adding the first unit is what turns it on — never a settings flag
+  ([20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)).
+  Staff surface at `/shop/[shopSlug]/gear`; sits strictly *beneath* rental fit, never replacing it.
+- **Gear unit** — one physical tracked thing on the register: the shop's own **tag** ("BCD #14",
+  unique per shop — it's how a wet hand finds the row), kind (the prep list's eight plus **tank**
+  and **other**), optional size/serial/brand. Its status is `in_service`, `needs_service` (pulled to
+  the bench, out of the assignable pool), or `retired` — the history-preserving end of life; the
+  register's escape hatch is retiring everything, which returns the shop to sizes-only prep with no
+  data loss.
+- **Gear reservation** — one unit assigned to one booking for an inclusive shop-local date range;
+  the fulfillment record behind "who has what and when is it due back", never a billing record
+  (rental money stays in checkout gear lines and staff invoices). The double-booking guard is the
+  **database's**: an exclusion constraint refuses two open reservations of one unit with
+  overlapping windows, so two staff racing get one reservation and one worded refusal. Check-out
+  and return are separate stamps — "reserved" and "out the door" stay distinguishable — and a
+  return closes the window and frees the unit immediately. A lapsed window splits on the handover
+  stamp: checked out and late is **overdue** (the unit is with a diver), never collected is
+  **never picked up** (it hangs on the wall) and is closed by release, never a fabricated return.
+  Cancelling a booking releases its un-collected units; a checked-out one stays until it really
+  comes home. Assigning informs the prep page; it gates nothing at boarding.
+- **Service clock** — a unit's care deadlines, derived from its append-only service events
+  (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
+  `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest
+  event of a kind *is* that clock; the earliest deadline is the unit's state (ok / due soon /
+  overdue), which **informs, never gates** — the dock decides whether an overdue unit dives, not
+  the software. Deliberately not a work order: no parts, no labor, no billing.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has

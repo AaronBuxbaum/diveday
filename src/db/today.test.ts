@@ -1,11 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { groupActions } from "@/lib/today";
 import { dbNowPlus, seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
+import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
@@ -1844,6 +1846,167 @@ describe("unclosed roll call (DOM-H3)", () => {
 
       expect(first?.id).toBe(`roll-call:${trip.id}:after_dive_uncounted:after_dive_1`);
       expect(first?.href.startsWith(`/shop/${shop.slug}/`)).toBe(true);
+    });
+  });
+
+  describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
+    async function anySeededBooking(
+      db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+      shopId: string,
+    ) {
+      const [booking] = await db
+        .select({ id: bookingsTable.id, personId: bookingsTable.personId })
+        .from(bookingsTable)
+        .where(and(eq(bookingsTable.shopId, shopId), eq(bookingsTable.status, "booked")))
+        .limit(1);
+      if (!booking) throw new Error("seeded booking missing");
+      return booking;
+    }
+
+    it("the seeded fleet alone puts nothing on the queue — its clocks and windows are all ahead", async () => {
+      const { db, shop } = await seededShopContext();
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(work.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
+    });
+
+    it("chases a unit that never came home, and lets a return clear the row", async () => {
+      const { db, shop } = await seededShopContext();
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const item = await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #90" });
+      if (!item.ok) throw new Error("item refused");
+      const booking = await anySeededBooking(db, shop.id);
+      const reserved = await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: item.item.id,
+        bookingId: booking.id,
+        reservedFrom: shiftCalendarDate(today, -4),
+        reservedUntil: shiftCalendarDate(today, -2),
+      });
+      if (!reserved.ok) throw new Error("reserve refused");
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const row = work.actions.find(
+        (action) => action.id === `gear-overdue:${reserved.reservation.id}`,
+      );
+      expect(row).toMatchObject({
+        kind: "gear_overdue",
+        urgency: "now",
+        href: `/shop/${shop.slug}/gear`,
+      });
+      expect(row?.detail).toContain("BCD #90");
+      expect(row?.dueAt?.getTime()).toBeLessThanOrEqual(nowMs());
+
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: reserved.reservation.id,
+      });
+      const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(
+        cleared.actions.some((action) => action.id === `gear-overdue:${reserved.reservation.id}`),
+      ).toBe(false);
+    });
+
+    it("lists a unit due back today, dated to the end of the shop's own day", async () => {
+      const { db, shop } = await seededShopContext();
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const item = await createGearItem(db, { shopId: shop.id, kind: "wetsuit", label: "5mm #90" });
+      if (!item.ok) throw new Error("item refused");
+      const booking = await anySeededBooking(db, shop.id);
+      const reserved = await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: item.item.id,
+        bookingId: booking.id,
+        reservedFrom: today,
+        reservedUntil: today,
+      });
+      if (!reserved.ok) throw new Error("reserve refused");
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const row = work.actions.find(
+        (action) => action.id === `gear-due-back:${reserved.reservation.id}`,
+      );
+      expect(row).toMatchObject({ kind: "gear_due_back" });
+      // Due by tonight, not overdue at breakfast: the deadline is the end of
+      // the shop-local day and still ahead of now.
+      expect(row?.dueAt?.getTime()).toBeGreaterThan(nowMs());
+      expect(row?.dueAt?.getTime()).toBeLessThanOrEqual(nowMs() + 24 * 60 * 60 * 1000);
+    });
+
+    it("surfaces this week's bench clocks — an expired one as today's work, a distant one not at all", async () => {
+      const { db, shop } = await seededShopContext();
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const lapsed = await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-90" });
+      const nextWeek = await createGearItem(db, {
+        shopId: shop.id,
+        kind: "tank",
+        label: "AL80-91",
+      });
+      const distant = await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-92" });
+      if (!lapsed.ok || !nextWeek.ok || !distant.ok) throw new Error("item refused");
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: lapsed.item.id,
+        kind: "visual_inspection",
+        servicedOn: shiftCalendarDate(today, -400),
+        nextDueOn: shiftCalendarDate(today, -35),
+      });
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: nextWeek.item.id,
+        kind: "visual_inspection",
+        servicedOn: shiftCalendarDate(today, -362),
+        nextDueOn: shiftCalendarDate(today, 3),
+      });
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: distant.item.id,
+        kind: "visual_inspection",
+        servicedOn: shiftCalendarDate(today, -60),
+        nextDueOn: shiftCalendarDate(today, 305),
+      });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const lapsedRow = work.actions.find(
+        (action) => action.id === `gear-service:${lapsed.item.id}`,
+      );
+      expect(lapsedRow).toMatchObject({
+        kind: "gear_service_due",
+        urgency: "now",
+        subject: "AL80-90",
+        href: `/shop/${shop.slug}/gear/${lapsed.item.id}`,
+      });
+      expect(work.actions.some((action) => action.id === `gear-service:${nextWeek.item.id}`)).toBe(
+        true,
+      );
+      expect(work.actions.some((action) => action.id === `gear-service:${distant.item.id}`)).toBe(
+        false,
+      );
+    });
+
+    it("is tenant-safe: another shop's queue never sees this fleet", async () => {
+      const { db, shop } = await seededShopContext();
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const item = await createGearItem(db, {
+        shopId: shop.id,
+        kind: "regulator",
+        label: "Reg #90",
+      });
+      if (!item.ok) throw new Error("item refused");
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: item.item.id,
+        kind: "service",
+        servicedOn: shiftCalendarDate(today, -370),
+        nextDueOn: shiftCalendarDate(today, -5),
+      });
+
+      const otherWork = await getTodayWork(
+        db,
+        "00000000-0000-4000-8000-000000000000",
+        "other-shop",
+        shop.timezone,
+      );
+      expect(otherWork.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
     });
   });
 });

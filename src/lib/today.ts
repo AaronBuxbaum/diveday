@@ -84,7 +84,10 @@ export type TodayActionKind =
   | "stuck_payment_operation"
   | "failed_photo_deletion"
   | "owed_refund"
-  | "reviews_pending";
+  | "reviews_pending"
+  | "gear_overdue"
+  | "gear_due_back"
+  | "gear_service_due";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -145,6 +148,13 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   owed_refund: 22,
   // Divers said something worth publishing; nothing sails or refunds on it.
   reviews_pending: 23,
+  // The gear register's rows (ADR 20260815-minimal-gear-register). All
+  // counter work, never a boarding blocker — a unit that never came home
+  // outranks one due back tonight, and both outrank a bench clock, because
+  // that is the order the desk actually chases them in.
+  gear_overdue: 24,
+  gear_due_back: 25,
+  gear_service_due: 26,
 };
 
 /**
@@ -181,6 +191,11 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
+  // Warning, not danger: a unit that is late is a phone call, not a diver in
+  // the water. Due-back-today and a bench clock are ordinary counter work.
+  gear_overdue: { tone: "warning" },
+  gear_due_back: { tone: "neutral" },
+  gear_service_due: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**

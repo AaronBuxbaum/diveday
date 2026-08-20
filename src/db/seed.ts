@@ -25,6 +25,9 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
   importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
@@ -88,6 +91,7 @@ import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
+import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
@@ -127,6 +131,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-more-trips.ts` | the rest of the month's board beyond today's three headline boats |
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
+ * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
  * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
@@ -540,7 +545,7 @@ export async function seedDemoSchedule(
   // tests mint a recap link from that fixed id. A freshly-minted demo shop gets a
   // random id so a second demo never collides on that primary key.
   const [shopRow] = await db
-    .select({ slug: shops.slug })
+    .select({ slug: shops.slug, timezone: shops.timezone })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
@@ -602,6 +607,13 @@ export async function seedDemoSchedule(
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows);
   await seedRentalFit(db, shopId, customers);
+  // The rental fleet on the wall, after the bookings so a few units can be
+  // reserved against the upcoming wreck trip (ADR 20260815-minimal-gear-register).
+  await seedGear(db, shopId, {
+    timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
+    tripRows,
+    bookingRows,
+  });
   // Leads off the public course pages. After the catalog and the divers, so the
   // one lead that links to an existing diver has somebody to link to.
   await seedCourseInquiries(db, shopId, { courseIdByTitle });
@@ -769,6 +781,14 @@ export async function resetDemoSchedule(
   // open again for the next test's fixture (ADR 20260804-day-closeout).
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  // The gear register, children first: reservations reference gear_items and
+  // bookings, service events reference gear_items and people (their recording
+  // staffer) — so all three clear before bookings and the people purge below.
+  // The whole fleet is reset-owned and re-seeded (seed-gear.ts), so a spec may
+  // add, retire, or reserve units freely and the next test starts clean.
+  await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
+  await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
+  await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));

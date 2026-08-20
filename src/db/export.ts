@@ -41,6 +41,9 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
   importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
@@ -511,6 +514,35 @@ export async function loadShopExportBundleInput(
         .from(rentalFitProfiles)
         .where(eq(rentalFitProfiles.shopId, shopId))
         .orderBy(asc(rentalFitProfiles.createdAt), asc(rentalFitProfiles.id));
+
+      const gearItemRows = await tx
+        .select()
+        .from(gearItems)
+        .where(eq(gearItems.shopId, shopId))
+        .orderBy(asc(gearItems.kind), asc(gearItems.label));
+      const gearItemLabel = new Map(gearItemRows.map((row) => [row.id, row.label]));
+
+      const gearServiceEventRows = await tx
+        .select()
+        .from(gearServiceEvents)
+        .where(eq(gearServiceEvents.shopId, shopId))
+        .orderBy(
+          asc(gearServiceEvents.servicedOn),
+          asc(gearServiceEvents.createdAt),
+          // The id tiebreaker keeps the bundle diffable when a batch write
+          // lands several events on one timestamp (see rollCallEvents above).
+          asc(gearServiceEvents.id),
+        );
+
+      const gearReservationRows = await tx
+        .select()
+        .from(gearReservations)
+        .where(eq(gearReservations.shopId, shopId))
+        .orderBy(
+          asc(gearReservations.reservedFrom),
+          asc(gearReservations.createdAt),
+          asc(gearReservations.id),
+        );
 
       const priorVisitRows = await tx
         .select()
@@ -1752,6 +1784,97 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["rental_fit.csv"],
         },
         {
+          file: "gear_items.csv",
+          header: [
+            "id",
+            "kind",
+            "label",
+            "size",
+            "serial_number",
+            "brand_model",
+            "purchased_on",
+            "status",
+            "service_note",
+            "created_at",
+            "updated_at",
+          ],
+          rows: gearItemRows.map((row) => [
+            row.id,
+            row.kind,
+            row.label,
+            row.size,
+            row.serialNumber,
+            row.brandModel,
+            row.purchasedOn,
+            row.status,
+            row.serviceNote,
+            row.createdAt,
+            row.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["gear_items.csv"],
+        },
+        {
+          file: "gear_service_events.csv",
+          header: [
+            "id",
+            "gear_item_id",
+            "gear_item_label",
+            "kind",
+            "serviced_on",
+            "next_due_on",
+            "note",
+            "recorded_by_person_id",
+            "recorded_by_name",
+            "created_at",
+          ],
+          rows: gearServiceEventRows.map((row) => [
+            row.id,
+            row.gearItemId,
+            gearItemLabel.get(row.gearItemId),
+            row.kind,
+            row.servicedOn,
+            row.nextDueOn,
+            row.note,
+            row.recordedByPersonId,
+            row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["gear_service_events.csv"],
+        },
+        {
+          file: "gear_reservations.csv",
+          header: [
+            "id",
+            "gear_item_id",
+            "gear_item_label",
+            "booking_id",
+            "person_name",
+            "reserved_from",
+            "reserved_until",
+            "checked_out_at",
+            "returned_at",
+            "return_note",
+            "created_at",
+          ],
+          rows: gearReservationRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId);
+            return [
+              row.id,
+              row.gearItemId,
+              gearItemLabel.get(row.gearItemId),
+              row.bookingId,
+              personId ? personName.get(personId) : null,
+              row.reservedFrom,
+              row.reservedUntil,
+              row.checkedOutAt,
+              row.returnedAt,
+              row.returnNote,
+              row.createdAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["gear_reservations.csv"],
+        },
+        {
           // History the shop brought in from its previous system
           // (ADR 20260725-import-prior-visits). In the bundle because a shop's
           // own history is its own to take back out, and out of the operational
@@ -2596,6 +2719,15 @@ export async function loadShopExportCounts(
     ),
     "rental_fit.csv": await countOf(
       db.select({ n: count() }).from(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId)),
+    ),
+    "gear_items.csv": await countOf(
+      db.select({ n: count() }).from(gearItems).where(eq(gearItems.shopId, shopId)),
+    ),
+    "gear_service_events.csv": await countOf(
+      db.select({ n: count() }).from(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId)),
+    ),
+    "gear_reservations.csv": await countOf(
+      db.select({ n: count() }).from(gearReservations).where(eq(gearReservations.shopId, shopId)),
     ),
     "prior_visits.csv": await countOf(
       db.select({ n: count() }).from(priorVisits).where(eq(priorVisits.shopId, shopId)),

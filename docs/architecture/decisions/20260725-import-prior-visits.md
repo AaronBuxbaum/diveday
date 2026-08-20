@@ -19,7 +19,7 @@ It bundles three different things, and they have three different answers:
 
 - **Service history** has no destination. Item-level inventory, booking assignment, and service
   history were deliberately removed in M5 as a half-maintained duplicate (`docs/product/vision.md`);
-  a lightweight who-has-what register may return (roadmap §3) but does not exist. Nothing to import.
+  a lightweight who-has-what register did return (2026-08-20, ADR 20260815-minimal-gear-register), but its service history starts fresh — a previous system's equipment log still has no importer. Nothing to import.
 - **Trip records and receipts** should not be reconstructed. Writing `trips`/`bookings` rows from a
   competitor's export means inventing `capacity`, `plannedDives`, and a roll call that never
   happened here — a fabricated safety document — and `orders.stripeInvoiceId` is `notNull` + unique,

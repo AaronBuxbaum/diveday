@@ -10,6 +10,9 @@ import {
   bookingPayments,
   bookings,
   certifications,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
   mediaDeletionAttempts,
   nitroxCertifications,
   paymentOperationIntents,
@@ -20,7 +23,8 @@ import {
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { nowDate } from "@/lib/clock";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
 
@@ -223,6 +227,53 @@ export async function POST(request: Request) {
   //    decision, and writing the row without the event would produce a demo
   //    state the product itself can never reach.
   await hideEnoughReviewsToWithholdTheRating(db, shop.id, actor.id);
+
+  // 7. Gear on its worst day (ADR 20260815-minimal-gear-register): one seeded
+  //    reservation dragged into the past so the register's returns panel wears
+  //    its amber "was due" state and Today gains its gear-overdue row, and one
+  //    tank's visual-inspection clock expired so the service column and the
+  //    unit page show the overdue grammar. Backdated in place rather than
+  //    seeded: the demo fleet stays calm (seed-gear.ts keeps every clock
+  //    ahead), same call as seed-front-desk's `succeeded` payment.
+  const overdueWindow = {
+    reservedFrom: calendarDateInTimezone(new Date(now.getTime() - 4 * 24 * HOUR_MS), shop.timezone),
+    reservedUntil: calendarDateInTimezone(
+      new Date(now.getTime() - 2 * 24 * HOUR_MS),
+      shop.timezone,
+    ),
+  };
+  const [overdueUnit] = await db
+    .select({ id: gearItems.id })
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shop.id), eq(gearItems.label, "BCD #2")))
+    .limit(1);
+  if (overdueUnit) {
+    await db
+      .update(gearReservations)
+      .set({ ...overdueWindow, checkedOutAt: new Date(now.getTime() - 4 * 24 * HOUR_MS) })
+      .where(eq(gearReservations.gearItemId, overdueUnit.id));
+  }
+  const [lapsedTank] = await db
+    .select({ id: gearItems.id })
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shop.id), eq(gearItems.label, "AL80-03")))
+    .limit(1);
+  if (lapsedTank) {
+    await db
+      .update(gearServiceEvents)
+      .set({
+        nextDueOn: calendarDateInTimezone(
+          new Date(now.getTime() - 35 * 24 * HOUR_MS),
+          shop.timezone,
+        ),
+      })
+      .where(
+        and(
+          eq(gearServiceEvents.gearItemId, lapsedTank.id),
+          eq(gearServiceEvents.kind, "visual_inspection"),
+        ),
+      );
+  }
 
   return NextResponse.json({ ok: true });
 }
