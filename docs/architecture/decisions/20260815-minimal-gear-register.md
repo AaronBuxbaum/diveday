@@ -82,9 +82,12 @@ gear_reservations
 ### The pieces, mapped to what was actually asked for
 
 - **Manage and track rental reservations** — `gear_items` + `gear_reservations`, above. A staff
-  surface at `/shop/[shopSlug]/gear` (new feature module, per
-  [20260730-feature-module-contracts](20260730-feature-module-contracts.md)) lists items, their
-  current reservation if any, and status.
+  surface at `/shop/[shopSlug]/gear` lists items, their current reservation if any, and status.
+  (The sketch here originally said "new feature module, per
+  [20260730-feature-module-contracts](20260730-feature-module-contracts.md)" — superseded by the
+  build amendment below: the shipped boundary is `src/lib/gear.ts` + `src/db/gear.ts`, no
+  `src/features/gear`, because Today's gear rows live in `src/db/today.ts` and `src/db` may not
+  import `src/features`.)
 - **Payments** — no new payment machinery. A reservation attaches to the same
   `order_line_items` row (`kind: "rental"`) the booking already creates; the reservation is a
   *fulfillment* record, never a billing record. Nothing here touches Stripe.

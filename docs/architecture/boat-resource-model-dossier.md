@@ -6,7 +6,7 @@ auditable thinking: the ground-truth inventory, the evaluation criteria (fixed b
 read), three independently-worked designs, the judge scores, the synthesis, and the
 dive-operations review. The ADR is the conclusion; this is why.
 
-**Nothing here is implementation.** Roadmap §5 and the buyout-charter candidate stay deferred
+**Nothing here is implementation.** Roadmap §4 and the buyout-charter candidate stay deferred
 ("until a real operator needs it"); this dossier exists so that when one does, implementation starts
 the same morning instead of with a month of modeling arguments.
 
@@ -104,7 +104,7 @@ committed:
   no backfill drama; rollback = roll code back, leave schema.
 - **C2 — Blast radius across existing surfaces.** How many of the inventory rows above change, and
   how deep (the booking transaction and the manifest spine weigh heaviest).
-- **C3 — Fit for multi-boat day orchestration** (roadmap §5): see all departures per boat, avoid
+- **C3 — Fit for multi-boat day orchestration** (roadmap §4): see all departures per boat, avoid
   double-scheduling a hull, crew collisions become visible.
 - **C4 — Fit for private/buyout charters**: quote → contract → deposit → withdrawn from public
   sale, without weakening waivers/certs/manifest.
@@ -277,7 +277,7 @@ an afterthought — nothing in the pipeline needs it, so nothing forces it to be
 
 ### What it deliberately does not solve
 
-Day orchestration (roadmap §5's actual ask); collision warnings; capacity fidelity. It also builds
+Day orchestration (roadmap §4's actual ask); collision warnings; capacity fidelity. It also builds
 the most new UI: an inquiry CRM is the closest of the three to a genuinely new subsystem, which is
 exactly what the "Not scheduled" section says these candidates must not be built as.
 
@@ -334,7 +334,7 @@ money rails.** Four slices, each independently shippable and valuable, each paus
    capacity prefill and an over-`max_passengers` warning (from B — the vessel's ceiling is recorded
    from day one, warned on from day one, *enforced* only if a later slice earns it). Pure expand;
    zero visible change for boat-less shops; no baseline moves.
-2. **The board sees boats** (roadmap §5's actual ask): boat chip on schedule-board cards, Today's
+2. **The board sees boats** (roadmap §4's actual ask): boat chip on schedule-board cards, Today's
    by-departure header, calendar-feed titles, offline-manifest header; soft same-boat overlap
    warning on add/move/copy. Warning, never refusal — weather-day reshuffles must stay free.
 3. **Buyout = withdrawn from sale** (from C): `trips.visibility` (`public`|`private`, default
@@ -351,7 +351,7 @@ the [ADR](decisions/20260804-boat-resource-model.md). Why the runners-up lost, i
   row (synthetic backfill), rewrites the booking transaction's lock, repaints every board baseline,
   and cannot pause once the contract phase starts — it fails "deferred until a real operator needs
   it" structurally, not accidentally. Its vessel-ceiling insight survives as slice 1's warning.
-- **C lost on scope**: an inquiry CRM is the most new UI for the least §5 coverage, and its
+- **C lost on scope**: an inquiry CRM is the most new UI for the least §4 coverage, and its
   centerpiece (the contract) is legally gated anyway. Its withdrawal semantics and its
   `course_inquiries` precedent survive as slices 3 and 4.
 
@@ -379,7 +379,7 @@ design answers them:
    question (`staff_shifts`), explicitly out of scope here and noted in the ADR's non-goals.
 3. **Split fleets / two marinas.** A boat berthed across town changes which trips it can plausibly
    serve. **Addressed as text**: `boats.description` carries the home dock; multi-*location*
-   operating views are the other half of roadmap §5 and stay open — this ADR deliberately does not
+   operating views are the other half of roadmap §4 and stay open — this ADR deliberately does not
    spend the location concept.
 4. **Boat out of service.** Engine-down weeks are real. **Addressed**: `archived_at` retires a
    hull from pickers (per [20260719-crud-archive-semantics](decisions/20260719-crud-archive-semantics.md));

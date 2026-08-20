@@ -24,16 +24,21 @@ export default defineConfig({
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,
-    // Vitest 4 defaults to the "forks" pool: one child process per test file,
-    // each repaying Node's full startup and re-importing the whole module
-    // graph (Next, Drizzle, PGlite's WASM) from scratch. "threads" reuses one
-    // process across files instead — per-file isolation is unaffected
-    // (`isolate` still gives every file a fresh module registry/vm context;
-    // that guarantee is orthogonal to the pool) — and measured a repeatable
-    // ~13% faster full-suite run locally (~218s -> ~190s wall clock, three
-    // clean runs, same 1449/1449 passing). Revisit only if PGlite ever shows a
-    // worker_threads-specific failure; none has surfaced in this repo's use.
-    pool: "threads",
+    // Vitest 4's default. This ran on `pool: "threads"` for a while (~13%
+    // faster full suite locally — worker_threads reuse one process instead of
+    // repaying Node startup per fork), with a written caveat to revisit if
+    // PGlite ever showed a worker_threads-specific failure. One surfaced on
+    // 2026-08-20: a CI unit shard died mid-run with a V8 fatal —
+    // `Check failed: jit_page_->allocations_.erase(addr) == 1` in
+    // `ThreadIsolation::UnregisterWasmAllocation`, SIGILL — the known V8 race
+    // in cross-thread WASM JIT-page bookkeeping, on the shard where every
+    // PGlite instance loads two WASM extensions (pg_trgm + btree_gist). The
+    // same shard passed locally and on re-runs; it is a probabilistic crash,
+    // not a failing test. Forks give each worker its own V8, which removes
+    // the cross-thread race entirely and contains any future WASM crash to
+    // one worker instead of killing the whole run. Don't switch back to
+    // "threads" while the suite runs WASM Postgres in workers.
+    pool: "forks",
     // `pnpm test:changed` (and `vitest related`) selects tests by walking the
     // *import* graph, and the Drizzle migrations are never imported — they are
     // read off disk at runtime by `migrate(db, { migrationsFolder: "drizzle" })`.

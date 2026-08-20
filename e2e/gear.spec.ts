@@ -61,7 +61,6 @@ test.describe("staff", () => {
   test("assigns a free unit on the wreck trip's prep page and releases it again", async ({
     page,
   }) => {
-    test.setTimeout(30_000); // a three-stop tour: prep → assign → release
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
     await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
     await expect(

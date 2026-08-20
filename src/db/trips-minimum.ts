@@ -2,6 +2,7 @@ import { and, asc, count, eq, isNotNull, isNull, lte, ne, sql } from "drizzle-or
 import { nowDate } from "@/lib/clock";
 import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/minimum-seats";
 import type { AppDb } from "./client";
+import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { bookings, people, shops, trips } from "./schema";
 
 /**
@@ -173,25 +174,38 @@ export async function cancelDeparturesBelowMinimum(
   const cancelled: SweptDeparture[] = [];
 
   for (const departure of due.slice(0, limit)) {
-    const [row] = await db
-      .update(trips)
-      // Stamped inline rather than routed through `setTripStatus`: the guard in
-      // the `where` below (still scheduled, still short of its minimum) is what
-      // makes this sweep safe to run concurrently, and a two-step read-then-set
-      // through that seam would lose it. The stamp itself is the same act.
-      .set({ status: "cancelled", cancelledAt: now })
-      .where(
-        and(
-          eq(trips.id, departure.tripId),
-          eq(trips.status, "scheduled"),
-          isNotNull(trips.minimumBookings),
-          sql`(
-            select count(*) from ${bookings}
-            where ${bookings.tripId} = ${trips.id} and ${bookings.status} <> 'cancelled'
-          ) < least(${trips.minimumBookings}, ${trips.capacity})`,
-        ),
-      )
-      .returning({ id: trips.id });
+    // One transaction per departure: the stamp and the gear release land
+    // together, and the conditional `where` keeps its concurrency guarantee.
+    const row = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(trips)
+        // Stamped inline rather than routed through `setTripStatus`: the guard in
+        // the `where` below (still scheduled, still short of its minimum) is what
+        // makes this sweep safe to run concurrently, and a two-step read-then-set
+        // through that seam would lose it. The stamp itself is the same act.
+        .set({ status: "cancelled", cancelledAt: now })
+        .where(
+          and(
+            eq(trips.id, departure.tripId),
+            eq(trips.status, "scheduled"),
+            isNotNull(trips.minimumBookings),
+            sql`(
+              select count(*) from ${bookings}
+              where ${bookings.tripId} = ${trips.id} and ${bookings.status} <> 'cancelled'
+            ) < least(${trips.minimumBookings}, ${trips.capacity})`,
+          ),
+        )
+        .returning({ id: trips.id });
+      if (updated) {
+        // The cancelled departure keeps its bookings, so the booking cascade
+        // never frees the gear reserved against it.
+        await releaseUnclaimedGearReservationsForTrips(tx, {
+          shopId: departure.shopId,
+          tripIds: [updated.id],
+        });
+      }
+      return updated;
+    });
     if (row) cancelled.push(departure);
   }
 

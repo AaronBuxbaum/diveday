@@ -526,13 +526,23 @@ export async function loadShopExportBundleInput(
         .select()
         .from(gearServiceEvents)
         .where(eq(gearServiceEvents.shopId, shopId))
-        .orderBy(asc(gearServiceEvents.servicedOn), asc(gearServiceEvents.createdAt));
+        .orderBy(
+          asc(gearServiceEvents.servicedOn),
+          asc(gearServiceEvents.createdAt),
+          // The id tiebreaker keeps the bundle diffable when a batch write
+          // lands several events on one timestamp (see rollCallEvents above).
+          asc(gearServiceEvents.id),
+        );
 
       const gearReservationRows = await tx
         .select()
         .from(gearReservations)
         .where(eq(gearReservations.shopId, shopId))
-        .orderBy(asc(gearReservations.reservedFrom), asc(gearReservations.createdAt));
+        .orderBy(
+          asc(gearReservations.reservedFrom),
+          asc(gearReservations.createdAt),
+          asc(gearReservations.id),
+        );
 
       const priorVisitRows = await tx
         .select()

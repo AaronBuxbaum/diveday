@@ -14,18 +14,27 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * eight kinds a unit shares with the packing list resolve through
  * `rental-labels.ts`'s existing `shared.rentalFit.itemLabels.*` words — one
  * code, one wording, on every screen — and only the two register-only kinds
- * (`tank`, `other`) carry words of their own here.
+ * (`tank`, `other`) carry words of their own under `gear.itemKinds.*`. The
+ * record is total on purpose: a kind added to the enum without a wording
+ * decision is a compile error here, never a raw code on a staff screen.
  */
-const REGISTER_ONLY_KIND_KEYS: Partial<Record<GearItemKind, StaffMessageKey>> = {
-  tank: "gear.itemKinds.tank",
-  other: "gear.itemKinds.other",
+const KIND_SOURCES: Record<GearItemKind, { rental: RentalItemKind } | { key: StaffMessageKey }> = {
+  bcd: { rental: "bcd" },
+  regulator: { rental: "regulator" },
+  wetsuit: { rental: "wetsuit" },
+  boots: { rental: "boots" },
+  mask_fins: { rental: "mask_fins" },
+  weights: { rental: "weights" },
+  dive_computer: { rental: "dive_computer" },
+  gopro: { rental: "gopro" },
+  tank: { key: "gear.itemKinds.tank" },
+  other: { key: "gear.itemKinds.other" },
 };
 
 /** A tracked unit's kind word — "BCD", "Tank", identical to the prep list's. */
 export function gearItemKindLabel(t: StaffTranslator, kind: GearItemKind): string {
-  const registerOnly = REGISTER_ONLY_KIND_KEYS[kind];
-  if (registerOnly) return t(registerOnly);
-  return rentalItemLabel(t, kind as RentalItemKind);
+  const source = KIND_SOURCES[kind];
+  return "rental" in source ? rentalItemLabel(t, source.rental) : t(source.key);
 }
 
 const STATUS_KEYS: Record<GearItemStatus, StaffMessageKey> = {

@@ -524,8 +524,12 @@ export async function releaseGearReservation(
     )
     .returning({ id: gearReservations.id });
   if (deleted) return { ok: true };
-  if (!(await reservationStamps(db, input))) return { ok: false, reason: "not_found" };
-  return { ok: false, reason: "already_checked_out" };
+  const stamps = await reservationStamps(db, input);
+  if (!stamps) return { ok: false, reason: "not_found" };
+  // A returned row can carry no check-out stamp (marking a unit returned never
+  // required one), so the refusal names the state that actually blocks the
+  // release rather than defaulting to "checked out".
+  return { ok: false, reason: stamps.returnedAt ? "already_returned" : "already_checked_out" };
 }
 
 /**
@@ -551,6 +555,40 @@ export async function releaseUnclaimedGearReservations(
         isNull(gearReservations.returnedAt),
       ),
     );
+}
+
+/**
+ * The trip-level twin of {@link releaseUnclaimedGearReservations}, for the
+ * writers that cancel whole departures while keeping their bookings on the
+ * books — the per-date cancel and blow-out (via `setTripStatus`), the
+ * minimum-seats sweep, and the two series bulk cancellations. Their bookings
+ * survive, so the booking cascade never runs, and without this every unit
+ * reserved against the cancelled departure would sit blocked in
+ * `listAvailableGearUnits` until someone noticed. Checked-out units
+ * deliberately stay: they are physically with a diver, and the return is the
+ * honest close.
+ */
+export async function releaseUnclaimedGearReservationsForTrips(
+  db: DbExecutor,
+  input: { shopId: string; tripIds: readonly string[] },
+): Promise<void> {
+  if (input.tripIds.length === 0) return;
+  await db.delete(gearReservations).where(
+    and(
+      eq(gearReservations.shopId, input.shopId),
+      isNull(gearReservations.checkedOutAt),
+      isNull(gearReservations.returnedAt),
+      inArray(
+        gearReservations.bookingId,
+        db
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(
+            and(eq(bookings.shopId, input.shopId), inArray(bookings.tripId, [...input.tripIds])),
+          ),
+      ),
+    ),
+  );
 }
 
 async function reservationStamps(

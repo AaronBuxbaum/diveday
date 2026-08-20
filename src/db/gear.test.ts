@@ -24,6 +24,7 @@ import {
   updateGearItem,
 } from "./gear";
 import { shops } from "./schema";
+import { setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
 const TODAY = "2026-08-20";
@@ -532,6 +533,58 @@ describe("gear reservations", () => {
     expect(remaining.map((row) => row.label)).toEqual(["BCD #40"]);
   });
 
+  it("a cancelled departure frees its counter pile, keeps what's out, and touches no other trip", async () => {
+    // Trip-level cancellations (per-date cancel, blow-out, the minimum sweep,
+    // series narrowing) keep their bookings, so the booking cascade never
+    // runs — without the release in setTripStatus these units would sit
+    // blocked in the picker for as long as anyone remembered to look.
+    const { db, shop } = await gearShopContext();
+    const collected = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #50" }),
+    );
+    const unclaimed = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "wetsuit", label: "3mm #50", size: "L" }),
+    );
+    const elsewhere = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #50" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const lena = await shopBooking(db, shop.id, "Lena Brooks");
+    const out = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: collected.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+    });
+    if (!out.ok) throw new Error("reserve failed");
+    await checkOutGearReservation(db, { shopId: shop.id, reservationId: out.reservation.id });
+    await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: unclaimed.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+    });
+    await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: elsewhere.id,
+      bookingId: lena.bookingId,
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+    });
+
+    await setTripStatus(db, shop.id, maya.trip.id, "cancelled");
+
+    const cancelledTrip = await listTripGearAssignments(db, shop.id, maya.trip.id);
+    // The un-collected wetsuit went back on the wall; the checked-out BCD is
+    // with a diver and stays until it is returned.
+    expect((cancelledTrip.get(maya.bookingId) ?? []).map((row) => row.label)).toEqual(["BCD #50"]);
+    // The other departure's reservation is not this cancellation's to touch.
+    const otherTrip = await listTripGearAssignments(db, shop.id, lena.trip.id);
+    expect((otherTrip.get(lena.bookingId) ?? []).map((row) => row.label)).toEqual(["Reg #50"]);
+  });
+
   it("walks reserve → check out → return, and release only while still on the counter", async () => {
     const { db, shop } = await gearShopContext();
     const bcd = mustCreate(
@@ -582,6 +635,30 @@ describe("gear reservations", () => {
     expect(
       await releaseGearReservation(db, { shopId: shop.id, reservationId: again.reservation.id }),
     ).toEqual({ ok: false, reason: "not_found" });
+
+    // A unit marked returned without ever being checked out (the counter
+    // correcting a row) refuses a release by naming that state — not the
+    // check-out that never happened.
+    const returnedOnly = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: bcd.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-09-05",
+      reservedUntil: "2026-09-06",
+    });
+    if (!returnedOnly.ok) throw new Error("re-reserve failed");
+    expect(
+      await returnGearReservation(db, {
+        shopId: shop.id,
+        reservationId: returnedOnly.reservation.id,
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      await releaseGearReservation(db, {
+        shopId: shop.id,
+        reservationId: returnedOnly.reservation.id,
+      }),
+    ).toEqual({ ok: false, reason: "already_returned" });
   });
 });
 

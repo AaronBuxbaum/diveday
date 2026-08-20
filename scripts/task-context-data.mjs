@@ -126,7 +126,7 @@ export const areas = {
       "rental_fit_profiles stays the universal always-on layer; the register never answers what size a diver needs.",
     ],
     validate: [
-      "pnpm test src/lib/gear.test.ts src/db/gear.test.ts --reporter=dot",
+      "pnpm test src/lib/gear.test.ts src/db/gear.test.ts src/db/gear-reservations.postgres.test.ts --reporter=dot",
       "pnpm check",
       "pnpm e2e e2e/gear.spec.ts --reporter=line",
     ],

@@ -494,16 +494,25 @@ export default async function TripPrepPage({
           {/* Which tagged unit each renting diver takes — the one part of this
               page that reserves anything, present only for a shop that keeps
               its fleet on the register. The assigned lines print with the
-              packing list; the controls do not. */}
+              packing list; the controls do not. The notice banner sits above
+              the section's own gate: a refusal like gear-not-found is exactly
+              the case where the row (or the whole fleet) can be gone, and the
+              staffer still gets told what happened. */}
+          {gearBanner ? (
+            <StaffNoticeBanner tone={gearBanner.tone}>{t(gearBanner.key)}</StaffNoticeBanner>
+          ) : null}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? (
-            <section aria-labelledby="assignments-heading" className="mt-8">
+            <section
+              aria-labelledby="assignments-heading"
+              // On paper the section is only its assigned lines: with nothing
+              // assigned yet it would print as a heading over bare names, so
+              // it drops out of the packet entirely until a unit is on it.
+              className={`mt-8${assignmentRows.some((row) => row.assigned.length > 0) ? "" : " print:hidden"}`}
+            >
               <h2 id="assignments-heading" className="text-lg font-semibold">
                 {t("gear.prep.heading")}
               </h2>
               <p className="mt-1 text-sm text-muted print:hidden">{t("gear.prep.description")}</p>
-              {gearBanner ? (
-                <StaffNoticeBanner tone={gearBanner.tone}>{t(gearBanner.key)}</StaffNoticeBanner>
-              ) : null}
               <ul
                 className={sectionCardClass({
                   padding: "none",
@@ -511,7 +520,10 @@ export default async function TripPrepPage({
                 })}
               >
                 {assignmentRows.map(({ diver, assigned, wanted }) => (
-                  <li key={diver.bookingId} className="px-4 py-3 sm:px-5">
+                  <li
+                    key={diver.bookingId}
+                    className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
+                  >
                     <p className="font-medium">{diver.fullName}</p>
                     {assigned.length > 0 ? (
                       <ul className="mt-1.5 flex flex-col gap-1.5">
