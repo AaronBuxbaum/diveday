@@ -767,7 +767,7 @@ export async function loadShopExportBundleInput(
             "waiver_accepted",
             "waiver_signed_at",
             "waiver_source_name",
-            "archived_at",
+            "deleted_at",
             "created_at",
           ],
           rows: peopleRows.map((row) => {
@@ -1658,12 +1658,12 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "waiver_templates.csv",
-          header: ["id", "title", "version", "archived_at", "created_at", "body"],
+          header: ["id", "title", "version", "deleted_at", "created_at", "body"],
           rows: templateRows.map((row) => [
             row.id,
             row.title,
             row.version,
-            row.archivedAt,
+            row.deletedAt,
             row.createdAt,
             row.body,
           ]),

@@ -3196,7 +3196,8 @@ export const waiverTemplates = pgTable(
     title: text("title").notNull(),
     version: integer("version").notNull(),
     body: text("body").notNull(),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Soft delete, spelled the one way every other entity spells it (ADR 20260820-every-delete-is-soft). */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -6,9 +6,9 @@ import { seededShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import { findOrCreatePerson } from "./people";
 import {
-  archiveCertification,
   createCertification,
   createSpecialtyCertification,
+  deleteCertification,
   reviewCertification,
 } from "./readiness";
 import { certifications, nitroxCertifications, people, shops } from "./schema";
@@ -976,9 +976,7 @@ describe("reviewCertification on a self-declared card", () => {
     });
     const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
     if (!card) throw new Error("setup: declaration not recorded");
-    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
+    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
 
     const outcome = await reviewCertification(db, {
       shopId: shop.id,

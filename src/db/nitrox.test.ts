@@ -4,8 +4,8 @@ import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
-  archiveNitroxCertification,
   createNitroxCertification,
+  deleteNitroxCertification,
   restoreNitroxCertification,
   reviewNitroxCertification,
   setBookingNitrox,
@@ -190,7 +190,7 @@ describe("setBookingNitrox", () => {
   it("flags a request after the card is archived", async () => {
     const ctx = await context();
     const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
-    await archiveNitroxCertification(ctx.db, {
+    await deleteNitroxCertification(ctx.db, {
       shopId: ctx.shopId,
       certificationId: cert.id,
     });
@@ -255,7 +255,7 @@ describe("setBookingNitrox", () => {
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).toContain(ctx.personId);
 
     expect(
-      await archiveNitroxCertification(ctx.db, {
+      await deleteNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
         certificationId: cert.id,
       }),
@@ -268,7 +268,7 @@ describe("setBookingNitrox", () => {
     const ctx = await context();
     const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
     expect(
-      await archiveNitroxCertification(ctx.db, { shopId: ctx.shopId, certificationId: cert.id }),
+      await deleteNitroxCertification(ctx.db, { shopId: ctx.shopId, certificationId: cert.id }),
     ).toBe(true);
     expect(await verifiedNitroxPersonIds(ctx.db, ctx.shopId)).not.toContain(ctx.personId);
 
@@ -289,7 +289,7 @@ describe("setBookingNitrox", () => {
     const ctx = await context();
     const cert = await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
     expect(
-      await archiveNitroxCertification(ctx.db, {
+      await deleteNitroxCertification(ctx.db, {
         shopId: crypto.randomUUID(),
         certificationId: cert.id,
       }),
