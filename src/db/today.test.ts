@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { groupActions } from "@/lib/today";
 import { dbNowPlus, seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
@@ -40,7 +41,7 @@ import {
 } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
-const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 describe("today's work queue (in-memory PGlite)", () => {
   it("puts the seeded departure that sails today on the board with live readiness counts", async () => {

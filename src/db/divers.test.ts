@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
 import { nowDate, nowMs } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
@@ -799,11 +800,7 @@ describe("diver erasure", () => {
     const completed = await completeWaiver(db, issued.token, {
       signerName: "Erasure Elena",
       agreed: true,
-      medicalAnswers: {
-        questionnaireId: "rstc",
-        questionnaireVersion: 1,
-        responses: { q1: false },
-      },
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
       now: erasureNow,
     });
     if (!completed.ok) throw new Error("waiver completion failed");

@@ -763,7 +763,7 @@ export async function completeWaiver(
   // The form is conditional: closed boxes are not submitted, but every
   // applicable question must be answered before signed evidence is written.
   const medicalValidation = validateMedicalAnswers(input.medicalAnswers, { requireComplete: true });
-  if (!medicalValidation.ok && input.medicalAnswers.questionnaireVersion !== 1) {
+  if (!medicalValidation.ok) {
     return { ok: false, reason: "invalid_medical" };
   }
   const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);

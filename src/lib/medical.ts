@@ -272,75 +272,8 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
   ],
 };
 
-/** The v1 paraphrase is retained only to interpret already-signed records. */
-const LEGACY_RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
-  id: "rstc",
-  version: 1,
-  jurisdiction: "rstc",
-  title: "RSTC Diver Medical",
-  intro: "Legacy DiveDay questionnaire.",
-  questions: [
-    {
-      id: "heart_lung",
-      prompt:
-        "Do you have, or have you had, a heart, lung, or breathing condition (including asthma) affecting exercise?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "blood_pressure",
-      prompt:
-        "Do you take medication for, or have you been treated for, blood pressure or heart disease?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "recent_surgery",
-      prompt: "Have you had surgery, a serious injury, or been hospitalized in the last 12 months?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "medication",
-      prompt:
-        "Are you taking prescription medication (other than birth control or anti-malarials)?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "ear_sinus",
-      prompt:
-        "Do you have recurring ear, sinus, or equalizing problems, or have you had ear surgery?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "diabetes_seizure",
-      prompt: "Do you have diabetes, epilepsy, seizures, fainting, or a neurological condition?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "pregnancy",
-      prompt: "Are you pregnant, or trying to become pregnant?",
-      section: "primary",
-      referral: true,
-    },
-    {
-      id: "recent_illness",
-      prompt:
-        "Have you recently been ill (cold, flu, congestion) in a way that could affect diving?",
-      section: "primary",
-      referral: true,
-    },
-  ],
-  boxes: [],
-};
-
 const CURRENT_QUESTIONNAIRES: readonly MedicalQuestionnaire[] = [RSTC_QUESTIONNAIRE];
-const BY_KEY = new Map(
-  [RSTC_QUESTIONNAIRE, LEGACY_RSTC_QUESTIONNAIRE].map((q) => [`${q.id}:${q.version}`, q]),
-);
+const BY_KEY = new Map(CURRENT_QUESTIONNAIRES.map((q) => [`${q.id}:${q.version}`, q]));
 
 /**
  * Not a lookup yet: every jurisdiction — including the `uk` value the schema
@@ -478,33 +411,10 @@ export function calculateMedicalResult(answers: MedicalAnswers): MedicalResult {
 
 /** Any applicable referral answer requires physician review; unknown/incomplete fails closed. */
 export function needsPhysicianReview(answers: MedicalAnswers): boolean {
-  const result = calculateMedicalResult(answers);
-  if (result.status === "incomplete") {
-    // Preserve v1's historical empty-answer compatibility for already-signed
-    // records while all new v2 submissions are validated before completion.
-    if (answers.questionnaireVersion === 1 && Object.keys(answers.responses).length === 0)
-      return false;
-    return true;
-  }
-  return result.status === "physician_review";
+  return calculateMedicalResult(answers).status !== "clear";
 }
 
 export function flaggedMedicalPrompts(answers: MedicalAnswers): string[] {
-  // Older signed records used v1's flat questionnaire and were sometimes
-  // persisted as soon as a single referral answer was selected. Preserve the
-  // useful historical audit summary for those records instead of replacing a
-  // known flagged prompt with the generic "incomplete" message used for new
-  // submissions.
-  const questionnaire = findQuestionnaireVersion(
-    answers.questionnaireId,
-    answers.questionnaireVersion,
-  );
-  if (questionnaire?.version === 1) {
-    return questionnaire.questions
-      .filter((question) => answers.responses[question.id] === true && question.referral)
-      .map((question) => question.prompt);
-  }
-
   const result = calculateMedicalResult(answers);
   if (result.status === "physician_review") return result.flaggedPrompts;
   if (result.status === "incomplete")

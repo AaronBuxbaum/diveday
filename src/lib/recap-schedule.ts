@@ -69,13 +69,3 @@ export function recapAutoSendIsDue({
   if (!target) return false;
   return now.getTime() >= target.getTime();
 }
-
-/** Backward-compatible helper for code referencing eligible time. */
-export function recapEligibleAt(endsAt: Date): Date {
-  return new Date(endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS);
-}
-
-/** Backward-compatible helper for code checking eligibility. */
-export function recapIsEligible(endsAt: Date, now: Date): boolean {
-  return now.getTime() >= recapEligibleAt(endsAt).getTime();
-}

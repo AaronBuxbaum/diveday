@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
@@ -9,7 +10,7 @@ import { shops, waiverRecords } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
-const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 async function exportContext() {
   const { db, shop } = await seededShopContext();
@@ -120,21 +121,21 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     if (!first) throw new Error("demo booking missing");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
+    // A referral answer, so the record carries a flagged prompt as well as raw
+    // responses — if either rides into the document, this test catches it.
+    const referralAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    referralAnswers.responses.q3 = true;
     await completeWaiver(db, issued.token, {
       signerName: first.person.fullName,
       agreed: true,
-      medicalAnswers: {
-        questionnaireId: "rstc",
-        questionnaireVersion: 1,
-        // The question id is the distinctive marker: if answers ever ride into
-        // the document, this key rides with them.
-        responses: { "MEDICAL-ANSWERS-MUST-NOT-LEAK": true },
-      },
+      medicalAnswers: referralAnswers,
     });
 
     const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
     const serialized = JSON.stringify(doc);
-    expect(serialized).not.toContain("MEDICAL-ANSWERS-MUST-NOT-LEAK");
+    const flaggedPrompt = RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q3")?.prompt;
+    expect(flaggedPrompt).toBeDefined();
+    expect(serialized).not.toContain(flaggedPrompt);
     expect(serialized).not.toContain("medicalAnswers");
   });
 
