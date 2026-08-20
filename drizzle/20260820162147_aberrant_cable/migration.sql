@@ -1,0 +1,2 @@
+ALTER TABLE "gear_service_events" ADD COLUMN "next_due_dives" integer;--> statement-breakpoint
+ALTER TABLE "gear_service_events" ADD CONSTRAINT "gear_service_events_due_dives_positive" CHECK ("next_due_dives" is null or "next_due_dives" > 0);

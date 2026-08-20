@@ -46,7 +46,7 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
   const [template] = await db
     .select()
     .from(waiverTemplates)
-    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
     .orderBy(desc(waiverTemplates.createdAt))
     .limit(1);
   return template ?? null;
@@ -57,7 +57,7 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
   return db
     .select()
     .from(waiverTemplates)
-    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.archivedAt)))
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
     .orderBy(desc(waiverTemplates.version));
 }
 
@@ -350,7 +350,7 @@ export async function issueWaiverRequest(
     const [template] = await tx
       .select()
       .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.archivedAt)))
+      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
       .orderBy(desc(waiverTemplates.createdAt))
       .limit(1);
     if (!template) return { ok: false, reason: "template_not_found" };
@@ -1291,7 +1291,7 @@ export async function recordInPersonWaiver(
     const [template] = await tx
       .select()
       .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.archivedAt)))
+      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
       .orderBy(desc(waiverTemplates.createdAt))
       .limit(1);
     if (!template) return { ok: false, reason: "template_not_found" };

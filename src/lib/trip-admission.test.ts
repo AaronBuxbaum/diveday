@@ -106,6 +106,83 @@ describe("decideTripAdmission — nothing is demanded", () => {
   });
 });
 
+describe("decideTripAdmission — what the booker just typed", () => {
+  it("sells the seat on a claim that reaches the rung", () => {
+    // The point of asking at all: a diver the shop has never carded says
+    // Advanced, and buys the Advanced charter. Readiness still wants the card.
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence(),
+        declared: { level: "advanced_open_water" },
+      }),
+    ).toEqual({ admitted: true });
+  });
+
+  it("refuses on a claim that falls short, and names the rung they gave", () => {
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence(),
+        declared: { level: "open_water" },
+      }),
+    ).toEqual({
+      admitted: false,
+      refusal: {
+        requiredLevel: "advanced_open_water",
+        missingSpecialties: [],
+        nitroxRequired: false,
+        heldLevel: "open_water",
+      },
+    });
+  });
+
+  it("takes the higher of the record and the claim, so a stale card cannot refuse someone who has since qualified", () => {
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence({
+          certifications: [certification({ status: "verified", level: "open_water" })],
+        }),
+        declared: { level: "advanced_open_water" },
+      }),
+    ).toEqual({ admitted: true });
+  });
+
+  it("clears a nitrox gate on the tick alone", () => {
+    expect(
+      decideTripAdmission({
+        requirement: {
+          minimumCertificationLevel: null,
+          requiredSpecialties: [],
+          requiresNitrox: true,
+        },
+        siteRequirement: null,
+        evidence: evidence(),
+        declared: { nitrox: true },
+      }),
+    ).toEqual({ admitted: true });
+  });
+
+  it("ignores a claim when the booking's identity did not match", () => {
+    // H-13: a statement made under a name that disagrees with the row it
+    // resolved to is not provably about that person — the same reason their
+    // cards are not read.
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence(),
+        declared: { level: "open_water" },
+        identityUnconfirmed: true,
+      }),
+    ).toEqual({ admitted: true });
+  });
+});
+
 describe("decideTripAdmission — absence of evidence is never a refusal (H-08's settled trade-off)", () => {
   it("admits a diver this shop has never carded", () => {
     // The whole new-customer case: nothing on file, so nothing says they
@@ -119,15 +196,39 @@ describe("decideTripAdmission — absence of evidence is never a refusal (H-08's
     ).toEqual({ admitted: true });
   });
 
-  it("admits a diver whose only card is still awaiting staff verification", () => {
-    // A capture in review is a card a staffer is about to adjudicate — the
-    // shop has not decided anything about this diver yet.
+  it("judges a diver on a card still awaiting verification, rather than reading them as a stranger", () => {
+    // H-29, reversed 2026-08-20: this used to admit. A staffer typed this card
+    // in — the shop is not "undecided about this diver", it holds their Open
+    // Water and the boat wants Advanced. Absence of evidence is the fail-open
+    // rule; a card in the verify queue is not absence.
     expect(
       decideTripAdmission({
         requirement: advancedTrip,
         siteRequirement: null,
         evidence: evidence({
           certifications: [certification({ status: "pending", level: "open_water" })],
+        }),
+      }),
+    ).toEqual({
+      admitted: false,
+      refusal: {
+        requiredLevel: "advanced_open_water",
+        missingSpecialties: [],
+        nitroxRequired: false,
+        heldLevel: "open_water",
+      },
+    });
+  });
+
+  it("still admits a diver whose pending card already reaches the rung", () => {
+    // The other half of the same reversal: believing the card cuts both ways,
+    // and a diver whose staff-typed Advanced is queued for lookup buys the seat.
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence({
+          certifications: [certification({ status: "pending", level: "advanced_open_water" })],
         }),
       }),
     ).toEqual({ admitted: true });

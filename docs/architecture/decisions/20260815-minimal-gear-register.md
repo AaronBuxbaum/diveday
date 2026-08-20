@@ -192,3 +192,49 @@ free), `gear_service_events.csv` beside the two CSVs named above, and the seeded
 The printable per-booking rental ticket named under "The pieces" was **not** built — the prep
 page's assignment list prints with the packing list, and a per-booking ticket is filed as a
 follow-up rather than silently dropped.
+
+
+## Amendment 2026-08-20 — the print slip, and the second clock
+
+Two pieces this ADR scoped and the first slice deliberately left out, both now
+built at the product owner's direction.
+
+**The per-booking rental slip** (`/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]`).
+Reached from the assignment row it is about, and only once that row has units on
+it — a slip listing nothing is a wrong slip, not a short one. It says what the
+diver has and when it is due back, and deliberately nothing else: no signature
+line, because one shop-wide waiver is an invariant (CR-015) and a second
+signed-looking slip is the fastest way to blur it; no money, because billing
+lives on orders and a rental with no total beside one that has a total teaches a
+staffer to look for one here. An e2e test asserts both absences on the slip
+itself.
+
+**Dual-clocked service intervals.** Manufacturers publish months *or* dives and
+mean whichever comes first (ScubaPro: 24 months or 100 dives), and a rental
+regulator in season reaches the dive number long before the date. A service
+event may now carry `next_due_dives` beside `next_due_on`, and `gearServiceState`
+reads the two together.
+
+Three properties of that second clock are load-bearing:
+
+- **It only escalates.** A unit under its dive count is not thereby fine — its
+  date can still have passed — because "whichever comes first" is not "instead
+  of".
+- **The count is derived, never stored.** It sums the planned dives of the
+  departures a unit came back from since its last service, so it cannot drift
+  from the reservations it is read out of.
+- **It is a floor, and every surface says so.** It counts the rentals the shop
+  wrote down; a unit handed over on a handshake counts as zero. That is the
+  right direction to be wrong in: a clock that runs slow tells a shop to service
+  something they already did, where one that ran fast would quietly clear a
+  regulator past its interval. Nothing gates on it — the register informs, as
+  the original decision says.
+
+A dive interval with no date beside it is **refused** rather than dropped: the
+two are compared together, and a staffer who typed 100 and got silence would
+have no way to tell it had not taken.
+
+The open question this cannot answer is whether shops keep the register faithfully
+enough for the count to mean anything. That is now §C3 of the first-call script,
+and the answer changes how loudly this should be presented — or whether it earns
+its place at all.

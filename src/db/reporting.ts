@@ -35,6 +35,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Owner reporting exposes shop-wide revenue, so it re-checks authorization
@@ -123,7 +124,7 @@ export async function getMonthlyReport(
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
       ),
     )
-    .where(inWindow)
+    .where(and(inWindow, liveTrip()))
     .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity);
 
   // Waiver-complete bookings per trip. A waiver is signed once and then covers
@@ -155,7 +156,7 @@ export async function getMonthlyReport(
         isNull(waiverRecords.supersededAt),
       ),
     )
-    .where(inWindow)
+    .where(and(inWindow, liveTrip()))
     .groupBy(trips.id);
 
   // Money collected on this month's trips. The base is each booking's current
@@ -356,7 +357,7 @@ export async function earliestReportedTripStart(
   const [row] = await db
     .select({ startsAt: trips.startsAt })
     .from(trips)
-    .where(and(eq(trips.shopId, shopId), ne(trips.status, "cancelled")))
+    .where(and(eq(trips.shopId, shopId), ne(trips.status, "cancelled"), liveTrip()))
     .orderBy(asc(trips.startsAt))
     .limit(1);
   return row?.startsAt ?? null;
@@ -434,7 +435,10 @@ export async function pagedMonthlyReportTrips(
       // Counted off `trips` alone. The row query below groups over a booking
       // join, so counting *its* rows would need a distinct — the window itself
       // is the honest denominator either way.
-      const [counted] = await db.select({ total: count() }).from(trips).where(inWindow);
+      const [counted] = await db
+        .select({ total: count() })
+        .from(trips)
+        .where(and(inWindow, liveTrip()));
       return counted?.total ?? 0;
     },
     fetchRows: async (offset, limit) =>
@@ -455,7 +459,7 @@ export async function pagedMonthlyReportTrips(
             inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
           ),
         )
-        .where(inWindow)
+        .where(and(inWindow, liveTrip()))
         .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
         .orderBy(asc(trips.startsAt), asc(trips.id))
         .limit(limit)
@@ -489,7 +493,7 @@ export async function pagedMonthlyReportTrips(
             isNull(waiverRecords.supersededAt),
           ),
         )
-        .where(inArray(trips.id, tripIds))
+        .where(and(inArray(trips.id, tripIds), liveTrip()))
         .groupBy(trips.id)
     : [];
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));

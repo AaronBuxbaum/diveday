@@ -38,6 +38,7 @@ import {
 } from "./schema";
 import { getShopById } from "./shops";
 import { getTripRoster, getTripWithBooked } from "./trips";
+import { liveTrip } from "./trips-live";
 
 /**
  * "Is this person on this trip's crew?", as one SQL condition, so the crew
@@ -154,6 +155,7 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     )
     .where(
       and(
+        liveTrip(),
         eq(tripAssignments.tripId, tripId),
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
@@ -936,6 +938,7 @@ export async function recordCrewRollCall(
       .from(trips)
       .where(
         and(
+          liveTrip(),
           eq(trips.id, input.tripId),
           eq(trips.shopId, input.shopId),
           eq(trips.status, "scheduled"),
@@ -968,6 +971,7 @@ export async function recordCrewRollCall(
       )
       .where(
         and(
+          liveTrip(),
           eq(tripAssignments.tripId, input.tripId),
           eq(tripAssignments.personId, input.personId),
           eq(trips.shopId, input.shopId),

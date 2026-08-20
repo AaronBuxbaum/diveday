@@ -10,10 +10,10 @@ import {
   reviewNitroxCertification,
 } from "./nitrox";
 import {
-  archiveCertification,
-  archiveSpecialtyCertification,
   createCertification,
   createSpecialtyCertification,
+  deleteCertification,
+  deleteSpecialtyCertification,
   getBookingReadiness,
   getBookingReadinessDetail,
   listTripReadiness,
@@ -388,9 +388,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       blockers: [],
     });
 
-    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
+    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
     const after = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
     // With the rescue card archived the diver falls back to their lower seeded
     // card, so readiness re-blocks — an archived card no longer counts.
@@ -421,9 +419,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       identifier: "PADI-RESTORE-1",
     });
     if (!card) throw new Error("expected certification to insert");
-    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
+    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
 
     // The undo path: the same archived card comes back into the shop list.
     expect(await restoreCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
@@ -433,9 +429,7 @@ describe("trip readiness (in-memory PGlite)", () => {
 
     // Archive it again, then re-capture the same number as a fresh card. Restoring
     // the old one now would collide on the partial unique index, so it's refused.
-    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
+    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
     const recaptured = await createCertification(db, {
       shopId: shop.id,
       personId: rosterEntry.person.id,
@@ -486,9 +480,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       identifier: "cd5678",
     });
     if (!card) throw new Error("expected certification to insert");
-    expect(await archiveCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(
-      true,
-    );
+    expect(await deleteCertification(db, { shopId: shop.id, certificationId: card.id })).toBe(true);
     const recaptured = await createCertification(db, {
       shopId: shop.id,
       personId: rosterEntry.person.id,
@@ -535,7 +527,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     });
     if (!card) throw new Error("expected specialty to insert");
     expect(
-      await archiveSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+      await deleteSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
     ).toBe(true);
     expect(
       await restoreSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
@@ -558,7 +550,7 @@ describe("trip readiness (in-memory PGlite)", () => {
     });
     if (!card) throw new Error("expected certification to insert");
     expect(
-      await archiveCertification(db, {
+      await deleteCertification(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
         certificationId: card.id,
       }),
@@ -577,13 +569,13 @@ describe("trip readiness (in-memory PGlite)", () => {
     });
     if (!card) throw new Error("expected specialty certification to insert");
     expect(
-      await archiveSpecialtyCertification(db, {
+      await deleteSpecialtyCertification(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
         certificationId: card.id,
       }),
     ).toBe(false);
     expect(
-      await archiveSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
+      await deleteSpecialtyCertification(db, { shopId: shop.id, certificationId: card.id }),
     ).toBe(true);
     expect(await activeSpecialtyCertificationIds(db, shop.id)).not.toContain(card.id);
   });

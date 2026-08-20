@@ -108,22 +108,51 @@ export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
 
   return (
+    // **An ordered list, because the four groups are a sequence.** They are the
+    // phases of one shop's day in the order it happens — welcome a diver, get
+    // them ready, run the day, hand it off — and the old rendering as four equal
+    // boxes threw that away, leaving the band to *assert* breadth where it could
+    // have shown it. Numbering them is the whole visual idea: it costs no copy,
+    // adds the one thing four assertions could not say on their own, and reads
+    // as a track rather than a shelf (product owner, 2026-08-20 — keep the
+    // cards, make them more visual, and not with a photograph).
+    //
+    // `<ol>` rather than a div of articles so the sequence is real for a screen
+    // reader too, not just a drawn effect.
+    //
     // Four columns wait for `xl`: at 1024 the ~226px cards wrapped their
     // uppercase eyebrows onto two lines and knocked the four headings onto
     // three different baselines — a comfortable 2×2 reads calmer there.
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {productFeatureGroups.map((group) => (
-        <article
+    <ol className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {productFeatureGroups.map((group, index) => (
+        <li
           key={group.eyebrow}
-          className="rounded-xl border border-border bg-background p-5 sm:p-6"
+          className="relative rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-6"
         >
-          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+          {/* The rule that turns four cards into one track. Only at `xl`, where
+              the four genuinely sit on one row — at `sm` the 2×2 would have it
+              pointing at nothing — and never off the last card, which would
+              trail into the margin. `gap-4` is 1rem, so `w-4` closes exactly
+              the gutter. */}
+          {index < productFeatureGroups.length - 1 ? (
+            <span
+              aria-hidden="true"
+              className="absolute top-10 left-full hidden h-px w-4 bg-border xl:block"
+            />
+          ) : null}
+          <span
+            aria-hidden="true"
+            className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary tabular-nums"
+          >
+            {index + 1}
+          </span>
+          <p className="mt-4 text-xs font-semibold tracking-widest text-primary uppercase">
             {t(group.eyebrow)}
           </p>
           <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
           <p className="mt-3 text-sm leading-6 text-muted">{t(group.summary)}</p>
-        </article>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }

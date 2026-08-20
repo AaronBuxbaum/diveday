@@ -1,21 +1,22 @@
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
+import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
+import { rewindowTripGearReservations } from "./gear";
 import type { Trip } from "./schema";
 import {
   bookings,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
-  tripAssignments,
   tripDives,
-  tripLastMinutePromos,
-  tripRequirements,
   tripScheduleDays,
   trips,
   tripWaitlistEntries,
 } from "./schema";
 import { insertTripInstance, resolveCourse } from "./trips-create";
+import { liveTrip } from "./trips-live";
 import { recordSeriesSkip } from "./trips-series";
 
 /**
@@ -54,7 +55,18 @@ function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: stri
 }
 
 export type MoveTripOutcome =
-  | { ok: true; trip: Trip }
+  | {
+      ok: true;
+      trip: Trip;
+      /**
+       * Gear reservations the move could not carry onto the new dates, because
+       * the unit is already spoken for there. Released rather than left
+       * pointing at days the departure no longer occupies — and counted here
+       * because the board has to say so: a silently released reservation is a
+       * unit somebody thinks is packed (`rewindowTripGearReservations`).
+       */
+      gearReleased: number;
+    }
   | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" };
 
 /**
@@ -121,7 +133,7 @@ export async function moveTrip(
     const [existing] = await tx
       .select()
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
@@ -131,7 +143,8 @@ export async function moveTrip(
       return { ok: false, reason: "already_sailed" };
     }
 
-    if (startsAt.getTime() === existing.startsAt.getTime()) return { ok: true, trip: existing };
+    if (startsAt.getTime() === existing.startsAt.getTime())
+      return { ok: true, trip: existing, gearReleased: 0 };
 
     const [shop] = await tx
       .select({ timezone: shops.timezone })
@@ -158,7 +171,17 @@ export async function moveTrip(
         .set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })
         .where(eq(tripScheduleDays.id, day.id));
     }
-    return { ok: true, trip };
+
+    // The gear goes with the departure. A reservation's window is derived from
+    // the trip's dates at assign time and never re-read, so without this the
+    // boat leaves on Thursday with kit the register still believes is out on
+    // Tuesday — free to be double-assigned, and overdue on the wrong day.
+    const gear = await rewindowTripGearReservations(tx, {
+      shopId,
+      tripId,
+      window: tripReservationWindow(trip, shop.timezone),
+    });
+    return { ok: true, trip, gearReleased: gear.released };
   });
 }
 
@@ -167,17 +190,26 @@ export type DeleteTripOutcome =
   | { ok: false; reason: "not_found" | "has_roster" | "already_sailed" };
 
 /**
- * Takes a departure off the board for good — the schedule builder's "remove".
+ * Takes a departure off the board — the schedule builder's "remove".
  *
  * Deliberately *not* how a trip with divers on it goes away. A trip anyone has
  * booked, joined a wait list for, or counted heads against gets cancelled
  * (`setTripStatus`), which keeps the roster, the refund story, and the record
- * that the day existed. Hard deletion is reserved for a departure that was put
- * on the board by mistake and that nobody has touched — there, leaving a
- * cancelled ghost behind is clutter, not history.
+ * that the day existed. This is for a departure that was put on the board by
+ * mistake and that nobody has touched — there, leaving a cancelled ghost behind
+ * is clutter, not history.
+ *
+ * **Soft, like every other delete** (ADR 20260820-every-delete-is-soft). It
+ * stamps `trips.deleted_at` and leaves the row and all five child tables where
+ * they are; the children are unreachable the moment the parent stops matching
+ * {@link liveTrip}, which is what makes putting the departure back a single
+ * column write instead of a rebuild of its dive plan and crew.
  *
  * The guard is checked under a row lock, so a booking landing mid-delete loses
- * the race rather than being silently erased with its trip.
+ * the race rather than being silently hidden with its trip. The two refusals
+ * are unchanged and are **not** softened by the row surviving: a departure with
+ * a roster is a different question — those divers need telling — and a sailed
+ * one is history rather than clutter.
  */
 export async function deleteTrip(
   db: AppDb,
@@ -193,7 +225,7 @@ export async function deleteTrip(
         seriesOccurrenceDate: trips.seriesOccurrenceDate,
       })
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!existing) return { ok: false, reason: "not_found" };
@@ -218,18 +250,16 @@ export async function deleteTrip(
 
     // A removed date must stay removed: a series instance leaves behind a skip
     // so the next horizon roll does not helpfully put it back (see
-    // `trip_series_skips`). Written before the delete, in the same transaction,
-    // so the two can never disagree.
+    // `trip_series_skips`). Written before the stamp, in the same transaction,
+    // so the two can never disagree. Still required with the row surviving —
+    // the roll reads the cadence, not the board, and would materialize a second
+    // instance for a date whose first one is merely hidden.
     await recordSeriesSkip(tx, existing);
 
-    // Children without a cascade of their own, innermost first. `activityEvents`
-    // cascades from the trip and needs no line here.
-    await tx.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.tripId, tripId));
-    await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
-    await tx.delete(tripRequirements).where(eq(tripRequirements.tripId, tripId));
-    await tx.delete(tripDives).where(eq(tripDives.tripId, tripId));
-    await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
-    await tx.delete(trips).where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    await tx
+      .update(trips)
+      .set({ deletedAt: nowDate() })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), isNull(trips.deletedAt)));
     return { ok: true };
   });
 }
@@ -258,7 +288,7 @@ export async function duplicateTrip(
     const [source] = await tx
       .select()
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1);
     if (!source) return null;
 

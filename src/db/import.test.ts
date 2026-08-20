@@ -548,7 +548,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await db
       .update(waiverTemplates)
-      .set({ archivedAt: nowDate() })
+      .set({ deletedAt: nowDate() })
       .where(eq(waiverTemplates.shopId, shop.id));
 
     const csv = [

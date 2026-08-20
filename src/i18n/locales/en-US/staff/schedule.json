@@ -6,6 +6,7 @@
   "notices": {
     "added": "It’s on the board.",
     "moved": "Moved.",
+    "movedGearReleased": "Moved — {count, plural, one {# gear assignment} other {# gear assignments}} released. Reassign on the prep page.",
     "copied": "Copied.",
     "removed": "Taken off the board.",
     "invalid": "That didn’t save — check the date, times, and seats, then try again.",

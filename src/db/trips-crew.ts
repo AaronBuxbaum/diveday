@@ -12,6 +12,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Who is working a departure.
@@ -58,7 +59,7 @@ export async function getTripCrewIds(db: AppDb, shopId: string, tripId: string):
     .select({ personId: tripAssignments.personId })
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId)));
+    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId), liveTrip()));
   return rows.map((r) => r.personId);
 }
 
@@ -77,7 +78,7 @@ export async function getTripCrewAssignments(
     .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId)));
+    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId), liveTrip()));
 }
 
 /**
@@ -161,7 +162,7 @@ export async function setTripCrew(
         courseId: trips.courseId,
       })
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!trip) return false;
@@ -242,6 +243,7 @@ export async function setTripCrew(
         .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
         .where(
           and(
+            liveTrip(),
             eq(trips.shopId, shopId),
             ne(trips.id, tripId),
             inArray(tripAssignments.personId, valid),
@@ -336,7 +338,7 @@ export async function changeTripCrew(
     const [targetTrip] = await tx
       .select({ courseId: trips.courseId })
       .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!targetTrip) return false;
@@ -419,7 +421,7 @@ export async function changeTripCrew(
           : await tx
               .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
               .from(trips)
-              .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+              .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
               .limit(1);
       const conflict = await tx
         .select({ personId: tripAssignments.personId })
@@ -428,6 +430,7 @@ export async function changeTripCrew(
         .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
         .where(
           and(
+            liveTrip(),
             eq(trips.shopId, shopId),
             ne(trips.id, tripId),
             eq(tripAssignments.personId, change.personId),
@@ -481,7 +484,7 @@ export async function tripCrewByTrip(
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .where(and(eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds)))
+    .where(and(eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds), liveTrip()))
     .orderBy(asc(people.fullName));
   const byTrip = new Map<string, Array<{ id: string; name: string }>>();
   for (const row of rows) {

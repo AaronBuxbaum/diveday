@@ -1570,6 +1570,56 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     return person;
   }
 
+  it("sells the seat on the rung the booker typed, and keeps the claim", async () => {
+    const { db, shop, open } = await seededContext();
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Wren Halloway",
+      email: "wren-halloway@example.com",
+      declared: { level: "advanced_open_water" },
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    // Written *after* the gate cleared: the claim is now the number the verify
+    // queue works from before the dive date.
+    const [card] = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, outcome.personId));
+    expect(card).toMatchObject({ level: "advanced_open_water", status: "pending" });
+    expect(card?.selfDeclaredAt).toBeInstanceOf(Date);
+  });
+
+  it("refuses on the rung the booker typed, and writes nothing at all", async () => {
+    const { db, shop, open } = await seededContext();
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+    const person = await diver(db, shop.id, "quiet-refusal@example.com");
+
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Cass Marlin",
+      email: "quiet-refusal@example.com",
+      declared: { level: "open_water" },
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "trip_prerequisite" });
+
+    // The half that matters for an anonymous form: a submission that fails
+    // leaves no mark on the record it was judged against, so nobody can edit a
+    // stranger's certification history by guessing their email and failing.
+    const cards = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, person.id));
+    expect(cards).toHaveLength(0);
+  });
+
   it("refuses the carded diver whose level cannot reach the trip's, naming the gap", async () => {
     const { db, shop, open } = await seededContext();
     const person = await diver(db, shop.id, "cass@example.com");

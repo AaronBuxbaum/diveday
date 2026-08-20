@@ -41,6 +41,7 @@ const checks = [
   ["uuid-segments", "check-uuid-segments.mjs"],
   ["notice-codes", "check-notice-codes.mjs"],
   ["soft-delete", "check-soft-delete.mjs"],
+  ["live-trips", "check-live-trips.mjs"],
   ["redirect-in-try", "check-redirect-in-try.mjs"],
   ["text", "check-source-text.mjs"],
   ["infra-ascii", "check-infra-ascii.mjs"],

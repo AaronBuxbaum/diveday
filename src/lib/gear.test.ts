@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { shiftCalendarDateMonths } from "./calendar-date";
 import {
   GEAR_SERVICE_DUE_SOON_DAYS,
+  GEAR_SERVICE_DUE_SOON_DIVES,
   gearKindRank,
   gearServiceState,
   pickDisplayReservation,
@@ -109,6 +110,99 @@ describe("gearServiceState", () => {
       today,
     );
     expect(state).toMatchObject({ state: "overdue", kind: "visual_inspection" });
+  });
+
+  // "24 months or 100 dives, whichever comes first" is what manufacturers
+  // publish, and a rental unit in season reaches the second number long before
+  // the first.
+  it("lets the dive clock run out first, on a date that is nowhere near due", () => {
+    expect(
+      gearServiceState(
+        [
+          {
+            kind: "service",
+            servicedOn: "2026-06-01",
+            nextDueOn: "2028-06-01",
+            nextDueDives: 100,
+            divesSince: 104,
+          },
+        ],
+        today,
+      ),
+    ).toMatchObject({
+      state: "overdue",
+      kind: "service",
+      dives: { since: 104, due: 100 },
+    });
+  });
+
+  it("reads due soon inside the last ten dives of the interval", () => {
+    expect(
+      gearServiceState(
+        [
+          {
+            kind: "service",
+            servicedOn: "2026-06-01",
+            nextDueOn: "2028-06-01",
+            nextDueDives: 100,
+            divesSince: 91,
+          },
+        ],
+        today,
+      ),
+    ).toMatchObject({ state: "due_soon", dives: { since: 91, due: 100 } });
+    expect(GEAR_SERVICE_DUE_SOON_DIVES).toBe(10);
+    // One dive earlier is still ok — the window is a window, not a slope.
+    expect(
+      gearServiceState(
+        [
+          {
+            kind: "service",
+            servicedOn: "2026-06-01",
+            nextDueOn: "2028-06-01",
+            nextDueDives: 100,
+            divesSince: 89,
+          },
+        ],
+        today,
+      ),
+    ).toMatchObject({ state: "ok" });
+  });
+
+  // The dive clock escalates and never relaxes: a unit well under its dive
+  // count is not thereby fine, because its date can still have passed.
+  it("keeps a passed date overdue even on a unit that has barely been dived", () => {
+    expect(
+      gearServiceState(
+        [
+          {
+            kind: "service",
+            servicedOn: "2025-06-01",
+            nextDueOn: "2026-06-01",
+            nextDueDives: 100,
+            divesSince: 3,
+          },
+        ],
+        today,
+      ),
+    ).toMatchObject({ state: "overdue", daysOverdue: 80 });
+  });
+
+  it("ignores a dive interval on a unit whose dives were never counted", () => {
+    expect(
+      gearServiceState(
+        [
+          {
+            kind: "service",
+            servicedOn: "2026-06-01",
+            nextDueOn: "2028-06-01",
+            nextDueDives: 100,
+            divesSince: null,
+          },
+        ],
+        today,
+      ),
+    ).toEqual({ state: "ok", kind: "service", nextDueOn: "2028-06-01" });
   });
 });
 

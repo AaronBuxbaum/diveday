@@ -13,6 +13,7 @@ import {
 } from "./schema";
 import { courseCrewCountsByTrip } from "./today";
 import { listStaff } from "./trips";
+import { liveTrip } from "./trips-live";
 
 export type StaffCapability = "teach" | "crew" | "captain";
 
@@ -112,6 +113,7 @@ export async function getStaffingView(
       .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
       .where(
         and(
+          liveTrip(),
           eq(trips.shopId, shopId),
           eq(trips.status, "scheduled"),
           lt(trips.startsAt, to),
@@ -135,6 +137,7 @@ export async function getStaffingView(
       .innerJoin(people, eq(people.id, tripAssignments.personId))
       .where(
         and(
+          liveTrip(),
           eq(trips.shopId, shopId),
           eq(trips.status, "scheduled"),
           lt(trips.startsAt, to),

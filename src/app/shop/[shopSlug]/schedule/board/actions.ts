@@ -440,7 +440,14 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
-  revalidateAndRedirect(back, `${back}?builder=moved`);
+  // A move that had to let go of gear says so on the way back. Silence here is
+  // a unit somebody still thinks is packed for this departure.
+  revalidateAndRedirect(
+    back,
+    outcome.gearReleased > 0
+      ? `${back}?builder=moved&gear=${outcome.gearReleased}`
+      : `${back}?builder=moved`,
+  );
 }
 
 const duplicateSchema = z.object({

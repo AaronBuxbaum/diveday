@@ -24,6 +24,7 @@ import {
   trips,
 } from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
+import { liveTrip } from "./trips-live";
 
 /**
  * The db half of the end-of-day close-out (ADR 20260804-day-closeout).
@@ -80,6 +81,7 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     .from(trips)
     .where(
       and(
+        liveTrip(),
         eq(trips.shopId, shopId),
         // A cancelled trip never sailed; it has no end-state to confirm.
         eq(trips.status, "scheduled"),

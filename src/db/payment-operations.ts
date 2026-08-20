@@ -10,6 +10,7 @@ import {
   people,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type StartPaymentOperationInput = {
   shopId: string;
@@ -310,7 +311,7 @@ export async function listStuckPaymentOperations(
       ? db
           .select({ id: trips.id, title: trips.title })
           .from(trips)
-          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId)))
+          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip()))
       : [],
     personIds.length
       ? db

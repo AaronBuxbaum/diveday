@@ -2435,6 +2435,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep-assignments", scheme);
       });
 
+      // The slip the counter prints and hands over. Reached the way a staffer
+      // reaches it — through the assignment row's own door, not a typed URL —
+      // so the capture also proves the door appears for a diver who has units
+      // on them.
+      test(`a diver's rental ticket renders true to the design (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+        await page.getByRole("link", { name: "Rental ticket" }).first().click();
+        await page.getByRole("heading", { name: "What you have" }).waitFor();
+        await capture(page, "rental-ticket", scheme);
+      });
+
       // The offline shell's list view — every trip currently saved on this
       // device, reachable at dive.day root as well as `/offline-manifest`
       // directly (see ADR 20260726-shopwide-offline-manifest-priming). Visiting

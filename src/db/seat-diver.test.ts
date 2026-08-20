@@ -340,7 +340,7 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
     deliverableEmailEnv();
     await db
       .update(waiverTemplates)
-      .set({ archivedAt: nowDate() })
+      .set({ deletedAt: nowDate() })
       .where(eq(waiverTemplates.shopId, shop.id));
 
     const result = await seatDiver(db, {

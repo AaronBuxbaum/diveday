@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { AppDb } from "./client";
 import { courses, diveSites, orders, people, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * The shop-scoped index behind the command palette. Every clause is pinned to
@@ -80,7 +81,11 @@ export async function searchShop(
       .from(trips)
       .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
       .where(
-        and(eq(trips.shopId, shopId), or(ilike(trips.title, like), ilike(diveSites.name, like))),
+        and(
+          eq(trips.shopId, shopId),
+          liveTrip(),
+          or(ilike(trips.title, like), ilike(diveSites.name, like)),
+        ),
       )
       .orderBy(desc(trips.startsAt))
       .limit(PER_GROUP),

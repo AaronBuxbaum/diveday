@@ -98,6 +98,36 @@ test.describe("staff", () => {
     ).toBeVisible();
   });
 
+  test("prints a diver their own rental ticket from the prep page", async ({ page }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+    // The door only exists on a row that has units on it, which is the whole
+    // rule: a slip listing nothing is a wrong slip, not a short one.
+    const withUnits = assignments.locator("li").filter({ hasText: "Rental ticket" }).first();
+    const diverName = ((await withUnits.locator("p").first().textContent()) ?? "").trim();
+    const firstTag = (
+      (await withUnits.locator("span.font-mono").first().textContent()) ?? ""
+    ).trim();
+    expect(firstTag.length).toBeGreaterThan(0);
+
+    await withUnits.getByRole("link", { name: "Rental ticket" }).click();
+    await expect(page.getByRole("heading", { name: diverName, level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What you have" })).toBeVisible();
+    await expect(page.getByText(firstTag, { exact: true })).toBeVisible();
+    // No money and nothing to sign: the two things this slip must never
+    // become (ADR 20260815-minimal-gear-register, CR-015). Scoped to the slip
+    // itself — the staff shell around it carries its own forms on every route,
+    // and they are not what this is about.
+    const slip = page.locator("#rental-ticket");
+    // The container first: every assertion below is an absence, and an absence
+    // inside a selector that matches nothing passes for the wrong reason.
+    await expect(slip).toBeVisible();
+    await expect(slip.getByText("$")).toHaveCount(0);
+    await expect(slip.getByText(/signature|sign here|i agree|total|deposit/i)).toHaveCount(0);
+    await expect(slip.locator("form")).toHaveCount(0);
+  });
+
   test("logs a service on a unit and the clock appears in its history", async ({ page }) => {
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "Reg #1", exact: true }).click();

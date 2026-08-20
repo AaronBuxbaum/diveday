@@ -29,6 +29,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverTemplate,
   listSignedWaiversByPerson,
@@ -61,7 +62,7 @@ export async function upsertTripRequirements(
   const [trip] = await db
     .select({ id: trips.id })
     .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!trip) return null;
   const [requirement] = await db
@@ -89,7 +90,7 @@ export async function upsertTripRequirements(
  * those rows.
  *
  * Like `getTripMaxDepthMeters` this deliberately does not filter
- * `dive_sites.deleted_at`: an archived briefing still governs the historical
+ * `dive_sites.deleted_at`: a deleted briefing still governs the historical
  * trip it is attached to. The choice is inherited from the depth advisory
  * rather than decided here — change both together or neither.
  */
@@ -112,7 +113,14 @@ function tripVisitedSites(db: DbExecutor, shopId: string, tripId: string) {
       // `dive_sites.shop_id` as well as the trip's: the join above reaches sites
       // through two paths, so shop ownership is proven on the query rather than
       // assumed from the trip's pointer (the CR-007 house rule).
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)))
+      .where(
+        and(
+          eq(trips.id, tripId),
+          eq(trips.shopId, shopId),
+          eq(diveSites.shopId, shopId),
+          liveTrip(),
+        ),
+      )
   );
 }
 
@@ -165,7 +173,9 @@ export async function getTripMaxDepthMeters(
     // through two paths, and proving the row belongs to this shop on the query
     // beats relying on the invariant that a trip never points at a foreign
     // site (the CR-007 house rule).
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)));
+    .where(
+      and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId), liveTrip()),
+    );
   return row?.maxDepth ?? null;
 }
 
@@ -283,7 +293,7 @@ export async function reviewCertification(
       and(
         eq(certifications.id, input.certificationId),
         eq(certifications.shopId, input.shopId),
-        // An archived card never comes back through a review, matching both
+        // A deleted card never comes back through a review, matching both
         // siblings (`reviewSpecialtyCertification`, `reviewNitroxCertification`
         // — a prior `security-reviewer` finding). It matters more now that the
         // self-declaration surface tells staff the right answer to a bad claim
@@ -349,11 +359,12 @@ export async function reviewCertification(
 }
 
 /**
- * Soft-archive a level card: it drops out of every readiness/roster read but the
- * row is kept for safety history (ADR 20260719-crud-archive-semantics). Shop-scoped
- * so one shop can never touch another's evidence; a no-op on an already-archived card.
+ * Delete a level card: it drops out of every readiness/roster read but the row
+ * is kept for safety history (ADR 20260820-every-delete-is-soft, extending
+ * 20260719-crud-archive-semantics). Shop-scoped so one shop can never touch
+ * another's evidence; a no-op on a card already deleted.
  */
-export async function archiveCertification(
+export async function deleteCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
@@ -375,8 +386,8 @@ export async function archiveCertification(
 }
 
 /**
- * Undo a soft-archive: bring a level card back into every readiness/roster read.
- * The inverse of `archiveCertification`, powering the land-then-undo affordance.
+ * Undo a delete: bring a level card back into every readiness/roster read.
+ * The inverse of `deleteCertification`, powering the land-then-undo affordance.
  * Refuses (returns false) when a live card already holds the same
  * shop/agency/identifier — the partial unique index would reject it, and a
  * re-entered card must never be clobbered by an undo.
@@ -385,22 +396,22 @@ export async function restoreCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string },
 ) {
-  const [archived] = await db
+  const [deleted] = await db
     .select()
     .from(certifications)
     .where(
       and(eq(certifications.id, input.certificationId), eq(certifications.shopId, input.shopId)),
     )
     .limit(1);
-  if (!archived || archived.deletedAt === null) return false;
+  if (!deleted || deleted.deletedAt === null) return false;
   const [conflict] = await db
     .select({ id: certifications.id })
     .from(certifications)
     .where(
       and(
         eq(certifications.shopId, input.shopId),
-        eq(certifications.agency, archived.agency),
-        sql`lower(${certifications.identifier}) = lower(${archived.identifier})`,
+        eq(certifications.agency, deleted.agency),
+        sql`lower(${certifications.identifier}) = lower(${deleted.identifier})`,
         isNull(certifications.deletedAt),
       ),
     )
@@ -500,7 +511,7 @@ export async function reviewSpecialtyCertification(
   if (input.reviewedByPersonId && !reviewedByPersonId) {
     return { ok: false, reason: "staff_not_found" };
   }
-  // Read first so a missing or archived card is a `not_found` refusal rather
+  // Read first so a missing or deleted card is a `not_found` refusal rather
   // than an update that silently matched no rows.
   const [existing] = await db
     .select({ id: specialtyCertifications.id })
@@ -527,8 +538,8 @@ export async function reviewSpecialtyCertification(
       and(
         eq(specialtyCertifications.id, input.certificationId),
         eq(specialtyCertifications.shopId, input.shopId),
-        // Never re-verify an archived card: this is the mutation that opens a
-        // specialty (depth) gate, and an archived card is out of every readiness
+        // Never re-verify a deleted card: this is the mutation that opens a
+        // specialty (depth) gate, and a deleted card is out of every readiness
         // read by design (`security-reviewer` finding).
         isNull(specialtyCertifications.deletedAt),
       ),
@@ -552,8 +563,8 @@ export function reviewNoteFor(note: string | undefined): string | null {
   return note?.trim() || null;
 }
 
-/** Soft-archive a specialty card. Shop-scoped, mirroring `archiveCertification`. */
-export async function archiveSpecialtyCertification(
+/** Delete a specialty card. Shop-scoped, mirroring `deleteCertification`. */
+export async function deleteSpecialtyCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
@@ -574,12 +585,12 @@ export async function archiveSpecialtyCertification(
   return Boolean(row);
 }
 
-/** Undo a specialty-card soft-archive, mirroring `restoreCertification`. */
+/** Undo a specialty-card delete, mirroring `restoreCertification`. */
 export async function restoreSpecialtyCertification(
   db: AppDb,
   input: { shopId: string; certificationId: string },
 ) {
-  const [archived] = await db
+  const [deleted] = await db
     .select()
     .from(specialtyCertifications)
     .where(
@@ -589,15 +600,15 @@ export async function restoreSpecialtyCertification(
       ),
     )
     .limit(1);
-  if (!archived || archived.deletedAt === null) return false;
+  if (!deleted || deleted.deletedAt === null) return false;
   const [conflict] = await db
     .select({ id: specialtyCertifications.id })
     .from(specialtyCertifications)
     .where(
       and(
         eq(specialtyCertifications.shopId, input.shopId),
-        eq(specialtyCertifications.agency, archived.agency),
-        sql`lower(${specialtyCertifications.identifier}) = lower(${archived.identifier})`,
+        eq(specialtyCertifications.agency, deleted.agency),
+        sql`lower(${specialtyCertifications.identifier}) = lower(${deleted.identifier})`,
         isNull(specialtyCertifications.deletedAt),
       ),
     )
@@ -648,7 +659,7 @@ export async function listTripReadiness(
       db
         .select({ startsAt: trips.startsAt })
         .from(trips)
-        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
         .limit(1),
   ]);
   const [shop] = shopRow;
@@ -815,7 +826,7 @@ export async function listTripsReadiness(
           .select({ id: trips.id, startsAt: trips.startsAt, minimumAge: courses.minimumAge })
           .from(trips)
           .leftJoin(courses, eq(courses.id, trips.courseId))
-          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
+          .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip())),
     ]);
 
   const [shop] = shopRow;
