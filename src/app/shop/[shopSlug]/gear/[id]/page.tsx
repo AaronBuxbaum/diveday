@@ -54,6 +54,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "duplicate-label": { tone: "danger", key: "gear.notice.duplicateLabel" },
   "invalid-date": { tone: "danger", key: "gear.notice.invalidDate" },
   "due-not-after-service": { tone: "danger", key: "gear.notice.dueNotAfterService" },
+  "invalid-dives": { tone: "danger", key: "gear.notice.invalidDives" },
+  "dives-need-a-date": { tone: "danger", key: "gear.notice.divesNeedADate" },
 };
 
 // See the register page's copy of this comment (ADR 20260804-instant-navigation).
@@ -373,6 +375,18 @@ function ServiceCard({
                       servicedOn: formatCalendarDate(clock.servicedOn, locale),
                     })}
               </span>
+              {/* The second interval, and the count it is being read against.
+                  "At least" is the whole claim: the count rides the rentals the
+                  shop wrote down, so a unit handed over on a handshake is not
+                  in it. */}
+              {clock.nextDueDives ? (
+                <span className="text-muted">
+                  {t("gear.unit.service.diveClock", {
+                    since: clock.divesSince ?? 0,
+                    due: clock.nextDueDives,
+                  })}
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -406,6 +420,20 @@ function ServiceCard({
           description={t("gear.unit.service.nextDueHint")}
         >
           <input type="date" name="nextDueOn" className={controlClass} />
+        </Field>
+        <Field
+          label={t("gear.unit.service.nextDueDives")}
+          hint={t("gear.form.optionalHint")}
+          description={t("gear.unit.service.nextDueDivesHint")}
+        >
+          <input
+            type="number"
+            name="nextDueDives"
+            min={1}
+            max={9999}
+            inputMode="numeric"
+            className={controlClass}
+          />
         </Field>
         <Field label={t("gear.unit.service.note")} hint={t("gear.form.optionalHint")}>
           <input

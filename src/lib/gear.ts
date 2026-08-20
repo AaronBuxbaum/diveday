@@ -115,11 +115,29 @@ export function suggestNextDueOn(
   return shiftCalendarDateMonths(servicedOn, months);
 }
 
-/** One clock's latest reading: when it last ran and when it next runs out. */
+/**
+ * One clock's latest reading: when it last ran, when it next runs out, and —
+ * for the units a shop dual-clocks — how many dives it has left.
+ *
+ * Manufacturers publish both numbers and mean "whichever comes first"
+ * (ScubaPro: 24 months **or** 100 dives), and a rental regulator in season
+ * reaches the dive count long before the date. `nextDueDives` is that second
+ * interval; `divesSince` is what this shop has actually recorded against the
+ * unit since `servicedOn`.
+ *
+ * **`divesSince` is a floor, never a fact.** It is derived from returned
+ * reservations joined to their departures' planned dives — records staff keep
+ * as well as they keep them — so a unit that went out on a handshake counts as
+ * zero. Every surface that shows it says "at least", and nothing gates on it.
+ */
 export type GearServiceClock = {
   kind: GearServiceKind;
   servicedOn: CalendarDate;
   nextDueOn: CalendarDate | null;
+  /** The dive interval for this clock, when the shop recorded one with it. */
+  nextDueDives?: number | null;
+  /** Dives recorded against this unit since `servicedOn`. A floor — see above. */
+  divesSince?: number | null;
 };
 
 /**
@@ -128,11 +146,38 @@ export type GearServiceClock = {
  */
 export const GEAR_SERVICE_DUE_SOON_DAYS = 30;
 
+/**
+ * The dive-clock twin of {@link GEAR_SERVICE_DUE_SOON_DAYS}. Ten dives is about
+ * a busy fortnight for one rental unit — the same "catch the next service run"
+ * distance the day window is picked for, measured in the other currency.
+ */
+export const GEAR_SERVICE_DUE_SOON_DIVES = 10;
+
+/**
+ * How far through the dive interval a unit is, when the shop set one. Carried
+ * beside the date so a surface can say which clock ran out — "at least 104 of
+ * 100 dives" is a different conversation from "due last Tuesday", and a crew
+ * that gets told the wrong one goes looking for the wrong paperwork.
+ */
+export type GearServiceDives = { since: number; due: number };
+
 export type GearServiceState =
   | { state: "no_clock" }
-  | { state: "ok"; kind: GearServiceKind; nextDueOn: CalendarDate }
-  | { state: "due_soon"; kind: GearServiceKind; nextDueOn: CalendarDate; daysLeft: number }
-  | { state: "overdue"; kind: GearServiceKind; nextDueOn: CalendarDate; daysOverdue: number };
+  | { state: "ok"; kind: GearServiceKind; nextDueOn: CalendarDate; dives?: GearServiceDives }
+  | {
+      state: "due_soon";
+      kind: GearServiceKind;
+      nextDueOn: CalendarDate;
+      daysLeft: number;
+      dives?: GearServiceDives;
+    }
+  | {
+      state: "overdue";
+      kind: GearServiceKind;
+      nextDueOn: CalendarDate;
+      daysOverdue: number;
+      dives?: GearServiceDives;
+    };
 
 /**
  * A unit's single most urgent clock, worded as a state. Clocks are
@@ -145,18 +190,52 @@ export function gearServiceState(
   clocks: readonly GearServiceClock[],
   todayLocal: CalendarDate,
 ): GearServiceState {
-  let earliest: { kind: GearServiceKind; nextDueOn: CalendarDate } | null = null;
+  let worst: GearServiceState | null = null;
   for (const clock of clocks) {
-    if (!clock.nextDueOn) continue;
-    if (!earliest || clock.nextDueOn < earliest.nextDueOn) {
-      earliest = { kind: clock.kind, nextDueOn: clock.nextDueOn };
-    }
+    const state = clockState(clock, todayLocal);
+    if (!state) continue;
+    if (!worst || outranks(state, worst)) worst = state;
   }
-  if (!earliest) return { state: "no_clock" };
-  const days = calendarDaysBetween(todayLocal, earliest.nextDueOn);
-  if (days < 0) return { state: "overdue", ...earliest, daysOverdue: -days };
-  if (days <= GEAR_SERVICE_DUE_SOON_DAYS) return { state: "due_soon", ...earliest, daysLeft: days };
-  return { state: "ok", ...earliest };
+  return worst ?? { state: "no_clock" };
+}
+
+/** One clock's own verdict, taking whichever of its two intervals bites first. */
+function clockState(clock: GearServiceClock, todayLocal: CalendarDate): GearServiceState | null {
+  if (!clock.nextDueOn) return null;
+  const base = { kind: clock.kind, nextDueOn: clock.nextDueOn };
+  const days = calendarDaysBetween(todayLocal, clock.nextDueOn);
+  const byDate: GearServiceState =
+    days < 0
+      ? { state: "overdue", ...base, daysOverdue: -days }
+      : days <= GEAR_SERVICE_DUE_SOON_DAYS
+        ? { state: "due_soon", ...base, daysLeft: days }
+        : { state: "ok", ...base };
+
+  // The dive clock only ever *escalates*. A unit under its dive count is not
+  // thereby fine — its date may still have passed — and a shop that records a
+  // dive interval has said "whichever comes first", not "instead of".
+  const due = clock.nextDueDives;
+  const since = clock.divesSince;
+  if (!due || since === null || since === undefined) return byDate;
+  const dives: GearServiceDives = { since, due };
+  const byDives: GearServiceState =
+    since >= due
+      ? { state: "overdue", ...base, daysOverdue: Math.max(0, -days), dives }
+      : since >= due - GEAR_SERVICE_DUE_SOON_DIVES
+        ? { state: "due_soon", ...base, daysLeft: Math.max(0, days), dives }
+        : byDate;
+  // When both clocks land on the same verdict the dive one carries the numbers,
+  // because it is the one the reader cannot work out from a calendar.
+  return outranks(byDives, byDate) || byDives.state === byDate.state ? byDives : byDate;
+}
+
+const URGENCY = { no_clock: 0, ok: 1, due_soon: 2, overdue: 3 } as const;
+
+/** True when `a` is the more urgent of the two, earliest deadline breaking a tie. */
+function outranks(a: GearServiceState, b: GearServiceState): boolean {
+  if (URGENCY[a.state] !== URGENCY[b.state]) return URGENCY[a.state] > URGENCY[b.state];
+  if (a.state === "no_clock" || b.state === "no_clock") return false;
+  return a.nextDueOn < b.nextDueOn;
 }
 
 /** The inclusive shop-local date range a reservation covers. */

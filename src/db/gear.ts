@@ -45,8 +45,10 @@ import {
   gearReservations,
   gearServiceEvents,
   people,
+  shops,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 // The lib unions and the pg enums must never drift: both directions are
 // compile errors here — a value added to one side without the other fails
@@ -225,7 +227,15 @@ export async function countGearItems(db: AppDb, shopId: string): Promise<number>
 
 export type RecordGearServiceOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "invalid_date" | "due_not_after_service" };
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "invalid_date"
+        | "due_not_after_service"
+        | "invalid_dives"
+        | "dives_need_a_date";
+    };
 
 /**
  * Append one care event to a unit's history. When the bench work is what the
@@ -241,6 +251,7 @@ export async function recordGearService(
     kind: GearServiceKind;
     servicedOn: string;
     nextDueOn?: string;
+    nextDueDives?: number;
     note?: string;
     recordedByPersonId?: string;
     returnToService?: boolean;
@@ -252,6 +263,17 @@ export async function recordGearService(
     return { ok: false, reason: "invalid_date" };
   }
   if (nextDueOn && nextDueOn <= servicedOn) return { ok: false, reason: "due_not_after_service" };
+  // A dive interval with no date beside it is half a clock: `gearServiceState`
+  // reads the two together, and "whichever comes first" needs both to compare.
+  // Refused rather than silently dropped — a staffer who typed 100 and got
+  // nothing would have no way to tell it did not take.
+  const nextDueDives = input.nextDueDives;
+  if (nextDueDives !== undefined) {
+    if (!Number.isInteger(nextDueDives) || nextDueDives <= 0) {
+      return { ok: false, reason: "invalid_dives" };
+    }
+    if (!nextDueOn) return { ok: false, reason: "dives_need_a_date" };
+  }
 
   return db.transaction(async (tx) => {
     const [item] = await tx
@@ -267,6 +289,7 @@ export async function recordGearService(
       kind: input.kind,
       servicedOn,
       nextDueOn,
+      nextDueDives: nextDueDives ?? null,
       note: optional(input.note),
       recordedByPersonId: input.recordedByPersonId ?? null,
     });
@@ -300,6 +323,7 @@ export async function latestServiceClocks(
       kind: gearServiceEvents.kind,
       servicedOn: gearServiceEvents.servicedOn,
       nextDueOn: gearServiceEvents.nextDueOn,
+      nextDueDives: gearServiceEvents.nextDueDives,
       createdAt: gearServiceEvents.createdAt,
     })
     .from(gearServiceEvents)
@@ -316,10 +340,87 @@ export async function latestServiceClocks(
   for (const row of rows) {
     const clocks = latest.get(row.gearItemId) ?? new Map<GearServiceKind, GearServiceClock>();
     // Rows arrive oldest-first, so the last write per kind is the newest event.
-    clocks.set(row.kind, { kind: row.kind, servicedOn: row.servicedOn, nextDueOn: row.nextDueOn });
+    clocks.set(row.kind, {
+      kind: row.kind,
+      servicedOn: row.servicedOn,
+      nextDueOn: row.nextDueOn,
+      nextDueDives: row.nextDueDives,
+    });
     latest.set(row.gearItemId, clocks);
   }
+
+  // The dive clock's other half. Only fetched for units that actually carry a
+  // dive interval — most shops set none, and this is a join across every
+  // completed rental of a unit's life.
+  const dualClocked = [...latest]
+    .filter(([, clocks]) => [...clocks.values()].some((clock) => clock.nextDueDives))
+    .map(([itemId]) => itemId);
+  if (dualClocked.length > 0) {
+    const dives = await completedDivesByUnit(db, shopId, dualClocked);
+    for (const [itemId, clocks] of latest) {
+      const record = dives.get(itemId) ?? [];
+      for (const clock of clocks.values()) {
+        if (!clock.nextDueDives) continue;
+        clock.divesSince = record
+          .filter((entry) => entry.tripDate >= clock.servicedOn)
+          .reduce((total, entry) => total + entry.plannedDives, 0);
+      }
+    }
+  }
   return new Map([...latest].map(([itemId, clocks]) => [itemId, [...clocks.values()]]));
+}
+
+/**
+ * Every dive a unit is on record for: one entry per rental it came back from,
+ * carrying the departure's shop-local date and its planned dive count.
+ *
+ * **This is the honest floor, and the shape says so.** It counts *returned*
+ * reservations — a unit still out has not finished its dives, and one handed
+ * over on a handshake was never written down at all — so a shop that keeps its
+ * register loosely will see a number below the truth. That is the right way for
+ * it to be wrong: a service clock that runs slow tells a shop to service
+ * something they already did, where one that ran fast would quietly clear a
+ * regulator that is past its interval. Nothing gates on it (`gearServiceState`
+ * informs, ADR 20260815-minimal-gear-register); it moves a row into "due soon"
+ * on a page a human reads.
+ *
+ * The trip's date is compared against `serviced_on` as a shop-local calendar
+ * date on both sides, so a departure and a service on the same day both count —
+ * a boundary a floor can afford.
+ */
+async function completedDivesByUnit(
+  db: AppDb,
+  shopId: string,
+  gearItemIds: readonly string[],
+): Promise<Map<string, { tripDate: CalendarDate; plannedDives: number }[]>> {
+  if (gearItemIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      gearItemId: gearReservations.gearItemId,
+      tripDate: sql<CalendarDate>`(${trips.startsAt} at time zone ${shops.timezone})::date::text`,
+      plannedDives: trips.plannedDives,
+    })
+    .from(gearReservations)
+    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        inArray(gearReservations.gearItemId, [...gearItemIds]),
+        isNotNull(gearReservations.returnedAt),
+        ne(bookings.status, "cancelled"),
+        liveTrip(),
+      ),
+    );
+
+  const byUnit = new Map<string, { tripDate: CalendarDate; plannedDives: number }[]>();
+  for (const row of rows) {
+    const bucket = byUnit.get(row.gearItemId) ?? [];
+    bucket.push({ tripDate: row.tripDate, plannedDives: row.plannedDives });
+    byUnit.set(row.gearItemId, bucket);
+  }
+  return byUnit;
 }
 
 export type GearServiceEventRow = {

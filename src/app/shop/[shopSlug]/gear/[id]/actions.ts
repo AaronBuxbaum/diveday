@@ -91,6 +91,7 @@ const serviceSchema = z.object({
   kind: z.enum(SERVICE_KINDS),
   servicedOn: z.string().trim().min(1).max(10),
   nextDueOn: z.string().trim().max(10),
+  nextDueDives: z.string().trim().max(4),
   note: z.string().trim().max(500),
 });
 
@@ -105,6 +106,7 @@ export async function recordGearServiceAction(formData: FormData) {
     kind: parsed.data.kind,
     servicedOn: parsed.data.servicedOn,
     nextDueOn: parsed.data.nextDueOn || undefined,
+    nextDueDives: parsed.data.nextDueDives ? Number(parsed.data.nextDueDives) : undefined,
     note: parsed.data.note || undefined,
     recordedByPersonId: session.user.personId,
     returnToService: formData.get("returnToService") === "on",

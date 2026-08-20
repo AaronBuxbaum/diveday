@@ -26,7 +26,7 @@ import { rankUnitsForSize, tripReservationWindow } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { assignGearUnitAction, releaseGearUnitAction } from "./actions";
@@ -524,7 +524,28 @@ export default async function TripPrepPage({
                     key={diver.bookingId}
                     className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
                   >
-                    <p className="font-medium">{diver.fullName}</p>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                      <p className="font-medium">{diver.fullName}</p>
+                      {/* The slip's door, and only once there is something to
+                          put on it — a ticket listing nothing is a wrong slip,
+                          not a short one. Hidden on paper: the departure packet
+                          is already printing this diver's units. */}
+                      {assigned.length > 0 ? (
+                        <Link
+                          href={shopPath(
+                            shopSlug,
+                            "trips",
+                            tripId,
+                            "prep",
+                            "ticket",
+                            diver.bookingId,
+                          )}
+                          className={`${buttonClass({ variant: "ghost", size: "sm" })} print:hidden`}
+                        >
+                          {t("gear.prep.ticketDoor")}
+                        </Link>
+                      ) : null}
+                    </div>
                     {assigned.length > 0 ? (
                       <ul className="mt-1.5 flex flex-col gap-1.5">
                         {assigned.map((assignment) => (

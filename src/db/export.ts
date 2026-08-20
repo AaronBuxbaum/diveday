@@ -1048,6 +1048,11 @@ export async function loadShopExportBundleInput(
             "conditions_updated_at",
             "description",
             "is_private",
+            // The bundle carries deleted departures (they are still the shop's
+            // rows), so it has to carry the stamp that says which — a file that
+            // hands back a deleted departure looking live is worse than one
+            // that left it out.
+            "deleted_at",
             "created_at",
           ],
           rows: tripRows.map((row) => [
@@ -1080,6 +1085,7 @@ export async function loadShopExportBundleInput(
             row.conditionsUpdatedAt,
             row.description,
             row.isPrivate,
+            row.deletedAt,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trips.csv"],
@@ -1827,6 +1833,7 @@ export async function loadShopExportBundleInput(
             "kind",
             "serviced_on",
             "next_due_on",
+            "next_due_dives",
             "note",
             "recorded_by_person_id",
             "recorded_by_name",
@@ -1839,6 +1846,7 @@ export async function loadShopExportBundleInput(
             row.kind,
             row.servicedOn,
             row.nextDueOn,
+            row.nextDueDives,
             row.note,
             row.recordedByPersonId,
             row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,

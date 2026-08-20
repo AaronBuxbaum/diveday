@@ -4153,6 +4153,19 @@ export const gearServiceEvents = pgTable(
      * Null for events with no clock, e.g. a condition note.
      */
     nextDueOn: date("next_due_on"),
+    /**
+     * The *other* clock: how many dives this unit may make before the same work
+     * comes round again. Manufacturers publish both and mean "whichever comes
+     * first" — ScubaPro's regulators are 24 months **or** 100 dives — and a
+     * rental fleet in season reaches the dive number long before the date.
+     *
+     * Null is the ordinary case and means only the date clock applies. The
+     * count it is compared against is **derived, never stored**
+     * (`divesSinceServiceByUnit`), so it can never disagree with the
+     * reservations it is read from — and it is honest about being a floor
+     * rather than a fact: it counts the dives this shop wrote down.
+     */
+    nextDueDives: integer("next_due_dives"),
     note: text("note"),
     /**
      * Who recorded it. A service history a shop may lean on as evidence
@@ -4168,6 +4181,13 @@ export const gearServiceEvents = pgTable(
     check(
       "gear_service_events_due_after_service",
       sql`${table.nextDueOn} is null or ${table.nextDueOn} > ${table.servicedOn}`,
+    ),
+    // A dive clock of zero or less is not a shorter interval, it is a typo:
+    // it would read as overdue the instant it was written, on a unit nobody
+    // has dived since.
+    check(
+      "gear_service_events_due_dives_positive",
+      sql`${table.nextDueDives} is null or ${table.nextDueDives} > 0`,
     ),
   ],
 );
