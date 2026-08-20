@@ -288,27 +288,15 @@ export type CourseTemplateUpdate = {
   diff: CourseTemplateDiff[];
   latestVersion: number;
   currentVersion: number;
-  legacyBaseline: boolean;
+  baselineUnavailable: boolean;
   sourceTemplateSlug: string;
 };
 
 function courseTemplateUpdateFromCourse(course: Course): CourseTemplateUpdate | null {
-  // Before source tracking existed, the seeded PADI rows still carried the
-  // stable template slug in their course slug. Treat that as a legacy link
-  // only when the agency and title agree; the missing snapshot means the safe
-  // merge must preserve all editable prose rather than guessing ownership.
-  const legacyTemplate = course.sourceTemplateSlug ? null : getCourseTemplate(course.slug);
-  const sourceTemplateSlug = course.sourceTemplateSlug ?? legacyTemplate?.slug;
-  if (!sourceTemplateSlug) return null;
+  if (!course.sourceTemplateSlug) return null;
 
-  const template = getCourseTemplate(sourceTemplateSlug);
-  if (
-    !template ||
-    (course.sourceTemplateSlug === null &&
-      (course.agency.trim().toLowerCase() !== template.agency || course.title !== template.title))
-  ) {
-    return null;
-  }
+  const template = getCourseTemplate(course.sourceTemplateSlug);
+  if (!template) return null;
   const currentVersion = course.sourceTemplateVersion ?? 1;
   const baseline = parseCourseTemplateSnapshot(course.sourceTemplateSnapshot);
   if (template.version <= currentVersion) return null;
@@ -323,7 +311,7 @@ function courseTemplateUpdateFromCourse(course: Course): CourseTemplateUpdate | 
     diff: courseTemplateDiff(current, baseline, latest),
     latestVersion: template.version,
     currentVersion,
-    legacyBaseline: baseline === null,
+    baselineUnavailable: baseline === null,
     sourceTemplateSlug: template.slug,
   };
 }

@@ -173,8 +173,8 @@ export default async function EditCoursePage({
         <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
           <h2 className="text-base font-semibold">{t("courses.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
-            {templateUpdate.legacyBaseline
-              ? t("courses.edit.templateUpdates.legacyDescription")
+            {templateUpdate.baselineUnavailable
+              ? t("courses.edit.templateUpdates.baselineUnavailableDescription")
               : t("courses.edit.templateUpdates.description", {
                   current: templateUpdate.currentVersion,
                   latest: templateUpdate.latestVersion,
@@ -196,9 +196,7 @@ export default async function EditCoursePage({
             ))}
           </ul>
           <p className="mt-4 text-sm text-muted">
-            {templateUpdate.legacyBaseline
-              ? t("courses.edit.templateUpdates.legacyKeepEditsDescription")
-              : t("courses.edit.templateUpdates.keepEditsDescription")}
+            {t("courses.edit.templateUpdates.keepEditsDescription")}
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
             <form action={preserveTemplateAction} className="flex flex-col gap-1">
