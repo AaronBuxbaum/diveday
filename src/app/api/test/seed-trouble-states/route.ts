@@ -23,6 +23,7 @@ import {
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
@@ -228,7 +229,14 @@ export async function POST(request: Request) {
   //    state the product itself can never reach.
   await hideEnoughReviewsToWithholdTheRating(db, shop.id, actor.id);
 
-  // 7. Gear on its worst day (ADR 20260815-minimal-gear-register): one seeded
+  // 7. A diver whose release went out two ways and only landed one of them, so
+  //    the record's delivery row shows both a refused channel and a settled
+  //    one at once. Nothing in the seed can produce it: a delivery outcome
+  //    needs a provider, and the demo shop has none — which is precisely why
+  //    the ring on those buttons had no baseline.
+  await markMixedWaiverDelivery(db, shop.id);
+
+  // 8. Gear on its worst day (ADR 20260815-minimal-gear-register): one seeded
   //    reservation dragged into the past so the register's returns panel wears
   //    its amber "was due" state and Today gains its gear-overdue row, and one
   //    tank's visual-inspection clock expired so the service column and the
@@ -276,6 +284,42 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * Give Priya's outstanding release one failed email and one delivered text.
+ *
+ * Priya is the seed's deliberate waiver holdout (`src/db/seed-bookings.ts`), so
+ * her record is the one that offers all four ways of getting a release signed —
+ * the same record `diver-profile-paper-waiver` photographs at rest. Issuing here
+ * rather than in the seed keeps that calm capture calm.
+ */
+async function markMixedWaiverDelivery(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+): Promise<void> {
+  const [priya] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.fullName, "Priya Sharma")))
+    .limit(1);
+  if (!priya) return;
+  const issued = await issueWaiverRequest(db, { shopId, personId: priya.id });
+  if (!issued.ok) return;
+  // Email first, text second: the record's own latest-attempt columns take the
+  // last write, and "the text got through" is the truer summary of the pair.
+  await recordWaiverDelivery(db, {
+    shopId,
+    waiverRecordId: issued.recordId,
+    channel: "email",
+    delivery: { status: "failed", detail: "mailbox does not exist" },
+  });
+  await recordWaiverDelivery(db, {
+    shopId,
+    waiverRecordId: issued.recordId,
+    channel: "text",
+    delivery: { status: "sent" },
+  });
 }
 
 /**

@@ -12,7 +12,6 @@ export type RepeatFieldsCopy = {
   every2Weeks: string;
   every4Weeks: string;
   repeatsOnLabel: string;
-  repeatsOnDescription: string;
   everyDay: string;
   endsLabel: string;
   endsNever: string;
@@ -199,7 +198,6 @@ export function RepeatFields({
             {copy.everyDay}
           </button>
         </div>
-        <p className="mt-2 text-sm text-muted">{copy.repeatsOnDescription}</p>
       </fieldset>
 
       {endsOnDate ? (

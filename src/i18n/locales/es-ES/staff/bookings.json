@@ -2,11 +2,10 @@
   "new": {
     "eyebrow": "Reservas",
     "title": "Añadir una reserva",
-    "description": "Sienta a un buceador en cualquier salida próxima — elige el barco y luego al buceador.",
     "backToBoard": "Volver al tablero",
     "tripHeading": "¿Qué salida?",
     "fullExcluded": "Las salidas completas no aparecen en esta lista. Cambia las plazas de un barco, o programa otra salida ese día, desde el tablero.",
-    "tripEmpty": "No queda ninguna plaza en las próximas salidas. Programa una salida primero.",
+    "tripEmpty": "No queda ninguna plaza en las próximas salidas.",
     "tripEmptyAction": "Abrir el calendario",
     "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "changeTrip": "¿No es esta? Elige otra salida.",
@@ -18,7 +17,6 @@
     "fromRequest": "Reserva desde una petición",
     "viewRequests": "Ver todas las peticiones",
     "relevantRequests": "Peticiones relevantes",
-    "relevantRequestsDescription": "Estas peticiones coinciden con la fecha de esta salida. Abre una para reservar a esa persona o usa el formulario manual de abajo.",
     "bookFromRequest": "Reservar desde esta petición",
     "requestsCount": "{count, plural, one {# petición} other {# peticiones}}",
     "pagination": {

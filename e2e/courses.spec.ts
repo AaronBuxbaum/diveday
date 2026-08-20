@@ -44,9 +44,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
   await page.getByRole("button", { name: "Save rental fit" }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "The crew will see this when they pack" }),
-  ).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
 });
 
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({

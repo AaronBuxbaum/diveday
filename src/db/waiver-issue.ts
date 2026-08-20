@@ -290,8 +290,11 @@ export async function issueAndDeliverWaiver(
             : "failed";
   }
   await recordWaiverDelivery(db, {
+    shopId,
     waiverRecordId: outcome.recordId,
+    channel,
     delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+    now: options.now,
   });
 
   return { ok: true, bookingId, diverName, token: outcome.token, delivery };
@@ -375,8 +378,11 @@ export async function issueAndDeliverPersonWaiver(
             : "failed";
   }
   await recordWaiverDelivery(db, {
+    shopId,
     waiverRecordId: outcome.recordId,
+    channel,
     delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+    now: options.now,
   });
   return {
     ok: true,

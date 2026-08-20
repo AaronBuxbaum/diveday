@@ -63,7 +63,7 @@ export function RelevantBookingRequests({
   className = "",
 }: {
   title: string;
-  description: string;
+  description?: string;
   items: BookingRequestCardItem[];
   openLabel: string;
   className?: string;

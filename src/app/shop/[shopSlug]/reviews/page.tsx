@@ -286,7 +286,6 @@ export default async function ReviewsPage({
               per-review act — see publishReviewsAction. */}
           {pendingOnPage > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted">{t("reviews.tickThenPublish")}</span>
               <PublishSelectedButton
                 label={t("reviews.publishSelected")}
                 pendingLabel={t("reviews.saving")}
@@ -501,10 +500,6 @@ export default async function ReviewsPage({
                             : t("reviews.markStandout")}
                         </SubmitButton>
                       </form>
-                    ) : review.isPublished ? (
-                      <p className="self-center text-sm text-muted">
-                        {t("reviews.standoutWrittenOnly")}
-                      </p>
                     ) : null}
                   </div>
                 </li>

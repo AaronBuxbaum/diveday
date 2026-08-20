@@ -174,11 +174,11 @@
       "return": "Regreso previsto"
     },
     "siteFitDemandingLabel": "Mejor con experiencia reciente",
-    "siteFitDemandingDetail": "La profundidad o la corriente pueden exigir más aquí. Lee los datos del punto y consulta con la tripulación si hace tiempo que no buceas.",
+    "siteFitDemandingDetail": "La profundidad o la corriente pueden exigir más aquí. Consulta con la tripulación si hace tiempo que no buceas.",
     "siteFitWelcomingLabel": "Inmersión acogedora",
     "siteFitWelcomingDetail": "La profundidad y la corriente publicadas hacen de esta una jornada asequible guiada por la tripulación.",
     "siteFitUnknownLabel": "Consulta a la tripulación",
-    "siteFitUnknownDetail": "La tripulación adapta la ruta al grupo y al día. Los datos de abajo son un buen punto de partida.",
+    "siteFitUnknownDetail": "La tripulación adapta la ruta al grupo y al día.",
     "backToAllTrips": "Todas las salidas",
     "specialties": {
       "deep": "Profundidad",
@@ -237,7 +237,6 @@
     "booking": "Reservando…",
     "noAccountNeeded": "No hace falta cuenta. El centro confirmará tu titulación y tus tallas de alquiler cuando llegues.",
     "fullHeading": "Este barco está completo",
-    "fullBody": "Las {capacity} plazas están ocupadas.",
     "findAnotherTrip": "Buscar otra salida",
     "reefNotGoingAnywhere": "— el arrecife no se va a ninguna parte.",
     "waitlistHeading": "Anótate en la lista de espera",
@@ -280,7 +279,7 @@
       "tripRequirementWithContact": "Esta salida es para buceadores con {list}, así que no pudimos reservar esa plaza. Escribe a {contact} si tienes esa certificación y el centro la añadirá a tu ficha.",
       "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
       "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor.",
-      "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
+      "fit": "Ese ajuste de equipo no se guardó — revisa los detalles e inténtalo de nuevo.",
       "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura — inténtalo de nuevo en un momento, o paga en el centro.",
       "checkFields": "Revisa los campos resaltados e inténtalo de nuevo."
     },
@@ -298,7 +297,7 @@
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
-    "introBody": "Añade lo que necesites y lo cobraremos junto con tu reserva. Podrás ajustar las tallas exactas después de reservar.",
+    "introBody": "Te cobraremos el equipo junto con tu reserva — podrás ajustar las tallas exactas después.",
     "diverNHeading": "Equipo del buceador {number}",
     "gearTotal": "Equipo para este buceador: {price}",
     "needGear": "¿Necesitas alquilar equipo?",
@@ -321,7 +320,7 @@
     "joinedBody": "Te escribiremos si sale una plaza de última hora con descuento en tus fechas.",
     "unsubscribe": {
       "title": "¿Dejar de recibir ofertas de última hora?",
-      "description": "Estás en la lista de {shopName} para ofertas de última hora. Toca abajo y dejaremos de enviártelas.",
+      "description": "Estás en la lista de {shopName} para ofertas de última hora.",
       "submit": "Dejar de recibir estos correos",
       "submitting": "Cancelando…",
       "confirmedTitle": "Te has dado de baja",
@@ -332,7 +331,7 @@
   },
   "courtesyEmailUnsubscribe": {
     "title": "¿Dejar de recibir estos correos?",
-    "description": "Estás en la lista de {shopName} para avisos de lista de espera y resúmenes tras la inmersión. Toca abajo y dejaremos de enviártelos — seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
+    "description": "Estás en la lista de {shopName} para avisos de lista de espera y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
     "submit": "Dejar de recibir estos correos",
     "submitting": "Cancelando…",
     "confirmedTitle": "Te has dado de baja",
@@ -415,7 +414,7 @@
     "sectionTitle": "Lo que dicen los buceadores",
     "verifiedNote": "Cada opinión es de alguien que estuvo en el barco.",
     "askHeading": "¿Qué tal tu día?",
-    "askBody": "Puntuar lleva un segundo. Las palabras son bienvenidas, pero nunca obligatorias.",
+    "askBody": "Las palabras son bienvenidas, pero nunca obligatorias.",
     "ratingLegend": "Tu puntuación",
     "ratingOption": "{rating} sobre 5 estrellas",
     "anonymousReviewer": "Un buceador",
@@ -435,7 +434,6 @@
     "allDescription": "Lee lo que dijeron los buceadores que estuvieron en el barco.",
     "backToSchedule": "Volver al calendario",
     "allEmptyHeading": "Todavía no hay opiniones escritas",
-    "allEmptyBody": "Aquí aparecerán las opiniones publicadas con palabras.",
     "paginationLabel": "Páginas de opiniones",
     "previousPage": "Anterior",
     "nextPage": "Siguiente",
@@ -471,7 +469,7 @@
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
     "tipFailed": "No ha salido bien — inténtalo de nuevo en un momento.",
     "tipThanksNotice": "¡Gracias por la propina a la tripulación! 🤿",
-    "tipConfirming": "Estamos confirmando tu pago con Stripe — normalmente tarda unos segundos. Actualiza la página si no se actualiza solo.",
+    "tipConfirming": "Estamos confirmando tu pago — normalmente tarda unos segundos. Actualiza la página si no se actualiza solo.",
     "photoLimit": "Es el máximo de fotos que admite un resumen ({max}).",
     "loggedAt": "Has registrado {count, plural, one {una inmersión} other {# inmersiones}} en {where}.",
     "loggedToday": "Has registrado {count, plural, one {una inmersión} other {# inmersiones}} hoy.",
@@ -482,7 +480,7 @@
     "tipLeave": "Dejar propina",
     "fromYourCrew": "De tu tripulación",
     "waterTemp": "Temp. del agua",
-    "photosBody": "Añade las fotos de hoy — se quedan en tu resumen y a {shop} le encantará verlas.",
+    "photosBody": "Se quedan en tu resumen y a {shop} le encantará verlas.",
     "photoAlt": "Una foto de {trip}",
     "photoLimitReached": "Ya has añadido el máximo de fotos que admite un resumen. ¡Buen botín!",
     "addAPhoto": "Añadir una foto",
@@ -491,7 +489,7 @@
     "photoTooMany": "Elige un máximo de {max} fotos a la vez.",
     "addingPhoto": "Añadiendo…",
     "addToMyRecap": "Añadir a mi resumen",
-    "buddyBody": "Bucear es mejor con alguien conocido. Reserva plaza en la próxima salida y tráetelo.",
+    "buddyBody": "Bucear es mejor con alguien conocido.",
     "seeWhatsNext": "Ver la próxima salida",
     "messageTheShop": "Escribir al centro",
     "tipAmountLegend": "Cantidad de propina",
@@ -547,7 +545,7 @@
     "payForTrip": "Pagar esta salida",
     "cancelledSeatReleased": "Tu plaza en {trip} ya no está reservada. Si te sorprende, ponte en contacto con {shop}.",
     "seeYou": "¡Nos vemos el {when}, {name}! 🤿",
-    "allSetBodyReady": "Está todo listo para tu salida. Tu centro confirmará los detalles exactos de llegada — nos vemos en el muelle.",
+    "allSetBodyReady": "Tu centro confirmará los detalles exactos de llegada — nos vemos en el muelle.",
     "almostThere": "Ya casi está, {name}.",
     "nextDetail": "Siguiente: {detail}",
     "checklistHeading": "Tu lista antes de la salida",
@@ -586,8 +584,7 @@
     },
     "emergencyOnFile": "Registrado — {name}.",
     "changePlans": "¿Necesitas cambiar tus planes?",
-    "reschedulePitch": "Elige otra salida y te movemos.",
-    "moveNeedsShop": "Esta reserva ya está pagada, así que moverla no se puede hacer desde aquí — el centro puede cambiarte de salida y ocuparse del pago. Cancelar sí lo puedes hacer tú, aquí abajo.",
+    "moveNeedsShop": "Esta reserva ya está pagada, así que el centro tiene que cambiarte de salida y ocuparse del pago.",
     "noOtherTrips": "Ahora mismo no hay ninguna otra salida con plazas en el calendario, así que todavía no hay adónde moverte. El centro puede contarte qué viene.",
     "manageShopOnly": "¿Te han cambiado los planes hoy? Tu plaza ya no se puede cambiar por tu cuenta — llama al centro y lo resuelven contigo.",
     "pickATrip": "Elige una salida",
@@ -675,10 +672,9 @@
     "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
     "signedBody": "Firmado, guardado y fuera de tu cabeza. Nos vemos en el muelle — tu centro te avisará si hace falta algo más.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
-    "sitesPeek": "Aquí tienes un avance de lo que vas a explorar en esta salida:",
     "signing": "Firmando…",
     "beforeDockTitle": "Un paso rápido antes del muelle",
-    "beforeDockDescription": "Esta exención privada lleva unos dos minutos. Puedes guardar tu progreso y volver a este enlace antes de que caduque.",
+    "beforeDockDescription": "Esta exención privada lleva unos dos minutos.",
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "Este enlace funciona hasta {date}.",
     "answerYes": "Sí",
@@ -715,7 +711,7 @@
     "metaTitle": "Reclama tu plaza",
     "eyebrow": "Reclama tu plaza",
     "heading": "Hay una plaza en {trip} esperándote",
-    "body": "Quien organiza tu grupo reservó esta plaza con {shop} y la guardó como “{seatName}”. Hazla tuya: añade tus propios datos y tu exención y tu preparación llegarán directamente a ti, no a través de esa persona.",
+    "body": "Quien organiza tu grupo reservó esta plaza con {shop} y la guardó como “{seatName}”. Tu exención y tu preparación llegarán directamente a ti, no a través de esa persona.",
     "when": "{date} · {time}",
     "nameLabel": "Tu nombre",
     "emailLabel": "Tu email",
@@ -743,7 +739,7 @@
   "rental": {
     "heading": "Equipo de alquiler",
     "ownGear": "Traes tu propio equipo — no hace falta alquiler.",
-    "matched": "Tallas registradas — la tripulación confirmará el ajuste en el muelle.",
+    "matched": "Tallas registradas.",
     "selectSizes": "Elige tus tallas para confirmar el equipo.",
     "noCharge": "No se te cobrará alquiler en esta salida.",
     "sizesLocked": "Tus tallas están listas para que la tripulación las revise en el muelle.",
@@ -758,7 +754,7 @@
     "anythingElse": "¿Algo más que deba saber la tripulación?",
     "savingFit": "Guardando…",
     "introBody": "Dile a la tripulación qué te gustaría alquilar y más o menos qué talla. Lo guardamos para la próxima vez, y confirmarán el ajuste y el lastre contigo en el muelle.",
-    "savedNote": "Guardado. La tripulación lo verá al preparar el equipo y confirmará el ajuste contigo en el muelle.",
+    "savedNote": "Guardado.",
     "estimatedRental": "Alquiler estimado: {price} por persona.",
     "estimatedRentalWithExtras": "Alquiler estimado: {price} por persona — más algunas piezas que se acuerdan en el centro.",
     "beforeDiscountLabel": "Antes del descuento por equipo completo:",
@@ -1606,7 +1602,6 @@
     "orPhone": "(o teléfono)",
     "orEmail": "(o correo)",
     "whenSuits": "Cuándo te viene bien",
-    "whenSuitsHint": "Tan exacto o tan aproximado como quieras — un día, una semana o “algún momento este otoño”.",
     "whereYouAreUpTo": "Por dónde vas",
     "chooseOne": "Elige una opción",
     "anythingElse": "Algo más",
@@ -1624,14 +1619,13 @@
     "send": "Enviar consulta",
     "sending": "Enviando…",
     "sentHeading": "Consulta enviada",
-    "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
+    "sentBody": "Nos pondremos en contacto contigo.",
     "requestDateHeading": "¿No hay ninguna fecha que te sirva?",
     "requestDateBody": "Cuéntanos qué te gustaría bucear y cuándo. No se reserva ni se aparta nada — veremos quién más pide esos días y te respondemos.",
     "whatToDive": "¿Qué te gustaría bucear?",
     "whatToDivePlaceholder": "Dos inmersiones en los pecios",
     "preferredDate": "Fecha que prefieres",
     "alternateDate": "O esta fecha",
-    "datesHint": "Es una petición, no una reserva — te diremos qué podemos organizar.",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",
@@ -1661,7 +1655,7 @@
     },
     "forgotPassword": {
       "title": "Restablece tu contraseña",
-      "description": "Introduce el correo de tu cuenta de DiveDay y te enviaremos un enlace para crear una nueva.",
+      "description": "Usa el correo de tu cuenta de DiveDay.",
       "sentTitle": "Revisa tu correo",
       "sent": "Si ese correo tiene una cuenta de DiveDay, un enlace de restablecimiento está en camino.",
       "sending": "Enviando…",
@@ -1677,17 +1671,16 @@
     },
     "verify": {
       "title": "Confirma tu correo electrónico",
-      "description": "Confirma que este es tu correo electrónico para saber que eres realmente tú.",
       "confirming": "Confirmando…",
       "submit": "Confirmar mi correo",
       "confirmedTitle": "Correo confirmado",
-      "confirmedText": "Gracias — tu correo está confirmado. Todo listo.",
+      "confirmedText": "Todo listo.",
       "unavailableTitle": "Este enlace de confirmación no está disponible",
-      "unavailableText": "Puede haber caducado o haberse usado ya. Si ya confirmaste tu correo, todo listo — inicia sesión y continúa."
+      "unavailableText": "Si ya confirmaste tu correo, todo listo — inicia sesión y continúa."
     },
     "resetPassword": {
       "unavailableTitle": "Este enlace de restablecimiento no está disponible",
-      "unavailableText": "Puede haber caducado o haberse usado ya — los enlaces de restablecimiento funcionan una sola vez, durante una hora. Pide uno nuevo desde la página de inicio de sesión.",
+      "unavailableText": "Puede haber caducado o haberse usado ya. Pide uno nuevo desde la página de inicio de sesión.",
       "title": "Crea una nueva contraseña",
       "description": "Elige una nueva contraseña para tu cuenta de DiveDay.",
       "newPassword": "Nueva contraseña",
@@ -1698,7 +1691,7 @@
       "metaTitle": "Iniciar sesión — DiveDay",
       "title": "Bienvenido de nuevo",
       "description": "Inicia sesión para llevar el centro.",
-      "error": "Ese correo y contraseña no coinciden — inténtalo de nuevo.",
+      "error": "Ese correo y contraseña no coinciden.",
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",
@@ -1788,7 +1781,7 @@
         "shopSlugTaken": "El enlace del centro “{slug}” ya está en uso.",
         "emailTaken": "Este correo ya está registrado.",
         "emailReserved": "Esa dirección de correo no puede usarse para una cuenta de centro. Usa una dirección que pueda recibir correo.",
-        "createFailed": "Algo salió mal al crear tu centro. Inténtalo de nuevo.",
+        "createFailed": "Algo salió mal al crear tu centro.",
         "signinFailed": "Tu centro se creó, pero no pudimos iniciar tu sesión. Prueba a iniciar sesión más abajo."
       }
     }
@@ -2066,12 +2059,11 @@
     "sharedWarning": "Enlace de demo compartido — no introduzcas datos reales de clientes.",
     "sessionExpired": "¿Sesión caducada? Vuelve a iniciar sesión en",
     "withCredentials": "con",
-    "chooseRole": "Elige un rol para vivir DiveDay desde distintas perspectivas:",
     "active": "Activo",
     "tryLabel": "Prueba:",
     "current": "Actual",
     "switchAction": "Cambiar",
-    "switchFailed": "El cambio de rol no se realizó — inténtalo de nuevo en un momento.",
+    "switchFailed": "El cambio de rol no se realizó.",
     "switchToAria": "Cambiar a {role}",
     "roles": {
       "owner": {
@@ -2260,7 +2252,7 @@
       "shared": {
         "cutover": {
           "heading": "Un cambio sin dramas",
-          "intro": "Dejar un sistema que has llevado durante años no tiene por qué significar un fin de semana parado. Este es el cambio, paso a paso.",
+          "intro": "Dejar un sistema que has llevado durante años no tiene por qué significar un fin de semana parado.",
           "step1": {
             "title": "Lleva los dos sistemas durante un ciclo de salidas",
             "detail": "Importa a DiveDay y empieza a llevar salidas reales con él — exenciones, lista de buceadores, listado — mientras mantienes tu sistema antiguo funcionando en paralelo. Nada obliga a un corte en seco el primer día."
@@ -2622,7 +2614,7 @@
       "seeProduct": "Ver qué hace →",
       "rulesEyebrow": "A qué nos comprometemos",
       "rulesTitle": "Cuatro reglas, y puedes verificar cada una.",
-      "rulesDescription": "Esto no son promesas. Cada una es algo que puedes ir a desmentir en la demo, en cosa de un minuto.",
+      "rulesDescription": "Esto no son promesas.",
       "rules": {
         "survivesDock": {
           "title": "Tiene que sobrevivir al muelle.",
@@ -2775,7 +2767,7 @@
         "eyebrow": "Tus registros",
         "title": "Una exportación completa cuando la necesites.",
         "body": "Cada buceador, reserva, exención firmada e historial de pagos, en CSV documentado — y cada foto que guardó la tienda, como archivos reales en lugar de enlaces. Un ZIP que descarga el propietario desde Ajustes, cualquier día, incluido el primero de la prueba.",
-        "securityNote": "La exportación incluye los registros que puede usar otro sistema. Las cuentas de acceso y las credenciales push de cada dispositivo siguen protegidas porque están ligadas a esta aplicación y a un teléfono concreto.",
+        "securityNote": "Las cuentas de acceso y las credenciales push de cada dispositivo siguen protegidas porque están ligadas a esta aplicación y a un teléfono concreto.",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
       },
       "seeFullList": "Ver todo lo que hace, en detalle →",
@@ -2799,7 +2791,7 @@
         },
         "dataIfNotWorking": {
           "question": "¿Cómo accedo a los registros de mi centro?",
-          "answer": "Los registros de tu centro están listos desde el primer día, y el botón de exportar crea una copia completa cuando la necesites. {claim} {terms}"
+          "answer": "Los registros de tu centro están listos desde el primer día. {claim} {terms}"
         },
         "switching": {
           "question": "¿Qué implica realmente cambiarse a DiveDay?",
@@ -2962,13 +2954,13 @@
   "errorBoundary": {
     "title": "Eso no salió bien",
     "bodySaved": "Algo salió mal al cargar esta página. Nada de lo que ya guardaste se perdió: toca para intentarlo de nuevo.",
-    "bodyDone": "Algo salió mal al cargar esta página. Nada de lo que ya hiciste se perdió: toca para intentarlo de nuevo.",
-    "bodyBooked": "Algo salió mal al cargar esta página. No se reservó nada: toca para intentarlo de nuevo.",
+    "bodyDone": "Nada de lo que ya hiciste se perdió.",
+    "bodyBooked": "No se reservó nada.",
     "tryAgain": "Intentar de nuevo"
   },
   "notFound": {
     "heading": "No pudimos encontrar esa página",
-    "body": "El enlace puede ser antiguo, o la página puede haberse movido. Revisa la dirección o vuelve a la página de inicio.",
+    "body": "El enlace puede ser antiguo, o la página puede haberse movido. Revisa la dirección.",
     "backHome": "Volver a la página de inicio"
   },
   "notifications": {

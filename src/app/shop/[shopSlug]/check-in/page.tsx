@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
-import { CHECK_IN_ROW_TONE, CHECK_IN_STATUS_BAR_TONE } from "@/components/row-tones";
+import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -238,7 +238,6 @@ export default async function CheckInPage({
       <ShopPageHeader
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
-        description={t("checkIn.description")}
         // What this queue *is* — how far either side of now it reaches — which
         // is a fact about the rows below it and nothing a reader can find
         // elsewhere. Gone with it: the shared-window sentence Today used to
@@ -310,11 +309,7 @@ export default async function CheckInPage({
                   : t("checkIn.emptyNoTripsTitle")}
             </h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {query
-                ? t("checkIn.emptyDescription")
-                : upcomingDepartures > 0
-                  ? t("checkIn.emptyQuietDescription")
-                  : t("checkIn.emptyNoTripsDescription")}
+              {query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
             </p>
             {query ? (
               <Link
@@ -345,7 +340,6 @@ export default async function CheckInPage({
           // waiting at the desk.
           <div className="rise-in rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
             <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("checkIn.clearedBody")}</p>
             <Link
               href={`/shop/${shopSlug}`}
               className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
@@ -456,7 +450,7 @@ export default async function CheckInPage({
                         <article
                           key={row.bookingId}
                           data-testid={`check-in-card-${row.bookingId}`}
-                          className={`group relative border-l-4 ${
+                          className={`border-l-4 ${
                             checkedIn
                               ? CHECK_IN_ROW_TONE.checkedIn
                               : ready
@@ -464,16 +458,6 @@ export default async function CheckInPage({
                                 : CHECK_IN_ROW_TONE.blocked
                           }`}
                         >
-                          <span
-                            aria-hidden="true"
-                            className={`pointer-events-none absolute inset-y-0 left-0 w-1 opacity-75 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 ${
-                              checkedIn
-                                ? CHECK_IN_STATUS_BAR_TONE.checkedIn
-                                : ready
-                                  ? CHECK_IN_STATUS_BAR_TONE.awaiting
-                                  : CHECK_IN_STATUS_BAR_TONE.blocked
-                            }`}
-                          />
                           {ready && !checkedIn ? (
                             <CheckInActionForm
                               action={checkInAction.bind(null, shopSlug)}

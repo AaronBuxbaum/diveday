@@ -19,10 +19,9 @@
     "noDepartures": "A quiet day at the dock"
   },
   "subtitle": {
-    "allClear": "Every head count on today's boats closed clean and nothing from today is still waiting. Close the day and go home.",
-    "outstanding": "A few things are still open from today. Settle what you can, decide about the rest — the close records your choices.",
-    "noDepartures": "No boat sailed today. Have a look at what tomorrow opens with, close the day, and go home.",
-    "closedSoFar": "The day is closed. Nothing locks — anything below can still be acted on, and closing again adds another record."
+    "allClear": "Close the day and go home.",
+    "outstanding": "Settle what you can, decide about the rest.",
+    "noDepartures": "Have a look at what tomorrow opens with, close the day, and go home."
   },
   "departures": {
     "heading": "How today's boats ended",
@@ -113,7 +112,6 @@
   },
   "tomorrow": {
     "heading": "Tomorrow, at a glance",
-    "subtitle": "What the morning queue opens with — read it now, walk out lighter.",
     "empty": "Tomorrow starts clear.",
     "count": "{count, plural, one {# job is waiting in tomorrow's queue.} other {# jobs are waiting in tomorrow's queue.}}"
   },
@@ -122,7 +120,7 @@
     "acknowledge": "{count, plural, one {# boat above is still out or has an open head count. I have seen it — closing the day does not stop the chase.} other {# boats above are still out or have open head counts. I have seen them — closing the day does not stop the chase.}}",
     "button": "Close the day",
     "buttonAgain": "Close the day again",
-    "note": "Closing is a record, not a lock: who closed, when, and what was still open. Nothing downstream waits on it."
+    "note": "Closing is a record, not a lock."
   },
   "record": {
     "heading": "Day closed",

@@ -163,6 +163,12 @@ const EXCLUDED_TABLES = [
   // buddy_pairs.csv; this is the history of how they got that way.
   "buddy_team_events",
   "notification_delivery_attempts", // per-attempt retry mechanics behind notification_deliveries.csv, which carries the outcome
+  // Which way each waiver link was handed over and what happened on that
+  // channel. The outcome another system could act on is already on
+  // waiver_records.csv (`delivery_status` and the provider columns beside it);
+  // these rows are the per-channel mechanics behind it, so they are out for
+  // exactly the reason notification_delivery_attempts is.
+  "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an

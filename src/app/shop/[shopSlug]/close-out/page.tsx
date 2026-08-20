@@ -533,7 +533,6 @@ export default async function CloseOutPage({
               </ul>
             </div>
           )}
-          <p className="mt-3 text-sm text-muted">{t("closeout.subtitle.closedSoFar")}</p>
         </section>
       ) : null}
 
@@ -835,7 +834,6 @@ export default async function CloseOutPage({
         <h2 id="closeout-tomorrow-heading" className="text-lg font-semibold">
           {t("closeout.tomorrow.heading")}
         </h2>
-        <p className="mt-1 text-sm text-muted">{t("closeout.tomorrow.subtitle")}</p>
         {state.tomorrow.total === 0 ? (
           <EmptyState className="mt-4">
             <p className="text-sm text-muted">{t("closeout.tomorrow.empty")}</p>

@@ -552,7 +552,6 @@ export default async function EditCoursePage({
             <legend className="px-1 text-sm font-semibold">
               {t("courses.edit.dayByDayLegend")}
             </legend>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.dayByDayDescription")}</p>
             <div className="mt-4">
               <DayByDayEditor
                 initialDays={course.scheduleDays}

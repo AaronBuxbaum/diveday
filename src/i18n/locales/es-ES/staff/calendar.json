@@ -37,7 +37,7 @@
   },
   "newLink": {
     "heading": "Tu enlace de suscripción",
-    "shownOnce": "Cópialo ahora: por seguridad solo se muestra una vez. Si lo pierdes, sustituye el enlace para obtener uno nuevo.",
+    "shownOnce": "Cópialo ahora: solo se muestra una vez. Si lo pierdes, reemplaza el enlace para obtener uno nuevo.",
     "webcalLabel": "Apple Calendar y Outlook",
     "httpsLabel": "Google Calendar y los demás",
     "webcalHint": "Abre tu aplicación de calendario y se suscribe.",

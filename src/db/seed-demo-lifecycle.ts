@@ -72,6 +72,7 @@ import {
   trips,
   tripWaitlistEntries,
   userAccounts,
+  waiverDeliveries,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -142,6 +143,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
+  // Per-channel delivery state hangs off the waiver record, so it goes first.
+  await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db
     .delete(notificationDeliveryAttempts)

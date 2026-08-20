@@ -1,10 +1,9 @@
 {
   "divingOptionsHeading": "Diving options",
-  "divingOptionsDescription": "Configure the types of diving activities your shop offers.",
   "shoreDivingLabel": "Shore diving",
   "shoreDivingDescription": "Enable if you offer shore dives (which will be an option when building trips).",
   "poolDivingLabel": "Pool diving",
-  "poolDivingDescription": "Enable if you offer pool/confined water sessions for courses.",
+  "poolDivingDescription": "Includes confined water sessions for courses.",
   "shoreEnabled": "Shore diving",
   "shoreDisabled": "No shore diving",
   "poolEnabled": "Pool diving",
@@ -13,10 +12,7 @@
   "divingOptionsSubmitting": "Saving...",
   "divingOptionsSaved": "Diving options saved.",
   "divingOptionsInvalid": "Choose whether you offer shore diving and/or pool diving.",
-
   "heading": "Boats",
-  "description": "Manage your shop's boats and their capacities.",
-  "detail": "If you configure boats, scheduling a third concurrent boat trip when you only have 2 boats will display a warning.",
   "nameLabel": "Boat name",
   "capacityLabel": "Capacity (seats)",
   "addBoat": "Add a boat",

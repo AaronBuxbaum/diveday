@@ -248,9 +248,7 @@ test.describe("staff", () => {
     await expect(page.getByText(/One waypoint down/)).toBeVisible();
     await map.click({ position: { x: 200, y: 90 } });
     await map.click({ position: { x: 340, y: 210 } });
-    await expect(
-      page.getByText("3 waypoints. Click to add another, or Undo to take one back."),
-    ).toBeVisible();
+    await expect(page.getByText(/^3 waypoints/)).toBeVisible();
 
     // Undo takes back exactly the last point, which is the control staff reach
     // for most while drawing.
@@ -409,7 +407,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/dive-sites");
     await expect(existing).toHaveCount(1);
     await expect(imported).toHaveCount(0);
-    await expect(page.getByText("Template update v2 ready — your edits are safe.")).toBeVisible();
+    await expect(page.getByText("Template update v2 ready.")).toBeVisible();
 
     await page.getByRole("link", { name: "Browse templates" }).click();
     await expect(
@@ -436,7 +434,7 @@ test.describe("staff", () => {
     await expect(existing).toHaveCount(1);
     await expect(imported).toHaveCount(1);
     await expect(page.getByText("DiveDay template v2")).toBeVisible();
-    await expect(page.getByText("Template update v2 ready — your edits are safe.")).toBeVisible();
+    await expect(page.getByText("Template update v2 ready.")).toBeVisible();
   });
 
   test("the old /dive-sites/catalog URL still works, and keeps the page it was deep-linked to", async ({

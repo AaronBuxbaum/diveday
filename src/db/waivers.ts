@@ -23,9 +23,14 @@ import {
   people,
   shops,
   trips,
+  waiverDeliveries,
+  type waiverDeliveryChannel,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+
+/** The three ways a shop hands a link over — the schema enum, named for callers. */
+export type WaiverDeliveryChannel = (typeof waiverDeliveryChannel.enumValues)[number];
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
@@ -856,16 +861,28 @@ export async function listSignedWaiversByPerson(
 
 export type DiverWaiverRequestStatus = "not_sent" | "failed" | "not_signed";
 
-/** Persist the delivery outcome on the waiver itself, including person-scoped links. */
+/**
+ * Persist the delivery outcome on the waiver itself, including person-scoped
+ * links — twice, deliberately, and to answer two different questions.
+ *
+ * The columns on `waiver_records` are **the latest attempt on this link**,
+ * whichever way it went: the delivery webhook keys on them, and
+ * `getDiverWaiverRequestStatus` reads them for "has this diver been reached at
+ * all?". The `waiver_deliveries` row is **this channel's** current state, and
+ * it exists because tapping Text must not erase what we knew about the email.
+ */
 export async function recordWaiverDelivery(
   db: DbExecutor,
   input: {
+    shopId: string;
     waiverRecordId: string;
+    channel: WaiverDeliveryChannel;
     delivery: {
       status: "sent" | "failed" | "not_configured";
       providerMessageId?: string;
       detail?: string;
     };
+    now?: Date;
   },
 ) {
   const providerStatus = null;
@@ -875,6 +892,8 @@ export async function recordWaiverDelivery(
       : input.delivery.status === "not_configured"
         ? ("not_configured" as const)
         : ("failed" as const);
+  const detail = input.delivery.status === "failed" ? (input.delivery.detail ?? null) : null;
+  const attemptedAt = input.now ?? nowDate();
   await db
     .update(waiverRecords)
     .set({
@@ -882,9 +901,109 @@ export async function recordWaiverDelivery(
       deliveryProviderMessageId: input.delivery.providerMessageId ?? null,
       deliveryProviderStatus: providerStatus,
       deliveryProviderStatusAt: null,
-      deliveryError: input.delivery.status === "failed" ? (input.delivery.detail ?? null) : null,
+      deliveryError: detail,
     })
     .where(eq(waiverRecords.id, input.waiverRecordId));
+  // Current state per channel, so a second send on the same channel replaces
+  // its row rather than stacking one. Any provider verdict already on the row
+  // is cleared: it belonged to the message this attempt just superseded.
+  await db
+    .insert(waiverDeliveries)
+    .values({
+      shopId: input.shopId,
+      waiverRecordId: input.waiverRecordId,
+      channel: input.channel,
+      status: deliveryStatus,
+      providerMessageId: input.delivery.providerMessageId ?? null,
+      detail,
+      attemptedAt,
+    })
+    .onConflictDoUpdate({
+      target: [waiverDeliveries.waiverRecordId, waiverDeliveries.channel],
+      set: {
+        status: deliveryStatus,
+        providerMessageId: input.delivery.providerMessageId ?? null,
+        providerStatus: null,
+        providerStatusAt: null,
+        detail,
+        attemptedAt,
+      },
+    });
+}
+
+/**
+ * The provider verdicts that mean a message that left DiveDay never landed.
+ * Shared by the diver's overall request status and the per-channel one, so a
+ * bounce can never read as delivered on one surface and failed on another.
+ */
+const FAILED_PROVIDER_STATUSES = new Set(["bounced", "complained", "failed", "suppressed"]);
+
+/**
+ * What a channel button on the diver record should wear. `unknown` is the
+ * honest answer for a channel nobody has tried on this link — and the reason
+ * this is a four-state code rather than a boolean.
+ */
+export type WaiverChannelDeliveryState = "unknown" | "sent" | "failed" | "not_configured";
+
+export type WaiverChannelDeliveryStates = Record<WaiverDeliveryChannel, WaiverChannelDeliveryState>;
+
+const NO_WAIVER_CHANNEL_STATES: WaiverChannelDeliveryStates = {
+  email: "unknown",
+  text: "unknown",
+  link: "unknown",
+};
+
+/**
+ * Per-channel delivery state for the diver's current outstanding waiver link.
+ *
+ * Scoped to the *pending, unsuperseded* record on purpose: a channel's outcome
+ * describes one link, so carrying last month's bounce onto a link issued this
+ * morning would be a button lying about a message that was never sent. When
+ * there is no such record — nothing outstanding — every channel is `unknown`.
+ */
+export async function getDiverWaiverChannelStates(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<WaiverChannelDeliveryStates> {
+  const [record] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "pending"),
+        isNull(waiverRecords.supersededAt),
+      ),
+    )
+    .orderBy(desc(waiverRecords.createdAt))
+    .limit(1);
+  if (!record) return NO_WAIVER_CHANNEL_STATES;
+
+  const rows = await db
+    .select({
+      channel: waiverDeliveries.channel,
+      status: waiverDeliveries.status,
+      providerStatus: waiverDeliveries.providerStatus,
+    })
+    .from(waiverDeliveries)
+    .where(
+      and(eq(waiverDeliveries.shopId, shopId), eq(waiverDeliveries.waiverRecordId, record.id)),
+    );
+
+  const states: WaiverChannelDeliveryStates = { ...NO_WAIVER_CHANNEL_STATES };
+  for (const row of rows) {
+    // A provider verdict outranks our own send result: "we handed it to SES"
+    // and "SES says it bounced" are both true, and only the second one matters
+    // to a staffer deciding whether to try another way.
+    if (row.providerStatus && FAILED_PROVIDER_STATUSES.has(row.providerStatus)) {
+      states[row.channel] = "failed";
+      continue;
+    }
+    states[row.channel] = row.status;
+  }
+  return states;
 }
 
 /**
@@ -925,12 +1044,11 @@ export async function getDiverWaiverRequestStatus(
     .limit(1);
 
   if (!row) return "not_sent";
-  const failedProviderStatuses = new Set(["bounced", "complained", "failed", "suppressed"]);
   const deliveryStatus = row.recordDeliveryStatus ?? row.deliveryStatus;
   const providerStatus = row.recordProviderStatus ?? row.providerStatus;
   if (
     deliveryStatus !== "sent" ||
-    (providerStatus !== null && failedProviderStatuses.has(providerStatus))
+    (providerStatus !== null && FAILED_PROVIDER_STATUSES.has(providerStatus))
   ) {
     return "failed";
   }

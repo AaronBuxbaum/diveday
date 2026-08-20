@@ -210,7 +210,6 @@ export default async function BlowoutPage({
         <ShopStat
           label={t("blowout.record.notified")}
           value={`${sent}/${divers.length}`}
-          detail={t("blowout.record.notifiedDetail", { sent, total: divers.length })}
           tone={sent === divers.length ? "success" : "warning"}
         />
         <ShopStat

@@ -316,7 +316,6 @@ export default async function OrdersIndexPage({
       <ShopPageHeader
         eyebrow={t("orders.index.eyebrow")}
         title={t("orders.index.title")}
-        description={t("orders.index.description")}
         actions={
           <>
             {/* The monthly report is this page's money, summed — its door

@@ -217,11 +217,40 @@ export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
     .filter({ visible: true });
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const href = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
-  if (!href?.startsWith("/waivers/")) {
-    throw new Error(`expected a /waivers/ bearer link from the send control, got ${href}`);
+  return waiverLinkFromResult(page, diverSection.getByRole("status"));
+}
+
+/**
+ * Take the bearer link out of a send control's result strip, the way a staffer
+ * does: by asking for it.
+ *
+ * The strip used to print the URL as a live anchor, and every spec below read
+ * its `href`. It no longer prints one at all — a bearer credential sitting on
+ * screen at rest, under a sentence suggesting somebody share it, was three
+ * mistakes in a row (see `WaiverSendControl`) — so the only route to the link
+ * is the control that puts it on the clipboard. Which makes this the honest
+ * test of the new behaviour rather than a workaround for it.
+ *
+ * "Copied" is the deterministic signal that the write resolved; nothing here
+ * sleeps or retries. Reading the clipboard back needs the permission, which is
+ * granted per context and is a no-op the second time.
+ */
+export async function waiverLinkFromResult(page: Page, resultNotice: Locator): Promise<string> {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  // Matched on all three of the control's states, not just its resting label: a
+  // "Copy link" tap auto-copies on arrival, so the button may already read
+  // "Copied" — or "Try again", if that first write landed outside a user
+  // gesture. Clicking is right in every one of them, and the settled "Copied"
+  // is what says the write resolved.
+  const copy = resultNotice.getByRole("button", { name: /^(Copy link|Copied|Try again)$/ }).first();
+  await copy.click();
+  await expect(copy).toHaveAccessibleName("Copied");
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  const path = copied.startsWith("http") ? new URL(copied).pathname : copied;
+  if (!path.startsWith("/waivers/")) {
+    throw new Error(`expected a /waivers/ bearer link on the clipboard, got ${copied}`);
   }
-  return href;
+  return path;
 }
 
 /**

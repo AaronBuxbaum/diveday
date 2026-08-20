@@ -3,7 +3,7 @@
     "heading": "The last boat is in",
     "body": "Every departure today is back at the dock. One pass through the close-out — how each boat ended, what is still open, what tomorrow opens with — and you can go home.",
     "headingBoatStillOut": "The close-out is open",
-    "bodyBoatStillOut": "Not every boat is back yet, so the day isn't finished. You can write up the departures that are home now — how each one ended, what is still open — and pick the rest up when the last one ties up.",
+    "bodyBoatStillOut": "Not every boat is back yet — you can write up the departures that are home now.",
     "action": "Close out the day"
   },
   "createdNotice": {
@@ -34,12 +34,11 @@
     "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
-    "promosNotAuthorized": "Promo codes discount real money, so they're limited to owners and managers."
+    "promosNotAuthorized": "Promo codes are limited to owners and managers."
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
     "lineHeading": "New here? Try this:",
-    "subtitle": "This only shows once — dismiss it any time.",
     "tryLabel": "Try:",
     "dismiss": "Got it",
     "roles": {
@@ -87,15 +86,15 @@
     "siteAction": "Add a dive site",
     "siteDone": "{count, plural, one {# dive site added.} other {# dive sites added.}}",
     "tripTitle": "Schedule your first trip",
-    "tripBody": "Put a departure on the board — divers can’t book until one exists.",
+    "tripBody": "Divers can’t book until one exists.",
     "tripAction": "Schedule a trip",
     "scheduleTitle": "Share your public schedule",
-    "scheduleBody": "The page divers actually book from — paste it on your website or socials.",
+    "scheduleBody": "Paste it on your website or socials.",
     "scheduleCopy": "Copy link",
     "scheduleCopied": "Copied",
     "scheduleCopyFailed": "Couldn’t copy — select the link above instead.",
     "stripeTitle": "Connect Stripe (optional)",
-    "stripeBody": "Take payment online. Skip this and collect payment at the counter instead.",
+    "stripeBody": "Take payment online.",
     "stripeAction": "Connect Stripe",
     "stripeDone": "Stripe connected.",
     "doneBadge": "Done"

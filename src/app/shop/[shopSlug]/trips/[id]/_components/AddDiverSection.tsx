@@ -131,8 +131,6 @@ export function AddDiverSection({
         </>
       ) : (
         <>
-          <p className="mt-1 text-sm text-muted">{t("trips.addDiver.searchDescription")}</p>
-
           <PersonSearchForm
             className="mt-4"
             query={query}

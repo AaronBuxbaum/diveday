@@ -47,7 +47,7 @@ export interface DiverListCopy {
   removedNote: string;
   restore: string;
   restoring: string;
-  /** `{name}` — one "Unarchive" per row needs a distinct accessible name. */
+  /** `{name}` — one "Restore" per row needs a distinct accessible name. */
   restoreDiverLabel: string;
   peopleHeading: string;
   /** Already pluralised for the count the badge carries — never a bare digit. */
@@ -57,7 +57,6 @@ export interface DiverListCopy {
   searchPlaceholder: string;
   noDiversMatchView: string;
   noDiversOnFile: string;
-  tryDifferentSearch: string;
   addOneHere: string;
   emptyShowAll: string;
   emptyImportBody: string;
@@ -79,7 +78,6 @@ export interface DiverListCopy {
   tableHeaderPerson: string;
   tableHeaderLevel: string;
   tableHeaderAttention: string;
-  noAttention: string;
 }
 
 function initials(fullName: string): string {
@@ -198,7 +196,7 @@ export function DiverList({
   // (`DiverFilter`, src/db/divers.ts), so a chip narrows the count and the
   // page together.
   //
-  // "Archived" is the fourth, and the one that is not about a day: it is the
+  // "Deleted" is the fourth, and the one that is not about a day: it is the
   // only way to *find* a soft-deleted diver, who otherwise matches no search
   // and sits in no view. It comes last, visually apart from the working views,
   // and only for a staffer who may restore — the whole reason to go there.
@@ -418,9 +416,9 @@ export function DiverList({
       {divers.length === 0 ? (
         <EmptyState className="mt-4">
           <p className="font-medium">{narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {narrowed ? copy.tryDifferentSearch : copy.addOneHere}
-          </p>
+          {narrowed ? null : (
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{copy.addOneHere}</p>
+          )}
           {/* Narrowed to nothing and empty on day one are different problems,
               so they get different doors: widen the view, or start the roster. */}
           {narrowed ? (
@@ -593,9 +591,6 @@ export function DiverList({
                         <Badge tone="neutral">
                           {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                         </Badge>
-                      ) : null}
-                      {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
-                        <span className="text-muted">{copy.noAttention}</span>
                       ) : null}
                     </div>
                   </Td>

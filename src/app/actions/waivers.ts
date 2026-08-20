@@ -76,8 +76,6 @@ export async function sendWaiversAction(
     // and non-empty, so this can't misfire there.
     emptySelection: bookingIds.length === 0 && !personId,
   };
-  const exposeLinks = formData.get("exposeLink") === "true";
-
   const results: Array<
     { kind: "booking"; bookingId: string } | { kind: "person"; personId: string }
   > = bookingIds.map((bookingId) => ({ kind: "booking", bookingId }));
@@ -100,10 +98,10 @@ export async function sendWaiversAction(
       continue;
     }
     if (result.delivery === "sent") {
+      // A successful send gets the "✅ Waiver sent to …" line and nothing else.
+      // It used to also hand back the link for the diver record to print; that
+      // page now reaches the link the way anyone else does, by asking for it.
       state.sent.push(result.diverName);
-      if (exposeLinks) {
-        state.links.push({ name: result.diverName, token: result.token, reason: "sent" });
-      }
     } else {
       state.links.push({ name: result.diverName, token: result.token, reason: result.delivery });
     }

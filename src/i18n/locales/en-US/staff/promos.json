@@ -1,25 +1,25 @@
 {
   "eyebrow": "Promo codes",
   "title": "Discounts a diver can type",
-  "description": "A code works across your whole schedule, unlike the one-trip deal you send from a departure. DiveDay creates it on your Stripe account, which enforces the expiry and redemption cap.",
+  "description": "A code works across your whole schedule, unlike the one-trip deal you send from a departure.",
   "notice": {
     "created": "Code created and live on your Stripe account.",
     "enabled": "Code switched on.",
-    "disabled": "Code switched off — it stops discounting immediately.",
+    "disabled": "Code switched off.",
     "invalid": "Check the code, discount, and dates and try again.",
     "invalidCode": "A code can use letters, numbers, hyphens, and underscores only.",
     "invalidDiscount": "Pick a discount between {min}% and {max}%.",
     "invalidWindow": "The end date has to come after the start date.",
     "duplicate": "You already have a code with that text.",
-    "notConnected": "Connect your Stripe account in Settings first — a code is created on your own account.",
-    "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything; try again.",
-    "notAuthorized": "Promo codes discount real money, so they're limited to owners and managers.",
+    "notConnected": "Connect your Stripe account in Settings first.",
+    "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything.",
+    "notAuthorized": "Promo codes are limited to owners and managers.",
     "deleted": "Code deleted.",
     "deletedToast": "Code deleted.",
     "restored": "Code re-created and live again on your Stripe account.",
     "restoreFailed": "Couldn't restore that code. Create it again below."
   },
-  "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — codes are created on your own Stripe account, not DiveDay's.",
+  "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code.",
   "scope": {
     "all": "Trips and courses",
     "trips": "Trips only",
@@ -27,7 +27,7 @@
   },
   "newCode": {
     "heading": "New code",
-    "detail": "Divers type this at checkout. Leave the dates or the cap empty for no limit."
+    "detail": "Leave the dates or the cap empty for no limit."
   },
   "fields": {
     "code": "Code",
@@ -53,7 +53,7 @@
   "yourCodes": "Your codes",
   "empty": {
     "heading": "No codes yet",
-    "detail": "Create one above, or send a one-trip deal from a departure's page when a boat needs filling.",
+    "detail": "Send a one-trip deal from a departure's page when a boat needs filling.",
     "action": "Create your first code"
   },
   "status": {
@@ -82,12 +82,11 @@
   "deleting": "Deleting…",
   "tripDeals": {
     "heading": "Trip deals",
-    "description": "One-trip discounts sent from a departure's page — the other half of every live code, gathered here so nothing is only visible from the trip it was sent on.",
-    "empty": "No trip deals are outstanding right now. Send one from a departure's page when a boat needs filling.",
+    "description": "One-trip discounts sent from a departure's page.",
+    "empty": "No trip deals are outstanding right now.",
     "emptyAction": "Open the schedule",
     "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
     "expiresAt": "Expires {date}",
-    "rangeNote": "Trip deals top out at 90% — the boat sails either way, so a deal always leaves something on the table. Shop-wide codes can reach 100% because staff also use them for comps.",
     "pagination": {
       "total": "{count, plural, one {# deal} other {# deals}}"
     }

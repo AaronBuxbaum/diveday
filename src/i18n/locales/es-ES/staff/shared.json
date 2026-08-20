@@ -22,13 +22,11 @@
     "sending": "Enviando…",
     "copied": "Copiado",
     "copyLink": "Copiar enlace",
-    "copyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
+    "copyFailed": "Reintentar",
     "reasonNoEmailOne": "Sin correo registrado",
     "reasonNoEmailOther": "{count} no tienen correo registrado",
     "reasonNoPhoneOne": "Sin un número al que podamos enviar mensajes",
     "reasonNoPhoneOther": "{count} no tienen un número al que podamos enviar mensajes",
-    "reasonLinkOnlyOne": "No se envió nada",
-    "reasonLinkOnlyOther": "No se envió nada",
     "reasonFailedOne": "No se pudo entregar el correo",
     "reasonFailedOther": "No se pudo entregar el correo a {count}",
     "reasonTextFailedOne": "No se pudo entregar el mensaje",
@@ -38,8 +36,6 @@
     "reasonUnconfigured": "DiveDay todavía no puede enviar correo desde esta instalación",
     "reasonTextUnconfigured": "DiveDay todavía no puede enviar mensajes desde esta instalación",
     "reasonNoAppOrigin": "Esta instalación no tiene una dirección web pública configurada, así que no se puede crear un enlace",
-    "sharePrivateLinkOne": "{reason} — comparte este enlace privado:",
-    "sharePrivateLinkOther": "{reason} — comparte estos enlaces privados:",
     "sent": "Exención enviada a {names}.",
     "alreadyDoneOne": "{names} ya tiene una exención firmada — no se reenvió nada.",
     "alreadyDoneOther": "{names} ya tienen una exención firmada — no se reenvió nada.",
@@ -77,8 +73,7 @@
     "popupBlocked": "El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes y vuelve a intentarlo."
   },
   "printPacket": {
-    "title": "Paquete de salida",
-    "description": "Imprime o guarda este paquete como PDF. Incluye las cuatro pestañas de la salida para el personal; los datos serializados o sin conexión se excluyen intencionadamente."
+    "title": "Paquete de salida"
   },
   "rollCallNote": {
     "optionalNote": "Nota",
@@ -470,7 +465,7 @@
   },
   "tripDiveFields": {
     "heading": "Plan de inmersiones",
-    "description": "Añade los detalles que ya conozcas. Dejar una inmersión en blanco no pasa nada — los buceadores igualmente verán un plan claro de {tripShape}.",
+    "description": "Dejar una inmersión en blanco no pasa nada — los buceadores igualmente verán un plan claro de {tripShape}.",
     "twoTankTrip": "dos tanques",
     "diveCountTrip": "{count} inmersiones",
     "numberOfDivesLabel": "Número de inmersiones",
@@ -487,8 +482,7 @@
     "travelLabelOther": "Minutos desde el sitio anterior",
     "travelHint": "(en blanco usa tu trayecto habitual)",
     "diverFacingDetailsLabel": "Detalles para los buceadores",
-    "detailsPlaceholder": "Lo que los buceadores deben saber sobre esta parte de la salida.",
-    "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, referencias, guía de campo — al briefing de esa inmersión. Deja el sitio en blanco cuando la tripulación lo elija en el muelle."
+    "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, referencias, guía de campo — al briefing de esa inmersión."
   },
   "offlineManifest": {
     "freshnessCopy": {

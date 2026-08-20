@@ -528,11 +528,7 @@ export default async function SettingsPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "saved"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        title={t("settings.main.title")}
-        description={t("settings.main.description")}
-      />
+      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.main.title")} />
 
       {banner && !activeSection ? (
         <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
@@ -587,7 +583,6 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.timezone.heading")}
               value={timezoneValue}
-              description={t("settings.main.timezone.description")}
               detail={t("settings.main.timezone.detail")}
               open={activeSection === "timezone"}
             >
@@ -775,7 +770,6 @@ export default async function SettingsPage({
                   ? t("settings.main.searchListing.valueHidden")
                   : t("settings.main.searchListing.valueListed")
               }
-              description={t("settings.main.searchListing.description")}
               detail={t("settings.main.searchListing.detail")}
               open={activeSection === "searchListing"}
               openOnHash="search-listing"
@@ -954,7 +948,6 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.units.heading")}
               value={unitsValue}
-              description={t("settings.main.units.description")}
               open={activeSection === "units"}
             >
               <SectionNotice banner={banner} section="units" active={activeSection} />
@@ -1036,7 +1029,6 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("boats.divingOptionsHeading")}
               value={divingOptionsValue}
-              description={t("boats.divingOptionsDescription")}
               open={activeSection === "divingOptions"}
             >
               <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
@@ -1079,8 +1071,6 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("boats.heading")}
               value={boatsValue}
-              description={t("boats.description")}
-              detail={t("boats.detail")}
               open={activeSection === "boats"}
             >
               <SectionNotice banner={banner} section="boats" active={activeSection} />
@@ -1232,7 +1222,6 @@ export default async function SettingsPage({
                 <SettingsRow
                   heading={t("settings.main.rentals.heading")}
                   value={rentalsValue}
-                  description={t("settings.main.rentals.description")}
                   detail={t("settings.main.rentals.detail")}
                   open={activeSection === "rentals"}
                 >
@@ -1332,9 +1321,6 @@ export default async function SettingsPage({
                     ) : (
                       <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>
                     )
-                  }
-                  description={
-                    !account ? t("settings.main.stripe.notConnectedDescription") : undefined
                   }
                   detail={!account ? t("settings.main.stripe.notConnectedDetail") : undefined}
                   open={activeSection === "stripe" || !account || !ready}

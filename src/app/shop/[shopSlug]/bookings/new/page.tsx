@@ -184,11 +184,7 @@ export default async function NewBookingPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader
-        eyebrow={t("bookings.new.eyebrow")}
-        title={t("bookings.new.title")}
-        description={t("bookings.new.description")}
-      />
+      <ShopPageHeader eyebrow={t("bookings.new.eyebrow")} title={t("bookings.new.title")} />
       <Link
         href={`/shop/${shopSlug}/schedule/board`}
         className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
@@ -217,7 +213,6 @@ export default async function NewBookingPage({
       <RelevantBookingRequests
         className="mt-6"
         title={t("bookings.new.relevantRequests")}
-        description={t("bookings.new.relevantRequestsDescription")}
         openLabel={t("bookings.new.bookFromRequest")}
         items={relevantRequestItems}
       />

@@ -40,10 +40,8 @@ test.describe("as captain", () => {
     // Next's own always-present `#__next-route-announcer__` out, which carries
     // a live-region role too and matches the moment FlashParams'
     // `history.replaceState` above makes the router treat this as a navigation.
-    const flash = page.getByRole("status").filter({ hasText: "Promo codes discount real money" });
-    await expect(flash).toContainText(
-      "Promo codes discount real money, so they're limited to owners and managers.",
-    );
+    const flash = page.getByRole("status").filter({ hasText: "Promo codes are limited" });
+    await expect(flash).toContainText("Promo codes are limited to owners and managers.");
     // Still the promo-specific reason, never a message about a surface this
     // captain never asked for — the whole point of the separate notice code.
     await expect(flash).not.toContainText(

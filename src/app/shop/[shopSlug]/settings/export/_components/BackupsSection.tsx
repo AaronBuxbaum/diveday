@@ -197,11 +197,7 @@ export function BackupsSection({
                 className={controlClass}
               />
             </Field>
-            <Field
-              label={t("backup.form.prefixLabel")}
-              hint={t("backup.form.optionalHint")}
-              description={t("backup.form.prefixHint")}
-            >
+            <Field label={t("backup.form.prefixLabel")} hint={t("backup.form.optionalHint")}>
               <input
                 name="prefix"
                 maxLength={200}
@@ -250,7 +246,6 @@ export function BackupsSection({
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
             <li>{t("backup.how.weekly")}</li>
             <li>{t("backup.how.contents")}</li>
-            <li>{t("backup.how.sealed")}</li>
             <li>{t("backup.how.failures")}</li>
           </ul>
         </SectionCard>

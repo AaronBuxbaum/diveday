@@ -1,5 +1,10 @@
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard, openTripTab, sendWaiverForFirstDiver } from "./helpers";
+import {
+  openTripFromBoard,
+  openTripTab,
+  sendWaiverForFirstDiver,
+  waiverLinkFromResult,
+} from "./helpers";
 
 /** The seeded charter every waiver flow in this file starts from. */
 const TRIP = "Two-Tank Reef — Molasses & French";
@@ -111,10 +116,9 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
   const resultNotice = diverSection.getByRole("status");
   await expect(resultNotice).toContainText("send email from this deployment yet");
-  const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
-  expect(waiverHref).toMatch(/^\/waivers\//);
+  const waiverHref = await waiverLinkFromResult(page, resultNotice);
 
-  await page.goto(waiverHref ?? "/");
+  await page.goto(waiverHref);
   await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
   // The trip this waiver is for is named on the page itself (task 42) — a
   // diver can verify what they're signing for instead of trusting a link
@@ -512,13 +516,11 @@ test("a diver without a booking can receive an independent waiver from their rec
   await expect(page.getByRole("button", { name: "Text waiver" })).toBeVisible();
 
   // "Copy link" is the one that never depends on a provider: it issues the
-  // private link and hands it straight back, with nothing sent.
+  // private link and puts it straight on the clipboard, with nothing sent. The
+  // URL is never printed on the page — the clipboard is the only way to it,
+  // which is what this now proves.
   await page.getByRole("button", { name: "Copy link" }).click();
-  await expect(page.getByRole("status")).toContainText("share");
-  const firstLink = page.getByRole("link", { name: /\/waivers\// });
-  await expect(firstLink).toBeVisible();
-  const firstHref = await firstLink.getAttribute("href");
-  expect(firstHref).toMatch(/^\/waivers\//);
+  const firstHref = await waiverLinkFromResult(page, page.getByRole("status"));
 
   /**
    * The whole point of the row: a staffer who copies the link and then sends it
@@ -527,14 +529,11 @@ test("a diver without a booking can receive an independent waiver from their rec
    * channel is the real shape of the mistake — copy it, then text it.
    */
   await page.getByRole("button", { name: "Text waiver" }).click();
-  await expect(page.getByRole("status")).toContainText("share");
-  await expect(page.getByRole("link", { name: /\/waivers\// })).toHaveAttribute(
-    "href",
-    firstHref ?? "",
-  );
+  await expect(page.getByRole("status")).toContainText("send texts from this deployment yet");
+  expect(await waiverLinkFromResult(page, page.getByRole("status"))).toBe(firstHref);
 
   // And it is the diver's live link, not a stale echo: it still opens.
-  await page.goto(firstHref ?? "/");
+  await page.goto(firstHref);
   await expect(page.getByLabel("Type your full name")).toBeVisible();
 });
 

@@ -86,12 +86,7 @@ export default async function VerifyAccountPage({
   // One question, one button — a panel around a single control is chrome
   // (docs/design/principles.md #10), so the shell renders none.
   return (
-    <EntryShell
-      wordmark
-      panel={false}
-      title={t("account.verify.title")}
-      description={t("account.verify.description")}
-    >
+    <EntryShell wordmark panel={false} title={t("account.verify.title")}>
       <form action={confirmEmailVerification.bind(null, token)}>
         <SubmitButton pendingLabel={t("account.verify.confirming")} className={buttonClass()}>
           {t("account.verify.submit")}

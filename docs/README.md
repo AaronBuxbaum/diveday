@@ -28,6 +28,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [design/principles.md](design/principles.md) | The delight-first design system: principles, tokens, motion, voice | design language evolves |
 | [design/brand.md](design/brand.md) | DiveDay's current brand identity: name, mark, colors, fonts, concepts, voice, and merch guidance | the approved identity, visual system, voice, or merch direction changes |
 | [../src/i18n/locales/es-ES/README.md](../src/i18n/locales/es-ES/README.md) | es-ES terminology and register: "centro" for the shop entity, the retail-vs-entity split, LatAm register rules | you add or reword a Spanish string |
+| [design/accessibility-tradeoffs.md](design/accessibility-tradeoffs.md) | The register of places DiveDay deliberately chose the more delightful standard experience over the more accessible one, what each costs and who, and what would reverse it | you make such a trade (in the same change), or a recorded one is revisited |
 | [design/forms-and-controls.md](design/forms-and-controls.md) | Field alignment and touch-target primitives, and the checks that enforce them | you build a form, a button, or a menu |
 | [engineering/workflow.md](engineering/workflow.md) | How to build features here: the loop, definition of done | process changes |
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |

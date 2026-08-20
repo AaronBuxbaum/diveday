@@ -16,7 +16,6 @@
     "title": "Blow-out cascade",
     "calledBy": "Called by {name} · {when}",
     "notified": "Notified",
-    "notifiedDetail": "{sent} of {total} messages away",
     "rebooked": "Rebooked",
     "rebookedDetail": "hold a seat on another departure",
     "unresolved": "Unresolved",

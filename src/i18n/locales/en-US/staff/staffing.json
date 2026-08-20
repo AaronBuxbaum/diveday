@@ -1,7 +1,7 @@
 {
   "eyebrow": "Operations",
   "title": "Staffing",
-  "description": "Who is working when, and what each person is qualified to teach or crew. Assign the crew for a boat on Today.",
+  "description": "Assign the crew for a boat on Today.",
   "window": {
     "from": "From",
     "through": "Through",
@@ -27,7 +27,6 @@
   },
   "addShift": {
     "heading": "Add a working shift",
-    "detail": "A shift says when someone is available. Assign the actual crew on each trip separately.",
     "person": "Staff member",
     "choosePerson": "Choose a person",
     "date": "Date",

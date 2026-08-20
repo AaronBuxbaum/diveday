@@ -269,7 +269,7 @@ export function DateRequestForm({
           {/* Two dates rather than one, and both optional. One date on its own
               reads like a slot being claimed; a first choice with a fallback
               beside it reads like what it is — a range the shop can answer. */}
-          <Field label={copy.preferredDate} hint={copy.optional} description={copy.datesHint}>
+          <Field label={copy.preferredDate} hint={copy.optional}>
             <input
               name="preferredDate"
               type="date"
@@ -287,12 +287,7 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          <Field
-            label={copy.whenSuits}
-            hint={copy.optional}
-            description={copy.whenSuitsHint}
-            className="sm:col-span-2"
-          >
+          <Field label={copy.whenSuits} hint={copy.optional} className="sm:col-span-2">
             <input
               name="timing"
               maxLength={200}

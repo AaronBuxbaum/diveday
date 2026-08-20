@@ -220,7 +220,6 @@ export type BuilderCopy = {
   every2Weeks: string;
   every4Weeks: string;
   repeatsOnLabel: string;
-  repeatsOnDescription: string;
   everyDay: string;
   endsLabel: string;
   endsNever: string;
@@ -865,7 +864,6 @@ function AddPanel({
             every2Weeks: copy.every2Weeks,
             every4Weeks: copy.every4Weeks,
             repeatsOnLabel: copy.repeatsOnLabel,
-            repeatsOnDescription: copy.repeatsOnDescription,
             everyDay: copy.everyDay,
             endsLabel: copy.endsLabel,
             endsNever: copy.endsNever,
@@ -929,6 +927,14 @@ function AddPanel({
  * conditions, prices, the roster — stays on the trip's own page, one click away
  * on the title. This surface is deliberately shallow.
  */
+/**
+ * How long the row menu's fold runs before React unmounts it. It must outlast
+ * the slowest child of `.animate-board-menu-out` in `globals.css` — the last
+ * button's 100ms stagger plus its 280ms fold — or the fold is cut off partway.
+ * Change one and change the other.
+ */
+const MENU_CLOSE_MS = 390;
+
 export function ScheduleBuilder({
   shopSlug,
   days,
@@ -1011,7 +1017,7 @@ export function ScheduleBuilder({
     menuCloseTimer.current = setTimeout(() => {
       setOpen((current) => (current === menuKey ? null : current));
       setClosingMenu((current) => (current === menuKey ? null : current));
-    }, 450);
+    }, MENU_CLOSE_MS);
   }, []);
 
   useEffect(() => {

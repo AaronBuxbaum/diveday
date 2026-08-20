@@ -108,10 +108,14 @@ export function WaiverSection({
           // country code cannot be texted, so offering the button would only
           // ever produce "no number we can text".
           hasPhone={Boolean(smsRecipient(diver.person.phone))}
+          channelStates={diver.waiverChannels}
           copy={{
             email: t("divers.stats.sendWaiverViaEmail"),
             text: t("divers.stats.sendWaiverViaSms"),
             link: t("divers.stats.copyWaiverLink"),
+            stateSent: t("divers.stats.waiverChannelSent"),
+            stateFailed: t("divers.stats.waiverChannelFailed"),
+            stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
           }}
           sendCopy={waiverSendCopy(t)}
         >

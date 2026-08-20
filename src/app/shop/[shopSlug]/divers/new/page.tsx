@@ -240,7 +240,6 @@ export default async function NewDiverPage({
       <ShopPageHeader
         eyebrow={t("divers.page.newDiverEyebrow")}
         title={t("divers.page.newDiverTitle")}
-        description={t("divers.page.newDiverDescription")}
       />
 
       <Link

@@ -19,10 +19,9 @@
     "noDepartures": "Un día tranquilo en el muelle"
   },
   "subtitle": {
-    "allClear": "Cada recuento de los barcos de hoy quedó cerrado y nada de hoy sigue pendiente. Cierra el día y a casa.",
-    "outstanding": "Quedan cosas abiertas de hoy. Resuelve lo que puedas y decide sobre el resto — el cierre registra tus decisiones.",
-    "noDepartures": "Hoy no zarpó ningún barco. Mira con qué abre mañana, cierra el día y a casa.",
-    "closedSoFar": "El día está cerrado. Nada queda bloqueado — todo lo de abajo sigue disponible, y cerrar de nuevo suma otro registro."
+    "allClear": "Cierra el día y a casa.",
+    "outstanding": "Resuelve lo que puedas y decide sobre el resto.",
+    "noDepartures": "Mira con qué abre mañana, cierra el día y a casa."
   },
   "departures": {
     "heading": "Cómo terminaron los barcos de hoy",
@@ -113,7 +112,6 @@
   },
   "tomorrow": {
     "heading": "Mañana, de un vistazo",
-    "subtitle": "Con qué abre la cola de la mañana — léelo ahora y sal más ligero.",
     "empty": "Mañana empieza despejado.",
     "count": "{count, plural, one {# tarea espera en la cola de mañana.} other {# tareas esperan en la cola de mañana.}}"
   },
@@ -122,7 +120,7 @@
     "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o tiene un recuento abierto. Lo he visto: cerrar el día no detiene el seguimiento.} other {# barcos de arriba siguen fuera o tienen recuentos abiertos. Los he visto: cerrar el día no detiene el seguimiento.}}",
     "button": "Cerrar el día",
     "buttonAgain": "Cerrar el día otra vez",
-    "note": "Cerrar es un registro, no un candado: quién cerró, cuándo y qué quedaba abierto. Nada depende de ello."
+    "note": "Cerrar es un registro, no un candado."
   },
   "record": {
     "heading": "Día cerrado",

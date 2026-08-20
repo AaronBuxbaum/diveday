@@ -4,7 +4,7 @@
   "findPlaceholder": "Empieza a escribir un nombre…",
   "search": "Buscar",
   "searching": "Buscando…",
-  "noMatches": "Sin coincidencias para “{query}” en los registros del centro.",
+  "noMatches": "Sin coincidencias para “{query}”.",
   "noEmailOnFile": "Sin correo registrado",
   "adding": "Añadiendo…",
   "handEntryHeading": "Buceador nuevo",

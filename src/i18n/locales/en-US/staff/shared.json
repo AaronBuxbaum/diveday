@@ -22,13 +22,11 @@
     "sending": "Sending…",
     "copied": "Copied",
     "copyLink": "Copy link",
-    "copyFailed": "Couldn’t copy — select the link above instead.",
+    "copyFailed": "Try again",
     "reasonNoEmailOne": "No email on file",
     "reasonNoEmailOther": "{count} have no email on file",
     "reasonNoPhoneOne": "No number we can text on file",
     "reasonNoPhoneOther": "{count} have no number we can text on file",
-    "reasonLinkOnlyOne": "Nothing was sent",
-    "reasonLinkOnlyOther": "Nothing was sent",
     "reasonFailedOne": "Email could not be delivered",
     "reasonFailedOther": "Email could not be delivered to {count}",
     "reasonTextFailedOne": "The text could not be delivered",
@@ -38,8 +36,6 @@
     "reasonUnconfigured": "DiveDay can’t send email from this deployment yet",
     "reasonTextUnconfigured": "DiveDay can’t send texts from this deployment yet",
     "reasonNoAppOrigin": "This deployment has no public web address set, so a link can’t be built",
-    "sharePrivateLinkOne": "{reason} — share this private link:",
-    "sharePrivateLinkOther": "{reason} — share these private links:",
     "sent": "Waiver sent to {names}.",
     "alreadyDoneOne": "{names} already has a signed waiver — nothing reissued.",
     "alreadyDoneOther": "{names} already have a signed waiver — nothing reissued.",
@@ -77,8 +73,7 @@
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
-    "title": "Trip packet",
-    "description": "Print or save this packet as a PDF. It includes the trip's four staff-facing tabs; serialized/offline data is intentionally excluded."
+    "title": "Trip packet"
   },
   "rollCallNote": {
     "optionalNote": "Note",
@@ -470,7 +465,7 @@
   },
   "tripDiveFields": {
     "heading": "Dive plan",
-    "description": "Add the details you know. Leaving a dive blank is okay — divers will still see a clear {tripShape} plan.",
+    "description": "Leaving a dive blank is okay — divers will still see a clear {tripShape} plan.",
     "twoTankTrip": "two-tank trip",
     "diveCountTrip": "{count}-dive trip",
     "numberOfDivesLabel": "Number of dives",
@@ -487,8 +482,7 @@
     "travelLabelOther": "Minutes from the previous site",
     "travelHint": "(blank uses your usual ride out)",
     "diverFacingDetailsLabel": "Diver-facing details",
-    "detailsPlaceholder": "What divers should know about this part of the trip.",
-    "footerNote": "Choosing a site brings its saved notes — map, landmarks, field guide — into that dive's briefing. Leave a dive's site blank when the crew picks it at the dock."
+    "footerNote": "Choosing a site brings its saved notes — map, landmarks, field guide — into that dive's briefing."
   },
   "offlineManifest": {
     "freshnessCopy": {

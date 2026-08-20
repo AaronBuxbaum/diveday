@@ -304,12 +304,7 @@ export default async function StaffingPage({
           primary ("Invite your crew"), two first-choice buttons for one
           decision. The empty state is the whole answer until there is a team. */}
       {canManage && staff.length > 0 ? (
-        <SectionCard
-          className="mt-8"
-          padding="lg"
-          title={t("staffing.addShift.heading")}
-          description={t("staffing.addShift.detail")}
-        >
+        <SectionCard className="mt-8" padding="lg" title={t("staffing.addShift.heading")}>
           <FieldGrid as="form" action={createShiftAction} columns={2}>
             <Field label={t("staffing.addShift.person")}>
               <select name="personId" required className={controlClass}>

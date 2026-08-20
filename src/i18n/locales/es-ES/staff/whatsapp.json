@@ -1,11 +1,11 @@
 {
   "eyebrow": "Ajustes",
   "title": "WhatsApp",
-  "description": "Envía recordatorios y resúmenes de salidas desde el número de WhatsApp de tu centro, para que los buceadores reconozcan quién les escribe. Sin esto, esos mensajes de cortesía salen por SMS desde un número de la plataforma.",
+  "description": "Envía recordatorios y resúmenes de salidas desde el número de WhatsApp de tu centro, para que los buceadores reconozcan quién les escribe.",
   "status": {
     "connectedHeading": "WhatsApp conectado",
     "notConnectedHeading": "No hay número de WhatsApp conectado",
-    "notConnectedDescription": "Los recordatorios y resúmenes de cortesía salen por SMS. Conecta tu número de WhatsApp Business abajo para enviarlos desde tu centro.",
+    "notConnectedDescription": "Los recordatorios y resúmenes de cortesía salen por SMS.",
     "verified": "Mensaje de prueba entregado",
     "untested": "Sin probar todavía",
     "number": "Número emisor",
@@ -14,14 +14,12 @@
   },
   "setup": {
     "heading": "Cómo funciona la conexión",
-    "description": "No tendrás que crear nada en las herramientas de Meta ni copiar ninguna clave. Todo ocurre en la ventana de Meta y DiveDay se encarga del resto.",
     "step1": "Presiona Conectar. Meta abre su propia ventana, donde inicias sesión con la cuenta de Facebook que gestiona tu centro.",
     "step2": "Elige el número de teléfono desde el que quieres que los buceadores reciban los mensajes, o añade uno nuevo, y acepta las condiciones de Meta.",
     "step3": "Ya está. DiveDay registra el número y envía tu plantilla de mensaje a revisión en tu nombre."
   },
   "test": {
     "heading": "Envía un mensaje de prueba",
-    "description": "Guardar las credenciales no prueba que funcionen. Envíate un mensaje real para confirmar que el token, la plantilla y el idioma encajan antes de que un buceador dependa de ello.",
     "phone": "Tu número de WhatsApp",
     "submit": "Enviar mensaje de prueba",
     "submitting": "Enviando…",
@@ -34,9 +32,9 @@
     "submitting": "Desconectando…"
   },
   "notice": {
-    "connected": "WhatsApp conectado. Envía un mensaje de prueba para confirmar que funciona.",
+    "connected": "WhatsApp conectado.",
     "disconnected": "WhatsApp desconectado. Los mensajes de cortesía saldrán por SMS.",
-    "tested": "Mensaje de prueba entregado. Tu conexión de WhatsApp funciona.",
+    "tested": "Mensaje de prueba entregado.",
     "test-failed": "WhatsApp rechazó el mensaje de prueba. Revisa que tu token siga siendo válido y que tu plantilla esté aprobada en el idioma indicado arriba.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",
     "not-authorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
@@ -44,7 +42,7 @@
     "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
     "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
     "signup-unavailable": "La conexión con WhatsApp aún no está activada en esta instancia de DiveDay.",
-    "signup-failed-exchange": "Meta no aceptó la conexión. Presiona Conectar para empezar de nuevo: el enlace del intento anterior solo se puede usar una vez.",
+    "signup-failed-exchange": "Meta no aceptó la conexión. Presiona Conectar para empezar de nuevo.",
     "signup-failed-register": "Meta no pudo activar ese número para enviar mensajes. Puede que ya se esté usando en la app de WhatsApp; elimínalo allí primero e inténtalo de nuevo.",
     "signup-failed-subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Presiona Conectar para intentarlo de nuevo.",
     "signup-failed-template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Presiona Conectar para intentarlo de nuevo."
@@ -57,7 +55,7 @@
     "connect": "Conectar WhatsApp",
     "reconnect": "Reconectar WhatsApp",
     "connecting": "Conectando…",
-    "cancelled": "Conexión cancelada; no se cambió nada. Presiona Conectar para intentarlo de nuevo.",
+    "cancelled": "Conexión cancelada; no se cambió nada.",
     "blocked": "No se pudo abrir la ventana de Meta. Revisa que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
   }
 }

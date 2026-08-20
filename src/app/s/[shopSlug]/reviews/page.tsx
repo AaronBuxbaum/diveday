@@ -103,7 +103,6 @@ export default async function PublicReviewsPage({
         {reviewPage.total === 0 ? (
           <EmptyState>
             <h2 className="font-medium">{t("reviews.allEmptyHeading")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("reviews.allEmptyBody")}</p>
           </EmptyState>
         ) : (
           <ReviewCards

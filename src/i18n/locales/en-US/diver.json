@@ -174,11 +174,11 @@
       "return": "Expected return"
     },
     "siteFitDemandingLabel": "Best with recent experience",
-    "siteFitDemandingDetail": "Depth or water movement can add work here. Read the site facts and check with the crew if it has been a while.",
+    "siteFitDemandingDetail": "Depth or water movement can add work here. Check with the crew if it has been a while.",
     "siteFitWelcomingLabel": "Welcoming dive",
     "siteFitWelcomingDetail": "The published depth and water movement make this an approachable crew-led day.",
     "siteFitUnknownLabel": "Ask the crew about fit",
-    "siteFitUnknownDetail": "The crew adapts the route to the group and the day. The facts below are the useful starting point.",
+    "siteFitUnknownDetail": "The crew adapts the route to the group and the day.",
     "backToAllTrips": "All trips",
     "specialties": {
       "deep": "Deep",
@@ -237,7 +237,6 @@
     "booking": "Booking…",
     "noAccountNeeded": "No account needed. The shop will confirm your certification and rental fit when you arrive.",
     "fullHeading": "This boat’s full",
-    "fullBody": "All {capacity} spots are taken.",
     "findAnotherTrip": "Find another trip",
     "reefNotGoingAnywhere": "— the reef isn’t going anywhere.",
     "waitlistHeading": "Join the wait list",
@@ -280,7 +279,7 @@
       "tripRequirementWithContact": "This charter is for divers with {list}, so we couldn't book that spot. Email {contact} if you hold that certification and the shop can add it to your record.",
       "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
       "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor.",
-      "fit": "We couldn't save that rental fit. Please check the details and try again.",
+      "fit": "That rental fit didn't save — check the details and try again.",
       "pay": "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
       "checkFields": "Check the highlighted fields and try again."
     },
@@ -298,7 +297,7 @@
   },
   "bookingGear": {
     "heading": "Rental gear",
-    "introBody": "Add what you need and we'll charge it together with your booking. You can fine-tune exact sizes after booking.",
+    "introBody": "We'll charge you for gear together with your booking — you can fine-tune exact sizes afterwards.",
     "diverNHeading": "Diver {number}'s gear",
     "gearTotal": "Gear for this diver: {price}",
     "needGear": "Need rental gear?",
@@ -321,7 +320,7 @@
     "joinedBody": "We’ll email you if a discounted last-minute spot opens up in your dates.",
     "unsubscribe": {
       "title": "Stop last-minute deal emails?",
-      "description": "You're on {shopName}'s list for last-minute deal emails. Tap below and we'll stop sending them.",
+      "description": "You're on {shopName}'s list for last-minute deal emails.",
       "submit": "Stop these emails",
       "submitting": "Stopping…",
       "confirmedTitle": "You're unsubscribed",
@@ -332,7 +331,7 @@
   },
   "courtesyEmailUnsubscribe": {
     "title": "Stop these emails?",
-    "description": "You're on {shopName}'s list for wait-list openings and post-trip recaps. Tap below and we'll stop sending them — you'll still get emails about your own bookings, waivers, and trip updates.",
+    "description": "You're on {shopName}'s list for wait-list openings and post-trip recaps. You'll still get emails about your own bookings, waivers, and trip updates.",
     "submit": "Stop these emails",
     "submitting": "Stopping…",
     "confirmedTitle": "You're unsubscribed",
@@ -415,7 +414,7 @@
     "sectionTitle": "What divers say",
     "verifiedNote": "Every review here comes from a diver who was on the boat.",
     "askHeading": "How was your day?",
-    "askBody": "A rating takes a second. Words are welcome but never required.",
+    "askBody": "Words are welcome but never required.",
     "ratingLegend": "Your rating",
     "ratingOption": "{rating} out of 5 stars",
     "anonymousReviewer": "A diver",
@@ -435,7 +434,6 @@
     "allDescription": "Read what divers who were on the boat said about their day.",
     "backToSchedule": "Back to schedule",
     "allEmptyHeading": "No written reviews yet",
-    "allEmptyBody": "Published reviews with words will appear here.",
     "paginationLabel": "Review pages",
     "previousPage": "Previous",
     "nextPage": "Next",
@@ -471,7 +469,7 @@
     "tipRange": "Enter a tip amount between $1 and $500.",
     "tipFailed": "That didn’t go through — try again in a moment.",
     "tipThanksNotice": "Thanks for tipping your crew! 🤿",
-    "tipConfirming": "Just confirming your payment with Stripe — this usually takes a few seconds. Refresh if it doesn’t update.",
+    "tipConfirming": "Just confirming your payment — this usually takes a few seconds. Refresh if it doesn’t update.",
     "photoLimit": "That’s the most photos one recap holds ({max}).",
     "loggedAt": "You logged {count, plural, one {a dive} other {# dives}} at {where}.",
     "loggedToday": "You logged {count, plural, one {a dive} other {# dives}} today.",
@@ -482,7 +480,7 @@
     "tipLeave": "Leave a tip",
     "fromYourCrew": "From your crew",
     "waterTemp": "Water temp",
-    "photosBody": "Add the shots from today — they stay on your recap, and {shop} may love to see them.",
+    "photosBody": "They stay on your recap, and {shop} may love to see them.",
     "photoAlt": "A photo from {trip}",
     "photoLimitReached": "You’ve added the most photos one recap holds. Nice haul!",
     "addAPhoto": "Add a photo",
@@ -491,7 +489,7 @@
     "photoTooMany": "Pick up to {max} photos at a time.",
     "addingPhoto": "Adding…",
     "addToMyRecap": "Add to my recap",
-    "buddyBody": "Diving’s better with someone you know. Grab a spot on the next departure and bring them along.",
+    "buddyBody": "Diving’s better with someone you know.",
     "seeWhatsNext": "See what’s next",
     "messageTheShop": "Message the shop",
     "tipAmountLegend": "Tip amount",
@@ -547,7 +545,7 @@
     "payForTrip": "Pay for this trip",
     "cancelledSeatReleased": "Your seat on {trip} is no longer held. If that’s a surprise, get in touch with {shop}.",
     "seeYou": "See you {when}, {name}! 🤿",
-    "allSetBodyReady": "Everything’s in order for your trip. Your shop will confirm exact arrival details — we’ll see you at the dock.",
+    "allSetBodyReady": "Your shop will confirm exact arrival details — we’ll see you at the dock.",
     "almostThere": "Almost there, {name}.",
     "nextDetail": "Next: {detail}",
     "checklistHeading": "Your pre-trip checklist",
@@ -586,8 +584,7 @@
     },
     "emergencyOnFile": "On file — {name}.",
     "changePlans": "Need to change your plans?",
-    "reschedulePitch": "Pick a different trip and we’ll move you.",
-    "moveNeedsShop": "This booking is already paid, so moving it isn’t something you can do here — the shop can move you and sort out the money side. Cancelling is still yours to do below.",
+    "moveNeedsShop": "This booking is already paid, so the shop has to move you and sort out the money side.",
     "noOtherTrips": "There’s no other departure with room on the calendar right now, so there’s nowhere to move you to yet. The shop can tell you what’s coming up.",
     "manageShopOnly": "Plans changed today? Your spot is past changing on your own now — call the shop and they’ll sort it out with you.",
     "pickATrip": "Pick a trip",
@@ -675,10 +672,9 @@
     "medicalContactNone": "Questions about next steps? Reach out to {shop}.",
     "signedBody": "Signed, saved, and off your mind. We’ll see you at the dock — your shop will let you know if anything else is needed.",
     "seeWhatsLeft": "See what’s left before you sail",
-    "sitesPeek": "Here is a sneak peek at what you will explore on this charter:",
     "signing": "Signing…",
     "beforeDockTitle": "A quick step before the dock",
-    "beforeDockDescription": "This private waiver takes about two minutes. You can save your place and come back on this link before it expires.",
+    "beforeDockDescription": "This private waiver takes about two minutes.",
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "This link works until {date}.",
     "answerYes": "Yes",
@@ -715,7 +711,7 @@
     "metaTitle": "Claim your seat",
     "eyebrow": "Claim your seat",
     "heading": "A seat on {trip} is waiting for you",
-    "body": "Your organizer booked this seat with {shop} and held it as “{seatName}”. Make it yours: add your own details, and your waiver and trip prep come straight to you instead of through them.",
+    "body": "Your organizer booked this seat with {shop} and held it as “{seatName}”. Your waiver and trip prep will come straight to you instead of through them.",
     "when": "{date} · {time}",
     "nameLabel": "Your name",
     "emailLabel": "Your email",
@@ -743,7 +739,7 @@
   "rental": {
     "heading": "Rental fit",
     "ownGear": "Bringing own gear — no rental needed.",
-    "matched": "Sizes recorded — the crew will confirm your fit at the dock.",
+    "matched": "Sizes recorded.",
     "selectSizes": "Select sizes to confirm your gear match.",
     "noCharge": "You won’t be charged for rentals on this trip.",
     "sizesLocked": "Your sizes are ready for the crew to check at the dock.",
@@ -758,7 +754,7 @@
     "anythingElse": "Anything else the crew should know?",
     "savingFit": "Saving fit…",
     "introBody": "Tell the crew what you'd like to rent and roughly what size. We keep it on file for next time, and they'll confirm fit and weighting with you at the dock.",
-    "savedNote": "Saved. The crew will see this when they pack, and check the fit with you at the dock.",
+    "savedNote": "Saved.",
     "estimatedRental": "Estimated rental: {price} per person.",
     "estimatedRentalWithExtras": "Estimated rental: {price} per person — plus a few items settled at the shop.",
     "beforeDiscountLabel": "Before the full-set discount:",
@@ -1606,7 +1602,6 @@
     "orPhone": "(or phone)",
     "orEmail": "(or email)",
     "whenSuits": "When suits you",
-    "whenSuitsHint": "As exact or as loose as you like — a day, a week, or “sometime this autumn”.",
     "whereYouAreUpTo": "Where you are up to",
     "chooseOne": "Choose one",
     "anythingElse": "Anything else",
@@ -1624,14 +1619,13 @@
     "send": "Send inquiry",
     "sending": "Sending…",
     "sentHeading": "Inquiry sent",
-    "sentBody": "We'll be in touch. You can still reach us directly using the details below.",
+    "sentBody": "We'll be in touch.",
     "requestDateHeading": "Nothing on a date that works?",
     "requestDateBody": "Tell us what you’d like to dive and when. Nothing is booked or held — we’ll see who else is asking for the same days and come back to you.",
     "whatToDive": "What would you like to dive?",
     "whatToDivePlaceholder": "Two dives on the wrecks",
     "preferredDate": "Date you’d like",
     "alternateDate": "Or this date",
-    "datesHint": "A request, not a booking — we’ll tell you what we can run.",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",
@@ -1661,7 +1655,7 @@
     },
     "forgotPassword": {
       "title": "Reset your password",
-      "description": "Enter the email on your DiveDay account and we'll send a link to set a new one.",
+      "description": "Use the email on your DiveDay account.",
       "sentTitle": "Check your email",
       "sent": "If that email has a DiveDay account, a reset link is on its way.",
       "sending": "Sending…",
@@ -1677,17 +1671,16 @@
     },
     "verify": {
       "title": "Confirm your email",
-      "description": "Confirm this is your email address so we know it's really you.",
       "confirming": "Confirming…",
       "submit": "Confirm my email",
       "confirmedTitle": "Email confirmed",
-      "confirmedText": "Thanks — your email is confirmed. You're all set.",
+      "confirmedText": "You're all set.",
       "unavailableTitle": "This confirmation link isn’t available",
-      "unavailableText": "It may have expired or already been used. If you already confirmed your email, you're all set — sign in and carry on."
+      "unavailableText": "If you already confirmed your email, you're all set — sign in and carry on."
     },
     "resetPassword": {
       "unavailableTitle": "This reset link isn’t available",
-      "unavailableText": "It may have expired or already been used — reset links work once, within an hour. Ask for a fresh one from the sign-in page.",
+      "unavailableText": "It may have expired or already been used. Ask for a fresh one from the sign-in page.",
       "title": "Set a new password",
       "description": "Choose a new password for your DiveDay account.",
       "newPassword": "New password",
@@ -1698,7 +1691,7 @@
       "metaTitle": "Sign in — DiveDay",
       "title": "Welcome back",
       "description": "Sign in to run the shop.",
-      "error": "That email and password don't match — give it another go.",
+      "error": "That email and password don't match.",
       "forgotPassword": "Forgot password?",
       "signingIn": "Signing in…",
       "submit": "Sign in",
@@ -1788,7 +1781,7 @@
         "shopSlugTaken": "The shop link “{slug}” is already taken.",
         "emailTaken": "This email is already registered.",
         "emailReserved": "That email address can't be used for a shop account. Please use an address that can receive mail.",
-        "createFailed": "Something went wrong creating your shop. Please try again.",
+        "createFailed": "Something went wrong creating your shop.",
         "signinFailed": "Your shop was created, but signing you in failed. Try signing in below."
       }
     }
@@ -2066,12 +2059,11 @@
     "sharedWarning": "Shared demo link — don't enter real customer details.",
     "sessionExpired": "Session expired? Sign back in at",
     "withCredentials": "with",
-    "chooseRole": "Choose a role to experience DiveDay from different perspectives:",
     "active": "Active",
     "tryLabel": "Try:",
     "current": "Current",
     "switchAction": "Switch",
-    "switchFailed": "That role switch didn’t go through — try again in a moment.",
+    "switchFailed": "That role switch didn’t go through.",
     "switchToAria": "Switch to {role}",
     "roles": {
       "owner": {
@@ -2260,7 +2252,7 @@
       "shared": {
         "cutover": {
           "heading": "Cutover without drama",
-          "intro": "Leaving a system you've run for years doesn't have to mean a weekend of downtime. Here's the switch, step by step.",
+          "intro": "Leaving a system you've run for years doesn't have to mean a weekend of downtime.",
           "step1": {
             "title": "Run both systems for one trip cycle",
             "detail": "Import into DiveDay and start taking real trips through it — waivers, roster, manifest — while you keep your old system running alongside it. Nothing forces a hard cutoff on day one."
@@ -2622,7 +2614,7 @@
       "seeProduct": "See what it does →",
       "rulesEyebrow": "What we hold it to",
       "rulesTitle": "Four rules, and you can check every one.",
-      "rulesDescription": "These aren't promises. Each one is something you can go and prove wrong in the demo, in about a minute.",
+      "rulesDescription": "These aren't promises.",
       "rules": {
         "survivesDock": {
           "title": "It has to survive the dock.",
@@ -2775,7 +2767,7 @@
         "eyebrow": "Your records",
         "title": "What happens to my records if I leave?",
         "body": "Every diver, booking, signed waiver and payment history, as documented CSVs — plus every photo the shop stored, as real files rather than links. One ZIP, downloaded by the shop's owner from Settings, on any day including the first day of a trial.",
-        "securityNote": "The export includes the records another system can use. Login accounts and device push credentials stay protected because they are tied to this app and a particular phone.",
+        "securityNote": "Login accounts and device push credentials stay protected because they are tied to this app and a particular phone.",
         "mockupLabel": "The Data export screen in DiveDay, listing the bundle's files with a row count for each and the account credentials that stay protected"
       },
       "seeFullList": "See everything it does, in detail →",
@@ -2799,7 +2791,7 @@
         },
         "dataIfNotWorking": {
           "question": "How do I access my shop's records?",
-          "answer": "Your shop's records are ready from day one, and the export button creates a complete copy whenever you need one. {claim} {terms}"
+          "answer": "Your shop's records are ready from day one. {claim} {terms}"
         },
         "switching": {
           "question": "What does switching to DiveDay actually involve?",
@@ -2962,13 +2954,13 @@
   "errorBoundary": {
     "title": "That didn’t go through",
     "bodySaved": "Something went wrong loading this page. Nothing you already saved was lost — tap to try again.",
-    "bodyDone": "Something went wrong loading this page. Nothing you already did was lost — tap to try again.",
-    "bodyBooked": "Something went wrong loading this page. Nothing was booked — tap to try again.",
+    "bodyDone": "Nothing you already did was lost.",
+    "bodyBooked": "Nothing was booked.",
     "tryAgain": "Try again"
   },
   "notFound": {
     "heading": "We couldn’t find that page",
-    "body": "The link may be old, or the page may have moved. Check the address, or head back to the homepage.",
+    "body": "The link may be old, or the page may have moved. Check the address.",
     "backHome": "Back to the homepage"
   },
   "notifications": {

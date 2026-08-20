@@ -26,7 +26,12 @@ type PaletteItem = {
   href?: string;
   run?: () => void;
 };
-type PaletteGroup = { heading: string; items: PaletteItem[] };
+/**
+ * `heading` is optional: the trailing "Add diver" row is a group of one whose
+ * label already says what it is, and a heading over it would be the heading
+ * repeating the only row under it.
+ */
+type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
 
 const EMPTY: SearchResults = { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
 
@@ -202,29 +207,37 @@ export function CommandPalette({
       detail: diver.detail ?? undefined,
       href: `${root}/divers/${diver.id}`,
     }));
-    if (q.length >= 2) {
-      const formData = new FormData();
-      formData.set("query", rawQuery);
-      diverItems.push({
-        key: "diver:add",
-        label: copy.addDiver,
-        detail: rawQuery,
-        run: () => startTransition(() => createDiverAction(formData)),
-      });
-    }
-    // Destination commands take precedence over the catch-all "add a diver"
-    // result when both match the same query. Typing "Add a booking" should
-    // make the exact navigation command the first keyboard selection, not
-    // send the query text to the diver form.
-    if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
+    // "Add a diver called <whatever you typed>" matches *every* query by
+    // construction, so it is the one row that can never lose a ranking contest
+    // — which is how typing "sign out" used to offer to create a diver named
+    // "sign out" above the actual Sign out command. It is appended after every
+    // real match instead of sitting inside Divers, so it is always the last
+    // thing an arrow key reaches and never what Enter takes on a query that
+    // matched something real.
+    const addDiver: PaletteItem | null =
+      q.length >= 2
+        ? (() => {
+            const formData = new FormData();
+            formData.set("query", rawQuery);
+            return {
+              key: "diver:add",
+              label: copy.addDiver,
+              detail: rawQuery,
+              run: () => startTransition(() => createDiverAction(formData)),
+            };
+          })()
+        : null;
+    if (goto.length > 0) out.push({ id: "go-to", heading: copy.groupGoTo, items: goto });
     if (diverItems.length > 0) {
       out.push({
+        id: "divers",
         heading: copy.groupDivers,
         items: diverItems,
       });
     }
     if (results.trips.length > 0) {
       out.push({
+        id: "trips",
         heading: copy.groupTrips,
         items: results.trips.map((trip) => ({
           key: `trip:${trip.id}`,
@@ -236,6 +249,7 @@ export function CommandPalette({
     }
     if (results.diveSites.length > 0) {
       out.push({
+        id: "dive-sites",
         heading: copy.groupDiveSites,
         items: results.diveSites.map((site) => ({
           key: `dive-site:${site.id}`,
@@ -246,6 +260,7 @@ export function CommandPalette({
     }
     if (results.courses.length > 0) {
       out.push({
+        id: "courses",
         heading: copy.groupCourses,
         items: results.courses.map((course) => ({
           key: `course:${course.id}`,
@@ -256,6 +271,7 @@ export function CommandPalette({
     }
     if (results.orders.length > 0) {
       out.push({
+        id: "orders",
         heading: copy.groupOrders,
         items: results.orders.map((order) => ({
           key: `order:${order.id}`,
@@ -281,6 +297,7 @@ export function CommandPalette({
       );
     if (otherLanguages.length > 0) {
       out.push({
+        id: "language",
         heading: copy.language,
         items: otherLanguages.map((choice) => ({
           key: `language:${choice.locale}`,
@@ -312,6 +329,7 @@ export function CommandPalette({
       copy.signOut.toLowerCase().includes(q)
     ) {
       out.push({
+        id: "session",
         heading: copy.groupSession,
         items: [
           {
@@ -322,6 +340,10 @@ export function CommandPalette({
         ],
       });
     }
+    // Last, under everything, with no heading of its own: the row states the
+    // act and carries the typed name as its detail, so a heading over a group
+    // of one would only repeat it.
+    if (addDiver) out.push({ id: "add-diver", items: [addDiver] });
     return out;
   }, [
     results,
@@ -345,7 +367,12 @@ export function CommandPalette({
   const resultsAnnouncement = useMemo(() => {
     if (query.trim().length < 2) return copy.emptyShort;
     if (flat.length === 0) return copy.emptyNoMatches;
-    return groups.map((group) => `${group.heading} (${group.items.length})`).join(", ");
+    return groups
+      .map((group) =>
+        group.heading ? `${group.heading} (${group.items.length})` : group.items[0]?.label,
+      )
+      .filter(Boolean)
+      .join(", ");
   }, [query, flat.length, groups, copy.emptyShort, copy.emptyNoMatches]);
 
   // Keep the active row in range as results change.
@@ -465,11 +492,20 @@ export function CommandPalette({
                       {query.trim().length < 2 ? copy.emptyShort : copy.emptyNoMatches}
                     </p>
                   ) : (
-                    groups.map((group) => (
-                      <div key={group.heading}>
-                        <p className="px-5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted uppercase">
-                          {group.heading}
-                        </p>
+                    groups.map((group, groupIndex) => (
+                      <div
+                        key={group.id}
+                        className={
+                          !group.heading && groupIndex > 0
+                            ? "mt-2 border-t border-border pt-2"
+                            : undefined
+                        }
+                      >
+                        {group.heading ? (
+                          <p className="px-5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted uppercase">
+                            {group.heading}
+                          </p>
+                        ) : null}
                         {group.items.map((item) => {
                           const isActive = item.key === activeKey;
                           return (

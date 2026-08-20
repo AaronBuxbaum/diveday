@@ -11,7 +11,7 @@
     "summaryAllDone": "{summary} · every date has departed or been cancelled.",
     "applying": "Applying…",
     "applyToSeries": "Apply this date's details to every upcoming date",
-    "applyDescription": "Copies this date's title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions; one already over the new capacity is left alone.",
+    "applyDescription": "Copies this date's title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions.",
     "saving": "Saving…",
     "stopRepeating": "Stop repeating",
     "stopRepeatingDescription": "Keeps every date already on the board and stops adding new ones. You can start it up again from here.",
@@ -36,9 +36,9 @@
     "seriesCancelled": "Cancelled every upcoming date in this series. Reinstate any single date from its own trip page.",
     "seriesRepeating": "This trip repeats again — the next few months of it are back on the board.",
     "seriesCadenceSaved": "Saved. The board matches the new days from here on.",
-    "seriesCadenceNarrowed": "Saved — but some dates already on the board are no longer part of this run. They're listed below with their head counts; nothing has been cancelled.",
+    "seriesCadenceNarrowed": "Saved — but some dates already on the board are no longer part of this run. Nothing has been cancelled.",
     "seriesOffCadenceCancelled": "Those dates are off the public schedule. Reinstate any single one from its own trip page.",
-    "seriesStopped": "Stopped repeating. Every date already on the board stays exactly as it is; no new ones will be added.",
+    "seriesStopped": "Stopped repeating. Every date already on the board stays exactly as it is.",
     "seriesError": "That series change didn't go through. Try again from a scheduled date in the series."
   }
 }

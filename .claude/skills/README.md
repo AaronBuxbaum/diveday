@@ -22,6 +22,7 @@ under the same sync duties (docs/README.md).
 | `e2e-and-visual` | Adding/changing a user-facing flow or surface; maintaining Playwright functional flows and visual specs |
 | `visual-triage` | Whenever Playwright reports a visual difference — decide which reference changes are expected and explain or fix the rest |
 | `i18n-copy` | Writing or editing any on-screen wording; a red `pnpm check:copy`; extracting a file off the copy baseline |
+| `copy-restraint` | Writing, editing, or reading past any user-facing sentence — the filter that decides whether it deserves to exist at all, and the sweep that removes explanatory, redundant, or apologetic copy |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |

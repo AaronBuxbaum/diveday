@@ -9,7 +9,6 @@ afterEach(cleanup);
 
 const COPY: CrewSectionCopy = {
   heading: "Crew",
-  description: "Who's running this trip.",
   courseNeedsInstructor: "This course needs an instructor.",
   overRatioWarning: null,
   noStaff: "No staff on file yet.",
