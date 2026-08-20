@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 
 type CopyStatus = "idle" | "copied" | "failed";
@@ -72,11 +72,17 @@ export function Copyable({
   const [status, setStatus] = useState<CopyStatus>("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  async function copy() {
-    const ok = await copyToClipboard(value);
+  // The one place a write's outcome becomes what the button says, so the two
+  // paths that can write (the tap and the `autoCopy` effect) cannot settle back
+  // to idle on different schedules.
+  const report = useCallback((ok: boolean) => {
     setStatus(ok ? "copied" : "failed");
     clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => setStatus("idle"), 4000);
+  }, []);
+
+  async function copy() {
+    report(await copyToClipboard(value));
   }
 
   // Deliberately keyed on the value, not on mount: each "Copy link" tap mints a
@@ -86,12 +92,12 @@ export function Copyable({
     if (!autoCopy) return;
     let alive = true;
     void copyToClipboard(value).then((ok) => {
-      if (alive) setStatus(ok ? "copied" : "failed");
+      if (alive) report(ok);
     });
     return () => {
       alive = false;
     };
-  }, [autoCopy, value]);
+  }, [autoCopy, value, report]);
 
   useEffect(() => () => clearTimeout(resetTimer.current), []);
 

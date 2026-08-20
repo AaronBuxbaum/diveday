@@ -228,8 +228,15 @@ export async function issueAndDeliverWaiver(
   if (channel === "link") {
     delivery = completionUrl ? "link_only" : "no_app_origin";
   } else if (channel === "text") {
-    if (!completionUrl || !ctx) {
+    if (!completionUrl) {
       delivery = "no_app_origin";
+    } else if (!ctx) {
+      // `issueWaiverRequest` already validated the booking, so this is only
+      // reachable if the row went away mid-issue. Reported as `failed` rather
+      // than `no_app_origin`, which is the same distinction the person-scoped
+      // path makes: a vanished booking is a data problem, and naming it after
+      // a missing APP_HOST sends the shop to the wrong setting.
+      delivery = "failed";
     } else {
       const result = await textWaiverLink(db, {
         shopId,
