@@ -8,6 +8,7 @@ import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import {
   decideTripAdmission,
+  type SelfDeclaration,
   type TripAdmission,
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
@@ -33,6 +34,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -76,6 +78,15 @@ export type BookingRequest = {
   actor: "staff" | "public";
   /** Optional, non-sensitive interest or pace preference for crew buddy grouping. */
   groupPreference?: string;
+  /**
+   * What this diver said about their own certification on the form, when the
+   * form asked (ADR 20260820-attested-at-booking-verified-at-boarding). Read by
+   * the admission gate for this decision and written to the record **only on a
+   * completed booking**, so a refused submission leaves nothing behind on
+   * anybody's row — which is what keeps an anonymous form from editing a
+   * stranger's safety record by failing.
+   */
+  declared?: SelfDeclaration;
 } & BookingPerson;
 
 /**
@@ -247,6 +258,8 @@ export async function tripAdmissionFor(
   person: { id: string } | undefined,
   identityUnconfirmed: boolean,
   courseSession: boolean,
+  /** What the booker said about themselves on this submission, if the form asked. */
+  declared?: SelfDeclaration,
 ): Promise<TripAdmission> {
   if (courseSession) {
     return decideTripAdmission({
@@ -276,7 +289,16 @@ export async function tripAdmissionFor(
     person && !identityUnconfirmed && demandsSomething
       ? await readCertificationEvidence(tx, shopId, person.id)
       : NO_EVIDENCE;
-  return decideTripAdmission({ requirement, siteRequirement, evidence, identityUnconfirmed });
+  // A declaration about a person whose identity did not match is not about
+  // *them* (H-13) — the same reason their cards are not read here.
+  const stated = identityUnconfirmed || !demandsSomething ? undefined : declared;
+  return decideTripAdmission({
+    requirement,
+    siteRequirement,
+    evidence,
+    identityUnconfirmed,
+    declared: stated,
+  });
 }
 
 /** What a diver this shop knows nothing about has on file — and what an unread evidence lookup stands in for. */
@@ -509,6 +531,7 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     person,
     identityUnconfirmed,
     Boolean(trip.courseId),
+    req.declared,
   );
   if (!admission.admitted) {
     return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
@@ -576,6 +599,7 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
         claimedAt: null,
       })
       .where(eq(bookings.id, existing.id));
+    await persistDeclaration(tx, req, person.id, identityUnconfirmed);
     return { ok: true, bookingId: existing.id, personId: person.id, personName: person.fullName };
   }
 
@@ -591,7 +615,43 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
+  await persistDeclaration(tx, req, person.id, identityUnconfirmed);
   return { ok: true, bookingId: created.id, personId: person.id, personName: person.fullName };
+}
+
+/**
+ * Write down what the diver said, now that the seat is actually theirs.
+ *
+ * **After the gate, never before it.** The declaration is read for the
+ * admission decision as a value (`tripAdmissionFor`), so a submission that gets
+ * refused persists nothing — which is what stops an anonymous form editing a
+ * stranger's certification record simply by failing against it. On a completed
+ * booking the claim is worth keeping: it is the number the verify queue works
+ * from before the dive date.
+ *
+ * `recordSelfDeclaredCards` owns the rules from here, and they are unchanged —
+ * a real card on file always wins and a claim is dropped rather than written
+ * beside it, so this can only ever fill a gap.
+ *
+ * Skipped when the identity did not match (H-13): a statement made under a name
+ * that disagrees with the row it resolved to is not provably about that person,
+ * for the same reason their cards are not read.
+ */
+async function persistDeclaration(
+  tx: DbExecutor,
+  req: BookingRequest,
+  personId: string,
+  identityUnconfirmed: boolean,
+): Promise<void> {
+  const declared = req.declared;
+  if (!declared || identityUnconfirmed) return;
+  if (!declared.level && !declared.nitrox) return;
+  await recordSelfDeclaredCards(tx, {
+    shopId: req.shopId,
+    personId,
+    level: declared.level ?? undefined,
+    nitrox: declared.nitrox,
+  });
 }
 
 /**

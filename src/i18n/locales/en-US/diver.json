@@ -17,7 +17,7 @@
       "levelUnsaid": "Rather not say",
       "levelNone": "I'm not certified yet",
       "levelInfoLabel": "Why we ask about certification",
-      "levelDescription": "Helps the shop pick which trips to tell you about. Nothing here is checked — they'll confirm what you can dive before you get in the water.",
+      "levelDescription": "Helps the shop tell you about trips you can dive. They'll confirm it against your card before you get in the water.",
       "nitrox": "I'm certified for nitrox (enriched air)"
     },
     "units": {

@@ -408,6 +408,14 @@ export function BookSpotSection({
                 />
               ))
             : null}
+          {/* What the diver holds, asked at the sale and believed there (ADR
+              20260820-attested-at-booking-verified-at-boarding). It describes
+              the lead booker, the same question in the same words the wait list
+              and the deal list ask, and it is read by the admission gate for
+              this submission — a claim that clears the boat's requirement buys
+              the seat, and the sighting is still owed before boarding. Nothing
+              is written unless the booking completes. */}
+          <DiveDeclarationFields showNitrox={false} />
           {perDiverPriceCents && gearTotalCents > 0 ? (
             <p className="-mt-2 text-sm font-medium tabular-nums">
               {t("totalDueAtCheckout", {

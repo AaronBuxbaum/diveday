@@ -168,6 +168,24 @@ function shopHasAdjudicated(certifications: readonly Certification[]): boolean {
   return certifications.length > 0;
 }
 
+/**
+ * What a person said about their own diving on the form they just submitted.
+ * Deliberately not a `Certification`: it has no id, no provenance and no shop
+ * behind it, and giving it the shape of a row is how it would end up stored as
+ * one by accident.
+ */
+export type SelfDeclaration = { level?: CertificationLevel | null; nitrox?: boolean };
+
+/** The higher of two rungs, either of which may be absent. */
+function highestOf(
+  a: CertificationLevel | null,
+  b: CertificationLevel | null,
+): CertificationLevel | null {
+  if (!a) return b;
+  if (!b) return a;
+  return certificationRank(a) >= certificationRank(b) ? a : b;
+}
+
 export type TripAdmissionInput = {
   /** The trip's own requirement row, or null when the shop hasn't configured one. */
   requirement: CertRequirementSource | null;
@@ -183,6 +201,19 @@ export type TripAdmissionInput = {
    * both directions.
    */
   identityUnconfirmed?: boolean;
+  /**
+   * **What the person buying the seat just said about themselves**, if the form
+   * asked. Not a row and not evidence — it is read for this one decision and
+   * persisted only if the booking succeeds, so a refused submission leaves
+   * nothing behind on anybody's record.
+   *
+   * Threaded in rather than written first because the gate runs *before* a
+   * brand-new diver's `people` row exists (`createBookingRecord`), so a
+   * declaration that had to be a row could never speak for the person it is
+   * about. It also means the public form cannot write to a stranger's record by
+   * failing: the only path that persists is a completed booking.
+   */
+  declared?: SelfDeclaration;
   /**
    * True when this trip **is** a course session (`trips.course_id`), rather
    * than a charter.
@@ -255,9 +286,17 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   const certifications = evidence.certifications;
   const specialtyCertifications = evidence.specialtyCertifications;
   const nitroxCertifications = evidence.nitroxCertifications;
-  if (!shopHasAdjudicated(certifications)) return ADMITTED;
+  const declaredLevel = input.declared?.level ?? null;
+  const declaredNitrox = Boolean(input.declared?.nitrox);
+  // Saying something is being known. A diver who names their rung on the form
+  // has stopped being the stranger H-08 admits blind, and is judged on their own
+  // words like anyone else.
+  if (!shopHasAdjudicated(certifications) && !declaredLevel && !declaredNitrox) return ADMITTED;
 
-  const heldLevel = highestLevelOnFile(certifications);
+  // The strongest thing said about this diver, from any direction: the record,
+  // or the sentence they just typed. Taking the higher of the two is what stops
+  // a stale Open Water row refusing somebody who has since qualified and says so.
+  const heldLevel = highestOf(highestLevelOnFile(certifications), declaredLevel);
   const requiredLevel =
     effective.minimumCertificationLevel &&
     (!heldLevel ||
@@ -273,7 +312,8 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
     (specialty) => !specialtyCertifications.some((card) => card.specialty === specialty),
   );
 
-  const nitroxRequired = effective.requiresNitrox && nitroxCertifications.length === 0;
+  const nitroxRequired =
+    effective.requiresNitrox && nitroxCertifications.length === 0 && !declaredNitrox;
 
   if (!requiredLevel && missingSpecialties.length === 0 && !nitroxRequired) return ADMITTED;
   return {

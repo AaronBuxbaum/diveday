@@ -50,9 +50,14 @@ describe("DiveDeclarationFields", () => {
       screen.getByRole("button", { name: "Why we ask about certification" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Helps the shop pick which trips to tell you about/),
+      screen.getByText(/Helps the shop tell you about trips you can dive/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Nothing here is checked/)).toBeInTheDocument();
+    // It used to promise "Nothing here is checked", which stopped being true on
+    // 2026-08-20: the admission gate reads this answer at the sale now (ADR
+    // 20260820-attested-at-booking-verified-at-boarding). What survives is the
+    // promise that still holds — the card gets confirmed before the water.
+    expect(screen.queryByText(/Nothing here is checked/)).not.toBeInTheDocument();
+    expect(screen.getByText(/confirm it against your card/)).toBeInTheDocument();
   });
 
   it("can omit nitrox from the broad deal-list form", () => {
