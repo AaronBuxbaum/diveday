@@ -719,7 +719,7 @@ export type DiveSiteTemplateUpdate = {
   templateName: string;
   currentVersion: number;
   latestVersion: number;
-  legacyBaseline: boolean;
+  baselineUnavailable: boolean;
   diff: ReturnType<typeof diveSiteTemplateDiff>;
 };
 
@@ -728,6 +728,14 @@ export type DiveSiteTemplateUpdate = {
  * diff against the version that site started from. Historical catalog rows are
  * immutable, so they provide the baseline without adding another snapshot
  * column to the shop's briefing.
+ *
+ * `baseline` (and `baselineUnavailable`) stay defensive against a missing
+ * version row rather than assuming one always exists: every writer of
+ * `sourceTemplateVersion` (`importGlobalDiveSiteTemplate`,
+ * `pullDiveSiteTemplateUpdates`, `undoDiveSiteTemplateUpdate`) currently
+ * pairs it with a real `globalDiveSiteVersions` row, and `seedDiveSiteCatalog`
+ * inserts every version 1..N up front — so this should never trigger today.
+ * It is not "an older site predates version tracking": there is no such era.
  */
 export async function getDiveSiteTemplateUpdate(
   db: AppDb,
@@ -781,7 +789,7 @@ export async function getDiveSiteTemplateUpdate(
     templateName: latest.briefing.name,
     currentVersion: site.sourceTemplateVersion,
     latestVersion: latest.version,
-    legacyBaseline: baseline === null,
+    baselineUnavailable: baseline === null,
     diff: diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot),
   };
 }
