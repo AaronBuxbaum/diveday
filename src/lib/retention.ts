@@ -28,6 +28,17 @@
  * It was proposed and declined: a lead who books eight months later is
  * ordinary dive-shop behaviour, and the erasure path that does exist is the
  * requested one (`src/db/anonymize.ts`), not a timer.
+ *
+ * **`gear_service_events` is deliberately unbounded and does not belong here.**
+ * It is append-only and it is the one trail in the schema whose value is
+ * evidentiary rather than operational: a unit's service, hydro-test and
+ * inspection history is what answers "was this regulator serviced on schedule?"
+ * long after the dive it was carried on. A window would delete exactly the rows
+ * that question reaches for. The history is already bounded by the thing it
+ * describes — deleting a unit cascades its events away, retiring one keeps them
+ * — and the volume is a few hundred rows a year for a large fleet, so nothing
+ * about growth argues the other way. Chosen by the product owner, 2026-08-20,
+ * over a 1825-day-past-retirement window.
  */
 
 import { DAY_MS } from "@/lib/clock";
