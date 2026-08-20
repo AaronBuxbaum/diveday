@@ -140,7 +140,7 @@
       "nextDueOn": "Próximo vencimiento",
       "nextDueHint": "Cuándo vence este plazo. El servicio anual y las inspecciones suelen ser a un año; la hidrostática a cinco.",
       "nextDueDives": "O después de estas inmersiones",
-      "nextDueDivesHint": "Los fabricantes publican ambos — 24 meses o 100 inmersiones, lo que ocurra primero. Necesita una fecha al lado.",
+      "nextDueDivesHint": "Los fabricantes publican ambos — 24 meses o 100 inmersiones. También necesita una fecha.",
       "diveClock": "al menos {since} de {due} inmersiones",
       "note": "Nota",
       "notePlaceholder": "Asiento de alta presión nuevo, probado en banco",

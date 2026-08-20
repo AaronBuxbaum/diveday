@@ -9,7 +9,6 @@ import {
   type CertRequirementSource,
   certificationRank,
   combineCertRequirements,
-  isUnsightedSelfDeclaration,
   type SiteCertRequirement,
 } from "./readiness";
 
@@ -58,20 +57,34 @@ import {
  * state, not a claim by the person taking the seat. Readiness is what waits for
  * the lookup.
  *
- * **The exception, and the filter it forced.** Since FU-20260813 a diver may
- * name their own level on the two public "tell me when something comes up"
- * opt-ins, which writes a `pending` card stamped `selfDeclaredAt`
- * (src/db/self-declared-cards.ts). This paragraph used to read: *"a
- * diver-facing 'add your card' form would turn this gate into self-attestation
- * — a refused diver could type the level the boat demands and be admitted on
- * the next attempt, having asserted nothing. If a card ever becomes
- * diver-writable, this function must start reading `status` (or the origin of
- * the row) in the same change."* That is precisely what happened, and this is
- * that change: every read below drops rows `isUnsightedSelfDeclaration` matches,
- * so a self-declared "Instructor" lifts nothing, a self-declared nitrox tick
- * clears nothing, and the leak H-24 exists to prevent stays shut. The moment a
- * staffer enters the agency and number off the card in their hand, the row
- * stops matching and counts like any other.
+ * **A stated card is taken at its word here, and only here** (H-27/H-29,
+ * product owner 2026-08-20). Every certification row is evidence at booking
+ * time, whatever its status and whoever wrote it: staff-typed, imported, or the
+ * diver's own declaration from a public form. The rung a diver stands on is a
+ * thing they can tell you, and telling you is how the number reaches the verify
+ * queue in time to be checked before the date.
+ *
+ * This deliberately reverses an earlier reading of the same code. It used to
+ * drop every `isUnsightedSelfDeclaration` row, on the argument that a
+ * diver-writable card "would turn this gate into self-attestation — a refused
+ * diver could type the level the boat demands and be admitted on the next
+ * attempt". **That is true and it is no longer treated as a defect**, because
+ * this gate was never the thing standing between a diver and the water:
+ *
+ * - **Readiness is.** `certificationBlocker` clears on a `verified` card and
+ *   nothing else, so a claim gets a diver a seat and never a place on the boat.
+ *   The two gates are supposed to differ; this is the difference.
+ * - **A gate that can be talked past has to be worth its refusals.** Refusing
+ *   carded regulars — the divers a shop knows exactly — while admitting
+ *   strangers who have said nothing is inverted relative to risk (H-27). What
+ *   the refusal is *for* is telling somebody at the sale that this boat needs
+ *   Advanced, so they buy the trip they can dive.
+ *
+ * What has **not** changed: a shop with nothing at all on file still admits
+ * (H-08's fail-open promise), and the anti-displacement rule in
+ * `recordSelfDeclaredCards` still means a claim can never be written over a
+ * real card. So no diver whose shop holds actual evidence is judged on
+ * somebody's typing.
  */
 
 /** The diver's certification evidence at this shop, as the db layer hands it up. */
@@ -132,18 +145,27 @@ function highestLevelOnFile(certifications: readonly Certification[]): Certifica
 }
 
 /**
- * Has this shop adjudicated this diver's cards at all? One verified
- * certification is the marker: it means a staffer looked the card number up
- * with the issuing agency and recorded the answer (glossary, **Verified
- * certification**), so the record can be relied on for what this diver holds.
- * Expiry is irrelevant to the question — a card that has since come due for a
- * refresher was still adjudicated.
+ * Does anything at all stand on the record about what this diver holds?
  *
- * Without one, this diver is simply unknown to the shop, and an unknown diver
- * is admitted (see the module docstring).
+ * **Any live certification row counts** — staff-captured, imported, or the
+ * diver's own declaration. The question this asks is "is this diver unknown to
+ * us?", and a diver with three cards a staffer typed in last Tuesday is not
+ * unknown; nor is one who told us their number on the booking form ten minutes
+ * ago. Expiry is irrelevant — a card due for a refresher was still stated.
+ *
+ * It used to require a **`verified`** row, which contradicted its own name and
+ * its own module docstring: the gate already trusted a `pending` staff-typed
+ * card for the level comparison two lines below, then read the same diver as a
+ * stranger here (H-29). The practical shape of that bug was a shop mid-backfill
+ * whose regulars all walked through a gate their own records should have
+ * answered.
+ *
+ * H-08's fail-open promise is untouched, because it never rested on the
+ * `verified` marker: a shop that has never carded a diver still has **zero
+ * rows**, so every genuinely new customer still books.
  */
 function shopHasAdjudicated(certifications: readonly Certification[]): boolean {
-  return certifications.some((certification) => certification.status === "verified");
+  return certifications.length > 0;
 }
 
 export type TripAdmissionInput = {
@@ -217,24 +239,22 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
 
   if (input.identityUnconfirmed) return ADMITTED;
 
-  // **Claims are not evidence.** A still-unsighted self-declaration is dropped
-  // before anything below looks at the record, rather than at each of the three
-  // reads — one filter is one thing to get right, and it is the whole reason
-  // this gate survived cards becoming diver-writable (see the module docstring).
-  // Note that a shop with *only* self-declared rows on file now reads as never
-  // having adjudicated this diver, which admits them: an unknown diver has
-  // always been admitted here, and a stranger's typing must not turn "unknown"
-  // into "known".
+  // **Before the boat, a stated card is taken at its word** (H-27/H-29, product
+  // owner 2026-08-20). Everything on the record is evidence here — staff-typed,
+  // imported, or the diver's own declaration — because the question this gate
+  // asks is "could this diver ever be cleared?", and a diver who says they hold
+  // Advanced and gives a number to check has answered it. Readiness is where the
+  // word has to become a sighting; nothing below weakens that, and
+  // `certificationBlocker` still clears on `verified` alone.
+  //
+  // This gate is therefore **not** an enforcement boundary and must never be
+  // read as one — a diver who wanted past it could always type a different rung.
+  // What it buys is that the refusal arrives *at the sale*, naming what the trip
+  // needs, instead of at the dock with a seat already paid for.
   const evidence = input.evidence;
-  const certifications = evidence.certifications.filter(
-    (card) => !isUnsightedSelfDeclaration(card),
-  );
-  const specialtyCertifications = evidence.specialtyCertifications.filter(
-    (card) => !isUnsightedSelfDeclaration(card),
-  );
-  const nitroxCertifications = evidence.nitroxCertifications.filter(
-    (card) => !isUnsightedSelfDeclaration(card),
-  );
+  const certifications = evidence.certifications;
+  const specialtyCertifications = evidence.specialtyCertifications;
+  const nitroxCertifications = evidence.nitroxCertifications;
   if (!shopHasAdjudicated(certifications)) return ADMITTED;
 
   const heldLevel = highestLevelOnFile(certifications);

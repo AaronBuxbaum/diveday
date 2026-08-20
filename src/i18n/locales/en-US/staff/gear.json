@@ -140,7 +140,7 @@
       "nextDueOn": "Next due",
       "nextDueHint": "When this clock runs out. Annual service and inspections usually a year out; hydro five.",
       "nextDueDives": "Or after this many dives",
-      "nextDueDivesHint": "Manufacturers publish both — 24 months or 100 dives, whichever comes first. Needs a due date beside it.",
+      "nextDueDivesHint": "Manufacturers publish both — 24 months or 100 dives. Needs a next-due date too.",
       "diveClock": "at least {since} of {due} dives",
       "note": "Note",
       "notePlaceholder": "New HP seat, bench-tested",

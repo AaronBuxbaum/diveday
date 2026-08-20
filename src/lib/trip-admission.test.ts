@@ -119,15 +119,39 @@ describe("decideTripAdmission — absence of evidence is never a refusal (H-08's
     ).toEqual({ admitted: true });
   });
 
-  it("admits a diver whose only card is still awaiting staff verification", () => {
-    // A capture in review is a card a staffer is about to adjudicate — the
-    // shop has not decided anything about this diver yet.
+  it("judges a diver on a card still awaiting verification, rather than reading them as a stranger", () => {
+    // H-29, reversed 2026-08-20: this used to admit. A staffer typed this card
+    // in — the shop is not "undecided about this diver", it holds their Open
+    // Water and the boat wants Advanced. Absence of evidence is the fail-open
+    // rule; a card in the verify queue is not absence.
     expect(
       decideTripAdmission({
         requirement: advancedTrip,
         siteRequirement: null,
         evidence: evidence({
           certifications: [certification({ status: "pending", level: "open_water" })],
+        }),
+      }),
+    ).toEqual({
+      admitted: false,
+      refusal: {
+        requiredLevel: "advanced_open_water",
+        missingSpecialties: [],
+        nitroxRequired: false,
+        heldLevel: "open_water",
+      },
+    });
+  });
+
+  it("still admits a diver whose pending card already reaches the rung", () => {
+    // The other half of the same reversal: believing the card cuts both ways,
+    // and a diver whose staff-typed Advanced is queued for lookup buys the seat.
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence({
+          certifications: [certification({ status: "pending", level: "advanced_open_water" })],
         }),
       }),
     ).toEqual({ admitted: true });
