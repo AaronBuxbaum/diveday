@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, listWalkInTrips, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
@@ -10,7 +11,7 @@ import { activityEvents, bookings, people, personRoles, userAccounts } from "./s
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
-const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 async function context() {
   const { db, shop } = await seededShopContext();

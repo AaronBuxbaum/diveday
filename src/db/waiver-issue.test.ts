@@ -2,6 +2,7 @@ import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { and, eq, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { WAIVER_LINK_TTL_MS } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
@@ -108,7 +109,7 @@ describe("issueAndDeliverWaiver", () => {
       completeWaiver(db, result.token, {
         signerName: person.fullName,
         agreed: true,
-        medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+        medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
       }),
     ).resolves.toMatchObject({ ok: true, status: "completed" });
   });
@@ -326,7 +327,7 @@ describe("issueAndDeliverWaiver", () => {
     await completeWaiver(db, issued.token, {
       signerName: "Nora Quinn",
       agreed: true,
-      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
     });
 
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
@@ -450,7 +451,7 @@ describe("emailFreshWaiverLink", () => {
     await completeWaiver(db, fresh.token, {
       signerName: "Nora Quinn",
       agreed: true,
-      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
     });
 
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("already_signed");
@@ -519,7 +520,7 @@ describe("issueWaiverOnJoin", () => {
     await completeWaiver(db, issued.token, {
       signerName: "Nora Quinn",
       agreed: true,
-      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
     });
     const result = await issueWaiverOnJoin(db, shop.id, bookingId);
     expect(result).toBeNull();

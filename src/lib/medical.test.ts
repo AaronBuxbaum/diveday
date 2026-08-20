@@ -54,13 +54,13 @@ describe("medical questionnaires", () => {
     expect(calculateMedicalResult(boxAnswers).status).toBe("physician_review");
   });
 
-  it("fails closed for incomplete current answers and accepts legacy v1 lookup", () => {
+  it("fails closed for incomplete current answers and no longer resolves the retired v1 questionnaire", () => {
     const incomplete = { ...emptyMedicalAnswers(RSTC_QUESTIONNAIRE), responses: { q1: true } };
     expect(validateMedicalAnswers(incomplete, { requireComplete: true })).toMatchObject({
       ok: false,
     });
     expect(calculateMedicalResult(incomplete).status).toBe("incomplete");
-    expect(findQuestionnaireVersion("rstc", 1)?.version).toBe(1);
+    expect(findQuestionnaireVersion("rstc", 1)).toBeNull();
   });
 
   it("still reads a v2 record under v2's rules after the dental item moved into Box C", () => {

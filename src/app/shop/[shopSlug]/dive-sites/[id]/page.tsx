@@ -347,8 +347,8 @@ export default async function EditDiveSitePage({
         <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
           <h2 className="text-base font-semibold">{t("diveSites.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
-            {templateUpdate.legacyBaseline
-              ? t("diveSites.edit.templateUpdates.legacyDescription", {
+            {templateUpdate.baselineUnavailable
+              ? t("diveSites.edit.templateUpdates.baselineUnavailableDescription", {
                   latest: templateUpdate.latestVersion,
                 })
               : t("diveSites.edit.templateUpdates.description", {

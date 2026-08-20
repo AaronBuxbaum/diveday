@@ -10,6 +10,7 @@ import {
   type RollCallCheckpoint,
   rollCallCompleteness,
 } from "@/lib/manifests";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
@@ -41,7 +42,7 @@ import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 
-const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 async function manifestContext() {
   const { db, shop } = await seededShopContext();

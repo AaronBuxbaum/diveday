@@ -30,7 +30,11 @@ const now = new Date("2026-07-18T12:00:00.000Z");
 afterEach(() => {
   vi.unstubAllEnvs();
 });
-const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
+const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+const medicalReferralAnswers = {
+  ...clearAnswers,
+  responses: { ...clearAnswers.responses, q3: true },
+};
 
 async function waiverContext() {
   const { db, shop } = await seededShopContext();
@@ -293,7 +297,7 @@ describe("waiver records (in-memory PGlite)", () => {
     const input = {
       signerName: person.fullName,
       agreed: true,
-      medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
+      medicalAnswers: medicalReferralAnswers,
       now,
     };
     expect(await completeWaiver(db, issued.token, input)).toEqual({
@@ -573,7 +577,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     const outcome = await completeWaiver(db, issued.token, {
       signerName: person.fullName,
       agreed: true,
-      medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
+      medicalAnswers: medicalReferralAnswers,
       now,
     });
     expect(outcome).toMatchObject({ ok: true, status: "medical_review" });
@@ -589,7 +593,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     expect(entry?.tripTitle).toBe(trip.title);
     expect(entry?.status).toBe("medical_review");
     expect(entry?.flaggedPrompts).toContain(
-      "Do you have, or have you had, a heart, lung, or breathing condition (including asthma) affecting exercise?",
+      RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q3")?.prompt,
     );
     // The raw questionnaire never rides along — only the flagged prompts do.
     expect(entry).not.toHaveProperty("medicalAnswers");
@@ -721,7 +725,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     await completeWaiver(db, issued.token, {
       signerName: person.fullName,
       agreed: true,
-      medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
+      medicalAnswers: medicalReferralAnswers,
       now,
     });
 
