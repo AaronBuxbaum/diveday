@@ -1,25 +1,25 @@
 {
   "eyebrow": "Códigos promocionales",
   "title": "Descuentos que un buceador puede escribir",
-  "description": "Un código funciona en todo tu calendario, a diferencia de la oferta de una sola salida. DiveDay lo crea en tu cuenta de Stripe, que aplica la caducidad y el tope de canjes.",
+  "description": "Un código funciona en todo tu calendario, a diferencia de la oferta de una sola salida.",
   "notice": {
     "created": "Código creado y activo en tu cuenta de Stripe.",
     "enabled": "Código activado.",
-    "disabled": "Código desactivado — deja de aplicar el descuento de inmediato.",
+    "disabled": "Código desactivado.",
     "invalid": "Revisa el código, el descuento y las fechas e inténtalo de nuevo.",
     "invalidCode": "Un código solo puede usar letras, números, guiones y guiones bajos.",
     "invalidDiscount": "Elige un descuento entre el {min}% y el {max}%.",
     "invalidWindow": "La fecha de fin tiene que ser posterior a la de inicio.",
     "duplicate": "Ya tienes un código con ese texto.",
-    "notConnected": "Conecta tu cuenta de Stripe en Ajustes primero — un código se crea en tu propia cuenta.",
-    "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento; inténtalo de nuevo.",
-    "notAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes.",
+    "notConnected": "Conecta tu cuenta de Stripe en Ajustes primero.",
+    "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento.",
+    "notAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
     "deleted": "Código eliminado.",
     "deletedToast": "Código eliminado.",
     "restored": "Código recreado y activo de nuevo en tu cuenta de Stripe.",
     "restoreFailed": "No se pudo restaurar ese código. Créalo de nuevo abajo."
   },
-  "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — los códigos se crean en tu propia cuenta de Stripe, no en la de DiveDay.",
+  "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código.",
   "scope": {
     "all": "Salidas y cursos",
     "trips": "Solo salidas",
@@ -27,7 +27,7 @@
   },
   "newCode": {
     "heading": "Nuevo código",
-    "detail": "Los buceadores lo escriben al pagar. Deja las fechas o el límite vacíos para que no tenga límite."
+    "detail": "Deja las fechas o el límite vacíos para que no tenga límite."
   },
   "fields": {
     "code": "Código",
@@ -53,7 +53,7 @@
   "yourCodes": "Tus códigos",
   "empty": {
     "heading": "Todavía no hay códigos",
-    "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse.",
+    "detail": "Envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse.",
     "action": "Crear tu primer código"
   },
   "status": {
@@ -82,12 +82,11 @@
   "deleting": "Eliminando…",
   "tripDeals": {
     "heading": "Ofertas por salida",
-    "description": "Descuentos de una sola salida enviados desde la página de una salida — la otra mitad de cada código activo, reunidos aquí para que ninguno sea visible solo desde la salida en la que se envió.",
-    "empty": "No hay ofertas por salida activas ahora mismo. Envía una desde la página de una salida cuando el barco necesite llenarse.",
+    "description": "Descuentos de una sola salida enviados desde la página de una salida.",
+    "empty": "No hay ofertas por salida activas ahora mismo.",
     "emptyAction": "Abrir el calendario",
     "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
     "expiresAt": "Caduca {date}",
-    "rangeNote": "Las ofertas de salida llegan al 90%: el barco zarpa igual, así que siempre queda algo sobre la mesa. Los códigos de todo el centro pueden llegar al 100% porque también se usan para cortesías.",
     "pagination": {
       "total": "{count, plural, one {# oferta} other {# ofertas}}"
     }

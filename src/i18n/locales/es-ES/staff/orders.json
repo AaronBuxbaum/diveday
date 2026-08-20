@@ -10,9 +10,8 @@
       "fallback": "No se pudo crear ese pedido."
     },
     "linkedTo": "Vinculado a la reserva de {personName} en {tripTitle} ({date}).",
-    "courseNote": "Las líneas de instrucción y e-learning del curso vienen rellenas de tu catálogo. Un pedido, dos líneas: borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
-    "noPriceNote": "Esta salida no tiene precio, así que la línea de la salida está en blanco — añade uno en la página de la salida para saltarte este paso la próxima vez.",
-    "priceNote": "La línea de la salida viene rellena con el precio de esta salida.",
+    "courseNote": "Borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
+    "noPriceNote": "Esta salida no tiene precio.",
     "customerLabel": "Cliente",
     "chooseCustomer": "Elige un cliente",
     "noteLabel": "Nota del pedido",
@@ -61,7 +60,7 @@
       "other": "Otro"
     },
     "openInvoice": "Abrir la factura para pagar",
-    "openInvoiceHint": "— comparte este enlace con el cliente si el correo de Stripe no le llegó.",
+    "openInvoiceHint": "— comparte este enlace con el cliente.",
     "demoActionHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que esta acción está desactivada.",
     "refreshStatus": "Actualizar estado",
     "refreshing": "Actualizando…",
@@ -73,19 +72,18 @@
       "refreshed": "Estado actualizado desde Stripe.",
       "refreshFailed": "No se pudo contactar con Stripe para actualizar este pedido.",
       "voided": "Pedido anulado.",
-      "voidFailed": "No se pudo anular este pedido — puede que ya esté pagado o anulado.",
+      "voidFailed": "No se pudo anular este pedido.",
       "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
-      "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
+      "refundFailed": "No se pudo reembolsar este pedido.",
       "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
-      "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar.",
+      "demoDisabled": "Este es un pedido de demostración — no se puede modificar.",
       "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."
     }
   },
   "index": {
     "eyebrow": "Recepción",
     "title": "Pedidos",
-    "description": "Todos los pedidos que ha enviado el centro, de todos los buceadores y salidas.",
     "newOrder": "Nuevo pedido",
     "monthlyReport": "Informe mensual",
     "notice": {
@@ -109,7 +107,7 @@
     "filteredByDiver": "Mostrando los pedidos de {name}.",
     "filteredByTrip": "Mostrando los pedidos de {title}.",
     "openFilteredTrip": "Abrir la salida",
-    "emptyAll": "Todavía no hay pedidos de DiveDay — aparecerán aquí en cuanto recepción envíe uno.",
+    "emptyAll": "Todavía no hay pedidos de DiveDay.",
     "emptyFiltered": "Ningún pedido de DiveDay coincide con estos filtros.",
     "emptyNoPayments": "Todavía no hay pedidos de DiveDay — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
     "table": {
@@ -160,7 +158,7 @@
     "owedRefunds": {
       "sectionLabel": "Reembolsos que aún debes",
       "heading": "{count, plural, one {# buceador sigue esperando} other {# buceadores siguen esperando}} el dinero de una salida que cancelaste.",
-      "detail": "Su dinero no pudo volver por tarjeta — un pago en mostrador, una cuenta de Stripe desconectada o un reembolso que Stripe rechazó. A cada uno se le dijo que te pondrías en contacto. Devuélvelo y luego marca la plaza como reembolsada en la pestaña Invitados de la salida.",
+      "detail": "Su dinero no pudo volver por tarjeta. A cada uno se le dijo que te pondrías en contacto. Devuélvelo y luego marca la plaza como reembolsada en la pestaña Invitados de la salida.",
       "depositOnly": "solo el depósito",
       "unrecordedAmount": "importe no registrado",
       "openTrip": "Abrir Invitados"

@@ -57,7 +57,6 @@ export interface DiverListCopy {
   searchPlaceholder: string;
   noDiversMatchView: string;
   noDiversOnFile: string;
-  tryDifferentSearch: string;
   addOneHere: string;
   emptyShowAll: string;
   emptyImportBody: string;
@@ -79,7 +78,6 @@ export interface DiverListCopy {
   tableHeaderPerson: string;
   tableHeaderLevel: string;
   tableHeaderAttention: string;
-  noAttention: string;
 }
 
 function initials(fullName: string): string {
@@ -418,9 +416,9 @@ export function DiverList({
       {divers.length === 0 ? (
         <EmptyState className="mt-4">
           <p className="font-medium">{narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {narrowed ? copy.tryDifferentSearch : copy.addOneHere}
-          </p>
+          {narrowed ? null : (
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{copy.addOneHere}</p>
+          )}
           {/* Narrowed to nothing and empty on day one are different problems,
               so they get different doors: widen the view, or start the roster. */}
           {narrowed ? (
@@ -593,9 +591,6 @@ export function DiverList({
                         <Badge tone="neutral">
                           {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                         </Badge>
-                      ) : null}
-                      {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
-                        <span className="text-muted">{copy.noAttention}</span>
                       ) : null}
                     </div>
                   </Td>

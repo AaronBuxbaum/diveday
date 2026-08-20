@@ -361,12 +361,7 @@ export default async function WaiverPage({
           ) : null}
         </EarnedMoment>
 
-        <DiveSitesPeek
-          sites={diveSitesList}
-          heading={t("waiver.scheduledSites")}
-          subheading={t("waiver.sitesPeek")}
-          t={t}
-        />
+        <DiveSitesPeek sites={diveSitesList} heading={t("waiver.scheduledSites")} t={t} />
       </main>
     );
   }

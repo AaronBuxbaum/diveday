@@ -2,13 +2,12 @@
   "main": {
     "eyebrow": "Ajustes",
     "title": "Ajustes del centro",
-    "description": "La configuración puntual u ocasional del centro está aquí, incluida la cuenta de Stripe que recibe facturas y pagos.",
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
-      "unitsSaved": "Unidades guardadas. Las profundidades, temperaturas y precios registrados conservan sus cifras — solo cambia cómo se leen.",
+      "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "rentalsSaved": "Catálogo de alquiler guardado.",
       "rentalPricesSaved": "Precios de alquiler guardados.",
@@ -24,7 +23,7 @@
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
-      "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay. Quien gestiona tu alojamiento completa la configuración de Stripe.",
+      "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay.",
       "disconnected": "Cuenta de Stripe desconectada.",
       "refreshed": "Estado de pagos actualizado desde Stripe.",
       "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
@@ -33,8 +32,7 @@
     },
     "timezone": {
       "heading": "Zona horaria",
-      "description": "La zona en la que se leen y se guardan todas las fechas y horas de DiveDay.",
-      "detail": "El calendario, el manifiesto y las horas que ven los buceadores lo siguen. Cambiarlo relee las salidas existentes en su nueva hora local; no las mueve.",
+      "detail": "Cambiarla relee las salidas existentes en su nueva hora local; no las mueve.",
       "label": "Zona horaria",
       "submitting": "Guardando…",
       "submit": "Guardar zona horaria",
@@ -112,8 +110,7 @@
       "heading": "Aparecer en buscadores",
       "valueListed": "Visible",
       "valueHidden": "Oculto",
-      "description": "Si Google y otros buscadores pueden mostrar tus páginas públicas.",
-      "detail": "Tu calendario y tus páginas de cursos aparecen por defecto — para la mayoría de los centros, ese es justo el motivo de tenerlas. Si desmarcas esto, DiveDay las quita de su sitemap y pide a los buscadores que no las indexen. Lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
+      "detail": "Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer — y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
       "submit": "Guardar",
       "submitting": "Guardando…"
@@ -128,7 +125,7 @@
     },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
-      "description": "La forma de una jornada de buceo, en minutos: qué pasa en el muelle y qué pasa una vez fuera.",
+      "description": "Todos estos números están en minutos.",
       "detail": "Estos seis números son el horario que tus buceadores leen como «El ritmo de tu jornada» en su página de reserva, y la hora de llegada aparece en las confirmaciones y en todos los recordatorios previos. Pon un momento a 0 y desaparece del día: así indicas que informas a bordo, que el equipo se monta en el barco o que entráis desde la playa. Los momentos previos a la salida nunca caen antes de la hora de llegada.",
       "submit": "Guardar el ritmo del día",
       "submitting": "Guardando…",
@@ -144,7 +141,7 @@
       "bottomTimeLabel": "Tiempo en el agua por inmersión",
       "bottomTimeDescription": "Tu tiempo de fondo planificado habitual.",
       "surfaceIntervalLabel": "Intervalo de superficie entre inmersiones",
-      "surfaceIntervalDescription": "0 si las inmersiones son seguidas. No aparece en salidas de una sola inmersión.",
+      "surfaceIntervalDescription": "0 si las inmersiones son seguidas.",
       "stepArrive": "Llegada y registro",
       "stepGearSetup": "Montaje del equipo",
       "stepBriefing": "Briefing de la tripulación",
@@ -161,13 +158,12 @@
     },
     "units": {
       "heading": "Unidades",
-      "description": "Cómo lee tu tripulación las profundidades, la temperatura del agua y los precios.",
       "depthLabel": "Mostrar profundidades en",
       "depthDetail": "Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees — ninguna profundidad registrada se mueve.",
       "meters": "Metros (m)",
       "feet": "Pies (ft)",
       "temperatureLabel": "Mostrar la temperatura del agua en",
-      "temperatureDetail": "Se configura aparte de la profundidad: muchos centros publican pies y Celsius. Siempre se guarda en Celsius, así que esto solo cambia lo que escribes y lees.",
+      "temperatureDetail": "Siempre se guarda en Celsius, así que esto solo cambia lo que escribes y lees.",
       "celsius": "Celsius (°C)",
       "fahrenheit": "Fahrenheit (°F)",
       "currencyLabel": "Cobrar y mostrar en",
@@ -181,8 +177,7 @@
     },
     "rentals": {
       "heading": "Qué alquilamos",
-      "description": "El equipo y los servicios que los buceadores pueden pedir en su equipo de alquiler.",
-      "detail": "Desmarca lo que no ofrezcas: desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no cargan nitrox, así que empieza desmarcado.",
+      "detail": "Desmarca lo que no ofrezcas: desaparece del formulario de equipo y de la lista de preparación.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
       "submitting": "Guardando…",
@@ -202,7 +197,6 @@
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
-      "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad.",
       "notConnectedDetail": "DiveDay nunca retiene tu dinero — los pagos de pedidos van directo a tu propio saldo de Stripe.",
       "connect": "Conectar Stripe",
       "notConfiguredWarning": "Los pagos en línea todavía no están activados en DiveDay — escribe a {email} y los ponemos en marcha.",
@@ -237,7 +231,7 @@
       "heading": "Tu prueba",
       "activeDescription": "Quedan {count, plural, one {# día} other {# días}}, hasta el {endDate}.",
       "expiredDescription": "Tu prueba terminó el {endDate}. Todo lo que has configurado sigue funcionando.",
-      "upgradeBody": "¿Listo para pasar a un plan de pago? Escríbenos y te ponemos en marcha.",
+      "upgradeBody": "¿Listo para pasar a un plan de pago?",
       "emailCta": "Escribir a {email}",
       "value": "{count, plural, one {Queda # día} other {Quedan # días}}",
       "expiredValue": "Terminó el {endDate}"
@@ -289,7 +283,7 @@
       "mediaDeletions": {
         "sectionLabel": "Fotos que no terminaron de eliminarse",
         "heading": "{count, plural, one {# foto eliminada} other {# fotos eliminadas}} pero todavía no borrada del almacenamiento",
-        "detail": "La foto ya no está en la aplicación; el archivo guardado no se borró — reintenta la eliminación, o déjalo para el reintento automático de esta noche.",
+        "detail": "Reintenta la eliminación, o déjala para el reintento automático de esta noche.",
         "queued": "en cola desde {date}",
         "retry": "Reintentar eliminación",
         "retrying": "Reintentando…"
@@ -322,7 +316,6 @@
   "team": {
     "eyebrow": "Ajustes",
     "title": "Equipo",
-    "description": "Invita personal, define qué puede hacer cada persona y gestiona quién sigue teniendo acceso.",
     "notice": {
       "invited": "Invitación enviada.",
       "inviteResent": "Invitación reenviada.",
@@ -341,7 +334,7 @@
       "notFound": "Esa persona no está en el equipo de este centro.",
       "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
       "contactSaved": "Contacto de emergencia guardado.",
-      "contactHalfFilled": "Un contacto de emergencia necesita nombre y teléfono: un nombre solo no es nadie a quien llamar."
+      "contactHalfFilled": "Un contacto de emergencia necesita nombre y teléfono."
     },
     "statusBadge": {
       "invited": "Invitado",
@@ -419,14 +412,13 @@
   "import": {
     "eyebrow": "Ajustes",
     "title": "Importar contactos",
-    "description": "Trae buceadores, registros de certificación, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay. Abajo está lo que se transfiere.",
+    "description": "Trae buceadores, registros de certificación, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay.",
     "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
     "notice": {
       "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
     },
     "comesAcross": {
-      "heading": "Qué se importa",
-      "description": "Los detalles, fila por fila:"
+      "heading": "Qué se importa"
     },
     "scopeChip": {
       "included": "Se importa",
@@ -496,7 +488,7 @@
     },
     "wizard": {
       "heading": "Subir un archivo de contactos",
-      "intro": "Un CSV de tu sistema anterior o el propio <mono>contacts.csv</mono> de DiveDay. Si coincide el correo se actualiza ese buceador; si no, es una ficha nueva. No se escribe nada hasta que confirmes la vista previa.",
+      "intro": "Un CSV de tu sistema anterior o el propio <mono>contacts.csv</mono> de DiveDay. No se escribe nada hasta que confirmes la vista previa.",
       "chooseFile": "Elegir archivo CSV",
       "chooseDifferentFile": "Elegir otro archivo",
       "columnTitle": "Columna “{header}”",
@@ -649,7 +641,7 @@
   "embed": {
     "eyebrow": "Ajustes",
     "title": "Widget para tu web",
-    "description": "Pega uno de estos en tu web para que los buceadores exploren y reserven sin salir de ella. Ambos apuntan al mismo calendario en vivo: no hay nada que sincronizar.",
+    "description": "Pega uno de estos en tu web para que los buceadores exploren y reserven sin salir de ella.",
     "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada en esta instancia de DiveDay — contacta a {email} para activarla.",
     "calendarEmbed": {
       "heading": "Widget de calendario",

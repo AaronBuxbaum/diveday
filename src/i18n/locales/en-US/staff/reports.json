@@ -33,9 +33,9 @@
     "tipsLabel": "Tips",
     "tipsDetail": "{count, plural, =0 {No tips left on this month's trips} one {# tip left on this month's trips} other {# tips left on this month's trips}} · 100% to the shop"
   },
-  "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
-  "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
-  "noTripsWithImportedHistory": "No DiveDay departures were recorded this month. The financial aggregate above comes from unverified imported source history.",
+  "noTripsFuture": "Nothing on the books for this month yet.",
+  "noTripsPast": "No trips sailed this month.",
+  "noTripsWithImportedHistory": "No DiveDay departures were recorded this month.",
   "importedHistory": {
     "sectionLabel": "Unverified imported history",
     "heading": "Unverified imported history",

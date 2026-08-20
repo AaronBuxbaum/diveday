@@ -167,17 +167,8 @@ export default async function DiveSitesPage({
           aria-label={t("diveSites.list.overviewAriaLabel")}
           className="mb-8 grid gap-3 sm:grid-cols-2"
         >
-          <ShopStat
-            label={t("diveSites.list.savedSites")}
-            value={stats.total}
-            detail={t("diveSites.list.savedSitesDetail")}
-            tone="primary"
-          />
-          <ShopStat
-            label={t("diveSites.list.fromTemplates")}
-            value={stats.fromTemplates}
-            detail={t("diveSites.list.fromTemplatesDetail")}
-          />
+          <ShopStat label={t("diveSites.list.savedSites")} value={stats.total} tone="primary" />
+          <ShopStat label={t("diveSites.list.fromTemplates")} value={stats.fromTemplates} />
         </section>
       )}
 
@@ -233,7 +224,7 @@ export default async function DiveSitesPage({
             {query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
           </h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {query ? t("diveSites.list.noMatchBody") : t("diveSites.list.emptyBody")}
+            {t("diveSites.list.emptyBody")}
           </p>
           {/* No second "Clear search" here: the search band right above this
               card already carries one whenever a query is active, and two

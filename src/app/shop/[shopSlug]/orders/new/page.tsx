@@ -180,11 +180,9 @@ export default async function NewOrderPage({
             tripTitle: bookingContext.trip.title,
             date: formatShortDate(bookingContext.trip.startsAt, locale, shop?.timezone),
           })}{" "}
-          {isCourseOrder
-            ? t("orders.new.courseNote")
-            : bookingContext.trip.priceCents === null
-              ? t("orders.new.noPriceNote")
-              : t("orders.new.priceNote")}
+          {!isCourseOrder && bookingContext.trip.priceCents === null
+            ? t("orders.new.noPriceNote")
+            : null}
         </p>
       ) : null}
 

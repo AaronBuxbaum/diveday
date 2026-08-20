@@ -11,6 +11,7 @@ import {
   openTripFromBoard,
   openTripTab,
   signOut,
+  waiverLinkFromResult,
 } from "./helpers";
 
 /**
@@ -146,12 +147,9 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
     await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-    const waiverHref = await diverSection
-      .getByRole("status")
-      .getByRole("link")
-      .getAttribute("href");
+    const waiverHref = await waiverLinkFromResult(page, diverSection.getByRole("status"));
 
-    await page.goto(waiverHref ?? "/");
+    await page.goto(waiverHref);
     await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
     await expectNoA11yViolations(page);
   });

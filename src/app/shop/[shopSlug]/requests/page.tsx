@@ -323,7 +323,6 @@ export default async function RequestsPage({
               <h2 id="no-date" className="text-xl font-semibold tracking-tight">
                 {t("requests.noDateHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">{t("requests.noDateDetail")}</p>
               <ul className="mt-3 flex flex-col gap-3">
                 {undated.map((request) => (
                   <RequestCard

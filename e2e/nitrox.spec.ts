@@ -41,7 +41,7 @@ test.describe("staff", () => {
 
     const card = page.locator("li").filter({ hasText: cardNo });
     await card.getByRole("button", { name: "Mark certified" }).click();
-    await expect(page.getByRole("status")).toContainText("certified");
+    await expect(page.getByRole("status")).toContainText("marked verified");
 
     await openWreckTrip(page);
     await page

@@ -218,13 +218,13 @@ export function LastMinuteDealSection({
                 ? t("trips.lastMinute.fullHeading")
                 : t("trips.lastMinute.noneAroundHeading")}
           </h3>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {cancelled
-              ? t("trips.lastMinute.cancelledNotice")
-              : openSeats <= 0
+          {cancelled ? null : (
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+              {openSeats <= 0
                 ? t("trips.lastMinute.fullNotice")
                 : t("trips.lastMinute.noneAroundNotice")}
-          </p>
+            </p>
+          )}
           {cancelled ? (
             <Link
               href={`/shop/${shopSlug}/schedule/board`}

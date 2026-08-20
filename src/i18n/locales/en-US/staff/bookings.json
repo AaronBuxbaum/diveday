@@ -2,11 +2,10 @@
   "new": {
     "eyebrow": "Bookings",
     "title": "Add a booking",
-    "description": "Seat a diver on any upcoming departure — pick the boat, then the diver.",
     "backToBoard": "Back to the board",
     "tripHeading": "Which departure?",
     "fullExcluded": "Full departures are left out of this list. Change a boat's seats, or put another departure on that day, from the board.",
-    "tripEmpty": "Nothing upcoming has a seat left. Put a departure on the board first.",
+    "tripEmpty": "Nothing upcoming has a seat left.",
     "tripEmptyAction": "Open the schedule",
     "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
     "changeTrip": "Not this one? Pick a different departure.",
@@ -18,7 +17,6 @@
     "fromRequest": "Booking from a request",
     "viewRequests": "View all requests",
     "relevantRequests": "Relevant requests",
-    "relevantRequestsDescription": "These requests match this departure's date. Open one to book that person, or use the hand-entry form below.",
     "bookFromRequest": "Book from this request",
     "requestsCount": "{count, plural, one {# request} other {# requests}}",
     "pagination": {

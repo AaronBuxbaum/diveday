@@ -229,7 +229,6 @@ export default async function DiversPage({
           searchPlaceholder: t("divers.list.searchPlaceholder"),
           noDiversMatchView: t("divers.list.noDiversMatchView"),
           noDiversOnFile: t("divers.list.noDiversOnFile"),
-          tryDifferentSearch: t("divers.list.tryDifferentSearch"),
           addOneHere: t("divers.list.addOneHere"),
           emptyShowAll: t("divers.list.emptyShowAll"),
           emptyImportBody: t("divers.list.emptyImportBody"),
@@ -242,7 +241,6 @@ export default async function DiversPage({
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderLevel: t("divers.list.tableHeaderLevel"),
           tableHeaderAttention: t("divers.list.tableHeaderAttention"),
-          noAttention: t("divers.list.noAttention"),
         }}
       />
     </main>

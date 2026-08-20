@@ -963,7 +963,6 @@ export default async function DiverReadinessPage({
             data.rescheduleCandidates &&
             data.rescheduleCandidates.length > 0 ? (
               <div className="mt-3">
-                <p className="text-base text-muted">{t("ready.reschedulePitch")}</p>
                 <form
                   action={rescheduleMyBookingAction.bind(null, token)}
                   className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"

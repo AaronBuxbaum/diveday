@@ -4,7 +4,7 @@
   "findPlaceholder": "Start typing a name…",
   "search": "Search",
   "searching": "Searching…",
-  "noMatches": "No matches for “{query}” in the shop's records.",
+  "noMatches": "No matches for “{query}”.",
   "noEmailOnFile": "No email on file",
   "adding": "Adding…",
   "handEntryHeading": "New diver",

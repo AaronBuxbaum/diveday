@@ -18,7 +18,7 @@ export function DiveSitesPeek({
 }: {
   sites: TripSitePeek[];
   heading: string;
-  subheading: string;
+  subheading?: string;
   /** A site's difficulty is a code now, so this grid needs the words for it. */
   t: DiverTranslator;
 }) {
@@ -26,7 +26,7 @@ export function DiveSitesPeek({
   return (
     <section className="mt-8">
       <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
-      <p className="mt-1 text-sm text-muted">{subheading}</p>
+      {subheading ? <p className="mt-1 text-sm text-muted">{subheading}</p> : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {sites.map((site) => (
           // A shell, not a padded card: the photo runs to the card's edge and

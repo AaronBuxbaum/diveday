@@ -80,9 +80,7 @@ export interface DateRequestCopy {
   orEmail: string;
   preferredDate: string;
   alternateDate: string;
-  datesHint: string;
   whenSuits: string;
-  whenSuitsHint: string;
   whenSuitsPlaceholder: string;
   whereYouAreUpTo: string;
   chooseOne: string;

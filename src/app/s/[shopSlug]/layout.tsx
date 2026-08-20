@@ -225,7 +225,6 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
             sharedWarning: t("demo.sharedWarning"),
             sessionExpired: t("demo.sessionExpired"),
             withCredentials: t("demo.withCredentials"),
-            chooseRole: t("demo.chooseRole"),
             active: t("demo.active"),
             tryLabel: t("demo.tryLabel"),
             current: t("demo.current"),

@@ -351,11 +351,7 @@ export default async function ImportContactsPage({
           `space-y-10` here, and no `mt-*` on any card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
-        <SectionCard
-          padding="lg"
-          title={t("settings.import.comesAcross.heading")}
-          description={t("settings.import.comesAcross.description")}
-        >
+        <SectionCard padding="lg" title={t("settings.import.comesAcross.heading")}>
           <ul className="space-y-2">
             {IMPORT_HONESTY_TABLE.map((row) => (
               <li

@@ -32,7 +32,6 @@ export type TripDiveFieldsCopy = {
   travelLabelOther: string;
   travelHint: string;
   diverFacingDetailsLabel: string;
-  detailsPlaceholder: string;
   footerNote: string;
 };
 
@@ -180,7 +179,6 @@ export function TripDiveFields({
                     rows={2}
                     maxLength={500}
                     defaultValue={initial?.description ?? ""}
-                    placeholder={copy.detailsPlaceholder}
                     className={controlClass}
                   />
                 </Field>

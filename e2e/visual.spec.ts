@@ -11,6 +11,7 @@ import {
   openTripFromBoard,
   openTripTab,
   seededTripId,
+  waiverLinkFromResult,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
@@ -1391,10 +1392,10 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         const resultNotice = diverSection.getByRole("status");
         await resultNotice.waitFor();
-        const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
+        const waiverHref = await waiverLinkFromResult(staffPage, resultNotice);
         await staffContext.close();
 
-        await page.goto(waiverHref ?? "/");
+        await page.goto(waiverHref);
         await page.getByRole("heading", { name: "A quick step before the dock" }).waitFor();
         await capture(page, "waiver-active", scheme);
       });

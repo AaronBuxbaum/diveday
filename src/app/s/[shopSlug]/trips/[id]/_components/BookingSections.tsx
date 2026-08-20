@@ -197,7 +197,6 @@ export function TripFullSection({
     <section id="book" className="mt-10 scroll-mt-4 rounded-2xl bg-surface-sunken p-5 sm:p-6">
       <h2 className="text-lg font-semibold">{t("fullHeading")}</h2>
       <p className="mt-1 text-muted">
-        {t("fullBody", { capacity: trip.capacity })}{" "}
         <Link
           href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"

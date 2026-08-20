@@ -172,11 +172,7 @@ export default async function WhatsAppSettingsPage({
           )}
         </SectionCard>
 
-        <SectionCard
-          padding="lg"
-          title={t("whatsapp.setup.heading")}
-          description={t("whatsapp.setup.description")}
-        >
+        <SectionCard padding="lg" title={t("whatsapp.setup.heading")}>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
             <li>{t("whatsapp.setup.step1")}</li>
             <li>{t("whatsapp.setup.step2")}</li>
@@ -206,11 +202,7 @@ export default async function WhatsAppSettingsPage({
 
         {account ? (
           <>
-            <SectionCard
-              padding="lg"
-              title={t("whatsapp.test.heading")}
-              description={t("whatsapp.test.description")}
-            >
+            <SectionCard padding="lg" title={t("whatsapp.test.heading")}>
               <FieldGrid as="form" action={testWhatsAppAction}>
                 <Field
                   label={t("whatsapp.test.phone")}

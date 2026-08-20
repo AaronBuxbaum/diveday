@@ -220,7 +220,6 @@ export type BuilderCopy = {
   every2Weeks: string;
   every4Weeks: string;
   repeatsOnLabel: string;
-  repeatsOnDescription: string;
   everyDay: string;
   endsLabel: string;
   endsNever: string;
@@ -865,7 +864,6 @@ function AddPanel({
             every2Weeks: copy.every2Weeks,
             every4Weeks: copy.every4Weeks,
             repeatsOnLabel: copy.repeatsOnLabel,
-            repeatsOnDescription: copy.repeatsOnDescription,
             everyDay: copy.everyDay,
             endsLabel: copy.endsLabel,
             endsNever: copy.endsNever,

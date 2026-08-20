@@ -13,7 +13,6 @@ const copy: RepeatFieldsCopy = {
   every2Weeks: "Every 2 weeks",
   every4Weeks: "Every 4 weeks",
   repeatsOnLabel: "Repeats on",
-  repeatsOnDescription: "Pick the days.",
   everyDay: "Every day",
   endsLabel: "Ends",
   endsNever: "Keeps repeating",

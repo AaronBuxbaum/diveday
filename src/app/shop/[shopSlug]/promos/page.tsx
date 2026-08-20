@@ -534,7 +534,6 @@ export default async function PromosPage({
         t={t}
         className="mt-4"
       />
-      <p className="mt-3 text-xs text-muted">{t("promos.tripDeals.rangeNote")}</p>
     </main>
   );
 }

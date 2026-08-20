@@ -56,9 +56,6 @@ export default async function TripPrintPage({
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
           {t("shared.printPacket.title")}
         </h1>
-        <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
-          {t("shared.printPacket.description")}
-        </p>
       </header>
 
       <section aria-labelledby="print-overview" className="print-bundle-page">

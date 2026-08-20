@@ -14,7 +14,6 @@ afterEach(() => {
 
 const COPY: RoleOrientationCardCopy = {
   heading: "New here? A few pointers for your role.",
-  subtitle: "This only shows once — dismiss it any time.",
   tryLabel: "Try:",
   dismiss: "Got it",
   title: "You're steering the whole shop",

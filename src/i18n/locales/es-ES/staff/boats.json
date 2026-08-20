@@ -1,10 +1,9 @@
 {
   "divingOptionsHeading": "Opciones de buceo",
-  "divingOptionsDescription": "Configura los tipos de actividades de buceo que ofrece tu centro.",
   "shoreDivingLabel": "Buceo desde costa",
   "shoreDivingDescription": "Actívalo si ofreces inmersiones desde la costa (será una opción al crear salidas).",
   "poolDivingLabel": "Buceo en piscina",
-  "poolDivingDescription": "Actívalo si ofreces sesiones en piscina o aguas confinadas para cursos.",
+  "poolDivingDescription": "Incluye sesiones en aguas confinadas para cursos.",
   "shoreEnabled": "Buceo desde costa",
   "shoreDisabled": "Sin buceo desde costa",
   "poolEnabled": "Buceo en piscina",
@@ -13,10 +12,7 @@
   "divingOptionsSubmitting": "Guardando...",
   "divingOptionsSaved": "Opciones de buceo guardadas.",
   "divingOptionsInvalid": "Elige si ofreces buceo desde la costa y/o buceo en piscina.",
-
   "heading": "Embarcaciones",
-  "description": "Gestiona las embarcaciones de tu centro y sus capacidades.",
-  "detail": "Si configuras embarcaciones, programar una tercera salida en barco simultánea cuando solo tienes 2 embarcaciones mostrará una advertencia.",
   "nameLabel": "Nombre de la embarcación",
   "capacityLabel": "Capacidad (plazas)",
   "addBoat": "Añadir embarcación",

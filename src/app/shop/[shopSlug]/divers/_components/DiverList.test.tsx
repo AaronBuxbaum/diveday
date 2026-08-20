@@ -44,7 +44,6 @@ const copy = {
   searchPlaceholder: t("divers.list.searchPlaceholder"),
   noDiversMatchView: t("divers.list.noDiversMatchView"),
   noDiversOnFile: t("divers.list.noDiversOnFile"),
-  tryDifferentSearch: t("divers.list.tryDifferentSearch"),
   addOneHere: t("divers.list.addOneHere"),
   emptyShowAll: t("divers.list.emptyShowAll"),
   emptyImportBody: t("divers.list.emptyImportBody"),
@@ -63,7 +62,6 @@ const copy = {
   tableHeaderPerson: t("divers.list.tableHeaderPerson"),
   tableHeaderLevel: t("divers.list.tableHeaderLevel"),
   tableHeaderAttention: t("divers.list.tableHeaderAttention"),
-  noAttention: t("divers.list.noAttention"),
 };
 
 function renderList({

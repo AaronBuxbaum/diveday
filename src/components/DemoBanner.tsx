@@ -23,7 +23,6 @@ interface DemoBannerCopy {
   sharedWarning: string;
   sessionExpired: string;
   withCredentials: string;
-  chooseRole: string;
   active: string;
   tryLabel: string;
   current: string;
@@ -164,10 +163,7 @@ export function DemoBanner({
         {/* Expandable Role Switched Panel */}
         {isExpanded ? (
           <div className="mt-4 border-t border-border/60 pt-4">
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              {copy.chooseRole}
-            </h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {roles.map((role) => {
                 const isActive = role.id === currentRole;
                 const isThisSwitching = switchingTo === role.id;

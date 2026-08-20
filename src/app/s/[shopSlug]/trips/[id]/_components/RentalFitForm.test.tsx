@@ -198,9 +198,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent(
-      "Sizes recorded — the crew will confirm your fit at the dock.",
-    );
+    expect(indicator).toHaveTextContent("Sizes recorded.");
   });
 
   it("updates dynamically when user checks a rental and inputs a size", () => {
@@ -236,9 +234,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     fireEvent.change(bcdSelect, { target: { value: "L" } });
 
     // Indicator should now light up
-    expect(indicator).toHaveTextContent(
-      "Sizes recorded — the crew will confirm your fit at the dock.",
-    );
+    expect(indicator).toHaveTextContent("Sizes recorded.");
   });
 
   it("renders the recorded-size message for a wetsuit once its size is provided", () => {
@@ -267,9 +263,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     ) as HTMLSelectElement;
     fireEvent.change(wetsuitSelect, { target: { value: "M" } });
 
-    expect(indicator).toHaveTextContent(
-      "Sizes recorded — the crew will confirm your fit at the dock.",
-    );
+    expect(indicator).toHaveTextContent("Sizes recorded.");
   });
 
   it("renders the recorded-size message for mask/fins because fin size is optional", () => {
@@ -290,9 +284,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent(
-      "Sizes recorded — the crew will confirm your fit at the dock.",
-    );
+    expect(indicator).toHaveTextContent("Sizes recorded.");
   });
 
   it("confirms gear match when BCD size is provided even if optional fin size is empty", () => {
@@ -320,9 +312,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     fireEvent.change(bcdSelect, { target: { value: "L" } });
 
     // Should be confirmed even though fin size is not provided
-    expect(indicator).toHaveTextContent(
-      "Sizes recorded — the crew will confirm your fit at the dock.",
-    );
+    expect(indicator).toHaveTextContent("Sizes recorded.");
   });
 });
 

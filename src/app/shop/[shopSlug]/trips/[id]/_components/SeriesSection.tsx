@@ -246,7 +246,6 @@ export function SeriesSection({
                 every2Weeks: t("schedule.builder.every2Weeks"),
                 every4Weeks: t("schedule.builder.every4Weeks"),
                 repeatsOnLabel: t("schedule.builder.repeatsOnLabel"),
-                repeatsOnDescription: t("schedule.builder.repeatsOnDescription"),
                 everyDay: t("schedule.builder.everyDay"),
                 endsLabel: t("schedule.builder.endsLabel"),
                 endsNever: t("schedule.builder.endsNever"),

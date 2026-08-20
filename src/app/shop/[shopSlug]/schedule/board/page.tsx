@@ -361,7 +361,6 @@ export default async function ScheduleBoardPage({
     every2Weeks: st("schedule.builder.every2Weeks"),
     every4Weeks: st("schedule.builder.every4Weeks"),
     repeatsOnLabel: st("schedule.builder.repeatsOnLabel"),
-    repeatsOnDescription: st("schedule.builder.repeatsOnDescription"),
     everyDay: st("schedule.builder.everyDay"),
     endsLabel: st("schedule.builder.endsLabel"),
     endsNever: st("schedule.builder.endsNever"),
@@ -408,7 +407,6 @@ export default async function ScheduleBoardPage({
       travelLabelOther: st("shared.tripDiveFields.travelLabelOther"),
       travelHint: st("shared.tripDiveFields.travelHint"),
       diverFacingDetailsLabel: st("shared.tripDiveFields.diverFacingDetailsLabel"),
-      detailsPlaceholder: st("shared.tripDiveFields.detailsPlaceholder"),
       footerNote: st("shared.tripDiveFields.footerNote"),
     },
   };
@@ -573,7 +571,6 @@ export default async function ScheduleBoardPage({
         // "Schedule" while the nav tab called it something else again.
         eyebrow={st("schedule.boardEyebrow")}
         title={st("schedule.boardTitle")}
-        description={st("schedule.boardDescription")}
         actions={
           <>
             <Link

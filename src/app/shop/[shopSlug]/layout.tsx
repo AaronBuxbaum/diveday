@@ -197,7 +197,6 @@ export default async function ShopLayout({
             sharedWarning: demoT("demo.sharedWarning"),
             sessionExpired: demoT("demo.sessionExpired"),
             withCredentials: demoT("demo.withCredentials"),
-            chooseRole: demoT("demo.chooseRole"),
             active: demoT("demo.active"),
             tryLabel: demoT("demo.tryLabel"),
             current: demoT("demo.current"),

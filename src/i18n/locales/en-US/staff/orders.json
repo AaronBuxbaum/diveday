@@ -10,9 +10,8 @@
       "fallback": "That order couldn't be created."
     },
     "linkedTo": "Linked to {personName}'s booking on {tripTitle} ({date}).",
-    "courseNote": "The course's instruction and e-learning lines are pre-filled from your catalog. One order, two lines: clear the e-learning line if this student already completed it elsewhere.",
-    "noPriceNote": "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time.",
-    "priceNote": "The trip fee below is pre-filled from this trip's price.",
+    "courseNote": "Clear the e-learning line if this student already completed it elsewhere.",
+    "noPriceNote": "This trip has no price set.",
     "customerLabel": "Customer",
     "chooseCustomer": "Choose a customer",
     "noteLabel": "Order note",
@@ -61,7 +60,7 @@
       "other": "Other"
     },
     "openInvoice": "Open the payable invoice",
-    "openInvoiceHint": "— share this link with the customer if Stripe's email didn't reach them.",
+    "openInvoiceHint": "— share this link with the customer.",
     "demoActionHint": "Demo orders aren't backed by a live Stripe invoice, so this action is disabled.",
     "refreshStatus": "Refresh status",
     "refreshing": "Refreshing…",
@@ -73,19 +72,18 @@
       "refreshed": "Status refreshed from Stripe.",
       "refreshFailed": "Couldn't reach Stripe to refresh this order.",
       "voided": "Order voided.",
-      "voidFailed": "Couldn't void this order — it may already be paid or void.",
+      "voidFailed": "Couldn't void this order.",
       "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
-      "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
+      "refundFailed": "Couldn't refund this order.",
       "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
       "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
-      "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
+      "demoDisabled": "This is a demo order — it can't be changed.",
       "fallback": "Something changed on this order — the details below are current."
     }
   },
   "index": {
     "eyebrow": "Front desk",
     "title": "Orders",
-    "description": "Every order the shop has sent, across every diver and trip.",
     "newOrder": "New order",
     "monthlyReport": "Monthly report",
     "notice": {
@@ -109,7 +107,7 @@
     "filteredByDiver": "Showing orders for {name}.",
     "filteredByTrip": "Showing orders for {title}.",
     "openFilteredTrip": "Open the departure",
-    "emptyAll": "No DiveDay orders yet — they show up here as soon as the front desk sends one.",
+    "emptyAll": "No DiveDay orders yet.",
     "emptyFiltered": "No DiveDay orders match these filters.",
     "emptyNoPayments": "No DiveDay orders yet — connect payments and the front desk can send its first order from here.",
     "table": {
@@ -160,7 +158,7 @@
     "owedRefunds": {
       "sectionLabel": "Refunds you still owe",
       "heading": "{count, plural, one {# diver is} other {# divers are}} still owed money for a departure you cancelled.",
-      "detail": "Their money couldn't go back by card — a counter payment, a disconnected Stripe account, or a refund Stripe refused. Each of them has been told you'll be in touch. Return it, then mark the seat refunded on the departure's Guests tab.",
+      "detail": "Their money couldn't go back by card. Each of them has been told you'll be in touch. Return it, then mark the seat refunded on the departure's Guests tab.",
       "depositOnly": "deposit only",
       "unrecordedAmount": "amount not recorded",
       "openTrip": "Open Guests"

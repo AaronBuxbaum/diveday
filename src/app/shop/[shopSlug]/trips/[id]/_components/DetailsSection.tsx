@@ -144,7 +144,6 @@ export function DetailsSection({
               travelLabelOther: t("shared.tripDiveFields.travelLabelOther"),
               travelHint: t("shared.tripDiveFields.travelHint"),
               diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
-              detailsPlaceholder: t("shared.tripDiveFields.detailsPlaceholder"),
               footerNote: t("shared.tripDiveFields.footerNote"),
             }}
           />

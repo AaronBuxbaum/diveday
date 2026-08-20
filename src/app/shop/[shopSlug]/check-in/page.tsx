@@ -238,7 +238,6 @@ export default async function CheckInPage({
       <ShopPageHeader
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
-        description={t("checkIn.description")}
         // What this queue *is* — how far either side of now it reaches — which
         // is a fact about the rows below it and nothing a reader can find
         // elsewhere. Gone with it: the shared-window sentence Today used to
@@ -310,11 +309,7 @@ export default async function CheckInPage({
                   : t("checkIn.emptyNoTripsTitle")}
             </h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {query
-                ? t("checkIn.emptyDescription")
-                : upcomingDepartures > 0
-                  ? t("checkIn.emptyQuietDescription")
-                  : t("checkIn.emptyNoTripsDescription")}
+              {query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
             </p>
             {query ? (
               <Link
@@ -345,7 +340,6 @@ export default async function CheckInPage({
           // waiting at the desk.
           <div className="rise-in rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
             <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("checkIn.clearedBody")}</p>
             <Link
               href={`/shop/${shopSlug}`}
               className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}

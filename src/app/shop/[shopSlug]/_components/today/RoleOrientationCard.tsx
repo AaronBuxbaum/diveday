@@ -4,7 +4,6 @@ import { buttonClass } from "@/components/ui/button";
 
 export type RoleOrientationCardCopy = {
   heading: string;
-  subtitle: string;
   tryLabel: string;
   dismiss: string;
   title: string;
@@ -47,7 +46,6 @@ export function RoleOrientationCard({
           <h2 id="role-orientation-heading" className="text-lg font-semibold">
             {copy.heading}
           </h2>
-          <p className="mt-1 text-sm text-muted">{copy.subtitle}</p>
           <p className="mt-4 font-medium">{copy.title}</p>
           <p className="mt-1 text-sm text-muted">{copy.desc}</p>
           <p className="mt-3 text-sm">

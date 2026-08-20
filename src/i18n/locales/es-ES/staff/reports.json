@@ -33,9 +33,9 @@
     "tipsLabel": "Propinas",
     "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina en las salidas de este mes} other {# propinas en las salidas de este mes}} · 100 % para el centro"
   },
-  "noTripsFuture": "Todavía no hay nada reservado para este mes — las reservas aparecerán aquí a medida que lleguen.",
-  "noTripsPast": "Ninguna salida zarpó este mes. Elige otro mes para ver cómo fue.",
-  "noTripsWithImportedHistory": "No hubo salidas de DiveDay registradas este mes. El agregado financiero de arriba procede de historial importado del origen sin verificar.",
+  "noTripsFuture": "Todavía no hay nada reservado para este mes.",
+  "noTripsPast": "Ninguna salida zarpó este mes.",
+  "noTripsWithImportedHistory": "No hubo salidas de DiveDay registradas este mes.",
   "importedHistory": {
     "sectionLabel": "Historial importado sin verificar",
     "heading": "Historial importado sin verificar",

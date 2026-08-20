@@ -389,7 +389,6 @@ export default async function TeamSettingsPage({
         eyebrow={t("settings.team.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.team.title")}
-        description={t("settings.team.description")}
       />
 
       {notice === "removed" && undoPersonId && undoUserAccountId && undoRoles ? (

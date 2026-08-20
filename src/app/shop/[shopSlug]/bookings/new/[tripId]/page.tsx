@@ -171,11 +171,7 @@ export default async function NewBookingDiverPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader
-        eyebrow={t("bookings.new.eyebrow")}
-        title={t("bookings.new.title")}
-        description={t("bookings.new.description")}
-      />
+      <ShopPageHeader eyebrow={t("bookings.new.eyebrow")} title={t("bookings.new.title")} />
       {/* R9: step two used to point back at the board, exactly like step one —
           so a staffer who picked the wrong departure had to leave the flow and
           re-enter it. Back, here, means back one step: the departure picker.
@@ -214,7 +210,6 @@ export default async function NewBookingDiverPage({
       <RelevantBookingRequests
         className="mt-6"
         title={t("bookings.new.relevantRequests")}
-        description={t("bookings.new.relevantRequestsDescription")}
         openLabel={t("bookings.new.bookFromRequest")}
         items={requestItems}
       />

@@ -2,13 +2,12 @@
   "main": {
     "eyebrow": "Settings",
     "title": "Shop settings",
-    "description": "One-time and occasional shop configuration lives here, including the Stripe account that receives invoices and payments.",
     "notice": {
       "packingSaved": "Packing checklist saved for every trip.",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
-      "unitsSaved": "Units saved. Recorded depths, temperatures, and prices keep their numbers — only how they are read changes.",
+      "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "rentalsSaved": "Rental catalog saved.",
       "rentalPricesSaved": "Rental prices saved.",
@@ -24,7 +23,7 @@
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
       "connected": "Stripe account connected.",
       "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
-      "notConfigured": "Online payments aren't switched on for this DiveDay setup yet. Whoever runs your hosting finishes the Stripe configuration.",
+      "notConfigured": "Online payments aren't switched on for this DiveDay setup yet.",
       "disconnected": "Stripe account disconnected.",
       "refreshed": "Payment status refreshed from Stripe.",
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
@@ -33,8 +32,7 @@
     },
     "timezone": {
       "heading": "Timezone",
-      "description": "The zone every date and time in DiveDay is read and written in.",
-      "detail": "The board, the manifest, and the times divers see all follow it. Changing it re-reads existing departures at their new local times; it does not move them.",
+      "detail": "Changing it re-reads existing departures at their new local times; it does not move them.",
       "label": "Timezone",
       "submitting": "Saving…",
       "submit": "Save timezone",
@@ -112,8 +110,7 @@
       "heading": "Search listing",
       "valueListed": "Listed",
       "valueHidden": "Hidden",
-      "description": "Whether Google and other search engines can list your public pages.",
-      "detail": "Your schedule and course pages are listed by default — for most shops that's the point of having them. Untick this and DiveDay drops them from its sitemap and asks search engines not to index them. Anything already indexed can take a few weeks to disappear, and a page someone has linked to stays reachable by that link.",
+      "detail": "Untick this and anything already indexed can take a few weeks to disappear — and a page someone has linked to stays reachable by that link.",
       "label": "List my public pages in search engines",
       "submit": "Save",
       "submitting": "Saving…"
@@ -128,7 +125,7 @@
     },
     "dockCall": {
       "heading": "Dock-day rhythm",
-      "description": "The shape of one dive day, in minutes — what happens at the dock, and what happens once you're off.",
+      "description": "Every number here is in minutes.",
       "detail": "These six numbers are the timeline your divers read as “Your dock-day rhythm” on their booking page, and the arrival call carries into confirmations and every pre-trip reminder. Set a beat to 0 and it drops out of the day entirely — that's how you say you brief on the boat, kit up on board, or dive from the beach. Beats before departure can never land earlier than your arrival call.",
       "submit": "Save dock-day rhythm",
       "submitting": "Saving…",
@@ -144,7 +141,7 @@
       "bottomTimeLabel": "Time in the water per dive",
       "bottomTimeDescription": "Your usual planned bottom time.",
       "surfaceIntervalLabel": "Surface interval between dives",
-      "surfaceIntervalDescription": "0 for back-to-back dives. Never shown on a one-dive trip.",
+      "surfaceIntervalDescription": "0 for back-to-back dives.",
       "stepArrive": "Arrive and check in",
       "stepGearSetup": "Gear set-up",
       "stepBriefing": "Crew briefing",
@@ -161,13 +158,12 @@
     },
     "units": {
       "heading": "Units",
-      "description": "How your crew reads depths, water temperature, and prices.",
       "depthLabel": "Show depths in",
       "depthDetail": "Depths are always stored in metres, so switching this changes only what you type in and read back — no recorded site depth moves.",
       "meters": "Metres (m)",
       "feet": "Feet (ft)",
       "temperatureLabel": "Show water temperature in",
-      "temperatureDetail": "Set separately from depth — plenty of shops publish feet and Celsius. Always stored in Celsius, so this changes only what you type and read.",
+      "temperatureDetail": "Always stored in Celsius, so this changes only what you type and read.",
       "celsius": "Celsius (°C)",
       "fahrenheit": "Fahrenheit (°F)",
       "currencyLabel": "Charge and display in",
@@ -181,8 +177,7 @@
     },
     "rentals": {
       "heading": "What we rent",
-      "description": "The gear and services divers can ask for in their rental fit.",
-      "detail": "Untick anything you don't offer — it drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts unticked.",
+      "detail": "Untick anything you don't offer — it drops off the kit form and the prep list.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
       "submitting": "Saving…",
@@ -202,7 +197,6 @@
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",
-      "notConnectedDescription": "Connect a Stripe account you own.",
       "notConnectedDetail": "DiveDay never holds your money — payments for orders go straight into your own Stripe balance.",
       "connect": "Connect Stripe",
       "notConfiguredWarning": "Online payments aren’t switched on for DiveDay yet — email {email} and we’ll get it set up.",
@@ -237,7 +231,7 @@
       "heading": "Your trial",
       "activeDescription": "{count, plural, one {# day} other {# days}} left, through {endDate}.",
       "expiredDescription": "Your trial ended {endDate}. Everything you've set up keeps working.",
-      "upgradeBody": "Ready to move to a paid plan? Email us and we'll get you set up.",
+      "upgradeBody": "Ready to move to a paid plan?",
       "emailCta": "Email {email}",
       "value": "{count, plural, one {# day left} other {# days left}}",
       "expiredValue": "Ended {endDate}"
@@ -289,7 +283,7 @@
       "mediaDeletions": {
         "sectionLabel": "Photos that didn't finish deleting",
         "heading": "{count, plural, one {# photo} other {# photos}} removed but not yet deleted from storage",
-        "detail": "The photo is already gone from the app; the stored file wasn't — retry the delete, or leave it for tonight's automatic retry.",
+        "detail": "Retry the delete, or leave it for tonight's automatic retry.",
         "queued": "queued {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…"
@@ -322,7 +316,6 @@
   "team": {
     "eyebrow": "Settings",
     "title": "Team",
-    "description": "Invite staff, set what each person can do, and manage who still has access.",
     "notice": {
       "invited": "Invite sent.",
       "inviteResent": "Invite resent.",
@@ -341,7 +334,7 @@
       "notFound": "That person isn't on this shop's team.",
       "notAuthorized": "Team management is limited to owners and managers.",
       "contactSaved": "Emergency contact saved.",
-      "contactHalfFilled": "An emergency contact needs both a name and a number — a name alone is nobody to call."
+      "contactHalfFilled": "An emergency contact needs both a name and a number."
     },
     "statusBadge": {
       "invited": "Invited",
@@ -419,14 +412,13 @@
   "import": {
     "eyebrow": "Settings",
     "title": "Import contacts",
-    "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV — your old system's or DiveDay's own export. What comes across is below.",
+    "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV — your old system's or DiveDay's own export.",
     "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
     "notice": {
       "notAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers."
     },
     "comesAcross": {
-      "heading": "What comes across",
-      "description": "The specifics, row by row:"
+      "heading": "What comes across"
     },
     "scopeChip": {
       "included": "Comes across",
@@ -496,7 +488,7 @@
     },
     "wizard": {
       "heading": "Upload a contacts file",
-      "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono>. An email match updates that diver; without one, it's a new record. Nothing is written until you confirm the preview.",
+      "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono>. Nothing is written until you confirm the preview.",
       "chooseFile": "Choose CSV file",
       "chooseDifferentFile": "Choose a different file",
       "columnTitle": "Column “{header}”",
@@ -649,7 +641,7 @@
   "embed": {
     "eyebrow": "Settings",
     "title": "Website embed",
-    "description": "Paste one of these into your website so divers can browse and book without leaving it. Both point at the same live schedule — nothing to sync.",
+    "description": "Paste one of these into your website so divers can browse and book without leaving it.",
     "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance — contact {email} to get it set up.",
     "calendarEmbed": {
       "heading": "Calendar embed",

@@ -1,7 +1,7 @@
 {
   "eyebrow": "Operaciones",
   "title": "Personal",
-  "description": "Quién trabaja y cuándo, y qué está cualificado para enseñar o tripular cada persona. La tripulación de cada salida se asigna en Hoy.",
+  "description": "La tripulación de cada salida se asigna en Hoy.",
   "window": {
     "from": "Desde",
     "through": "Hasta",
@@ -27,7 +27,6 @@
   },
   "addShift": {
     "heading": "Añadir un turno de trabajo",
-    "detail": "Un turno indica cuándo alguien está disponible. La tripulación real de cada salida se asigna aparte.",
     "person": "Miembro del personal",
     "choosePerson": "Elige una persona",
     "date": "Fecha",

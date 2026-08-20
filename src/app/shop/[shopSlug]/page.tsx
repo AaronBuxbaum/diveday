@@ -482,7 +482,6 @@ async function TodayBody({
                 dismissAction={dismissOrientationAction}
                 copy={{
                   heading: t("shopHome.orientation.heading"),
-                  subtitle: t("shopHome.orientation.subtitle"),
                   tryLabel: t("shopHome.orientation.tryLabel"),
                   dismiss: t("shopHome.orientation.dismiss"),
                   ...tourText,

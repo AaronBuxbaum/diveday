@@ -16,7 +16,6 @@
     "title": "Cascada de la cancelación",
     "calledBy": "Llamada por {name} · {when}",
     "notified": "Avisados",
-    "notifiedDetail": "{sent} de {total} mensajes enviados",
     "rebooked": "Reservaron de nuevo",
     "rebookedDetail": "tienen plaza en otra salida",
     "unresolved": "Sin resolver",

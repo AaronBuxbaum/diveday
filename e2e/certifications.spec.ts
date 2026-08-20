@@ -46,7 +46,7 @@ test("staff captures and verifies level and specialty certifications before eith
     .filter({ visible: true })
     .last();
   await pendingRow.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("certified");
+  await expect(page.getByRole("status")).toContainText("marked verified");
 
   // Specialty certification: gated exactly the same way, on the same record.
   await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
@@ -66,7 +66,7 @@ test("staff captures and verifies level and specialty certifications before eith
     .filter({ visible: true })
     .last();
   await specialtyRow.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("certified");
+  await expect(page.getByRole("status")).toContainText("marked verified");
 
   // The specialty certification can be deleted outright (replaces the old "needs
   // correction" flow). No confirm dialog: the delete lands and a toast offers a
@@ -240,5 +240,5 @@ test("a diver types their card in from the readiness page, and staff verify it t
   // staff-captured card does and clears nothing until someone confirms it.
   await expect(card).toContainText("pending");
   await card.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("certified");
+  await expect(page.getByRole("status")).toContainText("marked verified");
 });
