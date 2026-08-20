@@ -68,13 +68,21 @@ new domain concept, define it here in the same PR.
   warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
   read as the same thing at a busy desk.
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
-  one of the two public "tell me when something comes up" opt-ins: the shop-wide last-minute-deal
-  list, or a full trip's wait list. It is the weakest thing in the model and everything about it is
-  shaped to keep it that way. It lands on the person as a `pending` card stamped `self_declared_at`,
-  carries **no agency and no card number** (the forms never ask, and a placeholder would be read as a
-  card number eventually), and **no gate reads it** — readiness has always required `verified`, and
-  `decideTripAdmission` filters it out explicitly, so a refused diver cannot type their way onto a
-  boat. Staff see it marked *"— diver's word, no card"* in a warning tone wherever it renders, the
+  one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
+  list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`
+  card stamped `self_declared_at` and carries **no agency and no card number** (the forms do not yet
+  ask, and a placeholder would be read as a card number eventually — see
+  FU-20260820-collect-the-card-number-at-booking).
+  **One gate reads it and one does not, and the split is the whole design.**
+  `decideTripAdmission` — the *sale* — believes it, because the question there is "could this diver
+  ever be cleared?" and a diver who names their rung has answered it. `calculateReadiness` — the
+  *boat* — does not, and never has: it clears on `verified` and nothing else, so a claim buys a seat
+  and never a place in the water
+  ([20260820-attested-at-booking-verified-at-boarding](../architecture/decisions/20260820-attested-at-booking-verified-at-boarding.md)).
+  That means the sale-time gate **can be talked past** — a refused diver can type a higher rung and
+  succeed — and that is accepted rather than overlooked: it was never the thing keeping anyone out of
+  the water, and refusing a shop's own carded regulars to hold a line it could not hold was the worse
+  trade (H-27/H-29). Staff see it marked *"— diver's word, no card"* in a warning tone wherever it renders, the
   same treatment an **Imported specialty card** gets for the same reason: it must never be scanned as
   a plain level. Deliberately *not* the same
   thing as an **Imported certification**: a CSV a shop uploaded out of its own prior system is

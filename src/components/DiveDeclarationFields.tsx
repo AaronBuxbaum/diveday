@@ -8,9 +8,21 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 
 /**
- * **"What can you dive?", asked once, on both of the lists that ask a diver to
- * wait for something.** The shared level question informs staff; the optional
- * nitrox declaration is available only on a trip-specific wait list.
+ * **"What can you dive?", asked in the same words wherever it is asked.** The
+ * two wait lists ask it, and since 2026-08-20 so does the trip booking form.
+ *
+ * **The answer is no longer only informational.** On the booking form
+ * `decideTripAdmission` reads the level for that submission, so a diver who
+ * names a rung the boat demands buys the seat and one who names a lower rung is
+ * told at the sale (ADR 20260820-attested-at-booking-verified-at-boarding). The
+ * sighting is still owed before boarding, and readiness still clears on
+ * `verified` alone. On the two wait lists nothing gates on it at all — it is
+ * shown to the staffer doing the sending, and never filters a blast.
+ *
+ * **The nitrox tick is currently rendered nowhere** (`showNitrox={false}` at
+ * every call site), and the booking action deliberately refuses to honour a
+ * hand-crafted one: a checkbox no diver on the page can reach must not be a
+ * route past a nitrox gate.
  *
  * The shop-wide last-minute-deal list and a full trip's wait list both used to
  * collect a name, an email, and nothing about diving — so a discount blast

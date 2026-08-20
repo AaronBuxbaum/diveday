@@ -272,11 +272,17 @@ export function validVerifiedCertification(
 /**
  * **A card that is still only somebody's word for it.**
  *
- * A diver naming their own level on one of the two public opt-ins writes a
- * `pending` card stamped `selfDeclaredAt` (src/db/self-declared-cards.ts).
- * Nobody at the shop has seen anything, and the person may not even be who the
- * email says — so this is not evidence, and `decideTripAdmission` reads it as
- * absent rather than as a card.
+ * A diver naming their own level on one of the three public forms that ask —
+ * the deal list, a trip's wait list, or the booking form — writes a `pending`
+ * card stamped `selfDeclaredAt` (src/db/self-declared-cards.ts). Nobody at the
+ * shop has seen anything, and the person may not even be who the email says.
+ *
+ * **This predicate is what keeps the two gates different.** At the *sale*,
+ * `decideTripAdmission` believes a stated card; at the *boat*,
+ * `certificationBlocker` gives one its own code rather than clearing on it, so
+ * a claim buys a seat and never a place in the water (ADR
+ * 20260820-attested-at-booking-verified-at-boarding). It used to be read as
+ * absent by both.
  *
  * The stamp stays forever, because where a row began is history. What changes
  * is the `status`: once a staffer has entered the agency and number off a card

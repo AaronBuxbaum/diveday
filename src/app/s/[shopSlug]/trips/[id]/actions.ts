@@ -300,10 +300,18 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
+      // Only what the form actually renders. `DiveDeclarationFields` is mounted
+      // `showNitrox={false}` on both public forms, so a `nitroxCertified=on`
+      // arriving here is hand-crafted — and honouring it would clear a
+      // nitrox-gated sale by a route no honest diver on this page has, and plant
+      // an enriched-air claim on their record besides. Same discipline the gear
+      // checkboxes above are held to. The level is the whole question here.
       declared:
-        index === 0 && declared && (declared.level || declared.nitrox)
-          ? { level: declared.level, nitrox: declared.nitrox }
-          : undefined,
+        index === 0 && declared?.level
+          ? { level: declared.level, noCertification: declared.noCertification }
+          : index === 0 && declared?.noCertification
+            ? { noCertification: true }
+            : undefined,
       // Empty for any non-lead diver who left the field to the "use the main
       // contact's email" checkbox — never the lead's own address (see the
       // comment above the loop that builds `validParty`).

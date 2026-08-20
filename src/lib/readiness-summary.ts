@@ -250,6 +250,15 @@ export const REMINDER_ACTION_CODES = [
   "certification_missing",
   "certification_expired",
   "certification_insufficient",
+  // The two a diver now reaches the week before a dive with, since a stated
+  // card buys the seat and the sighting is still owed (ADR
+  // 20260820-attested-at-booking-verified-at-boarding). Without them the diver
+  // this policy creates heard about the outstanding card once, on the
+  // confirmation screen, and then got a week of reminders naming nothing —
+  // a warm "see you Saturday" over the one item the whole design rests on
+  // (`dive-domain-expert`, 2026-08-20).
+  "certification_self_declared",
+  "nitrox_self_declared",
   "specialty_missing",
   "specialty_expired",
   "nitrox_missing",

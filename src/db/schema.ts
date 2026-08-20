@@ -3604,10 +3604,11 @@ export const certifications = pgTable(
     importedFromLabel: text("imported_from_label"),
     /**
      * **A stranger typed this about themselves.** Set when a diver names their
-     * own level on one of the two public "tell me when something comes up"
-     * opt-ins (the shop-wide last-minute-deal list, a full trip's wait list) —
-     * nobody at the shop has seen a card, and the person may not even be who
-     * the email says (FU-20260813, ADR 20260814-self-declared-cards).
+     * own level on one of the three public forms that ask — the shop-wide
+     * last-minute-deal list, a full trip's wait list, or the trip booking form
+     * (added 2026-08-20) — nobody at the shop has seen a card, and the person
+     * may not even be who the email says (FU-20260813, ADR
+     * 20260814-self-declared-cards).
      *
      * Deliberately a *separate* provenance from `importedAt`, not a reuse of
      * it: an imported card came from a CSV the shop itself uploaded out of its
@@ -3621,11 +3622,13 @@ export const certifications = pgTable(
      *    see the check constraint below. A self-declared row carries `other`
      *    as its agency because the form never asks; the staff UI renders the
      *    level alone rather than claiming an agency nobody stated.
-     * 2. `decideTripAdmission` (src/lib/trip-admission.ts) **ignores** a
-     *    still-pending self-declared row entirely. That function's own
-     *    docstring required this in the same change that made cards
-     *    diver-writable, because it otherwise reads any card on file as
-     *    evidence and a refused diver could type their way past the gate.
+     * 2. `decideTripAdmission` (src/lib/trip-admission.ts) **believes** a
+     *    still-pending self-declared row at the sale, and `calculateReadiness`
+     *    does not at the boat. That is the reverse of the original rule and it
+     *    is deliberate (ADR 20260820-attested-at-booking-verified-at-boarding,
+     *    H-27/H-29): a refused diver *can* type their way past the sale gate,
+     *    which was accepted once it was clear that gate was never what keeps
+     *    anyone out of the water. The sighting at the dock is.
      * 3. Verifying one is **not** the one-tap promote every other pending card
      *    gets: `reviewCertification` refuses without the agency and card number
      *    the staffer is looking at, which is the same act as capturing a card
