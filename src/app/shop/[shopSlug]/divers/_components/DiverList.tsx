@@ -213,6 +213,12 @@ export function DiverList({
   const [quickAddMode, setQuickAddMode] = useState<QuickAddMode>(
     query.trim() ? "entering" : "hidden",
   );
+  // **The roster opens ready to be typed into**, the way check-in does
+  // (`check-in/CheckInSearch.tsx`): a staffer arrives here holding a name, and
+  // searching is the first thing they do. Focused through a ref rather than the
+  // `autoFocus` attribute because biome's `noAutofocus` rule forbids that JSX
+  // prop outright — every focus-on-mount in this repo goes the same way.
+  const searchRef = useRef<HTMLInputElement>(null);
   const quickAddRef = useRef<HTMLDivElement>(null);
   const quickAddFormRef = useRef<HTMLFormElement>(null);
   const [quickAddShift, setQuickAddShift] = useState(0);
@@ -228,6 +234,9 @@ export function DiverList({
     setTyped(query);
     setQuickAddMode(query.trim() ? "visible" : "hidden");
   }, [query]);
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
   useEffect(() => {
     if (quickAddMode !== "exiting") return;
     const timer = setTimeout(() => setQuickAddMode("hidden"), 250);
@@ -397,6 +406,7 @@ export function DiverList({
               {copy.searchDiversLabel}
             </label>
             <input
+              ref={searchRef}
               id="diver-search"
               type="search"
               value={typed}

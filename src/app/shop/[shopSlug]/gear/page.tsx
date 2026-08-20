@@ -255,7 +255,6 @@ export default async function GearRegisterPage({
         {fleetTotal === 0 ? (
           <EmptyState className="mt-4">
             <h2 className="font-semibold">{t("gear.empty.heading")}</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("gear.empty.body")}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-3">
               <AddUnitLink className={buttonClass()}>
                 <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
