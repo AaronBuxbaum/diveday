@@ -15,6 +15,12 @@
     "handEntryDescription": "El correo es opcional — con el nombre basta para guardar la plaza y el resto puede llegar después.",
     "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí.",
     "backToPicker": "Volver a la lista de salidas",
+    "fromRequest": "Reserva desde una petición",
+    "viewRequests": "Ver todas las peticiones",
+    "relevantRequests": "Peticiones relevantes",
+    "relevantRequestsDescription": "Estas peticiones coinciden con la fecha de esta salida. Abre una para reservar a esa persona o usa el formulario manual de abajo.",
+    "bookFromRequest": "Reservar desde esta petición",
+    "requestsCount": "{count, plural, one {# petición} other {# peticiones}}",
     "pagination": {
       "total": "{count, plural, one {# salida} other {# salidas}}"
     }

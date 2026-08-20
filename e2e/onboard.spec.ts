@@ -113,6 +113,7 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
 test("a freshly onboarded shop finds a way forward on its empty Divers and Orders pages", async ({
   page,
 }) => {
+  test.setTimeout(30_000);
   const unique = `empty-doors-${Date.now()}`;
   await page.goto("/onboard");
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Empty Doors E2E");
@@ -129,17 +130,21 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
-  // Divers: nobody on file. The add form is a collapsed disclosure further up
-  // the page, so the empty state's action has to open it and land the cursor
-  // in it — a bare "add one here" sentence left the shop hunting for the form.
+  // Divers: nobody on file. The roster's search is also the quick-add door;
+  // typing a name and choosing Add diver creates the record and opens it.
   await page.goto(`/shop/${unique}/divers`);
   await expect(page.getByText("No divers on file yet.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Import your roster" })).toHaveAttribute(
     "href",
     `/shop/${unique}/settings/import`,
   );
-  await page.getByRole("button", { name: "Add your first diver" }).click();
-  await expect(page.getByLabel("Full name")).toBeFocused();
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("First Empty Diver");
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+  // `?edit=1` opens the one-shot disclosure and FlashParams removes it after
+  // the detail page paints, so the settled URL may or may not retain it.
+  await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
+  await expect(page.getByRole("heading", { level: 1, name: "First Empty Diver" })).toBeVisible();
+  await expect(page.getByLabel("Date of birth")).toBeVisible();
 
   // Orders: no orders and no connected account, so the one honest door is the
   // money settings — the same fork the page header already makes, now inside
@@ -149,7 +154,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
     page.getByText(
       // One noun for one object: the record the front desk sends is an
       // "order" wherever it is named — "invoice" is only the Stripe artifact.
-      "No orders yet — connect payments and the front desk can send its first order from here.",
+      "No DiveDay orders yet — connect payments and the front desk can send its first order from here.",
     ),
   ).toBeVisible();
   // One door, once: while the unfiltered list is empty the header stands

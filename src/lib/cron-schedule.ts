@@ -1,12 +1,12 @@
 /**
  * The platform's scheduling grain, in one place.
  *
- * Everything durable in this app that "retries later" is drained by a Vercel
- * cron entry, and there is exactly one daily entry: `/api/cron/reminders` at
- * `0 14 * * *` (vercel.json). Nothing else wakes the process. That makes the
- * cron cadence — not the backoff arithmetic a queue happens to write into a
- * `next_attempt_at` column — the real floor on how soon anything can be tried
- * again.
+ * Most durable retries are drained by the daily `/api/cron/reminders` entry at
+ * `0 14 * * *` (vercel.json). That makes the cron cadence — not the backoff
+ * arithmetic a queue happens to write into a `next_attempt_at` column — the
+ * real floor on how soon those messages can be tried again. Post-dive recaps
+ * are the intentional exception: their own hourly pass is what makes the
+ * close-out's four-hour promise useful instead of a vague next-day follow-up.
  *
  * This module exists because that floor was invisible at the only place it
  * mattered. `src/db/notifications.ts` computed a 30s → 1h exponential ladder
@@ -15,10 +15,10 @@
  * a failed waiver email is ~24h out and the eighth is ~8 days out (OPS-6).
  * Neither figure appeared anywhere in the code or the runbooks.
  *
- * The schedule stays daily — sub-daily Vercel crons are a hosting-plan
- * question, not an engineering one. What changes is that the arithmetic now
+ * The generic queue's schedule stays daily. What changes is that the arithmetic
  * says what actually happens, and every consumer derives its bounds from this
- * constant instead of restating a cadence it cannot deliver.
+ * constant instead of restating a cadence it cannot deliver. Recap delivery has
+ * a separate, explicitly tested hourly exception in `recap-schedule.ts`.
  */
 
 /** UTC hour of the daily `/api/cron/reminders` tick. Mirrors vercel.json. */

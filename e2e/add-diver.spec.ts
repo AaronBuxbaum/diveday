@@ -1,6 +1,13 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openTripFromBoard } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  openTripActivity,
+  openTripFromBoard,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -22,6 +29,7 @@ async function openPrivateNotes(page: Page) {
   // rather than moving to helpers.ts because the spec seats exactly one diver
   // and reads the notes box without first locating a row.
   if (!isOpen) await details.locator("> summary").click();
+  return details;
 }
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
@@ -63,9 +71,12 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
     .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
-  await addDiver.getByLabel("Name").fill("Walk-in Wanda");
-  await addDiver.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Walk-in Wanda");
+  await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
@@ -77,14 +88,22 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // unrelated "full" elsewhere on the page.
   await expect(page.getByText("✅Full")).toBeVisible();
 
-  await openPrivateNotes(page);
+  const privateNotes = await openPrivateNotes(page);
+  await privateNotes.scrollIntoViewIfNeeded();
+  const notesScroll = await page.evaluate(() => window.scrollY);
+  const guestsUrl = page.url();
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
   await page.getByRole("button", { name: "Add private note" }).click();
   // No banner: adding a note lands in place now (`addInternalNoteAction`), so
   // the note appearing in the list above the box *is* the confirmation — the
   // page does not navigate, which is the whole point of the change.
+  await expect(page).toHaveURL(guestsUrl);
+  await expect
+    .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - notesScroll))
+    .toBeLessThan(100);
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
+  await openTripActivity(page);
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
 
   // Deleting a note is a purely reversible edit (docs/design/principles.md
@@ -108,10 +127,13 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByText("Add a private note").first()).toBeVisible();
 
   // Trip is now full — the same section switches to wait-listing.
-  await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();
-  await addDiver.getByLabel("Name").fill("Waitlist Wally");
-  await addDiver.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to wait list" }).click();
+  await expect(page.getByRole("link", { name: "Add to wait list" })).toBeVisible();
+  await page.getByRole("link", { name: "Add to wait list" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Waitlist Wally");
+  await page.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to wait list" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
   await expect(page.getByText("Wait list").first()).toBeVisible();
@@ -162,7 +184,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
   // Search the shop's existing people and add one by identity — their record,
   // not a re-typed name, lands on the roster.
-  await addDiver.getByLabel("Find a returning diver").fill("Priya");
+  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
   await addDiver.getByRole("button", { name: "Search" }).click();
 
   const candidate = addDiver.getByRole("button", { name: "Add Priya Sharma to the trip" });
@@ -179,7 +201,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
   // Picking the same diver again is no longer offered — the roster can't
   // double-book them.
-  await addDiver.getByLabel("Find a returning diver").fill("Priya");
+  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
   await addDiver.getByRole("button", { name: "Search" }).click();
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 });
@@ -238,6 +260,7 @@ test("booking a diver from their record issues their waiver, like every other do
   await expect(page.getByText("Waiver sent").first()).toBeVisible();
   // ...and the seating reaches the trip's activity trail, which this door also
   // used to skip.
+  await openTripActivity(page);
   await expect(page.getByText(/added Priya Sharma to the trip/)).toBeVisible();
 });
 
@@ -267,8 +290,11 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await expect(page.getByText(title).first()).toBeVisible();
 
+  // The diver form is a dedicated step shared by all seating doors.
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
   // Name only: this door takes the no-email diver the counter always could.
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Phoned In Pat");
+  await page.getByLabel("Full name").fill("Phoned In Pat");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
   // Lands on the trip's Guests tab with the roster's usual success affordance.
@@ -285,7 +311,9 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   const tripId = await scheduleTrip(page, title, 9, 1);
 
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("First Aboard Fay");
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("First Aboard Fay");
   await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
@@ -294,7 +322,9 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   // The boat is full now. The refusal comes back to the door that produced it,
   // still pointed at the same departure, so the next diver is one field away.
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Too Late Theo");
+  await page.getByRole("link", { name: "Add diver", exact: true }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Too Late Theo");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=diver-full`));

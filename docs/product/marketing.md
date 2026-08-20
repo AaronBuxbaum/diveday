@@ -340,7 +340,9 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-closing`, `product` / `product-mid`, `pricing` / `pricing-close`.
+`home-hero` / `home-closing`, `product` / `product-mid`, `pricing` / `pricing-close`, and the
+switching guides' `switching-<slug>` / `switching-<slug>-mid` / `switching-<slug>-close` (with the
+spreadsheet guide using the same three-position shape).
 Mid-page and closing doors exist because
 one CTA at the bottom of ten sections is a scroll a convinced reader shouldn't have to make; folded
 into the page's own tag, such a door can never be shown to have earned its place, and the next
@@ -360,7 +362,7 @@ from `/about`'s "how you leave" band. They all build a `?from=` the Vercel `<Ana
 already carries, so they need no companion event; a switching page retags its own demo and trial
 CTAs with its own source, which is exactly why the hop *into* it has to be attributed on the way in.
 Read them as reach, not as conversion — they say which door a reader chose, and the guide's own
-`switching-*` pair says what happened next.
+positioned `switching-*` tags say what happened next.
 
 The last two were bare hrefs until 2026-08-15, which would have left the question that put a direct
 spreadsheet door on the homepage — does the spreadsheet audience need one, or does the hub serve
@@ -375,6 +377,12 @@ which sits three blocks down the guide behind the hero, the wedge list and the m
 reader who clicks a specific promise and lands on a general argument reads the gap as bait. The
 fragment is built in the helper rather than at the call site so it can only land *after* the query
 string; `/switching/spreadsheet#columns?from=…` is a URL whose tag never reaches analytics at all.
+
+The `/product` spreadsheet door deliberately stays unanchored. Its label now names the proof at
+the guide's opening — how DiveDay reads the sheet — rather than promising the concierge that sits
+below the move rail; the homepage door remains anchored because it names the later column table.
+One door keeps one promise, and the product link does not imply that a reader has reached the
+human handoff before they have read the guide.
 
 ## Product visuals
 

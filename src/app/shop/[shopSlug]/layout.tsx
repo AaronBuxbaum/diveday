@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { switchDemoRoleAction } from "@/app/actions/demo";
+import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
@@ -225,6 +226,7 @@ export default async function ShopLayout({
           navCounts={{ blockers: navBlockersCount }}
           locale={locale}
           setLocale={setLocaleAction}
+          createDiverAction={createDiverFromSearchAction}
         />
       ) : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just

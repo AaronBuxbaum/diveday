@@ -1024,7 +1024,7 @@ describe("orders", () => {
   it("surfaces the trip's price through booking context so the order form can auto-fill it", async () => {
     const { db, shop, reef, entry } = await orderContext();
     expect(await getBookingContext(db, shop.id, entry.booking.id)).toMatchObject({
-      trip: { id: reef.id, priceCents: null },
+      trip: { id: reef.id, priceCents: 9500 },
     });
 
     await updateTrip(db, shop.id, reef.id, {

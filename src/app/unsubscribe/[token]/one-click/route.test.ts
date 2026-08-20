@@ -23,7 +23,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 
 const { optOutPersonFromCourtesyEmailByToken } = await import("@/db/courtesy-email");
 const { unsubscribeLastMinuteListEntryByToken } = await import("@/db/last-minute-list");
-const { checkRateLimit } = await import("@/lib/rate-limit");
+const { checkRateLimit, rateLimitKey, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { POST } = await import("./route");
 
 const TOKEN = "tok_abc123";
@@ -80,6 +80,19 @@ describe("POST /unsubscribe/[token]/one-click", () => {
     expect(response.status).toBe(429);
     expect(unsubscribeLastMinuteListEntryByToken).not.toHaveBeenCalled();
     expect(optOutPersonFromCourtesyEmailByToken).not.toHaveBeenCalled();
+  });
+
+  it("uses a token-scoped bucket separate from the human confirmation action", async () => {
+    await post();
+
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      rateLimitKey("unsubscribe-one-click", TOKEN),
+      RATE_LIMITS.oneClickUnsubscribe,
+    );
+    expect(checkRateLimit).not.toHaveBeenCalledWith(
+      rateLimitKey("unsubscribe-token", "203.0.113.7"),
+      RATE_LIMITS.accountTokenAction,
+    );
   });
 
   it("is idempotent — a second one-click POST for an already-unsubscribed token still answers 200", async () => {

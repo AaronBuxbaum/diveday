@@ -13,6 +13,7 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
@@ -21,6 +22,12 @@ import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/d
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
+import {
+  createDirectTripInvitation,
+  getTripInvitation,
+  listTripInvitations,
+  recordTripInvitation,
+} from "@/db/trip-invitations";
 import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
@@ -49,7 +56,7 @@ import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
@@ -59,7 +66,7 @@ import {
   MIN_INTERVAL_WEEKS,
   weekdaySetFrom,
 } from "@/lib/recurrence";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,
@@ -69,6 +76,7 @@ import {
 } from "@/lib/temperature-units";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
+import { uuidParam } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const detailsSchema = z.object({
@@ -157,6 +165,8 @@ const addDiverSchema = z.object({
   phone: diverPhoneSchema.optional(),
 });
 
+const directInvitationSchema = z.object({ personId: z.uuid() });
+
 function parseAddDiver(formData: FormData) {
   return addDiverSchema.safeParse({
     fullName: formData.get("fullName"),
@@ -182,6 +192,21 @@ const guestsPath = (shopSlug: string, tripId: string) =>
   shopPath(shopSlug, "trips", tripId, "guests");
 
 /**
+ * Record the Overview tab's complete trip-packet action. The printable route
+ * is opened by the browser in the same click, while this server action keeps
+ * the event behind the same shop/session boundary as every other trip action.
+ * It carries no trip id or diver data: the useful question is whether the
+ * button is used, not which departure was printed.
+ */
+export async function recordTripPrintPdfAction(shopSlug: string, tripId: string) {
+  if (!uuidParam(tripId)) return;
+  const { session } = await requireShopSurface(shopSlug);
+  const trip = await getTripWithBooked(await getDb(), session.user.shopId, tripId);
+  if (!trip) return;
+  await trackEvent({ name: "trip_print_pdf_clicked", surface: "trip_overview" });
+}
+
+/**
  * Trip *definition* — what the dive is and who it admits (details, admission
  * requirements, and the whole-series operations) — is owner/manager/instructor
  * work (H-14, ADR 20260724-role-authorization). Re-checks live roles against the
@@ -191,15 +216,16 @@ const guestsPath = (shopSlug: string, tripId: string) =>
  * This is deliberately narrower than "everything on Overview": the *operating*
  * actions the glossary assigns to the day-of crew — predicted-conditions entry,
  * day-of crew assignment (manifest accuracy), and a single trip's weather
- * cancellation — stay `requireStaffSession`, as do the roster/booking/recap
- * actions. Only trip definition and bulk schedule management run through here.
+ * cancellation — stay on the ordinary shop-surface preamble, as do the
+ * roster/booking/recap actions. Only trip definition and bulk schedule
+ * management add the live role gate below.
  */
 async function requireTripConfig(shopSlug: string, tripId: string) {
-  const s = await requireStaffSession();
-  if (!(await canPersonConfigureTrips(await getDb(), s.user.shopId, s.user.personId))) {
-    redirect(noticeUrl(backPath(shopSlug, tripId), "not-authorized"));
-  }
-  return s;
+  const { session } = await requireShopSurface(shopSlug, {
+    allow: canPersonConfigureTrips,
+    refusal: { notice: "not-authorized", landing: ["trips", tripId] },
+  });
+  return session;
 }
 
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
@@ -299,7 +325,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   // record water temp, viz, and surface state and own the go/no-go call
   // (glossary). This is operating work, not trip definition, so it stays open to
   // all staff even though the rest of Overview is config-gated (H-14).
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "conditions" }));
   const db = await getDb();
@@ -372,7 +398,7 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   const back = backPath(shopSlug, tripId);
   // Crew-entered conditions (see saveConditionsAction) — operating work, open to
   // all staff.
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
   revalidateAndRedirect(
     back,
@@ -387,7 +413,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   // divers are notified. It only flips status (no money moves — refunds stay
   // owner/manager on the per-booking path), so it's open to all staff. Bulk
   // schedule management (reinstate, whole-series cancel, create) stays config.
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   await setTripStatus(await getDb(), s.user.shopId, tripId, "cancelled");
   revalidateAndRedirect(back, noticeUrl(back, "cancelled"));
 }
@@ -531,7 +557,7 @@ export async function saveRecapShoutoutAction(
   formData: FormData,
 ) {
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const parsed = recapShoutoutSchema.safeParse({
     recapShoutout: formData.get("recapShoutout") ?? "",
   });
@@ -555,7 +581,7 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
   // so taking a photo down teleported the staffer to a different tab and put
   // the confirmation on a page with nothing to confirm.
   const back = backPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const photoId = String(formData.get("photoId") ?? "");
   if (!photoId) redirect(back);
   const db = await getDb();
@@ -591,11 +617,12 @@ export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, f
  */
 export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("note") ?? "");
   const saved = await addInternalNote(await getDb(), {
     shopId: s.user.shopId,
+    tripId,
     actorPersonId: s.user.personId,
     bookingId,
     body,
@@ -617,10 +644,11 @@ export async function deleteInternalNoteAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const noteId = String(formData.get("noteId") ?? "");
   const result = await deleteInternalNote(await getDb(), {
     shopId: s.user.shopId,
+    tripId,
     actorPersonId: s.user.personId,
     noteId,
   });
@@ -650,12 +678,13 @@ export async function restoreInternalNoteAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("body") ?? "");
   const restored = bookingId
     ? await addInternalNote(await getDb(), {
         shopId: s.user.shopId,
+        tripId,
         actorPersonId: s.user.personId,
         bookingId,
         body,
@@ -670,7 +699,7 @@ export async function restoreInternalNoteAction(
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseAddDiver(formData);
   if (!parsed.success) redirect(noticeUrl(back, "diver-invalid"));
   const outcome = await joinTripWaitlist(await getDb(), {
@@ -714,7 +743,7 @@ export async function inviteWaitlistAction(
   tripId: string,
   entryId: string,
 ): Promise<WaitlistInviteResult> {
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const result = await inviteWaitlistDiver(await getDb(), {
     shopId: s.user.shopId,
     shopSlug,
@@ -725,6 +754,101 @@ export async function inviteWaitlistAction(
   // whether it was sent from the roster or straight from Today (WP-9 → §7).
   revalidatePath(shopPath(shopSlug));
   return result.ok && result.delivery === "sent" ? "sent" : "fallback";
+}
+
+/**
+ * Records a staff outreach attempt for a request-origin invitation. The
+ * browser then opens the same safe composer fallback used by the wait-list
+ * invite; this deliberately does not turn a lead into a booking or consume a
+ * seat.
+ */
+export async function recordTripInvitationAction(
+  shopSlug: string,
+  tripId: string,
+  invitationId: string,
+): Promise<"sent" | "fallback"> {
+  const s = (await requireShopSurface(shopSlug)).session;
+  const db = await getDb();
+  const result = await sendTripInvitation(db, {
+    shopId: s.user.shopId,
+    shopSlug,
+    tripId,
+    invitationId,
+  });
+  revalidatePath(guestsPath(shopSlug, tripId));
+  return result;
+}
+
+/** Invites an existing diver without seating them on the departure. */
+export async function createDirectTripInvitationAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const guests = guestsPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
+  if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
+  const db = await getDb();
+  const created = await createDirectTripInvitation(db, {
+    shopId: s.user.shopId,
+    tripId,
+    personId: parsed.data.personId,
+    createdByPersonId: s.user.personId,
+  });
+  if (created) {
+    const invitation = (await listTripInvitations(db, s.user.shopId, tripId)).find(
+      ({ invitation }) =>
+        invitation.source === "direct" && invitation.personId === parsed.data.personId,
+    );
+    if (invitation) {
+      await sendTripInvitation(db, {
+        shopId: s.user.shopId,
+        shopSlug,
+        tripId,
+        invitationId: invitation.invitation.id,
+      });
+    }
+  }
+  revalidatePath(guests);
+  redirect(`${guests}#invitations`);
+}
+
+type TripInvitationDelivery = "sent" | "fallback";
+
+async function sendTripInvitation(
+  db: Awaited<ReturnType<typeof getDb>>,
+  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
+): Promise<TripInvitationDelivery> {
+  const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
+  if (!context) return "fallback";
+  const invitedAt = nowDate();
+  const recorded = await recordTripInvitation(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    invitationId: input.invitationId,
+    now: invitedAt,
+  });
+  if (!recorded) return "fallback";
+  const email = context.person?.email ?? context.request?.email ?? null;
+  const origin = publicAppUrl();
+  if (!email || !origin) return "fallback";
+  const delivery = await sendNotification(db, {
+    kind: "trip_invitation",
+    invitationId: context.invitation.id,
+    shopId: input.shopId,
+    to: email,
+    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
+    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
+    shopName: context.shop.name,
+    tripTitle: context.trip.title,
+    startsAt: context.trip.startsAt,
+    endsAt: context.trip.endsAt,
+    timezone: context.shop.timezone,
+    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
+    invitedAt,
+  });
+  return delivery.status === "sent" ? "sent" : "fallback";
 }
 
 /**
@@ -740,10 +864,14 @@ export async function sendLastMinuteDealAction(
 ) {
   const back = guestsPath(shopSlug, tripId);
   const anchor = "#last-minute-deal";
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const discountPercent = Number(formData.get("discountPercent"));
   if (!isValidLastMinuteDiscountPercent(discountPercent)) {
     redirect(noticeUrl(`${back}${anchor}`, "last-minute-invalid-discount"));
+  }
+  const recipientPersonIds = formData.getAll("recipientPersonIds").map(String).filter(Boolean);
+  if (recipientPersonIds.length === 0) {
+    redirect(noticeUrl(`${back}${anchor}`, "last-minute-no-recipients"));
   }
   const outcome = await sendLastMinuteDealBlast(await getDb(), {
     shopId: s.user.shopId,
@@ -751,6 +879,7 @@ export async function sendLastMinuteDealAction(
     tripId,
     discountPercent,
     createdByPersonId: s.user.personId,
+    recipientPersonIds,
   });
   if (outcome.ok) {
     // Today's nudge disappears once any blast has been sent, so refresh it
@@ -805,7 +934,7 @@ function refundNotice(refund: CancellationRefundOutcome): string {
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
   const dbi = await getDb();
@@ -856,7 +985,7 @@ export async function undoRemoveBookingAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
   const dbi = await getDb();
@@ -904,7 +1033,7 @@ export async function confirmDiverIdentityAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
   const confirmed = await confirmBookingIdentity(await getDb(), s.user.shopId, bookingId);
@@ -936,7 +1065,7 @@ export async function markWaiverInPersonAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(noticeUrl(back, "waiver-error"));
   const outcome = await recordInPersonWaiver(await getDb(), {
@@ -973,7 +1102,7 @@ export async function saveRosterEmergencyContactAction(
   formData: FormData,
 ) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!bookingId || !parsed.success) redirect(noticeUrl(back, "invalid"));
@@ -996,7 +1125,7 @@ export async function saveRosterEmergencyContactAction(
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const status = paymentStatusSchema.safeParse(formData.get("status"));
   const db = await getDb();
@@ -1064,7 +1193,7 @@ export async function updateTripCrewAction(
   tripId: string,
   change: TripCrewChange,
 ): Promise<{ ok: boolean }> {
-  const s = await requireStaffSession();
+  const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
   const success = await changeTripCrew(db, s.user.shopId, tripId, change);
   if (success) {

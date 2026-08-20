@@ -720,7 +720,7 @@ export function OfflineManifestView() {
           <ul
             className={sectionCardClass({
               padding: "none",
-              className: "mt-6 divide-y divide-border",
+              className: "mt-6 divide-y divide-border overflow-hidden",
             })}
           >
             {savedTrips.map((saved) => {
@@ -1041,16 +1041,6 @@ export function OfflineManifestView() {
           })}
           actions={
             <>
-              <div className="print:hidden">
-                <AmbientContrastControl
-                  copy={{
-                    modeLabel: t("shared.boatMode.modeLabel"),
-                    labelAuto: t("shared.boatMode.labelAuto"),
-                    labelLand: t("shared.boatMode.labelLand"),
-                    labelBoat: t("shared.boatMode.labelBoat"),
-                  }}
-                />
-              </div>
               <ConnectivityStatus
                 offlineLabel={t("shared.connectivity.offlineWithCopy")}
                 copy={{
@@ -1402,7 +1392,7 @@ export function OfflineManifestView() {
           tabIndex={-1}
           className={sectionCardClass({
             padding: "none",
-            className: "mt-4 divide-y divide-border outline-none",
+            className: "mt-4 divide-y divide-border overflow-hidden outline-none",
           })}
         >
           {manifest.divers.map((diver, index) => {
@@ -1867,6 +1857,16 @@ export function OfflineManifestView() {
           message: t("shared.subSurfaceRipple.message"),
         }}
       />
+      <div className="mt-8 flex justify-start print:hidden">
+        <AmbientContrastControl
+          copy={{
+            modeLabel: t("shared.boatMode.modeLabel"),
+            labelAuto: t("shared.boatMode.labelAuto"),
+            labelLand: t("shared.boatMode.labelLand"),
+            labelBoat: t("shared.boatMode.labelBoat"),
+          }}
+        />
+      </div>
     </main>
   );
 }

@@ -8,16 +8,19 @@ import {
   currentGlobalDiveSiteVersions,
   deleteDiveSite,
   diveSiteLibraryStats,
+  getDiveSiteTemplateUpdate,
   importGlobalDiveSiteTemplate,
   listDiveSites,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
+  pullDiveSiteTemplateUpdates,
   SITE_NAME_TAKEN,
   shopSearchAnchor,
+  undoDiveSiteTemplateUpdate,
   updateDiveSite,
   updateDiveSiteForForm,
 } from "./dive-sites";
-import { globalDiveSites, globalDiveSiteVersions } from "./schema";
+import { diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
 
 describe("dive-site library", () => {
   /**
@@ -51,6 +54,57 @@ describe("dive-site library", () => {
       .filter((name) => name.startsWith("Molasses Reef"));
     expect(molasses).toEqual(["Molasses Reef", "Molasses Reef 2", "Molasses Reef 3"]);
     expect(second?.sourceTemplateVersion).toBe(catalogEntry.version.version);
+  });
+
+  it("pulls a newer template revision without overwriting a local edit", async () => {
+    const { db, shop } = await seededShopContext();
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+      (row) => row.version.briefing.name === "Molasses Reef",
+    );
+    if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
+    const imported = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
+    if (!imported) throw new Error("expected a catalog copy");
+
+    await db.insert(globalDiveSiteVersions).values({
+      globalDiveSiteId: catalogEntry.template.id,
+      version: 3,
+      briefing: {
+        ...catalogEntry.version.briefing,
+        description: "A newly expanded published briefing.",
+      },
+    });
+    await db
+      .update(globalDiveSites)
+      .set({ currentVersion: 3 })
+      .where(eq(globalDiveSites.id, catalogEntry.template.id));
+    await db
+      .update(diveSites)
+      .set({ description: "Our local briefing for this boat." })
+      .where(eq(diveSites.id, imported.id));
+
+    const pending = await getDiveSiteTemplateUpdate(db, shop.id, imported.id);
+    expect(pending?.currentVersion).toBe(2);
+    expect(pending?.latestVersion).toBe(3);
+    expect(pending?.diff.some((change) => change.field === "description")).toBe(true);
+
+    const result = await pullDiveSiteTemplateUpdates(
+      db,
+      shop.id,
+      imported.id,
+      "preserve-shop-edits",
+    );
+    expect(result.status).toBe("updated");
+    const [updated] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
+    expect(updated?.sourceTemplateVersion).toBe(3);
+    expect(updated?.description).toBe("Our local briefing for this boat.");
+
+    const undone = await undoDiveSiteTemplateUpdate(db, shop.id, imported.id);
+    expect(undone.status).toBe("undone");
+    const [restored] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
+    expect(restored?.sourceTemplateVersion).toBe(catalogEntry.version.version);
+    expect(restored?.description).toBe("Our local briefing for this boat.");
+    expect(restored?.templateUpdateUndo).toBeNull();
+    expect((await undoDiveSiteTemplateUpdate(db, shop.id, imported.id)).status).toBe("unavailable");
   });
 
   /**

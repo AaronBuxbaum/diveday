@@ -94,11 +94,22 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=departure/);
 
-  await page.getByText("Add a note").first().click();
-  await page
-    .getByLabel("Note", { exact: true })
-    .first()
+  const privateNotes = priyaRow
+    .locator("details")
+    .filter({ hasText: /Private staff notes|Add a private note/ })
+    .first();
+  await expect(privateNotes).toHaveJSProperty("open", false);
+  await privateNotes.locator("> summary").click();
+  await privateNotes
+    .getByLabel("Add a note only staff can see")
     .fill("Guest asked to sit out before departure.");
+  const manifestUrl = page.url();
+  await privateNotes.getByRole("button", { name: "Add private note" }).click();
+  // Private notes are independent of roll-call state: the desk can save
+  // context before anyone is marked boarded, and the action revalidates this
+  // page in place rather than redirecting it.
+  await expect(page).toHaveURL(manifestUrl);
+  await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   // Park the button clear of the sticky header and progress panel before
   // sampling. Playwright scrolls a target into view as part of clicking it, so
   // a button sitting under those overlays moves the page after the sample and
@@ -135,7 +146,6 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .locator("dl > div dd")
     .evaluateAll((cells) => cells.reduce((sum, cell) => sum + Number(cell.textContent), 0));
   expect(rowTotal).toBe(rosterTotal);
-  await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(2);
 });

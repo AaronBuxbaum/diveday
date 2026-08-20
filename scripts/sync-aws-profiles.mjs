@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { parseDotenv } from "./dotenv.mjs";
 
 const repairConfigOnly = process.argv.includes("--repair-config");
+const checkOnly = process.argv.includes("--check");
 const source = repairConfigOnly ? "" : readFileSync(0, "utf8");
 const awsDirectory = process.env.AWS_PROFILE_HOME?.trim() || join(homedir(), ".aws");
 const credentialsPath = join(awsDirectory, "credentials");
@@ -81,7 +82,7 @@ function parseIni(document) {
   return { preamble, sections };
 }
 
-function updateIni(path, replacements) {
+function renderIni(path, replacements) {
   const existing = existsSync(path) ? readFileSync(path, "utf8") : "";
   const { preamble, sections } = parseIni(existing);
   for (const [name, entries] of replacements) {
@@ -90,31 +91,43 @@ function updateIni(path, replacements) {
     sections.set(name, merged);
   }
 
-  const rendered = [
+  return [
     preamble.join("\n"),
     ...[...sections].map(([name, entries]) =>
       [`[${name}]`, ...[...entries].map(([key, value]) => `${key} = ${value}`)].join("\n"),
     ),
     "",
   ].join("\n\n");
+}
+
+function updateIni(path, replacements) {
+  const rendered = renderIni(path, replacements);
   const temporaryPath = `${path}.tmp`;
   writeFileSync(temporaryPath, rendered, { mode: 0o600 });
   renameSync(temporaryPath, path);
   chmodSync(path, 0o600);
 }
 
+const configReplacements = new Map([
+  ["profile diveday-admin", { region: "us-east-1" }],
+  ...[...managedProfiles.keys()].map((profile) => [`profile ${profile}`, { region: "us-east-1" }]),
+]);
+
+if (checkOnly) {
+  const credentialsCurrent = repairConfigOnly
+    ? true
+    : existsSync(credentialsPath) &&
+      readFileSync(credentialsPath, "utf8") === renderIni(credentialsPath, managedProfiles);
+  const configCurrent =
+    existsSync(configPath) &&
+    readFileSync(configPath, "utf8") === renderIni(configPath, configReplacements);
+  console.log(credentialsCurrent && configCurrent ? "CURRENT" : "UPDATE");
+  process.exit(0);
+}
+
 mkdirSync(awsDirectory, { recursive: true, mode: 0o700 });
 if (!repairConfigOnly) updateIni(credentialsPath, managedProfiles);
 // The administrator credential predates this stack, so this only establishes
 // its profile's region and never invents or copies administrator key material.
-updateIni(
-  configPath,
-  new Map([
-    ["profile diveday-admin", { region: "us-east-1" }],
-    ...[...managedProfiles.keys()].map((profile) => [
-      `profile ${profile}`,
-      { region: "us-east-1" },
-    ]),
-  ]),
-);
+updateIni(configPath, configReplacements);
 console.log(`Updated ${managedProfiles.size} generated AWS profiles in ${credentialsPath}.`);

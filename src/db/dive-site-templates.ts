@@ -60,7 +60,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       depthRange: "6–12 m (20–40 ft)",
       maxDepthMeters: 12,
-      currentNote: "Usually gentle, but it sits on the reef line and can run — the crew calls it.",
+      currentNote: "Usually gentle, but reef-line current can run.",
       divePlan:
         "Follow a coral ridge out from the mooring, cross at a sand channel, and drift back along the next spur to the shallow garden under the boat.",
       fitTone: "welcoming",
@@ -203,7 +203,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       depthRange: "8–15 m (25–50 ft)",
       maxDepthMeters: 15,
-      currentNote: "Mild, but it sits in open water off the reef line — the crew calls the drop.",
+      currentNote: "Mild, but it sits in open water off the reef line.",
       divePlan:
         "Swim the length of the hull from bow to stern along the sand, then come back over the plates at about 9 m (30 ft) for the safety stop.",
       fitTone: "welcoming",
@@ -247,8 +247,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       depthRange: "18–40 m (60–130 ft)",
       maxDepthMeters: 40,
-      currentNote:
-        "Open-water current can run hard, and it is a long ship — the crew calls the line plan and the drop.",
+      currentNote: "Open-water current can run hard, and it is a long ship.",
       divePlan:
         "Descend together on the mooring line, tour the exterior — flight deck, cranes, well deck — and return to the ascent line with reserve gas and a planned stop.",
       fitTone: "demanding",
@@ -299,8 +298,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       depthRange: "18–37 m (60–120 ft)",
       maxDepthMeters: 37,
-      currentNote:
-        "Can run strong on the surface and at depth; the crew calls the line and the drop order.",
+      currentNote: "Can run strong on the surface and at depth.",
       divePlan:
         "Descend the mooring to the deck, tour the superstructure and gun mounts, then ascend on reserve gas with a stop on the line — the crow's nest at about 18 m is a good place to spend it.",
       fitTone: "demanding",
@@ -440,7 +438,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       depthRange: "5–12 m (15–40 ft)",
       maxDepthMeters: 12,
-      currentNote: "Usually gentle; the crew confirms the final plan.",
+      currentNote: "Usually gentle.",
       divePlan:
         "Drift the coral ridge from the mooring, pause over the barrel casks, then loop back over the sand.",
       fitTone: "welcoming",
@@ -534,7 +532,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         "Descend the mooring to the shallower section, work the length of one half, and turn on gas rather than on time.",
       fitTone: "demanding",
       fitNote:
-        "Deep, exposed and worth nitrox. Two dives here is the honest way to see the whole ship.",
+        "Deep, exposed and worth nitrox. Two dives here are the best way to see the whole ship.",
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
       landmarks: [
@@ -839,8 +837,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       depthRange: "12–43 m (40–140 ft)",
       maxDepthMeters: 43,
-      currentNote:
-        "Seven miles offshore in open water — current is common and the crew calls the line and the drop.",
+      currentNote: "Seven miles offshore in open water — current is common.",
       divePlan:
         "Down the line to the superstructure, one section only — the mast, a dish, or the bridge — and back to the line. Nobody sees this ship in one dive.",
       fitTone: "demanding",

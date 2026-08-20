@@ -38,7 +38,7 @@ describe("certificationSummaryText", () => {
 
   it("marks a claim nobody has checked, in words", () => {
     expect(certificationSummaryText(t, summary({ levelSelfDeclared: true }), "en-US")).toBe(
-      "Open Water — diver's word, no card",
+      "Open Water — unconfirmed",
     );
   });
 
@@ -55,14 +55,14 @@ describe("certificationSummaryText", () => {
   it("tells a stated 'no card' apart from an unanswered question", () => {
     expect(
       certificationSummaryText(t, summary({ level: null, noCertificationDeclared: true }), "en-US"),
-    ).toBe("Not certified yet — diver's word");
+    ).toBe("Not certified yet — unconfirmed");
     expect(
       certificationSummaryText(
         tEs,
         summary({ level: null, noCertificationDeclared: true }),
         "es-ES",
       ),
-    ).toBe("Todavía sin certificación — dicho por el buceador");
+    ).toBe("Todavía sin certificación — sin confirmar");
   });
 
   /**
@@ -96,7 +96,7 @@ describe("certificationSummaryText", () => {
         }),
         "en-US",
       ),
-    ).toBe("Not certified yet — diver's word, Nitrox — diver's word, no card");
+    ).toBe("Not certified yet — unconfirmed, Nitrox — unconfirmed");
   });
 });
 
@@ -112,7 +112,7 @@ describe("certificationSummaryBelowRequirementText", () => {
   it("keeps the self-declared mark alongside it rather than replacing it", () => {
     expect(
       certificationSummaryBelowRequirementText(t, summary({ levelSelfDeclared: true }), "en-US"),
-    ).toBe("Open Water — diver's word, no card · below this departure's minimum");
+    ).toBe("Open Water — unconfirmed · below this departure's minimum");
   });
 
   it("says it in Spanish too", () => {

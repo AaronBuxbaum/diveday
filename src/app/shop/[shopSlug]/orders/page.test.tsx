@@ -1,14 +1,22 @@
 import { and, eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
+import { Badge } from "@/components/ui/badge";
 import type { AppDb } from "@/db/client";
-import { bookings, orders, paymentOperationIntents, trips } from "@/db/schema";
+import {
+  bookings,
+  importedPaymentHistory,
+  orders,
+  paymentOperationIntents,
+  people,
+  trips,
+} from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
-import { ariaLabelsIn, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
+import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 
@@ -127,6 +135,72 @@ describe("the stuck-payment-operations panel", () => {
   });
 });
 
+describe("imported payment history", () => {
+  const PANEL = "Imported payment history";
+
+  async function addImportedHistory(db: AppDb, session: Session) {
+    const [person] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, session.user.shopId))
+      .limit(1);
+    if (!person) throw new Error("seeded shop has no diver");
+    const [history] = await db
+      .insert(importedPaymentHistory)
+      .values({
+        shopId: session.user.shopId,
+        personId: person.id,
+        occurredOn: "2024-05-11",
+        direction: "payment",
+        title: "Prior-shop reef sale",
+        statusLabel: "Settled",
+        amountLabel: "$165.00",
+        amountCents: 16_500,
+        currency: "usd",
+        receiptReference: "receipt_42",
+        receiptDocumentUrl: "/import-receipts/receipt_42.pdf",
+        sourceLabel: "Coral Coast Divers",
+        stripeReference: "in_42",
+        dedupeKey: "order-page-source-row",
+        importedAt: nowDate(),
+      })
+      .returning({ id: importedPaymentHistory.id });
+    if (!history) throw new Error("failed to insert imported source history");
+    return { personId: person.id, historyId: history.id };
+  }
+
+  it("renders imported source records in their own clearly unverified Orders section", async () => {
+    const { db, session } = await sessionFor("owner");
+    const source = await addImportedHistory(db, session);
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(session);
+    const element = await renderWith();
+
+    expect(ariaLabelsIn(element)).toContain(PANEL);
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/divers/${source.personId}`);
+    expect(hrefsIn(element)).toContain("/import-receipts/receipt_42.pdf");
+    // An imported row never receives an order detail link just because it is
+    // rendered under Orders — its uuid must not be confused for an order id.
+    expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/orders/${source.historyId}`);
+    expect(
+      findElements<{ children?: unknown }>(element, Badge).some(
+        (badge) => badge.props.children === "Unverified import",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not render an unsafe raw receipt URL if legacy data bypassed the importer", async () => {
+    const element = await renderOrders("owner", async (db, session) => {
+      const source = await addImportedHistory(db, session);
+      await db
+        .update(importedPaymentHistory)
+        .set({ receiptDocumentUrl: "https://untrusted.example/receipt.pdf" })
+        .where(eq(importedPaymentHistory.id, source.historyId));
+    });
+    expect(hrefsIn(element)).not.toContain("https://untrusted.example/receipt.pdf");
+  });
+});
+
 /*
  * `?tripId=` — where the trip pulse's "N orders are awaiting payment ›" lands.
  * The database layer has always been able to filter by departure; until this,
@@ -200,18 +274,13 @@ describe("the trip filter", () => {
     expect(listedOrders(await renderWith({ tripId, status: "open", range: "all" }))).toBe(1);
   });
 
-  it("keeps the departure on the page's own links and in the filter form", async () => {
+  it("keeps the departure in the filter form", async () => {
     const { tripId } = await shopWithAnInvoicedSeat();
     const element = await renderWith({ tripId, status: "open", range: "all" });
 
-    // The range toggle and the pager rebuild this URL; either one dropping the
-    // departure would silently widen the list back out to the whole shop.
-    const selfLinks = hrefsIn(element).filter((href) => href.includes("/orders?"));
-    expect(selfLinks.length).toBeGreaterThan(0);
-    for (const href of selfLinks) expect(href).toContain(`tripId=${tripId}`);
-
-    // And the filter form rides it as a hidden field, so applying a status does
-    // not throw the staffer back to every departure.
+    // The date range is now a filter control rather than a prose toggle. The
+    // departure remains a hidden form field, so applying any filter does not
+    // silently widen the list back out to the whole shop.
     expect(hiddenInputNamesIn(element)).toContain("tripId");
   });
 

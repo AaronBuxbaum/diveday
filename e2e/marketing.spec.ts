@@ -98,7 +98,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // in both directions — records arrive cleanly and leave the same way, which
   // is the reason to join, not a goodbye.
   await expect(
-    page.getByRole("heading", { name: "Your records come in clean, and leave the same way." }),
+    page.getByRole("heading", { name: "Bring your records in clean. Keep them useful." }),
   ).toBeVisible();
   // Both directions are shown, not just described: the importer's preview for
   // arriving, the export inventory for leaving. This band is the portability
@@ -185,10 +185,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // number that answers "does the spreadsheet audience need a direct door" was
   // about to be read against a denominator missing this page — the one a reader
   // reaches *after* the homepage convinced them.
-  await expect(productMain.getByRole("link", { name: /On a spreadsheet today\?/ })).toHaveAttribute(
-    "href",
-    "/switching/spreadsheet?from=product-spreadsheet",
-  );
+  await expect(
+    productMain.getByRole("link", { name: /See how DiveDay reads your spreadsheet/ }),
+  ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
@@ -283,7 +282,7 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // Asking for a password is the moment of maximum hesitation, so the three
   // reassurances sit with the form, not on a page the visitor already left.
   await expect(page.getByText("No card, no setup fee.")).toBeVisible();
-  await expect(page.getByText("Your records leave with you.")).toBeVisible();
+  await expect(page.getByText("Your records are ready from day one.")).toBeVisible();
   await expect(page.getByText("Real support, one email away.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
 
@@ -417,6 +416,12 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
+  await expect(
+    page
+      .getByRole("heading", { name: "Bring the file into DiveDay" })
+      .locator("..")
+      .getByRole("link", { name: "Start a trial" }),
+  ).toHaveAttribute("href", "/onboard?from=switching-eve-mid");
 
   // A buyer can act from the hero, not only from the closing block seven
   // sections down: the demo form and the trial link sit in the same section as
@@ -442,7 +447,9 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
   await expect(page.getByText("Stays behind").first()).toBeVisible();
   // Specialty cards moved into the green column and say what waits on staff.
-  await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
+  await expect(
+    page.getByText("Specialty certifications (deep, wreck, night, drysuit)"),
+  ).toBeVisible();
 
   // Nothing on a published page may cite how *we* talk about a decision. The
   // honesty table and the guides render verbatim, so a note written for the next
@@ -603,6 +610,12 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // sitting on their own shop's session (see import.spec.ts) — an anonymous
   // visitor has no shop to deep-link into.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
+  await expect(
+    page
+      .getByRole("heading", { name: "Bring the file into DiveDay" })
+      .locator("..")
+      .getByRole("link", { name: "Start a trial" }),
+  ).toHaveAttribute("href", "/onboard?from=switching-spreadsheet-mid");
 
   // The starter template downloads a real CSV (not a dead link).
   const templateHref = await page

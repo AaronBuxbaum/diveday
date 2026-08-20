@@ -3,7 +3,6 @@ import { getDb } from "@/db/client";
 import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
 import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { clientIp } from "@/lib/request-ip";
 
 /**
  * RFC 8058 one-click unsubscribe: the target of the `List-Unsubscribe` /
@@ -34,10 +33,9 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> },
 ): Promise<NextResponse> {
   const { token } = await params;
-  const ip = await clientIp();
   const limit = await checkRateLimit(
-    rateLimitKey("unsubscribe-token", ip),
-    RATE_LIMITS.accountTokenAction,
+    rateLimitKey("unsubscribe-one-click", token),
+    RATE_LIMITS.oneClickUnsubscribe,
   );
   if (!limit.allowed) return new NextResponse(null, { status: 429 });
 

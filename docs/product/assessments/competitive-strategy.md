@@ -142,8 +142,12 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    Column-mapped, previewed, validated import for the shop's people + cert + sizes data, with
    templates matching what the rivals actually emit (DiveShop360's customer/cert exports,
    DiveAdmin's CSVs, Smartwaiver participant CSVs, generic spreadsheet). Publish Jane-style scope
-   tables: what imports fully / partially / never (card-on-file: never; incumbent repair/service
-   history: never — say so plainly, it's the documented un-migratable residue everyone resents).
+   tables: what imports fully / partially / never. Card credentials stay with the processor — never
+   card numbers, CVCs, payment methods, or reusable tokens — and incumbent repair/service history
+   stays behind, which is the documented un-migratable residue everyone resents. Payment, refund,
+   receipt, and source Stripe-reference rows now come across in their own **unverified** Orders
+   section. A clearly parsed matching-currency payment/refund can be named in the aggregate revenue
+   figure, but it never becomes a live Stripe order, booking payment, or reconciliation claim.
    **Imported certifications land as *claimed*, never *verified*** — the verified/claimed
    distinction we already model is exactly what makes a fast import honest instead of dangerous;
    staff verify at first contact, same as today. Medical flags import fail-closed.

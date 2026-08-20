@@ -17,7 +17,7 @@ half is Sentry, and the *is it up* half is the external uptime check — see
 src/lib/log.ts  ──►  console.log/warn/error          (unchanged, always, first)
                 └─►  src/lib/observability/          (buffer, batch)
                        └─► PutLogEvents ─► /diveday/app  (CloudWatch Logs, 30 days)
-                                             ├─► metric filters ─► alarms ─► SNS ─► alerts@dive.day
+                                             ├─► metric filters ─► alarms (where configured) ─► SNS ─► alerts@dive.day
                                              ├─► dashboard "DiveDay"
                                              └─► saved Logs Insights queries
 
@@ -57,19 +57,21 @@ sent to the alert address. Until then every alarm transitions correctly and noti
 
 ## What is counted, and what to do when it fires
 
-Seven signals. Each is simultaneously a metric filter, an alarm, and a dashboard widget, declared
-once in `infra/lib/observability.ts`. Every other event code the app emits stays queryable — see
+Ten signals. Eight are alarmed; two are counters only, declared once in
+`infra/lib/observability.ts` and still available as dashboard series. Every other event code the app emits stays queryable — see
 the saved queries below — it just does not have a metric.
 
 | Alarm | Fires at | What it means | First move |
 | --- | --- | --- | --- |
 | `diveday-app-errors` | 3 in 15 min | Handled errors — the ones the app caught and decided about. Sentry never sees these. | Open the "Errors, newest first" saved query and read the codes. |
 | `diveday-money-path-refusals` | 1 in 15 min | A payment arrived the booking record cannot accept: mismatched Connect account, disqualified checkout, settled total over the asked amount, a paid-for cancelled seat. | Find the checkout or order id in the line and reconcile against the Stripe dashboard by hand, before the shop notices. |
-| `diveday-notification-send-failures` | 5 in 1 h | Waiver links and reminders are not leaving. Invisible from inside DiveDay — the booking still looks fine. | Read the error code, then the matching provider runbook (SES / SMS / WhatsApp). |
+| `diveday-notification-send-failures` | 1 in 1 h | Waiver links and reminders are not leaving. Invisible from inside DiveDay — the booking still looks fine. | Read the error code, then the matching provider runbook (SES / SMS / WhatsApp). |
 | `diveday-cron-pass-failures` | 1 in 24 h | A scheduled pass ran and did not do its work. Distinct from Sentry's cron monitors, which answer "did it run at all". | The line names the scan. Every pass is idempotent, so re-running the route by hand is safe. |
 | `diveday-database-unavailable` | 1 in 5 min | The health check could not reach Postgres. | Neon console first — an exhausted free-tier compute allowance suspends the endpoint, which looks exactly like this. Then [incident-response-runbook.md](incident-response-runbook.md). |
 | `diveday-rate-limit-store-failures` | 5 in 1 h | Rate limiting is failing open. It is *designed* to, but that trade is only safe while someone is told. | Every guarded public write boundary is currently unguarded — see [rate-limiting-runbook.md](rate-limiting-runbook.md). |
 | `diveday-manifest-streams-refused` | 1 in 1 h | Manifest streams turned away at the subscriber ceiling; a captain's roll-call screen is stale rather than live. | [realtime-manifest-events-runbook.md](realtime-manifest-events-runbook.md) — check the ceiling against boats out. |
+| `diveday-offline-retraction-superseded` | Counter only | A device tried to retract a statement another device or the live manifest already replaced. | Read shop and trip counts, then compare the affected boat's devices and live manifest. |
+| `diveday-offline-retraction-unnamed` | Counter only; target zero | A legacy device sent a bare retraction without a compare-and-set target. | Read the daily count; do not impose a deadline from this metric. |
 
 Alarms treat missing data as **not breaching**. A quiet app is a healthy app, and paging on a slow
 Tuesday is how an alert channel gets muted.
@@ -137,8 +139,9 @@ first-class in a query. `filter event = "checkout.paid_disqualified"` works with
 ## Adding a signal
 
 Edit `LOG_SIGNALS` in `infra/lib/observability.ts` and deploy. A row must state which event codes
-(or which level) it counts, a threshold, a period, and — this is the part with no default — what an
-operator should do when it fires. Then run `pnpm test infra --reporter=dot`.
+(or which level) it counts, a threshold, a period, and what an operator should do when it fires.
+Set `alarm: false` for a counter collected for evidence but not yet a paging signal. Then run
+`pnpm test infra --reporter=dot`.
 
 Two things the tests will refuse:
 
@@ -147,9 +150,10 @@ Two things the tests will refuse:
   does not error, it counts zero forever and the alarm above it reads healthy.
 - **A signal with no response.** A graph without a stated first move is a graph nobody acts on.
 
-Keep the set small on purpose. Past the free allowance a custom metric is $0.30/month and its alarm
-another $0.10, and the app emits ~40 event codes; a metric per code would be ~$16/month for a set of
-graphs nobody chose. Anything that does not need an *alarm* belongs in a saved query.
+Keep the set small on purpose. Past the free allowance a custom metric is $0.30/month and an alarm
+another $0.10, and the app emits ~40 event codes; a metric per code would be ~$12/month before
+alarms for a set of graphs nobody chose. Anything that does not need a metric belongs in a saved
+query; a counter that answers a stated transition question may still earn one without an alarm.
 
 ## What this costs
 
@@ -158,17 +162,16 @@ does not depend on the account's age or plan. What that covers, and what this st
 
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
-| 10 custom metrics | 13 (8 signals + 5 web vitals) | 3 × $0.30 = **$0.90** |
-| 10 standard-resolution alarms | 11 (8 signals + 3 alarmed vitals) | 1 × $0.10 = **$0.10** |
+| 10 custom metrics | 15 (10 signals + 5 web vitals) | 5 × $0.30 = **$1.50** |
+| 10 standard-resolution alarms | 11 (8 alarmed signals + 3 alarmed vitals) | 1 × $0.10 = **$0.10** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
 | 1 Contributor Insights rule | 0 | — |
 | 1,800 minutes of Live Tail | 0 | — |
 
-So the fixed monthly cost of everything in this runbook is about **$1.00**, and the next counted
-signal added to the registry costs **$0.40** — $0.30 for the metric plus $0.10 for the alarm. The
-alarm count read like a cliff while it sat exactly at ten and never was one; both halves are now
-past the allowance and priced the same way.
+So the fixed monthly cost of everything in this runbook is about **$1.60**. A counter-only signal
+added to the registry costs **$0.30**; an alarmed signal costs **$0.40** — $0.30 for the metric plus
+$0.10 for the alarm.
 
 **RUM is the exception and the one to watch.** Its 1,000,000 events is a one-time trial, *not* an
 always-free allowance, and past it RUM is $1.00 per 100,000 events with no ceiling.

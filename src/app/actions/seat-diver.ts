@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { findSimilarDivers } from "@/db/divers";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
@@ -195,6 +196,27 @@ export async function seatNewDiverAction(
   if (!parsed.success || (surface.email === "required" && !email)) {
     refuse(surface, landing, surface.invalidNotice);
   }
+
+  const force = formData.get("force") === "true";
+  if (!force) {
+    const db = await getDb();
+    const matches = await findSimilarDivers(db, session.user.shopId, parsed.data.fullName);
+    if (matches.length > 0) {
+      const back = surface.refusedPath(landing);
+      const search = new URLSearchParams();
+      search.set("confirmName", parsed.data.fullName);
+      if (parsed.data.email) search.set("confirmEmail", parsed.data.email);
+      if (parsed.data.phone) search.set("confirmPhone", parsed.data.phone);
+
+      const [path, query] = back.split("?");
+      const existingParams = new URLSearchParams(query);
+      for (const [k, v] of search.entries()) {
+        existingParams.set(k, v);
+      }
+      revalidateAndRedirect(path, `${path}?${existingParams.toString()}#hand-entry`);
+    }
+  }
+
   await seat(
     surface,
     landing,

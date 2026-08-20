@@ -65,7 +65,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Move your dive shop off spreadsheets — DiveDay",
   description:
-    "Running your dive shop from a spreadsheet? DiveDay reads the sheet you already keep — your divers, their cards, and their sizes — and adds the things a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+    "Running your dive shop from a spreadsheet? DiveDay reads the sheet you already keep — your divers, their certification records, and their sizes — and adds the things a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
   alternates: { canonical: "/switching/spreadsheet" },
   // This page shipped without the Open Graph block every sibling guide carries,
   // so the guide aimed at the largest under-served pool in the market was the
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     ...sharedLinkCard,
     title: "Move your dive shop off spreadsheets — DiveDay",
     description:
-      "Bring the sheet you already keep — divers, cards, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+      "Bring the sheet you already keep — divers, certification records, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
     url: "/switching/spreadsheet",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Move your dive shop off spreadsheets — DiveDay",
     description:
-      "Bring the sheet you already keep — divers, cards, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
+      "Bring the sheet you already keep — divers, certification records, sizes — and add what a spreadsheet can't: readiness checked at the dock, the day's blocker queue, and booking and waivers your divers do themselves.",
   },
 };
 
@@ -118,7 +118,13 @@ export default async function SpreadsheetSwitchPage() {
       </Suspense>
       <SpreadsheetBody
         locale={locale}
-        importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
+        importCta={
+          <SwitchingImportCta
+            label={t("switching.common.openImportCta")}
+            trialLabel={t("marketing.common.startTrial")}
+            source="switching-spreadsheet-mid"
+          />
+        }
       />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
@@ -153,14 +159,10 @@ const WEDGE_ITEMS = [
 /**
  * Cached per negotiated locale (DIVER_LOCALES — two entries). `importCta` carries
  * {@link SwitchingImportCta} (session-scoped — reads `auth()`) as a
- * pass-through slot per Next's `"use cache"` interleaving rules: it is never
- * read or invoked here, only rendered where it belongs in the tree, so its
- * per-visitor content never enters the cache entry.
- *
- * Its render site (`ImportPhase`) wraps `{importCta}` in its own `<Suspense>` —
- * see the same fix on the `[competitor]` guide's `GuideBody` for why: without
- * it, this preview's Cache Components runtime replayed a spurious "unique key"
- * warning on every request.
+ * pass-through slot per Next's `"use cache"` interleaving rules. Its funnel
+ * source is bound before it crosses this cache boundary, so this body only
+ * renders the slot unchanged and its per-visitor content never enters the
+ * cache entry.
  */
 async function SpreadsheetBody({
   locale,
@@ -201,7 +203,7 @@ async function SpreadsheetBody({
         />
       </GuideContext>
 
-      <MidCta locale={locale} source="switching-spreadsheet" />
+      <MidCta locale={locale} source="switching-spreadsheet-mid" />
 
       {/* The whole mechanical path, as one rail: ready your own sheet → the
           importer's own scope table, verbatim → the importer. */}
@@ -244,7 +246,9 @@ async function SpreadsheetBody({
           </ul>
         </MovePhase>
         <ScopePhase locale={locale} number={2} />
-        <ImportPhase locale={locale} number={3} importCta={importCta} />
+        <ImportPhase locale={locale} number={3}>
+          <Suspense fallback={null}>{importCta}</Suspense>
+        </ImportPhase>
       </MovePath>
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
@@ -252,7 +256,7 @@ async function SpreadsheetBody({
 
       <ClosingCta
         locale={locale}
-        source="switching-spreadsheet"
+        source="switching-spreadsheet-close"
         title={t("switching.spreadsheet.closingTitle")}
         body={t("switching.spreadsheet.closingDescription")}
         backLabel={t("switching.spreadsheet.otherSystems")}

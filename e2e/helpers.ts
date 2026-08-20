@@ -114,6 +114,20 @@ export async function openTripTab(page: Page, tab: "Guests" | "Manifest" | "Prep
   await page.waitForURL(new RegExp(`/${tab.toLowerCase()}(\\?|$)`));
 }
 
+/** Navigate to the create-diver form from an add-diver section or panel. */
+export async function openHandEntry(container: Locator): Promise<void> {
+  const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });
+  if ((await addLink.count()) > 0) {
+    await addLink.click();
+    await container.page().waitForURL(/\/divers\/new/);
+    return;
+  }
+  const details = container.locator("details#hand-entry");
+  if ((await details.count()) > 0 && (await details.getAttribute("open")) === null) {
+    await details.locator("summary").click();
+  }
+}
+
 /**
  * Put a departure on the board through the real staff form — the schedule
  * board's own add panel, opened at full depth (`?add=full`), which is the only
@@ -331,6 +345,17 @@ export async function openRosterNotes(row: Locator): Promise<void> {
     row
       .locator("details")
       .filter({ hasText: /Private staff notes|Add a private note/ })
+      .first(),
+  );
+}
+
+/** Open the Guests page activity log when a spec needs to inspect its audit trail. */
+export async function openTripActivity(page: Page): Promise<void> {
+  await openIfClosed(
+    page
+      .locator("details")
+      .filter({ hasText: /^Activity/ })
+      .filter({ visible: true })
       .first(),
   );
 }

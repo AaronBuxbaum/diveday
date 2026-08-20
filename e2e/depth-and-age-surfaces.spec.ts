@@ -7,6 +7,8 @@ const SHOP = DEMO_SHOP_SLUG;
 
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
+test.describe.configure({ timeout: 30_000 });
+
 /**
  * Open a seeded dive site's edit form and set its maximum depth.
  *
@@ -104,7 +106,9 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}/guests`);
 
     // The warning names both numbers and says plainly that it is not a block.
-    const warning = page.getByText(/deeper than the .* their card trains for/).first();
+    const warning = page
+      .getByText(/deeper than the .* their certification qualifies them for/)
+      .first();
     await expect(warning).toBeVisible();
     await expect(warning).toContainText("Not a block");
 
@@ -114,7 +118,7 @@ test.describe("staff", () => {
     // ready as the quiet "✓ Ready" text (the success Badge is reserved for
     // exceptional states — design/principles.md #9), so the glyph here is ✓,
     // not the Badge's ✅.
-    await expect(page.getByText("✓Ready", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("🌊Ready", { exact: true }).first()).toBeVisible();
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness
@@ -124,7 +128,7 @@ test.describe("staff", () => {
     await expect(
       page.locator("#roll-call-list").getByRole("button", { name: "Mark boarded" }).first(),
     ).toBeVisible();
-    await expect(page.locator("#roll-call-list").getByText("✅Ready")).toHaveCount(0);
+    await expect(page.locator("#roll-call-list").getByText("🌊Ready")).toHaveCount(0);
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {

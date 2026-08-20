@@ -369,6 +369,7 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
 
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
   page,
+  workerBaseURL,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
@@ -382,7 +383,10 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   // own negotiated Accept-Language for navigation requests). The demo shop's
   // own default is English, so this proves the notice follows the visitor,
   // not the shop.
-  const visitorContext = await page.context().browser()?.newContext({ locale: "es-ES" });
+  const visitorContext = await page
+    .context()
+    .browser()
+    ?.newContext({ baseURL: workerBaseURL, locale: "es-ES" });
   if (!visitorContext) throw new Error("expected a browser to create a second context from");
   const visitorPage = makeActivitySafe(await visitorContext.newPage());
   await visitorPage.goto(`${new URL(page.url()).origin}${waiverHref}`);
@@ -439,6 +443,7 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await expect(page.getByRole("heading", { name: "Priya Sharma", level: 1 })).toBeVisible();
   // The Waiver stat card is what sends anyone looking for this control.
   await expect(page.getByText("Not signed")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resend waiver" })).toBeVisible();
 
   await page.getByText("Mark signed on paper").click();
   // The medical attestation is the control, not a buried confirm. The browser's
@@ -476,6 +481,28 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await expect(page.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
+});
+
+test("a diver without a booking can receive an independent waiver from their record", async ({
+  page,
+}) => {
+  const stamp = Date.now();
+  await page.goto("/shop/blue-mantis/divers/new");
+  await page.getByLabel("Full name").fill(`Unscheduled E2E Diver ${stamp}`);
+  await page.getByLabel("Email").fill(`unscheduled-${stamp}@example.com`);
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.waitForURL(/\/shop\/blue-mantis\/divers\/[^/]+$/);
+
+  await expect(
+    page.getByRole("heading", { name: `Unscheduled E2E Diver ${stamp}`, level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Send / resend waiver and get link" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Send / resend waiver and get link" }).click();
+  await expect(page.getByRole("status")).toContainText("share");
+  await expect(page.getByRole("link", { name: /\/waivers\// })).toBeVisible();
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {

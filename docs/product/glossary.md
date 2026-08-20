@@ -14,6 +14,13 @@ new domain concept, define it here in the same PR.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
+- **Staff note** — shop-private operational context written for the next person on the team. A
+  note has one general kind for now and attaches either to a **diver** (shared across that diver's
+  record and the live boat manifest) or to one **booking** (departure-specific desk context). It is
+  displayed with its author and timestamp, is exported with the shop's records, and is never
+  evidence: readiness, trip admission, capacity, boarding, and roll-call completion do not read it.
+  New note kinds must name their audience and retention before they are added; free text is not a
+  license to put medical or boarding decisions into an unaudited gate.
 
 ## Certification
 
@@ -459,16 +466,17 @@ new domain concept, define it here in the same PR.
   README manifest: people and roles, all certification kinds, trips with their boarding gates and
   crew, series, bookings with payment state, wait lists, the roll-call ledger, waiver templates
   and signed records (attester included), rental fit, orders and their lines, any **prior visits**
-  imported from a previous system, and the shop's
+  and separately labelled **imported payment history** from a previous system, and the shop's
   dive-site library and course catalog — soft-archived history included, credentials never. Leads
   with `contacts.csv`, a flat one-row-per-person file (names pre-split, best card with its
   verification status, nitrox flag, sizes, date of birth) shaped for another system's import
   wizard, so leaving never means hand-merging CSVs. It carries every diver's date of birth where
   one is on file, minors included — a deliberate part of "the whole record leaves with you", and
   why the download is owner/manager-gated. Every image URL any CSV references that DiveDay's own storage
-  actually holds is also included as a real file under `photos/`, at the URL's own path, so a
-  photo survives after the account closes — a pasted external link or bundled template asset stays
-  a reference only (20260724-export-bundled-photos). Gated to owner/manager because it carries the
+  actually holds is also included as a real file under `photos/`, at the URL's own path, so a photo
+  or safely re-stored imported receipt survives after the account closes — a pasted external link or
+  bundled template asset stays a reference only (20260724-export-bundled-photos).
+  Gated to owner/manager because it carries the
   roster's complete medical evidence, which staff surfaces never show in full. The "leave anytime"
   half of the data-portability strategy; its CSV schemas are the contract the planned importer and
   read API reuse. See [20260722-full-shop-export](../architecture/decisions/20260722-full-shop-export.md)
@@ -823,6 +831,13 @@ new domain concept, define it here in the same PR.
   **Raising** one is owner/manager work, like the refund it may later need — every staff role can
   read orders, but billing a diver on the shop's own Stripe account is not deck work
   ([20260803-invoicing-role-gate](../architecture/decisions/20260803-invoicing-role-gate.md)).
+- **Imported payment history** — an unverified payment, refund, receipt, or source Stripe reference
+  carried from a prior system. It appears in its own section of Orders and may contribute to the
+  clearly labelled source portion of a monthly net-revenue figure only when its date, direction,
+  amount, and currency are unambiguous and its currency matches the shop's report. It is never a
+  DiveDay order, booking payment, Stripe confirmation, reusable card credential, or readiness fact;
+  its stored reference is a reconciliation clue only. See
+  [20260816-imported-payment-history-is-evidence](../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
 - **Payment event** — one recorded *transition* of a booking's payment state: what it moved to,
   what it moved from, the amount and currency at that moment, and which operation caused it. The
   append-only trail (`booking_payment_events`) beside the single mutable `booking_payments` row,
@@ -902,10 +917,11 @@ new domain concept, define it here in the same PR.
   diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
   reassurance; the signal is derived at send time, not stored.
 - **Post-trip recap** — a single shareable per-diver-per-trip page (`/recap/[token]`) generated after
-  the trip departs: the sites dived, the day's conditions, and a bring-a-buddy nudge. It rides the
-  same delivery-row dedup as the reminders, sent once per booking as the `trip_recap` kind by the
-  departed-trip scan (`src/db/recap.ts`) on the same daily cron. The link is a purpose-separated signed
-  booking token, distinct from the readiness link. See
+  the trip ends: the sites dived, the day's conditions, and a bring-a-buddy nudge. It rides the same
+  delivery-row dedup as the reminders, sent once per booking as the `trip_recap` kind no earlier than
+  four hours after the departure ends. The dedicated hourly recap scan (`/api/cron/recaps`) keeps that
+  floor punctual without weakening it. The link is a purpose-separated signed booking token, distinct
+  from the readiness link. See
   [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md).
 - **Review request** — a "Leave a review" section on the post-trip recap page, shown only when the
   shop has set a single, optional outbound link (`shops.review_url`) in Settings — DiveDay never
@@ -965,11 +981,13 @@ new domain concept, define it here in the same PR.
   Moving to a paid plan is by writing to `onboarding@dive.day`, not a self-serve checkout
   (product-owner decision, 2026-08-05, [human-decisions.md](human-decisions.md#decision-register)).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
-  revenue collected, bookings, **fill rate**, and **waiver completion** for the trips that departed
-  in a chosen month, plus a per-trip breakdown. Anchored to trip-departure month in the shop
-  timezone; "revenue" is the money actually collected on those trips' bookings (`paid` +
-  `deposit_paid` payments), not standalone retail. Owner/manager only. See
-  [20260723-owner-reporting](../architecture/decisions/20260723-owner-reporting.md).
+  net revenue, bookings, **fill rate**, and **waiver completion** for the trips that departed in a
+  chosen month, plus a per-trip breakdown. Trip metrics remain anchored to trip-departure month in
+  the shop timezone. Net revenue starts with money actually collected on those trips' bookings
+  (`paid` + `deposit_paid` payments), then may include a separately named, unverified imported
+  payment/refund slice by source calendar date when its currency matches. Owner/manager only. See
+  [20260723-owner-reporting](../architecture/decisions/20260723-owner-reporting.md) and
+  [20260816-imported-payment-history-is-evidence](../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
 - **Fill rate** — seats booked ÷ seats offered. On a report it is the month's active bookings over
   the sum of its trips' capacities; on one trip it is that trip's active bookings over its capacity,
   capped at fully booked. "Active" excludes cancellations and no-shows. That is **not** the manifest

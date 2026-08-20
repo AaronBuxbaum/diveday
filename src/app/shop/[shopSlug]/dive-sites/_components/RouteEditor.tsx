@@ -162,7 +162,8 @@ export function RouteEditor({
             <MapEmbed
               title={copy.mapAriaLabel}
               src={googleTerrainEmbedUrl(query, zoom)}
-              className="h-72"
+              className="h-[calc(18rem+4rem)]"
+              showAttribution
             >
               {/* The click surface sits over the whole frame. A `<button>`
                   rather than a bare div so it is a real control with a name,

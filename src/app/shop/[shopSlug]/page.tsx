@@ -596,6 +596,7 @@ async function TodayBody({
           timezone={shop.timezone}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
           locale={locale}
+          nowMs={now.getTime()}
           viewSwitch={queueSwitch}
         />
       )}
@@ -651,30 +652,22 @@ function TodaySkeleton() {
   return (
     <div className="animate-pulse">
       <div className="h-4 w-32 rounded bg-surface-sunken" />
-      <div className="mt-3 h-9 w-72 rounded bg-surface-sunken" />
-      <div className="mt-2 h-5 w-96 max-w-full rounded bg-surface-sunken" />
-
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-5">
-        <div className="flex items-center justify-between">
-          <div className="h-5 w-40 rounded bg-surface-sunken" />
-          <div className="h-5 w-24 rounded bg-surface-sunken" />
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2.5">
-          {["s1", "s2", "s3", "s4", "s5", "s6"].map((id) => (
-            <div key={`active-${id}`} className="h-8 w-8 rounded-full bg-surface-sunken" />
-          ))}
-          {["e1", "e2", "e3", "e4", "e5", "e6"].map((id) => (
-            <div
-              key={`empty-${id}`}
-              className="h-8 w-8 rounded-full border-2 border-dashed border-border-strong bg-transparent"
-            />
-          ))}
-        </div>
-      </div>
+      <div className="mt-2 h-10 w-72 rounded bg-surface-sunken" />
+      <div className="mt-3 h-6 w-full max-w-2xl rounded bg-surface-sunken" />
+      <div className="mt-2 h-6 w-4/5 max-w-xl rounded bg-surface-sunken" />
 
       <div className="mt-8 flex flex-col gap-3">
+        {[0, 1].map((i) => (
+          <div
+            key={`departure-${i}`}
+            className="h-32 rounded-2xl border border-border bg-surface"
+          />
+        ))}
+      </div>
+
+      <div className="mt-10 flex flex-col gap-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-20 rounded-xl border border-border bg-surface" />
+          <div key={`queue-${i}`} className="h-20 rounded-xl border border-border bg-surface" />
         ))}
       </div>
     </div>

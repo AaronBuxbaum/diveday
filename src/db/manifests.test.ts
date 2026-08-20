@@ -1,9 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   isRollCallAccountedFor,
   type RollCallCheckpoint,
@@ -37,6 +38,8 @@ import {
 import { listRollCallGaps } from "./today";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
+
+vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
@@ -603,6 +606,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * is how a crew learns not to raise the alarm at all.
    */
   it("refuses an offline retraction another device has superseded, and applies one that still stands", async () => {
+    vi.mocked(log).mockClear();
     const { db, shop, reef, booking, staff } = await manifestContext();
     const now = nowMs();
     const base = {
@@ -650,6 +654,10 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         occurredAt: new Date(now - 60 * 60 * 1000),
       }),
     ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+    expect(log).toHaveBeenCalledWith("manifest.offline_retraction_superseded", "warn", {
+      shopId: shop.id,
+      tripId: reef.id,
+    });
     // The alarm stands, which is the whole point of refusing.
     expect(
       (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.divers.find(
@@ -696,6 +704,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * compare-and-set is a strict tightening of the events that do carry it.
    */
   it("still applies an offline retraction that names nothing, for a device queued before the field existed", async () => {
+    vi.mocked(log).mockClear();
     const { db, shop, reef, booking, staff } = await manifestContext();
     const now = nowMs();
     const base = {
@@ -723,6 +732,10 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         occurredAt: new Date(now - 60 * 60 * 1000),
       }),
     ).resolves.toMatchObject({ ok: true });
+    expect(log).toHaveBeenCalledWith("manifest.offline_retraction_unnamed", "info", {
+      shopId: shop.id,
+      tripId: reef.id,
+    });
   });
 
   it("raises the manifest-events push signal for a genuine write but not a duplicate replay", async () => {
@@ -1500,6 +1513,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
      * people most reliably still in the water.
      */
     it("refuses an offline crew retraction another device has superseded, and applies one that still stands", async () => {
+      vi.mocked(log).mockClear();
       const { db, shop, reef, staff } = await manifestContext();
       const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
       const member = crew[0];
@@ -1543,6 +1557,10 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
           occurredAt: new Date(now - 60 * 60 * 1000),
         }),
       ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+      expect(log).toHaveBeenCalledWith("manifest.offline_retraction_superseded", "warn", {
+        shopId: shop.id,
+        tripId: reef.id,
+      });
       expect(
         (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.find(
           (entry) => entry.id === member.id,

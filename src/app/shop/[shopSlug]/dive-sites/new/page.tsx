@@ -108,9 +108,9 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       shopId: activeSession.user.shopId,
       ...siteFields,
       forecastLatitude:
-        parsed.fields.forecastLatitude === "" ? undefined : parsed.fields.forecastLatitude,
+        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
       forecastLongitude:
-        parsed.fields.forecastLongitude === "" ? undefined : parsed.fields.forecastLongitude,
+        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
       satelliteImageUrl: photos.photos.satelliteImageUrl,
       routeImageUrl: photos.photos.routeImageUrl,
       imageUrls: photos.photos.imageUrls,

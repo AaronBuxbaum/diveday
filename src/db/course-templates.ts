@@ -1,4 +1,6 @@
 // i18n-exempt-file: shop-editable starter course content, not app UI copy — see CourseContent's doc comment
+
+import { courseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseContent, CourseGalleryPhoto } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 
@@ -11,8 +13,9 @@ import type { CertificationLevel } from "@/lib/readiness";
  * rewrite to match how it actually runs the course.
  *
  * Imported copies are independent (src/db/courses.ts); bumping a version here
- * never rewrites a shop's page, and never relaxes a cert gate under a course a
- * shop is already teaching.
+ * never rewrites a shop's page automatically. The staff editor can show a
+ * three-way diff and explicitly apply a later version, with shop-owned fields
+ * kept out of the overwrite (ADR 20260816-course-template-updates).
  *
  * **Every depth is a placeholder — `{depth18}`, never "18 meters" and never
  * "18 meters (60 feet)".** The prose lands in the shop's own row as free text,
@@ -158,14 +161,17 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
   },
   {
     slug: "open-water-diver",
-    version: 1,
+    // Version 2 is the first live revision consumed by the update flow. Older
+    // shop copies can review this wording change without losing their own
+    // overview, pricing, or photography.
+    version: 2,
     title: "Open Water Diver",
     agency: "padi",
     description: "The foundational certification course for new divers.",
     minimumCertificationLevel: null,
     content: {
       ...blank,
-      summary: "How to become a certified PADI Open Water Diver",
+      summary: "Become a certified PADI Open Water Diver",
       overview:
         "The Open Water Diver certification is the one that opens the door: qualified to dive to {depth18} with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter/yard swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
@@ -285,7 +291,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 12,
       prerequisiteNote:
-        "PADI Open Water Diver (or a qualifying certification from another agency) — we verify the card before the first dive. Divers aged 12–14 certify as Junior Advanced Open Water Divers and are limited to {depth21}, including on the deep dive; the full {depth30} comes at 15.",
+        "PADI Open Water Diver (or a qualifying certification from another agency) — we verify the certification record before the first dive. Divers aged 12–14 certify as Junior Advanced Open Water Divers and are limited to {depth21}, including on the deep dive; the full {depth30} comes at 15.",
       includes: [
         "All PADI learning materials and certification fees",
         "Five supervised adventure dives",
@@ -445,7 +451,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Shake the rust off before your first dive back",
       overview:
-        "If it has been a year or more since your last dive, the theory fades faster than the fun does. This is the PADI ReActivate program: a short knowledge review, then a confined-water session where you put the gear back on and find that your hands still know what to do.\n\nWe go over the skills that matter after a break — mask clearing, regulator recovery, weighting and buoyancy, sharing air, and how your computer works. Then you dive. Most divers feel normal again within the first ten minutes of the confined-water session.\n\nThis is not a new certification. It is a dated refresher noted on your card, and it is the honest thing to do before you get on a boat with strangers.",
+        "If it has been a year or more since your last dive, the theory fades faster than the fun does. This is the PADI ReActivate program: a short knowledge review, then a confined-water session where you put the gear back on and find that your hands still know what to do.\n\nWe go over the skills that matter after a break — mask clearing, regulator recovery, weighting and buoyancy, sharing air, and how your computer works. Then you dive. Most divers feel normal again within the first ten minutes of the confined-water session.\n\nThis is not a new certification. It is a dated refresher noted on your certification record, and it is the right reset before you get on a boat with strangers.",
       heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
       galleryPhotos: bundledGallery("Brain coral 2 Molasses Reef 20080309.jpg"),
       durationText: "Half a day · about 4 hours",
@@ -456,7 +462,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       // that this is our line, not the agency's — same precedent as Rescue,
       // Deep, and Wreck below.
       prerequisiteNote:
-        "Open Water Diver or higher, from PADI or another agency — that is where we set this course. PADI's own floor is one rung lower (PADI Scuba Diver), which our system cannot record; if you hold Scuba Diver, talk to us before you book — the gate is ours, not the agency's. Send us a photo of your card or we can look it up. You will complete a medical questionnaire first; some answers require a physician's sign-off before you can dive.",
+        "Open Water Diver or higher, from PADI or another agency — that is where we set this course. PADI's own floor is one rung lower (PADI Scuba Diver), which our system cannot record; if you hold Scuba Diver, talk to us before you book — the gate is ours, not the agency's. Share your digital certification record or other evidence, or we can look it up. You will complete a medical questionnaire first; some answers require a physician's sign-off before you can dive.",
       includes: [
         "Knowledge review with an instructor",
         "Complete rental gear for the session",
@@ -484,7 +490,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "Do I get a new certification?",
           answer:
-            "No. Your original certification never expires. ReActivate adds a date to your card showing when you last refreshed, which some operators like to see.",
+            "No. Your original certification never expires. ReActivate adds a date to your certification record showing when you last refreshed, which some operators like to see.",
         },
         {
           question: "Can I do this the same day as a boat dive?",
@@ -520,7 +526,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       // Diver) is the agency's own floor. The age is the tighter limit here —
       // a 10- or 11-year-old Junior Open Water Diver has to wait until 12.
       prerequisiteNote:
-        "PADI Open Water Diver or higher, from PADI or another agency, and at least 12 years old. Junior Open Water Divers aged 10–11 are old enough for the certification card but not for this course; the agency's minimum age is 12. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 12 years old. Junior Open Water Divers aged 10–11 are old enough for the certification but not for this course; the agency's minimum age is 12. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
       includes: [
         "All PADI learning materials and certification fees",
         "Analyzer use and cylinder-logging practice",
@@ -1020,7 +1026,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How long does it really take?",
           answer:
-            "Four to eight weeks for most candidates, longer if you are working around a job. The program is performance-based, so the honest answer is that it takes as long as it takes to be someone we would put in front of customers.",
+            "Four to eight weeks for most candidates, longer if you are working around a job. The program is performance-based, so the timeline follows the skills: you finish when you are ready to lead a safe, confident dive for customers.",
         },
         {
           question: "Is Divemaster the same as instructor?",
@@ -1031,3 +1037,11 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     },
   },
 ];
+
+/** Resolve the current code-owned template without exposing the array to callers. */
+export function getCourseTemplate(slug: string): CourseTemplate | null {
+  return COURSE_TEMPLATES.find((template) => template.slug === slug) ?? null;
+}
+
+/** The baseline persisted beside a shop copy when it begins following a template. */
+export { courseTemplateSnapshot };

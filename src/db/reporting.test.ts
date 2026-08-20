@@ -5,6 +5,7 @@ import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   canPersonViewShopReports,
+  earliestImportedFinancialHistoryDate,
   earliestReportedTripStart,
   getMonthlyReport,
   pagedMonthlyReportTrips,
@@ -14,6 +15,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  importedPaymentHistory,
   type PaymentStatus,
   people,
   personRoles,
@@ -34,6 +36,34 @@ async function makePerson(db: AppDb, shopId: string, name: string): Promise<stri
   const [row] = await db.insert(people).values({ shopId, fullName: name }).returning();
   if (!row) throw new Error("failed to insert person");
   return row.id;
+}
+
+async function addImportedFinancialHistory(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    occurredOn: string;
+    direction: "payment" | "refund" | "unknown";
+    amountCents: number | null;
+    currency: string | null;
+  },
+): Promise<void> {
+  seq += 1;
+  await db.insert(importedPaymentHistory).values({
+    shopId: input.shopId,
+    personId: input.personId,
+    occurredOn: input.occurredOn,
+    direction: input.direction,
+    title: `Imported source ${seq}`,
+    statusLabel: input.direction === "payment" ? "Settled" : "Refunded",
+    amountLabel: input.amountCents === null ? "unknown amount" : `$${input.amountCents / 100}`,
+    amountCents: input.amountCents,
+    currency: input.currency,
+    sourceLabel: "Prior shop",
+    dedupeKey: `imported-${seq}`,
+    importedAt: new Date("2026-06-01T00:00:00Z"),
+  });
 }
 
 async function makeTrip(
@@ -329,6 +359,69 @@ describe("getMonthlyReport", () => {
     expect(report.revenueCents).toBe(0);
   });
 
+  it("adds only clear, matching-currency imported payments and refunds to net revenue", async () => {
+    const { db, shop } = await seededShopContext();
+    const person = await makePerson(db, shop.id, "Imported Rosa");
+    const before = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START, {
+      currency: "usd",
+      timeZone: "UTC",
+    });
+
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2026-06-02",
+      direction: "payment",
+      amountCents: 12_000,
+      currency: "usd",
+    });
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2026-06-03",
+      direction: "refund",
+      amountCents: 2_000,
+      currency: "usd",
+    });
+    // All of these stay visible in Orders, but none belongs in this aggregate:
+    // unknown direction, a different currency, and a source day outside June.
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2026-06-04",
+      direction: "unknown",
+      amountCents: 9_999,
+      currency: "usd",
+    });
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2026-06-05",
+      direction: "payment",
+      amountCents: 8_888,
+      currency: "eur",
+    });
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2026-05-31",
+      direction: "payment",
+      amountCents: 7_777,
+      currency: "usd",
+    });
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START, {
+      currency: "usd",
+      timeZone: "UTC",
+    });
+    expect(report.revenueCents).toBe(before.revenueCents + 10_000);
+    expect(report).toMatchObject({
+      importedPaymentCents: 12_000,
+      importedRefundCents: 2_000,
+      importedFinancialRecordCount: 2,
+    });
+  });
+
   it("excludes a payment/waiver row whose own shop_id doesn't match the trip's shop, even though it joins to that shop's booking (CR-007)", async () => {
     const { db, shop } = await seededShopContext();
     const [otherShop] = await db
@@ -610,6 +703,40 @@ describe("earliestReportedTripStart", () => {
 
     expect(await earliestReportedTripStart(db, other.id)).toBeNull();
     expect(await earliestReportedTripStart(db, shop.id)).not.toBeNull();
+  });
+});
+
+describe("earliestImportedFinancialHistoryDate", () => {
+  it("uses the same eligible source-history boundary as the revenue aggregate", async () => {
+    const { db, shop } = await seededShopContext();
+    const person = await makePerson(db, shop.id, "Earliest Import");
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2020-01-01",
+      direction: "unknown",
+      amountCents: 1_000,
+      currency: "usd",
+    });
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2020-02-01",
+      direction: "payment",
+      amountCents: 1_000,
+      currency: "eur",
+    });
+    await addImportedFinancialHistory(db, {
+      shopId: shop.id,
+      personId: person,
+      occurredOn: "2020-03-01",
+      direction: "refund",
+      amountCents: 1_000,
+      currency: "usd",
+    });
+
+    expect(await earliestImportedFinancialHistoryDate(db, shop.id, "usd")).toBe("2020-03-01");
+    expect(await earliestImportedFinancialHistoryDate(db, shop.id, "eur")).toBe("2020-02-01");
   });
 });
 

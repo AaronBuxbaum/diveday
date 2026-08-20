@@ -21,7 +21,7 @@ test.describe("owner", () => {
 
     // The four headline metrics the buyer asks about.
     const metrics = page.getByRole("region", { name: "This month's numbers" });
-    await expect(metrics.getByText("Revenue collected")).toBeVisible();
+    await expect(metrics.getByText("Net revenue")).toBeVisible();
     await expect(metrics.getByText("Bookings")).toBeVisible();
     await expect(metrics.getByText("Seat fill")).toBeVisible();
     await expect(metrics.getByText("Waivers signed")).toBeVisible();

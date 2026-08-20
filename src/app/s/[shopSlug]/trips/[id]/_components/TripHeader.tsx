@@ -105,6 +105,9 @@ export function TripHeader({
                 {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
               </p>
             )}
+            {trip.isPrivate ? (
+              <p className="mt-2 text-sm font-medium text-primary">{t("trip.privateCharter")}</p>
+            ) : null}
             {trip.course ? (
               <p className="mt-2 text-sm font-medium text-primary">
                 {t("trip.courseSession")} ·{" "}

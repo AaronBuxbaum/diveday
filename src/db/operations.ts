@@ -1,12 +1,21 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
 
 export async function addInternalNote(
   db: AppDb,
-  input: { shopId: string; bookingId: string; actorPersonId: string; body: string },
+  input: {
+    shopId: string;
+    tripId: string;
+    bookingId: string;
+    actorPersonId: string;
+    body: string;
+  },
 ) {
+  if (![input.shopId, input.tripId, input.bookingId, input.actorPersonId].every(isUuid))
+    return null;
   const body = input.body.trim();
   if (!body || body.length > 1_000) return null;
   return db.transaction(async (tx) => {
@@ -18,6 +27,7 @@ export async function addInternalNote(
       .where(
         and(
           eq(bookings.id, input.bookingId),
+          eq(bookings.tripId, input.tripId),
           eq(bookings.shopId, input.shopId),
           eq(trips.shopId, input.shopId),
         ),
@@ -52,6 +62,54 @@ export async function addInternalNote(
 }
 
 /**
+ * Add a note to the diver record rather than to one booking. The same
+ * staff-only record can then be read from the diver page and from any boat
+ * manifest that carries that diver, without copying text between surfaces.
+ * Notes are context only: no readiness, boarding, capacity, or checkpoint
+ * decision reads them.
+ */
+export async function addDiverNote(
+  db: AppDb,
+  input: { shopId: string; personId: string; actorPersonId: string; body: string },
+) {
+  if (![input.shopId, input.personId, input.actorPersonId].every(isUuid)) return null;
+  const body = input.body.trim();
+  if (!body || body.length > 1_000) return null;
+  return db.transaction(async (tx) => {
+    const [diver] = await tx
+      .select({ name: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    const [actor] = await tx
+      .select({ name: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    if (!diver || !actor) return null;
+    const [note] = await tx
+      .insert(internalNotes)
+      .values({
+        shopId: input.shopId,
+        personId: input.personId,
+        bookingId: null,
+        createdByPersonId: input.actorPersonId,
+        body,
+      })
+      .returning();
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: input.actorPersonId,
+      message: `${actor.name} added a private note about ${diver.name}`,
+      occurredAt: nowDate(),
+    });
+    return note ?? null;
+  });
+}
+
+/**
  * Return-what-you-deleted, same convention as `deleteRecapPhoto`
  * (`DeleteRecapPhotoResult`): the caller needs the booking + text back to
  * offer a one-tap undo that recreates the note (docs/design/principles.md
@@ -64,8 +122,11 @@ export type DeleteInternalNoteResult =
 
 export async function deleteInternalNote(
   db: AppDb,
-  input: { shopId: string; noteId: string; actorPersonId: string },
+  input: { shopId: string; tripId: string; noteId: string; actorPersonId: string },
 ): Promise<DeleteInternalNoteResult> {
+  if (![input.shopId, input.tripId, input.noteId, input.actorPersonId].every(isUuid)) {
+    return { deleted: false };
+  }
   return db.transaction(async (tx) => {
     const [note] = await tx
       .select({
@@ -80,7 +141,13 @@ export async function deleteInternalNote(
       .from(internalNotes)
       .innerJoin(bookings, eq(bookings.id, internalNotes.bookingId))
       .innerJoin(people, eq(people.id, internalNotes.personId))
-      .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)))
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+        ),
+      )
       .limit(1);
     if (!note) return { deleted: false };
     const [actor] = await tx
@@ -104,6 +171,59 @@ export async function deleteInternalNote(
   });
 }
 
+export type DeleteDiverNoteResult = { deleted: true; body: string } | { deleted: false };
+
+/** Delete a person-scoped note; the caller can offer a one-tap undo. */
+export async function deleteDiverNote(
+  db: AppDb,
+  input: { shopId: string; personId: string; noteId: string; actorPersonId: string },
+): Promise<DeleteDiverNoteResult> {
+  if (![input.shopId, input.personId, input.noteId, input.actorPersonId].every(isUuid)) {
+    return { deleted: false };
+  }
+  return db.transaction(async (tx) => {
+    const [note] = await tx
+      .select({ body: internalNotes.body, diverName: people.fullName })
+      .from(internalNotes)
+      .innerJoin(people, eq(people.id, internalNotes.personId))
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(internalNotes.personId, input.personId),
+          isNull(internalNotes.bookingId),
+        ),
+      )
+      .limit(1);
+    if (!note) return { deleted: false };
+    const [actor] = await tx
+      .select({ name: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    if (!actor) return { deleted: false };
+    await tx
+      .delete(internalNotes)
+      .where(
+        and(
+          eq(internalNotes.id, input.noteId),
+          eq(internalNotes.shopId, input.shopId),
+          eq(internalNotes.personId, input.personId),
+          isNull(internalNotes.bookingId),
+        ),
+      );
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: input.actorPersonId,
+      message: `${actor.name} deleted a private note about ${note.diverName}`,
+      occurredAt: nowDate(),
+    });
+    return { deleted: true, body: note.body };
+  });
+}
+
 export async function listBookingNotes(db: AppDb, shopId: string, tripId: string) {
   return db
     .select({ note: internalNotes, authorName: people.fullName })
@@ -111,6 +231,70 @@ export async function listBookingNotes(db: AppDb, shopId: string, tripId: string
     .innerJoin(bookings, eq(bookings.id, internalNotes.bookingId))
     .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
     .where(and(eq(internalNotes.shopId, shopId), eq(bookings.tripId, tripId)))
+    .orderBy(asc(internalNotes.createdAt));
+}
+
+/** Notes written on the diver record, oldest first. */
+export async function listDiverNotes(db: AppDb, shopId: string, personId: string) {
+  return db
+    .select({ note: internalNotes, authorName: people.fullName })
+    .from(internalNotes)
+    .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
+    .where(
+      and(
+        eq(internalNotes.shopId, shopId),
+        eq(internalNotes.personId, personId),
+        isNull(internalNotes.bookingId),
+      ),
+    )
+    .orderBy(asc(internalNotes.createdAt));
+}
+
+/**
+ * Every staff note about one diver, in one chronological record.
+ *
+ * `internal_notes` already holds both scopes: a person-scoped note has no
+ * booking, while a trip note has the booking and therefore its departure.
+ * The diver record is the one place staff need the complete story, so it
+ * reads both shapes and carries the booking context as metadata instead of
+ * copying a trip note into a second note system.
+ */
+export async function listDiverRecordNotes(db: AppDb, shopId: string, personId: string) {
+  return db
+    .select({
+      note: internalNotes,
+      authorName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      tripStartsAt: trips.startsAt,
+    })
+    .from(internalNotes)
+    .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
+    .leftJoin(bookings, eq(bookings.id, internalNotes.bookingId))
+    .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(internalNotes.shopId, shopId), eq(internalNotes.personId, personId)))
+    .orderBy(asc(internalNotes.createdAt));
+}
+
+/**
+ * Resolve diver-scoped notes onto the booking that represents that diver on a
+ * trip. This is the bridge that lets the Diver page and boat manifest share
+ * one source of truth without making a diver note belong to a single booking.
+ */
+export async function listDiverNotesForTrip(db: AppDb, shopId: string, tripId: string) {
+  return db
+    .select({ note: internalNotes, authorName: people.fullName, bookingId: bookings.id })
+    .from(internalNotes)
+    .innerJoin(bookings, eq(bookings.personId, internalNotes.personId))
+    .innerJoin(people, eq(people.id, internalNotes.createdByPersonId))
+    .where(
+      and(
+        eq(internalNotes.shopId, shopId),
+        isNull(internalNotes.bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+      ),
+    )
     .orderBy(asc(internalNotes.createdAt));
 }
 
@@ -133,6 +317,15 @@ export async function listTripActivity(db: AppDb, shopId: string, tripId: string
     .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)))
     .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
     .limit(50);
+}
+
+/** Count every activity line so the Guests tab can advertise what its collapsed log contains. */
+export async function countTripActivity(db: AppDb, shopId: string, tripId: string) {
+  const [row] = await db
+    .select({ count: count() })
+    .from(activityEvents)
+    .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)));
+  return row?.count ?? 0;
 }
 
 export async function recordTripActivity(

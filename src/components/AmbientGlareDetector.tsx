@@ -165,7 +165,13 @@ const CONTRAST_MODES = ["auto", "standard", "full"] as const;
  * moving boat. Each option is now a real 44px button whose pressed state *is*
  * the answer, in the same segmented grammar as `QueueViewSwitch`.
  */
-export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) {
+export function AmbientContrastControl({
+  copy,
+  className = "",
+}: {
+  copy: AmbientContrastCopy;
+  className?: string;
+}) {
   // The stored choice lives in this browser, so the server cannot know it. The
   // control renders in its Auto position — the default it is actually in until
   // told otherwise — and the effect below moves it only when this device has
@@ -215,11 +221,11 @@ export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) 
     // Real radios in a fieldset, not styled buttons: exactly one of the three
     // is on, arrow keys move between them for free, and the legend names the
     // group without a second visible heading.
-    <fieldset className="select-none text-left print:hidden">
+    <fieldset className={`select-none text-left print:hidden ${className}`.trim()}>
       <legend className="text-xs font-bold tracking-wide text-muted uppercase">
         {copy.modeLabel}
       </legend>
-      <div className="mt-1.5 inline-flex rounded-full border border-border bg-surface-sunken p-1">
+      <div className="mt-1.5 flex max-w-full overflow-x-auto overscroll-x-contain rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {
           const active = value === mode;
           return (

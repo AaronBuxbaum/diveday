@@ -123,13 +123,14 @@ export async function collectSpecFiles(root) {
 /**
  * The capture names `e2e/visual.spec.ts` actually shoots.
  *
- * `capturePrint()` reuses names `capture()` already registered (the manifest and
- * prep print baselines), so matching the screen helper alone is enough and keeps
- * the pattern the one AGENTS.md and the e2e-and-visual skill describe.
+ * Print-only surfaces use `capturePrint()` because they are rendered with print
+ * media. Both helpers produce a baseline name that belongs in the same ledger.
  */
 export function parseCaptureNames(source) {
   const names = new Set();
-  for (const match of source.matchAll(/\bcapture\(\s*page\s*,\s*["'`]([^"'`]+)["'`]/g)) {
+  for (const match of source.matchAll(
+    /\b(?:capture|capturePrint)\(\s*page\s*,\s*["'`]([^"'`]+)["'`]/g,
+  )) {
     names.add(match[1]);
   }
   return names;

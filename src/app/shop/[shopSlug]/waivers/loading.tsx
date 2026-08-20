@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the waiver template editor (design principle 1).
@@ -13,7 +14,7 @@ export default function WaiverTemplateLoading() {
       <div className="mt-10">
         <div className="h-6 w-56 rounded bg-surface-sunken" />
         <div className="mt-2 h-4 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-4 h-96 rounded-2xl border border-border bg-surface" />
+        <div className={sectionCardClass({ padding: "none", className: "mt-4 h-96" })} />
       </div>
     </div>
   );

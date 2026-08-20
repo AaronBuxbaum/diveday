@@ -9,7 +9,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  */
 
 /** Where the send happened, so the right route is revalidated after it lands. */
-export type WaiverSendSurface = "today" | "blockers" | "check_in" | "roster";
+export type WaiverSendSurface = "today" | "blockers" | "check_in" | "roster" | "diver";
 
 /** A private fallback link staff must hand over when email did not go out. */
 export type WaiverFallbackLink = {
@@ -19,7 +19,7 @@ export type WaiverFallbackLink = {
    * differently from a shop that has no email provider wired up at all, and
    * both read differently from a deployment with no `APP_HOST` to build the
    * link on. Each gap points at a different setting, so each gets its own word. */
-  reason: "no_email" | "no_app_origin" | "unconfigured" | "test_recipient" | "failed";
+  reason: "sent" | "no_email" | "no_app_origin" | "unconfigured" | "test_recipient" | "failed";
 };
 
 export type WaiverSendState = {
@@ -33,10 +33,8 @@ export type WaiverSendState = {
   /** Divers whose send failed outright (no current booking/template). */
   errors: string[];
   /**
-   * True when the submit carried no `bookingId` at all — only reachable from
-   * the roster's bulk control, where the selection comes from checkboxes
-   * rather than a fixed prop, so an empty tick list is a real user outcome to
-   * name rather than a silent no-op.
+   * True when the submit carried neither booking ids nor a person id — only
+   * reachable from the roster's bulk control with nothing selected.
    */
   emptySelection: boolean;
 };

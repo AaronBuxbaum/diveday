@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
 import { getDb } from "@/db/client";
-import { listBookableDivers } from "@/db/divers";
+import { findSimilarDivers, listBookableDivers } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
@@ -84,6 +83,9 @@ export default async function WalkInDiverPage({
     notice?: string;
     /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
+    confirmName?: string;
+    confirmEmail?: string;
+    confirmPhone?: string;
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
@@ -93,11 +95,12 @@ export default async function WalkInDiverPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { diverq, notice, gate } = await searchParams;
+  const { diverq, notice, gate, confirmName, confirmEmail, confirmPhone } = await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
+  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -119,15 +122,6 @@ export default async function WalkInDiverPage({
         title={t("checkIn.walkIn.title")}
         description={t("checkIn.walkIn.description")}
       />
-      {/* Back means back one step — the boat picker — not out to the queue.
-          The queue is where a *finished* walk-in lands. */}
-      <Link
-        href={picker}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-      >
-        ← {t("checkIn.walkIn.backToPicker")}
-      </Link>
-
       {banner ? (
         <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">
           {gateRefusal ? tripAdmissionRefusalText(t, gateRefusal, locale) : t(banner.key)}
@@ -154,6 +148,10 @@ export default async function WalkInDiverPage({
         tripId={trip.id}
         query={query}
         candidates={candidates}
+        confirmName={confirmName}
+        confirmEmail={confirmEmail}
+        confirmPhone={confirmPhone}
+        confirmMatches={confirmMatches}
         copy={{
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
@@ -167,12 +165,12 @@ export default async function WalkInDiverPage({
           noMatchesHeading: t("seatDiver.noMatchesHeading"),
           noMatches: t("seatDiver.noMatches", { query }),
           noMatchesAction: t("seatDiver.noMatchesAction"),
-          handEntryHeading: t("seatDiver.handEntryHeading"),
-          handEntryDescription: t("checkIn.walkIn.handEntryDescription"),
-          nameLabel: t("seatDiver.nameLabel"),
-          emailLabel: t("seatDiver.emailLabel"),
-          phoneLabel: t("seatDiver.phoneLabel"),
-          optionalHint: t("seatDiver.optionalHint"),
+          addDiver: t("seatDiver.addDiver"),
+          addDiverAction: t("seatDiver.addDiverAction"),
+          addDiverPrompt: t.raw("seatDiver.addDiverPrompt"),
+          addNewDiverAction: t.raw("seatDiver.addNewDiverAction"),
+          confirmMatchesTitle: t("divers.page.confirmMatchesTitle"),
+          confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
     </main>

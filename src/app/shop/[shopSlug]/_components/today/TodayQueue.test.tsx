@@ -162,7 +162,7 @@ describe("TodayQueue horizon folding (visual weight follows urgency)", () => {
 
     // Today's group renders in full — no disclosure between a staffer and the
     // morning's blockers.
-    expect(screen.getByText("Before today’s boats").closest("details")).toBeNull();
+    expect(screen.getByText("Within 24 hours").closest("details")).toBeNull();
     // The horizon groups are folded to heading + count, closed by default.
     const folds = container.querySelectorAll("details");
     expect(folds).toHaveLength(2);
@@ -288,7 +288,7 @@ describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
   });
 });
 
-describe("TodayQueue departure grouping (say the boat once)", () => {
+describe("TodayQueue urgency rows (rank across boats)", () => {
   function renderQueue(actions: TodayAction[]) {
     return render(
       <TodayQueue
@@ -302,7 +302,7 @@ describe("TodayQueue departure grouping (say the boat once)", () => {
     );
   }
 
-  it("says a shared departure once, in a group header, never on each row", () => {
+  it("keeps each row's boat context visible instead of grouping by departure", () => {
     renderQueue([
       action({
         id: "a1",
@@ -320,11 +320,10 @@ describe("TodayQueue departure grouping (say the boat once)", () => {
       }),
     ]);
 
-    // Once: the header. The rows carry only what differs.
-    expect(screen.getAllByText("Two-Tank Reef · 9:30 AM")).toHaveLength(1);
+    expect(screen.getByText("Two-Tank Reef · 9:30 AM")).toBeInTheDocument();
+    expect(screen.getByText("9:30 AM")).toBeInTheDocument();
     expect(screen.getByText("Priya Sharma")).toBeInTheDocument();
-    // A row about the boat itself never repeats the boat's name as a subject.
-    expect(screen.queryByText("Two-Tank Reef")).toBeNull();
+    expect(screen.getByText("Two-Tank Reef")).toBeInTheDocument();
     expect(screen.getByText("5 divers are missing rental sizes.")).toBeInTheDocument();
   });
 

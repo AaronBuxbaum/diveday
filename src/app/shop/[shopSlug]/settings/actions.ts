@@ -8,6 +8,7 @@ import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
+import { createBoat, deleteBoat, updateBoat } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { retryMediaDeletion } from "@/db/media-deletions";
@@ -18,6 +19,7 @@ import {
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
+  setShopDivingOptions,
   setShopDockDayRhythm,
   setShopPackingList,
   setShopRentalItems,
@@ -60,6 +62,7 @@ import {
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
+import { uuidParam } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
  * Shop settings mutations
@@ -85,39 +88,39 @@ import { timeZoneAnchor } from "@/lib/timezones";
  * Hiding the page is a courtesy, never the gate: a server action is a POST
  * endpoint whose id ships to any browser that has ever rendered the form, so
  * without this a demoted staffer — or anyone who kept an old page open — could
- * still rewrite the shop's timezone, address, or packing list. Returns the
- * settings redirect target when the actor lacks the gate, or null when they
- * may proceed.
+ * still rewrite the shop's timezone, address, or packing list. Refusal
+ * redirects here so callers cannot forget to act on a returned target.
  */
 async function settingsBlock(session: {
   user: { shopId: string; personId: string; shopSlug: string };
-}): Promise<string | null> {
+}): Promise<void> {
+  const settings = shopPath(session.user.shopSlug, "settings");
   const allowed = await canPersonManageShopSettings(
     await getDb(),
     session.user.shopId,
     session.user.personId,
   );
-  return allowed ? null : noticeUrl(shopPath(session.user.shopSlug, "settings"), "not-authorized");
+  if (!allowed) revalidateAndRedirect(settings, noticeUrl(settings, "not-authorized"));
 }
 
 /**
  * Payment settings (Stripe Connect and the rental catalog/prices) are
  * owner/manager work (H-14, ADR 20260724-role-authorization), re-checked
- * against live roles. Returns the settings redirect target when the actor
- * lacks the gate, or null when they may proceed. Narrower than
- * {@link settingsBlock} by intent rather than by effect — the two resolve to
- * the same roles today, and each states its own reason so one can move without
- * silently dragging the other.
+ * against live roles. Refusal redirects here so callers cannot forget to act
+ * on a returned target. Narrower than {@link settingsBlock} by intent rather
+ * than by effect — the two resolve to the same roles today, and each states
+ * its own reason so one can move without silently dragging the other.
  */
 async function paymentSettingsBlock(session: {
   user: { shopId: string; personId: string; shopSlug: string };
-}): Promise<string | null> {
+}): Promise<void> {
+  const settings = shopPath(session.user.shopSlug, "settings");
   const allowed = await canPersonManagePaymentSettings(
     await getDb(),
     session.user.shopId,
     session.user.personId,
   );
-  return allowed ? null : noticeUrl(shopPath(session.user.shopSlug, "settings"), "not-authorized");
+  if (!allowed) revalidateAndRedirect(settings, noticeUrl(settings, "not-authorized"));
 }
 
 const contactSchema = z.object({
@@ -136,6 +139,14 @@ const addressSchema = z.object({
   addressRegion: z.string().trim().max(120),
   addressPostalCode: z.string().trim().max(20),
   addressCountry: z.string().trim().max(2),
+  latitude: z
+    .union([z.literal(""), z.coerce.number().min(-90).max(90)])
+    .optional()
+    .nullable(),
+  longitude: z
+    .union([z.literal(""), z.coerce.number().min(-180).max(180)])
+    .optional()
+    .nullable(),
 });
 
 const reviewUrlSchema = z.object({
@@ -157,11 +168,7 @@ const reviewUrlSchema = z.object({
 export async function savePackingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const packingList = String(formData.get("packingList") ?? "")
     .split("\n")
     .map((item) => item.trim())
@@ -205,11 +212,7 @@ export async function savePackingAction(formData: FormData) {
 export async function saveUnitsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const depthUnit = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
   const temperatureUnit = z
     .enum(["celsius", "fahrenheit"])
@@ -223,11 +226,7 @@ export async function saveUnitsAction(formData: FormData) {
   const submittedCurrency = formData.get("currency");
   let currency: ShopCurrency | null = null;
   if (submittedCurrency !== null) {
-    const blocked = await paymentSettingsBlock(session);
-    if (blocked) {
-      revalidateAndRedirect(settings, blocked);
-      return;
-    }
+    await paymentSettingsBlock(session);
     // Not `toShopCurrency`: that coerces anything unknown to usd, which would
     // silently save dollars for a shop that submitted a typo. An unrecognized
     // value is a refusal.
@@ -258,11 +257,7 @@ export async function saveUnitsAction(formData: FormData) {
 export async function saveDockDayRhythmAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const rhythm = parseDockDayRhythm(
     Object.fromEntries(DOCK_DAY_FIELDS.map((field) => [field, formData.get(field)])),
   );
@@ -277,16 +272,8 @@ export async function saveDockDayRhythmAction(formData: FormData) {
 export async function saveRentalItemsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const selected = SHOP_CATALOG_ITEMS.filter((item) => formData.get(item.name) === "on").map(
     (item) => item.kind,
   );
@@ -320,16 +307,8 @@ function parsePriceAmount(
 export async function saveRentalPricingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(noticeUrl(settings, "rental-prices-invalid", { saved: "rentalPricing" }));
@@ -377,11 +356,7 @@ export async function saveRentalPricingAction(formData: FormData) {
 export async function saveContactAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "contact-invalid", { saved: "contact" }));
   await setShopContact(await getDb(), session.user.shopId, parsed.data);
@@ -402,31 +377,31 @@ export async function saveContactAction(formData: FormData) {
  * An all-empty address is the Remove control, and it says so rather than
  * reporting "saved" for a thing that is now gone.
  */
-export async function saveAddressAction(formData: FormData) {
+export async function saveAddressAction(formData: FormData): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const parsed = addressSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "address-invalid", { saved: "address" }));
-  await setShopAddress(await getDb(), session.user.shopId, parsed.data);
-  const emptied = Object.values(parsed.data).every((value) => value.length === 0);
-  const notice = emptied ? "address-removed" : "address-saved";
-  revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "address" }));
+  const { latitude, longitude, ...textFields } = parsed.data;
+  await setShopAddress(await getDb(), session.user.shopId, {
+    ...textFields,
+    latitude: typeof latitude === "number" ? latitude : null,
+    longitude: typeof longitude === "number" ? longitude : null,
+  });
+  revalidatePath(settings);
+  // AddressSearch is an in-place picker. Returning after the write keeps the
+  // settings shell and viewport mounted instead of turning a suggestion tap
+  // into a full route navigation; the component already has the exact fields
+  // that were just persisted.
+  return { ok: true };
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */
 export async function saveReviewUrlAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const parsed = reviewUrlSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "review-url-invalid", { saved: "reviewLink" }));
   await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
@@ -442,11 +417,7 @@ export async function saveReviewUrlAction(formData: FormData) {
 export async function saveSearchListingAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const listed = formData.get("searchListed") === "on";
   await setShopSearchListing(await getDb(), session.user.shopId, listed);
   const notice = listed ? "search-listing-on" : "search-listing-off";
@@ -456,16 +427,8 @@ export async function saveSearchListingAction(formData: FormData) {
 export async function disconnectAction() {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account && !account.disconnectedAt) {
@@ -479,16 +442,8 @@ export async function disconnectAction() {
 export async function refreshAction() {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
-  }
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
   const db = await getDb();
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (account) {
@@ -514,11 +469,7 @@ export async function refreshAction() {
 export async function saveTimezoneAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
-  const notAllowed = await settingsBlock(session);
-  if (notAllowed) {
-    revalidateAndRedirect(settings, notAllowed);
-    return;
-  }
+  await settingsBlock(session);
   const submitted = formData.get("timezone");
   // An id this runtime can't resolve would make every date formatter on every
   // surface throw, so an unrecognized value is a refusal, never a fallback.
@@ -708,4 +659,80 @@ export async function dischargeProcessorErasureAction(formData: FormData) {
     actorPersonId: session.user.personId,
   });
   revalidatePath(shopPath(session.user.shopSlug, "settings"));
+}
+
+/** Saves whether the shop offers shore diving and/or pool diving. */
+export async function saveDivingOptionsAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const hasShoreDiving = formData.get("hasShoreDiving") === "on";
+  const hasPoolDiving = formData.get("hasPoolDiving") === "on";
+
+  const db = await getDb();
+  await setShopDivingOptions(db, session.user.shopId, { hasShoreDiving, hasPoolDiving });
+
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
+  );
+}
+
+/** Creates a new boat for the shop. */
+export async function createBoatAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const name = String(formData.get("name") ?? "").trim();
+  const capacity = Number(formData.get("capacity") ?? 0);
+
+  if (!name || Number.isNaN(capacity) || capacity <= 0) {
+    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+  }
+
+  const db = await getDb();
+  await createBoat(db, session.user.shopId, name, capacity);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "boat-created", { saved: "boats" }));
+}
+
+/** Updates an existing boat's name and capacity. */
+export async function updateBoatAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const rawBoatId = formData.get("boatId");
+  const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
+  const name = String(formData.get("name") ?? "").trim();
+  const capacity = Number(formData.get("capacity") ?? 0);
+
+  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0) {
+    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+  }
+
+  const db = await getDb();
+  await updateBoat(db, session.user.shopId, boatId, name, capacity);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "boat-updated", { saved: "boats" }));
+}
+
+/** Deletes a boat from the shop. */
+export async function deleteBoatAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const rawBoatId = formData.get("boatId");
+  const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
+  if (!boatId) {
+    redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
+  }
+
+  const db = await getDb();
+  await deleteBoat(db, session.user.shopId, boatId);
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "boat-deleted", { saved: "boats" }));
 }

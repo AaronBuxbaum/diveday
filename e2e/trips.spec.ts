@@ -62,7 +62,7 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" });
   await expect(
-    openTankCard.getByText(/^Dive site · Benwood Wreck · 1 more dive to be confirmed$/),
+    openTankCard.getByText(/^Dive site · Benwood Wreck · \+ 1 more dive site$/),
   ).toHaveCount(1);
 
   // A multi-dive trip's public page presents every dive briefing.
@@ -205,7 +205,7 @@ test.describe("trip pulse", () => {
     // and the filter line stream in together, and `count()` never auto-waits.
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
     const rows = page.locator("tbody tr");
-    await expect(page.getByRole("table")).toBeVisible();
+    await expect(page.getByRole("table").first()).toBeVisible();
     const shopWide = await rows.count();
     expect(shopWide).toBeGreaterThan(1);
 
@@ -237,6 +237,35 @@ test.describe("trip pulse", () => {
     await expect(
       page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
     ).toBeVisible();
+  });
+});
+
+test.describe("trip print packet", () => {
+  signedInAsOwner();
+
+  test("the Overview opens a complete printable trip packet", async ({ page }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
+
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Print / save PDF" }).click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/print$`));
+    await expect(popup.getByRole("heading", { name: "Trip packet" })).toBeVisible();
+    await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Manifest", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
+    await popup.close();
+
+    // Printing is intentionally owned by Overall. The packet is the one
+    // document door; the other tabs must not quietly print only themselves.
+    for (const tab of ["guests", "manifest", "prep"]) {
+      await page.goto(`/shop/blue-mantis/trips/${tripId}/${tab}`);
+      await expect(page.getByRole("button", { name: "Print / save PDF" })).toHaveCount(0);
+    }
   });
 });
 
@@ -283,13 +312,12 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     if (!tripPath) throw new Error(`no trip card found for ${title}`);
 
     await page.goto(`${tripPath}/guests`);
-    const addDiver = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
-      .filter({ visible: true });
-    await addDiver.getByLabel("Name").fill(diver);
-    await addDiver.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
-    await addDiver.getByRole("button", { name: "Add to trip" }).click();
+    await page.getByRole("link", { name: "Add diver" }).click();
+    await page.waitForURL(/\/divers\/new/);
+    await page.getByLabel("Full name").fill(diver);
+    await page.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("button", { name: "Add to trip" }).click();
+    await page.waitForURL(/\/trips\/[^/]+\/guests/);
     // Prefix match: with no email provider configured the fleet gets the
     // honest "…but their waiver wasn't emailed" variant of this notice.
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");

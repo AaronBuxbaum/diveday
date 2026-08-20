@@ -33,6 +33,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
  */
 type PersonFieldTrioProps = {
   email: "required" | "optional";
+  name?: "required" | "optional";
   nameLabel: string;
   emailLabel: string;
   phoneLabel: string;
@@ -46,6 +47,11 @@ type PersonFieldTrioProps = {
    */
   emailMaxLength?: number;
   phoneMaxLength?: number;
+  defaultValues?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+  };
   className?: string;
   children?: ReactNode;
 } & (
@@ -55,12 +61,14 @@ type PersonFieldTrioProps = {
 
 export function PersonFieldTrio({
   email,
+  name = "required",
   nameLabel,
   emailLabel,
   phoneLabel,
   optionalHint,
   emailMaxLength = 200,
   phoneMaxLength = 30,
+  defaultValues,
   className = "",
   as,
   children,
@@ -68,10 +76,11 @@ export function PersonFieldTrio({
 }: PersonFieldTrioProps) {
   return (
     <FieldGrid columns={3} className={className} as={as} {...rest}>
-      <Field label={nameLabel}>
+      <Field label={nameLabel} hint={name === "optional" ? optionalHint : undefined}>
         <input
           name="fullName"
-          required
+          required={name === "required"}
+          defaultValue={defaultValues?.fullName}
           maxLength={120}
           autoComplete="name"
           className={controlClass}
@@ -82,6 +91,7 @@ export function PersonFieldTrio({
           name="email"
           type="email"
           required={email === "required"}
+          defaultValue={defaultValues?.email}
           maxLength={emailMaxLength}
           autoComplete="email"
           className={controlClass}
@@ -91,6 +101,7 @@ export function PersonFieldTrio({
         <input
           name="phone"
           type="tel"
+          defaultValue={defaultValues?.phone}
           maxLength={phoneMaxLength}
           autoComplete="tel"
           className={controlClass}

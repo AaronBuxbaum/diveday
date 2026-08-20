@@ -1,8 +1,10 @@
-import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
+import { notFound } from "next/navigation";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { uuidParam } from "@/lib/uuid";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
 // Restored after CI. ARCH-7 removed this as provably-unread by
@@ -25,14 +27,10 @@ export const instant = false;
  * re-fetches the spine — only the page body below swaps. The `<main>` landmark
  * lives here; pages render their content directly.
  *
- * Also owns **boat mode** — the sunlight/wet-hands treatment (bigger targets,
- * boosted ink) that used to be scoped to the Manifest alone. A crew member who
- * turns it on to run a roll call is on the same boat when they open Guests to
- * fix a blocker or Prep to check the tanks, so it belongs to the trip, not to
- * one tab: the `.boat-mode` wrapper, the ambient-light detector, and the one
- * Auto / Land / Boat control all live here and stay mounted across tab
- * switches. The choice itself is per-device and persists in `localStorage`
- * (`AmbientGlareDetector`).
+ * Boat Mode is deliberately not owned here. It is a manifest-only working
+ * surface, so its palette, sensor detector, and control live at the bottom of
+ * `manifest/page.tsx`; Overview, Guests, and Prep keep the ordinary staff
+ * treatment even when a device has a stored Boat Mode preference.
  */
 export default async function TripLayout({
   children,
@@ -42,8 +40,14 @@ export default async function TripLayout({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const { shopSlug, id } = await params;
+  // The layout runs before every trip child page. Reject malformed ids here so
+  // the activity-count query never compares arbitrary text with a UUID column
+  // and turns a normal typo into the trip error boundary.
+  if (!uuidParam(id)) notFound();
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
+  const trip = shop ? await getTripWithBooked(db, shop.id, id) : null;
+  const guestCount = trip?.booked ?? 0;
   // Staff read the nav in the language their own device asks for, same
   // negotiation as every trip page (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
@@ -56,33 +60,14 @@ export default async function TripLayout({
     prep: t("trips.subNav.prep"),
   };
   return (
-    <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
-      <AmbientGlareDetector />
-      {/* `items-end`, so the nav's pill and the control's pill share a bottom
-          edge — the control carries a legend above it, and centring the two
-          boxes puts their visible pills a few pixels out of line. */}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        {/* `basis-full` until `md`. These two are both `whitespace-nowrap`
-            pills, and between roughly 520px and 700px they fit on one row only
-            by squeezing the nav below its four tabs' own width — which the
-            nav's `overflow-x-auto` then absorbed *silently*, scrolling Prep out
-            of sight with no scrollbar and nothing to say a fourth tab existed.
-            Taking the whole row below `md` makes them stack, which is what the
-            wrap was already for at phone widths; from `md` up there is room for
-            both side by side. */}
+    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
+      <div className="mb-6 print:hidden">
         <TripSubNav
           shopSlug={shopSlug}
           tripId={id}
+          guestCount={guestCount}
           copy={subNavCopy}
-          className="basis-full md:min-w-64 md:flex-1 md:basis-auto"
-        />
-        <AmbientContrastControl
-          copy={{
-            modeLabel: t("shared.boatMode.modeLabel"),
-            labelAuto: t("shared.boatMode.labelAuto"),
-            labelLand: t("shared.boatMode.labelLand"),
-            labelBoat: t("shared.boatMode.labelBoat"),
-          }}
+          className="w-full"
         />
       </div>
       {children}

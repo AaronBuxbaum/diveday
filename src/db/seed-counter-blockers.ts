@@ -78,7 +78,7 @@ export async function seedCounterBlockers(
       diveSiteId: duane.id,
       title: DEMO_COUNTER_BLOCKED_TRIP,
       description:
-        "Deep wreck penetration on enriched air. AOW, Deep, and an EANx card required; paid at booking.",
+        "Deep wreck penetration on enriched air. AOW, Deep, and an EANx certification required; paid at booking.",
       startsAt,
       endsAt,
       capacity: 8,

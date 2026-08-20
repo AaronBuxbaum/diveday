@@ -31,7 +31,6 @@ export function dateRequestCopy(t: DiverTranslator, subject: "course" | "dive"):
     preferredDate: t("inquiry.preferredDate"),
     alternateDate: t("inquiry.alternateDate"),
     datesHint: t("inquiry.datesHint"),
-    dateFlexible: t("inquiry.dateFlexible"),
     whenSuits: t("inquiry.whenSuits"),
     whenSuitsHint: t("inquiry.whenSuitsHint"),
     whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),

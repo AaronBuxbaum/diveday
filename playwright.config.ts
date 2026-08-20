@@ -8,6 +8,7 @@ import {
   E2E_WORKER_COUNT,
   e2eBaseURL,
   e2ePort,
+  e2eServerCommand,
   e2eWorkerIndexes,
 } from "./e2e/servers";
 
@@ -200,18 +201,18 @@ export default defineConfig({
       // fails with ECONNRESET, in whichever spec happened to pause longest
       // between two API calls. Widening the server's idle window closes the
       // whole class rather than retrying at each call site.
-      command: `./node_modules/.bin/next start --hostname 127.0.0.1 --port ${port} --keepAliveTimeout 120000`,
+      command: e2eServerCommand(port),
       url: e2eBaseURL(i),
       env: { ...serverEnv, PORT: String(port) },
-      reuseExistingServer: !process.env.CI,
-      // Playwright's default swallows a running server's output, which is fine
-      // until the *server* is what fails: a route that throws mid-stream shows
-      // up client-side as nothing but "socket hang up", and the stack that
-      // explains it goes to the server's stderr where no one can read it. That
-      // is exactly the wall the recap OG-image failure hit. Piping costs
-      // nothing on a green run — Playwright only surfaces this output when a
-      // test fails — and turns a blind failure into a readable one.
-      stdout: "pipe",
+      // Reusing a local server turns an orphan into a silent stale-build
+      // failure. Let Playwright fail loudly on a port collision so the
+      // supervisor's cleanup path, and the process table, remain actionable.
+      reuseExistingServer: false,
+      // Routine application logs (including one structured web-vital line per
+      // page) are written to stdout. Forwarding that stream makes every
+      // Playwright run noisy with `[WebServer]` telemetry. Keep stderr piped so
+      // startup and request failures still appear when the server is broken.
+      stdout: "ignore",
       stderr: "pipe",
       // `next start` serves a build that already exists on disk, so it boots in
       // seconds; 60s covers a cold, contended CI runner without making a

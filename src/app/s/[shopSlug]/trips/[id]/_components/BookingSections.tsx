@@ -233,7 +233,7 @@ export function TripFullSection({
             words, so a staffer working either list is reading one claim rather
             than two (FU-20260813). It describes the person joining — the lead
             of the party — and never gates the join. */}
-        <DiveDeclarationFields />
+        <DiveDeclarationFields showNitrox={false} />
         <div>
           <SubmitButton
             pendingLabel={t("waitlistJoining")}

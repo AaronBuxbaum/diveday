@@ -123,6 +123,18 @@ describe("BookingConfirmation receipt currency (task 35)", () => {
 });
 
 describe("BookingConfirmation next step", () => {
+  it("names payment without claiming it is the only open step", () => {
+    renderConfirmation(
+      { state: "payable" },
+      { readiness: waiverPending, requirement: waiverRequirement },
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Finish paying for your seat" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /One thing left/ })).not.toBeInTheDocument();
+  });
+
   it("offers the waiver itself, not just the readiness page, when one is outstanding", () => {
     renderConfirmation(null, { readiness: waiverPending, requirement: waiverRequirement });
 

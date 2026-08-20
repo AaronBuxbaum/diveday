@@ -3,14 +3,27 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import {
+  type BookingRequestCardItem,
+  BookingRequestContext,
+  RelevantBookingRequests,
+} from "@/components/seat-diver/BookingRequestCards";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
 import { getDb } from "@/db/client";
-import { listBookableDivers } from "@/db/divers";
+import {
+  type DateRequestRow,
+  listDateRequestsByIds,
+  listDateRequestsForCalendarDates,
+} from "@/db/course-inquiries";
+import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -76,8 +89,12 @@ export default async function NewBookingDiverPage({
   searchParams: Promise<{
     diverq?: string;
     notice?: string;
+    request?: string;
     /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
+    confirmName?: string;
+    confirmEmail?: string;
+    confirmPhone?: string;
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
@@ -87,20 +104,62 @@ export default async function NewBookingDiverPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { diverq, notice, gate } = await searchParams;
+  const { diverq, notice, gate, request, confirmName, confirmEmail, confirmPhone } =
+    await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
+  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  const requestId = request ? uuidParam(request) : null;
+  const canViewReports = await canPersonViewShopReports(db, shop.id, session.user.personId);
 
   // Read by id, not from the picker's page of options: a departure sitting past
   // the first page is still a legitimate place to stand.
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
   const query = diverq?.trim() ?? "";
-  const candidates = await listBookableDivers(db, shop.id, trip.id, { query });
+  const tripDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
+  const lookupDates = Array.from({ length: FLEXIBLE_WINDOW_DAYS * 2 + 1 }, (_unused, index) =>
+    shiftCalendarDate(tripDate, index - FLEXIBLE_WINDOW_DAYS),
+  );
+  const [requestRows, relevantRows]: [DateRequestRow[], DateRequestRow[]] = canViewReports
+    ? await Promise.all([
+        requestId ? listDateRequestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
+        listDateRequestsForCalendarDates(db, shop.id, lookupDates),
+      ])
+    : [[], []];
+  const requestContext: DateRequestRow | null = requestRows[0] ?? null;
+  const requestSubject = (row: DateRequestRow) =>
+    row.courseTitle
+      ? t("requests.aboutCourse", { course: row.courseTitle })
+      : t("requests.aboutDive", { interest: row.interest ?? "" });
+  const requestName = (row: DateRequestRow) => row.name ?? t("requests.anonymous");
+  const requestDivers = (row: DateRequestRow) =>
+    t("requests.divers", { count: Math.max(1, row.divers ?? 1) });
+  const matchingRequests = relevantRows.filter(
+    (row) => dateRequestMatchFor(row, tripDate) !== null,
+  );
+  const requestItems: BookingRequestCardItem[] = matchingRequests.map((row) => ({
+    id: row.id,
+    name: requestName(row),
+    subject: requestSubject(row),
+    diversLabel: requestDivers(row),
+    dateLabel: formatCalendarDate(tripDate, locale),
+    href: `/shop/${shopSlug}/bookings/new/${trip.id}?request=${encodeURIComponent(row.id)}`,
+  }));
+  const requestPersonSearch = requestContext?.personId && !query ? requestName(requestContext) : "";
+  const searchQuery = query || requestPersonSearch;
+  const requestCandidate =
+    requestContext?.personId && !query
+      ? await getBookableDiver(db, shop.id, trip.id, requestContext.personId)
+      : null;
+  const candidates = requestCandidate
+    ? [requestCandidate]
+    : await listBookableDivers(db, shop.id, trip.id, { query: searchQuery });
+  const requestQuery = requestContext ? `?request=${encodeURIComponent(requestContext.id)}` : "";
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   // The trip's own cert gate refused this diver: say *which* requirement failed
   // and what they hold, rather than the one static sentence every refusal used
@@ -122,7 +181,7 @@ export default async function NewBookingDiverPage({
           re-enter it. Back, here, means back one step: the departure picker.
           Step one keeps the board link, because that is what is behind it. */}
       <Link
-        href={`/shop/${shopSlug}/bookings/new`}
+        href={`/shop/${shopSlug}/bookings/new${requestQuery}`}
         className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
       >
         ← {t("bookings.new.backToPicker")}
@@ -134,6 +193,32 @@ export default async function NewBookingDiverPage({
         </ShopNotice>
       ) : null}
 
+      {requestContext ? (
+        <BookingRequestContext
+          className="mt-6"
+          title={t("bookings.new.fromRequest")}
+          name={requestName(requestContext)}
+          diversLabel={requestDivers(requestContext)}
+          subject={requestSubject(requestContext)}
+          sourceHref={`/shop/${shopSlug}/requests`}
+          sourceLabel={t("bookings.new.viewRequests")}
+          personHref={
+            requestContext.personId
+              ? `/shop/${shopSlug}/divers/${requestContext.personId}`
+              : undefined
+          }
+          personLabel={requestContext.personId ? t("requests.viewDiver") : undefined}
+        />
+      ) : null}
+
+      <RelevantBookingRequests
+        className="mt-6"
+        title={t("bookings.new.relevantRequests")}
+        description={t("bookings.new.relevantRequestsDescription")}
+        openLabel={t("bookings.new.bookFromRequest")}
+        items={requestItems}
+      />
+
       <SelectedTripCard
         className="mt-6"
         label={t("bookings.new.tripHeading")}
@@ -144,7 +229,7 @@ export default async function NewBookingDiverPage({
           booked: trip.booked,
           capacity: trip.capacity,
         })}
-        changeHref={`/shop/${shopSlug}/bookings/new`}
+        changeHref={`/shop/${shopSlug}/bookings/new${requestQuery}`}
         changeLabel={t("bookings.new.changeTrip")}
       />
 
@@ -156,9 +241,23 @@ export default async function NewBookingDiverPage({
         surface="new-booking"
         shopSlug={shopSlug}
         tripId={trip.id}
-        query={query}
+        query={searchQuery}
         candidates={candidates}
         personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
+        searchHiddenFields={requestContext ? { request: requestContext.id } : undefined}
+        newDiverDefaults={
+          requestContext && !requestContext.personId
+            ? {
+                fullName: requestContext.name ?? undefined,
+                email: requestContext.email ?? undefined,
+                phone: requestContext.phone ?? undefined,
+              }
+            : undefined
+        }
+        confirmName={confirmName}
+        confirmEmail={confirmEmail}
+        confirmPhone={confirmPhone}
+        confirmMatches={confirmMatches}
         copy={{
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
@@ -172,12 +271,12 @@ export default async function NewBookingDiverPage({
           noMatchesHeading: t("seatDiver.noMatchesHeading"),
           noMatches: t("seatDiver.noMatches", { query }),
           noMatchesAction: t("seatDiver.noMatchesAction"),
-          handEntryHeading: t("seatDiver.handEntryHeading"),
-          handEntryDescription: t("bookings.new.handEntryDescription"),
-          nameLabel: t("seatDiver.nameLabel"),
-          emailLabel: t("seatDiver.emailLabel"),
-          phoneLabel: t("seatDiver.phoneLabel"),
-          optionalHint: t("seatDiver.optionalHint"),
+          addDiver: t("seatDiver.addDiver"),
+          addDiverAction: t("seatDiver.addDiverAction"),
+          addDiverPrompt: t.raw("seatDiver.addDiverPrompt"),
+          addNewDiverAction: t.raw("seatDiver.addNewDiverAction"),
+          confirmMatchesTitle: t("divers.page.confirmMatchesTitle"),
+          confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
     </main>

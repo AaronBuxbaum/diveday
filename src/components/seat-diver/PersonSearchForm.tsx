@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
@@ -25,21 +26,29 @@ import { QueryForm } from "@/components/ui/QueryForm";
  */
 export function PersonSearchForm({
   query,
+  queryName = "diverq",
   hiddenFields,
   label,
   placeholder,
   submitLabel,
   pendingLabel,
+  addDiverHref,
+  addDiverLabel,
   className = "",
 }: {
   /** The server's own query — see the `key` below for why it is not just a default. */
   query: string;
+  /** The URL key for this search when a page has more than one picker. */
+  queryName?: string;
   /** Extra state a GET reload must carry, e.g. the walk-in's chosen `tripId`. */
   hiddenFields?: Record<string, string>;
   label: string;
   placeholder: string;
   submitLabel: string;
   pendingLabel: string;
+  /** Optional link to add a new diver directly */
+  addDiverHref?: string;
+  addDiverLabel?: string;
   className?: string;
 }) {
   return (
@@ -50,7 +59,7 @@ export function PersonSearchForm({
       <Field label={label} className="min-w-0 flex-1">
         <input
           type="search"
-          name="diverq"
+          name={queryName}
           // Keyed on the server's own query so the box can never disagree with
           // it. `defaultValue` applies at mount only, so without this the typed
           // text survives a navigation as client state the comment above
@@ -71,6 +80,14 @@ export function PersonSearchForm({
       <SubmitButton pendingLabel={pendingLabel} className={buttonClass({ variant: "secondary" })}>
         {submitLabel}
       </SubmitButton>
+      {addDiverHref && addDiverLabel ? (
+        <Link
+          href={addDiverHref}
+          className={buttonClass({ variant: "primary", className: "whitespace-nowrap" })}
+        >
+          {addDiverLabel}
+        </Link>
+      ) : null}
     </QueryForm>
   );
 }

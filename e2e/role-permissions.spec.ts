@@ -22,13 +22,20 @@ import { openSettingsRow } from "./helpers";
  */
 const SHOP = DEMO_SHOP_SLUG;
 
+// These permission lenses each traverse several full-page routes. Under the
+// full five-worker suite, the default single-flow budget is too small even
+// though the assertions are deterministic.
+test.describe.configure({ timeout: 30_000 });
+
 async function firstDiverDetailHref(page: Page): Promise<string> {
   await page.goto(`/shop/${SHOP}/divers`);
-  const href = await page
-    .locator(`a[href^="/shop/${SHOP}/divers/"]`)
-    .filter({ visible: true })
-    .first()
-    .getAttribute("href");
+  const detailLinks = page
+    .locator(`a[href^="/shop/${SHOP}/divers/"]:not([href$="/divers/new"])`)
+    .filter({ visible: true });
+  // The roster streams behind its loading shell for slower role sessions.
+  // Wait for the first actual record link instead of inspecting the DOM once.
+  await expect(detailLinks.first()).toBeVisible();
+  const href = await detailLinks.first().getAttribute("href");
   if (!href) throw new Error("no diver detail link found");
   return href;
 }

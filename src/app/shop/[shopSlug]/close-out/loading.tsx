@@ -1,9 +1,11 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Body-shaped skeleton for the close-out (design principle 1) — header, the
- * departure end-state cards, the leftovers list, and the close panel have no
- * loading state of their own to show meanwhile.
+ * departure end-state cards, the leftovers list, administrative follow-up,
+ * tomorrow glance, and the close panel have no loading state of their own to
+ * show meanwhile.
  */
 export default function CloseOutLoading() {
   return (
@@ -11,21 +13,46 @@ export default function CloseOutLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-72" descriptionWidth="w-96 max-w-full" />
 
-        <div className="mt-10 h-5 w-56 rounded bg-surface-sunken" />
+        <div className={sectionCardClass({ padding: "md", className: "h-36" })} />
+
+        <div className="mt-10 h-6 w-56 rounded bg-surface-sunken" />
+        <div className="mt-1 h-4 w-80 max-w-full rounded bg-surface-sunken" />
         <div className="mt-4 flex flex-col gap-3">
           {[0, 1].map((i) => (
-            <div key={`dep-${i}`} className="h-24 rounded-2xl border border-border bg-surface" />
+            <div
+              key={`dep-${i}`}
+              className={sectionCardClass({ padding: "md", className: "h-44" })}
+            />
           ))}
         </div>
 
-        <div className="mt-10 h-5 w-44 rounded bg-surface-sunken" />
+        <div className="mt-10 h-6 w-44 rounded bg-surface-sunken" />
+        <div className="mt-1 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+        <div className="mt-4 flex flex-col gap-3">
+          {[0, 1].map((i) => (
+            <div
+              key={`left-${i}`}
+              className={sectionCardClass({ padding: "md", className: "h-28" })}
+            />
+          ))}
+        </div>
+
+        <div className="mt-10 h-6 w-56 rounded bg-surface-sunken" />
+        <div className="mt-1 h-4 w-72 max-w-full rounded bg-surface-sunken" />
         <div className="mt-4 flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
-            <div key={`left-${i}`} className="h-24 rounded-2xl border border-border bg-surface" />
+            <div
+              key={`leftover-${i}`}
+              className={sectionCardClass({ padding: "md", className: "h-28" })}
+            />
           ))}
         </div>
 
-        <div className="mt-10 h-36 rounded-2xl border border-border bg-surface" />
+        <div className={sectionCardClass({ padding: "lg", className: "mt-10 h-56" })} />
+
+        <div className="mt-10 h-6 w-56 rounded bg-surface-sunken" />
+        <div className="mt-1 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+        <div className={sectionCardClass({ padding: "md", className: "mt-4 h-28" })} />
       </div>
     </main>
   );

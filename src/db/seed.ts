@@ -9,6 +9,7 @@ import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   accountTokens,
   activityEvents,
+  boats,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -24,6 +25,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -56,7 +58,10 @@ import {
   tripBlowoutDivers,
   tripBlowouts,
   tripDives,
+  tripInvitations,
+  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
+  tripRecapPhotos,
   tripRequirements,
   tripReviews,
   tripSeries,
@@ -91,6 +96,7 @@ import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
 import { seedPromos } from "./seed-promos";
+import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedTripLegs } from "./seed-trip-legs";
@@ -213,6 +219,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressRegion: "FL",
       addressPostalCode: "33037",
       addressCountry: "US",
+      latitude: 25.0865,
+      longitude: -80.4473,
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
       // a full set is cheaper than the pieces, each piece has its own price, and
       // nitrox is a per-dive surcharge. Divers see these when they set their
@@ -242,9 +250,16 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         nitroxCents: 1200,
       },
       isDemo: true,
+      hasShoreDiving: true,
+      hasPoolDiving: true,
     })
     .returning();
   if (!shop) throw new Error("seed: failed to insert demo shop");
+
+  await db.insert(boats).values([
+    { shopId: shop.id, name: "Mantis I", capacity: 12 },
+    { shopId: shop.id, name: "Mantis II", capacity: 20 },
+  ]);
 
   await db.insert(waiverTemplates).values({
     shopId: shop.id,
@@ -369,6 +384,8 @@ async function insertDemoShop(db: DbExecutor) {
           name: identity.name,
           slug: identity.slug,
           timezone: DEMO_SHOP_TIMEZONE,
+          contactEmail: identity.emailFor("hello"),
+          contactPhone: "+1 305 555 0142",
           rentalItems: [
             "bcd",
             "regulator",
@@ -393,6 +410,8 @@ async function insertDemoShop(db: DbExecutor) {
             nitroxCents: 1200,
           },
           isDemo: true,
+          hasShoreDiving: true,
+          hasPoolDiving: true,
         })
         .returning();
       if (!shop) throw new Error("createDemoShop: failed to insert shop");
@@ -410,6 +429,7 @@ async function insertDemoShop(db: DbExecutor) {
 
 export async function createDemoShop(
   db: DbExecutor,
+  opts: { history?: boolean } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -419,6 +439,11 @@ export async function createDemoShop(
   await enforceMintedDemoCap(db);
 
   const { shop, identity } = await insertDemoShop(db);
+
+  await db.insert(boats).values([
+    { shopId: shop.id, name: "Mantis I", capacity: 12 },
+    { shopId: shop.id, name: "Mantis II", capacity: 20 },
+  ]);
 
   await db.insert(waiverTemplates).values({
     shopId: shop.id,
@@ -470,11 +495,11 @@ export async function createDemoShop(
     staff.map((person) => person.id),
   );
 
-  // No fabricated billing back-fill on a minted demo: `seedHistory` pins
-  // globally-unique waiver token hashes and Stripe ids that would collide with
-  // the canonical demo (and with a second minted demo). The billing/orders
-  // showcase lives on blue-mantis; a throwaway demo is the lean schedule.
-  await seedDemoSchedule(db, shop.id, { history: false });
+  // A visitor's demo should carry the same owner-facing story as the
+  // canonical demo, including sailed trips, tips, and reviews. Test-only
+  // private shops can opt into the lean schedule when they need isolation
+  // from history-only rows.
+  await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -590,6 +615,7 @@ export async function seedDemoSchedule(
   // shops (see callers); on for the demo shop and the e2e fleet.
   if (opts.history !== false) {
     await seedHistory(db, shopId, instructor.id);
+    await seedRecentRecaps(db, shopId);
     // The billing states that back-fill never produces: it invoices a paid trip
     // fee or a paid deposit and nothing else, so "Refunded", "Void",
     // "Uncollectible" and every retail line kind were unreachable from a shop
@@ -745,6 +771,7 @@ export async function resetDemoSchedule(
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
+  await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
@@ -760,6 +787,8 @@ export async function resetDemoSchedule(
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Recap photos reference bookings and trips, so they must go before both.
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  // The shared close-out photo album also references its trip and uploader.
+  await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // The moderation trail references the review it describes, so it goes first
   // (ADR 20260813-review-moderation-has-a-floor).
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
@@ -783,12 +812,16 @@ export async function resetDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
+  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   // References trips (last-minute-deal blasts) and people (the last-minute
   // list itself), so both must go before the trips/people deletes below or
   // this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
   // comment above already walks).
+  await db
+    .delete(tripLastMinutePromoRecipients)
+    .where(eq(tripLastMinutePromoRecipients.shopId, shopId));
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
   // Before the entries they point at. Added with Leo's self-serve unsubscribe
   // (docs ADR 20260731-self-serve-unsubscribe) but not to this ordering, which
@@ -1013,6 +1046,9 @@ export async function resetDemoSchedule(
   // test minted is not seeded state and correctly does not come back.
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
+  // The low-level reset stays lean by default so callers that are resetting a
+  // fixture do not unexpectedly recreate hundreds of historical tips/reviews.
+  // Full demo refreshes opt into the reporting story explicitly.
   await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }
 

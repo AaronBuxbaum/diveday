@@ -1,12 +1,17 @@
 import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { MedicalAnswers } from "./schema";
 import { bookings, notificationDeliveries, people, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
-import { emailFreshWaiverLink, issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
+import {
+  emailFreshWaiverLink,
+  issueAndDeliverPersonWaiver,
+  issueAndDeliverWaiver,
+  issueWaiverOnJoin,
+} from "./waiver-issue";
 import { completeWaiver, getWaiverForToken, issueWaiverRequest, saveWaiverDraft } from "./waivers";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -49,6 +54,56 @@ afterEach(() => {
 });
 
 describe("issueAndDeliverWaiver", () => {
+  it("issues and completes a person-scoped waiver without a booking", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "person-waiver-message" });
+
+    const { db, shop } = await seededShopContext();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Unscheduled Diver", email: "unscheduled@dive.day" })
+      .returning();
+    if (!person) throw new Error("person insert failed");
+
+    const result = await issueAndDeliverPersonWaiver(db, shop.id, person.id);
+    expect(result).toMatchObject({
+      ok: true,
+      bookingId: null,
+      delivery: "sent",
+      diverName: "Unscheduled Diver",
+    });
+    if (!result.ok) throw new Error("person waiver issue failed");
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.shopId, shop.id),
+          eq(waiverRecords.personId, person.id),
+          eq(waiverRecords.status, "pending"),
+          isNull(waiverRecords.supersededAt),
+        ),
+      );
+    expect(record).toMatchObject({
+      bookingId: null,
+      personId: person.id,
+      deliveryStatus: "sent",
+    });
+
+    await expect(
+      completeWaiver(db, result.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+      }),
+    ).resolves.toMatchObject({ ok: true, status: "completed" });
+  });
+
   it("emails the link and reports it sent when delivery is configured", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("SES_AWS_REGION", "us-east-1");

@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /** Roster-shaped skeleton for the staff course list (design principle 1). */
 export default function StaffCoursesLoading() {
@@ -8,7 +9,7 @@ export default function StaffCoursesLoading() {
         <ShopPageHeaderSkeleton titleWidth="w-48" descriptionWidth="w-full max-w-xl" />
         <div className="mt-8 flex flex-col gap-3">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-2xl border border-border bg-surface" />
+            <div key={i} className={sectionCardClass({ padding: "none", className: "h-24" })} />
           ))}
         </div>
       </div>

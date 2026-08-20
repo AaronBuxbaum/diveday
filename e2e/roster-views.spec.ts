@@ -19,15 +19,14 @@ signedInAsOwner();
 //
 // - Nadia Petrov is one of the divers deliberately left without an emergency
 //   contact; Priya Sharma has one on file.
-// - Priya (customer 0) is on today's boat. Amara Osei (customer 10) is one of
-//   the "later sailings carry their own regulars" group, so she holds a seat,
-//   but not one that sails today.
+// - Priya (customer 0) is on today's boat. Hana Kobayashi (customer 12) is
+//   deliberately left without a booking, so she is not part of today's view.
 // - Mateo Duarte (customer 13) carries a pending open-water card, which is
 //   exactly what "Needs attention" asks about.
 const MISSING_CONTACT_DIVER = "Nadia Petrov";
 const CONTACT_ON_FILE_DIVER = "Priya Sharma";
 const DIVING_TODAY_DIVER = "Priya Sharma";
-const DIVING_LATER_DIVER = "Amara Osei";
+const DIVING_LATER_DIVER = "Hana Kobayashi";
 const PENDING_CARD_DIVER = "Mateo Duarte";
 
 test("the diver roster offers role-view chips that drive the filter", { tag: READ_ONLY }, async ({
@@ -44,7 +43,7 @@ test("the diver roster offers role-view chips that drive the filter", { tag: REA
   await expect(page).toHaveURL(/filter=missing_contact/);
   await expect(page.getByRole("heading", { name: /People/ })).toBeVisible();
   // Each diver is looked for by name rather than scanned for in the list: the
-  // roster is alphabetical and pages at 20 (DIVER_PAGE_SIZE), so "is this
+  // roster is alphabetical and pages at 10 (DIVER_PAGE_SIZE), so "is this
   // diver in this view" is only a decidable question when the view is narrowed
   // to them. Search and filter share one URL builder (DiverList's `hrefFor`),
   // which is what keeps the chip's filter on through each search below.

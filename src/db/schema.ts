@@ -19,8 +19,10 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { CloseoutSnapshot } from "@/lib/closeout";
+import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
+import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
@@ -92,6 +94,8 @@ export const shops = pgTable(
      * set to feet, so no existing shop's reading changed on the day it landed.
      */
     temperatureUnit: temperatureUnit("temperature_unit").notNull().default("celsius"),
+    hasShoreDiving: boolean("has_shore_diving").notNull().default(false),
+    hasPoolDiving: boolean("has_pool_diving").notNull().default(false),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -187,6 +191,8 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -408,6 +414,8 @@ export const personRoles = pgTable(
 
 export const tripStatus = pgEnum("trip_status", ["scheduled", "cancelled"]);
 
+export const diveMode = pgEnum("dive_mode", ["boat", "shore", "pool"]);
+
 /**
  * How a trip series repeats. Only weekly, and deliberately so: a weekday *set*
  * plus a week interval already expresses daily ("all seven"), weekly, and
@@ -619,6 +627,14 @@ export const courses = pgTable(
     /** Short internal blurb shown in staff lists and pickers; not the marketing copy. */
     description: text("description"),
     /**
+     * Provenance for the code-owned DiveDay template this course started from.
+     * These are nullable because courses created before template syncing, or
+     * made entirely by a shop, have no safe baseline for a three-way merge.
+     */
+    sourceTemplateSlug: text("source_template_slug"),
+    sourceTemplateVersion: integer("source_template_version"),
+    sourceTemplateSnapshot: jsonb("source_template_snapshot").$type<CourseTemplateSnapshot>(),
+    /**
      * URL segment for the public course page. Shop-scoped rather than global so
      * two shops can both publish /courses/open-water-diver.
      */
@@ -681,6 +697,8 @@ export const courses = pgTable(
      */
     priceCents: integer("price_cents"),
     eLearningPriceCents: integer("e_learning_price_cents"),
+    /** Optional private course price when a session is run as a private group. */
+    privatePriceCents: integer("private_price_cents"),
     /**
      * Set by the certifying agency, not the shop: null means an uncertified
      * participant may enroll (for example, DSD/OW). Staff read it; nothing in
@@ -908,6 +926,8 @@ export const diveSites = pgTable(
       .references(() => shops.id),
     sourceTemplateId: uuid("source_template_id"),
     sourceTemplateVersion: integer("source_template_version"),
+    /** The last template pull's prior managed fields, for a one-time undo. */
+    templateUpdateUndo: jsonb("template_update_undo").$type<DiveSiteTemplateUndo>(),
     name: text("name").notNull(),
     description: text("description"),
     locationName: text("location_name"),
@@ -1050,6 +1070,20 @@ export const diveSites = pgTable(
     // and only the name half was indexed (DATA-L6).
     index("dive_sites_location_trgm_idx").using("gin", sql`${table.locationName} gin_trgm_ops`),
   ],
+);
+
+export const boats = pgTable(
+  "boats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    capacity: integer("capacity").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("boats_shop_id_idx").on(table.shopId)],
 );
 
 /** DiveDay-maintained common-site catalog; shops copy a published version into their own library. */
@@ -1324,6 +1358,9 @@ export const trips = pgTable(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
+    isPrivate: boolean("is_private").notNull().default(false),
+    diveMode: diveMode("dive_mode").notNull().default("boat"),
+    boatId: uuid("boat_id").references(() => boats.id, { onDelete: "set null" }),
     conditionsSummary: text("conditions_summary"),
     /**
      * Always Celsius regardless of the shop's `temperature_unit`, and
@@ -1345,6 +1382,13 @@ export const trips = pgTable(
      * (20260723-post-trip-recap follow-up).
      */
     recapShoutout: text("recap_shoutout"),
+    /** Staff pause on automatic recap delivery for this departure. */
+    recapAutoSendPaused: boolean("recap_auto_send_paused").notNull().default(false),
+    /**
+     * When set, overrides the default 4-hour countdown after scheduled return
+     * (e.g. after being unpaused, to the later of original time or 1 hour from unpause).
+     */
+    recapAutoSendAt: timestamp("recap_auto_send_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1363,8 +1407,9 @@ export const trips = pgTable(
     // `sendDueReminders` (src/db/reminders.ts): scheduled trips departing
     // between now and the reminder horizon.
     index("trips_status_starts_idx").on(table.status, table.startsAt),
-    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home inside
-    // the recap lookback — the same shape one column over, on `ends_at`.
+    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home at
+    // least four hours ago inside the recap lookback — the same shape one
+    // column over, on `ends_at`.
     index("trips_status_ends_idx").on(table.status, table.endsAt),
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
@@ -1653,6 +1698,66 @@ export const tripWaitlistEntries = pgTable(
 );
 
 /**
+ * A staff-selected invitation to a departure. This is deliberately not a
+ * booking and not a wait-list position: it reserves no capacity, never enters
+ * the manifest, and can be created for the same request on more than one trip.
+ * The source discriminator leaves room for invitations chosen from the wait
+ * list or an existing diver record without forcing those concepts to share a
+ * table's meaning (ADR 20260816-trip-invitations).
+ */
+export const tripInvitationSource = pgEnum("trip_invitation_source", [
+  "date_request",
+  "waitlist",
+  "direct",
+]);
+
+export const tripInvitations = pgTable(
+  "trip_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    source: tripInvitationSource("source").notNull(),
+    /** Set for a request-origin invitation; the request carries its contact snapshot. */
+    courseInquiryId: uuid("course_inquiry_id").references(() => courseInquiries.id),
+    /** Set for a wait-list-origin invitation; the wait-list row remains separate. */
+    waitlistEntryId: uuid("waitlist_entry_id").references(() => tripWaitlistEntries.id),
+    /** Set only for a direct existing-diver invitation. */
+    personId: uuid("person_id").references(() => people.id),
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    /** The staff outreach attempt; null means the invitation is still pending. */
+    invitedAt: timestamp("invited_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_invitations_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
+    uniqueIndex("trip_invitations_trip_request_unique")
+      .on(table.tripId, table.courseInquiryId)
+      .where(sql`${table.courseInquiryId} is not null`),
+    uniqueIndex("trip_invitations_trip_waitlist_unique")
+      .on(table.tripId, table.waitlistEntryId)
+      .where(sql`${table.waitlistEntryId} is not null`),
+    uniqueIndex("trip_invitations_trip_person_unique")
+      .on(table.tripId, table.personId)
+      .where(sql`${table.personId} is not null`),
+    check(
+      "trip_invitations_source_reference_check",
+      sql`(
+        (${table.source} = 'date_request' and ${table.courseInquiryId} is not null and ${table.waitlistEntryId} is null and ${table.personId} is null)
+        or (${table.source} = 'waitlist' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is not null and ${table.personId} is null)
+        or (${table.source} = 'direct' and ${table.courseInquiryId} is null and ${table.waitlistEntryId} is null and ${table.personId} is not null)
+      )`,
+    ),
+  ],
+);
+
+/**
  * A diver opted in, shop-wide, to hear about last-minute deals — deliberately
  * separate from `tripWaitlistEntries` (per-trip interest in a *full* charter).
  * `availableFrom`/`availableUntil` are the date range the diver said they're
@@ -1789,6 +1894,33 @@ export const tripLastMinutePromos = pgTable(
     index("trip_last_minute_promos_trip_created_idx").on(table.tripId, table.createdAt),
     uniqueIndex("trip_last_minute_promos_shop_code_unique").on(table.shopId, table.code),
     check("trip_last_minute_promos_discount_range", sql`${table.discountPercent} between 5 and 90`),
+  ],
+);
+
+/**
+ * Per-diver recipient audit log for last-minute promo blasts.
+ * Records who was sent which deal, when, and with what discount (via tripPromoId).
+ */
+export const tripLastMinutePromoRecipients = pgTable(
+  "trip_last_minute_promo_recipients",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripPromoId: uuid("trip_promo_id")
+      .notNull()
+      .references(() => tripLastMinutePromos.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    email: text("email").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_last_minute_promo_recipients_promo_idx").on(table.tripPromoId),
+    index("trip_last_minute_promo_recipients_person_idx").on(table.personId),
+    index("trip_last_minute_promo_recipients_shop_person_idx").on(table.shopId, table.personId),
   ],
 );
 
@@ -2075,9 +2207,9 @@ export const notificationKind = pgEnum("notification_kind", [
   // (src/lib/reminders.ts) means each cadence sends at most once.
   "trip_reminder_7d",
   "trip_reminder_24h",
-  // The post-trip recap message — sent once per booking after the trip departs,
-  // linking to the diver's shareable recap page (docs first-principles
-  // brainstorm C: the word-of-mouth window, weaponized).
+  // The post-trip recap message — sent once per booking no earlier than four
+  // hours after the trip ends, linking to the diver's shareable recap page
+  // (docs first-principles brainstorm C: the word-of-mouth window, weaponized).
   "trip_recap",
   // The weather blow-out cascade message: the cancellation, the diver's money
   // story, and the alternatives they qualify for (ADR 20260804-blowout-cascade).
@@ -2207,7 +2339,8 @@ export const notificationSendQueue = pgTable(
       .notNull()
       .references(() => shops.id),
     idempotencyKey: text("idempotency_key").notNull().unique(),
-    payload: jsonb("payload").$type<Notification>().notNull(),
+    /** Cleared after a terminal send; queued/processing rows always carry it. */
+    payload: jsonb("payload").$type<Notification>(),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull(),
@@ -3094,8 +3227,8 @@ export const waiverRecords = pgTable(
      * not bookings), and a staff-attested paper release recorded from the
      * diver's own record, where the conversation is about the person and they
      * may hold no booking at all (ADR 20260811-person-scoped-paper-waivers).
-     * Every record a *token* can reach still carries one — see
-     * `requireTokenBookingId`.
+     * A digital token may be booking-scoped or person-scoped; the public waiver
+     * page handles both contexts without making a schedule part of signing.
      */
     bookingId: uuid("booking_id").references(() => bookings.id),
     /**
@@ -3115,6 +3248,12 @@ export const waiverRecords = pgTable(
     templateVersion: integer("template_version").notNull(),
     templateBody: text("template_body").notNull(),
     status: waiverRecordStatus("status").notNull().default("pending"),
+    /** Latest delivery outcome for a digital link; null for paper/imported records. */
+    deliveryStatus: notificationDeliveryStatus("delivery_status"),
+    deliveryProviderMessageId: text("delivery_provider_message_id"),
+    deliveryProviderStatus: notificationProviderStatus("delivery_provider_status"),
+    deliveryProviderStatusAt: timestamp("delivery_provider_status_at", { withTimezone: true }),
+    deliveryError: text("delivery_error"),
     /** SHA-256 hash only — the raw bearer token is shown once when issued. */
     tokenHash: text("token_hash").notNull().unique(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -3330,6 +3469,12 @@ export const certifications = pgTable(
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     /**
+     * The live staff member who made the review that marked this card
+     * certified. Null on records predating this accountable trail and on an
+     * import that has not yet been reviewed by this shop.
+     */
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    /**
      * Provenance for a card brought in by the contact importer
      * (ADR 20260724-import-verified-cards). A non-null `importedAt` is the
      * definitive "this card was migrated" marker — mirroring `waiverRecords`'
@@ -3381,6 +3526,8 @@ export const certifications = pgTable(
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who removed the card, when the removal was accountable. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -3465,6 +3612,8 @@ export const specialtyCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** See certifications.reviewedByPersonId. */
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * specialty card lands `verified` and flagged
@@ -3481,6 +3630,8 @@ export const specialtyCertifications = pgTable(
     importedFromLabel: text("imported_from_label"),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who removed the card, when the removal was accountable. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -3574,6 +3725,108 @@ export const priorVisits = pgTable(
       table.shopId,
       table.personId,
       table.dedupeKey,
+    ),
+  ],
+);
+
+/**
+ * The direction a prior system assigns to an imported financial record. It is
+ * deliberately a small, source-evidence vocabulary rather than an Order or
+ * Stripe status: `payment` and `refund` can contribute to the unverified
+ * import slice of the financial aggregates when their amount and currency are
+ * clear; `unknown` remains visible in Orders but never changes a total.
+ */
+export const importedPaymentDirection = pgEnum("imported_payment_direction", [
+  "payment",
+  "refund",
+  "unknown",
+]);
+
+/**
+ * Payment and receipt history carried from another system. This is *not* an
+ * `orders` row: it has no live Stripe invoice, no booking-payment effect, and
+ * no authority to issue or refund money. Every value is source evidence and
+ * renders as an unverified import until a future reconciliation explicitly
+ * proves otherwise.
+ *
+ * `amountCents` / `currency` are deliberately paired and nullable. The import
+ * parser fills them only for a self-identifying supported currency; those are
+ * the only source rows permitted into aggregate revenue/refund math. The raw
+ * `amountLabel` is always retained so staff can see exactly what the source
+ * said, including an amount too ambiguous to aggregate.
+ *
+ * A `stripeReference` is a non-authoritative crosswalk seam, not a synthetic
+ * Stripe object. It lets a later reconciliation match a source-exported
+ * `in_`/`pi_`/`ch_` identifier against the real connected account without ever
+ * inventing a charge or retaining card credentials.
+ */
+export const importedPaymentHistory = pgTable(
+  "imported_payment_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /** Shop-local calendar day the source says this payment/refund occurred. */
+    occurredOn: date("occurred_on").notNull(),
+    /** Source-derived direction, never a local payment or order status. */
+    direction: importedPaymentDirection("direction").notNull().default("unknown"),
+    /** What the prior system called the sale, trip, or receipt. */
+    title: text("title"),
+    /** The source's own status word, preserved rather than mapped. */
+    statusLabel: text("status_label"),
+    /** Source money text, preserved verbatim whether it can be normalized or not. */
+    amountLabel: text("amount_label"),
+    /** Parsed only when the amount named a supported currency unambiguously. */
+    amountCents: integer("amount_cents"),
+    /** Lowercase ISO 4217 code paired with amountCents. */
+    currency: text("currency"),
+    /** Prior processor/order-system payment identifier, not a credential. */
+    paymentReference: text("payment_reference"),
+    /** Prior receipt number or reference, not a locally-issued receipt. */
+    receiptReference: text("receipt_reference"),
+    /** First-party re-stored receipt document only; raw external URLs are never kept. */
+    receiptDocumentUrl: text("receipt_document_url"),
+    /** Prior shop or source-system label the row carried. */
+    sourceLabel: text("source_label"),
+    /** Prior booking/order identifier that contextualizes the row. */
+    sourceReference: text("source_reference"),
+    /** Unverified Stripe object reference retained solely for future reconciliation. */
+    stripeReference: text("stripe_reference"),
+    /** Stable source/content key that makes re-imports idempotent. */
+    dedupeKey: text("dedupe_key").notNull(),
+    /** Always set — this table only receives imports, never hand-created payments. */
+    importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("imported_payment_history_shop_person_idx").on(
+      table.shopId,
+      table.personId,
+      table.occurredOn,
+    ),
+    index("imported_payment_history_shop_date_idx").on(table.shopId, table.occurredOn),
+    index("imported_payment_history_shop_currency_direction_idx").on(
+      table.shopId,
+      table.currency,
+      table.direction,
+      table.occurredOn,
+    ),
+    uniqueIndex("imported_payment_history_shop_person_dedupe_unique").on(
+      table.shopId,
+      table.personId,
+      table.dedupeKey,
+    ),
+    check(
+      "imported_payment_history_amount_nonnegative",
+      sql`${table.amountCents} IS NULL OR ${table.amountCents} >= 0`,
+    ),
+    check(
+      "imported_payment_history_amount_currency_pair",
+      sql`(${table.amountCents} IS NULL AND ${table.currency} IS NULL) OR (${table.amountCents} IS NOT NULL AND ${table.currency} IS NOT NULL)`,
     ),
   ],
 );
@@ -3691,6 +3944,8 @@ export const nitroxCertifications = pgTable(
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** See certifications.reviewedByPersonId. */
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * nitrox card lands `verified` (flagged) awaiting a staff confirm
@@ -3711,6 +3966,8 @@ export const nitroxCertifications = pgTable(
     selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who removed the card, when the removal was accountable. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -4074,6 +4331,32 @@ export const recapPhotos = pgTable(
 );
 
 /**
+ * A crew-owned image kept with a departure's close-out. Unlike `recapPhotos`,
+ * it has no diver booking because one upload is shared with every diver on
+ * the completed departure's recap.
+ */
+export const tripRecapPhotos = pgTable(
+  "trip_recap_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    imageUrl: text("image_url").notNull(),
+    uploadedByPersonId: uuid("uploaded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trip_recap_photos_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
+  ],
+);
+
+/**
  * A star rating (and optional words) from a diver who provably dived — the row
  * is only ever written through that booking's own signed recap link, so unlike
  * an open web form there is no way to leave one without having been on the
@@ -4105,6 +4388,8 @@ export const tripReviews = pgTable(
       .references(() => people.id),
     rating: integer("rating").notNull(),
     comment: text("comment"),
+    /** Staff curation flag for the public review selection. */
+    isStandout: boolean("is_standout").notNull().default(false),
     isPublished: boolean("is_published").notNull().default(false),
     /** Null until published; drives "newest published first" on the public list. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
@@ -4560,6 +4845,7 @@ export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
 export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
+export type TripLastMinutePromoRecipient = typeof tripLastMinutePromoRecipients.$inferSelect;
 export type BookingPayment = typeof bookingPayments.$inferSelect;
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 export type PaymentEventOperation = (typeof paymentEventOperation.enumValues)[number];

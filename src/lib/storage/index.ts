@@ -259,6 +259,24 @@ export async function storeImportWaiverDocument(
 }
 
 /**
+ * Store a receipt document supplied by a contact import. This follows the
+ * exact same byte validation and re-storage path as imported waiver evidence,
+ * but its `import-receipts` namespace keeps financial source documents out of
+ * waiver, card, and public-media storage. The caller is server-side and never
+ * renders the source URL directly.
+ */
+export async function storeImportReceiptDocument(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  const scoped = { ...upload, keyPrefix: "import-receipts" };
+  if (looksLikePdf(upload.bytes)) {
+    return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
+  }
+  return storeImage(scoped, MAX_IMAGE_BYTES, provider);
+}
+
+/**
  * Store a PDF import document without the image pipeline. The bytes are already
  * bounded by the ingest fetch (`ingestImageUrl`, which enforces the same
  * `MAX_IMAGE_BYTES` cap and all the SSRF defenses); here we re-check the size

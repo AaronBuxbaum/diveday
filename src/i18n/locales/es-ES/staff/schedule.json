@@ -58,8 +58,13 @@
     "priceDescription": "Los buceadores lo ven en cuanto la salida llega a la página pública. Déjalo vacío para ponerle precio más tarde en la salida.",
     "course": "Curso",
     "optional": "(opcional)",
+    "courseAgencies": {
+      "padi": "PADI",
+      "ssi": "SSI",
+      "other": "Otra agencia"
+    },
     "diveSite": "Sitio de buceo",
-    "ordinaryTrip": "Salida normal",
+    "ordinaryTrip": "Inmersión recreativa",
     "decideLater": "Decidir más tarde",
     "optionsLoading": "Cargando…",
     "adding": "Añadiendo…",
@@ -80,10 +85,12 @@
     "viewOnlyNotice": "Programar y editar salidas está limitado a propietarios, gerentes e instructores. La tripulación gestiona el día en el agua — el listado, el check-in, el manifiesto y el pase de lista — desde la propia página de cada salida.",
     "titlePlaceholderCourse": "{courseTitle} — Sesión 1",
     "courseNote": "{requirement} · añade un instructor antes de compartir la sesión",
-    "courseCertRequired": "Se requiere tarjeta {level} para inscribirse",
-    "courseNoCardRequired": "No se exige tarjeta C existente",
+    "courseCertRequired": "Se requiere certificación {level} para inscribirse",
+    "courseNoCardRequired": "No se exige certificación previa",
     "descriptionLabel": "Descripción",
     "descriptionPlaceholder": "Puntos de inmersión, condiciones, para quién es, certificaciones requeridas.",
+    "isPrivateLabel": "Chárter privado",
+    "isPrivateHint": "Marcar esta salida como un chárter privado para su grupo",
     "daysLabel": "Cuántos días",
     "daysDescription": "Casi todas las salidas duran un día. Un curso de fin de semana o un liveaboard que se reúne a las mismas horas en días consecutivos es una sola salida: una lista, un juego de exenciones, una tripulación.",
     "payAtBookingLegend": "Pago al reservar",
@@ -113,7 +120,12 @@
     "minimumDecisionLabel": "Decidir con",
     "minimumDecisionDescription": "Cuánto antes de la salida se toma la decisión. Al reservar, se indica el momento exacto al buceador.",
     "diversSuffix": "buceadores",
-    "hoursBeforeSuffix": "horas de antelación"
+    "hoursBeforeSuffix": "horas de antelación",
+    "requestPlanHeading": "Partir de las peticiones",
+    "requestPlanDescription": "Las personas marcadas recibirán una invitación para esta salida, pero no una reserva. Cambia la selección antes de ponerla en el calendario.",
+    "requestPlanRecommendation": "Hay aproximadamente {divers} buceadores representados. Capacidad inicial sugerida: {capacity} plazas.",
+    "requestPlanDivers": "{divers} buceadores",
+    "requestPlanPerson": "{name} ({divers, plural, one {# buceador} other {# buceadores}})"
   },
   "addBooking": "Añadir una reserva"
 }

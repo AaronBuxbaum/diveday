@@ -1,11 +1,13 @@
 {
   "eyebrow": "Peticiones",
-  "title": "Fechas que piden los buceadores",
-  "description": "Buceadores que no encontraron un día que les sirviera, agrupados por el día que piden. Cada persona aparece en todas las fechas que dijo poder hacer, así que un número aquí son buceadores que podrían ir ese día — no reservas. No se aparta nada.",
+  "title": "Fechas solicitadas",
+  "description": "Peticiones de fecha agrupadas por el día indicado. Una petición puede aparecer en más de un grupo si incluye una fecha alternativa o puede moverse unos días. No se aparta nada.",
   "emptyHeading": "Todavía no hay peticiones",
   "emptyDetail": "Los buceadores piden desde tu página de horarios y desde cualquier página de curso — “¿No hay ninguna fecha que te sirva?”. Lo que envían llega aquí.",
-  "couldMake": "{count, plural, one {# buceador podría ir este día} other {# buceadores podrían ir este día}}",
-  "askedForThisDay": "{count, plural, one {# lo pidió como primera opción} other {# lo pidieron como primera opción}}",
+  "groupCount": "{count, plural, one {# grupo podría hacer este día} other {# grupos podrían hacer este día}}",
+  "groupPeopleCount": "{groups, plural, one {# grupo} other {# grupos}} · {divers, plural, one {# buceador podría hacer este día} other {# buceadores podrían hacer este día}}",
+  "recommendationHeading": "Sugerencia para planificar",
+  "recommendationDetail": "Aproximadamente {divers} buceadores en {requests} peticiones. Empieza con {capacity} plazas y ajústalo a la salida que realmente quieras organizar.",
   "addDeparture": "Programa una salida este día",
   "flexible": "Flexible",
   "flexibleAround": "Pidió el {date} y puede moverse unos días",
@@ -19,10 +21,11 @@
   "whenSuits": "Cuándo le viene bien: {timing}",
   "askedOn": "Pedido el {date}",
   "viewDiver": "Abrir ficha del buceador",
+  "createBooking": "Crear una reserva",
   "experience": {
     "never": "Nunca ha buceado",
     "tried": "Ha probado el buceo, sin certificar",
-    "certified": "Certificado, con tarjeta",
+    "certified": "Certificado, puede compartir el registro de certificación",
     "lapsed": "Certificado, hace tiempo que no bucea"
   },
   "pagination": {

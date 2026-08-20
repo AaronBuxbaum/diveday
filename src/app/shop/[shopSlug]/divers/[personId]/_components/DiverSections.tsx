@@ -4,7 +4,7 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 /**
  * The diver record's spine.
  *
- * This page is one very long scroll — eleven stacked sections, about 6,400px on
+ * This page is one very long scroll — twelve stacked sections, about 6,400px on
  * a phone — and staff arrive at it with one of two errands: "verify this card"
  * (near the top, fine) or "take this payment" (which used to sit seventh, some
  * 4,500px down, reachable only by flicking). The row of anchors the page builds
@@ -20,10 +20,12 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  * 20260802-diver-data-erasure). Reaching them costs a scroll, on purpose.
  */
 export const DIVER_SECTIONS = [
+  { id: "waiver", labelKey: "divers.subNav.waiver" },
   { id: "cards", labelKey: "divers.subNav.cards" },
   { id: "fit", labelKey: "divers.subNav.fit" },
   { id: "payments", labelKey: "divers.subNav.payments" },
   { id: "trips", labelKey: "divers.subNav.trips" },
+  { id: "notes", labelKey: "divers.subNav.notes" },
   { id: "history", labelKey: "divers.subNav.history" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 

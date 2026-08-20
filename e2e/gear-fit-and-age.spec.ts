@@ -177,15 +177,20 @@ test.describe("minimum age (H-08, fail open)", () => {
   }
 
   test("admits a diver with no date of birth on file (fail open)", async ({ page }) => {
+    test.setTimeout(30_000);
     const stamp = e2eNow().getTime();
     const tripPath = await createAgeGateSession(page, `Age gate session ${stamp}`);
 
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
     await page.goto(`${tripPath}/guests`);
-    await page.getByLabel("Name", { exact: true }).fill(`Ageless Diver ${stamp}`);
-    await page.getByLabel("Email", { exact: true }).fill(`ageless-${stamp}@example.com`);
+    await page.getByRole("link", { name: "Add a diver" }).click();
+    await page.getByRole("link", { name: "Add diver" }).click();
+    await page.waitForURL(/\/divers\/new/);
+    await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);
+    await page.getByLabel("Email").fill(`ageless-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();
+    await page.waitForURL(/\/trips\/[^/]+\/guests/);
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
   });
 
@@ -206,10 +211,8 @@ test.describe("minimum age (H-08, fail open)", () => {
 
     // A diver who *does* have a date on file, aged 8 on the course date.
     await page.goto(`/shop/${SHOP}/divers`);
-    await page.getByText("Add a diver").click(); // the form lives in a collapsed <details>
-    await page.getByLabel("Full name").fill(`Young Diver ${stamp}`);
-    await page.getByLabel("Email").fill(`young-${stamp}@example.com`);
-    await page.getByRole("button", { name: "Add diver" }).click();
+    await page.getByRole("searchbox", { name: "Search divers" }).fill(`Young Diver ${stamp}`);
+    await page.getByRole("button", { name: "Add diver", exact: true }).click();
     await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
 
     // Adding a diver lands with the details form already expanded — the

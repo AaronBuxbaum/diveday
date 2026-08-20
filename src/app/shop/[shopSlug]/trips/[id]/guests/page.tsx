@@ -4,22 +4,22 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
-import { listBookableDivers } from "@/db/divers";
+import { findSimilarDivers, listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
-import { listBookingNotes, listTripActivity } from "@/db/operations";
+import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "@/db/operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { listTripLastMinutePromos } from "@/db/trip-promos";
+import { listTripInvitations } from "@/db/trip-invitations";
+import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -27,7 +27,11 @@ import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
-import { lastMinuteEntryMatchesTripDate, orderLastMinuteRecipients } from "@/lib/last-minute-list";
+import {
+  filterEligibleLastMinuteRecipients,
+  lastMinuteEntryMatchesTripDate,
+  orderLastMinuteRecipients,
+} from "@/lib/last-minute-list";
 import { combineCertRequirements } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -38,6 +42,7 @@ import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { isRosterFilter, RosterSection } from "../_components/RosterSection";
+import { TripInvitationSection } from "../_components/TripInvitationSection";
 import { resolveTripNotice, TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { WaitlistSection } from "../_components/WaitlistSection";
@@ -45,10 +50,12 @@ import {
   addInternalNoteAction,
   addToWaitlistAction,
   confirmDiverIdentityAction,
+  createDirectTripInvitationAction,
   deleteInternalNoteAction,
   inviteWaitlistAction,
   markPaymentAction,
   markWaiverInPersonAction,
+  recordTripInvitationAction,
   removeBookingAction,
   restoreInternalNoteAction,
   saveRosterEmergencyContactAction,
@@ -68,17 +75,11 @@ export const metadata: Metadata = {
   title: "Trip guests — DiveDay",
 };
 
-/**
- * How many activity entries show before the tail collapses behind "Show all":
- * enough to answer "what just happened on this trip" at a glance, few enough
- * that a season of history never buries the sections below.
- */
-const RECENT_ACTIVITY_COUNT = 3;
-
 type TripGuestsSearchParams = Promise<{
   notice?: string;
   bid?: string;
   diverq?: string;
+  inviteq?: string;
   count?: string;
   /** Which form on this page the notice answers — see `resolveTripNotice`. */
   form?: string;
@@ -93,6 +94,9 @@ type TripGuestsSearchParams = Promise<{
   /** The deleted note's booking + text, carried by the land-then-undo redirect (§7). */
   noteBookingId?: string;
   noteBody?: string;
+  confirmName?: string;
+  confirmEmail?: string;
+  confirmPhone?: string;
 }>;
 
 /**
@@ -143,8 +147,20 @@ async function TripGuestsBody({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { notice, bid, diverq, count, form, gate, rf, noteBookingId, noteBody } =
-    await searchParams;
+  const {
+    notice,
+    bid,
+    diverq,
+    count,
+    form,
+    gate,
+    rf,
+    noteBookingId,
+    noteBody,
+    confirmName,
+    confirmEmail,
+    confirmPhone,
+  } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -153,6 +169,7 @@ async function TripGuestsBody({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
+  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
   // The returning-diver picker only books, so it is skipped once the boat is
@@ -169,9 +186,12 @@ async function TripGuestsBody({
     readinessRows,
     prepDivers,
     waitlist,
+    invitations,
     lastMinuteList,
     lastMinutePromos,
+    lastMinutePromoRecipients,
     bookingNotes,
+    diverNotes,
     activity,
     stripeAccount,
   ] = await Promise.all([
@@ -181,9 +201,12 @@ async function TripGuestsBody({
     listTripReadiness(db, shop.id, tripId),
     listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
+    listTripInvitations(db, shop.id, tripId),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
+    listTripLastMinutePromoRecipients(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
+    listDiverNotesForTrip(db, shop.id, tripId),
     listTripActivity(db, shop.id, tripId),
     getShopStripeAccount(db, shop.id),
   ]);
@@ -195,36 +218,37 @@ async function TripGuestsBody({
     booked: trip.booked,
     waitlisted: waitlist.length,
   });
-  const notesByBooking = new Map<string, typeof bookingNotes>();
+  const notesByBooking = new Map<
+    string,
+    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
+  >();
   for (const row of bookingNotes) {
     if (!row.note.bookingId) continue;
     const rows = notesByBooking.get(row.note.bookingId) ?? [];
-    rows.push(row);
+    rows.push({ ...row, deletable: true });
     notesByBooking.set(row.note.bookingId, rows);
   }
+  // Keep the three staff-note entry points one system: a diver-record note is
+  // visible on Guests for the same booking, just as it is on Manifest. It is
+  // edited on the diver record, the canonical scope, so this roster does not
+  // offer a delete action that would silently do nothing.
+  for (const row of diverNotes) {
+    const rows = notesByBooking.get(row.bookingId) ?? [];
+    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
+    notesByBooking.set(row.bookingId, rows);
+  }
+  for (const rows of notesByBooking.values()) {
+    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
+  }
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  // The same set, in the same order, that `sendLastMinuteDealBlast` would mail:
-  // matched on the stated date window, then wait-listed divers first. A preview
-  // that disagreed with the send would be worse than no preview — the staffer
-  // would be vetting a list that isn't the one going out.
-  const lastMinuteRecipients = orderLastMinuteRecipients(
-    lastMinuteList.filter(({ entry }) => lastMinuteEntryMatchesTripDate(entry, tripDateIso)),
-    waitlist.map(({ person }) => person.id),
+  const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
+    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
   );
-  /**
-   * **The gate the deal panel states above its recipient list** — the trip's
-   * own requirement folded with every dive site it visits, which is the same
-   * effective requirement admission and readiness hold a diver to. The trip row
-   * alone would go quiet on exactly the departure that hurts: a two-tank day
-   * whose Advanced gate comes from the *second* site, where a shop would then
-   * be told the trip asks for nothing and mail the discount to everybody.
-   *
-   * A missing requirements row folds to the identity rather than short-circuiting
-   * to null, so a site-only gate still gets said out loud. That the row is
-   * missing at all is the trip page's own warning to give (`RequirementsSection`
-   * renders it in warning tone); this panel does not gate, so it does not
-   * re-state it.
-   */
+  const waitlistPersonIds = waitlist.map(({ person }) => person.id);
+  const preCertSummaries = await listCertificationSummaries(db, shop.id, [
+    ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
+  ]);
+
   const dealRequirement = combineCertRequirements(
     requirement ?? {
       minimumCertificationLevel: null,
@@ -233,16 +257,29 @@ async function TripGuestsBody({
     },
     siteRequirement,
   );
-  // One read for both panels: what each of these people can dive, as far as
-  // anybody here knows. A joiner may have named their own level on the public
-  // form, and it renders marked self-declared — the fact that stops a shop
-  // mailing an Open Water diver a discount on a deep wreck (FU-20260813).
-  const certificationSummaries = await listCertificationSummaries(db, shop.id, [
-    ...new Set([
-      ...lastMinuteRecipients.map(({ person }) => person.id),
-      ...waitlist.map(({ person }) => person.id),
-    ]),
-  ]);
+
+  const courseTarget = trip.course
+    ? {
+        slug: trip.course.slug,
+        title: trip.course.title,
+        sourceTemplateSlug: trip.course.sourceTemplateSlug,
+        minimumCertificationLevel: trip.course.minimumCertificationLevel,
+        isIntroCourse: trip.course.isIntroCourse,
+      }
+    : null;
+
+  const rawMatchesWithCert = lastMinuteMatched.map((m) => ({
+    ...m,
+    certification: preCertSummaries.get(m.person.id) ?? null,
+  }));
+
+  const eligibleMatches = filterEligibleLastMinuteRecipients(
+    rawMatchesWithCert,
+    dealRequirement,
+    courseTarget,
+  );
+  const lastMinuteRecipients = orderLastMinuteRecipients(eligibleMatches, waitlistPersonIds);
+  const certificationSummaries = preCertSummaries;
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
   // whose money is already gone (dive-domain review).
@@ -273,7 +310,11 @@ async function TripGuestsBody({
   // received it. Today's own "fill these seats" row is gated on the same reach
   // (src/db/today.ts), so its `#last-minute-deal` anchor cannot point at a
   // section this hides.
-  const showPromote = lastMinuteRecipients.length > 0 || lastMinutePromos.length > 0;
+  // The panel is shown if there are people on the last-minute list whose date
+  // range covers this trip (even if they don't meet current requirements) OR if
+  // there are promos (history of blasts sent). This allows the empty state
+  // "Nobody to send this to yet" to render when requirements are raised.
+  const showPromote = lastMinuteMatched.length > 0 || lastMinutePromos.length > 0;
   // The deal panel, when shown, is inside a <details> whose `#last-minute-deal`
   // landing auto-opens; the add-diver section is not rendered on a cancelled
   // departure, so its notices fall back to the banner — as do the deal's own on
@@ -294,10 +335,6 @@ async function TripGuestsBody({
   // The roster is the spine of the diver section; waiver and readiness detail
   // hang off it by booking id so each diver renders as one consolidated card.
   const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
-  // The freshest entries answer "what just happened here"; the tail waits
-  // behind the disclosure below.
-  const recentActivity = activity.slice(0, RECENT_ACTIVITY_COUNT);
-  const olderActivity = activity.slice(RECENT_ACTIVITY_COUNT);
   const waiverByBooking = new Map(
     readinessRows.map(
       (row) =>
@@ -306,12 +343,10 @@ async function TripGuestsBody({
   );
 
   return (
-    <>
+    <div data-trip-guests-ready className="contents">
       <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
       <TripPageHeader
-        title={trip.title}
-        startsAt={trip.startsAt}
-        endsAt={trip.endsAt}
+        trip={trip}
         locale={locale}
         timeZone={shop.timezone}
         badge={
@@ -420,20 +455,28 @@ async function TripGuestsBody({
           certificationSummaries={certificationSummaries}
           /* The same folded gate the deal panel below states — a wait list is
              per-trip, so the departure the staffer is inviting onto is the one
-             already resolved above. Passed as the rung alone: this list is not
-             reordered, filtered, or gated by it, it is only said on the row. */
-          minimumCertificationLevel={dealRequirement.minimumCertificationLevel}
+             already resolved above. The shared predicate marks the row without
+             reordering, filtering, or gating this lead list. */
+          departureRequirement={dealRequirement}
           locale={locale}
           timezone={shop.timezone}
         />
       ) : null}
 
-      {/* After the roster, not before it: this page's question is "who is
-          attending", and the answer leads while the tools follow
-          (design/principles.md #10). The empty roster's own action, seat-diver
-          refusals, and the divers page's cross-link all land here by the
-          `#add-diver` anchor, so the section keeps its place in the document
-          without needing to sit above the fold. */}
+      {invitations.length > 0 ? (
+        <TripInvitationSection
+          invitations={invitations}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          shopName={shop.name}
+          tripTitle={trip.title}
+          tripStartsAt={trip.startsAt}
+          timezone={shop.timezone}
+          inviteAction={recordTripInvitationAction.bind(null, shopSlug, tripId)}
+          locale={locale}
+        />
+      ) : null}
+
       {cancelled ? null : (
         <AddDiverSection
           shopSlug={shopSlug}
@@ -444,70 +487,15 @@ async function TripGuestsBody({
           addBookingAction={seatNewDiverAction.bind(null, "trip-guests", shopSlug)}
           addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
           addExistingDiverAction={seatExistingDiverAction.bind(null, "trip-guests", shopSlug)}
+          inviteAction={createDirectTripInvitationAction.bind(null, shopSlug, tripId)}
           status={noticeForForm(tripNotice, "add-diver")}
           locale={locale}
+          confirmName={confirmName}
+          confirmEmail={confirmEmail}
+          confirmPhone={confirmPhone}
+          confirmMatches={confirmMatches}
         />
       )}
-
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">{t("trips.guests.activityHeading")}</h2>
-        {activity.length === 0 ? (
-          // The shared empty-section grammar, not a bare paragraph — the
-          // roster above already wears the same dashed card for "nothing here"
-          // (design/principles.md #4).
-          <EmptyState className="mt-4">
-            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
-          </EmptyState>
-        ) : (
-          <>
-            {/* When it happened is a column, not a trailing clause. Set inline
-                after the sentence, the timestamps landed at a different x on
-                every row — the eye reads them as part of the message and then
-                has to re-find where the next one starts. Right-aligned they
-                form the scannable edge a log wants, and `items-baseline` keeps
-                the two texts on one line rather than one boxed above the other.
-                Below `sm` the time drops under its own message instead of
-                squeezing a name into two words. */}
-            <ol className="mt-4 grid gap-2">
-              {recentActivity.map((event) => (
-                <li
-                  key={event.id}
-                  className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
-                >
-                  <span className="min-w-0">{event.message}</span>
-                  <span className="shrink-0 text-muted tabular-nums">
-                    {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            {/* The tail waits behind a disclosure: the freshest entries answer
-                "what just happened here", while a season's history at equal
-                weight is noise (design/principles.md #9). */}
-            {olderActivity.length > 0 ? (
-              <details className="group mt-2">
-                <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden hover:underline">
-                  {t("trips.guests.activityShowAll", { count: activity.length })}
-                  <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-                </summary>
-                <ol className="mt-2 grid gap-2">
-                  {olderActivity.map((event) => (
-                    <li
-                      key={event.id}
-                      className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
-                    >
-                      <span className="min-w-0">{event.message}</span>
-                      <span className="shrink-0 text-muted tabular-nums">
-                        {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            ) : null}
-          </>
-        )}
-      </section>
 
       {/* The marketing blast collapses behind its own disclosure (task 156,
           UX persona lens 17) — Guests is "who is attending," not a promo
@@ -555,9 +543,11 @@ async function TripGuestsBody({
                 certification: certificationSummaries.get(person.id) ?? null,
               }))}
               requirement={dealRequirement}
+              course={courseTarget}
               openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
               cancelled={cancelled}
               promos={lastMinutePromos}
+              promoRecipients={lastMinutePromoRecipients}
               timezone={shop.timezone}
               status={noticeForForm(tripNotice, "last-minute-deal")}
               sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
@@ -565,6 +555,37 @@ async function TripGuestsBody({
           </div>
         </AutoOpenDetails>
       ) : null}
-    </>
+
+      <details
+        className={sectionCardClass({
+          padding: "none",
+          className: "group mt-10",
+        })}
+      >
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span>{t("trips.guests.activityHeading")}</span>
+          <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-border p-4">
+          {activity.length === 0 ? (
+            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
+          ) : (
+            <ol className="grid gap-2">
+              {activity.map((event) => (
+                <li
+                  key={event.id}
+                  className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
+                >
+                  <span className="min-w-0">{event.message}</span>
+                  <span className="shrink-0 text-muted tabular-nums">
+                    {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </details>
+    </div>
   );
 }

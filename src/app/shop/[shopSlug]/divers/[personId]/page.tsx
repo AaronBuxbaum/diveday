@@ -11,6 +11,7 @@ import {
 } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
+import { listDiverRecordNotes } from "@/db/operations";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -22,6 +23,7 @@ import { uuidParam } from "@/lib/uuid";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
+import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
@@ -34,7 +36,7 @@ import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
 import { UpcomingTripsSection } from "./_components/UpcomingTripsSection";
-import { restoreCardAction } from "./actions";
+import { restoreCardAction, restoreDiverNoteAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -63,11 +65,14 @@ export default async function DiverDetailPage({
     notice?: string;
     undo?: string;
     cardType?: string;
+    by?: string;
     /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
     /** Which form on this page the notice answers — see `resolveDiverNotice`. */
     form?: string;
     edit?: string;
+    /** The deleted diver note's text, carried by the land-then-undo redirect. */
+    noteBody?: string;
   }>;
 }) {
   const session = await requireStaffSession();
@@ -76,7 +81,7 @@ export default async function DiverDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
-  const { notice, undo, cardType, gate, form, edit } = await searchParams;
+  const { notice, undo, cardType, by, gate, form, edit, noteBody } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -98,12 +103,13 @@ export default async function DiverDetailPage({
   // (H-06); flagging them for hands-on fitting stays open to all staff.
   // Erasing a diver's personal and medical data is stricter still — owner only,
   // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
-  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount] = await Promise.all([
+  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount, notes] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
     canPersonErasePersonalData(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
+    listDiverRecordNotes(db, shop.id, personId),
   ]);
   // `orders/new` refuses outright without a payable account, so the Payments
   // section offers "Connect payments" rather than invoice buttons that bounce.
@@ -120,7 +126,7 @@ export default async function DiverDetailPage({
 
   /**
    * The page's `?notice=` resolved once, to words *and* to the section those
-   * words belong beside. This record is eight independent forms on one very
+   * words belong beside. This record is nine independent forms on one very
    * long scroll, and every one of their outcomes used to land in a single
    * banner under the `<h1>` — so saving a rental fit two screens down confirmed
    * it somewhere the staffer was not looking. Each section is handed its own
@@ -136,10 +142,12 @@ export default async function DiverDetailPage({
   // path repeats the same confirmation in two places.
   const cardRemovalUndo = notice === "card-deleted" && undo && cardType;
   const cardsStatus = cardRemovalUndo ? undefined : noticeForForm(diverNotice, "cards");
+  const diverNoteRemovalUndo = notice === "note-deleted" && noteBody;
+  const notesStatus = diverNoteRemovalUndo ? undefined : noticeForForm(diverNotice, "notes");
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice", "undo", "cardType", "form", "edit"]} />
+      <FlashParams params={["notice", "undo", "cardType", "by", "form", "edit", "noteBody"]} />
       <DiverHeader
         diver={diver}
         shopSlug={shopSlug}
@@ -151,10 +159,10 @@ export default async function DiverDetailPage({
         // straight away, so a reload or a shared link is the ordinary
         // collapsed page.
         //
-        // A details-form outcome opens it too: the form lives in a collapsed
-        // `<details>`, and a refusal rendered inside a shut disclosure is worse
-        // than the banner it replaced — invisible rather than merely far away.
-        editOpen={edit === "1" || Boolean(detailsStatus)}
+        // Keep the editor open for a refused save so the staffer can correct
+        // the fields in place. A successful save closes it; the saved notice
+        // remains visible above the editor.
+        editOpen={edit === "1" || detailsStatus?.tone === "danger"}
       />
       {removed ? (
         <RestoreDiver
@@ -167,9 +175,21 @@ export default async function DiverDetailPage({
       ) : null}
       {cardRemovalUndo ? (
         <UndoToast
-          message={staffTranslator(locale)("divers.notices.cardRemovedToast")}
+          message={staffTranslator(locale)("divers.notices.cardRemovedToast", {
+            name:
+              by ??
+              staffTranslator(locale)("divers.certifications.noCertificationClearedByUnknown"),
+          })}
           action={restoreCardAction.bind(null, shopSlug, personId)}
           fields={{ certificationId: undo, cardType }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
+        />
+      ) : diverNoteRemovalUndo ? (
+        <UndoToast
+          message={t("divers.notices.noteDeleted")}
+          action={restoreDiverNoteAction.bind(null, shopSlug, personId)}
+          fields={{ body: noteBody }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
@@ -184,19 +204,17 @@ export default async function DiverDetailPage({
         items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
-      <StatsSummary diver={diver} shop={shop} locale={locale} />
-      {/* Beside the stat row it answers, not filed under a section heading of
-          its own: the Waiver card is what tells a staffer the release is
-          outstanding, so the one thing they can do about it from this page
-          belongs directly beneath it. Renders nothing when there is nothing
-          to record. */}
-      <PaperWaiver
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        locale={locale}
-        status={noticeForForm(diverNotice, "waiver")}
-      />
+      <StatsSummary diver={diver} shop={shop} locale={locale} notesCount={notes.length} />
+      <DiverSection id="waiver">
+        <PaperWaiver
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          status={noticeForForm(diverNotice, "waiver")}
+        />
+      </DiverSection>
       <DiverSection id="cards">
         <CertificationCards
           diver={diver}
@@ -264,6 +282,16 @@ export default async function DiverDetailPage({
           personId={personId}
           locale={locale}
           paymentsConnected={paymentsConnected}
+        />
+      </DiverSection>
+      <DiverSection id="notes">
+        <DiverNotesSection
+          notes={notes}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+          status={notesStatus}
         />
       </DiverSection>
       <DiverSection id="history">

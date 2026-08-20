@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -74,8 +74,9 @@ const COPY: BuilderCopy = {
   priceDescription: "Divers see this on the public page.",
   course: "Course",
   optional: "(optional)",
+  courseAgencyLabels: { padi: "PADI", ssi: "SSI", other: "Other agency" },
   diveSite: "Dive site",
-  ordinaryTrip: "Ordinary trip",
+  ordinaryTrip: "Fun dive",
   decideLater: "Decide later",
   optionsLoading: "Loading…",
   adding: "Adding…",
@@ -100,6 +101,8 @@ const COPY: BuilderCopy = {
   courseNoCardRequired: "No existing C-card required",
   descriptionLabel: "Description",
   descriptionPlaceholder: "Sites, conditions, who it's for.",
+  isPrivateLabel: "Private charter",
+  isPrivateHint: "Mark this trip as a private charter for your group",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",
@@ -192,7 +195,7 @@ const PRICE: BuilderPriceInput = { step: "0.01", max: 100_000, placeholder: "$0.
  * stub, and the one that cares asserts it is not called until then.
  */
 const loadOptions = vi.fn(async () => ({
-  courses: [{ id: "course-1", title: "Open Water Diver" }],
+  courses: [{ id: "course-1", title: "Open Water Diver", agency: "padi" }],
   diveSites: [{ id: "site-1", title: "Molasses Reef" }],
 }));
 
@@ -387,12 +390,40 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     expect(loadOptions).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Fun dive" })).toBeInTheDocument();
 
     // Reopening reuses what it already has — the catalogue does not change
     // while somebody schedules a week.
     await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
     expect(loadOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it("groups course choices by agency while keeping each agency's order", async () => {
+    loadOptions.mockResolvedValueOnce({
+      courses: [
+        { id: "padi-ow", title: "Open Water Diver", agency: "padi" },
+        { id: "ssi-ow", title: "SSI Open Water Diver", agency: "ssi" },
+        { id: "other", title: "Custom Course", agency: "naui" },
+      ],
+      diveSites: [],
+    });
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+
+    const courseSelect = await vi.waitFor(() => {
+      const select = container.querySelector('select[name="courseId"]');
+      if (!select) throw new Error("course selector is not mounted yet");
+      return select;
+    });
+    expect(courseSelect.querySelectorAll("optgroup")).toHaveLength(3);
+    expect(courseSelect.querySelector('optgroup[label="PADI"]')).toHaveTextContent(
+      "Open Water Diver",
+    );
+    expect(courseSelect.querySelector('optgroup[label="SSI"]')).toHaveTextContent(
+      "SSI Open Water Diver",
+    );
+    expect(courseSelect.querySelector('optgroup[label="NAUI"]')).toHaveTextContent("Custom Course");
   });
 });
 
@@ -702,7 +733,9 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
     expect(move).toHaveFocus();
 
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull(),
+    );
     expect(trigger).toHaveFocus();
   });
 
@@ -719,13 +752,17 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
     await userEvent.click(
       screen.getByRole("button", { name: /^Move, copy, or remove Night Dive/ }),
     );
-    expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull(),
+    );
     expect(screen.getByRole("button", { name: /^Move Night Dive/ })).toBeInTheDocument();
 
     // A stray click on the page is a dismissal, never swallowed work — the
     // list holds no typed state.
     await userEvent.click(screen.getByRole("heading", { name: "Sat, Aug 1" }));
-    expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Move Night Dive/ })).toBeNull(),
+    );
   });
 
   it("choosing an action closes the list and opens that action's panel", async () => {
@@ -1024,6 +1061,19 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
       "Open Water Diver — Session 1",
     );
     expect(screen.getByText(/No existing C-card required · add an instructor/)).toBeInTheDocument();
+  });
+
+  it("opens already pointed at the dive site a library link named", async () => {
+    const { container } = renderBuilder({
+      openAdd: "quick",
+      initialSite: {
+        id: "site-1",
+        name: "Molasses Reef",
+      },
+    });
+
+    const site = container.querySelector('select[name="diveSiteId"]');
+    expect(site).toHaveValue("site-1");
   });
 
   it("opens at full depth for a link that meant the whole form", async () => {

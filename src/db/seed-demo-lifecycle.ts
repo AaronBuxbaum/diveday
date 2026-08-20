@@ -5,6 +5,7 @@ import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
   activityEvents,
+  boats,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -20,6 +21,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  importedPaymentHistory,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -56,7 +58,10 @@ import {
   tripBlowoutDivers,
   tripBlowouts,
   tripDives,
+  tripInvitations,
+  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
+  tripRecapPhotos,
   tripRequirements,
   tripReviews,
   tripSeries,
@@ -129,6 +134,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // before both parents below (ADR 20260804-day-closeout).
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // Before the reviews it describes: the trail's review_id FK carries no
   // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
   await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
@@ -139,9 +145,13 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .where(eq(notificationDeliveryAttempts.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
   // including the unsubscribe tokens that reference the entries.
+  await db
+    .delete(tripLastMinutePromoRecipients)
+    .where(eq(tripLastMinutePromoRecipients.shopId, shopId));
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
   await db
     .delete(lastMinuteListUnsubscribeTokens)
@@ -179,6 +189,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
+  await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit
@@ -196,6 +207,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
+  await db.delete(boats).where(eq(boats.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   // References both shops and people (ADR 20260803-processor-erasure-obligations),

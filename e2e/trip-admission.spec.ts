@@ -104,7 +104,7 @@ test.describe("as owner", () => {
     await expect(page).toHaveURL(/gate=advanced_open_water[^&]*\.[\w-]{40,}/);
     const banner = page.getByText("This charter requires Advanced Open Water.");
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText("highest card on file is Open Water");
+    await expect(banner).toContainText("highest certification on file is Open Water");
     // A level refusal has no missing card, and pointing a staffer at the
     // certifications form would be pointing them past a safety gate: a
     // hand-entered card lands `pending`, which clears admission next attempt
@@ -142,13 +142,13 @@ test.describe("as owner", () => {
     // it also carries `role="alert"` but is filtered out here as a side
     // effect of not matching the text, the same disambiguation the other two
     // specs use.
-    const banner = page.getByRole("alert").filter({ hasText: "cards on file" });
-    await expect(banner).toContainText("cards on file don't reach what this trip");
-    await expect(banner).not.toContainText("Deep card");
+    const banner = page.getByRole("alert").filter({ hasText: "certifications on file" });
+    await expect(banner).toContainText("certifications on file don't reach what this trip");
+    await expect(banner).not.toContainText("Deep certification");
     await expect(banner).not.toContainText("charter requires");
   });
 
-  test("the global Add-booking door says a missing specialty card is missing, whatever the diver's level", async ({
+  test("the global Add-booking door says a missing specialty certification is missing, whatever the diver's level", async ({
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
@@ -160,10 +160,10 @@ test.describe("as owner", () => {
     // The global door's refusal stays on the form that produced it, boat still
     // chosen, so the staffer can pick someone else.
     await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=`));
-    const banner = page.getByText("This charter requires a Deep card.");
+    const banner = page.getByText("This charter requires a Deep certification.");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("none on this diver");
-    await expect(banner).not.toContainText("highest card on file");
+    await expect(banner).not.toContainText("highest certification on file");
   });
 
   test("the counter collapses the same refusal to one blunt line and carries no gate detail", async ({
@@ -202,7 +202,7 @@ test.describe("as owner", () => {
     // banner can say which card is missing and what the diver holds.
     await expect(page).toHaveURL(new RegExp(`/check-in/walk-in/${tripId}\\?`));
     await expect(
-      page.getByText(/Advanced Open Water|cards on file|cards don’t reach/),
+      page.getByText(/Advanced Open Water|certifications on file|certifications don’t reach/),
     ).toBeVisible();
   });
 

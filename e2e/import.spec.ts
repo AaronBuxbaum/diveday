@@ -47,7 +47,9 @@ test.describe("contact import", () => {
     // medical column called out as deliberately dropped, and the waiver claim
     // called out as trusted.
     await expect(page.getByText("Divers in file")).toBeVisible();
-    await expect(page.getByText(/Card imported as verified from your records/)).toBeVisible();
+    await expect(
+      page.getByText(/Certification imported as verified from your records/),
+    ).toBeVisible();
     await expect(page.getByText(/Left behind on purpose/)).toBeVisible();
     await expect(page.getByText(/Medical Notes/)).toBeVisible();
     await expect(
@@ -79,8 +81,8 @@ test.describe("contact import", () => {
     // that card already satisfied readiness on arrival (H-24 scopes the
     // attestation to the confirms that open something).
     const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
-    await levelCard.getByRole("button", { name: "Confirm card" }).click();
-    await expect(levelCard.getByRole("button", { name: "Confirm card" })).toHaveCount(0);
+    await levelCard.getByRole("button", { name: "Confirm certification" }).click();
+    await expect(levelCard.getByRole("button", { name: "Confirm certification" })).toHaveCount(0);
     // Provenance survives the confirm — that is the contract, and it now reads
     // on the card's own small-print line beside the card number rather than as
     // a pill in the button row (`CardStatusMark`), so this matches the source
@@ -123,7 +125,9 @@ test.describe("contact import — specialty cards", () => {
     test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/settings/import");
     // The honesty table now says specialty cards come across.
-    await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
+    await expect(
+      page.getByText("Specialty certifications (deep, wreck, night, drysuit)"),
+    ).toBeVisible();
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
       "data-hydrated",
       "true",
@@ -134,13 +138,13 @@ test.describe("contact import — specialty cards", () => {
       mimeType: "text/csv",
       buffer: Buffer.from(SPECIALTY_CSV, "utf-8"),
     });
-    await expect(page.getByText(/Specialty card imported as verified/)).toBeVisible();
+    await expect(page.getByText(/Specialty certification imported as verified/)).toBeVisible();
     // Row 2 is the same diver, and says so rather than reading "skipped".
     await expect(page.getByText(/same diver as row 1/)).toBeVisible();
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
-    await expect(page.getByText(/1 specialty card/)).toBeVisible();
-    await expect(page.getByText(/1 row\(s\) added cards to a diver/)).toBeVisible();
+    await expect(page.getByText(/1 specialty certification/)).toBeVisible();
+    await expect(page.getByText(/1 row\(s\) added certifications to a diver/)).toBeVisible();
     await expect(
       page.getByText(/A dive that requires one of those specialties waits/),
     ).toBeVisible();
@@ -172,12 +176,12 @@ test.describe("contact import — specialty cards", () => {
     const addDiver = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-    await addDiver.getByLabel("Name").fill("Deep Dana");
-    await addDiver.getByLabel("Email").fill("deep.dana@example.com");
-    await addDiver.getByRole("button", { name: "Add to trip" }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Diver added to the trip — but their waiver wasn’t emailed.",
-    );
+    const returningDiverSearch = addDiver.getByRole("searchbox", {
+      name: "Find a returning diver",
+    });
+    await returningDiverSearch.fill("Deep Dana");
+    await addDiver.getByRole("button", { name: "Search" }).click();
+    await addDiver.getByRole("button", { name: "Add Deep Dana to the trip" }).click();
 
     // The card is on file and verified — and the dive still waits, which is the
     // whole point of the decision. The blocker names the fix, not just the fault.
@@ -199,7 +203,7 @@ test.describe("contact import — specialty cards", () => {
     // (ADR 20260814-one-tap-imported-card-confirm). The gate is still per-card:
     // nothing about this diver's Deep card counts until a staffer confirms it.
     const deepCard = page.locator("li").filter({ hasText: "PADI · Deep" });
-    await deepCard.getByRole("button", { name: "Confirm card" }).click();
+    await deepCard.getByRole("button", { name: "Confirm certification" }).click();
 
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
@@ -295,6 +299,72 @@ test.describe("contact import — prior visits", () => {
         .getByText(/3 visits came across/)
         .filter({ visible: true }),
     ).toBeVisible();
+  });
+});
+
+/**
+ * Payment history is useful migration evidence but deliberately does not
+ * manufacture a DiveDay order, booking payment, or Stripe confirmation. This
+ * walks the staff path from a source export through the visible unverified
+ * rows and the separately-labelled revenue/refund contribution.
+ */
+const PAYMENT_HISTORY_CSV = [
+  "Full Name,Email,Payment Date,Payment Status,Payment Amount,Payment Currency,Payment Direction,Payment ID,Receipt Number,Stripe Payment Intent ID",
+  "Source Sloane,source.sloane@example.com,2026-03-04,Paid,USD 165.00,USD,Payment,legacy-pay-1001,REC-1001,pi_legacy_1001",
+  "Source Sloane,source.sloane@example.com,2026-03-05,Refunded,USD 25.00,USD,Refund,legacy-refund-1001,REC-1002,pi_legacy_1002",
+].join("\n");
+
+test.describe("contact import — payment and receipt history", () => {
+  signedInAsOwner();
+
+  test("source payments and refunds stay visibly unverified while tracing the aggregate back to Orders", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
+
+    await page.setInputFiles('input[type="file"]', {
+      name: "payment-history.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(PAYMENT_HISTORY_CSV, "utf-8"),
+    });
+    await expect(
+      page.getByText(
+        "2 payment, refund, or receipt source rows will be imported as unverified history.",
+      ),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Import 1 contact" }).click();
+    await expect(
+      page.getByText("2 unverified payment / receipt source records added to Orders."),
+    ).toBeVisible();
+
+    await page.goto("/shop/blue-mantis/orders?from=2026-03-01&to=2026-03-31&range=custom");
+    const history = page.getByRole("region", { name: "Imported payment history" });
+    await expect(history).toBeVisible();
+    await expect(history.getByText("Source Sloane").first()).toBeVisible();
+    await expect(history.getByText("Unverified import").first()).toBeVisible();
+    await expect(history.getByText("Source payment")).toBeVisible();
+    await expect(history.getByText("Source refund")).toBeVisible();
+    await expect(history.getByText("Stripe reference: pi_legacy_1001")).toBeVisible();
+    await expect(history.getByRole("link", { name: "Source Sloane" }).first()).toHaveAttribute(
+      "href",
+      /\/shop\/blue-mantis\/divers\//,
+    );
+
+    await page.goto("/shop/blue-mantis/reports?month=2026-03");
+    const importedNotice = page.getByRole("region", { name: "Unverified imported history" });
+    await expect(importedNotice).toContainText("source payments");
+    await expect(importedNotice).toContainText("source refunds");
+    await importedNotice.getByRole("link", { name: "Review imported history in Orders" }).click();
+    await expect(page).toHaveURL(
+      /\/shop\/blue-mantis\/orders\?from=2026-03-01&to=2026-03-31&range=custom/,
+    );
+    await expect(page.getByRole("region", { name: "Imported payment history" })).toContainText(
+      "Source Sloane",
+    );
   });
 });
 

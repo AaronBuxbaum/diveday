@@ -8,6 +8,7 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   ne,
@@ -16,6 +17,7 @@ import {
   sum,
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { DbExecutor } from "./client";
 import { offsetPage } from "./paging";
@@ -24,6 +26,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  importedPaymentHistory,
   orders,
   people,
   personRoles,
@@ -91,6 +94,7 @@ export async function getMonthlyReport(
   shopId: string,
   startUtc: Date,
   endUtc: Date,
+  options: { currency?: string; timeZone?: string } = {},
 ): Promise<MonthlyReportInput> {
   const inWindow = and(
     eq(trips.shopId, shopId),
@@ -256,6 +260,33 @@ export async function getMonthlyReport(
       ),
     );
 
+  // Imported source history is not tied to a local trip, so it lives on its
+  // own calendar-day timeline rather than pretending an imported booking was a
+  // DiveDay departure. It can affect the aggregate only if the import parser
+  // named a currency and that currency matches this shop's declared one; other
+  // rows remain visible in Orders but are structurally incapable of entering a
+  // single-currency report. `direction` is a conservative source classifier,
+  // never an order or booking-payment status.
+  const importStart = calendarDateInTimezone(startUtc, options.timeZone ?? "UTC");
+  const importEnd = calendarDateInTimezone(endUtc, options.timeZone ?? "UTC");
+  const [importedFinancialTotals] = await db
+    .select({
+      payments: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else 0 end), 0)`,
+      refunds: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'refund' then ${importedPaymentHistory.amountCents} else 0 end), 0)`,
+      count: count(importedPaymentHistory.id),
+    })
+    .from(importedPaymentHistory)
+    .where(
+      and(
+        eq(importedPaymentHistory.shopId, shopId),
+        eq(importedPaymentHistory.currency, options.currency ?? "usd"),
+        isNotNull(importedPaymentHistory.amountCents),
+        inArray(importedPaymentHistory.direction, ["payment", "refund"]),
+        gte(importedPaymentHistory.occurredOn, importStart),
+        lt(importedPaymentHistory.occurredOn, importEnd),
+      ),
+    );
+
   // Post-trip tips settled on this month's trips (PAY-M2). Anchored to the
   // trip's departure like every other figure here, not to when the diver
   // happened to tap the recap link, so a tip left the morning after a June
@@ -291,12 +322,19 @@ export async function getMonthlyReport(
     waiverComplete: waiverByTrip.get(row.tripId) ?? 0,
   }));
 
+  const currentRevenueCents =
+    Number(baseRevenue?.total ?? 0) +
+    Number(recoveredDeposits?.total ?? 0) +
+    Number(invoiceRevenue?.total ?? 0);
+  const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
+  const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
+
   return {
     trips: reportTrips,
-    revenueCents:
-      Number(baseRevenue?.total ?? 0) +
-      Number(recoveredDeposits?.total ?? 0) +
-      Number(invoiceRevenue?.total ?? 0),
+    revenueCents: currentRevenueCents + importedPaymentCents - importedRefundCents,
+    importedPaymentCents,
+    importedRefundCents,
+    importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),
     tipsCents: Number(tipTotals?.total ?? 0),
     tipCount: Number(tipTotals?.tipCount ?? 0),
   };
@@ -322,6 +360,33 @@ export async function earliestReportedTripStart(
     .orderBy(asc(trips.startsAt))
     .limit(1);
   return row?.startsAt ?? null;
+}
+
+/**
+ * The first source-financial day that can affect the report's aggregate. This
+ * deliberately follows the same currency/direction/amount gate as
+ * `getMonthlyReport`, so the month picker never reaches backwards merely for
+ * an ambiguous receipt that the report itself correctly leaves out.
+ */
+export async function earliestImportedFinancialHistoryDate(
+  db: DbExecutor,
+  shopId: string,
+  currency = "usd",
+): Promise<string | null> {
+  const [row] = await db
+    .select({ occurredOn: importedPaymentHistory.occurredOn })
+    .from(importedPaymentHistory)
+    .where(
+      and(
+        eq(importedPaymentHistory.shopId, shopId),
+        eq(importedPaymentHistory.currency, currency),
+        isNotNull(importedPaymentHistory.amountCents),
+        inArray(importedPaymentHistory.direction, ["payment", "refund"]),
+      ),
+    )
+    .orderBy(asc(importedPaymentHistory.occurredOn))
+    .limit(1);
+  return row?.occurredOn ?? null;
 }
 
 /** How many trips the "Trips this month" table shows per page. */

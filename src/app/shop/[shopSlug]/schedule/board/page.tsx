@@ -6,8 +6,12 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
+import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
+import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
+import { listDiveSites } from "@/db/dive-sites";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
@@ -19,6 +23,7 @@ import {
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { maxConcurrentTrips } from "@/lib/boats";
 import { nowDate } from "@/lib/clock";
 import {
   formatDayParts,
@@ -29,6 +34,7 @@ import {
 } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { adviseRequests } from "@/lib/request-advisor";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -38,13 +44,16 @@ import {
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { uuidParam } from "@/lib/uuid";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
   type BuilderDay,
   type BuilderInitialCourse,
+  type BuilderInitialSite,
   type BuilderMoreOptions,
   type BuilderPriceInput,
+  type BuilderRequestPlan,
   ScheduleBuilder,
 } from "./_components/ScheduleBuilder";
 import {
@@ -125,11 +134,24 @@ export default async function ScheduleBoardPage({
     date?: string;
     /** Opens the add panel pointed at a course (the catalogue's own control). */
     course?: string;
+    /** Comma-separated request ids carried from the Requests planning link. */
+    requests?: string;
+    /** Opens the add panel pointed at a dive site (the library's own control). */
+    site?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder, created, series, add, date, course } = await searchParams;
+  const { after, back, builder, created, series, add, date, course, requests, site } =
+    await searchParams;
+  const requestIds = [
+    ...new Set(
+      (requests ?? "")
+        .split(",")
+        .map((value) => uuidParam(value))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
   const session = await requireStaffSession();
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug — a staff member
@@ -152,10 +174,18 @@ export default async function ScheduleBoardPage({
   // they are two queries and a whole catalogue of client props for two selects
   // inside a panel that is closed by default, so they load when it opens
   // (`loadBuilderOptionsAction`).
-  const [range, { trips: upcoming, nextCursor }, canConfigure, openRollCalls] = await Promise.all([
+  const [
+    range,
+    { trips: upcoming, nextCursor },
+    canConfigure,
+    canViewReports,
+    openRollCalls,
+    shopBoats,
+  ] = await Promise.all([
     upcomingScheduleRange(db, shop.id, now),
     pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
+    canPersonViewShopReports(db, shop.id, session.user.personId),
     // Departures that already came back with a head count still open (DOM-H3).
     // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
     // whose `startsAt` is still ahead of `now` — so this is its own backwards
@@ -163,7 +193,9 @@ export default async function ScheduleBoardPage({
     // roll-call lookup. Only on the first page: they belong at the front of
     // the board, not repeated on top of every later cursor page.
     after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+    listBoats(db, shop.id),
   ]);
+  const boatMap = new Map(shopBoats.map((b) => [b.id, b.name]));
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
@@ -179,6 +211,45 @@ export default async function ScheduleBoardPage({
   const requestedCourse = course
     ? ((await listActiveCourses(db, shop.id)).find((row) => row.id === course) ?? null)
     : null;
+
+  // A dive site the library sent us here to schedule.
+  const requestedSite = site
+    ? ((await listDiveSites(db, shop.id)).find((row) => row.id === site) ?? null)
+    : null;
+
+  // Request details are contact information. Only the same live report gate
+  // that protects /requests may carry them onto the builder, even though the
+  // board itself is readable by a wider staff audience.
+  const requestRows =
+    canViewReports && requestIds.length > 0
+      ? await listDateRequestsByIds(db, shop.id, requestIds)
+      : [];
+  const requestAdvice = adviseRequests(
+    requestRows.map((request) => ({
+      id: request.id,
+      divers: request.divers,
+      experienceLevel: request.experienceLevel,
+      courseId: request.courseId,
+    })),
+    shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
+  );
+  const requestPlan: BuilderRequestPlan | null =
+    requestRows.length > 0
+      ? {
+          estimatedDivers: requestAdvice.estimatedDivers,
+          suggestedCapacity: requestAdvice.suggestedCapacity,
+          suggestedBoatName: requestAdvice.suggestedBoat?.name ?? null,
+          exceedsKnownBoats: requestAdvice.exceedsKnownBoats,
+          requests: requestRows.map((request) => ({
+            id: request.id,
+            name: request.name ?? st("requests.anonymous"),
+            subject: request.courseTitle
+              ? st("requests.aboutCourse", { course: request.courseTitle })
+              : st("requests.aboutDive", { interest: request.interest ?? "" }),
+            divers: Math.max(1, request.divers ?? 1),
+          })),
+        }
+      : null;
 
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
   // The named form whenever the action passed a title back; the anonymous
@@ -197,28 +268,28 @@ export default async function ScheduleBoardPage({
     : undefined;
   const builderCopy: BuilderCopy = {
     ariaLabel: st("schedule.builder.ariaLabel"),
-    addDepartureOnDay: st("schedule.builder.addDepartureOnDay"),
+    addDepartureOnDay: st.raw("schedule.builder.addDepartureOnDay"),
     add: st("schedule.builder.add"),
     cancel: st("schedule.builder.cancel"),
     noSiteSetYet: st("schedule.builder.noSiteSetYet"),
-    courseLabel: st("schedule.builder.courseLabel"),
-    dayCountLabel: st("schedule.builder.dayCountLabel"),
+    courseLabel: st.raw("schedule.builder.courseLabel"),
+    dayCountLabel: st.raw("schedule.builder.dayCountLabel"),
     crewLabel: st("schedule.builder.crewLabel"),
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
     noPriceSet: st("schedule.builder.noPriceSet"),
-    noPriceSetAria: st("schedule.builder.noPriceSetAria"),
+    noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
-    rollCallOpen: st("schedule.builder.rollCallOpen"),
-    rollCallOpenAria: st("schedule.builder.rollCallOpenAria"),
-    rollCallOpenNote: st("schedule.builder.rollCallOpenNote"),
-    rowActionsAria: st("schedule.builder.rowActionsAria"),
+    rollCallOpen: st.raw("schedule.builder.rollCallOpen"),
+    rollCallOpenAria: st.raw("schedule.builder.rollCallOpenAria"),
+    rollCallOpenNote: st.raw("schedule.builder.rollCallOpenNote"),
+    rowActionsAria: st.raw("schedule.builder.rowActionsAria"),
     move: st("schedule.builder.move"),
-    moveAria: st("schedule.builder.moveAria"),
+    moveAria: st.raw("schedule.builder.moveAria"),
     copy: st("schedule.builder.copy"),
-    copyAria: st("schedule.builder.copyAria"),
+    copyAria: st.raw("schedule.builder.copyAria"),
     remove: st("schedule.builder.remove"),
-    removeAria: st("schedule.builder.removeAria"),
-    removeConfirm: st("schedule.builder.removeConfirm"),
+    removeAria: st.raw("schedule.builder.removeAria"),
+    removeConfirm: st.raw("schedule.builder.removeConfirm"),
     removeConfirmButton: st("schedule.builder.removeConfirmButton"),
     removeCancel: st("schedule.builder.removeCancel"),
     removePending: st("schedule.builder.removePending"),
@@ -233,6 +304,11 @@ export default async function ScheduleBoardPage({
     priceDescription: st("schedule.builder.priceDescription"),
     course: st("schedule.builder.course"),
     optional: st("schedule.builder.optional"),
+    courseAgencyLabels: {
+      padi: st("schedule.builder.courseAgencies.padi"),
+      ssi: st("schedule.builder.courseAgencies.ssi"),
+      other: st("schedule.builder.courseAgencies.other"),
+    },
     diveSite: st("schedule.builder.diveSite"),
     ordinaryTrip: st("schedule.builder.ordinaryTrip"),
     decideLater: st("schedule.builder.decideLater"),
@@ -240,7 +316,7 @@ export default async function ScheduleBoardPage({
     adding: st("schedule.builder.adding"),
     putOnBoard: st("schedule.builder.putOnBoard"),
     newDate: st("schedule.builder.newDate"),
-    multiDayNote: st("schedule.builder.multiDayNote"),
+    multiDayNote: st.raw("schedule.builder.multiDayNote"),
     newDepartureTime: st("schedule.builder.newDepartureTime"),
     moving: st("schedule.builder.moving"),
     moveIt: st("schedule.builder.moveIt"),
@@ -253,12 +329,14 @@ export default async function ScheduleBoardPage({
     moreOptions: st("schedule.builder.moreOptions"),
     fewerOptions: st("schedule.builder.fewerOptions"),
     moreOptionsDescription: st("schedule.builder.moreOptionsDescription"),
-    titlePlaceholderCourse: st("schedule.builder.titlePlaceholderCourse"),
-    courseNote: st("schedule.builder.courseNote"),
-    courseCertRequired: st("schedule.builder.courseCertRequired"),
+    titlePlaceholderCourse: st.raw("schedule.builder.titlePlaceholderCourse"),
+    courseNote: st.raw("schedule.builder.courseNote"),
+    courseCertRequired: st.raw("schedule.builder.courseCertRequired"),
     courseNoCardRequired: st("schedule.builder.courseNoCardRequired"),
     descriptionLabel: st("schedule.builder.descriptionLabel"),
     descriptionPlaceholder: st("schedule.builder.descriptionPlaceholder"),
+    isPrivateLabel: st("schedule.builder.isPrivateLabel"),
+    isPrivateHint: st("schedule.builder.isPrivateHint"),
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),
     payAtBookingLegend: st("schedule.builder.payAtBookingLegend"),
@@ -289,6 +367,19 @@ export default async function ScheduleBoardPage({
     endsNever: st("schedule.builder.endsNever"),
     endsOnChoice: st("schedule.builder.endsOnChoice"),
     endsOnLabel: st("schedule.builder.endsOnLabel"),
+    requestPlanHeading: st("schedule.builder.requestPlanHeading"),
+    requestPlanDescription: st("schedule.builder.requestPlanDescription"),
+    requestPlanRecommendation: st.raw("schedule.builder.requestPlanRecommendation"),
+    requestPlanDivers: st.raw("schedule.builder.requestPlanDivers"),
+    requestPlanPerson: st.raw("schedule.builder.requestPlanPerson"),
+    requestPlanBoatRecommendation: st.raw("boats.requestPlanBoatRecommendation"),
+    requestPlanBoatExceeded: st("boats.requestPlanBoatExceeded"),
+    diveModeLabel: st("boats.diveModeLabel"),
+    modeBoat: st("boats.modeBoat"),
+    modeShore: st("boats.modeShore"),
+    modePool: st("boats.modePool"),
+    boatSelectLabel: st("boats.boatSelectLabel"),
+    unassignedBoat: st("boats.unassignedBoat"),
   };
 
   // The rare half of the add panel: bounds the domain owns, and the per-dive
@@ -300,13 +391,13 @@ export default async function ScheduleBoardPage({
     maxDays: MAX_TRIP_DAYS,
     diveFields: {
       heading: st("shared.tripDiveFields.heading"),
-      description: st("shared.tripDiveFields.description"),
+      description: st.raw("shared.tripDiveFields.description"),
       twoTankTrip: st("shared.tripDiveFields.twoTankTrip"),
-      diveCountTrip: st("shared.tripDiveFields.diveCountTrip"),
+      diveCountTrip: st.raw("shared.tripDiveFields.diveCountTrip"),
       numberOfDivesLabel: st("shared.tripDiveFields.numberOfDivesLabel"),
-      diveOptionOne: st("shared.tripDiveFields.diveOptionOne"),
-      diveOptionOther: st("shared.tripDiveFields.diveOptionOther"),
-      diveLegend: st("shared.tripDiveFields.diveLegend"),
+      diveOptionOne: st.raw("shared.tripDiveFields.diveOptionOne"),
+      diveOptionOther: st.raw("shared.tripDiveFields.diveOptionOther"),
+      diveLegend: st.raw("shared.tripDiveFields.diveLegend"),
       nameLabel: st("shared.tripDiveFields.nameLabel"),
       optionalHint: st("shared.tripDiveFields.optionalHint"),
       namePlaceholderFirst: st("shared.tripDiveFields.namePlaceholderFirst"),
@@ -324,7 +415,8 @@ export default async function ScheduleBoardPage({
 
   // `?course=` always implies an open panel: it would otherwise land on a board
   // that silently swallowed the course the link named.
-  const addPanelState = add === "full" ? "expanded" : add || requestedCourse ? "quick" : "closed";
+  const addPanelState =
+    add === "full" ? "expanded" : add || requestedCourse || requestedSite ? "quick" : "closed";
 
   const initialCourse: BuilderInitialCourse | null = requestedCourse
     ? {
@@ -335,6 +427,13 @@ export default async function ScheduleBoardPage({
               level: st(CERTIFICATION_LEVEL_KEYS[requestedCourse.minimumCertificationLevel]),
             })
           : st("schedule.builder.courseNoCardRequired"),
+      }
+    : null;
+
+  const initialSite: BuilderInitialSite | null = requestedSite
+    ? {
+        id: requestedSite.id,
+        name: requestedSite.name,
       }
     : null;
 
@@ -363,6 +462,8 @@ export default async function ScheduleBoardPage({
       booked: number;
       courseTitle: string | null;
       diveSiteName: string | null;
+      diveMode?: "boat" | "shore" | "pool";
+      boatId?: string | null;
     },
     rollCallOpen: { diveNumber: number; uncounted: number } | null,
   ) {
@@ -384,6 +485,8 @@ export default async function ScheduleBoardPage({
       dateIso,
       startTime: toTimeInputValue(wall),
       timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, tz),
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
       capacity: trip.capacity,
       booked: trip.booked,
       courseTitle: trip.courseTitle,
@@ -392,6 +495,8 @@ export default async function ScheduleBoardPage({
       crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
       priceCents: trip.priceCents,
       rollCallOpen,
+      diveMode: trip.diveMode ?? "boat",
+      boatName: trip.boatId ? (boatMap.get(trip.boatId) ?? null) : null,
     });
   }
 
@@ -412,6 +517,8 @@ export default async function ScheduleBoardPage({
         booked: open.rosterSize,
         courseTitle: null,
         diveSiteName: null,
+        diveMode: "boat",
+        boatId: null,
       },
       { diveNumber: open.diveNumber, uncounted: open.uncounted },
     );
@@ -433,9 +540,29 @@ export default async function ScheduleBoardPage({
         booked: trip.booked,
         courseTitle: trip.course?.title ?? null,
         diveSiteName: trip.diveSite?.name ?? null,
+        diveMode: trip.diveMode,
+        boatId: trip.boatId,
       },
       null,
     );
+  }
+
+  if (shopBoats.length > 0) {
+    for (const day of builderDays) {
+      const boatTrips = day.trips.filter(
+        (t): t is typeof t & { startsAt: Date; endsAt: Date } =>
+          (t.diveMode ?? "boat") === "boat" &&
+          t.startsAt instanceof Date &&
+          t.endsAt instanceof Date,
+      );
+      const peakConcurrent = maxConcurrentTrips(boatTrips);
+      if (peakConcurrent > shopBoats.length) {
+        day.boatWarning = st("boats.concurrencyWarning", {
+          tripCount: peakConcurrent,
+          boatCount: shopBoats.length,
+        });
+      }
+    }
   }
 
   return (
@@ -528,6 +655,8 @@ export default async function ScheduleBoardPage({
         copy={builderCopy}
         more={builderMore}
         initialCourse={initialCourse}
+        initialSite={initialSite}
+        requestPlan={requestPlan}
         openAdd={addPanelState}
         actions={{
           add: addDepartureAction.bind(null, shopSlug),

@@ -13,7 +13,6 @@ const copy: DateRequestCopy = {
   preferredDate: "Date you’d like",
   alternateDate: "Or this date",
   datesHint: "A request, not a booking.",
-  dateFlexible: "Either of those, or a few days either side, works for me",
   yourName: "Your name",
   namePlaceholder: "Priya Sharma",
   yourEmail: "Your email",
@@ -289,7 +288,7 @@ describe("DateRequestForm — asking for a date", () => {
   // The dates are what make a request groupable at all ("four people could
   // make the 12th"); the free-text box beside them is what holds everything a
   // date cannot say, so both travel.
-  it("carries a preferred date, an alternate, and the flexible flag", async () => {
+  it("carries a preferred and alternate date", async () => {
     const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
@@ -298,7 +297,6 @@ describe("DateRequestForm — asking for a date", () => {
       target: { value: "2026-09-12" },
     });
     fireEvent.change(screen.getByLabelText(/Or this date/), { target: { value: "2026-09-19" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: /a few days either side/ }));
     pickExperience();
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
@@ -306,7 +304,7 @@ describe("DateRequestForm — asking for a date", () => {
     const formData = submitInquiry.mock.calls[0]?.[1];
     expect(formData.get("preferredDate")).toBe("2026-09-12");
     expect(formData.get("alternateDate")).toBe("2026-09-19");
-    expect(formData.get("dateFlexible")).toBe("on");
+    expect(formData.get("dateFlexible")).toBeNull();
   });
 
   it("sends no date fields at all when the diver named none", async () => {

@@ -58,8 +58,13 @@
     "priceDescription": "Divers see this the moment the departure reaches the public page. Leave it empty to price it later on the trip.",
     "course": "Course",
     "optional": "(optional)",
+    "courseAgencies": {
+      "padi": "PADI",
+      "ssi": "SSI",
+      "other": "Other agency"
+    },
     "diveSite": "Dive site",
-    "ordinaryTrip": "Ordinary trip",
+    "ordinaryTrip": "Fun dive",
     "decideLater": "Decide later",
     "optionsLoading": "Loading…",
     "adding": "Adding…",
@@ -80,10 +85,12 @@
     "viewOnlyNotice": "Scheduling and editing trips is limited to owners, managers, and instructors. The crew runs the day on the water — the roster, check-in, manifest, and roll call — from each trip's own page.",
     "titlePlaceholderCourse": "{courseTitle} — Session 1",
     "courseNote": "{requirement} · add an instructor before sharing the session",
-    "courseCertRequired": "{level} card required at enrollment",
-    "courseNoCardRequired": "No existing C-card required",
+    "courseCertRequired": "{level} certification required at enrollment",
+    "courseNoCardRequired": "No existing certification required",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Sites, conditions, who it's for, required certs.",
+    "isPrivateLabel": "Private charter",
+    "isPrivateHint": "Mark this trip as a private charter for your group",
     "daysLabel": "How many days",
     "daysDescription": "Most departures are one day. A course weekend or a liveaboard that meets the same hours on consecutive days is a single trip — one roster, one set of waivers, one crew.",
     "payAtBookingLegend": "Pay at booking",
@@ -113,7 +120,12 @@
     "minimumDecisionLabel": "Decide by",
     "minimumDecisionDescription": "How long before departure the call is made. Divers are told the exact moment when they book.",
     "diversSuffix": "divers",
-    "hoursBeforeSuffix": "hours before"
+    "hoursBeforeSuffix": "hours before",
+    "requestPlanHeading": "Starting from requests",
+    "requestPlanDescription": "Checked people will be invited to this departure, not booked. Change the selection before putting it on the board.",
+    "requestPlanRecommendation": "About {divers} divers are represented. Suggested starting capacity: {capacity} seats.",
+    "requestPlanDivers": "{divers} divers",
+    "requestPlanPerson": "{name} ({divers, plural, one {# diver} other {# divers}})"
   },
   "addBooking": "Add a booking"
 }

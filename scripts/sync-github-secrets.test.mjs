@@ -31,10 +31,14 @@ exit ${exitCode}
   chmodSync(join(binDirectory, "gh"), 0o755);
 }
 
-function sync(inputPath, binDirectory) {
+function sync(inputPath, binDirectory, checkOnly = false) {
   return execFileSync(
     "node",
-    [join(process.cwd(), "scripts", "sync-github-secrets.mjs"), inputPath],
+    [
+      join(process.cwd(), "scripts", "sync-github-secrets.mjs"),
+      inputPath,
+      ...(checkOnly ? ["--check"] : []),
+    ],
     { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
   );
 }
@@ -65,6 +69,18 @@ describe("sync-github-secrets", () => {
 
     sync(inputPath, directory);
 
+    expect(existsSync(logPath)).toBe(false);
+  });
+
+  it("reports a current checkpoint without invoking GitHub", () => {
+    const directory = temporaryDirectory("diveday-gh-secrets-");
+    const inputPath = join(directory, ".env.github");
+    writeFileSync(inputPath, "A=1\n");
+    writeFileSync(`${inputPath}.synced`, "A=1\n");
+    const logPath = join(directory, "gh.log");
+    writeGhStub(directory, logPath);
+
+    expect(sync(inputPath, directory, true).trim()).toBe("CURRENT");
     expect(existsSync(logPath)).toBe(false);
   });
 

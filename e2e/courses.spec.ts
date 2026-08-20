@@ -655,3 +655,14 @@ test.describe("the public header nav", () => {
     await expect(header.locator('a[href^="mailto:"]')).toHaveCount(0);
   });
 });
+
+test("the course editor exposes private-session pricing alongside standard pricing", async ({
+  privateShop,
+  page,
+}) => {
+  test.setTimeout(30_000);
+  // Private courses are no longer a separate visibility mode. The editor
+  // keeps private-group pricing as an optional second price instead.
+  await page.goto(`/shop/${privateShop.slug}/courses/rescue-diver/edit`);
+  await expect(page.getByLabel("Private session price")).toBeVisible();
+});

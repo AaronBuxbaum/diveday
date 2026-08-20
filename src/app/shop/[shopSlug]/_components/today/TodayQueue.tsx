@@ -6,18 +6,22 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { getSeasonalBriefing, groupActions, groupByDeparture, type TodayAction } from "@/lib/today";
+import { getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import { KindChip } from "./KindChip";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
+import { RelativeDepartureTime } from "./RelativeDepartureTime";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
 import { UrgencyBand } from "./UrgencyBand";
 import { WaiverSendControl } from "./WaiverSendControl";
+
+const RELATIVE_DEPARTURE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
 export type TodayInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
@@ -33,6 +37,9 @@ function ActionRow({
   inviteCopy,
   paymentCopy,
   t,
+  locale,
+  timezone,
+  nowMs,
 }: {
   action: TodayAction;
   /** Inside a departure group the header already says the boat — the row must not repeat it. */
@@ -45,7 +52,14 @@ function ActionRow({
   inviteCopy: WaitlistInviteCopy;
   paymentCopy: PaymentActionCopy;
   t: StaffTranslator;
+  locale: string;
+  timezone: string;
+  nowMs?: number;
 }) {
+  const dueAt = action.dueAt;
+  const showRelativeDepartureTime = Boolean(
+    dueAt && Math.abs(dueAt.getTime() - (nowMs ?? Date.now())) <= RELATIVE_DEPARTURE_WINDOW_MS,
+  );
   // What the row itself has to say: the person it is about (unless the row is
   // about the boat, which the group header already names) and what is wrong.
   const lead = grouped ? (
@@ -53,6 +67,11 @@ function ActionRow({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <KindChip kind={action.kind} t={t} />
         {action.aboutDeparture ? null : <p className="font-semibold">{action.subject}</p>}
+        {showRelativeDepartureTime && dueAt ? (
+          <p className="text-sm text-muted">
+            <RelativeDepartureTime at={dueAt} locale={locale} timeZone={timezone} nowMs={nowMs} />
+          </p>
+        ) : null}
       </div>
       <p className="mt-1 text-muted">{action.detail}</p>
     </div>
@@ -62,6 +81,11 @@ function ActionRow({
         <KindChip kind={action.kind} t={t} />
         <p className="font-semibold">{action.subject}</p>
         {action.context ? <p className="text-sm text-muted">{action.context}</p> : null}
+        {showRelativeDepartureTime && dueAt ? (
+          <p className="text-sm text-muted">
+            <RelativeDepartureTime at={dueAt} locale={locale} timeZone={timezone} nowMs={nowMs} />
+          </p>
+        ) : null}
       </div>
       <p className="mt-1.5 text-muted">{action.detail}</p>
     </div>
@@ -75,89 +99,89 @@ function ActionRow({
   // button. Ten bordered "Open …" buttons down a queue made every row read
   // as a form; a tappable row reads as a list.
   const rowIsLink = !action.waiver && !action.resend && !action.invite && !action.payment?.orderId;
-  return (
-    <li
-      className={
-        grouped
-          ? `group/row relative px-4 py-3.5 transition-colors duration-200 sm:px-5${
-              rowIsLink
-                ? " hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60"
-                : ""
-            }`
-          : `group/row relative rounded-2xl border border-border bg-surface p-4 shadow-sm transition-colors duration-200 sm:p-5${
-              // Pressable chrome only on a card that is actually pressable —
-              // a Send-waiver card that scaled and tinted on hover while only
-              // its button did anything was a false affordance.
-              rowIsLink
-                ? " card-scale-hint hover:border-primary/40 has-[a:focus-visible]:border-primary/40"
-                : ""
-            }`
-      }
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-        {lead}
-        {action.waiver ? (
-          <WaiverSendControl
-            shopSlug={shopSlug}
-            surface="today"
-            bookingIds={action.waiver.bookingIds}
-            label={action.actionLabel}
-            copy={waiverCopy}
-          />
-        ) : action.resend ? (
-          <ResendConfirmationControl
-            shopSlug={shopSlug}
-            bookingId={action.resend.bookingId}
-            label={action.actionLabel}
-            copy={resendCopy}
-          />
-        ) : action.invite ? (
-          <WaitlistInvite
-            entryId={action.invite.entryId}
-            personName={action.invite.personName}
-            personEmail={action.invite.personEmail}
-            invitedAt={action.invite.invitedAt}
-            bookingPath={action.invite.bookingPath}
-            shopName={shopName}
-            tripTitle={action.invite.tripTitle}
-            tripWhen={action.invite.tripWhen}
-            invite={inviteAction.bind(null, action.invite.tripId)}
-            copy={inviteCopy}
-          />
-        ) : action.payment?.orderId ? (
-          <PaymentActionControl
-            shopSlug={shopSlug}
-            orderId={action.payment.orderId}
-            hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
-            copy={paymentCopy}
-          />
-        ) : (
-          <>
-            {/* The stretched link, same construction as the public schedule's
+  const rowClass = grouped
+    ? `group/row relative px-4 py-3.5 transition-colors duration-200 sm:px-5${
+        rowIsLink ? " hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""
+      }`
+    : `group/row relative transition-colors duration-200${
+        // Pressable chrome only on a card that is actually pressable — a
+        // Send-waiver card that scaled and tinted on hover while only its
+        // button did anything was a false affordance.
+        rowIsLink
+          ? " card-scale-hint hover:border-primary/40 has-[a:focus-visible]:border-primary/40"
+          : ""
+      }`;
+  const content = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+      {lead}
+      {action.waiver ? (
+        <WaiverSendControl
+          shopSlug={shopSlug}
+          surface="today"
+          bookingIds={action.waiver.bookingIds}
+          label={action.actionLabel}
+          copy={waiverCopy}
+        />
+      ) : action.resend ? (
+        <ResendConfirmationControl
+          shopSlug={shopSlug}
+          bookingId={action.resend.bookingId}
+          label={action.actionLabel}
+          copy={resendCopy}
+        />
+      ) : action.invite ? (
+        <WaitlistInvite
+          entryId={action.invite.entryId}
+          personName={action.invite.personName}
+          personEmail={action.invite.personEmail}
+          invitedAt={action.invite.invitedAt}
+          bookingPath={action.invite.bookingPath}
+          shopName={shopName}
+          tripTitle={action.invite.tripTitle}
+          tripWhen={action.invite.tripWhen}
+          invite={inviteAction.bind(null, action.invite.tripId)}
+          copy={inviteCopy}
+        />
+      ) : action.payment?.orderId ? (
+        <PaymentActionControl
+          shopSlug={shopSlug}
+          orderId={action.payment.orderId}
+          hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
+          copy={paymentCopy}
+        />
+      ) : (
+        <>
+          {/* The stretched link, same construction as the public schedule's
                 agenda rows: an invisible overlay makes the whole row the tap
                 target (a far better dock-test target than a 44px button), the
                 aria-label keeps the destination's name for screen readers and
                 the role-based tests, and the visible affordance below is
                 presentational. `has-[a:focus-visible]` on the row carries the
                 focus tint; the overlay's own outline draws around the row. */}
-            <Link
-              href={action.href}
-              aria-label={action.actionLabel}
-              className={`absolute inset-0 z-0 ${grouped ? "" : "rounded-2xl"}`}
-            />
-            <span
-              aria-hidden="true"
-              className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
-            >
-              {action.actionLabel}
-              <span className="inline-block transition-transform duration-200 group-hover/row:translate-x-0.5">
-                ›
-              </span>
+          <Link
+            href={action.href}
+            aria-label={action.actionLabel}
+            className={`absolute inset-0 z-0 ${grouped ? "" : "rounded-2xl"}`}
+          />
+          <span
+            aria-hidden="true"
+            className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
+          >
+            {action.actionLabel}
+            <span className="inline-block transition-transform duration-200 group-hover/row:translate-x-0.5">
+              ›
             </span>
-          </>
-        )}
-      </div>
-    </li>
+          </span>
+        </>
+      )}
+    </div>
+  );
+  return grouped ? (
+    <li className={rowClass}>{content}</li>
+  ) : (
+    <SectionCard as="li" className={rowClass}>
+      {content}
+    </SectionCard>
   );
 }
 
@@ -173,6 +197,7 @@ export function TodayQueue({
   timezone,
   inviteAction,
   locale,
+  nowMs,
   viewSwitch,
 }: {
   actions: readonly TodayAction[];
@@ -182,6 +207,7 @@ export function TodayQueue({
   timezone: string;
   inviteAction: TodayInviteAction;
   locale: string;
+  nowMs?: number;
   /**
    * The urgency/by-departure switch, rendered on the queue's own heading row —
    * the control rides the thing it governs rather than floating above it.
@@ -258,8 +284,8 @@ export function TodayQueue({
     );
   }
 
-  // The morning's boats — "imminent" (next 3 hours) and "now" ("Before
-  // today's boats") — are the two urgency bands a diver could still be
+  // The morning's boats — "imminent" (next 3 hours) and "now" (within 24
+  // hours) — are the two urgency bands a diver could still be
   // standing at the dock for. Once neither has any work left but a later
   // group still does, that's a real earned moment: the last blocker of the
   // morning just cleared, not the whole queue (the 🤙 empty state above
@@ -291,64 +317,29 @@ export function TodayQueue({
       ) : null}
       <div className="mt-5 flex flex-col gap-8">
         {groups.map((group, index) => {
-          // The band's rows, boat by boat: rows that hang off the same
-          // departure share one header card so the trip's name and time are
-          // said once, and each row keeps only what differs — the person, the
-          // problem, the fix (design/principles.md #9). Rows with no boat
-          // stand alone as their own cards.
+          // In urgency mode, every row competes across every trip. The row
+          // carries its own boat/time context, so a critical issue on a later
+          // boat can appear above routine prep on the next boat.
           const rows = (
-            <div className="mt-3 flex flex-col gap-3">
-              {groupByDeparture(group.actions).map((departureGroup) =>
-                departureGroup.label === null ? (
-                  <ul key={departureGroup.key} className="flex flex-col gap-3">
-                    {departureGroup.actions.map((action) => (
-                      <ActionRow
-                        key={action.id}
-                        action={action}
-                        shopSlug={shopSlug}
-                        shopName={shopName}
-                        inviteAction={inviteAction}
-                        waiverCopy={waiverCopy}
-                        resendCopy={resendCopy}
-                        inviteCopy={inviteCopy}
-                        paymentCopy={paymentCopy}
-                        t={t}
-                      />
-                    ))}
-                  </ul>
-                ) : (
-                  <section
-                    key={departureGroup.key}
-                    // No hover chrome on the card itself: the card never
-                    // navigates, and having just taught "tint = tappable" on
-                    // the rows inside it, a scaling, border-tinting wrapper
-                    // would be a false affordance. The rows carry their own.
-                    className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm"
-                  >
-                    <h4 className="border-b border-border bg-surface-sunken px-4 py-2 text-sm font-semibold sm:px-5">
-                      {departureGroup.label}
-                    </h4>
-                    <ul className="divide-y divide-border">
-                      {departureGroup.actions.map((action) => (
-                        <ActionRow
-                          key={action.id}
-                          action={action}
-                          grouped
-                          shopSlug={shopSlug}
-                          shopName={shopName}
-                          inviteAction={inviteAction}
-                          waiverCopy={waiverCopy}
-                          resendCopy={resendCopy}
-                          inviteCopy={inviteCopy}
-                          paymentCopy={paymentCopy}
-                          t={t}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ),
-              )}
-            </div>
+            <ul className="mt-3 flex flex-col gap-3">
+              {group.actions.map((action) => (
+                <ActionRow
+                  key={action.id}
+                  action={action}
+                  shopSlug={shopSlug}
+                  shopName={shopName}
+                  inviteAction={inviteAction}
+                  waiverCopy={waiverCopy}
+                  resendCopy={resendCopy}
+                  inviteCopy={inviteCopy}
+                  paymentCopy={paymentCopy}
+                  t={t}
+                  locale={locale}
+                  timezone={timezone}
+                  nowMs={nowMs}
+                />
+              ))}
+            </ul>
           );
           // Visual weight follows urgency; horizon folds. Work a boat could
           // still be waiting on ("imminent"/"now") always renders in full,

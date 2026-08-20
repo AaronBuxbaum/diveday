@@ -105,7 +105,7 @@ describe("NoticeBanner", () => {
         signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: PERSON }),
       );
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This charter requires a Deep card. There's none on this diver's record.",
+        "This charter requires a Deep certification. There's none on this diver's record.",
       );
     });
 
@@ -115,9 +115,9 @@ describe("NoticeBanner", () => {
       renderBanner("trip-prerequisite", "~~deep~0");
       const banner = screen.getByRole("alert");
       expect(banner).toHaveTextContent(
-        "This diver's cards on file don't reach what that trip and its dive sites require",
+        "This diver's certifications on file don't reach what that trip and its dive sites require",
       );
-      expect(banner).not.toHaveTextContent("Deep card");
+      expect(banner).not.toHaveTextContent("Deep certification");
     });
 
     it("falls back to the generic sentence on another diver's genuine gate", () => {
@@ -125,19 +125,19 @@ describe("NoticeBanner", () => {
         "trip-prerequisite",
         signTripAdmissionGate(deepCardRefusal, { kind: "diver", id: OTHER_PERSON }),
       );
-      expect(screen.getByRole("alert")).not.toHaveTextContent("Deep card");
+      expect(screen.getByRole("alert")).not.toHaveTextContent("Deep certification");
     });
 
     it("still renders — never blank — when the gate is absent", () => {
       renderBanner("trip-prerequisite");
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "This diver's cards on file don't reach what that trip and its dive sites require",
+        "This diver's certifications on file don't reach what that trip and its dive sites require",
       );
     });
 
     it("renders rather than throwing on a repeated ?gate=", () => {
       expect(() => renderBanner("trip-prerequisite", ["~~deep~0", "~~wreck~0"])).not.toThrow();
-      expect(screen.getByRole("alert")).not.toHaveTextContent("Deep card");
+      expect(screen.getByRole("alert")).not.toHaveTextContent("Deep certification");
     });
 
     /**
@@ -181,7 +181,7 @@ describe("NoticeBanner", () => {
 });
 
 /**
- * **The routing half.** This record is eight independent forms on one ~6,400px
+ * **The routing half.** This record is nine independent forms on one ~6,400px
  * scroll — details, level cards, specialty cards, rental fit, payments, book an
  * activity, remove, erase — and every one of their outcomes used to resolve
  * into a single banner under the `<h1>`. Save a rental fit halfway down the

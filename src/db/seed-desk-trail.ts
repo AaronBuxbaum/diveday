@@ -17,8 +17,9 @@ import { at } from "./seed-clock";
  *
  * Written for **today's reef boat**, which is the departure a demo actually
  * opens. Notes and activity are pure annotation: neither is read by
- * `getBookingReadiness`, the manifest, or the Today queue, so today's exactly
- * asserted readiness counts and head counts are untouched by every row here.
+ * `getBookingReadiness` or the Today queue, so today's exactly asserted
+ * readiness counts and head counts are untouched by every row here. The live
+ * manifest displays notes as crew context, but never uses them as a gate.
  *
  * The wording is the shop talking to itself in its own language, exactly as
  * `addInternalNote` and `recordTripActivity` store it — a name interpolated
@@ -46,8 +47,7 @@ const NOTE_PLANS: {
     rosterIndex: 2,
     daysAgo: 3,
     hour: 16,
-    body: (diver) =>
-      `${diver} rang ahead — first dive back after ear surgery, wants a slow descent.`,
+    body: (diver) => `${diver} rang ahead — first boat dive in a while, wants a slow descent.`,
   },
   {
     rosterIndex: 4,

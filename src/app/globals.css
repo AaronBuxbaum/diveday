@@ -413,6 +413,16 @@ summary {
   thead {
     break-inside: avoid;
   }
+
+  /* The packet is four screen tabs in one document. Give each tab a clean
+     start without forcing a page break inside a long roster or manifest. */
+  .trip-print-bundle .print-bundle-page {
+    break-before: page;
+  }
+
+  .trip-print-bundle .print-bundle-page:first-of-type {
+    break-before: auto;
+  }
 }
 
 /* Earned-moment entrance (confirmation panels). Reduced-motion kill-switch below covers it. */
@@ -465,11 +475,24 @@ summary {
 
 @keyframes slide-in-right {
   from {
-    transform: translateX(100%);
+    transform: translateX(var(--quick-add-shift, 0px));
   }
   to {
     transform: translateX(0);
   }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--quick-add-shift, 0px));
+  }
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 250ms var(--ease-out-soft) both;
 }
 
 @keyframes scale-in {
@@ -483,6 +506,19 @@ summary {
   }
 }
 
+@keyframes board-menu-in {
+  from {
+    transform: translateX(-1rem);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-board-menu-in {
+  animation: board-menu-in 450ms var(--ease-out-soft) both;
+}
+
 .animate-fade-in {
   animation: fade-in 150ms var(--ease-out-soft) both;
 }
@@ -493,6 +529,34 @@ summary {
 
 .animate-scale-in {
   animation: scale-in 200ms var(--ease-out-soft) both;
+}
+
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes board-menu-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-1rem);
+  }
+}
+
+.animate-board-menu-out {
+  animation: board-menu-out 450ms var(--ease-out-soft) both;
+}
+
+.animate-scale-out {
+  animation: scale-out 180ms var(--ease-out-soft) both;
 }
 
 /* Reusable class for standard UI transitions (opacity, transform, background-color, border-color, etc.) */

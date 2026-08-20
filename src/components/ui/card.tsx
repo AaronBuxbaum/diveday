@@ -43,6 +43,10 @@ import { type ReactNode, useId } from "react";
  * - **An overlay** — a dropdown, a modal, a toast, a bottom sheet. They carry
  *   `shadow-lg`/`shadow-2xl` because they float above the page rather than
  *   sitting in it.
+ * - **A tone-carrying operational panel** — a warning, success confirmation,
+ *   paid receipt or earned moment. Its border and fill communicate meaning,
+ *   and `SectionCard` deliberately has no tone prop that could flatten it into
+ *   neutral chrome. Keep that treatment at the call site.
  *
  * A card nested directly inside another card at the same radius and fill reads
  * as a rendering bug, not as structure. If that is where you have arrived, the

@@ -120,11 +120,15 @@ pnpm infra:deploy
 ```
 
 After CloudFormation succeeds, the command writes `.env.local`, `.env.vercel`, and `.env.github`,
-then asks whether to update generated AWS CLI profiles, import Vercel Production variables, deploy
-Vercel, update GitHub visual-test secrets, set the CI role-ARN repository variables and the
-`infra-deploy` GitHub Environment reviewer, and add SES DNS records through Vercel. Press Enter or
-`n` to skip any one; `--no-wizard` skips all of it and only creates the three files. In CI, the
-`deploy` job answers yes to every one of those questions automatically instead — see
+then checks each optional handoff before asking whether it needs an update: generated AWS CLI
+profiles, Vercel Production variables, GitHub visual-test secrets, the CI role-ARN repository
+variables, the `infra-deploy` GitHub Environment reviewer, and SES DNS records through Vercel. A
+handoff already current is omitted from the wizard; if its read-only check cannot prove that, its
+question remains visible and the existing write step reports the failure. The final Vercel
+Production deploy question is always explicit because a deploy can be intentional even when every
+handoff is current. Press Enter or `n` to skip any shown question; `--no-wizard` skips all of it and
+only creates the three files. In CI, the `deploy` job answers yes to every shown question
+automatically instead — see
 [ADR 20260811-ci-deploy-full-wizard](../architecture/decisions/20260811-ci-deploy-full-wizard.md) —
 once the required-reviewer approval on `infra-deploy` has already gated the run. SES DNS defaults to
 the `dive.day` Vercel zone; set `VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The
@@ -151,7 +155,9 @@ checks a SHA-256 fingerprint of each value against an SSM Parameter Store parame
 this handoff already authenticates on a workstation — or, in CI, under
 `GitHubActionsCdkDeployRole`'s own narrow grant on that one parameter path (ADR
 20260811-ci-deploy-full-wizard) — never the values themselves (ADR
-20260811-vercel-sync-checkpoint-in-ssm). GitHub's diff still checks a local checkpoint file,
+20260811-vercel-sync-checkpoint-in-ssm). The complete hashed state is checked before the first
+Vercel value upload and refreshed after every successful sync, including a no-op, so removed
+variables cannot remain in the checkpoint. GitHub's diff still checks a local checkpoint file,
 `.env.github.synced`, gitignored, since that sync step has no AWS channel of its own. A value edited
 directly in the Vercel dashboard or GitHub UI is invisible to either check and reads as still in
 sync.

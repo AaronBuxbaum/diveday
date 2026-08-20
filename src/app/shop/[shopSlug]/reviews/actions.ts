@@ -5,11 +5,13 @@ import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
   setReviewPublished,
+  setReviewStandout,
   setReviewsPublished,
 } from "@/db/reviews";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { isUuid } from "@/lib/uuid";
 
 /**
  * Publish or hide one diver review. The shop is taken from the staff session
@@ -36,7 +38,7 @@ export async function setReviewPublishedAction(formData: FormData) {
   const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewId = String(formData.get("reviewId") ?? "");
   const publish = formData.get("publish") === "true";
-  if (!reviewId) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+  if (!isUuid(reviewId)) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
 
   const outcome = await setReviewPublished(await getDb(), session.user.shopId, reviewId, publish, {
     recordedByPersonId: session.user.personId,
@@ -44,6 +46,7 @@ export async function setReviewPublishedAction(formData: FormData) {
     reasonNote: String(formData.get("reasonNote") ?? ""),
   });
   if (outcome === "not_found") revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+  if (outcome === "not_published") revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
   // The `#review-<id>` fragment goes on the path handed to `noticeUrl`, which
   // merges the notice into the query *ahead* of it — the refused row is still
   // what the browser lands on.
@@ -53,10 +56,26 @@ export async function setReviewPublishedAction(formData: FormData) {
   if (outcome === "note_required") {
     revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "note-required"));
   }
+  if (outcome === "note_too_long") {
+    revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "note-too-long"));
+  }
   revalidateAndRedirect(
     reviews,
     publish ? noticeUrl(reviews, "published") : noticeUrl(reviews, "hidden", { undo: reviewId }),
   );
+}
+
+/** Mark or unmark a published review for the public standout selection. */
+export async function setReviewStandoutAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const reviews = shopPath(session.user.shopSlug, "reviews");
+  const reviewId = String(formData.get("reviewId") ?? "");
+  const standout = formData.get("standout") === "true";
+  if (!isUuid(reviewId)) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+
+  const outcome = await setReviewStandout(await getDb(), session.user.shopId, reviewId, standout);
+  if (outcome !== true) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+  revalidateAndRedirect(reviews, noticeUrl(reviews, standout ? "standout" : "standout-removed"));
 }
 
 /** A posted value narrowed to a real reason code, or null — never a coerced one. */

@@ -3,10 +3,13 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
+import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
+import { createTripRequestInvitations } from "@/db/trip-invitations";
 import {
   countShopTrips,
   createTrip,
@@ -88,15 +91,31 @@ export async function loadBuilderOptionsAction() {
   const db = await getDb();
   const shopId = session.user.shopId;
   if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) {
-    return { courses: [], diveSites: [] };
+    return {
+      courses: [],
+      diveSites: [],
+      boats: [],
+      hasShoreDiving: false,
+      hasPoolDiving: false,
+    };
   }
-  const [courses, diveSites] = await Promise.all([
+  const [courses, diveSites, boats, shop] = await Promise.all([
     listActiveCourses(db, shopId).then((rows) =>
-      rows.map((row) => ({ id: row.id, title: row.title })),
+      rows.map((row) => ({ id: row.id, title: row.title, agency: row.agency })),
     ),
     listDiveSites(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
+    listBoats(db, shopId).then((rows) =>
+      rows.map((row) => ({ id: row.id, name: row.name, capacity: row.capacity })),
+    ),
+    getShopById(db, shopId),
   ]);
-  return { courses, diveSites };
+  return {
+    courses,
+    diveSites,
+    boats,
+    hasShoreDiving: shop?.hasShoreDiving ?? false,
+    hasPoolDiving: shop?.hasPoolDiving ?? false,
+  };
 }
 
 /**
@@ -111,6 +130,15 @@ const addSchema = z.object({
   // Absent entirely from a collapsed submission, so optional rather than
   // required-but-empty.
   description: z.string().trim().max(500).optional(),
+  isPrivate: z.preprocess(
+    (value) => value === "true" || value === true,
+    z.boolean().optional().default(false),
+  ),
+  diveMode: z.preprocess(
+    (value) => value || "boat",
+    z.enum(["boat", "shore", "pool"]).default("boat"),
+  ),
+  boatId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -178,13 +206,24 @@ function repeatWeekdaysFrom(formData: FormData): WeekdaySet {
 
 export async function addDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
-  const { db, shop } = await requireBoardAuthor(shopSlug);
+  const { db, shop, session } = await requireBoardAuthor(shopSlug);
   const invalid = async () => {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
+  const requestIds = z.array(z.uuid()).safeParse(formData.getAll("inquiryId"));
+  if (!requestIds.success) return await invalid();
+  // The request ids arrive from a client form and the builder URL is shareable.
+  // A staffer who can create a departure is not automatically allowed to read
+  // the private lead details that would be attached to it.
+  if (
+    requestIds.data.length > 0 &&
+    !(await canPersonViewShopReports(db, shop.id, session.user.personId))
+  ) {
+    return await invalid();
+  }
   const {
     title,
     description,
@@ -203,6 +242,9 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     diveSiteId,
     repeatIntervalWeeks,
     repeatEndsOn,
+    isPrivate,
+    diveMode,
+    boatId,
   } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
@@ -280,6 +322,9 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     // A window with no minimum beside it is not a policy — it would sit in the
     // row saying nothing and read as one on the next edit.
     minimumDecisionHours: minimumBookings ? (minimumDecisionHours ?? null) : null,
+    isPrivate,
+    diveMode,
+    boatId: diveMode === "boat" ? boatId : null,
   };
 
   if (repeatIntervalWeeks > 0) {
@@ -304,6 +349,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       template: { startsAt, endsAt: lastDay.endsAt, scheduleDays },
     });
     if (!series) return await invalid();
+    const firstTrip = series.trips[0];
+    if (!firstTrip) return await invalid();
+    await createTripRequestInvitations(db, {
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      requestIds: requestIds.data,
+      createdByPersonId: session.user.personId,
+    });
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
   }
@@ -316,6 +369,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     scheduleDays,
   });
   if (!created) return await invalid();
+  await createTripRequestInvitations(db, {
+    shopId: shop.id,
+    tripId: created.id,
+    requestIds: requestIds.data,
+    createdByPersonId: session.user.personId,
+  });
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   return await landAfterAdd(db, shop, shopSlug, title, 1);
 }

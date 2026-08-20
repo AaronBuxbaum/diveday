@@ -86,4 +86,26 @@ describe("SegmentedControl", () => {
       expect(option).toHaveClass("font-semibold", "text-sm", "whitespace-nowrap");
     }
   });
+
+  it("supports a visible count pill without changing the tab's accessible name", () => {
+    render(
+      <SegmentedControl
+        ariaLabel="Trip"
+        items={[
+          {
+            key: "guests",
+            label: (
+              <span>
+                Guests <span aria-hidden="true">12</span>
+              </span>
+            ),
+            href: "/shop/reef/trips/1/guests",
+          },
+        ]}
+        currentKey={null}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Guests" })).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeVisible();
+  });
 });

@@ -92,7 +92,10 @@ exit 1
   chmodSync(join(binDirectory, "pnpm"), 0o755);
 }
 
-function runImport(candidateLines, { environment = "production", checkpointDocument } = {}) {
+function runImport(
+  candidateLines,
+  { environment = "production", checkpointDocument, checkOnly = false } = {},
+) {
   const binDirectory = temporaryDirectory("diveday-vercel-stub-");
   const addLogPath = join(binDirectory, "add.log");
   const putValueLogPath = join(binDirectory, "put-value.log");
@@ -111,7 +114,12 @@ function runImport(candidateLines, { environment = "production", checkpointDocum
 
   const stdout = execFileSync(
     "node",
-    [join(process.cwd(), "scripts", "import-vercel-env.mjs"), inputPath, environment],
+    [
+      join(process.cwd(), "scripts", "import-vercel-env.mjs"),
+      inputPath,
+      environment,
+      ...(checkOnly ? ["--check"] : []),
+    ],
     { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
   );
 
@@ -134,6 +142,37 @@ describe("import-vercel-env", () => {
       checkpointDocument: `APP_HOST=${fingerprint("https://old.example")}\nAUTH_SECRET=${fingerprint("unchanged")}\n`,
     });
     expect(added).toEqual(["APP_HOST"]);
+  });
+
+  it("refreshes the full hashed checkpoint even when no Vercel value changed", () => {
+    const { added, pushedValue, stdout } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}\nREMOVED=${fingerprint("old")}\n`,
+    });
+
+    expect(added).toEqual([]);
+    expect(pushedValue).toBe(`A=${fingerprint("1")}`);
+    expect(stdout).toContain("refreshed the hashed state for all 1 variable(s)");
+  });
+
+  it("reports a current checkpoint without uploading or refreshing it", () => {
+    const { added, pushedValue, stdout, ssmCalls } = runImport(["A=1"], {
+      checkpointDocument: `A=${fingerprint("1")}`,
+      checkOnly: true,
+    });
+
+    expect(stdout.trim()).toBe("CURRENT");
+    expect(added).toEqual([]);
+    expect(pushedValue).toBeNull();
+    expect(ssmCalls).toHaveLength(1);
+    expect(ssmCalls[0]).toContain("get-parameter");
+  });
+
+  it("reports an update when the checkpoint is missing", () => {
+    const { added, pushedValue, stdout } = runImport(["A=1"], { checkOnly: true });
+
+    expect(stdout.trim()).toBe("UPDATE");
+    expect(added).toEqual([]);
+    expect(pushedValue).toBeNull();
   });
 
   it("pushes everything the first time, when there is no checkpoint parameter yet", () => {
@@ -198,6 +237,36 @@ exit 1
     expect(pushedValueArgument).toMatch(/^file:\/\//);
     expect(pushedValueArgument).not.toContain(fingerprint("1"));
     expect(pushedValue).toBe(`A=${fingerprint("1")}`);
+  });
+
+  it("checks the complete hashed state before uploading any Vercel value", () => {
+    const binDirectory = temporaryDirectory("diveday-vercel-stub-");
+    const addLogPath = join(binDirectory, "add.log");
+    const putValueLogPath = join(binDirectory, "put-value.log");
+    const putValueArgumentLogPath = join(binDirectory, "put-value-argument.log");
+    const ssmCallsLogPath = join(binDirectory, "ssm-calls.log");
+    writeStubs(binDirectory, {
+      addLogPath,
+      putValueLogPath,
+      putValueArgumentLogPath,
+      ssmCallsLogPath,
+    });
+
+    const inputPath = join(binDirectory, ".env.vercel");
+    writeFileSync(
+      inputPath,
+      `${Array.from({ length: 70 }, (_, index) => `A${index}=value`).join("\n")}\n`,
+    );
+    const result = spawnSync(
+      "node",
+      [join(process.cwd(), "scripts", "import-vercel-env.mjs"), inputPath, "production"],
+      { env: { ...process.env, PATH: `${binDirectory}:${process.env.PATH}` }, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("over the 4096-byte Standard-tier SSM limit");
+    expect(existsSync(addLogPath)).toBe(false);
+    expect(existsSync(putValueLogPath)).toBe(false);
   });
 
   it("names the checkpoint parameter for the requested environment", () => {

@@ -4,6 +4,7 @@ import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/Waive
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
+import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,11 @@ import type {
   RosterEntry,
   WaiverByBooking,
 } from "./types";
+
+type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & {
+  /** Diver-record notes are visible here but remain editable on their canonical page. */
+  deletable?: boolean;
+};
 
 // The whole waiver collapses to a single control per diver. Its face is the
 // status; its click is the only sensible next action. `action: null` means the
@@ -191,7 +197,7 @@ export function RosterSection({
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
-  notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
+  notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
   /** Staff record or correct a diver's emergency contact from their card (task 144). */
@@ -440,7 +446,7 @@ export function RosterSection({
                 {readiness ? (
                   readiness.status === "ready" ? (
                     <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
-                      <span aria-hidden="true">✓</span>
+                      <span aria-hidden="true">🌊</span>
                       {readinessStatusText(t, "ready")}
                     </span>
                   ) : (
@@ -746,69 +752,57 @@ export function RosterSection({
                       : t("trips.roster.privateStaffNotes", { count: notes.length })}
                   </summary>
                   <div className="mt-2 grid gap-3">
-                    {notes.map(({ note, authorName }) => (
-                      <div
-                        key={note.id}
-                        className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
-                      >
-                        <div className="min-w-0">
-                          <p>{note.body}</p>
-                          <p className="mt-1 text-xs text-muted">
-                            {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
-                          </p>
+                    {notes.map((entry) => {
+                      const { note, authorName } = entry;
+                      return (
+                        <div
+                          key={note.id}
+                          className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
+                        >
+                          <div className="min-w-0">
+                            <p className="break-words whitespace-pre-wrap">{note.body}</p>
+                            <p className="mt-1 text-xs text-muted">
+                              {authorName} ·{" "}
+                              {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
+                            </p>
+                          </div>
+                          {entry.deletable === false ? null : (
+                            <form action={deleteNoteAction} className="shrink-0">
+                              <input type="hidden" name="noteId" value={note.id} />
+                              {/* No confirm dialog: the delete lands and a toast offers
+                                a one-tap undo (recreates the note) — a purely
+                                reversible edit, not a real send (principle 7). */}
+                              <SubmitButton
+                                pendingLabel={t("trips.roster.deletingEllipsis")}
+                                className={buttonClass({
+                                  variant: "danger-ghost",
+                                  size: "sm",
+                                  busy: true,
+                                })}
+                              >
+                                {t("trips.roster.delete")}
+                              </SubmitButton>
+                            </form>
+                          )}
                         </div>
-                        <form action={deleteNoteAction} className="shrink-0">
-                          <input type="hidden" name="noteId" value={note.id} />
-                          {/* No confirm dialog: the delete lands and a toast offers
-                              a one-tap undo (recreates the note) — a purely
-                              reversible edit, not a real send (principle 7). */}
-                          <SubmitButton
-                            pendingLabel={t("trips.roster.deletingEllipsis")}
-                            className={buttonClass({
-                              variant: "danger-ghost",
-                              size: "sm",
-                              busy: true,
-                            })}
-                          >
-                            {t("trips.roster.delete")}
-                          </SubmitButton>
-                        </form>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {/* Keyed on the note count so a landed note empties the box.
                         Adding one no longer navigates (see `addInternalNoteAction`),
                         and an uncontrolled textarea React never remounts would
                         otherwise still hold the text of the note now listed
                         above it — inviting the same note twice. */}
-                    <form key={notes.length} action={addNoteAction} className="grid gap-2">
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      {/* `Field`, not a hand-written `<label htmlFor>` plus a
-                          control: it mints and wires the id itself, marks the
-                          required control with the visible `*`, and owns the
-                          caption/control two-row shape
-                          (docs/design/forms-and-controls.md). The pair this
-                          replaces had the label and the asterisk-less textarea
-                          spelled out by hand. */}
-                      <Field label={t("trips.roster.addNoteLabel")}>
-                        <textarea
-                          name="note"
-                          required
-                          maxLength={1000}
-                          rows={2}
-                          className={controlClass}
-                        />
-                      </Field>
-                      <SubmitButton
-                        pendingLabel={t("trips.roster.adding")}
-                        className={buttonClass({
-                          variant: "secondary",
-                          size: "sm",
-                          className: "justify-self-start",
-                        })}
-                      >
-                        {t("trips.roster.addPrivateNote")}
-                      </SubmitButton>
-                    </form>
+                    <PrivateNoteForm
+                      action={addNoteAction}
+                      hiddenFields={{ bookingId: booking.id }}
+                      resetKey={notes.length}
+                      rows={2}
+                      copy={{
+                        label: t("trips.roster.addNoteLabel"),
+                        add: t("trips.roster.addPrivateNote"),
+                        adding: t("trips.roster.adding"),
+                      }}
+                    />
                   </div>
                 </details>
               </>

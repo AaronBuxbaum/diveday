@@ -26,6 +26,7 @@ import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
   "shop.csv",
+  "boats.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -41,8 +42,10 @@ const EXPECTED_FILES = [
   "staff_shifts.csv",
   "bookings.csv",
   "waitlist_entries.csv",
+  "trip_invitations.csv",
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
+  "trip_last_minute_promo_recipients.csv",
   "booking_payment_events.csv",
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
@@ -53,6 +56,7 @@ const EXPECTED_FILES = [
   "waiver_records.csv",
   "rental_fit.csv",
   "prior_visits.csv",
+  "imported_payment_history.csv",
   "internal_notes.csv",
   "activity_events.csv",
   "notification_deliveries.csv",
@@ -63,6 +67,7 @@ const EXPECTED_FILES = [
   "dive_site_creatures.csv",
   "dive_site_moments.csv",
   "recap_photos.csv",
+  "trip_recap_photos.csv",
   "trip_reviews.csv",
   "review_moderation_events.csv",
   "shop_promo_codes.csv",
@@ -74,6 +79,7 @@ const EXPECTED_FILES = [
 /** Schema tables that get their own CSV in the bundle. */
 const EXPORTED_TABLES = [
   "shops",
+  "boats",
   "people",
   "certifications",
   "specialty_certifications",
@@ -96,8 +102,10 @@ const EXPORTED_TABLES = [
   "course_inquiries",
   "shop_promo_redemptions",
   "trip_waitlist_entries",
+  "trip_invitations",
   "last_minute_list_entries",
   "trip_last_minute_promos",
+  "trip_last_minute_promo_recipients",
   "roll_call_events",
   "roll_call_crew_events",
   "buddy_pair_members",
@@ -105,6 +113,7 @@ const EXPORTED_TABLES = [
   "waiver_records",
   "rental_fit_profiles",
   "prior_visits",
+  "imported_payment_history",
   "orders",
   "order_line_items",
   "tips",
@@ -112,6 +121,7 @@ const EXPORTED_TABLES = [
   "dive_site_creatures",
   "dive_site_moments",
   "recap_photos",
+  "trip_recap_photos",
   "trip_reviews",
   "review_moderation_events",
   "shop_promo_codes",
@@ -209,7 +219,8 @@ const EXCLUDED_TABLES = [
  */
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
-  shops: ["jurisdiction", "is_demo"], // DiveDay-side config, not shop records
+  shops: ["jurisdiction", "is_demo", "latitude", "longitude"], // DiveDay-side config, not shop records
+  boats: ["shop_id"],
   staff_shifts: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [
@@ -226,7 +237,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   certifications: ["shop_id"],
   specialty_certifications: ["shop_id"],
   nitrox_certifications: ["shop_id"],
-  trips: ["shop_id", "recap_shoutout"], // recap copy travels with recap_photos.csv
+  trips: [
+    "shop_id",
+    "recap_shoutout", // recap copy travels with recap_photos.csv
+    "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
+    "recap_auto_send_at",
+  ],
   trip_series: ["shop_id"],
   trip_series_skips: ["id", "shop_id"],
   trip_dives: [],
@@ -243,12 +259,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
   trip_waitlist_entries: ["shop_id"],
+  trip_invitations: ["shop_id"],
   last_minute_list_entries: ["shop_id"],
   trip_last_minute_promos: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",
   ],
+  trip_last_minute_promo_recipients: ["shop_id"],
   roll_call_events: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
@@ -262,6 +280,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_signer_name", // unsubmitted draft state, not a signed record
     "draft_acknowledged",
     "draft_medical_answers",
+    // Delivery plumbing is provider-specific operational state. The signed
+    // waiver remains portable; a destination can issue its own link and
+    // delivery attempt rather than importing stale provider ids or outcomes.
+    "delivery_status",
+    "delivery_provider_message_id",
+    "delivery_provider_status",
+    "delivery_provider_status_at",
+    "delivery_error",
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.
@@ -290,6 +316,13 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "dedupe_key",
     "created_at", // when the import ran; `imported_at` already carries that
   ],
+  imported_payment_history: [
+    "shop_id",
+    // Re-import machinery, not a source fact; the exported source references
+    // and visible fields carry the history elsewhere.
+    "dedupe_key",
+    "created_at", // `imported_at` is the meaningful import timestamp
+  ],
   orders: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
@@ -305,10 +338,15 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "source_template_id", // provenance into DiveDay's catalog, not the shop's
     "source_template_version",
+    // A one-time rollback snapshot for the template-apply interaction. It is
+    // DiveDay's temporary UI bookkeeping, not part of the site's portable
+    // briefing and must never be restored by an import.
+    "template_update_undo",
   ],
   dive_site_creatures: ["shop_id"],
   dive_site_moments: ["shop_id"],
   recap_photos: ["shop_id"],
+  trip_recap_photos: ["shop_id"],
   trip_reviews: ["shop_id"],
   shop_promo_codes: [
     "shop_id",
@@ -425,6 +463,7 @@ describe("full-shop export dataset", () => {
       "activity_events.csv",
       "notification_deliveries.csv",
       "shop_promo_redemptions.csv",
+      "imported_payment_history.csv",
       "course_inquiries.csv",
     ]) {
       expect(table(input, file).rows.length, `${file} has no rows`).toBeGreaterThan(0);
@@ -469,6 +508,9 @@ describe("full-shop export dataset", () => {
     // incident review would correlate against.
     expect(rollCall.header).toContain("client_event_id");
     expect(rollCall.header).toContain("offline_snapshot_saved_at");
+    const crewRollCall = table(input, "roll_call_crew_events.csv");
+    expect(crewRollCall.header).toContain("source");
+    expect(crewRollCall.header).toContain("client_event_id");
   });
 
   it("flattens each person into an import-ready contacts row", async () => {

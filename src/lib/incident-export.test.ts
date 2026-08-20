@@ -171,6 +171,7 @@ describe("buildIncidentExport", () => {
         identifier: "AB-1234",
         status: "verified",
         reviewedAt: "2026-07-20T09:00:00.000Z",
+        reviewedByName: null,
         expiresAt: null,
         imported: false,
         // A card the shop captured. `false` is the assertion, not noise: an
@@ -185,6 +186,7 @@ describe("buildIncidentExport", () => {
       templateTitle: "Diving Release",
       templateVersion: 3,
       signatureMethod: null,
+      recordedByName: null,
     });
 
     expect(doc.crew).toHaveLength(1);
@@ -252,7 +254,71 @@ describe("buildIncidentExport", () => {
       templateTitle: null,
       templateVersion: null,
       signatureMethod: null,
+      recordedByName: null,
     });
+  });
+
+  it("names the staff member who marked a governing waiver on paper", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({ signatureMethod: "in_person_attested" }),
+            waiverRecordedByName: "Rae Owner",
+          },
+        ],
+      }),
+    );
+
+    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver).toMatchObject({
+      state: "complete",
+      signatureMethod: "in_person_attested",
+      recordedByName: "Rae Owner",
+    });
+  });
+
+  it("carries the staff member who marked a certification as certified", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [{ ...verifiedCard(), reviewedByName: "Rae Owner" }],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver(),
+          },
+        ],
+      }),
+    );
+
+    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.certifications[0]).toMatchObject({
+      status: "verified",
+      reviewedByName: "Rae Owner",
+    });
+  });
+
+  it("does not name a staff member for a digital or imported waiver", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({ signatureMethod: "imported" }),
+            waiverRecordedByName: "Rae Owner",
+          },
+        ],
+      }),
+    );
+
+    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver.recordedByName).toBeNull();
   });
 
   it("reports a medical hold as a status only — answers and template body never appear", () => {

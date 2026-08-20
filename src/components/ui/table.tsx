@@ -52,10 +52,11 @@ export type TableMinWidth = keyof typeof MIN_WIDTH;
 
 /**
  * The table plus its shell, as one piece so neither can be forgotten or
- * hand-rolled. The shell is `overflow-x-auto`, never `overflow-hidden`: a
- * clipped Amount column on a phone once silently swallowed the one figure
- * the orders index exists to show. `print:overflow-visible` keeps paper out
- * of the scroll rule entirely.
+ * hand-rolled. The outer shell clips rounded corners; its inner scroll region
+ * keeps wide tables usable on a phone. Separating those two responsibilities
+ * prevents a first/last row hover from painting square beyond the card while
+ * preserving sideways scrolling. `print:overflow-visible` keeps paper out of
+ * the scroll rule entirely.
  *
  * Elevation follows containment, one rule: a table that *is* the surface
  * (orders, reports, the departure log) wears the card shell; a table already
@@ -82,17 +83,20 @@ export function Table({
 }) {
   return (
     <div
-      className={`overflow-x-auto print:overflow-visible ${
+      className={`overflow-hidden print:overflow-visible ${
         flush ? "" : "rounded-2xl border border-border bg-surface shadow-sm"
       } ${shellClassName}`
         .replace(/\s+/g, " ")
         .trim()}
     >
-      <table
-        className={`w-full text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}
-      >
-        {children}
-      </table>
+      <div className="overflow-x-auto print:overflow-visible">
+        <table
+          className={`w-full table-layout-fixed text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}
+          style={{ tableLayout: "fixed" }}
+        >
+          {children}
+        </table>
+      </div>
     </div>
   );
 }
@@ -140,7 +144,7 @@ export function Th({
   return (
     <th
       scope={scope}
-      className={`px-4 py-3 font-semibold ${numeric ? "text-right" : ""} ${
+      className={`overflow-hidden bg-clip-padding px-4 py-3 font-semibold ${numeric ? "text-right" : ""} ${
         hideBelow ? HIDE_BELOW[hideBelow] : ""
       } ${className}`.trim()}
     >
@@ -171,6 +175,7 @@ export function Td({
   numeric = false,
   muted = false,
   hideBelow,
+  align = "top",
   pad = true,
   className = "",
   children,
@@ -179,6 +184,7 @@ export function Td({
   numeric?: boolean;
   /** Secondary ink for a supporting cell. */
   muted?: boolean;
+  align?: "top" | "middle";
   hideBelow?: keyof typeof HIDE_BELOW;
   /**
    * Opt out of the cell padding **only** for a tbody that reflows its rows to
@@ -192,7 +198,7 @@ export function Td({
 }) {
   return (
     <td
-      className={`align-top ${pad ? "px-4 py-3" : ""} ${
+      className={`overflow-hidden bg-clip-padding ${align === "middle" ? "align-middle" : "align-top"} ${pad ? "px-4 py-3" : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
       } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`.trim()}
     >

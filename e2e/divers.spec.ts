@@ -64,7 +64,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(subNav).toBeVisible();
 
   const payments = page.getByRole("heading", { name: "Payments" });
-  // Seventh of eleven sections: far below the fold on arrival.
+  // Eighth of twelve sections: far below the fold on arrival.
   await expect(payments).not.toBeInViewport();
 
   await subNav.getByRole("link", { name: "Payments" }).click();
@@ -74,14 +74,33 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeAttached();
 
   // And back up, so the bar is a spine rather than a one-way trip.
-  await subNav.getByRole("link", { name: "Cards" }).click();
+  await subNav.getByRole("link", { name: "Certifications" }).click();
   await expect(page).toHaveURL(/#cards$/);
-  await expect(page.getByRole("heading", { name: "Certification cards" })).toBeInViewport();
+  await expect(page.getByRole("heading", { name: "Certification records" })).toBeInViewport();
 
   // The destructive tail is deliberately not a sub-nav target: archiving a
   // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(5);
+  await expect(subNav.getByRole("link")).toHaveCount(7);
   await expect(subNav.getByRole("link", { name: /Erase|Archive/ })).toHaveCount(0);
+});
+
+test("a diver note is shared with the live boat manifest", async ({ page }) => {
+  const note = `Briefing note ${e2eNow().getTime()}`;
+
+  await page.goto(`/shop/${SHOP}/divers?q=Priya`);
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  const notes = page.getByRole("region", { name: "Diver notes" });
+  await notes.getByLabel("Add a note").fill(note);
+  await notes.getByRole("button", { name: "Add note" }).click();
+  await expect(notes).toContainText(note);
+
+  await page.getByRole("region", { name: "Upcoming trips" }).getByRole("link").first().click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
+  const row = page.locator("#roll-call-list li").filter({ hasText: "Priya Sharma" });
+  await expect(row.getByText("Diver notes", { exact: true })).toBeVisible();
+  await expect(row).toContainText(note);
 });
 
 // Task 144 (safety-adjacent — this prints on the manifest): Today used to
@@ -109,9 +128,13 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}/guests`);
-  await page.getByLabel("Name", { exact: true }).fill(diverName);
-  await page.getByLabel("Email", { exact: true }).fill(`contact-${stamp}@example.com`);
+  await page.getByRole("link", { name: "Add a diver" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill(diverName);
+  await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
   const card = page.locator("li").filter({ hasText: diverName });
@@ -262,7 +285,7 @@ test.describe("on a phone", () => {
     // carrying the column, not about which card this seeded diver holds.
     await expect(
       card.getByText(
-        /Open Water|Advanced Open Water|Rescue Diver|Divemaster|Instructor|No current card/,
+        /Open Water|Advanced Open Water|Rescue Diver|Divemaster|Instructor|No current certification/,
       ),
     ).toBeVisible();
     await expect(page.getByRole("table")).toBeHidden();
@@ -292,10 +315,8 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
   const diverName = `Archivable Diver ${stamp}`;
 
   await page.goto(`/shop/${SHOP}/divers`);
-  await page.getByText("Add a diver").click(); // the form lives in a collapsed <details>
-  await page.getByLabel("Full name").fill(diverName);
-  await page.getByLabel("Email").fill(`archivable-${stamp}@example.com`);
-  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
   await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
   const recordUrl = page.url().split("?")[0] ?? "";
@@ -336,7 +357,7 @@ test("staff archive a diver, find them again in the Archived view, and unarchive
 /**
  * **An outcome belongs beside the control that earned it.**
  *
- * The diver record is eight independent forms on one ~6,400px scroll, and every
+ * The diver record is nine independent forms on one ~6,400px scroll, and every
  * one of their outcomes used to resolve into a single banner under the `<h1>`:
  * you saved a rental fit halfway down the page and the confirmation appeared
  * off-screen above you. Each section now renders its own (`resolveDiverNotice`

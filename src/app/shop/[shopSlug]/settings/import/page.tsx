@@ -65,11 +65,21 @@ function importWizardCopy(t: StaffTranslator) {
     waiver_source_name: t("settings.import.wizard.fieldLabels.waiver_source_name"),
     waiver_document_url: t("settings.import.wizard.fieldLabels.waiver_document_url"),
     medical_document_url: t("settings.import.wizard.fieldLabels.medical_document_url"),
+    payment_date: t("settings.import.wizard.fieldLabels.payment_date"),
+    payment_status: t("settings.import.wizard.fieldLabels.payment_status"),
+    payment_amount: t("settings.import.wizard.fieldLabels.payment_amount"),
+    payment_currency: t("settings.import.wizard.fieldLabels.payment_currency"),
+    payment_direction: t("settings.import.wizard.fieldLabels.payment_direction"),
+    payment_reference: t("settings.import.wizard.fieldLabels.payment_reference"),
+    receipt_reference: t("settings.import.wizard.fieldLabels.receipt_reference"),
+    receipt_document_url: t("settings.import.wizard.fieldLabels.receipt_document_url"),
+    stripe_reference: t("settings.import.wizard.fieldLabels.stripe_reference"),
     visit_date: t("settings.import.wizard.fieldLabels.visit_date"),
     visit_title: t("settings.import.wizard.fieldLabels.visit_title"),
     visit_status: t("settings.import.wizard.fieldLabels.visit_status"),
     visit_amount: t("settings.import.wizard.fieldLabels.visit_amount"),
     visit_reference: t("settings.import.wizard.fieldLabels.visit_reference"),
+    internal_notes: t("settings.import.wizard.fieldLabels.internal_notes"),
   };
 
   const issues: Record<ImportIssueCode, string> = {
@@ -96,6 +106,8 @@ function importWizardCopy(t: StaffTranslator) {
     visit_date_unreadable: t.raw("settings.import.issues.visitDateUnreadable"),
     visit_no_reference: t("settings.import.issues.visitNoReference"),
     visit_no_date: t("settings.import.issues.visitNoDate"),
+    payment_history_date_unreadable: t.raw("settings.import.issues.paymentHistoryDateUnreadable"),
+    payment_history_no_date: t("settings.import.issues.paymentHistoryNoDate"),
     no_name: t("settings.import.issues.noName"),
     merged_duplicate: t.raw("settings.import.issues.mergedDuplicate"),
     no_email_new_record: t("settings.import.issues.noEmailNewRecord"),
@@ -124,6 +136,7 @@ function importWizardCopy(t: StaffTranslator) {
     unmappedColumns: t.raw("settings.import.wizard.unmappedColumns"),
     waiverRowsNotice: t.raw("settings.import.wizard.waiverRowsNotice"),
     visitRowsNotice: t.raw("settings.import.wizard.visitRowsNotice"),
+    paymentHistoryRowsNotice: t.raw("settings.import.wizard.paymentHistoryRowsNotice"),
     stats: {
       diversInFile: t("settings.import.wizard.stats.diversInFile"),
       extraCardRows: t("settings.import.wizard.stats.extraCardRows"),
@@ -133,6 +146,8 @@ function importWizardCopy(t: StaffTranslator) {
       nitroxCards: t("settings.import.wizard.stats.nitroxCards"),
       waivers: t("settings.import.wizard.stats.waivers"),
       pastVisits: t("settings.import.wizard.stats.pastVisits"),
+      paymentHistory: t("settings.import.wizard.stats.paymentHistory"),
+      internalNotes: t("settings.import.wizard.stats.internalNotes"),
     },
     table: {
       rowNumber: t("settings.import.wizard.table.rowNumber"),
@@ -173,6 +188,10 @@ function importWizardCopy(t: StaffTranslator) {
       waiverDocumentsFailedNote: t.raw("settings.import.wizard.result.waiverDocumentsFailedNote"),
       visitsLine: t.raw("settings.import.wizard.result.visitsLine"),
       visitsSkippedNote: t.raw("settings.import.wizard.result.visitsSkippedNote"),
+      paymentHistoryLine: t.raw("settings.import.wizard.result.paymentHistoryLine"),
+      paymentHistorySkippedNote: t.raw("settings.import.wizard.result.paymentHistorySkippedNote"),
+      receiptDocumentsFailedNote: t.raw("settings.import.wizard.result.receiptDocumentsFailedNote"),
+      notesLine: t.raw("settings.import.wizard.result.notesLine"),
       seeRoster: t("settings.import.wizard.result.seeRoster"),
     },
   };
@@ -236,9 +255,17 @@ const SCOPE_ROW_KEYS: Record<ImportScopeRowId, { what: StaffMessageKey; detail: 
       what: "settings.import.scopeTable.pastVisits.what",
       detail: "settings.import.scopeTable.pastVisits.detail",
     },
-    receiptsService: {
-      what: "settings.import.scopeTable.receiptsService.what",
-      detail: "settings.import.scopeTable.receiptsService.detail",
+    paymentHistory: {
+      what: "settings.import.scopeTable.paymentHistory.what",
+      detail: "settings.import.scopeTable.paymentHistory.detail",
+    },
+    serviceHistory: {
+      what: "settings.import.scopeTable.serviceHistory.what",
+      detail: "settings.import.scopeTable.serviceHistory.detail",
+    },
+    diverNotes: {
+      what: "settings.import.scopeTable.diverNotes.what",
+      detail: "settings.import.scopeTable.diverNotes.detail",
     },
   };
 

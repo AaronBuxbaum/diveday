@@ -16,7 +16,15 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage } from "./paging";
 import type { MedicalAnswers } from "./schema";
-import { bookings, people, shops, trips, waiverRecords, waiverTemplates } from "./schema";
+import {
+  bookings,
+  notificationDeliveries,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
@@ -244,6 +252,7 @@ export type IssueWaiverOutcome =
       reason:
         | "booking_not_found"
         | "booking_unavailable"
+        | "person_not_found"
         | "template_not_found"
         | "already_completed";
     };
@@ -255,28 +264,46 @@ export type IssueWaiverOutcome =
  */
 export async function issueWaiverRequest(
   db: AppDb,
-  input: { shopId: string; bookingId: string; now?: Date },
+  input: { shopId: string; bookingId?: string; personId?: string; now?: Date },
 ): Promise<IssueWaiverOutcome> {
+  if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
   const now = input.now ?? nowDate();
   const token = createWaiverToken();
   const tokenHash = hashWaiverToken(token);
   const expiresAt = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
 
   return db.transaction(async (tx): Promise<IssueWaiverOutcome> => {
-    const [booking] = await tx
-      .select({ id: bookings.id, personId: bookings.personId, tripStatus: trips.status })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      .limit(1);
-    if (!booking) return { ok: false, reason: "booking_not_found" };
-    if (booking.tripStatus !== "scheduled") return { ok: false, reason: "booking_unavailable" };
+    const booking = input.bookingId
+      ? await tx
+          .select({ id: bookings.id, personId: bookings.personId, tripStatus: trips.status })
+          .from(bookings)
+          .innerJoin(trips, eq(trips.id, bookings.tripId))
+          .where(
+            and(
+              eq(bookings.id, input.bookingId),
+              eq(bookings.shopId, input.shopId),
+              ne(bookings.status, "cancelled"),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : null;
+    if (input.bookingId && !booking) return { ok: false, reason: "booking_not_found" };
+    if (booking && booking.tripStatus !== "scheduled") {
+      return { ok: false, reason: "booking_unavailable" };
+    }
+    const personId = booking?.personId ?? input.personId;
+    if (!personId) return { ok: false, reason: "person_not_found" };
+    if (!booking) {
+      const [person] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(
+          and(eq(people.id, personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
+        )
+        .limit(1);
+      if (!person) return { ok: false, reason: "person_not_found" };
+    }
 
     const [template] = await tx
       .select()
@@ -289,23 +316,46 @@ export async function issueWaiverRequest(
     const current = await tx
       .select()
       .from(waiverRecords)
-      .where(and(eq(waiverRecords.bookingId, booking.id), isNull(waiverRecords.supersededAt)));
-    if (current.some((record) => record.status !== "pending")) {
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          booking
+            ? eq(waiverRecords.bookingId, booking.id)
+            : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
+          isNull(waiverRecords.supersededAt),
+        ),
+      );
+    const alreadyStanding = booking
+      ? current.some((record) => record.status !== "pending")
+      : current.some(
+          (record) =>
+            record.status === "medical_review" ||
+            isCompletedWaiverCurrent(record, template.version, now),
+        );
+    if (alreadyStanding) {
       return { ok: false, reason: "already_completed" };
     }
     if (current.length > 0) {
       await tx
         .update(waiverRecords)
         .set({ supersededAt: now })
-        .where(and(eq(waiverRecords.bookingId, booking.id), isNull(waiverRecords.supersededAt)));
+        .where(
+          and(
+            eq(waiverRecords.shopId, input.shopId),
+            booking
+              ? eq(waiverRecords.bookingId, booking.id)
+              : and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)),
+            isNull(waiverRecords.supersededAt),
+          ),
+        );
     }
 
     const [record] = await tx
       .insert(waiverRecords)
       .values({
         shopId: input.shopId,
-        bookingId: booking.id,
-        personId: booking.personId,
+        bookingId: booking?.id ?? null,
+        personId,
         templateId: template.id,
         templateTitle: template.title,
         templateVersion: template.version,
@@ -330,22 +380,10 @@ export type TokenWaiverState =
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
 /**
- * `bookingId` is nullable on the schema for the two records that have no seat
- * to name: an imported one (ADR 20260724-import-waiver-acceptance) and a
- * person-scoped paper release (ADR 20260811-person-scoped-paper-waivers).
- * Neither is ever issued a completion link — a paper record's `tokenHash` is a
- * random unusable value — so neither can be reached through a token. Every
- * record a token flow touches came from `issueWaiverRequest`, which always
- * sets a real booking; this narrows that invariant for token-reached callers
- * rather than threading a null check through each one.
+ * `bookingId` is nullable for imported, paper, and independent digital waivers.
+ * A bearer token only needs the record's shop and person, so token pages handle
+ * both booking-scoped and person-scoped releases.
  */
-export function requireTokenBookingId(record: { bookingId: string | null }): string {
-  if (!record.bookingId) {
-    throw new Error("Waiver record reached through a token has no bookingId");
-  }
-  return record.bookingId;
-}
-
 async function currentRecordForToken(db: AppDb, token: string) {
   const [record] = await db
     .select()
@@ -424,6 +462,30 @@ export async function hasLiveWaiverRequest(
     .where(
       and(
         eq(waiverRecords.bookingId, bookingId),
+        eq(waiverRecords.status, "pending"),
+        isNull(waiverRecords.supersededAt),
+        gt(waiverRecords.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return Boolean(live);
+}
+
+/** The schedule-free counterpart used when a waiver belongs to the person. */
+export async function hasLivePersonWaiverRequest(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  const [live] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        isNull(waiverRecords.bookingId),
         eq(waiverRecords.status, "pending"),
         isNull(waiverRecords.supersededAt),
         gt(waiverRecords.expiresAt, now),
@@ -513,6 +575,20 @@ export async function getEmergencyContactForBooking(
   return row ?? null;
 }
 
+/** The same person-level contact read used by a waiver with no booking. */
+export async function getEmergencyContactForPerson(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<{ name: string | null; phone: string | null } | null> {
+  const [row] = await db
+    .select({ name: people.emergencyContactName, phone: people.emergencyContactPhone })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  return row ?? null;
+}
+
 /**
  * Save an emergency contact for a booking's diver, scoped to the shop so a
  * bearer-token surface (the `/ready` page) can only ever write to its own
@@ -538,6 +614,25 @@ export async function saveBookingEmergencyContact(
     .update(people)
     .set(patch)
     .where(eq(people.id, booking.personId))
+    .returning({ id: people.id });
+  return Boolean(updated);
+}
+
+/** Save a person-level emergency contact when the waiver has no booking context. */
+export async function savePersonEmergencyContact(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; name?: string; phone?: string },
+): Promise<boolean> {
+  const name = input.name?.trim();
+  const phone = input.phone?.trim();
+  if (!name && !phone) return false;
+  const patch: Partial<typeof people.$inferInsert> = {};
+  if (name) patch.emergencyContactName = name;
+  if (phone) patch.emergencyContactPhone = phone;
+  const [updated] = await db
+    .update(people)
+    .set(patch)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .returning({ id: people.id });
   return Boolean(updated);
 }
@@ -625,7 +720,16 @@ export async function completeWaiver(
         .where(eq(waiverRecords.id, signedRecord.id));
     }
     if (input.emergencyContact) {
-      await saveEmergencyContact(db, requireTokenBookingId(state.record), input.emergencyContact);
+      if (state.record.bookingId) {
+        await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
+      } else {
+        await savePersonEmergencyContact(db, {
+          shopId: state.record.shopId,
+          personId: state.record.personId,
+          name: input.emergencyContact.name,
+          phone: input.emergencyContact.phone,
+        });
+      }
     }
     return { ok: true, status: completedStatus(saved.status), idempotent: false };
   }
@@ -671,6 +775,89 @@ export async function listSignedWaiversByPerson(
     byPerson.set(row.personId, list);
   }
   return byPerson;
+}
+
+export type DiverWaiverRequestStatus = "not_sent" | "failed" | "not_signed";
+
+/** Persist the delivery outcome on the waiver itself, including person-scoped links. */
+export async function recordWaiverDelivery(
+  db: DbExecutor,
+  input: {
+    waiverRecordId: string;
+    delivery: {
+      status: "sent" | "failed" | "not_configured";
+      providerMessageId?: string;
+      detail?: string;
+    };
+  },
+) {
+  const providerStatus = null;
+  const deliveryStatus =
+    input.delivery.status === "sent"
+      ? ("sent" as const)
+      : input.delivery.status === "not_configured"
+        ? ("not_configured" as const)
+        : ("failed" as const);
+  await db
+    .update(waiverRecords)
+    .set({
+      deliveryStatus,
+      deliveryProviderMessageId: input.delivery.providerMessageId ?? null,
+      deliveryProviderStatus: providerStatus,
+      deliveryProviderStatusAt: null,
+      deliveryError: input.delivery.status === "failed" ? (input.delivery.detail ?? null) : null,
+    })
+    .where(eq(waiverRecords.id, input.waiverRecordId));
+}
+
+/**
+ * The delivery state of the latest outstanding waiver request for one diver.
+ * A missing delivery row is treated as a failed handoff: the waiver record
+ * can exist even when there was no usable email/origin to attempt delivery.
+ */
+export async function getDiverWaiverRequestStatus(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<DiverWaiverRequestStatus> {
+  const [row] = await db
+    .select({
+      recordDeliveryStatus: waiverRecords.deliveryStatus,
+      recordProviderStatus: waiverRecords.deliveryProviderStatus,
+      deliveryStatus: notificationDeliveries.status,
+      providerStatus: notificationDeliveries.providerStatus,
+    })
+    .from(waiverRecords)
+    .leftJoin(
+      notificationDeliveries,
+      and(
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.bookingId, waiverRecords.bookingId),
+        eq(notificationDeliveries.kind, "waiver_request"),
+      ),
+    )
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "pending"),
+        isNull(waiverRecords.supersededAt),
+      ),
+    )
+    .orderBy(desc(waiverRecords.createdAt))
+    .limit(1);
+
+  if (!row) return "not_sent";
+  const failedProviderStatuses = new Set(["bounced", "complained", "failed", "suppressed"]);
+  const deliveryStatus = row.recordDeliveryStatus ?? row.deliveryStatus;
+  const providerStatus = row.recordProviderStatus ?? row.providerStatus;
+  if (
+    deliveryStatus !== "sent" ||
+    (providerStatus !== null && failedProviderStatuses.has(providerStatus))
+  ) {
+    return "failed";
+  }
+  return "not_signed";
 }
 
 export type InPersonWaiverOutcome =

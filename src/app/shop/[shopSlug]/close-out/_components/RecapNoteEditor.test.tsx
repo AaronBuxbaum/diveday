@@ -56,4 +56,56 @@ describe("the close-out's post-trip recap note", () => {
       screen.getByText(/Recap note saved — it rides along on every diver's recap\./),
     ).toBeInTheDocument();
   });
+
+  it("renders the recap send controls under the post-trip disclosure", () => {
+    render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout={null}
+        saved={false}
+        t={t}
+        tripId="trip-123"
+        recapSendAction={vi.fn()}
+        toggleRecapAutoSendPauseAction={vi.fn()}
+        recapAutoSendAt={new Date("2026-08-16T16:00:00.000Z")}
+        recapAutoSendPaused={false}
+        recapNowMs={new Date("2026-08-16T12:00:00.000Z").getTime()}
+      />,
+    );
+    expect(screen.getByText("Recap")).toBeInTheDocument();
+    expect(screen.getByText(/Automatic recap sending begins in/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send recap now" })).toBeInTheDocument();
+  });
+
+  it("locks the note and photo controls after the recap is sent", () => {
+    render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout="Thanks for diving with us."
+        saved={false}
+        t={t}
+        recapSentAt={new Date("2026-08-16T16:00:00.000Z")}
+        recapSentAtLabel="4:00 PM"
+        photos={[
+          {
+            id: "photo-1",
+            imageUrl: "https://img.example/photo.jpg",
+            caption: null,
+            diverName: "Rae R.",
+            bookingId: "booking-1",
+          },
+        ]}
+        deletePhotoAction={vi.fn()}
+        uploadCrewPhotoAction={vi.fn()}
+        deleteCrewPhotoAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toBeDisabled();
+    expect(
+      screen.getAllByText("This recap was sent at 4:00 PM. The note and photos are now locked.")[0],
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload photo" })).not.toBeInTheDocument();
+  });
 });

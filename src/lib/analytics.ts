@@ -25,7 +25,7 @@ let warnedAboutRedaction = false;
  */
 
 /** Where a staff action happened, so recovery can be sliced by surface. */
-export type EventSurface = "today" | "blockers" | "roster" | "check_in";
+export type EventSurface = "today" | "blockers" | "roster" | "check_in" | "diver";
 
 /**
  * The typed event vocabulary. Adding an event here — rather than a free-form
@@ -174,6 +174,11 @@ export type AnalyticsEvent =
       total: number;
       sent: number;
       failed: number;
+    }
+  | {
+      /** Staff opened the complete trip packet from the Overview tab. */
+      name: "trip_print_pdf_clicked";
+      surface: "trip_overview";
     };
 
 type EventProps = Record<string, string | number | boolean | null>;

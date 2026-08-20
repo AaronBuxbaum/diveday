@@ -364,11 +364,17 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await page.waitForURL(/\/bookings\/new\/[^/]+$/);
   await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
 
-  // ── Leg 4. Type the diver in and seat them.
+  // ── Leg 4. Navigate to Add diver, type the diver in and seat them.
+  await beginWalk(page);
+  await tabUntil(page, /"Add diver"/, { limit: 25, where: "diver search" });
+  await page.keyboard.press("Enter");
+  await page.waitForURL(/\/divers\/new\?/);
+  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+
   await beginWalk(page);
   await recordAnnouncements(page);
   await tabUntil(page, /"Full name"/, { limit: 25, where: "diver form" });
-  await expect(page.locator("#hand-entry").getByLabel("Full name")).toBeFocused();
+  await expect(page.getByLabel("Full name")).toBeFocused();
   await page.keyboard.type(diver);
 
   // The three fields and the submit are contiguous and in reading order. This

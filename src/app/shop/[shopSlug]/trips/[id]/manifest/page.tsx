@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import {
   OfflineManifestManager,
   type OfflineManifestManagerCopy,
 } from "@/components/OfflineManifestManager";
-import { PrintButton } from "@/components/PrintButton";
 import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
@@ -16,7 +16,7 @@ import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
-import { listBookingNotes } from "@/db/operations";
+import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -37,10 +37,11 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { type DeskNote, DiverRollCall } from "./_components/DiverRollCall";
+import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
+  addManifestPrivateNoteAction,
   crewRollCallAction,
   dissolveBuddyTeamAction,
   formBuddyTeamAction,
@@ -49,7 +50,6 @@ import {
   type ManifestActionContext,
   removeBuddyTeamMemberAction,
   rollCallAction,
-  saveRollCallNoteAction,
   subscribePushAction,
   unsubscribePushAction,
 } from "./actions";
@@ -94,7 +94,7 @@ export default async function TripManifestPage({
   if (!shop) notFound();
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
-  const [completeManifests, buddyTeamsList, bookingNotes] = await Promise.all([
+  const [completeManifests, buddyTeamsList, bookingNotes, diverNotes] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
@@ -102,8 +102,11 @@ export default async function TripManifestPage({
     // member from every row's team (ADR 20260804-buddy-teams).
     listTripBuddyTeams(db, shop.id, tripId),
     // The private staff notes written on the Guests tab. Read here, never
-    // written here — see `DeskNotes`.
+    // written here — see `StaffNotes`.
     listBookingNotes(db, shop.id, tripId),
+    // Person-scoped notes written on the Diver record. Resolve them onto this
+    // trip's booking below so every interface reads the same source of truth.
+    listDiverNotesForTrip(db, shop.id, tripId),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -141,7 +144,7 @@ export default async function TripManifestPage({
   const boundCrewRollCallAction = crewRollCallAction.bind(null, actionContext);
   // The note carries its own checkpoint and the action re-proves it, so this
   // one takes the narrower context that has none.
-  const boundSaveRollCallNoteAction = saveRollCallNoteAction.bind(null, { shopSlug, tripId });
+  const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
 
   // Who can still join a *new* team: any active roster entry not already on
   // one — including a member of a team whose other seat was cancelled, which
@@ -202,14 +205,36 @@ export default async function TripManifestPage({
   // forms and has no single home, so it stays at the top of the panel.
   const buddyErrorForm = buddyErrorText ? (buddyError === "few" ? "builder" : "panel") : null;
 
-  // Grouped by booking, oldest first (the query's own order) — the way a desk
-  // note reads is as a running thread on that seat.
-  const deskNotesByBooking = new Map<string, DeskNote[]>();
+  // One chronological note thread per booking. A person-scoped note and a
+  // booking note are two contexts in the same `internal_notes` source, not two
+  // lists the crew has to compare — the scope is retained only where it helps
+  // explain why a note follows a diver beyond this departure.
+  const notesByBooking = new Map<string, ManifestNote[]>();
   for (const { note, authorName } of bookingNotes) {
     if (!note.bookingId) continue;
-    const rows = deskNotesByBooking.get(note.bookingId) ?? [];
-    rows.push({ id: note.id, body: note.body, authorName, createdAt: note.createdAt });
-    deskNotesByBooking.set(note.bookingId, rows);
+    const rows = notesByBooking.get(note.bookingId) ?? [];
+    rows.push({
+      id: note.id,
+      body: note.body,
+      authorName,
+      createdAt: note.createdAt,
+      scope: "booking",
+    });
+    notesByBooking.set(note.bookingId, rows);
+  }
+  for (const { note, authorName, bookingId } of diverNotes) {
+    const rows = notesByBooking.get(bookingId) ?? [];
+    rows.push({
+      id: note.id,
+      body: note.body,
+      authorName,
+      createdAt: note.createdAt,
+      scope: "diver",
+    });
+    notesByBooking.set(bookingId, rows);
+  }
+  for (const rows of notesByBooking.values()) {
+    rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
   }
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
@@ -236,7 +261,8 @@ export default async function TripManifestPage({
   }
 
   return (
-    <div>
+    <div className="boat-mode">
+      <AmbientGlareDetector />
       <SkipLink href="#roll-call-list" label={t("manifest.skipToRollCall")} />
       {/* The same header the other three tabs wear (`TripPageHeader`). This
           page used to hand-roll its own — a smaller `<h1>`, a rule underneath,
@@ -247,9 +273,7 @@ export default async function TripManifestPage({
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
-        title={manifest.trip.title}
-        startsAt={manifest.trip.startsAt}
-        endsAt={manifest.trip.endsAt}
+        trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
         // One line about what this page *is*. What to do at each checkpoint is
@@ -257,11 +281,9 @@ export default async function TripManifestPage({
         // both of which name the current one; saying it a third time up here
         // was the page explaining itself before it showed itself.
         description={t("manifest.description")}
-        // Just the printer. "Generate log" used to stand here too, which put
-        // a hand-to-authorities document one tap from "Mark boarded" on the
-        // page a crew works at the rail — writing the day up is an evening
-        // act, and its door is now the close-out page.
-        actions={<PrintButton label={t("shared.printButton.label")} />}
+        // Printing is an Overall-tab action. The manifest is the live dock
+        // surface; keeping a second current-page printer here made it unclear
+        // whether staff were getting the full packet or only this tab.
       />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the
@@ -334,9 +356,9 @@ export default async function TripManifestPage({
         tripId={tripId}
         locale={locale}
         timezone={shop.timezone}
-        deskNotesByBooking={deskNotesByBooking}
+        notesByBooking={notesByBooking}
         rollCallAction={boundRollCallAction}
-        saveRollCallNoteAction={boundSaveRollCallNoteAction}
+        addPrivateNoteAction={boundAddPrivateNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}
         buddyTeamLabel={buddyTeamLabel}
         t={t}
@@ -501,9 +523,19 @@ export default async function TripManifestPage({
             and put a settings toggle in the one row a captain taps to change
             what the page is showing — and then spent a while as a lone checkbox
             below the offline card, which is what this group fixes. */}
-        <div className="mt-4 border-t border-border pt-4 empty:hidden">
+        <div className="mt-4 grid gap-3 border-t border-border pt-4 print:hidden sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
           <WaterLockerToggle
             copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+            className="h-full"
+          />
+          <AmbientContrastControl
+            className="rounded-xl border border-border bg-surface-sunken p-3"
+            copy={{
+              modeLabel: t("shared.boatMode.modeLabel"),
+              labelAuto: t("shared.boatMode.labelAuto"),
+              labelLand: t("shared.boatMode.labelLand"),
+              labelBoat: t("shared.boatMode.labelBoat"),
+            }}
           />
         </div>
       </section>

@@ -8,8 +8,8 @@ import {
 } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
+import { type LastMinuteDepartureBar, ranksBelow } from "@/lib/last-minute-list";
 import { publicTripPath } from "@/lib/public-routes";
-import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import type { Waitlist } from "./types";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
 
@@ -22,7 +22,7 @@ export function WaitlistSection({
   tripWhen,
   inviteAction,
   certificationSummaries,
-  minimumCertificationLevel,
+  departureRequirement,
   locale,
   timezone,
 }: {
@@ -42,21 +42,8 @@ export function WaitlistSection({
    * not a queue (ADR 20260813-wait-list-is-a-lead-list).
    */
   certificationSummaries: Map<string, CertificationSummary>;
-  /**
-   * **This departure's effective minimum rung** — its own requirement folded
-   * with every dive site it visits (`combineCertRequirements`, resolved once by
-   * the page for the deal panel below). Null when the departure asks for no
-   * level, in which case nobody is under a bar because there isn't one.
-   *
-   * It is here so a row can *say* that this lead ranks below what the departure
-   * asks for. The deal panel beside it has said so since 2026-08-15, and an
-   * invite is the stronger act of the two: bulk mail versus a staffer offering
-   * one named diver a freed seat on this exact departure. It informs and
-   * nothing else — it does not order this list, filter it, or touch the Invite
-   * button (ADR 20260813-wait-list-is-a-lead-list, ADR
-   * 20260814-self-declared-cards decision 4).
-   */
-  minimumCertificationLevel: CertificationLevel | null;
+  /** The same folded departure bar the last-minute deal panel reads. */
+  departureRequirement: LastMinuteDepartureBar | null;
   locale: string;
   timezone: string;
 }) {
@@ -108,13 +95,10 @@ export function WaitlistSection({
         >
           {waitlist.map(({ entry, person }) => {
             const summary = certificationSummaries.get(person.id) ?? null;
-            // Only the ladder, and only for somebody who is on it: a required
-            // specialty or nitrox card does not rank one level under another,
-            // and the phrase would be claiming a comparison it cannot make.
-            const belowRequirement =
-              minimumCertificationLevel !== null &&
-              summary?.level != null &&
-              certificationRank(summary.level) < certificationRank(minimumCertificationLevel);
+            // The deal panel and this row answer the same question with one
+            // predicate. Unlike the capped deal preview, this list keeps its
+            // lead order and never filters or gates the invite.
+            const belowRequirement = ranksBelow({ certification: summary }, departureRequirement);
             return (
               <li
                 key={entry.id}

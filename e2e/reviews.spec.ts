@@ -74,6 +74,9 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await expect(card.getByText("Waiting on you")).toBeVisible();
   await card.getByRole("button", { name: "Publish" }).click();
   await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+  await expect(card.getByRole("button", { name: "Mark as standout" })).toBeVisible();
+  await card.getByRole("button", { name: "Mark as standout" }).click();
+  await expect(page.getByText("Review marked as standout.")).toBeVisible();
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();
@@ -95,20 +98,33 @@ test.describe("as owner, reviews list", () => {
     const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
     const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
     await expect(published.getByText("Published")).toBeVisible();
+    await expect(published.getByRole("button", { name: "Hide this review" })).toHaveCount(0);
     // Hiding states a case (ADR 20260813-review-moderation-has-a-floor): the
     // reason picker waits behind the Hide disclosure, and the act is recorded
     // with whichever reason the shop chose. Still no confirm dialog — it is one
     // of DiveDay's land-then-undo actions (docs/design/principles.md #7) and
     // offers Undo from a toast.
     await published.getByText("Hide", { exact: true }).click();
+    await expect(published.getByLabel("What happened")).toHaveCount(0);
     await published.getByLabel("Why are you taking it down?").selectOption("spam");
     await published.getByRole("button", { name: "Hide this review" }).click();
     await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
-    await expect(published.getByText("Waiting on you")).toBeVisible();
+    await expect(published.getByText("⚠️Hidden", { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");
     await expect(page.getByText(comment)).toHaveCount(0);
+  });
+
+  test("a waiting review can be hidden with a recorded reason", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reviews?filter=waiting");
+    const waiting = page
+      .locator("li")
+      .filter({ hasText: "A warm, patient crew and a brilliant final drift over the reef." })
+      .filter({ visible: true });
+    await expect(waiting.getByText("Waiting on you")).toBeVisible();
+    await expect(waiting.getByRole("button", { name: "Publish" })).toBeVisible();
+    await expect(waiting.getByText("Hide", { exact: true })).toBeVisible();
   });
 
   test("hiding a review can be undone from the toast", async ({ page }) => {
@@ -247,6 +263,19 @@ test("the public schedule publishes its published reviews as Review objects", as
   // top-level graph carries the shop's full review list.
   const firstTripOrganizer = parsed.itemListElement?.[0]?.item?.organizer;
   expect(firstTripOrganizer?.review).toBeUndefined();
+});
+
+test("the public review count opens all reviews without trip names", async ({ page }) => {
+  await page.goto("/s/blue-mantis");
+  const reviewsLink = page.getByRole("link", { name: /reviews$/i });
+  await expect(reviewsLink).toHaveAttribute("href", "/s/blue-mantis/reviews");
+  await reviewsLink.click();
+
+  await expect(page.getByRole("heading", { level: 1, name: "All reviews" })).toBeVisible();
+  await expect(page.getByText("Two-Tank Reef — Molasses & French")).toHaveCount(0);
+  await expect(
+    page.getByText("Vis was unreal and the crew found us a turtle on the second tank."),
+  ).toBeVisible();
 });
 
 test("the embed widget emits no structured data — the standalone page is canonical", async ({

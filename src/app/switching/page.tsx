@@ -33,13 +33,13 @@ const metadataCompetitors = cachedListFormat(DEFAULT_DIVER_LOCALE, {
 
 export const metadata: Metadata = {
   title: "Switching guides — DiveDay",
-  description: `On a spreadsheet, or leaving ${metadataCompetitors}? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.`,
+  description: `On a spreadsheet, or leaving ${metadataCompetitors}? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with a clear picture of what comes across.`,
   alternates: { canonical: "/switching" },
   openGraph: {
     ...sharedLinkCard,
     title: "Switching guides — DiveDay",
     description:
-      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
+      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with a clear picture of what comes across.",
     url: "/switching",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Switching guides — DiveDay",
     description:
-      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
+      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with a clear picture of what comes across.",
   },
 };
 

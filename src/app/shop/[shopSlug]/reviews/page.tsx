@@ -11,7 +11,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { controlClass, FormStatus } from "@/components/ui/form";
+import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   countReviewsAwaitingModeration,
@@ -25,7 +25,7 @@ import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireStaffSession } from "@/lib/session";
@@ -36,7 +36,8 @@ import {
   ReviewSelectCheckbox,
   ReviewSelectionProvider,
 } from "./_components/ReviewBulkPublish";
-import { setReviewPublishedAction } from "./actions";
+import { ReviewHideForm } from "./_components/ReviewHideForm";
+import { setReviewPublishedAction, setReviewStandoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -72,6 +73,9 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   "none-selected": { tone: "danger", key: "reviews.notice.noneSelected" },
   "reason-required": { tone: "danger", key: "reviews.notice.reasonRequired" },
   "note-required": { tone: "danger", key: "reviews.notice.noteRequired" },
+  "note-too-long": { tone: "danger", key: "reviews.notice.noteTooLong" },
+  standout: { tone: "success", key: "reviews.notice.standout" },
+  "standout-removed": { tone: "success", key: "reviews.notice.standoutRemoved" },
   error: { tone: "danger", key: "reviews.notice.error" },
 };
 
@@ -160,7 +164,9 @@ export default async function ReviewsPage({
   // counted off the same page of reviews rather than off `waitingCount` (which
   // counts the whole shop, including reviews on a page this one has not
   // reached) — staff can never be offered a button that acts on nothing here.
-  const pendingOnPage = reviews.filter((review) => !review.isPublished).length;
+  // Hidden reviews stay unpublished, but are deliberately not waiting for a
+  // first read and therefore do not belong in this bulk-release action.
+  const pendingOnPage = reviews.filter((review) => !review.isPublished && !review.isHidden).length;
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -339,39 +345,44 @@ export default async function ReviewsPage({
         ) : (
           <ul className="flex flex-col gap-3">
             {reviews.map((review) => {
-              // A published 5★ review is the shop's best news on this page —
-              // the one place besides `EarnedMoment` itself that borrows its
-              // coral accent, matching its classes rather than reusing the
-              // section component (this is a repeatable list row, not a
-              // page-level hero — see the component's own "rationed" note).
-              const standout = review.isPublished && review.rating === 5;
+              const standout = review.isPublished && review.isStandout;
               return (
                 <li
                   key={review.id}
                   // A refused hide comes back with `#review-<id>`, so the row
                   // that argued is the one the browser lands on.
+                  // Published five-star rows carry the earned-moment tone, so
+                  // this dynamic list row is not a neutral SectionCard.
                   id={`review-${review.id}`}
-                  className={`flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-start ${
+                  className={`flex flex-col gap-3 rounded-2xl border p-5 ${
                     standout ? "border-accent/40 bg-accent/10" : "border-border bg-surface"
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-2">
-                    {review.isPublished ? null : (
+                    {!review.isPublished && !review.isHidden ? (
                       <ReviewSelectCheckbox
                         reviewId={review.id}
                         ariaLabel={t("reviews.selectToPublishAriaLabel", {
                           name: review.diverName,
                         })}
                       />
-                    )}
+                    ) : null}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <StarRating
                           rating={review.rating}
                           label={t("reviews.rating", { rating: review.rating })}
                         />
-                        <Badge tone={review.isPublished ? "success" : "neutral"}>
-                          {review.isPublished ? t("reviews.published") : t("reviews.waitingOnYou")}
+                        <Badge
+                          tone={
+                            review.isPublished ? "success" : review.isHidden ? "warning" : "neutral"
+                          }
+                        >
+                          {review.isPublished
+                            ? t("reviews.published")
+                            : review.isHidden
+                              ? t("reviews.hidden")
+                              : t("reviews.waitingOnYou")}
                         </Badge>
                         {standout ? (
                           <span className="text-xs font-semibold text-primary">
@@ -407,75 +418,95 @@ export default async function ReviewsPage({
                           ),
                         })}
                       </p>
+                      {review.isHidden && review.hiddenReason ? (
+                        <div className="mt-2 space-y-1 text-sm text-muted">
+                          <p>
+                            {review.hiddenReasonNote
+                              ? t("reviews.hiddenReasonWithNote", {
+                                  reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                                  note: review.hiddenReasonNote,
+                                })
+                              : t("reviews.hiddenReason", {
+                                  reason: t(REVIEW_REASON_KEYS[review.hiddenReason]),
+                                })}
+                          </p>
+                          {review.hiddenAt && review.hiddenBy ? (
+                            <p>
+                              {t("reviews.hiddenMeta", {
+                                date: formatDateTimeTz(review.hiddenAt, locale, timezone),
+                                name: review.hiddenBy,
+                              })}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
-                  {review.isPublished ? (
-                    /* Hiding states a case, so it cannot be a bare button any
+                  <div className="flex flex-wrap items-start gap-2 border-t border-border pt-3">
+                    {!review.isHidden ? (
+                      /* Hiding states a case, so it cannot be a bare button any
                        more (ADR 20260813-review-moderation-has-a-floor). The
                        picker waits behind a disclosure: the shop that opens
                        this is already sure, and the reason list is the whole
                        point — a shop that finds none of them true is telling
-                       itself something. */
-                    <details className="shrink-0 sm:w-64">
-                      <summary
-                        className={`${buttonClass({
-                          variant: "secondary",
-                        })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-                      >
-                        {t("reviews.hide")}
-                      </summary>
-                      <form action={setReviewPublishedAction} className="mt-3 flex flex-col gap-2">
+                       itself something. This is available before publication
+                       as well: hiding a waiting review records the decision
+                       and keeps it out of the public set. */
+                      <details>
+                        <summary
+                          className={`${buttonClass({
+                            variant: "secondary",
+                          })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+                        >
+                          {t("reviews.hide")}
+                        </summary>
+                        <ReviewHideForm
+                          reviewId={review.id}
+                          action={setReviewPublishedAction}
+                          reasons={REVIEW_MODERATION_REASONS.map((reason) => ({
+                            value: reason,
+                            label: t(REVIEW_REASON_KEYS[reason]),
+                          }))}
+                          reasonLabel={t("reviews.hideReasonLabel")}
+                          reasonPlaceholder={t("reviews.hideReasonPlaceholder")}
+                          noteLabel={t("reviews.hideNoteLabel")}
+                          hideLabel={t("reviews.hideConfirm")}
+                          savingLabel={t("reviews.saving")}
+                        />
+                      </details>
+                    ) : null}
+                    {!review.isPublished ? (
+                      <form action={setReviewPublishedAction} className="shrink-0">
                         <input type="hidden" name="reviewId" value={review.id} />
-                        <input type="hidden" name="publish" value="false" />
-                        <label
-                          className="text-xs font-medium text-muted"
-                          htmlFor={`reason-${review.id}`}
-                        >
-                          {t("reviews.hideReasonLabel")}
-                        </label>
-                        <select
-                          id={`reason-${review.id}`}
-                          name="reason"
-                          required
-                          defaultValue=""
-                          className={controlClass}
-                        >
-                          <option value="" disabled>
-                            {t("reviews.hideReasonPlaceholder")}
-                          </option>
-                          {REVIEW_MODERATION_REASONS.map((reason) => (
-                            <option key={reason} value={reason}>
-                              {t(REVIEW_REASON_KEYS[reason])}
-                            </option>
-                          ))}
-                        </select>
+                        <input type="hidden" name="publish" value="true" />
+                        <SubmitButton pendingLabel={t("reviews.saving")} className={buttonClass()}>
+                          {t("reviews.publish")}
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                    {review.isPublished && review.comment ? (
+                      <form action={setReviewStandoutAction} className="shrink-0">
+                        <input type="hidden" name="reviewId" value={review.id} />
                         <input
-                          name="reasonNote"
-                          type="text"
-                          maxLength={200}
-                          placeholder={t("reviews.hideNotePlaceholder")}
-                          aria-label={t("reviews.hideNoteLabel")}
-                          className={controlClass}
+                          type="hidden"
+                          name="standout"
+                          value={review.isStandout ? "false" : "true"}
                         />
                         <SubmitButton
                           pendingLabel={t("reviews.saving")}
-                          className={buttonClass({
-                            variant: "secondary",
-                          })}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t("reviews.hideConfirm")}
+                          {review.isStandout
+                            ? t("reviews.removeStandout")
+                            : t("reviews.markStandout")}
                         </SubmitButton>
                       </form>
-                    </details>
-                  ) : (
-                    <form action={setReviewPublishedAction} className="shrink-0">
-                      <input type="hidden" name="reviewId" value={review.id} />
-                      <input type="hidden" name="publish" value="true" />
-                      <SubmitButton pendingLabel={t("reviews.saving")} className={buttonClass()}>
-                        {t("reviews.publish")}
-                      </SubmitButton>
-                    </form>
-                  )}
+                    ) : review.isPublished ? (
+                      <p className="self-center text-sm text-muted">
+                        {t("reviews.standoutWrittenOnly")}
+                      </p>
+                    ) : null}
+                  </div>
                 </li>
               );
             })}

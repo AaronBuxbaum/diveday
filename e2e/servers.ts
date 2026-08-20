@@ -41,6 +41,15 @@ export function e2eBaseURL(workerIndex: number): string {
   return `http://127.0.0.1:${e2ePort(workerIndex)}`;
 }
 
+/**
+ * Start one worker's Next server under the repository supervisor. Keeping the
+ * command here makes the process-group lifecycle part of the shared topology,
+ * rather than an easily missed string in Playwright config.
+ */
+export function e2eServerCommand(port: number): string {
+  return `node scripts/e2e-server.mjs --hostname 127.0.0.1 --port ${port} --keepAliveTimeout 120000`;
+}
+
 export const e2eWorkerIndexes: number[] = Array.from({ length: E2E_WORKER_COUNT }, (_, i) => i);
 
 /**

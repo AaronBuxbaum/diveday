@@ -118,11 +118,18 @@ export default async function MigrationGuidePage({
 async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
+  const importSource = guideSource(guide.slug, "mid");
   return (
     <GuideBody
       locale={locale}
       guide={guide}
-      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
+      importCta={
+        <SwitchingImportCta
+          label={t("switching.common.openImportCta")}
+          trialLabel={t("marketing.common.startTrial")}
+          source={importSource}
+        />
+      }
     />
   );
 }
@@ -131,18 +138,10 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
  * Cached per (negotiated locale, guide) — `guide` is a plain, serializable
  * data object (`src/lib/migration-guides.ts`), safe as a `"use cache"`
  * argument. `importCta` carries {@link SwitchingImportCta} (session-scoped —
- * reads `auth()`) as a pass-through slot per Next's interleaving rules: never
- * read or invoked here, only rendered where it belongs, so its per-visitor
- * content never enters the cache entry.
- *
- * Its render site (`ImportPhase`) wraps `{importCta}` in a `<Suspense>` —
- * without one, this preview's Cache Components runtime replayed a spurious
- * "unique key" warning on every request that reached this cached body,
- * because the dynamic child was streaming into a cache boundary with no
- * boundary of its own to resolve against. Isolating the dynamic read behind
- * its own `<Suspense>`, per the Next migrating-to-cache-components guide, is
- * what stopped it — confirmed by removing `importCta` entirely (warning
- * gone) and then restoring it wrapped (still gone, button still renders).
+ * reads `auth()`) as a pass-through slot per Next's interleaving rules. Its
+ * funnel source is bound before it crosses this cache boundary, so this body
+ * only renders the slot unchanged and its per-visitor content never enters the
+ * cache entry.
  */
 async function GuideBody({
   locale,
@@ -226,7 +225,7 @@ async function GuideBody({
         </section>
       )}
 
-      <MidCta locale={locale} source={source} />
+      <MidCta locale={locale} source={guideSource(guide.slug, "mid")} />
 
       {/* The whole mechanical path, as one rail: export (files the shop makes
           itself) → the importer's own scope table, verbatim → the importer →
@@ -247,7 +246,6 @@ async function GuideBody({
         <ImportPhase
           locale={locale}
           number={3}
-          importCta={importCta}
           importerNote={
             guide.importerNote && (
               <>
@@ -258,7 +256,9 @@ async function GuideBody({
               </>
             )
           }
-        />
+        >
+          <Suspense fallback={null}>{importCta}</Suspense>
+        </ImportPhase>
         <MovePhase number={4} title={t(guide.cutover.heading)} intro={t(guide.cutover.intro)}>
           <StepList
             steps={guide.cutover.steps.map((step) => ({
@@ -274,7 +274,7 @@ async function GuideBody({
 
       <ClosingCta
         locale={locale}
-        source={source}
+        source={guideSource(guide.slug, "close")}
         title={
           guide.coexist
             ? t("switching.competitor.runTheDay", { competitor: guide.competitor })

@@ -212,9 +212,17 @@ export const IMPORT_SCOPE_ROW_KEYS: Record<
     what: "marketing.guides.shared.scopeTable.pastVisits.what",
     detail: "marketing.guides.shared.scopeTable.pastVisits.detail",
   },
-  receiptsService: {
-    what: "marketing.guides.shared.scopeTable.receiptsService.what",
-    detail: "marketing.guides.shared.scopeTable.receiptsService.detail",
+  paymentHistory: {
+    what: "marketing.guides.shared.scopeTable.paymentHistory.what",
+    detail: "marketing.guides.shared.scopeTable.paymentHistory.detail",
+  },
+  serviceHistory: {
+    what: "marketing.guides.shared.scopeTable.serviceHistory.what",
+    detail: "marketing.guides.shared.scopeTable.serviceHistory.detail",
+  },
+  diverNotes: {
+    what: "marketing.guides.shared.scopeTable.diverNotes.what",
+    detail: "marketing.guides.shared.scopeTable.diverNotes.detail",
   },
 };
 

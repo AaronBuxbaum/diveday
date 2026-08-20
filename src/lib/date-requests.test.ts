@@ -48,12 +48,12 @@ describe("groupDateRequests", () => {
       request("pat", { preferredDate: "2026-09-12", alternateDate: "2026-09-19" }),
       request("sam", { preferredDate: "2026-09-19" }),
     ]);
-    expect(groups.map((g) => [g.date, g.count, g.firmCount])).toEqual([
-      ["2026-09-12", 1, 1],
-      ["2026-09-19", 2, 1],
+    expect(groups.map((g) => [g.date, g.groupCount])).toEqual([
+      ["2026-09-12", 1],
+      ["2026-09-19", 2],
     ]);
-    // The 19th is two people who could make it, only one of whom asked for it —
-    // the distinction the staff list renders in a lighter weight.
+    // The 19th has two requests; the entry match still distinguishes the
+    // preferred request from the alternate one in the staff list.
     expect(shape(groups[1].entries)).toEqual(["sam:preferred", "pat:alternate"]);
   });
 
@@ -72,7 +72,7 @@ describe("groupDateRequests", () => {
     ]);
     const near = groups.find((candidate) => candidate.date === "2026-09-14");
     expect(shape(near?.entries ?? [])).toEqual(["firm-14:preferred", "flex:nearby"]);
-    expect(near?.firmCount).toBe(1);
+    expect(near?.groupCount).toBe(2);
     // Three weeks away is not "near", flexible or not.
     const far = groups.find((candidate) => candidate.date === "2026-09-30");
     expect(shape(far?.entries ?? [])).toEqual(["firm-30:preferred"]);
@@ -83,19 +83,19 @@ describe("groupDateRequests", () => {
       request("anchor-in", { preferredDate: september(12 + FLEXIBLE_WINDOW_DAYS) }),
       request("flex", { preferredDate: "2026-09-12", dateFlexible: true }),
     ]);
-    expect(inside.groups.at(-1)?.count).toBe(2);
+    expect(inside.groups.at(-1)?.groupCount).toBe(2);
 
     const outside = group([
       request("anchor-out", { preferredDate: september(12 + FLEXIBLE_WINDOW_DAYS + 1) }),
       request("flex", { preferredDate: "2026-09-12", dateFlexible: true }),
     ]);
-    expect(outside.groups.at(-1)?.count).toBe(1);
+    expect(outside.groups.at(-1)?.groupCount).toBe(1);
 
     const earlier = group([
       request("anchor-before", { preferredDate: september(12 - FLEXIBLE_WINDOW_DAYS) }),
       request("flex", { preferredDate: "2026-09-12", dateFlexible: true }),
     ]);
-    expect(earlier.groups[0]?.count).toBe(2);
+    expect(earlier.groups[0]?.groupCount).toBe(2);
   });
 
   it("keeps a request out of a group it is not near, even when it is flexible", () => {
@@ -121,7 +121,7 @@ describe("groupDateRequests", () => {
       "2026-09-12",
     );
     expect(shape(twelfth.entries)).toEqual(["pat:preferred", "sam:nearby"]);
-    expect(twelfth.count).toBe(2);
+    expect(twelfth.groupCount).toBe(2);
   });
 
   it("sets a request with no date at all aside rather than forcing it into a group", () => {

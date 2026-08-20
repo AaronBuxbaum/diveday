@@ -63,8 +63,6 @@ const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
 export function CourseHero({
   course,
   totalCents,
-  bookHref,
-  inquiryHref,
   currency,
   locale,
   t,
@@ -72,12 +70,6 @@ export function CourseHero({
 }: {
   course: Course;
   totalCents: number | null;
-  bookHref: string | null;
-  /** Anchor to "Get in touch", shown as the hero's fallback CTA when there's
-   * no open session to book yet — otherwise a diver landing here has no
-   * visible next step until they scroll the whole page (design/principles.md
-   * #2). */
-  inquiryHref?: string | null;
   /** The shop's currency — a Cozumel shop's course price is pesos, not dollars. */
   currency: ShopCurrency;
   /** The shop's locale — money and dates on a public page follow it, not the server's. */
@@ -131,25 +123,13 @@ export function CourseHero({
           title={course.title}
           description={course.summary ?? undefined}
         />
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="mt-4 flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
               {money.format(minorToMajor(totalCents, currency))}
               <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
           )}
-          {/* Secondary on purpose: this is in-page navigation, not the
-              commitment itself. The page's one primary is the next date's
-              "Book this date" inside CourseSessions (principle 8). */}
-          {bookHref ? (
-            <Link href={bookHref} className={buttonClass({ variant: "secondary", size: "cta" })}>
-              {t("course.seeDates")}
-            </Link>
-          ) : inquiryHref ? (
-            <Link href={inquiryHref} className={buttonClass({ variant: "secondary", size: "cta" })}>
-              {t("course.askAboutDates")}
-            </Link>
-          ) : null}
         </div>
       </div>
       {facts.length > 0 ? (
@@ -550,6 +530,15 @@ export function CourseSessions({
                   })}
                 </ul>
               </div>
+            ) : null}
+            {inquiryHref ? (
+              <p className="mt-6 text-sm text-muted">
+                {t("course.requestDifferentDateLead")}{" "}
+                <Link href={inquiryHref} className="font-medium text-primary hover:underline">
+                  {t("course.requestDateLink")}
+                </Link>
+                .
+              </p>
             ) : null}
           </>
         )}

@@ -215,6 +215,8 @@ export async function setShopAddress(
     addressRegion?: string | null;
     addressPostalCode?: string | null;
     addressCountry?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
   },
 ) {
   const clean = (value: string | null | undefined) => value?.trim() || null;
@@ -226,6 +228,8 @@ export async function setShopAddress(
       addressRegion: clean(address.addressRegion),
       addressPostalCode: clean(address.addressPostalCode),
       addressCountry: clean(address.addressCountry),
+      latitude: address.latitude ?? null,
+      longitude: address.longitude ?? null,
     })
     .where(eq(shops.id, shopId))
     .returning();
@@ -268,5 +272,15 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
     .set({ reviewUrl: reviewUrl.trim() || null })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/** Sets whether the shop does shore diving and/or pool diving. */
+export async function setShopDivingOptions(
+  db: AppDb,
+  shopId: string,
+  options: { hasShoreDiving: boolean; hasPoolDiving: boolean },
+) {
+  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }

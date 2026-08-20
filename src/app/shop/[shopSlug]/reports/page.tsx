@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
-import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import {
   canPersonViewShopReports,
+  earliestImportedFinancialHistoryDate,
   earliestReportedTripStart,
   getMonthlyReport,
   pagedMonthlyReportTrips,
@@ -44,6 +45,10 @@ export const metadata: Metadata = {
   title: "Reports — DiveDay",
 };
 
+function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
+  return compareMonths(left, right) > 0 ? right : left;
+}
+
 /**
  * A slim, labelled share bar — fill or waiver completion as a portion of a
  * whole. A null ratio ("no bookings to measure") renders as a bare em dash, not
@@ -74,8 +79,10 @@ function ShareBar({ ratio, label }: { ratio: number | null; label: string }) {
 
 /**
  * Owner reporting — the buyer's "how's my month" over data DiveDay already
- * holds: bookings, revenue collected, seat fill, and waiver completion, anchored
- * to the trips that departed in the chosen month (ADR 20260723-owner-reporting).
+ * holds: bookings, net revenue, seat fill, and waiver completion. Trip metrics
+ * stay anchored to departures; clearly-labelled source payments/refunds add a
+ * separate unverified financial slice by their source calendar date (ADR
+ * 20260723-owner-reporting and 20260816-imported-payment-history-is-evidence).
  * Owner/manager only: revenue is not for the daily crew.
  *
  * A report and nothing else. Three back-office queues used to hang off the
@@ -126,21 +133,34 @@ export default async function ReportsPage({
   // The oldest month this shop could have anything to report on. It is the
   // floor of both the picker and the back arrow: walking further back only ever
   // renders identical empty months, and `?month=0001-01` should land somewhere
-  // real rather than querying the year 1. A shop with no trips at all floors at
-  // the current month; a shop whose only trips are still ahead floors there too
-  // (`clampMonth` needs min <= max, and "earliest" can be in the future).
+  // real rather than querying the year 1. An imported payment/refund is a
+  // genuine financial fact even without a DiveDay departure, so its earliest
+  // eligible source day also moves this floor.
   //
   // #411 batched this into a `Promise.all` alongside the ops-panel lists and
   // the erase gate. Those four reads left with the panels they fed, so the one
   // read that remains is a plain await again — a `Promise.all` of one is a
   // parallelization of nothing.
   const earliestTripStart = await earliestReportedTripStart(db, shop.id);
+  const earliestImportedFinancialDate = await earliestImportedFinancialHistoryDate(
+    db,
+    shop.id,
+    currency,
+  );
   const earliestWall = earliestTripStart ? utcToWallTime(earliestTripStart, tz) : null;
   const earliestTripMonth: MonthRef = earliestWall
     ? { year: earliestWall.year, month: earliestWall.month }
     : thisMonth;
-  const floorMonth =
-    compareMonths(earliestTripMonth, thisMonth) < 0 ? earliestTripMonth : thisMonth;
+  const earliestImportedMonth = earliestImportedFinancialDate
+    ? {
+        year: Number(earliestImportedFinancialDate.slice(0, 4)),
+        month: Number(earliestImportedFinancialDate.slice(5, 7)),
+      }
+    : thisMonth;
+  const floorMonth = [earliestTripMonth, earliestImportedMonth, thisMonth].reduce(
+    earlierMonth,
+    thisMonth,
+  );
   // No ceiling: a shop that schedules ahead can still ask for a month that has
   // not happened yet, and the page frames it honestly as one that hasn't sailed.
   const current = clampMonth(parseMonthKey(month) ?? thisMonth, floorMonth);
@@ -158,13 +178,13 @@ export default async function ReportsPage({
   // the report itself, expressed as the `<input type="date">` values the
   // Orders index's own filter form reads.
   const lastDayOfMonth = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
-  const revenueOrdersHref = `/shop/${shopSlug}/orders?from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDayOfMonth)}`;
+  const revenueOrdersHref = `/shop/${shopSlug}/orders?from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDayOfMonth)}&range=custom`;
 
   // Totals see every trip in the month (summarizeMonth's fill rate and waiver
   // completion would quietly go wrong if this were page-limited); the table
   // below gets its own bounded, cursor-paginated slice.
   const [input, tripPage] = await Promise.all([
-    getMonthlyReport(db, shop.id, monthStart, monthEnd),
+    getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range, so switching to a shorter month never strands the reader on
     // a page that month does not have.
@@ -174,6 +194,7 @@ export default async function ReportsPage({
   ]);
   const report = summarizeMonth(input);
   const { trips } = tripPage;
+  const hasMonthlyActivity = report.tripCount > 0 || report.importedFinancialRecordCount > 0;
 
   const isThisMonth = current.year === thisMonth.year && current.month === thisMonth.month;
   const isFuture =
@@ -300,7 +321,7 @@ export default async function ReportsPage({
         </nav>
       </div>
 
-      {report.tripCount === 0 ? (
+      {!hasMonthlyActivity ? (
         // A month with no departures is this page's rest state, not news about
         // it: `ShopNotice` is the vocabulary for something that *happened*
         // (a save, a refusal, a permission bounce), and wearing it here made an
@@ -319,16 +340,24 @@ export default async function ReportsPage({
             <ShopStat
               label={t("reports.metrics.revenueLabel")}
               value={formatReportMoney(report.revenueCents, currency, locale)}
-              detail={t("reports.metrics.revenueDetail")}
+              detail={
+                report.importedFinancialRecordCount > 0
+                  ? t("reports.metrics.revenueDetailWithImported", {
+                      count: report.importedFinancialRecordCount,
+                      payments: formatReportMoney(report.importedPaymentCents, currency, locale),
+                      refunds: formatReportMoney(report.importedRefundCents, currency, locale),
+                    })
+                  : t("reports.metrics.revenueDetail")
+              }
               linkHref={revenueOrdersHref}
               linkLabel={t("reports.metrics.revenueViewOrders")}
             />
             {/*
               Tips sit beside revenue rather than inside it (PAY-M2): they are
               their own Stripe charge, 100% to the shop, and never part of the
-              booking payment gate — so the two numbers together are what makes
-              the month reconcile against the shop's Stripe dashboard, while
-              "Revenue collected" keeps meaning what its detail line says.
+              booking payment gate. The imported-source note below separately
+              names financial evidence that is not Stripe-confirmed, so nobody
+              mistakes a useful migration total for a Stripe-dashboard match.
             */}
             <ShopStat
               label={t("reports.metrics.tipsLabel")}
@@ -361,82 +390,110 @@ export default async function ReportsPage({
             />
           </section>
 
-          <section aria-label={t("reports.tripsThisMonth")} className="mt-8">
-            <h2 className="mb-3 text-lg font-semibold">{t("reports.tripsThisMonth")}</h2>
-            <Table>
-              <THead>
-                <Th>{t("reports.table.trip")}</Th>
-                <Th numeric hideBelow="sm">
-                  {t("reports.table.seats")}
-                </Th>
-                <Th>{t("reports.table.fill")}</Th>
-                <Th>{t("reports.table.waivers")}</Th>
-              </THead>
-              <TBody>
-                {trips.map((trip) => {
-                  const waiverRatio =
-                    trip.activeBookings > 0 ? trip.waiverComplete / trip.activeBookings : null;
-                  return (
-                    <tr key={trip.tripId}>
-                      <Td>
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${trip.tripId}/guests`}
-                          className="font-medium text-foreground hover:text-primary hover:underline"
-                        >
-                          {trip.title}
-                        </Link>
-                        <div className="text-xs text-muted">
-                          {formatShortDate(trip.startsAt, locale, tz)}
-                          {/* The raw ratio the Seats column carries on wider screens,
-                              folded in here so a phone never loses "70% of what?". */}
-                          <span className="tabular-nums sm:hidden">
-                            {" · "}
-                            {t("reports.seatsMobile", {
+          {report.importedFinancialRecordCount > 0 ? (
+            <section aria-label={t("reports.importedHistory.sectionLabel")} className="mt-6">
+              <ShopNotice tone="warning">
+                <p className="font-medium">{t("reports.importedHistory.heading")}</p>
+                <p className="mt-1 text-sm">
+                  {t("reports.importedHistory.detail", {
+                    payments: formatReportMoney(report.importedPaymentCents, currency, locale),
+                    refunds: formatReportMoney(report.importedRefundCents, currency, locale),
+                  })}
+                </p>
+                <Link
+                  href={revenueOrdersHref}
+                  className="mt-3 inline-block font-medium text-primary underline underline-offset-2"
+                >
+                  {t("reports.importedHistory.viewOrders")}
+                </Link>
+              </ShopNotice>
+            </section>
+          ) : null}
+
+          {report.tripCount > 0 ? (
+            <section aria-label={t("reports.tripsThisMonth")} className="mt-8">
+              <h2 className="mb-3 text-lg font-semibold">{t("reports.tripsThisMonth")}</h2>
+              <Table>
+                <THead>
+                  <Th>{t("reports.table.trip")}</Th>
+                  <Th numeric hideBelow="sm">
+                    {t("reports.table.seats")}
+                  </Th>
+                  <Th>{t("reports.table.fill")}</Th>
+                  <Th>{t("reports.table.waivers")}</Th>
+                </THead>
+                <TBody>
+                  {trips.map((trip) => {
+                    const waiverRatio =
+                      trip.activeBookings > 0 ? trip.waiverComplete / trip.activeBookings : null;
+                    return (
+                      <tr key={trip.tripId}>
+                        <Td>
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${trip.tripId}/guests`}
+                            className="font-medium text-foreground hover:text-primary hover:underline"
+                          >
+                            {trip.title}
+                          </Link>
+                          <div className="text-xs text-muted">
+                            {formatShortDate(trip.startsAt, locale, tz)}
+                            {/* The raw ratio the Seats column carries on wider screens,
+                                folded in here so a phone never loses "70% of what?". */}
+                            <span className="tabular-nums sm:hidden">
+                              {" · "}
+                              {t("reports.seatsMobile", {
+                                booked: trip.activeBookings,
+                                capacity: trip.capacity,
+                              })}
+                            </span>
+                          </div>
+                        </Td>
+                        <Td numeric muted hideBelow="sm">
+                          {trip.activeBookings}/{trip.capacity}
+                        </Td>
+                        <Td>
+                          <ShareBar
+                            ratio={tripFillRate(trip)}
+                            label={t("reports.fillLabel", {
                               booked: trip.activeBookings,
                               capacity: trip.capacity,
                             })}
-                          </span>
-                        </div>
-                      </Td>
-                      <Td numeric muted hideBelow="sm">
-                        {trip.activeBookings}/{trip.capacity}
-                      </Td>
-                      <Td>
-                        <ShareBar
-                          ratio={tripFillRate(trip)}
-                          label={t("reports.fillLabel", {
-                            booked: trip.activeBookings,
-                            capacity: trip.capacity,
-                          })}
-                        />
-                      </Td>
-                      <Td>
-                        <ShareBar
-                          ratio={waiverRatio}
-                          label={t("reports.waiversRowLabel", {
-                            complete: trip.waiverComplete,
-                            total: trip.activeBookings,
-                          })}
-                        />
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </TBody>
-            </Table>
-            <Pager
-              page={tripPage.page}
-              pageCount={tripPage.pageCount}
-              href={(target) =>
-                `/shop/${shopSlug}/reports?month=${monthKey(current)}${
-                  target > 1 ? `&page=${target}` : ""
-                }`
-              }
-              total={t("reports.pagination.total", { count: tripPage.total })}
-              t={t}
-              className="mt-4"
-            />
-          </section>
+                          />
+                        </Td>
+                        <Td>
+                          <ShareBar
+                            ratio={waiverRatio}
+                            label={t("reports.waiversRowLabel", {
+                              complete: trip.waiverComplete,
+                              total: trip.activeBookings,
+                            })}
+                          />
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </TBody>
+              </Table>
+              <Pager
+                page={tripPage.page}
+                pageCount={tripPage.pageCount}
+                href={(target) =>
+                  `/shop/${shopSlug}/reports?month=${monthKey(current)}${
+                    target > 1 ? `&page=${target}` : ""
+                  }`
+                }
+                total={t("reports.pagination.total", { count: tripPage.total })}
+                t={t}
+                className="mt-4"
+              />
+            </section>
+          ) : (
+            <EmptyState className="mt-8">
+              <p className="mx-auto max-w-md text-sm text-muted">
+                {t("reports.noTripsWithImportedHistory")}
+              </p>
+            </EmptyState>
+          )}
         </>
       )}
     </main>

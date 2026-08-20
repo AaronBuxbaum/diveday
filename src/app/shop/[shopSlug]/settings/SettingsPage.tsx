@@ -13,6 +13,7 @@ import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
+import { listBoats } from "@/db/boats";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
@@ -56,16 +57,18 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
-import { SettingsGroupAnchors } from "./_components/SettingsGroupAnchors";
 import { SettingsDoorRow, SettingsRow, SettingsRowList } from "./_components/SettingsRows";
 import { AddressSearch } from "./AddressSearch";
 import {
+  createBoatAction,
+  deleteBoatAction,
   dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveContactAction,
+  saveDivingOptionsAction,
   saveDockDayRhythmAction,
   savePackingAction,
   saveRentalItemsAction,
@@ -74,6 +77,7 @@ import {
   saveSearchListingAction,
   saveTimezoneAction,
   saveUnitsAction,
+  updateBoatAction,
 } from "./actions";
 import { SETTINGS_GROUPS } from "./settings-groups";
 
@@ -136,6 +140,12 @@ function noticeMessages(
     // receives the whole shop, medical evidence included — and the same
     // bounce-with-an-explanation rule as every gate above.
     "backup-not-authorized": { tone: "danger", text: t("backup.notice.not-authorized") },
+    "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
+    "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
+    "boat-created": { tone: "success", text: t("boats.boatCreated") },
+    "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
+    "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
+    "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
   };
 }
 
@@ -214,9 +224,8 @@ function StatusRow({
   );
 }
 
-// Re-exported (not just imported) so `SettingsPage.test.tsx`'s group-anchor
-// assertions keep reading the same list `SettingsGroupAnchors` derives from —
-// one registry, `settings-groups.ts`, not a copy per consumer.
+// Re-exported so the page test reads the same section registry the page uses,
+// rather than carrying a second list of settings groups.
 export { SETTINGS_GROUPS };
 
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
@@ -349,6 +358,8 @@ const SECTION_IDS = [
   "packing",
   "dockCall",
   "units",
+  "divingOptions",
+  "boats",
   "rentals",
   "rentalPricing",
   "stripe",
@@ -426,13 +437,13 @@ export default async function SettingsPage({
   // that visits it, and the preview is drawn from the shop-wide figure alone.
   // Empty for a shop that has overridden nothing, and then the preview says
   // nothing extra.
-  const [pendingMediaDeletions, owedProcessorErasures, siteBottomTimeOverrides] = await Promise.all(
-    [
+  const [pendingMediaDeletions, owedProcessorErasures, siteBottomTimeOverrides, shopBoats] =
+    await Promise.all([
       listPendingMediaDeletions(db, session.user.shopId),
       listOwedProcessorErasures(db, session.user.shopId),
       listSiteBottomTimeOverrides(db, session.user.shopId),
-    ],
-  );
+      listBoats(db, session.user.shopId),
+    ]);
   // Owner-only, and tighter than the gate this panel is *read* behind: a retry
   // fires a destructive call at the shop's Stripe account and a discharge signs
   // an attestation that a diver's data is gone from the processor. The actions
@@ -500,6 +511,12 @@ export default async function SettingsPage({
     ),
     shopCurrency.toUpperCase(),
   ].join(" · ");
+  const divingOptionsValue = [
+    shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
+    shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
+  ].join(" · ");
+  const boatsValue =
+    shopBoats.length > 0 ? t("boats.value", { count: shopBoats.length }) : t("boats.noBoats");
   const rentalsValue = t("settings.main.rentals.value", { count: offeredKinds.size });
   const rentalPricingValue =
     shop.rentalPricing.setCents !== null
@@ -511,18 +528,6 @@ export default async function SettingsPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "saved"]} />
-      {/* The jump row stands above the `<h1>` because it is about the page as
-          a whole, and it renders only here — the sub-pages it used to sit on
-          get their way back from their own eyebrow instead. */}
-      <SettingsGroupAnchors
-        ariaLabel={t("settings.main.subNav.ariaLabel")}
-        groupLabels={
-          Object.fromEntries(
-            SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]),
-          ) as Record<SettingsGroupSpec["id"], string>
-        }
-        className="mb-4"
-      />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         title={t("settings.main.title")}
@@ -1026,6 +1031,146 @@ export default async function SettingsPage({
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
+            </SettingsRow>
+
+            <SettingsRow
+              heading={t("boats.divingOptionsHeading")}
+              value={divingOptionsValue}
+              description={t("boats.divingOptionsDescription")}
+              open={activeSection === "divingOptions"}
+            >
+              <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
+              <FieldGrid as="form" action={saveDivingOptionsAction} columns={1} className="mt-4">
+                <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    name="hasShoreDiving"
+                    type="checkbox"
+                    defaultChecked={shop.hasShoreDiving}
+                    className="size-4 accent-primary"
+                  />
+                  <div>
+                    <p className="font-medium">{t("boats.shoreDivingLabel")}</p>
+                    <p className="text-xs text-muted">{t("boats.shoreDivingDescription")}</p>
+                  </div>
+                </label>
+                <label className="flex min-h-11 items-center gap-3 text-sm mt-2">
+                  <input
+                    name="hasPoolDiving"
+                    type="checkbox"
+                    defaultChecked={shop.hasPoolDiving}
+                    className="size-4 accent-primary"
+                  />
+                  <div>
+                    <p className="font-medium">{t("boats.poolDivingLabel")}</p>
+                    <p className="text-xs text-muted">{t("boats.poolDivingDescription")}</p>
+                  </div>
+                </label>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("boats.divingOptionsSubmitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("boats.divingOptionsSubmit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            <SettingsRow
+              heading={t("boats.heading")}
+              value={boatsValue}
+              description={t("boats.description")}
+              detail={t("boats.detail")}
+              open={activeSection === "boats"}
+            >
+              <SectionNotice banner={banner} section="boats" active={activeSection} />
+              <div className="space-y-4 mt-4">
+                {shopBoats.length === 0 ? (
+                  <p className="text-sm text-muted italic">{t("boats.noBoats")}</p>
+                ) : (
+                  <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+                    {shopBoats.map((boat) => (
+                      <form
+                        key={boat.id}
+                        action={updateBoatAction}
+                        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
+                      >
+                        <input type="hidden" name="boatId" value={boat.id} />
+                        <div className="flex-1 w-full">
+                          <input
+                            name="name"
+                            type="text"
+                            required
+                            defaultValue={boat.name}
+                            placeholder={t("boats.nameLabel")}
+                            className={controlClass}
+                          />
+                        </div>
+                        <div className="w-full sm:w-32 flex items-center gap-2">
+                          <input
+                            name="capacity"
+                            type="number"
+                            required
+                            min={1}
+                            defaultValue={boat.capacity}
+                            placeholder={t("boats.capacityLabel")}
+                            className={`${controlClass} tabular-nums`}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                          <SubmitButton
+                            pendingLabel={t("boats.submitting")}
+                            className={buttonClass({ variant: "secondary", size: "sm" })}
+                          >
+                            {t("boats.submit")}
+                          </SubmitButton>
+                          <button
+                            formAction={deleteBoatAction}
+                            type="submit"
+                            className={buttonClass({ variant: "danger", size: "sm" })}
+                          >
+                            {t("boats.deleteBoat")}
+                          </button>
+                        </div>
+                      </form>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
+                  <h4 className="text-sm font-medium mb-3">{t("boats.createTitle")}</h4>
+                  <form
+                    action={createBoatAction}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                  >
+                    <div className="flex-1 w-full">
+                      <input
+                        name="name"
+                        type="text"
+                        required
+                        placeholder={t("boats.nameLabel")}
+                        className={controlClass}
+                      />
+                    </div>
+                    <div className="w-full sm:w-32">
+                      <input
+                        name="capacity"
+                        type="number"
+                        required
+                        min={1}
+                        placeholder={t("boats.capacityLabel")}
+                        className={`${controlClass} tabular-nums`}
+                      />
+                    </div>
+                    <SubmitButton
+                      pendingLabel={t("boats.submitting")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("boats.addBoat")}
+                    </SubmitButton>
+                  </form>
+                </div>
+              </div>
             </SettingsRow>
           </SettingsRowList>
         </SettingsGroup>

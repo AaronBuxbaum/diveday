@@ -52,6 +52,7 @@ export function StaffTabBar({
   gates,
   counts,
   labels,
+  closeOutLabel,
   navAriaLabel,
   badgeLabels,
   moreLabel,
@@ -62,6 +63,8 @@ export function StaffTabBar({
   gates: ShopNavGates;
   counts?: ShopNavCounts;
   labels: StaffDestinationLabels;
+  /** Compact dock word; the header/palette keep the full destination label. */
+  closeOutLabel: string;
   navAriaLabel: string;
   badgeLabels: Record<StaffDestinationBadge, string>;
   /** The sixth slot's word — same key the header's More menu wears. */
@@ -105,10 +108,30 @@ export function StaffTabBar({
     if (!moreOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     return () => {
       document.body.style.overflow = previous;
     };
   }, [moreOpen]);
+
+  const trapSheetFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab") return;
+    const focusable = [
+      ...(sheetRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? []),
+    ];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const tabClass = (active: boolean) =>
     `flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-0.5 pt-1.5 pb-1 transition-colors duration-200 ${
@@ -158,6 +181,7 @@ export function StaffTabBar({
                 <Link
                   href={href}
                   aria-current={active ? "page" : undefined}
+                  aria-label={labels[destination.id]}
                   className={tabClass(active)}
                 >
                   <span className={pillClass(active)}>
@@ -184,7 +208,7 @@ export function StaffTabBar({
                     390px is a locale bug to shorten in the bundle, not a
                     rendering strategy. es-ES's longest ("Buceadores") fits. */}
                   <span className="max-w-full truncate text-xs font-medium leading-tight">
-                    {labels[destination.id]}
+                    {destination.id === "closeOut" ? closeOutLabel : labels[destination.id]}
                   </span>
                 </Link>
               </li>
@@ -196,6 +220,24 @@ export function StaffTabBar({
                 type="button"
                 ref={moreButtonRef}
                 onClick={() => setMoreOpen((current) => !current)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Tab" || !moreOpen) return;
+                  const focusable = [
+                    ...(sheetRef.current?.querySelectorAll<HTMLElement>(
+                      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                    ) ?? []),
+                  ];
+                  const first = focusable[0];
+                  const last = focusable[focusable.length - 1];
+                  if (!first || !last) return;
+                  if (event.shiftKey) {
+                    event.preventDefault();
+                    last.focus();
+                  } else {
+                    event.preventDefault();
+                    first.focus();
+                  }
+                }}
                 aria-expanded={moreOpen}
                 aria-controls={moreOpen ? sheetId : undefined}
                 // When the current page lives behind this door, say so in the
@@ -244,9 +286,16 @@ export function StaffTabBar({
         <div
           id={sheetId}
           ref={sheetRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`${sheetId}-heading`}
+          onKeyDown={trapSheetFocus}
           className="rise-in absolute inset-x-0 bottom-full max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-t-2xl border-t border-border bg-surface shadow-xl"
         >
           <div className="mx-auto w-full max-w-xl p-3 pb-2">
+            <h2 id={`${sheetId}-heading`} className="sr-only">
+              {moreLabel}
+            </h2>
             <MoreGroups
               daily={daily}
               setup={setup}

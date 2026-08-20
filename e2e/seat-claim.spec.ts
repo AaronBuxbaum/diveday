@@ -1,5 +1,12 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripActivity,
+  signInAsOwner,
+  signOut,
+} from "./helpers";
 
 /**
  * The group-organizer loop (docs ADR 20260804-seat-claim-links): one
@@ -14,6 +21,7 @@ test.describe("seat claim links", () => {
   test("organizer books a party, a diver claims their own seat on another device", async ({
     page,
     browser,
+    workerBaseURL,
   }) => {
     // Sequential navigations across three actors (staff setup, organizer,
     // claimant) — same aggregate-cost reasoning as booking.spec.ts.
@@ -66,7 +74,7 @@ test.describe("seat claim links", () => {
     const organizerUrl = page.url();
 
     // The invited diver opens the link on their own browser profile.
-    const claimantContext = await browser.newContext();
+    const claimantContext = await browser.newContext({ baseURL: workerBaseURL });
     const claimantPage = makeActivitySafe(await claimantContext.newPage());
     await claimantPage.goto(claimPath ?? "/");
     await expect(
@@ -117,6 +125,7 @@ test.describe("seat claim links", () => {
       .getByRole("link", { name: "Guests" })
       .click();
     await expect(page.locator("#roster").getByText("Sam Reyes").first()).toBeVisible();
+    await openTripActivity(page);
     await expect(page.getByText(/Sam Reyes claimed their seat/)).toBeVisible();
   });
 });

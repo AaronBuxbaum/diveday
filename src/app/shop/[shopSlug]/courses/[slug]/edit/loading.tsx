@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Form-shaped skeleton for the course editor (design principle 1). Without
@@ -12,7 +13,7 @@ export default function EditCourseLoading() {
         <ShopPageHeaderSkeleton description={false} />
         <div className="mt-8 flex flex-col gap-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-11 rounded-lg border border-border bg-surface" />
+            <div key={i} className={sectionCardClass({ padding: "none", className: "h-11" })} />
           ))}
         </div>
       </div>

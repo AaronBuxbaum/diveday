@@ -28,6 +28,16 @@ percentages refer to: the site's existing `forecast_latitude`/`forecast_longitud
 `route_zoom`. The briefing overlays an SVG with `viewBox="0 0 100 100"` on the embed, so a percentage
 *is* the coordinate the drawing happens in.
 
+### Attribution geometry (2026-08-16)
+
+The current [Google Maps Platform Terms of Service](https://cloud.google.com/maps-platform/terms),
+section 3.2.2(b), requires all attribution supplied by Google to remain displayed and not be
+modified, obscured, or deleted. The route map therefore does not crop Google's bottom attribution
+strip. `MapEmbed` keeps the original symmetric iframe dimensions and the original route window,
+then exposes the provider-rendered strip in an additional 4rem band below that window. The route
+SVG and editor click surface remain constrained to the original-height inner window, so existing
+percentage waypoints still land on the same map pixels. No hand-written attribution is substituted.
+
 **The map cannot be panned while drawing.** This is the load-bearing constraint, not an unfinished
 edge. Percentages are meaningful only against a frame the viewer can reproduce, and the frame comes
 from a third-party `<iframe>` whose centre and zoom we cannot read back. If the shop could drag the

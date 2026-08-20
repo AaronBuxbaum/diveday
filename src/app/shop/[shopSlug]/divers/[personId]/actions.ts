@@ -1,6 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { anonymizeDiver } from "@/db/anonymize";
 import {
@@ -24,6 +26,7 @@ import {
   restoreNitroxCertification,
   reviewNitroxCertification,
 } from "@/db/nitrox";
+import { addDiverNote, deleteDiverNote } from "@/db/operations";
 import { refundOrder } from "@/db/orders";
 import {
   archiveCertification,
@@ -39,7 +42,7 @@ import {
   reviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { certificationAgency, certificationLevel } from "@/db/schema";
+import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
 import { recordInPersonWaiver } from "@/db/waivers";
@@ -180,6 +183,7 @@ const FORM_ANCHORS: Record<string, string> = {
   "specialty-cards": "#cards",
   fit: "#fit",
   payments: "#payments",
+  notes: "#notes",
   "book-activity": "#trips",
   remove: "#remove-heading",
   restore: "#removed-heading",
@@ -195,6 +199,85 @@ function backTo(base: string, notice: string, form?: string) {
   // The anchor rides on the path so `noticeUrl` keeps the query ahead of it;
   // `form` drops out of the query entirely when there is none.
   return noticeUrl(`${base}${form ? (FORM_ANCHORS[form] ?? "") : ""}`, notice, { form });
+}
+
+/**
+ * Add a note to the diver record. The successful path revalidates in place so
+ * the new line appears beside the field that was just used; the refusal path
+ * lands on the Notes anchor with the same section-scoped status treatment as
+ * the other long-form record editors.
+ */
+export async function addDiverNoteAction(shopSlug: string, personId: string, formData: FormData) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-notes",
+    "notes",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const note = await addDiverNote(db, {
+    shopId: staff.user.shopId,
+    personId,
+    actorPersonId: staff.user.personId,
+    body: String(formData.get("note") ?? ""),
+  });
+  if (!note) {
+    revalidateAndRedirect(base, backTo(base, "invalid", "notes"));
+    return;
+  }
+  revalidatePath(base);
+}
+
+/** Delete a person-scoped note and carry its text to a one-tap undo toast. */
+export async function deleteDiverNoteAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-notes",
+    "notes",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const result = await deleteDiverNote(db, {
+    shopId: staff.user.shopId,
+    personId,
+    actorPersonId: staff.user.personId,
+    noteId: String(formData.get("noteId") ?? ""),
+  });
+  revalidateAndRedirect(
+    base,
+    result.deleted
+      ? noticeUrl(`${base}#notes`, "note-deleted", { noteBody: result.body })
+      : backTo(base, "invalid", "notes"),
+  );
+}
+
+/** Restore a deleted diver note through the same audited insert path. */
+export async function restoreDiverNoteAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-notes",
+    "notes",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const restored = await addDiverNote(db, {
+    shopId: staff.user.shopId,
+    personId,
+    actorPersonId: staff.user.personId,
+    body: String(formData.get("body") ?? ""),
+  });
+  revalidateAndRedirect(base, backTo(base, restored ? "note-added" : "invalid", "notes"));
 }
 
 /**
@@ -272,15 +355,56 @@ async function isLiveStaff(db: AppDb, shopId: string, personId: string): Promise
   return Boolean(roles && isStaff(roles));
 }
 
-export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
+async function liveStaffName(db: AppDb, shopId: string, personId: string) {
+  const [staff] = await db
+    .select({ fullName: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  return staff?.fullName ?? "staff";
+}
+
+/**
+ * Shared preamble for every mutation bound to this record's route segment.
+ *
+ * The subject id is not a form field, but it is still caller-controlled when
+ * a server action is replayed by hand. Narrow it before any uuid query, then
+ * re-read the staffer's live role before the action's more specific gate. A
+ * malformed required subject is a 404, not a notice on a page that cannot
+ * render it.
+ */
+async function requireDiverActionContext(
+  shopSlug: string,
+  rawPersonId: string,
+  unauthorizedNotice: string,
+  form?: string,
+) {
+  const personId = uuidParam(rawPersonId);
+  if (!personId) notFound();
+
   const staff = await requireStaffSession();
+  const db = await getDb();
+  const base = shopPath(shopSlug, "divers", personId);
+  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, unauthorizedNotice, form));
+  }
+  return { base, db, personId, staff };
+}
+
+export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-details",
+    "details",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
   const parsed = personSchema.safeParse(Object.fromEntries(formData));
   // `&form=` is how a code half a dozen actions emit finds its way back to the
   // form that emitted it, instead of into a banner at the top of a 6,400px page
   // (`resolveDiverNotice`).
   if (!parsed.success) redirect(backTo(base, "invalid", "details"));
-  const db = await getDb();
   const saved = await updateDiver(db, {
     shopId: staff.user.shopId,
     personId,
@@ -304,15 +428,9 @@ export async function addCertificationAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "cards"));
   // No card photo, anywhere in the model: a shop verifies a card by looking its
@@ -333,15 +451,9 @@ export async function addCertificationAction(
 }
 
 export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(backTo(base, "invalid", "specialty-cards"));
   const saved =
@@ -383,15 +495,9 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
  * typed "Instructor" would verify the one field nobody looked at.
  */
 export async function reviewAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   // Before anything is read: a number that is not a number gets its own answer,
   // on its own box. Without this the refusal below is the one that fires, and
   // it tells the staffer to do what they just did (`sightedNumberRefused`).
@@ -406,6 +512,7 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
         certificationId,
         status: "verified",
         sighting,
+        reviewedByPersonId: staff.user.personId,
       })
     : ({ ok: false, reason: "not_found" } as const);
   revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "cards"));
@@ -460,15 +567,9 @@ export async function reviewSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   // The nitrox twin of the level sighting's own refusal, and it matters at
   // least as much here: this tap authorizes a gas fill.
   if (sightedNumberRefused(formData)) {
@@ -487,11 +588,13 @@ export async function reviewSpecialtyAction(
           certificationId,
           status: "verified",
           sighting: sightingFromForm(formData),
+          reviewedByPersonId: staff.user.personId,
         })
       : await reviewSpecialtyCertification(db, {
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
+          reviewedByPersonId: staff.user.personId,
         })
     : ({ ok: false, reason: "not_found" } as const);
   revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "specialty-cards"));
@@ -531,15 +634,9 @@ export async function clearNoCertificationAction(
   personId: string,
   _formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const cleared = await clearNoCertificationDeclaration(db, {
     shopId: staff.user.shopId,
     personId,
@@ -573,25 +670,30 @@ export async function deleteCertificationAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
   const deleted = certificationId
-    ? await archiveCertification(db, { shopId: staff.user.shopId, certificationId })
+    ? await archiveCertification(db, {
+        shopId: staff.user.shopId,
+        certificationId,
+        deletedByPersonId: staff.user.personId,
+      })
     : false;
+  const removedBy = deleted
+    ? await liveStaffName(db, staff.user.shopId, staff.user.personId)
+    : null;
   // Land-then-undo: the delete happens now, and the toast on the next render
   // carries the id + type so a single tap restores it (no confirm dialog).
   revalidateAndRedirect(
     base,
     deleted
-      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType: "level" })
+      ? noticeUrl(base, "card-deleted", {
+          undo: certificationId,
+          cardType: "level",
+          by: removedBy ?? undefined,
+        })
       : backTo(base, "invalid", "cards"),
   );
 }
@@ -602,26 +704,35 @@ export async function deleteSpecialtyAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
   const cardType = formData.get("cardType") === "nitrox" ? "nitrox" : "specialty";
   const deleted = certificationId
     ? cardType === "nitrox"
-      ? await archiveNitroxCertification(db, { shopId: staff.user.shopId, certificationId })
-      : await archiveSpecialtyCertification(db, { shopId: staff.user.shopId, certificationId })
+      ? await archiveNitroxCertification(db, {
+          shopId: staff.user.shopId,
+          certificationId,
+          deletedByPersonId: staff.user.personId,
+        })
+      : await archiveSpecialtyCertification(db, {
+          shopId: staff.user.shopId,
+          certificationId,
+          deletedByPersonId: staff.user.personId,
+        })
     : false;
+  const removedBy = deleted
+    ? await liveStaffName(db, staff.user.shopId, staff.user.personId)
+    : null;
   revalidateAndRedirect(
     base,
     deleted
-      ? noticeUrl(base, "card-deleted", { undo: certificationId, cardType })
+      ? noticeUrl(base, "card-deleted", {
+          undo: certificationId,
+          cardType,
+          by: removedBy ?? undefined,
+        })
       : backTo(base, "invalid", "specialty-cards"),
   );
 }
@@ -635,15 +746,9 @@ const cardTypeSchema = z.enum(["level", "specialty", "nitrox"]);
  * being clobbered (readiness.ts).
  */
 export async function restoreCardAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Live roles, not the JWT — see `isLiveStaff`. Page-level refusal: every card
-  // action can emit this, so it has no one form to sit beside.
-  if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-cards"));
-    return;
-  }
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const certificationId = cardIdFromForm(formData);
   const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
   if (!certificationId || !cardType.success) redirect(base);
@@ -664,9 +769,9 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-fit", "fit");
+  personId = context.personId;
+  const { base, db, staff } = context;
   // The gate is on *overriding* a stated request, not on writing the record
   // (H-06, ADR 20260724-gear-fit-fallback). A diver with nothing on file has
   // stated nothing to override, so recording their sizes for the first time is
@@ -720,12 +825,9 @@ export async function setNeedsStaffFitAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
-  // Re-read live roles like every other mutation on this page. Even the open
-  // direction suppresses a size on the packing list, so a demoted or disabled
-  // account must not keep doing it on a stale JWT.
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-fit", "fit");
+  personId = context.personId;
+  const { base, db, staff } = context;
   const roles = await loadActiveStaffRoles(db, staff.user.shopId, staff.user.personId);
   if (!roles || !isStaff(roles)) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-fit", "fit"));
@@ -773,9 +875,15 @@ export async function markWaiverInPersonAction(
   personId: string,
   formData: FormData,
 ) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const outcome = await recordInPersonWaiver(await getDb(), {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-waiver",
+    "waiver",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const outcome = await recordInPersonWaiver(db, {
     shopId: staff.user.shopId,
     subject: { personId },
     recordedByPersonId: staff.user.personId,
@@ -796,10 +904,15 @@ export async function markWaiverInPersonAction(
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const orderId = String(formData.get("orderId") ?? "");
-  const db = await getDb();
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-refund",
+    "payments",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const orderId = uuidParam(String(formData.get("orderId") ?? ""));
   // Money leaving the account is owner/manager work (H-14, ADR
   // 20260724-role-authorization), re-checked against live roles.
   if (!(await canPersonRefund(db, staff.user.shopId, staff.user.personId))) {
@@ -837,9 +950,14 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-delete",
+    "remove",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
   // Soft-deleting a person frees their email and pulls them from shop work —
   // owner/manager only (H-14, ADR 20260724-role-authorization).
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
@@ -870,9 +988,14 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
  * both land here as `restore-refused`, which says what to do about it.
  */
 export async function restorePersonAction(shopSlug: string, personId: string, _formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-delete",
+    "restore",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "restore"));
     return;
@@ -901,9 +1024,14 @@ export async function restorePersonAction(shopSlug: string, personId: string, _f
  * a hidden field the form could have carried unchanged.
  */
 export async function erasePersonAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = shopPath(shopSlug, "divers", personId);
-  const staff = await requireStaffSession();
-  const db = await getDb();
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-erase",
+    "erase",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
   if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-erase", "erase"));
     return;

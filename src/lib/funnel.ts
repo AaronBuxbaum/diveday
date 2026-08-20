@@ -70,6 +70,8 @@ const FIXED_SOURCES = [
   "sign-in",
   "switching-hub",
   "switching-spreadsheet",
+  "switching-spreadsheet-mid",
+  "switching-spreadsheet-close",
 ] as const;
 
 /**
@@ -80,12 +82,13 @@ const FIXED_SOURCES = [
  * page can ask for its tag.
  */
 export type FunnelSource = (typeof FIXED_SOURCES)[number] | `switching-${string}`;
+export type GuidePosition = "mid" | "close";
 
 const FIXED = new Set<string>(FIXED_SOURCES);
 
 /** The funnel tag for one switching guide, from the slug the route validated. */
-export function guideSource(slug: string): FunnelSource {
-  return `switching-${slug}`;
+export function guideSource(slug: string, position?: GuidePosition): FunnelSource {
+  return `switching-${slug}${position ? `-${position}` : ""}`;
 }
 
 /**
@@ -97,7 +100,12 @@ export function guideSource(slug: string): FunnelSource {
 export function eventSource(value: unknown): FunnelSource | "unknown" {
   if (typeof value !== "string") return "unknown";
   const known =
-    FIXED.has(value) || MIGRATION_GUIDE_SLUGS.some((slug) => value === guideSource(slug));
+    FIXED.has(value) ||
+    MIGRATION_GUIDE_SLUGS.some((slug) =>
+      [guideSource(slug), guideSource(slug, "mid"), guideSource(slug, "close")].some(
+        (source) => source === value,
+      ),
+    );
   return known ? (value as FunnelSource) : "unknown";
 }
 

@@ -13,11 +13,10 @@ import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
  * - **A request appears in the group for its preferred date *and* in the group
  *   for its alternate.** A shop deciding whether to put a boat on the 12th
  *   wants everyone who could make the 12th, not only those who named it first.
- *   So a group's headline count is "people who could make this date", which is
- *   what a boat is counted against, and `firmCount` is the part of it that
- *   asked for this day before any other — enough to render a second choice in a
- *   lighter weight, so "3, one of them a fallback" cannot read as three firm
- *   asks.
+ *   So a group's headline is the number of groups in the group. The entries
+ *   still carry their match so a second choice or flexible neighbour can be
+ *   rendered differently, without turning the group summary into a diver
+ *   capacity estimate or a count of first choices.
  * - **A flexible request joins every group near one of its own dates** rather
  *   than getting a bucket of its own. A bucket labelled "flexible" is a list
  *   nobody schedules from.
@@ -57,10 +56,8 @@ export type DateRequestEntry<T> = {
 export type DateRequestGroup<T> = {
   date: CalendarDate;
   entries: DateRequestEntry<T>[];
-  /** People who could make this date — `entries.length`, named for what it means. */
-  count: number;
-  /** How many of them asked for this day first. */
-  firmCount: number;
+  /** Groups represented in this date group — `entries.length`, named for what it means. */
+  groupCount: number;
 };
 
 export type GroupedDateRequests<T> = {
@@ -93,6 +90,18 @@ function matchFor(dates: DateRequestDates, date: CalendarDate): DateRequestMatch
     (named) => Math.abs(calendarDaysBetween(named, date)) <= FLEXIBLE_WINDOW_DAYS,
   );
   return near ? "nearby" : null;
+}
+
+/**
+ * Whether a request belongs beside a particular departure date. The booking
+ * flow uses the same rules as the Requests page so a flexible request is not
+ * shown for one surface and silently omitted from the other.
+ */
+export function dateRequestMatchFor(
+  dates: DateRequestDates,
+  date: CalendarDate,
+): DateRequestMatch | null {
+  return matchFor(dates, date);
 }
 
 /**
@@ -132,8 +141,7 @@ export function groupDateRequests<T>(
     return {
       date,
       entries,
-      count: entries.length,
-      firmCount: entries.filter((entry) => entry.match === "preferred").length,
+      groupCount: entries.length,
     };
   });
 

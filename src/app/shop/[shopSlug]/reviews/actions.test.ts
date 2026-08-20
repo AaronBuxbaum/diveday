@@ -20,10 +20,14 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
-vi.mock("@/db/reviews", () => ({ setReviewPublished: vi.fn(), setReviewsPublished: vi.fn() }));
+vi.mock("@/db/reviews", () => ({
+  setReviewPublished: vi.fn(),
+  setReviewStandout: vi.fn(),
+  setReviewsPublished: vi.fn(),
+}));
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
-const { setReviewsPublished } = await import("@/db/reviews");
+const { setReviewStandout, setReviewsPublished } = await import("@/db/reviews");
 const { requireStaffSession } = await import("@/lib/session");
 const { publishReviewsAction } = await import("./actions");
 
@@ -85,3 +89,39 @@ describe("publishReviewsAction", () => {
     expect(await redirectedTo(selection(REVIEW_A))).toBe("/shop/blue-mantis/reviews?notice=error");
   });
 });
+
+describe("setReviewStandoutAction", () => {
+  it("marks a review and keeps the shop from the session", async () => {
+    vi.mocked(setReviewStandout).mockResolvedValue(true);
+    const formData = new FormData();
+    formData.set("reviewId", REVIEW_A);
+    formData.set("standout", "true");
+
+    expect(await redirectedToStandout(formData)).toBe("/shop/blue-mantis/reviews?notice=standout");
+    expect(setReviewStandout).toHaveBeenCalledWith({}, SHOP_ID, REVIEW_A, true);
+  });
+
+  it("unmarks a review with the inverse notice", async () => {
+    vi.mocked(setReviewStandout).mockResolvedValue(true);
+    const formData = new FormData();
+    formData.set("reviewId", REVIEW_A);
+    formData.set("standout", "false");
+
+    expect(await redirectedToStandout(formData)).toBe(
+      "/shop/blue-mantis/reviews?notice=standout-removed",
+    );
+    expect(setReviewStandout).toHaveBeenCalledWith({}, SHOP_ID, REVIEW_A, false);
+  });
+});
+
+async function redirectedToStandout(formData: FormData): Promise<string> {
+  try {
+    const { setReviewStandoutAction } = await import("./actions");
+    await setReviewStandoutAction(formData);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+    throw error;
+  }
+  throw new Error("action returned without redirecting");
+}

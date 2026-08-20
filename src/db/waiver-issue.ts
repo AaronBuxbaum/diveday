@@ -1,11 +1,17 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import type { AppDb } from "./client";
-import { sendAndRecordNotification } from "./notifications";
+import { sendAndRecordNotification, sendNotification } from "./notifications";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips } from "./schema";
-import { hasLiveWaiverRequest, issueWaiverRequest, staleWaiverRecordForToken } from "./waivers";
+import {
+  hasLivePersonWaiverRequest,
+  hasLiveWaiverRequest,
+  issueWaiverRequest,
+  recordWaiverDelivery,
+  staleWaiverRecordForToken,
+} from "./waivers";
 
 /**
  * The one place that issues a waiver link *and* delivers it. Both the trip
@@ -47,6 +53,10 @@ export type IssueAndDeliverWaiverResult =
       diverName: string | null;
       reason: "already_completed" | "error";
     };
+
+export type PersonWaiverResult =
+  | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: true }>, "bookingId"> & { bookingId: null })
+  | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: false }>, "bookingId"> & { bookingId: null });
 
 /**
  * Issue a fresh waiver link for a booking and email it when we can. Emailing is
@@ -98,6 +108,7 @@ export async function issueAndDeliverWaiver(
   // email provider configured" when the actual gap is a missing APP_HOST sends
   // them to look at the wrong setting.
   let delivery: WaiverDelivery = "no_app_origin";
+  let providerMessageId: string | undefined;
   if (!email) {
     delivery = "no_email";
   } else if (origin && ctx) {
@@ -115,6 +126,7 @@ export async function issueAndDeliverWaiver(
       expiresAt: outcome.expiresAt,
       timezone: ctx.shop.timezone,
     });
+    providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
     delivery =
       result.status === "sent"
         ? "sent"
@@ -124,8 +136,83 @@ export async function issueAndDeliverWaiver(
             ? "test_recipient"
             : "failed";
   }
+  await recordWaiverDelivery(db, {
+    waiverRecordId: outcome.recordId,
+    delivery: {
+      status:
+        delivery === "sent" ? "sent" : delivery === "unconfigured" ? "not_configured" : "failed",
+      providerMessageId,
+    },
+  });
 
   return { ok: true, bookingId, diverName, token: outcome.token, delivery };
+}
+
+/** Issue and deliver a waiver directly to a diver, with no booking or schedule required. */
+export async function issueAndDeliverPersonWaiver(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+): Promise<PersonWaiverResult> {
+  const [ctx] = await db
+    .select({ person: people, shop: shops })
+    .from(people)
+    .innerJoin(shops, eq(shops.id, people.shopId))
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
+    .limit(1);
+  const outcome = await issueWaiverRequest(db, { shopId, personId });
+  if (!outcome.ok) {
+    return {
+      ok: false,
+      bookingId: null,
+      diverName: ctx?.person.fullName ?? null,
+      reason: outcome.reason === "already_completed" ? "already_completed" : "error",
+    };
+  }
+  const origin = publicAppUrl();
+  let delivery: WaiverDelivery = "no_app_origin";
+  let providerMessageId: string | undefined;
+  if (ctx?.person.email && origin) {
+    const result = await sendNotification(db, {
+      kind: "waiver_request",
+      waiverRecordId: outcome.recordId,
+      shopId,
+      to: ctx.person.email,
+      locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+      diverName: ctx.person.fullName,
+      shopName: ctx.shop.name,
+      completionUrl: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+      expiresAt: outcome.expiresAt,
+      timezone: ctx.shop.timezone,
+    });
+    providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
+    delivery =
+      result.status === "sent"
+        ? "sent"
+        : result.status === "not_configured"
+          ? "unconfigured"
+          : result.errorCode === "invalid_test_recipient"
+            ? "test_recipient"
+            : "failed";
+    await recordWaiverDelivery(db, {
+      waiverRecordId: outcome.recordId,
+      delivery: { ...result, providerMessageId },
+    });
+  } else {
+    const reason = !ctx?.person.email ? "no_email" : !origin ? "no_app_origin" : "failed";
+    delivery = reason;
+    await recordWaiverDelivery(db, {
+      waiverRecordId: outcome.recordId,
+      delivery: { status: "failed" },
+    });
+  }
+  return {
+    ok: true,
+    bookingId: null,
+    diverName: ctx?.person.fullName ?? "",
+    token: outcome.token,
+    delivery,
+  };
 }
 
 /**
@@ -165,7 +252,7 @@ export type WaiverLinkRescue =
 
 /**
  * A diver's self-serve rescue for a waiver link that aged out: issue a fresh
- * one and mail it to the address already on their booking.
+ * one and mail it to the address already on their booking or person record.
  *
  * The security shape matters more than the mechanics. A waiver URL *is* its
  * capability, so a stale one that leaked (a forwarded email, a shared screen)
@@ -195,9 +282,15 @@ export async function emailFreshWaiverLink(
   now: Date = nowDate(),
 ): Promise<WaiverLinkRescue> {
   const stale = await staleWaiverRecordForToken(db, token, now);
-  if (!stale?.bookingId) return "unavailable";
-  if (await hasLiveWaiverRequest(db, stale.bookingId, now)) return "current_link_live";
-  const outcome = await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId);
+  if (!stale) return "unavailable";
+  if (stale.bookingId) {
+    if (await hasLiveWaiverRequest(db, stale.bookingId, now)) return "current_link_live";
+  } else if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
+    return "current_link_live";
+  }
+  const outcome = stale.bookingId
+    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId)
+    : await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId);
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
   if (outcome.delivery === "no_email") return "no_email";

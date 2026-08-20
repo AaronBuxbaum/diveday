@@ -13,7 +13,9 @@ import {
   ne,
   notInArray,
   or,
+  sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { diverDepthLimit } from "@/lib/depth-ceiling";
@@ -35,11 +37,16 @@ import {
   specialtyCertifications,
   trips,
 } from "./schema";
-import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
+import {
+  getCurrentWaiverTemplate,
+  getDiverWaiverRequestStatus,
+  listSignedWaiversByPerson,
+} from "./waivers";
 
 export type NewDiver = {
   shopId: string;
-  fullName: string;
+  /** Contact-only intake may fill the display name from email or phone. */
+  fullName?: string;
   email?: string;
   phone?: string;
 };
@@ -55,6 +62,8 @@ export type NewDiver = {
  */
 export async function createDiver(db: AppDb, input: NewDiver) {
   const email = input.email?.trim().toLowerCase() || null;
+  const phone = input.phone?.trim() || null;
+  const fullName = input.fullName?.trim() || email || phone || "Unnamed diver";
   if (email) {
     const [existing] = await db
       .select({ id: people.id })
@@ -72,9 +81,9 @@ export async function createDiver(db: AppDb, input: NewDiver) {
         .insert(people)
         .values({
           shopId: input.shopId,
-          fullName: input.fullName.trim(),
+          fullName,
           email,
-          phone: input.phone?.trim() || null,
+          phone,
         })
         .returning();
       if (!person) throw new Error("createDiver: person insert returned no row");
@@ -231,7 +240,7 @@ export async function isDiverRemoved(db: AppDb, shopId: string, personId: string
   return Boolean(row?.deletedAt);
 }
 
-export const DIVER_PAGE_SIZE = 20;
+export const DIVER_PAGE_SIZE = 10;
 
 /**
  * The diver roster stays server-fed: search is indexed `ilike` over the
@@ -638,6 +647,55 @@ export async function listBookableDivers(
 }
 
 /**
+ * The same returning-diver shape for a request that already points at a person.
+ * Looking up by id keeps "book this person" exact even when two divers share a
+ * name, while the trip and active-booking checks keep a stale request from
+ * creating a duplicate seat.
+ */
+export async function getBookableDiver(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<BookableDiver | null> {
+  const [booked] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        eq(bookings.personId, personId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (booked) return null;
+
+  const [row] = await db
+    .select({ person: people })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const [rentalFit] = await db
+    .select()
+    .from(rentalFitProfiles)
+    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
+    .limit(1);
+  return { person: row.person, rentalFit: rentalFit ?? null };
+}
+
+/**
  * One diver's whole record.
  *
  * `includeRemoved` is what makes removal reversible from the UI. A removed
@@ -657,10 +715,18 @@ export async function getDiverProfile(
   personId: string,
   options: { includeRemoved?: boolean } = {},
 ) {
+  const clearedBy = alias(people, "no_certification_cleared_by");
+  const levelReviewer = alias(people, "level_certification_reviewer");
+  const specialtyReviewer = alias(people, "specialty_certification_reviewer");
+  const nitroxReviewer = alias(people, "nitrox_certification_reviewer");
   const [personRow] = await db
-    .select({ person: people })
+    .select({ person: people, clearedByName: clearedBy.fullName })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .leftJoin(
+      clearedBy,
+      and(eq(clearedBy.id, people.noCertificationClearedByPersonId), eq(clearedBy.shopId, shopId)),
+    )
     .where(
       and(
         eq(people.id, personId),
@@ -683,10 +749,12 @@ export async function getDiverProfile(
     visitRows,
     signedWaivers,
     waiverTemplate,
+    waiverRequest,
   ] = await Promise.all([
     db
-      .select()
+      .select({ card: certifications, reviewedByName: levelReviewer.fullName })
       .from(certifications)
+      .leftJoin(levelReviewer, eq(levelReviewer.id, certifications.reviewedByPersonId))
       .where(
         and(
           eq(certifications.shopId, shopId),
@@ -696,8 +764,12 @@ export async function getDiverProfile(
       )
       .orderBy(desc(certifications.createdAt)),
     db
-      .select()
+      .select({ card: specialtyCertifications, reviewedByName: specialtyReviewer.fullName })
       .from(specialtyCertifications)
+      .leftJoin(
+        specialtyReviewer,
+        eq(specialtyReviewer.id, specialtyCertifications.reviewedByPersonId),
+      )
       .where(
         and(
           eq(specialtyCertifications.shopId, shopId),
@@ -707,8 +779,9 @@ export async function getDiverProfile(
       )
       .orderBy(desc(specialtyCertifications.createdAt)),
     db
-      .select()
+      .select({ card: nitroxCertifications, reviewedByName: nitroxReviewer.fullName })
       .from(nitroxCertifications)
+      .leftJoin(nitroxReviewer, eq(nitroxReviewer.id, nitroxCertifications.reviewedByPersonId))
       .where(
         and(
           eq(nitroxCertifications.shopId, shopId),
@@ -745,13 +818,21 @@ export async function getDiverProfile(
     // sizes, rather than reconstructed per booking by whoever needs it.
     listSignedWaiversByPerson(db, shopId, [personId]),
     getCurrentWaiverTemplate(db, shopId),
+    getDiverWaiverRequestStatus(db, shopId, personId),
   ]);
 
   return {
     person: personRow.person,
-    certifications: levelCards,
-    specialtyCertifications: specialtyCards,
-    nitroxCertifications: nitroxCards,
+    noCertificationClearedByName: personRow.clearedByName,
+    certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
+    specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
+      ...card,
+      reviewedByName,
+    })),
+    nitroxCertifications: nitroxCards.map(({ card, reviewedByName }) => ({
+      ...card,
+      reviewedByName,
+    })),
     rentalFit: profile[0] ?? null,
     bookings: bookingRows,
     orders: personOrders,
@@ -766,5 +847,38 @@ export async function getDiverProfile(
       personSignedWaivers: signedWaivers.get(personId) ?? [],
       currentTemplateVersion: waiverTemplate?.version ?? null,
     }),
+    waiverRequest,
   };
+}
+
+/**
+ * Finds divers in a shop whose names match exactly (case-insensitive) or are similar
+ * (similarity score > 0.4 using pg_trgm similarity).
+ */
+export async function findSimilarDivers(db: AppDb, shopId: string, fullName: string) {
+  const trimmed = fullName.trim();
+  const lowerName = trimmed.toLowerCase();
+
+  return db
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      email: people.email,
+      phone: people.phone,
+    })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        eq(personRoles.role, "diver"),
+        isNull(people.deletedAt),
+        or(
+          eq(sql`lower(${people.fullName})`, lowerName),
+          sql`similarity(lower(${people.fullName}), ${lowerName}) > 0.4`,
+        ),
+      ),
+    )
+    .orderBy(desc(sql`similarity(lower(${people.fullName}), ${lowerName})`))
+    .limit(5);
 }

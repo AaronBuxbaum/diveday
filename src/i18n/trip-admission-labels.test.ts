@@ -121,7 +121,7 @@ describe("tripRequirementList — what the trip asks of anybody", () => {
         },
         "en-US",
       ),
-    ).toBe("Advanced Open Water or higher, a Deep card, and a nitrox card");
+    ).toBe("Advanced Open Water or higher, a Deep certification, and a nitrox certification");
   });
 
   it("describes the trip and never the reader", () => {
@@ -148,6 +148,6 @@ describe("tripRequirementList — what the trip asks of anybody", () => {
         },
         "es-ES",
       ),
-    ).toBe("Open Water o superior y tarjeta de Nocturno");
+    ).toBe("Open Water o superior y certificación de Nocturno");
   });
 });

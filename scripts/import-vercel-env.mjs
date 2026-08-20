@@ -16,12 +16,13 @@ import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subpr
 // first and rejected.
 const rawArguments = process.argv.slice(2);
 const isCiDeploy = rawArguments.includes("--ci-unattended");
+const checkOnly = rawArguments.includes("--check");
 const [inputPath, environment = "production"] = rawArguments.filter(
-  (argument) => argument !== "--ci-unattended",
+  (argument) => argument !== "--ci-unattended" && argument !== "--check",
 );
 if (!inputPath || !["production", "preview", "development"].includes(environment)) {
   console.error(
-    "Usage: node scripts/import-vercel-env.mjs <dotenv-file> [production|preview|development]",
+    "Usage: node scripts/import-vercel-env.mjs <dotenv-file> [production|preview|development] [--check]",
   );
   process.exit(2);
 }
@@ -31,7 +32,41 @@ if (!inputPath || !["production", "preview", "development"].includes(environment
 const parseDotenv = dotenvMap;
 
 const document = readFileSync(inputPath, "utf8");
+
+// The generated file is the source for a series of write-only uploads. Do not
+// silently ignore a malformed or repeated line and then discover it only after
+// the first value has already reached Vercel: every candidate must be
+// unambiguous before any external state changes.
+const malformedLines = [];
+const duplicateKeys = [];
+const seenKeys = new Set();
+for (const [index, line] of document.split(/\r?\n/).entries()) {
+  if (!line.trim() || line.trimStart().startsWith("#")) continue;
+  const match = line.match(/^([A-Z][A-Z0-9_]*)=(.*)$/);
+  if (!match) {
+    malformedLines.push(index + 1);
+    continue;
+  }
+  if (seenKeys.has(match[1])) duplicateKeys.push(match[1]);
+  seenKeys.add(match[1]);
+}
+if (malformedLines.length > 0 || duplicateKeys.length > 0) {
+  const reasons = [];
+  if (malformedLines.length > 0) {
+    reasons.push(`invalid dotenv line(s) ${malformedLines.join(", ")}`);
+  }
+  if (duplicateKeys.length > 0) {
+    reasons.push(`duplicate variable(s) ${[...new Set(duplicateKeys)].join(", ")}`);
+  }
+  console.error(`Refusing to upload ${inputPath}: ${reasons.join("; ")}.`);
+  process.exit(1);
+}
+
 const entries = parseDotenv(document);
+if (entries.size === 0) {
+  console.error(`Refusing to upload ${inputPath}: it contains no environment variables.`);
+  process.exit(1);
+}
 
 // Every value is pushed with `--sensitive` below, and Vercel never returns a
 // sensitive value again once set -- not to the dashboard, not to `vercel env
@@ -133,36 +168,35 @@ const previous = readCheckpoint();
 
 const changed = [...entries].filter(([key, value]) => previous.get(key) !== fingerprint(value));
 
-if (changed.length === 0) {
-  console.log(`No ${environment} Vercel environment variables changed; nothing pushed.`);
-  process.exit(0);
-}
-
-for (const [key, value] of changed) {
-  // Do not put a secret in argv or terminal output. The Vercel CLI reads each
-  // value from stdin; --force makes rerunning a rotation deterministic.
-  const result = runBounded(
-    "pnpm",
-    ["exec", "vercel", "env", "add", key, environment, "--force", "--sensitive"],
-    {
-      input: value,
-      stdio: ["pipe", "inherit", "inherit"],
-      timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
-    },
-  );
-  if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
 // Only recorded after every push succeeds, and as fingerprints of the full
 // current document -- not just the changed subset, and never the values
 // themselves -- so the next run's diff is against reality without this
 // parameter ever holding a secret. Standard-tier String parameters cap at
-// 4KB; the current key set fingerprints to well under that, and a future
-// overflow fails this call loudly rather than corrupting the checkpoint --
-// the fix then is `--tier Advanced` below.
+// 4KB. Build and size-check this complete state before the first Vercel upload;
+// a future overflow must fail without leaving Vercel partially updated -- the
+// fix then is `--tier Advanced` below.
 const checkpointDocument = [...entries]
   .map(([key, value]) => `${key}=${fingerprint(value)}`)
   .join("\n");
+const checkpointNeedsRefresh =
+  previous.size !== entries.size ||
+  [...entries].some(([key, value]) => previous.get(key) !== fingerprint(value));
+const checkpointBytes = Buffer.byteLength(checkpointDocument, "utf8");
+if (checkpointBytes > 4096) {
+  console.error(
+    `Refusing to upload ${inputPath}: the hashed Vercel sync checkpoint is ${checkpointBytes} bytes, over the 4096-byte Standard-tier SSM limit. Use an Advanced parameter before adding more variables.`,
+  );
+  process.exit(1);
+}
+
+if (checkOnly) {
+  // The check is deliberately read-only. It still authenticates and reads the
+  // account-wide checkpoint, but it never uploads a Vercel value or refreshes
+  // SSM. The wizard uses this to avoid presenting a question whose only work
+  // would be a no-op (or a checkpoint cleanup it did not know about).
+  console.log(checkpointNeedsRefresh ? "UPDATE" : "CURRENT");
+  process.exit(0);
+}
 
 // A `--value` of literal argv text sits in `ps` output for any other user on
 // this machine to read, the exact reason `vercel env add` above goes through
@@ -172,29 +206,61 @@ const checkpointDocument = [...entries]
 // passed as a literal argument.
 const checkpointDirectory = mkdtempSync(join(tmpdir(), "diveday-vercel-checkpoint-"));
 const checkpointFile = join(checkpointDirectory, "checkpoint.env");
-writeFileSync(checkpointFile, checkpointDocument);
-const put = runBounded(
-  "aws",
-  [
-    "ssm",
-    "put-parameter",
-    "--name",
-    parameterName,
-    "--type",
-    "String",
-    "--overwrite",
-    "--value",
-    `file://${checkpointFile}`,
-  ],
-  {
-    env: adminEnvironment,
-    stdio: ["ignore", "inherit", "inherit"],
-    timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
-  },
-);
-rmSync(checkpointDirectory, { recursive: true, force: true });
-if (put.status !== 0) process.exit(put.status ?? 1);
+let exitCode = 0;
+try {
+  writeFileSync(checkpointFile, checkpointDocument);
+
+  for (const [key, value] of changed) {
+    // Do not put a secret in argv or terminal output. The Vercel CLI reads each
+    // value from stdin; --force makes rerunning a rotation deterministic.
+    const result = runBounded(
+      "pnpm",
+      ["exec", "vercel", "env", "add", key, environment, "--force", "--sensitive"],
+      {
+        input: value,
+        stdio: ["pipe", "inherit", "inherit"],
+        timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
+      },
+    );
+    if (result.status !== 0) {
+      exitCode = result.status ?? 1;
+      break;
+    }
+  }
+
+  if (exitCode === 0) {
+    // Upload the complete hashed state even when no Vercel value changed. This
+    // prunes variables removed from the generated document and keeps the
+    // account-wide checkpoint authoritative for every current variable.
+    const put = runBounded(
+      "aws",
+      [
+        "ssm",
+        "put-parameter",
+        "--name",
+        parameterName,
+        "--type",
+        "String",
+        "--overwrite",
+        "--value",
+        `file://${checkpointFile}`,
+      ],
+      {
+        env: adminEnvironment,
+        stdio: ["ignore", "inherit", "inherit"],
+        timeoutMs: SUBPROCESS_TIMEOUTS.awsApi,
+      },
+    );
+    exitCode = put.status ?? 1;
+  }
+} finally {
+  rmSync(checkpointDirectory, { recursive: true, force: true });
+}
+
+if (exitCode !== 0) process.exit(exitCode);
 
 console.log(
-  `Pushed ${changed.length} of ${entries.size} ${environment} Vercel environment variable(s); the rest matched the last sync.`,
+  changed.length === 0
+    ? `No ${environment} Vercel environment variables changed; refreshed the hashed state for all ${entries.size} variable(s).`
+    : `Pushed ${changed.length} of ${entries.size} ${environment} Vercel environment variable(s); the rest matched the last sync.`,
 );

@@ -142,12 +142,18 @@ describe("qualifyingAlternatives — offerability", () => {
 
   it("excludes cancelled and already-departed candidates", () => {
     const alsoBlownOut = candidate({ status: "cancelled" });
-    const departed = candidate({ startsAt: daysFromNow(-1) });
+    const departedDaysAgo = candidate({ startsAt: daysFromNow(-1) });
+    const departedTwoHoursAgo = candidate({
+      startsAt: new Date(NOW.getTime() - 2 * 60 * 60 * 1000),
+    });
     const departingRightNow = candidate({ startsAt: NOW });
     const upcoming = candidate();
-    expect(offers([alsoBlownOut, departed, departingRightNow, upcoming], openWaterDiver())).toEqual(
-      [upcoming.id],
-    );
+    expect(
+      offers(
+        [alsoBlownOut, departedDaysAgo, departedTwoHoursAgo, departingRightNow, upcoming],
+        openWaterDiver(),
+      ),
+    ).toEqual([departingRightNow.id, upcoming.id]);
   });
 
   it("excludes course sessions — enrolment is not a charter-seat replacement", () => {

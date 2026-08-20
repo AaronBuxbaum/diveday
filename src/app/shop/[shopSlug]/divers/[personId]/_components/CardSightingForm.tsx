@@ -5,7 +5,6 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { CARD_NUMBER_INPUT_PATTERN } from "@/lib/card-number";
 import type { CertificationLevel } from "@/lib/readiness";
 import { AGENCY_KEYS } from "./shared";
 
@@ -146,16 +145,11 @@ export function CardSightingForm({
           description={t("divers.certifications.cardNumberShapeHint")}
           error={numberError}
         >
-          {/* `pattern` is the same shape `isPlausibleCardNumber` asserts, so the
-              ordinary typo is refused in the box with every other value still
-              typed and nothing lost to a redirect. It is a courtesy, never the
-              gate — `sightedNumberRefused` in actions.ts is — and it is
-              deliberately the weaker of the two, so anything it refuses the
-              server refuses as well (src/lib/card-number.ts). */}
+          {/* The description and title explain the expected shape; the server
+              action remains the validation gate so its inline refusal is visible. */}
           <input
             name="sightedIdentifier"
             required
-            pattern={CARD_NUMBER_INPUT_PATTERN}
             title={t("divers.certifications.cardNumberShapeHint")}
             className={controlClass}
           />

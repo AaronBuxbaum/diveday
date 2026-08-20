@@ -188,8 +188,6 @@ export default async function CoursePage({
       <CourseHero
         course={course}
         totalCents={courseTotalCents(course)}
-        bookHref={sessions.length > 0 ? "#dates" : null}
-        inquiryHref={inquiryHref}
         currency={toShopCurrency(shop.currency)}
         locale={locale}
         t={t}

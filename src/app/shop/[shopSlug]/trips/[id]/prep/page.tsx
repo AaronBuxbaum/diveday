@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
-import { PrintButton } from "@/components/PrintButton";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -120,9 +119,7 @@ export default async function TripPrepPage({
   return (
     <>
       <TripPageHeader
-        title={trip.title}
-        startsAt={trip.startsAt}
-        endsAt={trip.endsAt}
+        trip={trip}
         locale={locale}
         timeZone={shop.timezone}
         badge={
@@ -138,7 +135,6 @@ export default async function TripPrepPage({
         ]
           .filter(Boolean)
           .join(" · ")}
-        actions={<PrintButton label={t("shared.printButton.label")} />}
       />
 
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (

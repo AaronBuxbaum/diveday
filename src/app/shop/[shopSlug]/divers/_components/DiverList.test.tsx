@@ -25,6 +25,8 @@ type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 const emptyPage: DiverPage = { divers: [], total: 0, page: 1, pageCount: 0, pageSize: 25 };
 
 const copy = {
+  addDiverLabel: t("divers.list.addDiverAction"),
+  addDiverWithName: t.raw("divers.list.addDiverWithName"),
   viewAllDivers: t("divers.list.viewAllDivers"),
   viewDivingToday: t("divers.list.viewDivingToday"),
   viewNeedsAttention: t("divers.list.viewNeedsAttention"),
@@ -44,7 +46,6 @@ const copy = {
   noDiversOnFile: t("divers.list.noDiversOnFile"),
   tryDifferentSearch: t("divers.list.tryDifferentSearch"),
   addOneHere: t("divers.list.addOneHere"),
-  emptyAddAction: t("divers.list.emptyAddAction"),
   emptyShowAll: t("divers.list.emptyShowAll"),
   emptyImportBody: t("divers.list.emptyImportBody"),
   emptyImportAction: t("divers.list.emptyImportAction"),
@@ -61,6 +62,8 @@ const copy = {
   toConfirmText: t.raw("divers.list.toConfirmText"),
   tableHeaderPerson: t("divers.list.tableHeaderPerson"),
   tableHeaderLevel: t("divers.list.tableHeaderLevel"),
+  tableHeaderAttention: t("divers.list.tableHeaderAttention"),
+  noAttention: t("divers.list.noAttention"),
 };
 
 function renderList({
@@ -71,6 +74,7 @@ function renderList({
   // Owner/manager by default — the roster hands this down only to whoever may
   // unarchive, and it is what makes the Archived view exist at all.
   restoreAction = (() => {}) as ((formData: FormData) => void) | null,
+  quickAddAction = (() => {}) as ((formData: FormData) => void) | null,
   copyOverrides = {} as Partial<typeof copy>,
 } = {}) {
   return render(
@@ -81,34 +85,17 @@ function renderList({
       filter={filter}
       importHref={importHref}
       restoreAction={restoreAction}
+      quickAddAction={quickAddAction}
       copy={{ ...copy, ...copyOverrides }}
     />,
   );
 }
 
 describe("DiverList empty state", () => {
-  it("offers the add-diver form as an action, not as prose", () => {
+  it("does not offer a separate add diver button before typing", () => {
     renderList();
     expect(screen.getByText("No divers on file yet.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add your first diver" })).toBeInTheDocument();
-  });
-
-  it("opens the collapsed add-diver disclosure and focuses its first field", async () => {
-    const details = document.createElement("details");
-    details.id = "add-diver";
-    details.innerHTML = '<input name="fullName" />';
-    document.body.append(details);
-    // jsdom has no layout, so scrollIntoView is not implemented on elements.
-    details.scrollIntoView = vi.fn();
-
-    renderList();
-    expect(details.open).toBe(false);
-    screen.getByRole("button", { name: "Add your first diver" }).click();
-
-    expect(details.open).toBe(true);
-    expect(details.scrollIntoView).toHaveBeenCalled();
-    expect(document.activeElement).toBe(details.querySelector('input[name="fullName"]'));
-    details.remove();
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
   });
 
   it("offers a bulk import to whoever may run one", () => {
@@ -125,15 +112,37 @@ describe("DiverList empty state", () => {
     expect(screen.queryByText(/spreadsheet/i)).toBeNull();
   });
 
-  it("offers the way back out when a search or view narrowed the list to nothing", () => {
+  it("offers the way back out or to add the typed diver when search narrowed to nothing", () => {
     renderList({ query: "nobody" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
-    // Widening the view is the fix here; adding a diver is not.
+    expect(screen.getByRole("button", { name: "Add diver" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show all divers" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers",
     );
-    expect(screen.queryByRole("button", { name: "Add your first diver" })).toBeNull();
+  });
+
+  it("keeps the search hint visible after the query reaches the URL", () => {
+    renderList({ query: "nobody" });
+    expect(screen.getByText("Search by name, email, or phone.")).toBeInTheDocument();
+  });
+
+  it("slides the add diver action away when the search is cleared", () => {
+    vi.useFakeTimers();
+    try {
+      renderList({ query: "nobody" });
+      const search = screen.getByRole("searchbox", { name: "Search divers" });
+      fireEvent.change(search, { target: { value: "" } });
+      const button = screen.getByRole("button", { name: "Add diver" });
+      const animationShell = button.closest("div");
+      expect(animationShell).toHaveClass("animate-slide-out-right");
+
+      fireEvent.animationEnd(animationShell as HTMLElement, { animationName: "slide-out-right" });
+      act(() => vi.advanceTimersByTime(250));
+      expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {
@@ -405,9 +414,9 @@ describe("DiverList level cell", () => {
     expect(screen.queryByText("1 card")).toBeNull();
   });
 
-  it("says so in words when no card speaks for this diver", () => {
+  it("says so in words when no certification record speaks for this diver", () => {
     renderList({ page: rosterPage({ certificationLevel: null }) });
-    expect(screen.getAllByText("No current card").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No current certification").length).toBeGreaterThan(0);
   });
 
   it("keeps the pending and to-confirm badges beside the level", () => {

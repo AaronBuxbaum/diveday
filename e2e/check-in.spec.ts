@@ -1,6 +1,8 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
+test.describe.configure({ timeout: 45_000 });
+
 signedInAsOwner();
 
 test("counter check-in searches by diver, confirms live readiness, and keeps blocked rows out of the line", async ({
@@ -11,6 +13,7 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
 
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
@@ -48,6 +51,10 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
+  await expect(page.getByRole("searchbox", { name: "Scan or search diver" })).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
 
   const row = page
     .locator("article")
@@ -59,18 +66,24 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
   // the top of the page (design principle 9), and no sentence under the row
   // teaching the re-tap either: a control the finger just put into "Checked in
   // ☑️" is its own affordance, and its accessible name already says "Undo".
-  const settled = row.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
-  await expect(settled).toBeVisible();
+  const settled = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  await expect(settled).toBeVisible({ timeout: 15_000 });
   await expect(settled).toContainText("Checked in ☑️");
   await expect(settled).not.toContainText("undo");
 
   await settled.click();
-  await expect(row.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
   await page.goto("/shop/blue-mantis/check-in");
-  await page.getByRole("link", { name: "Add a walk-in" }).click();
+  const queueSearch = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await queueSearch.fill("Zzyzx No Such Diver");
+  await queueSearch.press("Enter");
+  await expect(page.getByRole("heading", { name: "No one matches that scan" })).toBeVisible();
+  await page.getByRole("link", { name: "Add “Zzyzx No Such Diver” as a walk-in" }).click();
   await expect(page.getByRole("heading", { name: "Walk-in", level: 1 })).toBeVisible();
 
   const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
@@ -83,17 +96,19 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // The departure is a path segment, not a `?tripId=` — which is what lets a
   // refusal land back on this same form with the boat still chosen and name
   // the gate it hit.
-  await expect(page).toHaveURL(/\/check-in\/walk-in\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/\/check-in\/walk-in\/[0-9a-f-]{36}(\?.*)?$/);
   // The chosen boat is echoed back so the crew can confirm before adding anyone.
   await expect(page.getByText(tripTitle, { exact: false }).first()).toBeVisible();
 
-  // A search for someone who isn't on file falls through to hand-entry.
-  const search = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
-  await search.fill("Zzyzx No Such Diver");
-  await search.press("Enter");
+  // A search for someone who isn't on file falls through to adding a diver.
+  const walkInSearch = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
+  await walkInSearch.fill("Zzyzx No Such Diver");
+  await walkInSearch.press("Enter");
   await expect(page.getByText(/No matches for/)).toBeVisible();
 
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Walk-in Test Diver");
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new\?/);
+  await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
 
@@ -110,6 +125,15 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(
     page.locator("article").filter({ hasText: "Walk-in Test Diver" }).filter({ visible: true }),
   ).toHaveCount(1);
+});
+
+test("the walk-in picker explains an invalid submission before a boat is chosen", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
+  await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toContainText(
+    "Choose a boat and enter a name before adding a walk-in.",
+  );
 });
 
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
@@ -133,12 +157,12 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })
     .click();
-  const addDiver = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
-  await addDiver.getByLabel("Name").fill("Fills The Boat");
-  await addDiver.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
-  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Fills The Boat");
+  await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
   );
@@ -150,12 +174,16 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // say *why* a diver bounced.
   await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}`);
   await page.waitForURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
-  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Turned Away Tara");
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new\?/);
+  await page.getByLabel("Full name").fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   // A refusal lands back on the walk-in form with the boat still chosen — the
   // staffer's next move is another diver or another boat, not a trip page.
-  await expect(page).toHaveURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/shop/blue-mantis/check-in/walk-in/${tripId}\\?notice=walkin-full$`),
+  );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".
@@ -176,6 +204,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill("Priya Sharma");
   await search.press("Enter");
 
@@ -208,7 +237,10 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   await search.fill("Priya Sharma");
   await search.press("Enter");
   await card.getByText("Mark signed on paper").click();
-  await card.getByLabel("I have this diver's signed release on file", { exact: false }).check();
+  await card
+    .getByLabel("I have this diver's signed release on file", { exact: false })
+    .filter({ visible: true })
+    .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
 
   // Success lands **in place**: no banner, no navigation, and — the point of

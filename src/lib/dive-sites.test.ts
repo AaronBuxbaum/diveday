@@ -7,8 +7,8 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
     name: "Turtle Garden",
     description: "",
     locationName: "",
-    forecastLatitude: "",
-    forecastLongitude: "",
+    forecastLatitude: "25.123",
+    forecastLongitude: "-80.321",
     marineLife: "",
     marineLifeDescription: "",
     difficulty: "",
@@ -28,9 +28,12 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
 }
 
 describe("parseDiveSiteForm", () => {
-  it("accepts a briefing with no coordinates at all", () => {
-    const result = parseDiveSiteForm(formEntries(), "meters");
-    expect(result).toMatchObject({ ok: true, maxDepthMeters: null });
+  it("allows a briefing with no coordinates yet", () => {
+    const result = parseDiveSiteForm(
+      formEntries({ forecastLatitude: "", forecastLongitude: "" }),
+      "meters",
+    );
+    expect(result.ok).toBe(true);
   });
 
   // A site that names no time in the water is the ordinary case: the shop's
@@ -70,8 +73,8 @@ describe("parseDiveSiteForm", () => {
   // "check the required name and links" — naming neither coordinate, while the
   // name was fine. Each half gets the same, specific code.
   it.each([
-    ["latitude only", { forecastLatitude: "25.123" }],
-    ["longitude only", { forecastLongitude: "-80.321" }],
+    ["latitude only", { forecastLatitude: "25.123", forecastLongitude: "" }],
+    ["longitude only", { forecastLatitude: "", forecastLongitude: "-80.321" }],
   ])("refuses %s with the coordinate-pairing code, not a generic one", (_label, overrides) => {
     expect(parseDiveSiteForm(formEntries(overrides), "meters")).toEqual({
       ok: false,

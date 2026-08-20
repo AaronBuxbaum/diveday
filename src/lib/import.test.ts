@@ -8,6 +8,8 @@ import {
   IMPORT_HONESTY_TABLE,
   IMPORT_LEVELS,
   type ImportScopeRowId,
+  importedPaymentDirection,
+  importedPaymentHistoryDedupeKey,
   isTechnicalCertName,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_CELL_LENGTH,
@@ -15,6 +17,7 @@ import {
   MAX_IMPORT_ROWS,
   normalizeLevel,
   parseCsv,
+  parseImportedMoney,
   prepareContactImport,
   priorVisitDedupeKey,
 } from "./import";
@@ -96,7 +99,7 @@ describe("prepareContactImport — mapping", () => {
     // that claims a header, so an alias shared between two fields would make the
     // later one unreachable — silently, and with the shop's column landing on the
     // wrong thing. A file whose headers are exactly the canonical field names
-    // must therefore map each one to itself, all 27, none swallowed.
+    // must therefore map each one to itself, all of them, none swallowed.
     const headers = IMPORT_FIELDS.join(",");
     const prepared = prepareContactImport(`${headers}\n${IMPORT_FIELDS.map(() => "x").join(",")}`);
     expect(prepared.fatal).toBeNull();
@@ -655,12 +658,13 @@ describe("prepareContactImport — prior visits", () => {
     "Sam Reed,sam@example.com,2025-06-30,Discover Scuba,Completed,$120.00,CCD-3",
   ].join("\n");
 
-  it("reads a one-row-per-booking export as people plus their visits", () => {
+  it("reads a one-row-per-booking export as people, their visits, and separate source payment history", () => {
     const prepared = prepareContactImport(bookingsExport);
     // Two people; Hana's second booking is a merge row, not a duplicate person.
     expect(prepared.totals.importable).toBe(2);
     expect(prepared.totals.merged).toBe(1);
     expect(prepared.totals.withVisit).toBe(3);
+    expect(prepared.totals.withPaymentHistory).toBe(3);
     expect(prepared.rows[1].action).toBe("merge");
     expect(prepared.rows[1].visit?.title).toBe("Night dive Benwood");
   });
@@ -674,6 +678,13 @@ describe("prepareContactImport — prior visits", () => {
       amountLabel: "$165.00",
       sourceReference: "CCD-1",
     });
+    expect(first.paymentHistory).toMatchObject({
+      occurredOn: "2024-05-11",
+      direction: "payment",
+      statusLabel: "Completed",
+      amountLabel: "$165.00",
+      sourceReference: "CCD-1",
+    });
   });
 
   it("keeps a cancelled booking rather than dropping it", () => {
@@ -682,6 +693,9 @@ describe("prepareContactImport — prior visits", () => {
     // carrying the word "Cancelled" and the profile renders that.
     const cancelled = prepareContactImport(bookingsExport).rows[1];
     expect(cancelled.visit?.statusLabel).toBe("Cancelled");
+    // Cancelled only tells us this was not an ordinary settled payment. The
+    // source row remains visible, but it cannot affect a financial aggregate.
+    expect(cancelled.paymentHistory?.direction).toBe("unknown");
   });
 
   it("reads the date formats a real export writes, not just ISO", () => {
@@ -738,6 +752,111 @@ describe("prepareContactImport — prior visits", () => {
     expect(fields.status).toBe("certification_status");
     expect(fields.date_signed).toBe("waiver_signed_at");
     expect(fields.visit_date).toBe("visit_date");
+  });
+});
+
+describe("prepareContactImport — imported payment and receipt history", () => {
+  it("keeps explicit financial fields separate from a generic booking row", () => {
+    const csv = [
+      "full_name,email,payment_date,payment_status,payment_amount,payment_currency,payment_direction,payment_reference,receipt_number,receipt_url,stripe_invoice_id",
+      "Rosa Receipt,rosa@example.com,2024-05-11,Settled,165.00,USD,payment,pay_42,receipt_42,/import-receipts/receipt.pdf,in_42",
+    ].join("\n");
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.visit).toBeNull();
+    expect(row.paymentHistory).toMatchObject({
+      occurredOn: "2024-05-11",
+      direction: "payment",
+      statusLabel: "Settled",
+      amountLabel: "165.00",
+      currencyLabel: "USD",
+      paymentReference: "pay_42",
+      receiptReference: "receipt_42",
+      receiptDocumentUrl: "/import-receipts/receipt.pdf",
+      stripeReference: "in_42",
+    });
+  });
+
+  it("drops source payment history without a usable date rather than inventing one", () => {
+    const [row] = prepareContactImport(
+      "full_name,payment_amount,payment_currency\nNo Date,165.00,USD",
+    ).rows;
+    expect(row.action).toBe("import");
+    expect(row.paymentHistory).toBeNull();
+    expect(row.issues.some((issue) => issue.code === "payment_history_no_date")).toBe(true);
+  });
+
+  it("does not map card-number or reusable-payment fields", () => {
+    const prepared = prepareContactImport(
+      "full_name,card_number,cvc,payment_method_id\nNo Credentials,4242424242424242,123,pm_secret",
+    );
+    expect(prepared.mapping.map((entry) => entry.field)).toEqual(["full_name"]);
+    expect(prepared.unmappedColumns).toEqual(["card_number", "cvc", "payment_method_id"]);
+  });
+});
+
+describe("imported payment evidence helpers", () => {
+  it("classifies only clear source directions", () => {
+    expect(
+      importedPaymentDirection({
+        directionLabel: "payment",
+        statusLabel: null,
+        amountLabel: "165",
+      }),
+    ).toBe("payment");
+    expect(
+      importedPaymentDirection({
+        directionLabel: null,
+        statusLabel: "Refunded",
+        amountLabel: "95",
+      }),
+    ).toBe("refund");
+    expect(
+      importedPaymentDirection({
+        directionLabel: null,
+        statusLabel: "Cancelled",
+        amountLabel: "95",
+      }),
+    ).toBe("unknown");
+  });
+
+  it("parses a source amount only with an unambiguous currency", () => {
+    expect(parseImportedMoney("$165.00", null, "usd")).toEqual({
+      amountCents: 16_500,
+      currency: "usd",
+    });
+    expect(parseImportedMoney("US$165.00", null, "cad")).toEqual({
+      amountCents: 16_500,
+      currency: "usd",
+    });
+    expect(parseImportedMoney("160,00 €", null, "usd")).toEqual({
+      amountCents: 16_000,
+      currency: "eur",
+    });
+    expect(parseImportedMoney("165", null, "usd")).toBeNull();
+    expect(parseImportedMoney("$165.00", null, "eur")).toBeNull();
+    expect(parseImportedMoney("€165.00", "USD", "usd")).toBeNull();
+    // The field is a Postgres integer. Keep an oversized source amount on its
+    // unverified row rather than letting it abort the whole import on insert.
+    expect(parseImportedMoney("USD 21474836.48", null, "usd")).toBeNull();
+  });
+
+  it("keeps independently referenced receipts distinct and makes re-imports stable", () => {
+    const base = {
+      occurredOn: "2024-05-11",
+      direction: "payment" as const,
+      title: "Reef",
+      statusLabel: "Settled",
+      amountLabel: "$165.00",
+      paymentReference: null,
+      receiptReference: "receipt_42",
+      receiptDocumentUrl: null,
+      sourceReference: null,
+      stripeReference: null,
+    };
+    expect(importedPaymentHistoryDedupeKey(base)).toBe("receipt:receipt_42");
+    expect(importedPaymentHistoryDedupeKey(base)).toBe(
+      importedPaymentHistoryDedupeKey({ ...base }),
+    );
   });
 });
 
@@ -802,13 +921,19 @@ describe("IMPORT_HONESTY_TABLE", () => {
     }
   });
 
-  it("keeps payment and service history behind, with an honest reason", () => {
+  it("keeps payment credentials and service history behind, while importing payment evidence separately", () => {
     const behind = IMPORT_HONESTY_TABLE.filter((entry) => entry.scope === "stays-behind").map(
       (entry) => entry.id,
     );
-    expect(behind).toEqual(expect.arrayContaining(["cardOnFile", "receiptsService"]));
-    expect(row("cardOnFile").what).toBe("Card on file / payment");
-    expect(row("receiptsService").what).toBe("Receipts & service history");
+    expect(behind).toEqual(expect.arrayContaining(["cardOnFile", "serviceHistory"]));
+    expect(row("cardOnFile").what).toBe("Credit card details");
+    expect(row("cardOnFile").detail).toMatch(/never imports card numbers/i);
+    expect(row("serviceHistory").what).toBe("Gear service history");
+
+    const history = row("paymentHistory");
+    expect(history.scope).toBe("included");
+    expect(history.detail).toMatch(/unverified/i);
+    expect(history.detail).toMatch(/never becomes a live Stripe order/i);
   });
 
   // The row that replaced "Booking, trip & service history" must not read as a
@@ -834,7 +959,7 @@ describe("IMPORT_HONESTY_TABLE", () => {
 
   it("marks certifications and nitrox as coming across verified and flagged imported", () => {
     const cert = row("certificationCard");
-    expect(cert.what).toBe("Certification card");
+    expect(cert.what).toBe("Certification record");
     expect(cert.scope).toBe("included");
     expect(cert.detail).toMatch(/verified/i);
     expect(cert.detail).toMatch(/imported/i);
@@ -853,7 +978,7 @@ describe("IMPORT_HONESTY_TABLE", () => {
 
   it("brings specialty cards across, and says the dive waits on the staff confirm", () => {
     const specialty = row("specialtyCards");
-    expect(specialty.what).toMatch(/^Specialty cards/);
+    expect(specialty.what).toMatch(/^Specialty certifications/);
     expect(specialty.scope).toBe("included");
     expect(specialty.detail).toMatch(/verified/i);
     // The gate rule is the whole reason this row can be honest — it must be
@@ -868,6 +993,13 @@ describe("IMPORT_HONESTY_TABLE", () => {
     expect(insurance.detail).toMatch(/never a gate/i);
   });
 
+  it("brings internal & diver notes across into diver profiles", () => {
+    const notes = row("diverNotes");
+    expect(notes.what).toBe("Diver & staff notes");
+    expect(notes.scope).toBe("included");
+    expect(notes.detail).toMatch(/notes/i);
+  });
+
   it("never leaks internal vocabulary into a table three surfaces render verbatim", () => {
     // This table is rendered on both switching pages and in the import wizard.
     // An ADR id or a decision-register id here reaches a shop owner as a dead
@@ -877,5 +1009,13 @@ describe("IMPORT_HONESTY_TABLE", () => {
       expect(resolved.what, `${entry.id} — what`).not.toMatch(INTERNAL_VOCABULARY);
       expect(resolved.detail, `${entry.id} — detail`).not.toMatch(INTERNAL_VOCABULARY);
     }
+  });
+
+  it("parses internal notes from internal_notes, comments, and notes columns", () => {
+    const csv = `name,email,notes\nSam Diver,sam@example.com,"Needs size L BCD, prefers morning dives"`;
+    const prepared = prepareContactImport(csv);
+    expect(prepared.fatal).toBeNull();
+    expect(prepared.rows[0].notes).toBe("Needs size L BCD, prefers morning dives");
+    expect(prepared.totals.withNotes).toBe(1);
   });
 });

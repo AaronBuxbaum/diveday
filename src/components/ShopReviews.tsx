@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { StarRating } from "@/components/StarRating";
 import { SectionCard } from "@/components/ui/card";
 import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatShortDate } from "@/lib/format";
+import { publicReviewsPath } from "@/lib/public-routes";
 import type { ReviewAggregate } from "@/lib/reviews";
 
 /**
@@ -16,12 +18,14 @@ import type { ReviewAggregate } from "@/lib/reviews";
 export function ShopReviews({
   aggregate,
   reviews,
+  shopSlug,
   locale,
   timezone,
   t,
 }: {
   aggregate: ReviewAggregate;
   reviews: PublicReview[];
+  shopSlug: string;
   locale: string;
   timezone: string;
   t: DiverTranslator;
@@ -29,10 +33,6 @@ export function ShopReviews({
   if (aggregate.average === null || aggregate.count === 0) return null;
   // ICU picks the singular/plural form, so "1 review" vs "2 reviews" (and the
   // Spanish equivalents) is the translator's decision, not a ternary here.
-  const summary = t("reviews.aggregate", {
-    average: aggregate.average.toFixed(1),
-    count: aggregate.count,
-  });
   const roundedAverage = Math.round(aggregate.average);
 
   return (
@@ -46,32 +46,52 @@ export function ShopReviews({
             rating={roundedAverage}
             label={t("reviews.ratingOption", { rating: roundedAverage })}
           />
-          <span className="tabular-nums">{summary}</span>
+          <span className="tabular-nums">
+            {t("reviews.average", { average: aggregate.average.toFixed(1) })} ·{" "}
+            <Link href={publicReviewsPath(shopSlug)} className="hover:underline">
+              {t("reviews.count", { count: aggregate.count })}
+            </Link>
+          </span>
         </p>
       </div>
       <p className="mt-1 text-sm text-muted">{t("reviews.verifiedNote")}</p>
-      {reviews.length > 0 ? (
-        // A list of like cards, so it keeps its own `gap-3` rather than the
-        // page's section rhythm — see docs/design/forms-and-controls.md.
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-          {reviews.map((review) => (
-            <SectionCard as="li" key={review.id}>
-              <StarRating
-                rating={review.rating}
-                label={t("reviews.ratingOption", { rating: review.rating })}
-                className="text-sm"
-              />
-              {review.comment ? (
-                <p className="mt-2 text-base text-pretty">{review.comment}</p>
-              ) : null}
-              <p className="mt-3 text-sm text-muted">
-                {review.reviewer || t("reviews.anonymousReviewer")} · {review.tripTitle} ·{" "}
-                {formatShortDate(review.divedAt, locale, timezone)}
-              </p>
-            </SectionCard>
-          ))}
-        </ul>
-      ) : null}
+      <ReviewCards reviews={reviews} locale={locale} timezone={timezone} t={t} />
     </section>
+  );
+}
+
+/** Shared public cards; the archive intentionally omits the trip title. */
+export function ReviewCards({
+  reviews,
+  locale,
+  timezone,
+  t,
+  showTrip = true,
+}: {
+  reviews: PublicReview[];
+  locale: string;
+  timezone: string;
+  t: DiverTranslator;
+  showTrip?: boolean;
+}) {
+  if (reviews.length === 0) return null;
+  return (
+    <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+      {reviews.map((review) => (
+        <SectionCard as="li" key={review.id}>
+          <StarRating
+            rating={review.rating}
+            label={t("reviews.ratingOption", { rating: review.rating })}
+            className="text-sm"
+          />
+          {review.comment ? <p className="mt-2 text-base text-pretty">{review.comment}</p> : null}
+          <p className="mt-3 text-sm text-muted">
+            {review.reviewer || t("reviews.anonymousReviewer")}
+            {showTrip ? ` · ${review.tripTitle}` : null} ·{" "}
+            {formatShortDate(review.divedAt, locale, timezone)}
+          </p>
+        </SectionCard>
+      ))}
+    </ul>
   );
 }

@@ -31,14 +31,15 @@ export type ExportFile = { name: string; content: string | Uint8Array };
  */
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
+  "boats.csv": "The shop's boats and their passenger capacities.",
   "contacts.csv":
-    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification card (current before expired, verified before pending, expiry included so the destination can enforce it), Nitrox status, rental sizes, and the most recent live signed waiver (accepted/date/source, medical_review holds excluded on purpose). The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the card; a waiver_accepted row should land trusted-and-marked-imported the same way this shop's own importer treats one. no_certification_declared_at is the date this diver said on a public form that they hold no certification at all — a Discover Scuba customer, a snorkeller, somebody yet to start a course. It is their own word and never a certification: it is not a card, not a level, and nothing may treat it as evidence of anything. Blank means only that nobody has that answer on file, which is not the same as a diver who said no. It is also blank once the shop holds any card for them, or once staff cleared it as never said; people.csv carries the raw stamp and its clearance separately.",
+    "One flat row per person, shaped for another system's import wizard: names pre-split, the best certification record (current before expired, verified before pending, expiry included so the destination can enforce it), Nitrox status, rental sizes, and the most recent live signed waiver (accepted/date/source, medical_review holds excluded on purpose). The normalized files stay authoritative — this file exists so leaving never means hand-merging CSVs. Certifications imported from it should land unverified in the destination until its staff re-check the record; a waiver_accepted row should land trusted-and-marked-imported the same way this shop's own importer treats one. no_certification_declared_at is the date this diver said on a public form that they hold no certification at all — a Discover Scuba customer, a snorkeller, somebody yet to start a course. It is their own word and never a certification, level, or evidence. Blank means only that nobody has that answer on file, which is not the same as a diver who said no. It is also blank once the shop holds any certification for them, or once staff cleared it as never said; people.csv carries the raw stamp and its clearance separately.",
   "people.csv":
     "Everyone the shop knows — divers and staff — with their roles. no_certification_declared_at is the date the person said on a public form that they hold no certification at all; it is their own word and never a certification. Read it with the two columns beside it: no_certification_cleared_at set means staff said the person never gave that answer, and it is superseded. A blank no_certification_cleared_at with no_certification_cleared_by_person_id set is not a contradiction — it means staff corrected it once and the person has stated it again since, so the answer stands and that column records who disagreed. contacts.csv resolves all three into one cell.",
-  "certifications.csv": "Certification-ladder cards with their verification status.",
+  "certifications.csv": "Certification records with their verification status.",
   "specialty_certifications.csv":
-    "Specialty cards (deep, wreck, night, drysuit) with verification status.",
-  "nitrox_certifications.csv": "Nitrox (EANx) cards with verification status.",
+    "Specialty certifications (deep, wreck, night, drysuit) with verification status.",
+  "nitrox_certifications.csv": "Nitrox (EANx) certifications with verification status.",
   "trips.csv":
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
   "trip_series.csv":
@@ -57,10 +58,14 @@ export const EXPORT_FILE_NOTES = {
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time.",
   "waitlist_entries.csv":
     "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
+  "trip_invitations.csv":
+    "Staff outreach attached to a departure without claiming a seat: the source request or wait-list entry, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
   "last_minute_list.csv":
     "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
   "trip_last_minute_promos.csv":
     "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
+  "trip_last_minute_promo_recipients.csv":
+    "Per-diver recipient audit log for last-minute promo blasts: who was sent each deal, when, and their email on file.",
   "booking_payment_events.csv":
     "Every recorded change to a booking's payment state, oldest first — what it moved to, what it moved from, the amount and currency at that moment, and which operation caused it (a checkout settling, a staff mark, a refund). bookings.csv carries only where each booking's money stands *now*, and a refund overwrites that in place, so this is the file that says how it got there. It records transitions, not writes: a webhook redelivered twice appends nothing the second time, and a refused write appends nothing at all — so a row here always means the state genuinely changed.",
   "booking_checkouts.csv":
@@ -80,6 +85,8 @@ export const EXPORT_FILE_NOTES = {
   "rental_fit.csv": "Each diver's rental kit and sizes.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say cancelled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
+  "imported_payment_history.csv":
+    "Unverified payment, refund, and receipt source history carried from a previous system. These rows are not DiveDay orders, booking payments, live Stripe charges, or reusable payment credentials. amount_cents and currency exist only where the source amount was clearly parsed; a matching-currency payment/refund can be included in a clearly labelled report aggregate, but every row remains source evidence that staff must review. receipt_document_url points to a re-stored document when one was available.",
   "internal_notes.csv":
     "The shop's own private notes about its divers and their bookings — what the front desk wrote down so the next person on the counter would know. Never shown to a diver, and never part of any gate: a note is context, not evidence, so nothing in readiness, boarding, or medical clearance has ever read one. They are here because they are the shop's own words about its own customers, and a shop that leaves without them arrives somewhere else having forgotten everything it knew.",
   "activity_events.csv":
@@ -99,6 +106,8 @@ export const EXPORT_FILE_NOTES = {
     "Staff-moderated diver moments attached to dive sites, published and unpublished.",
   "recap_photos.csv":
     "Photos divers attached to their post-trip recap pages, by booking and trip. Image links stay readable while the DiveDay account is active.",
+  "trip_recap_photos.csv":
+    "Staff-only close-out photos by departure, including the staff member who uploaded each one. They were never automatically shared with divers; sharing needs its own audience decision.",
   "trip_reviews.csv":
     "Ratings and words from divers who provably dived — each row was written through that booking's own post-trip recap link, so there are no unverified reviews here. Only is_published rows were shown publicly and only those were counted in the shop's displayed average; a review carrying a comment stayed unpublished until staff released it, while a bare rating published on arrival. One row per booking: a diver revising their review updated it in place.",
   "review_moderation_events.csv":
@@ -192,7 +201,7 @@ export type ExportBundleInput = {
   shopSlug: string;
   timezone: string;
   tables: ExportTable[];
-  /** Every DiveDay-stored image URL referenced anywhere in `tables`, deduped. */
+  /** Every DiveDay-stored image or import-document URL referenced in `tables`, deduped. */
   photoUrls: string[];
 };
 
@@ -222,7 +231,7 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
         `- ${table.file} (${table.rows.length} ${table.rows.length === 1 ? "row" : "rows"}): ${table.note}`,
     ),
     ``,
-    `Photos: any image_url / *_url column above whose link is`,
+    `Photos and imported documents: any image_url / *_url column above whose link is`,
     `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
     `path as the URL — for example an image_url of`,
     `https://xyz.public.blob.vercel-storage.com/recap/ab12-photo.jpg is also at`,

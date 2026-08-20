@@ -282,7 +282,7 @@
       "mediaKind": {
         "course_photo": "Course photo",
         "recap_photo": "Recap photo",
-        "certification_card": "Card photo",
+        "certification_card": "Certification evidence",
         "waiver_document": "Waiver document",
         "dive_site_photo": "Dive-site photo"
       },
@@ -400,7 +400,7 @@
   "export": {
     "eyebrow": "Settings",
     "title": "Data export",
-    "description": "Everything this shop keeps in DiveDay, as plain CSV — divers, cards, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Includes a ready-to-import contacts file.",
+    "description": "Everything this shop keeps in DiveDay, as plain CSV — divers, certification records, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Includes a ready-to-import contacts file.",
     "downloadButton": {
       "idle": "Download export",
       "acknowledged": "On its way — check your downloads"
@@ -413,13 +413,13 @@
     "rowCount": "{count, plural, one {# row} other {# rows}}",
     "notIncluded": {
       "label": "Not included, on purpose:",
-      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export — see the README."
+      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay's own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export — see the README."
     }
   },
   "import": {
     "eyebrow": "Settings",
     "title": "Import contacts",
-    "description": "Bring divers, cards, rental sizes, and prior waiver acceptance in from a CSV — your old system's or DiveDay's own export. What comes across is below.",
+    "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV — your old system's or DiveDay's own export. What comes across is below.",
     "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
     "notice": {
       "notAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers."
@@ -450,16 +450,16 @@
         "detail": "BCD, wetsuit, boot, and fin sizes become a rental-fit profile."
       },
       "certificationCard": {
-        "what": "Certification card",
+        "what": "Certification record",
         "detail": "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry."
       },
       "specialtyCards": {
-        "what": "Specialty cards (deep, wreck, night, drysuit)",
-        "detail": "Imported as verified specialty cards, flagged imported; each one still needs a staff confirm before the dive that requires it."
+        "what": "Specialty certifications (deep, wreck, night, drysuit)",
+        "detail": "Imported as verified specialty certifications, flagged imported; each one still needs a staff confirm before the dive that requires it."
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Imported as a verified nitrox card, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits."
+        "detail": "Imported as verified nitrox certification, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits."
       },
       "signedWaivers": {
         "what": "Signed waivers & medical clearance",
@@ -474,16 +474,24 @@
         "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
       },
       "cardOnFile": {
-        "what": "Card on file / payment",
-        "detail": "Stays with your payment processor — DiveDay never imports card or payment data."
+        "what": "Credit card details",
+        "detail": "Stay with your payment processor. DiveDay never imports card numbers or CVCs."
       },
       "pastVisits": {
         "what": "Past visits (what they booked, when)",
         "detail": "One row per booking becomes visit history — not a dive, and it never appears on your schedule or counts toward capacity."
       },
-      "receiptsService": {
-        "what": "Receipts & service history",
-        "detail": "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs."
+      "paymentHistory": {
+        "what": "Payment & receipt history",
+        "detail": "Source payment, refund, and receipt rows come across as unverified history in Orders. A clearly parsed amount in your shop currency is called out in the revenue/refund aggregate; it never becomes a live Stripe order or booking payment."
+      },
+      "serviceHistory": {
+        "what": "Gear service history",
+        "detail": "Stays behind — DiveDay tracks rental sizes, not a specific rig's service record."
+      },
+      "diverNotes": {
+        "what": "Internal & diver notes",
+        "detail": "Customer remarks and staff notes carry over directly into private notes on the diver's profile."
       }
     },
     "wizard": {
@@ -520,31 +528,44 @@
         "waiver_source_name": "Waiver source",
         "waiver_document_url": "Waiver document",
         "medical_document_url": "Medical document",
+        "payment_date": "Payment date",
+        "payment_status": "Payment status",
+        "payment_amount": "Payment amount",
+        "payment_currency": "Payment currency",
+        "payment_direction": "Payment / refund direction",
+        "payment_reference": "Payment reference",
+        "receipt_reference": "Receipt reference",
+        "receipt_document_url": "Receipt document",
+        "stripe_reference": "Stripe reference",
         "visit_date": "Past visit date",
         "visit_title": "Past visit",
         "visit_status": "Past visit status",
         "visit_amount": "Past visit amount",
-        "visit_reference": "Booking reference"
+        "visit_reference": "Booking reference",
+        "internal_notes": "Internal notes"
       },
       "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren't recognized as a waiver column, so their contents never import. A recognized “waiver accepted” column is trusted instead; see below.",
       "unmappedColumns": "Not recognized, so ignored: {columns}.",
       "waiverRowsNotice": "{count, plural, one {# row claims} other {# rows claim}} a waiver already accepted at a prior shop. DiveDay trusts that, medical clearance included, and marks it “imported”.",
       "visitRowsNotice": "{count, plural, one {# row records} other {# rows record}} a past visit. See “What comes across” above for what that does and doesn't mean.",
+      "paymentHistoryRowsNotice": "{count, plural, one {# payment, refund, or receipt source row} other {# payment, refund, or receipt source rows}} will be imported as unverified history. They never create Stripe orders or charges.",
       "stats": {
         "diversInFile": "Divers in file",
-        "extraCardRows": "Extra card rows",
+        "extraCardRows": "Extra certification rows",
         "skipped": "Skipped",
-        "cards": "Cards",
+        "cards": "Certifications",
         "specialties": "Specialties",
-        "nitroxCards": "Nitrox cards",
+        "nitroxCards": "Nitrox certifications",
         "waivers": "Waivers",
-        "pastVisits": "Past visits"
+        "pastVisits": "Past visits",
+        "paymentHistory": "Payment / receipt history",
+        "internalNotes": "Internal notes"
       },
       "table": {
         "rowNumber": "#",
         "name": "Name",
         "email": "Email",
-        "card": "Card",
+        "card": "Certification",
         "waiver": "Waiver",
         "notes": "Notes",
         "noName": "— no name —",
@@ -563,11 +584,11 @@
       "submitting": "Importing…",
       "result": {
         "summary": "Imported. {added} added, {updated} updated.",
-        "cardsLine": "{cardsAdded, plural, one {# card} other {# cards}}, {specialtyAdded, plural, one {# specialty card} other {# specialty cards}}, and {nitroxAdded, plural, one {# nitrox card} other {# nitrox cards}} imported, flagged imported, with a one-tap confirm on each diver.",
-        "rowsMergedNote": " {count} row(s) added cards to a diver an earlier row brought in.",
-        "cardsSkippedNote": " {count} card(s) already on those divers' records were left untouched.",
+        "cardsLine": "{cardsAdded, plural, one {# certification} other {# certifications}}, {specialtyAdded, plural, one {# specialty certification} other {# specialty certifications}}, and {nitroxAdded, plural, one {# nitrox certification} other {# nitrox certifications}} imported, flagged imported, with a one-tap confirm on each diver.",
+        "rowsMergedNote": " {count} row(s) added certifications to a diver an earlier row brought in.",
+        "cardsSkippedNote": " {count} certification(s) already on those divers' records were left untouched.",
         "rowsSkippedNote": " {count} row(s) skipped.",
-        "cardsHeldByAnother": "{count} card number(s) in the file are already on a different diver in your shop, so those cards were not added to anyone. Check the file for a repeated number, then enter those cards by hand.",
+        "cardsHeldByAnother": "{count} certification number(s) in the file are already on a different diver in your shop, so those records were not added to anyone. Check the file for a repeated number, then review and add the certification records in DiveDay.",
         "specialtyGateNote": "A dive that requires one of those specialties waits on that confirm — tap it on the diver's record and the gate opens.",
         "waiversLine": "{count, plural, one {# waiver} other {# waivers}} imported as accepted, marked “imported” on the diver's profile.",
         "waiversSkippedExistingNote": " {count} diver(s) already had a current waiver on file, left untouched.",
@@ -575,6 +596,10 @@
         "waiverDocumentsFailedNote": " {count} document link(s) didn't fetch and were left off the record.",
         "visitsLine": "{count, plural, one {# past visit} other {# past visits}} added to divers' shop history.",
         "visitsSkippedNote": " {count} were already imported and were left as they are — re-running the same export doesn't double anyone's history.",
+        "paymentHistoryLine": "{count, plural, one {# unverified payment / receipt source record} other {# unverified payment / receipt source records}} added to Orders.",
+        "paymentHistorySkippedNote": " {count} payment-history rows were already present and were left as they are.",
+        "notesLine": "{count, plural, one {# internal note} other {# internal notes}} imported to diver profiles.",
+        "receiptDocumentsFailedNote": " {count} receipt document link(s) didn't fetch and were left off the source record.",
         "seeRoster": "See the roster"
       }
     },
@@ -582,28 +607,30 @@
       "emailInvalid": "Email \"{email}\" doesn't look valid — imported without an email.",
       "expiryUnreadable": "Refresher-due date \"{value}\" can't be read as a date — imported for staff review, not as verified, so nobody boards on a guessed date.",
       "expiryAssumedMonthFirst": "Refresher-due date \"{value}\" read as {parsed} (month first). Check it if your file writes day first.",
-      "cardMarkedUnverified": "Your file marks this card \"{status}\" — imported for staff review rather than as verified, since your own records don't call it checked.",
+      "cardMarkedUnverified": "Your file marks this certification \"{status}\" — imported for staff review rather than as verified, since your own records don't call it checked.",
       "specialtyNotGated": "Specialty \"{specialty}\" isn't a specialty we gate on (deep, wreck, night, drysuit) — nothing imported for it.",
-      "specialtyNoCardNumber": "Specialty \"{specialty}\" has no card number on the row — not imported. A card without a number can't be verified.",
-      "specialtyImportedVerified": "{count, plural, one {Specialty card} other {# specialty cards}} imported as verified from your records, flagged imported. A dive that requires one waits until a staffer confirms they've seen it.",
-      "specialtyImportedPending": "{count, plural, one {Specialty card} other {# specialty cards}} imported for staff review — see the note above.",
+      "specialtyNoCardNumber": "Specialty \"{specialty}\" has no certification number on the row — not imported. A certification without a number can't be verified.",
+      "specialtyImportedVerified": "{count, plural, one {Specialty certification} other {# specialty certifications}} imported as verified from your records, flagged imported. A dive that requires one waits until a staffer confirms they've seen it.",
+      "specialtyImportedPending": "{count, plural, one {Specialty certification} other {# specialty certifications}} imported for staff review — see the note above.",
       "agencyUnrecognized": "Certification agency unrecognized — imported as “other”.",
-      "levelNamesSpecialty": "Certification \"{level}\" names a specialty, not a level, and this row's specialty column was used instead — no level card imported. Add that card by hand if it's a separate one.",
+      "levelNamesSpecialty": "Certification \"{level}\" names a specialty, not a level, and this row's specialty column was used instead — no level certification imported. Add that certification record in DiveDay if it's a separate one.",
       "levelIsTechnical": "Certification \"{level}\" is a technical or overhead rating, not a recreational rung — not imported, and never read as a nearby level. Record it by hand if your shop gates on it.",
-      "levelNotGated": "Certification \"{level}\" isn't a level we gate on — card not imported. Add it by hand if it's a real card.",
-      "levelNoCardNumber": "Certification level \"{level}\" has no usable card number — card not imported. A card without a number can't be verified.",
-      "certImportedVerified": "Card imported as verified from your records — flagged imported, with a one-tap confirm for staff.",
-      "certImportedPending": "Card imported for staff review — see the note above.",
-      "nitroxImported": "Nitrox card imported as verified from your records — flagged imported. Fills give plain air until a staffer taps confirm.",
-      "nitroxNoCardNumber": "Nitrox marked on the source with no card number — add and verify a nitrox card in DiveDay.",
+      "levelNotGated": "Certification \"{level}\" isn't a level we gate on — certification not imported. Add the record in DiveDay if your shop needs to keep it.",
+      "levelNoCardNumber": "Certification level \"{level}\" has no usable certification number — certification not imported. Evidence without a number can't be verified.",
+      "certImportedVerified": "Certification imported as verified from your records — flagged imported, with a one-tap confirm for staff.",
+      "certImportedPending": "Certification imported for staff review — see the note above.",
+      "nitroxImported": "Nitrox certification imported as verified from your records — flagged imported. Fills give plain air until a staffer taps confirm.",
+      "nitroxNoCardNumber": "Nitrox marked on the source with no certification number — add and verify the nitrox certification in DiveDay.",
       "waiverDateInvalid": "Waiver accepted date \"{value}\" isn't a real calendar date (expected YYYY-MM-DD) — imported dated to today instead.",
       "waiverImported": "Waiver imported as accepted — trusted from the prior shop, medical clearance included, and marked “imported”.",
       "dobInvalid": "Date of birth \"{value}\" isn't a plausible calendar date (expected YYYY-MM-DD, 1900 or later, not in the future) — imported without it.",
       "visitDateUnreadable": "Visit date \"{value}\" isn't a date we can read — the diver imports without this visit.",
       "visitNoReference": "Visit imported without a booking reference — a re-import matches on date, name, and amount, so two identical bookings on one day come in as one visit.",
       "visitNoDate": "This row names a past booking but carries no date — the diver imports without this visit.",
+      "paymentHistoryDateUnreadable": "Payment history date \"{value}\" isn't a date we can read — that source record won't import.",
+      "paymentHistoryNoDate": "This payment or receipt source row has no usable date, so it won't import.",
       "noName": "No name — row skipped.",
-      "mergedDuplicate": "Same diver as row {row} ({email}) — this row's cards, waiver, and past visit are added to them, contact details left as the earlier row has them.",
+      "mergedDuplicate": "Same diver as row {row} ({email}) — this row's certifications, waiver, and past visit are added to them, contact details left as the earlier row has them.",
       "noEmailNewRecord": "No email — imported as a new record; a re-import can't match it to update."
     },
     "errors": {

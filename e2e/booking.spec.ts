@@ -4,6 +4,7 @@ import {
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openTripActivity,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -123,6 +124,7 @@ test.describe("staff", () => {
     // ("… removed Nora Quinn from the trip"), so the name legitimately stays
     // on the page — what must be gone is her seat.
     await expect(page.locator("#roster").getByText("Nora Quinn")).toHaveCount(0);
+    await openTripActivity(page);
     await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
     await expect(page.locator("#roster").getByText("Sam Quinn").first()).toBeVisible();
   });

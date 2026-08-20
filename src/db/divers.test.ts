@@ -11,6 +11,7 @@ import type { AppDb } from "./client";
 import {
   createDiver,
   deleteDiver,
+  findSimilarDivers,
   getDiverProfile,
   listBookableDivers,
   listDiverSummaries,
@@ -55,11 +56,58 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { clearNoCertificationDeclaration, recordSelfDeclaredCards } from "./self-declared-cards";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 describe("person-first diver records", () => {
+  it("uses contact information as the temporary name for contact-first intake", async () => {
+    const { db, shop } = await seededShopContext();
+    const byEmail = await createDiver(db, {
+      shopId: shop.id,
+      email: "contact-first@example.com",
+    });
+    expect(byEmail?.fullName).toBe("contact-first@example.com");
+
+    const byPhone = await createDiver(db, {
+      shopId: shop.id,
+      phone: "+1 305 555 0188",
+    });
+    expect(byPhone?.fullName).toBe("+1 305 555 0188");
+  });
+
+  it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Cleared Casey",
+      email: "cleared-casey@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const [staff] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")))
+      .limit(1);
+    if (!staff) throw new Error("seed staff missing");
+
+    await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      noCertification: true,
+    });
+    await clearNoCertificationDeclaration(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      byPersonId: staff.id,
+    });
+
+    expect((await getDiverProfile(db, shop.id, diver.id))?.noCertificationClearedByName).toBe(
+      "Dana Reyes",
+    );
+  });
+
   it("composes cards, fit, and history from one diver record", async () => {
     const { db, shop } = await seededShopContext();
 
@@ -796,7 +844,7 @@ describe("diver erasure", () => {
       agency: "padi",
       specialty: "deep",
       identifier: "PADI-ELENA-1",
-      reviewNote: "Elena brought the physical card",
+      reviewNote: "Elena shared her digital certification record",
       status: "verified",
     });
     await db.insert(nitroxCertifications).values({
@@ -2273,6 +2321,34 @@ describe("listDiverSummaries certification level", () => {
     expect(await summaryFor(db, shop.id, "Level Aspiring")).toMatchObject({
       certificationLevel: "open_water",
       pendingCertificationCount: 1,
+    });
+  });
+
+  describe("findSimilarDivers name similarity and exact matching", () => {
+    it("finds exact and case-insensitive name matches, and similar names using trigram similarity", async () => {
+      const { db, shop } = await seededShopContext();
+
+      // Create a diver to match
+      const baseDiver = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Johnathan Doe",
+        email: "johndoe@example.com",
+      });
+      expect(baseDiver).not.toBeNull();
+
+      // Exact case-insensitive match
+      const exactMatches = await findSimilarDivers(db, shop.id, "johnathan doe");
+      expect(exactMatches).toHaveLength(1);
+      expect(exactMatches[0].fullName).toBe("Johnathan Doe");
+
+      // Similar match (typo / abbreviation)
+      const similarMatches = await findSimilarDivers(db, shop.id, "Jonathan Do");
+      expect(similarMatches).toHaveLength(1);
+      expect(similarMatches[0].fullName).toBe("Johnathan Doe");
+
+      // Unrelated name should not match
+      const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
+      expect(noMatches).toHaveLength(0);
     });
   });
 });

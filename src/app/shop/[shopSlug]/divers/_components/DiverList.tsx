@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +24,7 @@ import type { CertificationLevel } from "@/lib/readiness";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
+type QuickAddMode = "hidden" | "entering" | "visible" | "exiting";
 
 /**
  * Every value is a plain string — never a function. This is a client
@@ -27,6 +35,8 @@ type DiverSummary = DiverPage["divers"][number];
  * at render time via `pluralForm()`/`fill()` (`@/i18n/fill`).
  */
 export interface DiverListCopy {
+  addDiverLabel: string;
+  addDiverWithName: string;
   viewAllDivers: string;
   viewDivingToday: string;
   viewNeedsAttention: string;
@@ -49,7 +59,6 @@ export interface DiverListCopy {
   noDiversOnFile: string;
   tryDifferentSearch: string;
   addOneHere: string;
-  emptyAddAction: string;
   emptyShowAll: string;
   emptyImportBody: string;
   emptyImportAction: string;
@@ -69,6 +78,8 @@ export interface DiverListCopy {
   toConfirmText: string;
   tableHeaderPerson: string;
   tableHeaderLevel: string;
+  tableHeaderAttention: string;
+  noAttention: string;
 }
 
 function initials(fullName: string): string {
@@ -153,6 +164,7 @@ export function DiverList({
   filter,
   importHref,
   restoreAction,
+  quickAddAction,
   copy,
   pager,
 }: {
@@ -169,6 +181,8 @@ export function DiverList({
    * 20260724-role-gated-surfaces-hide-not-explain).
    */
   restoreAction: ((formData: FormData) => void) | null;
+  /** Quick-creates a diver by query string (name/email/phone) and redirects to edit mode. */
+  quickAddAction?: ((formData: FormData) => void) | null;
   copy: DiverListCopy;
   /**
    * The roster's `<Pager>`, rendered by the Server Component above this one.
@@ -198,6 +212,11 @@ export function DiverList({
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
+  const [quickAddMode, setQuickAddMode] = useState<QuickAddMode>(
+    query.trim() ? "entering" : "hidden",
+  );
+  const quickAddRef = useRef<HTMLDivElement>(null);
+  const [quickAddShift, setQuickAddShift] = useState(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce: the
@@ -208,7 +227,27 @@ export function DiverList({
   useEffect(() => {
     if (debounce.current) return;
     setTyped(query);
+    setQuickAddMode(query.trim() ? "visible" : "hidden");
   }, [query]);
+  useEffect(() => {
+    if (quickAddMode !== "exiting") return;
+    const timer = setTimeout(() => setQuickAddMode("hidden"), 250);
+    return () => clearTimeout(timer);
+  }, [quickAddMode]);
+  useLayoutEffect(() => {
+    const quickAdd = quickAddRef.current;
+    if (quickAddMode === "hidden" || !quickAdd) {
+      setQuickAddShift(0);
+      return;
+    }
+    const updateShift = () =>
+      setQuickAddShift(Math.ceil(quickAdd.getBoundingClientRect().width + 8));
+    updateShift();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateShift);
+    observer.observe(quickAdd);
+    return () => observer.disconnect();
+  }, [quickAddMode]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
@@ -242,6 +281,15 @@ export function DiverList({
 
   const search = (value: string) => {
     setTyped(value);
+    setQuickAddMode((mode) =>
+      value.trim()
+        ? mode === "hidden" || mode === "exiting"
+          ? "entering"
+          : "visible"
+        : mode === "hidden"
+          ? "hidden"
+          : "exiting",
+    );
     cancelPendingSearch();
     debounce.current = setTimeout(() => {
       // Cleared before the replace so the navigation this triggers is free to
@@ -249,24 +297,6 @@ export function DiverList({
       debounce.current = null;
       router.replace(hrefFor(value, filter), { scroll: false });
     }, 250);
-  };
-
-  /**
-   * The empty state's door to the add-diver form. That form is a collapsed
-   * `<details id="add-diver">` further up this page, so a bare `#add-diver`
-   * anchor would jump to a summary that is still shut — the fix is to open it,
-   * bring it into view, and put the cursor in the first field, which is what a
-   * staffer clicking the button meant. Wired here rather than re-rendering
-   * the form inside the card so there is still exactly one add form on the page.
-   */
-  const openAddDiver = () => {
-    const details = document.getElementById("add-diver");
-    if (!(details instanceof HTMLDetailsElement)) return;
-    details.open = true;
-    details.scrollIntoView({ behavior: "smooth", block: "start" });
-    details.querySelector<HTMLInputElement>('input[name="fullName"]')?.focus({
-      preventScroll: true,
-    });
   };
 
   const { divers } = page;
@@ -327,22 +357,62 @@ export function DiverList({
               every view. */}
           {filter === "removed" ? (
             <p className="mt-1 text-sm text-muted">{copy.removedNote}</p>
-          ) : query ? null : (
+          ) : (
             <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
           )}
         </div>
-        <div className="w-full sm:w-80">
-          <label className="sr-only" htmlFor="diver-search">
-            {copy.searchDiversLabel}
-          </label>
-          <input
-            id="diver-search"
-            type="search"
-            value={typed}
-            onChange={(event) => search(event.target.value)}
-            placeholder={copy.searchPlaceholder}
-            className={`${controlClass} min-w-0`}
-          />
+        <div
+          className="flex w-full max-w-full flex-wrap items-center gap-2 max-sm:overflow-x-hidden sm:w-auto"
+          style={{ "--quick-add-shift": `${quickAddShift}px` } as CSSProperties}
+        >
+          <div className="w-full min-w-0 sm:w-80">
+            <label className="sr-only" htmlFor="diver-search">
+              {copy.searchDiversLabel}
+            </label>
+            <input
+              id="diver-search"
+              type="search"
+              value={typed}
+              onChange={(event) => search(event.target.value)}
+              placeholder={copy.searchPlaceholder}
+              className={`${controlClass} min-w-0 ${
+                quickAddMode === "exiting"
+                  ? "animate-slide-out-right"
+                  : quickAddMode === "entering"
+                    ? "animate-slide-in-right"
+                    : ""
+              }`}
+            />
+          </div>
+          {quickAddMode !== "hidden" && quickAddAction ? (
+            <div
+              ref={quickAddRef}
+              className={
+                quickAddMode === "exiting"
+                  ? "animate-slide-out-right"
+                  : quickAddMode === "entering"
+                    ? "animate-slide-in-right"
+                    : undefined
+              }
+              onAnimationEnd={() => {
+                if (quickAddMode === "exiting") setQuickAddMode("hidden");
+                if (quickAddMode === "entering") setQuickAddMode("visible");
+              }}
+            >
+              <form action={quickAddAction} onSubmit={cancelPendingSearch}>
+                <input type="hidden" name="query" value={typed.trim()} />
+                <SubmitButton
+                  pendingLabel={copy.addDiverLabel}
+                  className={buttonClass({
+                    variant: "primary",
+                    className: "whitespace-nowrap",
+                  })}
+                >
+                  {fill(copy.addDiverWithName, { name: typed.trim() })}
+                </SubmitButton>
+              </form>
+            </div>
+          ) : null}
         </div>
       </div>
       {divers.length === 0 ? (
@@ -354,43 +424,34 @@ export function DiverList({
           {/* Narrowed to nothing and empty on day one are different problems,
               so they get different doors: widen the view, or start the roster. */}
           {narrowed ? (
-            <Link
-              href={hrefFor("", "all")}
-              scroll={false}
-              // Same reasoning as the view chips: this link clears the search
-              // and the view together, so a pending keystroke must not land
-              // afterwards and put half of it back.
-              onClick={cancelPendingSearch}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {copy.emptyShowAll}
-            </Link>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={openAddDiver}
-                className={buttonClass({ className: "mt-4" })}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <Link
+                href={hrefFor("", "all")}
+                scroll={false}
+                // Same reasoning as the view chips: this link clears the search
+                // and the view together, so a pending keystroke must not land
+                // afterwards and put half of it back.
+                onClick={cancelPendingSearch}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                {copy.emptyAddAction}
-              </button>
-              {importHref ? (
-                <>
-                  <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
-                  <Link
-                    href={importHref}
-                    className={buttonClass({
-                      variant: "secondary",
-                      size: "sm",
-                      className: "mt-2",
-                    })}
-                  >
-                    {copy.emptyImportAction}
-                  </Link>
-                </>
-              ) : null}
+                {copy.emptyShowAll}
+              </Link>
+            </div>
+          ) : importHref ? (
+            <>
+              <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+              <Link
+                href={importHref}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "mt-2",
+                })}
+              >
+                {copy.emptyImportAction}
+              </Link>
             </>
-          )}
+          ) : null}
         </EmptyState>
       ) : (
         <>
@@ -455,7 +516,7 @@ export function DiverList({
           {/* Desktop: the shared table vocabulary (`@/components/ui/table`) —
               one shell, one header voice, one row divider, one density, shared
               with orders, reports, the departure log and the import preview.
-              No `minWidth` floor: this is a two-column table, and the 720px
+              No `minWidth` floor: this is a three-column table, and the 720px
               floor it used to carry forced a sideways scroll on exactly the
               narrow-desktop widths the phone cards no longer cover. The shell's
               own `overflow-x-auto` stays as the safety net, and `relative` on
@@ -465,6 +526,7 @@ export function DiverList({
             <THead>
               <Th>{copy.tableHeaderPerson}</Th>
               <Th>{copy.tableHeaderLevel}</Th>
+              <Th>{copy.tableHeaderAttention}</Th>
             </THead>
             <TBody>
               {divers.map((diver) => (
@@ -477,7 +539,7 @@ export function DiverList({
                       beats the shell's inherited `text-sm`. `align-middle`
                       centres this cell's avatar against the taller of the two,
                       as it did before the conversion. */}
-                  <Td className="relative align-middle text-base">
+                  <Td className="align-middle text-base">
                     <Link
                       href={`/shop/${shopSlug}/divers/${diver.person.id}`}
                       className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
@@ -504,17 +566,24 @@ export function DiverList({
                       </div>
                     </Link>
                   </Td>
-                  {/* One quiet cell instead of a pill column plus an Attention
-                      column that said "None" on nearly every row: the level is
-                      muted roster fact, and a badge appears beside it only when
-                      this person actually needs a staffer (design principle 9).
-                      It replaced a card *count*, whose value was `1` on nearly
-                      every row and which answered a question staff rarely ask;
-                      "what level is this diver?" is the one they ask at booking
-                      time (FU-20260813). */}
+                  {/* The level is a stable fact column. Attention is separate
+                      and always present, so searching never redraws the table
+                      shape when a result happens to have no pending work. */}
                   <Td className="align-middle">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
+                      {filter === "removed" && restoreAction ? (
+                        <RestoreRow
+                          action={restoreAction}
+                          personId={diver.person.id}
+                          fullName={diver.person.fullName}
+                          copy={copy}
+                        />
+                      ) : null}
+                    </div>
+                  </Td>
+                  <Td className="align-middle">
+                    <div className="flex flex-wrap items-center gap-2">
                       {pendingCount(diver) > 0 ? (
                         <Badge tone="warning">
                           {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -525,13 +594,8 @@ export function DiverList({
                           {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                         </Badge>
                       ) : null}
-                      {filter === "removed" && restoreAction ? (
-                        <RestoreRow
-                          action={restoreAction}
-                          personId={diver.person.id}
-                          fullName={diver.person.fullName}
-                          copy={copy}
-                        />
+                      {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
+                        <span className="text-muted">{copy.noAttention}</span>
                       ) : null}
                     </div>
                   </Td>

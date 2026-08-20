@@ -30,7 +30,8 @@ const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, respons
 
 async function waiverContext() {
   const { db, shop } = await seededShopContext();
-  const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const trip = trips.find((row) => row.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("demo trip missing");
   const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
   if (!rosterEntry) throw new Error("demo booking missing");
@@ -96,6 +97,38 @@ describe("waiver records (in-memory PGlite)", () => {
         expect.objectContaining({ id: second.recordId, supersededAt: null }),
       ]),
     );
+  });
+
+  it("does not supersede a booking waiver when issuing a person-scoped waiver", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const bookingIssued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now,
+    });
+    if (!bookingIssued.ok) throw new Error("expected booking waiver link");
+
+    const independentIssued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      now: new Date(now.getTime() + 1),
+    });
+    if (!independentIssued.ok) throw new Error("expected independent waiver link");
+
+    expect(await getWaiverForToken(db, bookingIssued.token, now)).toMatchObject({
+      state: "available",
+    });
+
+    const [bookingRecord] = await db
+      .select({ supersededAt: waiverRecords.supersededAt })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, bookingIssued.recordId));
+    const [independentRecord] = await db
+      .select({ supersededAt: waiverRecords.supersededAt })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, independentIssued.recordId));
+    expect(bookingRecord?.supersededAt).toBeNull();
+    expect(independentRecord?.supersededAt).toBeNull();
   });
 
   it("keeps the old template snapshot when a newer version becomes default", async () => {

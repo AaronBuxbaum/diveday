@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { courseSlug } from "@/lib/courses";
 import type { DbExecutor } from "./client";
-import { COURSE_TEMPLATES } from "./course-templates";
+import { COURSE_TEMPLATES, courseTemplateSnapshot } from "./course-templates";
 import { courses } from "./schema";
 
 /**
@@ -14,6 +14,7 @@ import { courses } from "./schema";
  * education admits only a verified card at the stated level.
  */
 export async function seedCatalog(db: DbExecutor, shopId: string) {
+  const templateByTitle = new Map(COURSE_TEMPLATES.map((template) => [template.title, template]));
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
@@ -166,6 +167,20 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
         // slugs are minted, so the seed mints them the same way an import does.
       ].map((course) => ({
         ...course,
+        ...(templateByTitle.has(course.title)
+          ? (() => {
+              const template = templateByTitle.get(course.title);
+              if (!template) return {};
+              return {
+                agency: template.agency,
+                description: template.description,
+                minimumCertificationLevel: template.minimumCertificationLevel,
+                sourceTemplateSlug: template.slug,
+                sourceTemplateVersion: template.version,
+                sourceTemplateSnapshot: courseTemplateSnapshot(template),
+              };
+            })()
+          : {}),
         slug: courseSlug(course.title),
         // The same rule the `nitrox_compatible` migration backfills existing
         // shops with, so a freshly seeded catalog and a migrated one answer

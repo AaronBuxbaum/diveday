@@ -81,14 +81,16 @@ import { sectionCardClass } from "@/components/ui/card";
 </div>
 ```
 
-**Where this has landed so far:** 88 files, converted cluster by cluster on 2026-08-15 — all of
-`src/app/shop/[shopSlug]/settings/**`, then `trips/**`, `divers/**`, `orders/**`, the shared
-`src/components/**`, the diver-facing `src/app/s/[shopSlug]/**`, the bearer-token pages,
-`dive-sites/**`, and the marketing routes.
+**Where this has landed so far:** 120 files, converted cluster by cluster on 2026-08-15 and
+2026-08-16 — all of `src/app/shop/[shopSlug]/settings/**`, `trips/**`, `divers/**`, `orders/**`,
+the shared `src/components/**`, the diver-facing `src/app/s/[shopSlug]/**`, the bearer-token pages,
+`dive-sites/**`, the marketing routes, and the staff Today, check-in, bookings, waivers, schedule,
+courses, close-out, promos, reports, reviews, requests, and staffing surfaces (including their
+loading shells).
 
-About 85 files still carry a hand-typed `border border-border bg-surface` — but that count is no
-longer a to-do list, and reading it as one is the mistake to avoid. Each cluster's pass sorted the
-remainder into things that are genuinely **not** section cards, and left the reason at the site:
+The remaining hand-typed `border border-border bg-surface` rectangles are not a to-do list, and
+reading them as one is the mistake to avoid. Each cluster's pass sorted the remainder into things
+that are genuinely **not** section cards, and left the reason at the site:
 sunken insets (`bg-surface-sunken`), overlays carrying `shadow-lg`/`shadow-2xl`, tone-carrying
 panels, `<fieldset>`s whose `<legend>` is a control's accessible name, and the marketing pages'
 `bg-background` cards, which are that colour precisely because the band behind them is

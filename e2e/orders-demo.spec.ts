@@ -79,7 +79,7 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
-    const rows = page.locator("tbody tr").filter({ visible: true });
+    const rows = page.locator("table").first().locator("tbody tr").filter({ visible: true });
     await expect(rows.first()).toBeVisible();
     const firstPageCount = await rows.count();
     expect(firstPageCount).toBeLessThanOrEqual(50);
@@ -97,48 +97,69 @@ test.describe("demo billing history", () => {
     await page.waitForURL(/[?&]page=2/);
     await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
     // Different orders, not the same screen re-rendered.
-    await expect(page.locator("tbody tr").first().getByRole("link").first()).not.toHaveText(
-      firstDiver,
-    );
+    await expect(rows.first().getByRole("link").first()).not.toHaveText(firstDiver);
 
     // And back, without losing the pager.
     await page
       .getByRole("navigation", { name: "Pages" })
       .getByRole("link", { name: "Previous" })
       .click();
-    await expect(page.locator("tbody tr").first().getByRole("link").first()).toHaveText(firstDiver);
+    await expect(rows.first().getByRole("link").first()).toHaveText(firstDiver);
   });
 
   /**
    * The index used to load every order a shop had ever raised. It opens on a
-   * window now — which is only acceptable because the window is *stated* and
-   * has a door out of it, right where a staffer hunting an older order will
-   * look for one.
+   * safe window now, with the range choice in the filter form and an explicit
+   * all-orders option for a staffer hunting an older order.
    */
-  test("the index opens on a stated window with an explicit way to see everything", {
+  test("the index opens on a safe default range with an explicit all-orders option", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
-    await expect(page.getByText(/Showing the last 90 days/)).toBeVisible();
+    const range = page.getByLabel("Date range");
+    await expect(range).toHaveValue("recent");
 
-    const windowed = await page.locator("tbody tr").filter({ visible: true }).count();
+    const windowed = await page
+      .locator("table")
+      .first()
+      .locator("tbody tr")
+      .filter({ visible: true })
+      .count();
     const windowedTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
 
-    await page.getByRole("link", { name: "Show every order" }).click();
+    await range.selectOption("all");
+    await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page).toHaveURL(/range=all/);
-    await expect(page.getByText(/Showing every order/)).toBeVisible();
+    await expect(page.getByLabel("Date range")).toHaveValue("all");
     // A strictly larger set — otherwise the window was never doing anything,
     // and this test would pass on a page that silently ignores `?range=`.
     const allTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
     expect(allTotal).not.toBe(windowedTotal);
-    expect(await page.locator("tbody tr").filter({ visible: true }).count()).toBeGreaterThanOrEqual(
-      windowed,
-    );
+    expect(
+      await page.locator("table").first().locator("tbody tr").filter({ visible: true }).count(),
+    ).toBeGreaterThanOrEqual(windowed);
 
-    // And back to the default, so the escape hatch is not one-way.
-    await page.getByRole("link", { name: "Back to the last 90 days" }).click();
-    await expect(page.getByText(/Showing the last 90 days/)).toBeVisible();
+    // And back to the safe default, so the range control is not one-way.
+    await page.getByLabel("Date range").selectOption("recent");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page).toHaveURL(/range=recent/);
+    await expect(page.getByLabel("Date range")).toHaveValue("recent");
+  });
+
+  test("status badges align with the order row", { tag: READ_ONLY }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/orders?status=open&range=all");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+
+    const row = page
+      .locator("table")
+      .first()
+      .locator("tbody tr")
+      .filter({ visible: true })
+      .filter({ hasText: "Open — awaiting payment" })
+      .first();
+    await expect(row).toBeVisible();
+    await expect(row.locator("td").nth(2)).toHaveClass(/align-middle/);
   });
 
   /**
@@ -172,7 +193,7 @@ test.describe("demo billing history", () => {
     // sentence naming whose orders these are used to be read off the first row
     // and therefore vanished exactly here.
     await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
-    await expect(page.getByText("No orders match these filters.")).toBeVisible();
+    await expect(page.getByText("No DiveDay orders match these filters.")).toBeVisible();
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */
@@ -194,7 +215,7 @@ test.describe("demo billing history", () => {
     // the matched badges alone passes trivially when the match set is empty.
     // A settled order renders an empty status cell (only exceptional states
     // carry a badge), so "every row is paid" reads as "no row carries one".
-    const rows = page.locator("tbody tr").filter({ visible: true });
+    const rows = page.locator("table").first().locator("tbody tr").filter({ visible: true });
     await expect(rows.first()).toBeVisible();
     for (const row of await rows.all()) {
       await expect(row.locator("td").nth(2)).toHaveText("");

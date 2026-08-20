@@ -57,6 +57,8 @@ describe("folding a looked-up place into the five columns", () => {
       addressRegion: "",
       addressPostalCode: "",
       addressCountry: "",
+      latitude: null,
+      longitude: null,
     });
   });
 

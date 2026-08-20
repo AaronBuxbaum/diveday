@@ -79,7 +79,6 @@ export function DateRequestForm({
   const [phone, setPhone] = useState("");
   const [preferredDate, setPreferredDate] = useState("");
   const [alternateDate, setAlternateDate] = useState("");
-  const [dateFlexible, setDateFlexible] = useState(false);
   const [timing, setTiming] = useState("");
   // One diver is the answer far more often than any other, so it is the one
   // the box already holds — a diver bringing friends types over it, and nobody
@@ -125,7 +124,6 @@ export function DateRequestForm({
     if (phone) formData.set("phone", phone);
     if (preferredDate) formData.set("preferredDate", preferredDate);
     if (alternateDate) formData.set("alternateDate", alternateDate);
-    if (dateFlexible) formData.set("dateFlexible", "on");
     if (timing) formData.set("timing", timing);
     if (diversInput) formData.set("divers", diversInput);
     formData.set("experience", experience);
@@ -289,18 +287,6 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          <div className="sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                name="dateFlexible"
-                type="checkbox"
-                checked={dateFlexible}
-                onChange={(event) => setDateFlexible(event.target.checked)}
-                className="size-4 rounded border-border-strong"
-              />
-              {copy.dateFlexible}
-            </label>
-          </div>
           <Field
             label={copy.whenSuits}
             hint={copy.optional}

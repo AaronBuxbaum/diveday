@@ -116,21 +116,21 @@ describe("calculateReadiness", () => {
   });
 
   /**
-   * **A claim is not a card in a staffer's hand, and the diver must be told so.**
+   * **A claim is not a verified certification record, and the diver must be told so.**
    *
    * A self-declaration is `pending`, so it fell into the `certification_pending`
-   * branch — which tells the diver on `/ready` *"your certification card is with
-   * the shop for verification"* about a card the shop has never seen, and (via
+   * branch — which tells the diver on `/ready` *"your certification details are with
+   * the shop for verification"* about details the shop has never verified, and (via
    * `CERT_ENTRY_CODES`, which excludes `pending` to avoid a duplicate the unique
    * index would refuse) simultaneously withdrew the form that was their only way
-   * to send one. There is no number on a self-declared row, so there was never a
+   * to send them. There is no number on a self-declared row, so there was never a
    * duplicate to avoid. A diver who ticked a dropdown was left with no move and
-   * arrived at the dock without a card.
+   * arrived at the dock without a verified certification.
    *
    * The gate itself never moved — both codes are blockers — which is exactly why
    * this had to be tested rather than noticed.
    */
-  it("does not tell a diver their self-declared level is a card awaiting verification", () => {
+  it("does not tell a diver their self-declared level is certification awaiting verification", () => {
     const blockers = calculateReadiness({
       requirement,
       waiver: signedWaiver,

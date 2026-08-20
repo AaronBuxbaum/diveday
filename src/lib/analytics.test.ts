@@ -166,4 +166,12 @@ describe("trackEvent", () => {
       ["refund_issued", { auto: false, status: "manual" }],
     ]);
   });
+
+  it("records the trip packet button from the Overview surface", async () => {
+    const tracker = vi.fn();
+    await trackEvent({ name: "trip_print_pdf_clicked", surface: "trip_overview" }, tracker);
+    expect(tracker).toHaveBeenCalledWith("trip_print_pdf_clicked", {
+      surface: "trip_overview",
+    });
+  });
 });

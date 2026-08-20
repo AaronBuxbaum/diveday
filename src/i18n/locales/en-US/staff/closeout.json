@@ -1,7 +1,17 @@
 {
   "title": "Close-out",
   "notice": {
-    "closed": "Day closed. The record is below — see you tomorrow."
+    "closed": "Day closed. The record is below — see you tomorrow.",
+    "acknowledgeRequired": "Acknowledge the open boat or head count before closing the day.",
+    "recapSent": "Any still-outstanding recaps were sent.",
+    "recapAttention": "Some recaps need attention. Check the post-dive reports below.",
+    "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
+    "recapLocked": "This recap has been sent. Its note and photos can no longer be changed.",
+    "crewPhotoAdded": "Crew photo added to this close-out.",
+    "crewPhotoRemoved": "Crew photo removed.",
+    "crewPhotoLimit": "This close-out already has the maximum number of crew photos.",
+    "crewPhotoUnsupported": "Photo uploads are not configured for this shop yet.",
+    "crewPhotoFailed": "That photo could not be added. Check the file and try again."
   },
   "headline": {
     "allClear": "Everyone is home",
@@ -36,6 +46,62 @@
       "departureUncounted": "{count, plural, one {The dock count never finished — # diver has no result at departure.} other {The dock count never finished — # divers have no result at departure.}}",
       "noRollCall": "No roll call was recorded on this trip."
     }
+  },
+  "admin": {
+    "heading": "Administrative close-out",
+    "subtitle": "Follow-up work for the boats that are already back.",
+    "status": {
+      "complete": "Complete",
+      "pending": "In progress",
+      "attention": "Needs attention"
+    },
+    "postDiveReports": {
+      "label": "Post-dive reports",
+      "description": "Send each diver the recap from a completed departure.",
+      "progress": "{completed} of {total} sent.",
+      "pending": "{count, plural, one {# report is still queued.} other {# reports are still queued.}}",
+      "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}",
+      "retry": "Retry failed reports",
+      "retrying": "Retrying failed reports…"
+    }
+  },
+  "recap": {
+    "summaryHeading": "Recap",
+    "heading": "Recap sending",
+    "waiting": "Automatic recap sending begins in {remaining}.",
+    "due": "Recaps will be sent within 1h.",
+    "paused": "Automatic recap sending is paused.",
+    "failed": "Automatic recap sending failed.",
+    "noScheduledReturn": "No scheduled return time. Recaps will not be sent automatically.",
+    "send": "Send recap now",
+    "sending": "Sending recap…",
+    "pause": "Pause automatic sending",
+    "pausing": "Pausing automatic sending…",
+    "unpause": "Unpause automatic sending",
+    "unpausing": "Unpausing automatic sending…",
+    "lessThanMinute": "less than a minute",
+    "aboutMinutes": "{count, plural, one {1 minute} other {# minutes}}",
+    "aboutHours": "{count, plural, one {1 hour} other {# hours}}",
+    "sent": "This recap was sent at {time}. The note and photos are now locked.",
+    "summarySent": "This recap was sent about {duration} ago.",
+    "summaryWaiting": "This recap will go out automatically in about {duration}.",
+    "summaryDue": "This recap is ready to send.",
+    "summaryPaused": "Recap sending is paused.",
+    "summaryFailed": "Automatic recap sending failed.",
+    "summaryNoScheduled": "This recap will not be sent automatically."
+  },
+  "crewPhotos": {
+    "heading": "Crew photos",
+    "description": "Photos here are shared with every diver in this departure's recap.",
+    "photoAlt": "Crew photo from this departure",
+    "add": "Add a crew photo",
+    "upload": "Upload photo",
+    "adding": "Uploading photo…",
+    "remove": "Remove",
+    "confirmRemove": "Remove this crew photo from the close-out?",
+    "removeConfirmButton": "Remove photo",
+    "removeCancel": "Keep photo",
+    "removing": "Removing photo…"
   },
   "leftovers": {
     "heading": "Today's leftovers",

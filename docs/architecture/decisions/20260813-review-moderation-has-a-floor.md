@@ -134,3 +134,38 @@ the second has anything to act on: `ratingIsWithheld` is the question the surfac
 
 The words address the situation and never the shop's character. The common case is a small shop that
 removed real spam, and the fix is entirely in its hands.
+
+## Amendment, 2026-08-16 — publication precedes hiding, and public review selection is curated
+
+The moderation floor now has one additional boundary: a review cannot be hidden while it is still
+waiting for its first publication. `setReviewPublished` refuses that transition, and the staff page
+only offers Hide after Publish has made the review public. This keeps “waiting for staff to read it”
+distinct from “the shop reviewed it and chose to remove it”; only the latter creates a hidden
+moderation event.
+
+Public review cards are a small, deliberate sample rather than an arbitrary newest slice. Staff can
+mark a published written review as a **standout**; standouts appear first, newest within that bucket.
+If the sample still has room, the remaining reviews are grouped by rating from five down to one, and
+newest first within each rating bucket. The schedule shows four cards when the layout has room for a
+2x2 grid. The public review archive uses the same ordering and paging, and omits the trip title so
+the archive is shop-level social proof rather than a trip history. A diver edit clears the standout
+flag and returns written text to moderation, so curation never survives an unread revision.
+
+The public schedule's aggregate count links to that archive. Bare ratings continue to contribute to
+the aggregate and are not used for the editorial schedule preview: without words they are not an
+empty testimonial card. The archive is the complete customer view, however, so it lists every
+published review, including rating-only reviews rendered as stars with their first-name-and-last-
+initial byline and verified-diver date.
+
+## Amendment, 20260816 — moderation has three states
+
+The prior amendment's rule that publication must precede hiding is superseded. A review with words
+starts **Unread**. Staff may publish it, moving it to **Published**, or hide it directly, moving it
+to **Hidden** without ever placing it on the public page. Publishing a hidden review automatically
+unhides it and returns it to Published; hiding a published review returns it to Hidden. These are
+the only three current moderation states. A **standout** is an optional flag only while a review is
+Published: hiding clears it, and republishing requires staff to choose it again if desired.
+
+The append-only moderation trail remains the record of why a review was hidden. A diver's later
+revision starts a fresh Unread state even when the older version had been hidden, so a historical
+hide never silently carries onto new words.

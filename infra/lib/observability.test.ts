@@ -64,9 +64,10 @@ describe("the log-signal registry", () => {
     }
   });
 
-  it("names each metric and alarm once", () => {
+  it("names each metric and configured alarm once", () => {
     expect(new Set(LOG_SIGNALS.map((signal) => signal.metricName)).size).toBe(LOG_SIGNALS.length);
-    expect(new Set(LOG_SIGNALS.map(alarmNameFor)).size).toBe(LOG_SIGNALS.length);
+    const alarmed = LOG_SIGNALS.filter((signal) => signal.alarm !== false);
+    expect(new Set(alarmed.map(alarmNameFor)).size).toBe(alarmed.length);
   });
 
   it("sets a threshold that can be reached and a period CloudWatch accepts", () => {
@@ -172,7 +173,7 @@ describe("the synthesized observability stack", () => {
     expect(rendered).not.toContain('"*"');
   });
 
-  it("expands every registry row into a filter and an alarm that notifies", () => {
+  it("expands every registry row into a filter, alarming only configured rows", () => {
     const template = synthesize();
     const filters = Object.values(
       template.findResources("AWS::Logs::MetricFilter") as Record<
@@ -205,7 +206,8 @@ describe("the synthesized observability stack", () => {
     // among the latter carry an alarm.
     expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length);
     expect(alarms).toHaveLength(
-      LOG_SIGNALS.length + WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length,
+      LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
+        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length,
     );
 
     for (const signal of LOG_SIGNALS) {
@@ -222,6 +224,10 @@ describe("the synthesized observability stack", () => {
       const alarm = alarms.find(
         (candidate) => candidate.Properties?.AlarmName === alarmNameFor(signal),
       );
+      if (signal.alarm === false) {
+        expect(alarm).toBeUndefined();
+        continue;
+      }
       expect(alarm?.Properties?.Threshold).toBe(signal.threshold);
       expect(alarm?.Properties?.Period).toBe(signal.periodMinutes * 60);
       // An idle app must never page. Missing data here means "nothing was

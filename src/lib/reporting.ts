@@ -8,9 +8,12 @@
  *
  * The one real modelling decision: a monthly report is anchored to the trips that
  * *departed* in the month, in the shop's timezone. Bookings, fill rate, and
- * waiver completion all live naturally on those trips; revenue is the money
- * actually collected on their bookings (booking_payments — the same paid/deposit
- * amounts that gate boarding). See docs ADR 20260723-owner-reporting.
+ * waiver completion all live naturally on those trips; revenue starts with the
+ * money actually collected on their bookings (booking_payments — the same
+ * paid/deposit amounts that gate boarding). It then includes only the explicit,
+ * unverified import slice whose payment/refund amount and currency were clear;
+ * the report surface names that addition and links to its source rows. See docs
+ * ADR 20260723-owner-reporting and 20260816-imported-payment-history-is-evidence.
  */
 
 import { cachedFormatter } from "./intl-cache";
@@ -30,8 +33,14 @@ export type ReportTrip = {
 
 export type MonthlyReportInput = {
   trips: ReportTrip[];
-  /** Minor units collected (paid + deposit) on this month's trips' bookings. */
+  /** Net minor units: current trip revenue plus unverified imported payments minus refunds. */
   revenueCents: number;
+  /** Unverified imported source payments included in revenueCents for this calendar month. */
+  importedPaymentCents: number;
+  /** Unverified imported source refunds subtracted from revenueCents for this calendar month. */
+  importedRefundCents: number;
+  /** How many imported source rows supplied either aggregate amount above. */
+  importedFinancialRecordCount: number;
   /**
    * Minor units of *settled* post-trip tips on this month's trips (PAY-M2).
    * Kept beside `revenueCents` rather than folded into it: a tip is 100% the
@@ -57,8 +66,14 @@ export type MonthlyReport = {
   fillRate: number | null;
   /** Trips that left with no open seat. */
   atCapacityTrips: number;
-  /** Minor units collected on the month's trips. */
+  /** Net minor units: current trip revenue plus the clearly-labelled imported source slice. */
   revenueCents: number;
+  /** Unverified imported source payments included in revenueCents. */
+  importedPaymentCents: number;
+  /** Unverified imported source refunds subtracted from revenueCents. */
+  importedRefundCents: number;
+  /** Source rows behind the imported financial contribution. */
+  importedFinancialRecordCount: number;
   /** Minor units of settled tips on the month's trips — never inside `revenueCents`. */
   tipsCents: number;
   /** How many tips made that total. */
@@ -91,6 +106,9 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     fillRate: seatsOffered > 0 ? Math.min(1, seatsBooked / seatsOffered) : null,
     atCapacityTrips,
     revenueCents: input.revenueCents,
+    importedPaymentCents: input.importedPaymentCents,
+    importedRefundCents: input.importedRefundCents,
+    importedFinancialRecordCount: input.importedFinancialRecordCount,
     tipsCents: input.tipsCents,
     tipCount: input.tipCount,
     waiverComplete,

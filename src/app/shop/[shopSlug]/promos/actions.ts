@@ -31,7 +31,9 @@ async function requirePromoManager() {
   // `shopPath`, not a template: the slug rides in on the session but is still
   // an ordinary string being spliced into a redirect target, and every segment
   // it builds is escaped (src/lib/staff-notices.ts).
-  return { session, allowed, promos: shopPath(session.user.shopSlug, "promos") };
+  const promos = shopPath(session.user.shopSlug, "promos");
+  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  return { session, promos };
 }
 
 /** A local date-time from the form to a `Date`, or null for an empty box. */
@@ -51,8 +53,7 @@ const promoFormSchema = z.object({
 });
 
 export async function createPromoAction(formData: FormData) {
-  const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  const { session, promos } = await requirePromoManager();
 
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
@@ -77,8 +78,7 @@ export async function createPromoAction(formData: FormData) {
 }
 
 export async function setPromoEnabledAction(formData: FormData) {
-  const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  const { session, promos } = await requirePromoManager();
 
   const promoId = String(formData.get("promoId") ?? "");
   const enable = formData.get("enable") === "true";
@@ -92,8 +92,7 @@ export async function setPromoEnabledAction(formData: FormData) {
 
 /** Re-run Stripe creation for a `failed` code, unchanged from how it was entered. */
 export async function retryPromoAction(formData: FormData) {
-  const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  const { session, promos } = await requirePromoManager();
 
   const promoId = String(formData.get("promoId") ?? "");
   if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
@@ -118,8 +117,7 @@ export async function retryPromoAction(formData: FormData) {
  * same as an ordinary "add a promo".
  */
 export async function deletePromoAction(formData: FormData) {
-  const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  const { session, promos } = await requirePromoManager();
 
   const promoId = String(formData.get("promoId") ?? "");
   if (!promoId) revalidateAndRedirect(promos, noticeUrl(promos, "invalid"));
@@ -157,8 +155,7 @@ export async function deletePromoAction(formData: FormData) {
  * ordinary "create a promo" takes.
  */
 export async function restorePromoAction(formData: FormData) {
-  const { session, allowed, promos } = await requirePromoManager();
-  if (!allowed) revalidateAndRedirect(promos, noticeUrl(promos, "not-authorized"));
+  const { session, promos } = await requirePromoManager();
 
   const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(promos, noticeUrl(promos, "restore-failed"));

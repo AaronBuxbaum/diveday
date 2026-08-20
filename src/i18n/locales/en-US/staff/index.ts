@@ -24,6 +24,7 @@
 import backup from "./backup.json";
 import blockers from "./blockers.json";
 import blowout from "./blowout.json";
+import boats from "./boats.json";
 import bookings from "./bookings.json";
 import calendar from "./calendar.json";
 import checkIn from "./checkIn.json";
@@ -81,6 +82,7 @@ const staff = {
   seatDiver,
   blowout,
   incidentExport,
+  boats,
 };
 
 export default staff;

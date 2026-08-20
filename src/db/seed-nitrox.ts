@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { bookings, nitroxCertifications, priorVisits } from "./schema";
+import { bookings, importedPaymentHistory, nitroxCertifications, priorVisits } from "./schema";
 import { dateAt } from "./seed-clock";
 
 /**
@@ -132,6 +132,49 @@ export async function seedNitrox(
         sourceLabel: "Coral Coast Divers",
         sourceReference: "CCD-24003",
         dedupeKey: "ref:ccd-24003",
+        importedAt: nowDate(),
+      },
+    ]);
+    // Source payment/receipt evidence deliberately sits beside the imported
+    // visits rather than becoming an order. The Orders visual surface needs a
+    // real unverified row to keep its warning treatment reviewable; the refund
+    // gives the aggregate its two-direction shape without touching Stripe or a
+    // booking-payment gate.
+    await db.insert(importedPaymentHistory).values([
+      {
+        shopId,
+        personId: customers[12].id,
+        occurredOn: dateAt(-384),
+        direction: "payment" as const,
+        title: "Two-tank morning — Molasses Reef",
+        statusLabel: "Completed",
+        amountLabel: "$165.00",
+        amountCents: 16_500,
+        currency: "usd",
+        paymentReference: "PAY-CCD-20418",
+        receiptReference: "RCPT-20418",
+        sourceLabel: "Coral Coast Divers",
+        sourceReference: "CCD-20418",
+        stripeReference: null,
+        dedupeKey: "payment:pay-ccd-20418",
+        importedAt: nowDate(),
+      },
+      {
+        shopId,
+        personId: customers[12].id,
+        occurredOn: dateAt(-201),
+        direction: "refund" as const,
+        title: "Night dive — Benwood Wreck",
+        statusLabel: "Refunded",
+        amountLabel: "$95.00",
+        amountCents: 9_500,
+        currency: "usd",
+        paymentReference: "PAY-CCD-22677",
+        receiptReference: null,
+        sourceLabel: "Coral Coast Divers",
+        sourceReference: "CCD-22677",
+        stripeReference: null,
+        dedupeKey: "payment:pay-ccd-22677",
         importedAt: nowDate(),
       },
     ]);

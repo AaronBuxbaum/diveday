@@ -45,7 +45,10 @@ export function SpecialtyCards({
   // Here it can only have come from the nitrox sighting form, the one control
   // on this section that asks for a number a staffer reads off a card.
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
-  const sectionStatus = numberError ? undefined : status;
+  // Mark certified and capture success notices belong to the card row, never
+  // to this add-specialty form. Render all feedback beside the cards so the
+  // disclosure itself never claims an unrelated action succeeded.
+  const sectionStatus = !numberError && status?.form === "specialty-cards" ? status : undefined;
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -55,71 +58,73 @@ export function SpecialtyCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
-        {/* Opened by its own outcome — see CertificationCards for why. */}
-        <details open={Boolean(sectionStatus)}>
-          {/* Through the wrapper — see CertificationCards for why. */}
-          <summary
-            className={buttonClass({
-              className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-            })}
-          >
+        <details className="relative ml-auto shrink-0">
+          <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
             {t("divers.specialty.addSpecialty")}
           </summary>
-          {/* No `encType`: a function `action` is a server action, not a
-              native form post — React builds the `FormData` (files intact)
-              and ships it over its own transport, so the browser never reads
-              this attribute. Setting it anyway just trips a dev warning
-              ("Cannot specify a encType or method for a form that specifies a
-              function as the action"). */}
-          <FieldGrid
-            as="form"
-            action={addSpecialtyAction.bind(null, shopSlug, personId)}
-            columns={2}
-            className={sectionCardClass({
-              className: "mt-3 gap-y-3 sm:w-[32rem]",
-            })}
-          >
-            <Field label={t("divers.certifications.agency")}>
-              <select name="agency" className={controlClass}>
-                {Object.entries(AGENCY_KEYS).map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("divers.specialty.specialtyLabel")}>
-              <select name="specialty" className={controlClass}>
-                {[
-                  ...Object.entries(SPECIALTY_KEYS).map(([value, key]) => [value, t(key)] as const),
-                  ["nitrox", t("divers.specialty.nitroxOption")] as const,
-                ].map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("divers.certifications.cardNumber")}>
-              <input name="identifier" required className={controlClass} />
-            </Field>
-            <Field
-              label={t("divers.certifications.refresherDue")}
-              hint={t("divers.certifications.refresherHint")}
+          <div className="absolute top-full right-0 z-30 mt-2 max-w-[calc(100vw-2rem)]">
+            {/* No `encType`: a function `action` is a server action, not a
+                native form post — React builds the `FormData` (files intact)
+                and ships it over its own transport, so the browser never reads
+                this attribute. Setting it anyway just trips a dev warning
+                ("Cannot specify a encType or method for a form that specifies a
+                function as the action"). */}
+            <FieldGrid
+              as="form"
+              action={addSpecialtyAction.bind(null, shopSlug, personId)}
+              columns={2}
+              className={sectionCardClass({
+                className: "gap-y-3 sm:w-[32rem]",
+              })}
             >
-              <input name="expiresOn" type="date" className={controlClass} />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("divers.certifications.capturing")}
-                className={buttonClass({ variant: "secondary" })}
+              <Field label={t("divers.certifications.agency")}>
+                <select name="agency" className={controlClass}>
+                  {Object.entries(AGENCY_KEYS).map(([value, key]) => (
+                    <option key={value} value={value}>
+                      {t(key)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t("divers.specialty.specialtyLabel")}>
+                <select name="specialty" className={controlClass}>
+                  {[
+                    ...Object.entries(SPECIALTY_KEYS).map(
+                      ([value, key]) => [value, t(key)] as const,
+                    ),
+                    ["nitrox", t("divers.specialty.nitroxOption")] as const,
+                  ].map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t("divers.certifications.cardNumber")}>
+                <input name="identifier" required className={controlClass} />
+              </Field>
+              <Field
+                label={t("divers.certifications.refresherDue")}
+                hint={t("divers.certifications.refresherHint")}
               >
-                {t("divers.specialty.captureForReview")}
-              </SubmitButton>
-              <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
-            </FieldActions>
-          </FieldGrid>
+                <input name="expiresOn" type="date" className={controlClass} />
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("divers.certifications.capturing")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("divers.specialty.captureForReview")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </div>
         </details>
+        {sectionStatus ? (
+          <div className="basis-full">
+            <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
+          </div>
+        ) : null}
       </div>
       {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
         <EmptyState className="mt-4">

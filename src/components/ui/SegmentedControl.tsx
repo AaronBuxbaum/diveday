@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 /**
  * The one segmented control: a sunken track with a raised pill on the current
@@ -45,7 +46,7 @@ export type SegmentedControlItem = {
   /** Stable identity, compared against `currentKey`. */
   key: string;
   /** Resolved copy — words come from a message bundle at the call site. */
-  label: string;
+  label: ReactNode;
   href: string;
 };
 

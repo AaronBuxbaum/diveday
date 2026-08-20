@@ -52,3 +52,19 @@ The recap must not introduce a second scheduler or a new dedup mechanism.
 - **Escape hatch:** if "within the hour of return" ever matters more than "within a day", move recaps to
   a shorter cron interval (paid plan) or the deferred job queue — both are additive; the due rule and
   dedup are unchanged.
+
+## Amendment (2026-08-16) — four-hour floor and dedicated hourly scan
+
+The original daily scan could send a recap as soon as a trip ended and could not make a Close-out
+countdown honest. A post-dive recap must now be sent **at least four hours after the departure
+ends**, whether a staff member presses “Send recap now” or the scheduled worker sends it.
+
+- `recapEligibleAt` / `recapIsEligible` in `src/lib/recap-schedule.ts` are the one timing rule.
+  `sendDueRecaps` selects only departures at or past that floor, and `sendTripRecaps` repeats the
+  same check for the staff action; a crafted request cannot bypass it.
+- `/api/cron/recaps` runs hourly under the existing `CRON_SECRET`, with its own `diveday-recaps`
+  monitor. The old daily reminder route no longer dispatches recaps, so concurrent scans cannot
+  race each other. The existing delivery-row dedup and 48-hour lookback remain unchanged.
+- Close-out shows the eligibility countdown and enables its send control at the floor. It can also
+  keep crew photos staff-only until a future, explicit audience/consent policy chooses to share
+  them with divers.

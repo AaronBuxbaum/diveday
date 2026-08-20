@@ -9,6 +9,8 @@ import { canPersonImportShopData, commitContactImport } from "./import";
 import {
   bookings,
   certifications,
+  importedPaymentHistory,
+  internalNotes,
   nitroxCertifications,
   orders,
   people,
@@ -583,7 +585,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 });
 
-describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits)", () => {
+describe("commitContactImport — prior visits and imported payment history", () => {
   const bookingsExport = [
     "customer_name,email,booking_date,tour_name,booking_status,total,booking_id,prior_shop",
     "Ines Vela,ines.visits@example.com,2024-05-11,Two-tank Molasses Reef,Completed,$165.00,CCD-1,Coral Coast Divers",
@@ -604,7 +606,26 @@ describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits
       .orderBy(priorVisits.visitedOn);
   }
 
-  it("writes one inert history row per booking, verbatim", async () => {
+  async function paymentHistoryFor(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    email: string,
+  ) {
+    const person = await personByEmail(db, shopId, email);
+    if (!person) throw new Error(`no person for ${email}`);
+    return db
+      .select()
+      .from(importedPaymentHistory)
+      .where(
+        and(
+          eq(importedPaymentHistory.shopId, shopId),
+          eq(importedPaymentHistory.personId, person.id),
+        ),
+      )
+      .orderBy(importedPaymentHistory.occurredOn);
+  }
+
+  it("writes one inert visit per booking plus separate unverified financial evidence", async () => {
     const { db, shop } = await seededShopContext();
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const summary = await commitContactImport(
@@ -613,7 +634,12 @@ describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits
       prepareContactImport(bookingsExport),
       importer,
     );
-    expect(summary).toMatchObject({ peopleCreated: 1, rowsMerged: 1, visitsAdded: 2 });
+    expect(summary).toMatchObject({
+      peopleCreated: 1,
+      rowsMerged: 1,
+      visitsAdded: 2,
+      paymentHistoryAdded: 2,
+    });
 
     const visits = await visitsFor(db, shop.id, "ines.visits@example.com");
     expect(visits).toHaveLength(2);
@@ -628,6 +654,21 @@ describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits
     // The prior system's own word, not a DiveDay booking status.
     expect(visits[1].statusLabel).toBe("Cancelled");
     expect(visits[0].importedAt).toBeInstanceOf(Date);
+
+    const paymentHistory = await paymentHistoryFor(db, shop.id, "ines.visits@example.com");
+    expect(paymentHistory).toHaveLength(2);
+    expect(paymentHistory[0]).toMatchObject({
+      occurredOn: "2024-05-11",
+      direction: "payment",
+      amountLabel: "$165.00",
+      amountCents: 16_500,
+      currency: "usd",
+      sourceReference: "CCD-1",
+      sourceLabel: "Coral Coast Divers",
+    });
+    // The cancelled source row remains available for review, but it is not
+    // silently counted as a refund or a payment.
+    expect(paymentHistory[1]).toMatchObject({ direction: "unknown", amountCents: 9_500 });
   });
 
   it("touches no operational table — the migration can never reach the dock", async () => {
@@ -660,8 +701,43 @@ describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits
       prepareContactImport(bookingsExport),
       importer,
     );
-    expect(again).toMatchObject({ visitsAdded: 0, visitsSkippedExisting: 2 });
+    expect(again).toMatchObject({
+      visitsAdded: 0,
+      visitsSkippedExisting: 2,
+      paymentHistoryAdded: 0,
+      paymentHistorySkippedExisting: 2,
+    });
     expect(await visitsFor(db, shop.id, "ines.visits@example.com")).toHaveLength(2);
+    expect(await paymentHistoryFor(db, shop.id, "ines.visits@example.com")).toHaveLength(2);
+  });
+
+  it("retains a receipt and source Stripe reference as evidence, not a local order", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const csv = [
+      "full_name,email,payment_date,payment_status,payment_amount,payment_currency,payment_reference,receipt_number,receipt_url,stripe_invoice_id,prior_shop",
+      "Rosa Receipt,rosa.receipt@example.com,2024-05-11,Settled,165.00,USD,pay_42,receipt_42,/import-receipts/receipt_42.pdf,in_42,Coral Coast Divers",
+    ].join("\n");
+    const beforeOrderCount = (await db.select().from(orders).where(eq(orders.shopId, shop.id)))
+      .length;
+
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary).toMatchObject({ peopleCreated: 1, paymentHistoryAdded: 1 });
+    expect((await db.select().from(orders).where(eq(orders.shopId, shop.id))).length).toBe(
+      beforeOrderCount,
+    );
+
+    const [history] = await paymentHistoryFor(db, shop.id, "rosa.receipt@example.com");
+    expect(history).toMatchObject({
+      direction: "payment",
+      amountCents: 16_500,
+      currency: "usd",
+      paymentReference: "pay_42",
+      receiptReference: "receipt_42",
+      receiptDocumentUrl: "/import-receipts/receipt_42.pdf",
+      stripeReference: "in_42",
+      sourceLabel: "Coral Coast Divers",
+    });
   });
 
   it("still de-duplicates when the export carries no booking reference", async () => {
@@ -703,6 +779,40 @@ describe("commitContactImport — prior visits (ADR 20260725-import-prior-visits
     const strayShopId = other?.id ?? "00000000-0000-0000-0000-000000000000";
     const stray = await db.select().from(priorVisits).where(eq(priorVisits.shopId, strayShopId));
     expect(stray).toHaveLength(0);
+  });
+
+  it("imports internal notes onto diver profiles and does not duplicate identical notes on re-import", async () => {
+    const { db, shop } = await seededShopContext();
+    const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const csv = [
+      "name,email,notes",
+      "Maya River,maya.river@example.com,Prefers steel 100s and morning dives",
+    ].join("\n");
+
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary.notesAdded).toBe(1);
+
+    const person = await personByEmail(db, shop.id, "maya.river@example.com");
+    if (!person) throw new Error("person not created");
+
+    const notes = await db
+      .select()
+      .from(internalNotes)
+      .where(and(eq(internalNotes.shopId, shop.id), eq(internalNotes.personId, person.id)));
+    expect(notes).toHaveLength(1);
+    expect(notes[0].body).toBe("Prefers steel 100s and morning dives");
+    expect(notes[0].bookingId).toBeNull();
+    expect(notes[0].createdByPersonId).toBe(importer);
+
+    // Re-import with the same note should not duplicate
+    const summary2 = await commitContactImport(db, shop.id, prepareContactImport(csv), importer);
+    expect(summary2.notesAdded).toBe(0);
+
+    const notesAfter = await db
+      .select()
+      .from(internalNotes)
+      .where(and(eq(internalNotes.shopId, shop.id), eq(internalNotes.personId, person.id)));
+    expect(notesAfter).toHaveLength(1);
   });
 });
 

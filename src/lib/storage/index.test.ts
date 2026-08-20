@@ -7,6 +7,7 @@ import {
   isManagedBlobUrl,
   MAX_COURSE_IMAGE_BYTES,
   storeCourseImage,
+  storeImportReceiptDocument,
   storeImportWaiverDocument,
 } from "./index";
 import { MAX_IMAGE_BYTES } from "./limits";
@@ -265,6 +266,24 @@ describe("import document storage — images and PDFs", () => {
     // The raw PDF bytes are stored unchanged — never re-encoded to JPEG.
     expect(arg.bytes).toBe(fakePdf);
     expect(arg.keyPrefix).toBe("import-waivers");
+  });
+
+  it("stores an imported receipt through the same safe document path under its own namespace", async () => {
+    const provider = {
+      upload: vi
+        .fn()
+        .mockResolvedValue({ status: "stored", url: "https://blob.example/receipt.pdf" }),
+    };
+    const result = await storeImportReceiptDocument(
+      { filename: "receipt.pdf", contentType: "application/pdf", bytes: fakePdf },
+      provider,
+    );
+    expect(result).toEqual({ status: "stored", url: "https://blob.example/receipt.pdf" });
+    expect(provider.upload).toHaveBeenCalledTimes(1);
+    expect(provider.upload.mock.calls[0][0]).toMatchObject({
+      contentType: "application/pdf",
+      keyPrefix: "import-receipts",
+    });
   });
 
   it("routes on magic bytes, not the claimed type: a mislabeled non-PDF is rejected", async () => {

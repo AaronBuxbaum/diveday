@@ -68,3 +68,16 @@ tabs at ~65px each at 390px, six absolute — so the answer could never be more 
 - Escape hatch: if the two-group split stops matching how shops think (e.g. a "daily" group
   grown past ~8 rows), regroup in the registry — consumers render whatever the groups hold; the
   costly part was the doors, which stay.
+
+## Amendment — 2026-08-16: Close-out takes the primary slot; Orders moves to More
+
+The five-slot ceiling still applies, but the product owner changed which working surfaces deserve
+all-day chrome. The primary registry order is now Today, Check-in, Divers, Board, and Close-out.
+Orders remains ungated, searchable, and directly reachable from its own contextual links, but it
+belongs to the `daily` / “Run the shop” More group rather than the phone dock and desktop primary
+tabs. This keeps the dock at five destination tabs plus its sixth More slot while making the
+end-of-day ritual a one-tap destination.
+
+The current trip layout also keeps Boat Mode scoped to the Manifest surface. The shared trip
+subnav remains ordinary print-hidden navigation chrome; the Manifest owns the Boat Mode palette,
+detector, and control at the bottom of its page.

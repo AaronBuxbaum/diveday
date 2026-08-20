@@ -20,7 +20,11 @@
  *   - a row recording a past booking writes one inert `prior_visits` row
  *     (ADR 20260725-import-prior-visits) and touches no operational table —
  *     no trip, no booking, no order, no roll call — so a migrated history can
- *     never reach the dock, capacity, or reporting.
+ *     never reach the dock or capacity;
+ *   - source payment/refund/receipt evidence writes only
+ *     `imported_payment_history`: it is never a local order, Stripe charge,
+ *     booking payment, or credential. A clear, shop-currency amount may join
+ *     the explicitly-unverified slice of the monthly financial aggregate.
  * Everything is scoped by the shopId the caller reads from the session, never a
  * URL, and the whole batch commits in one transaction (document fetches happen
  * once, beforehand, outside it) so a preview and its commit describe the same
@@ -31,18 +35,21 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { canImportShopData, type Role } from "@/lib/authz";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { PreparedImport, PreparedRow } from "@/lib/import";
-import { storeImportWaiverDocument } from "@/lib/storage";
+import { type PreparedImport, type PreparedRow, parseImportedMoney } from "@/lib/import";
+import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/storage";
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken, isCompletedWaiverCurrent } from "@/lib/waivers";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
   certifications,
+  importedPaymentHistory,
+  internalNotes,
   nitroxCertifications,
   people,
   personRoles,
   priorVisits,
   rentalFitProfiles,
+  shops,
   specialtyCertifications,
   userAccounts,
   waiverRecords,
@@ -76,16 +83,24 @@ export type ImportSummary = {
   waiversSkippedNoTemplate: number;
   /** A waiver_document_url / medical_document_url did not fetch/store and was left off the record. */
   waiverDocumentsFailed: number;
+  /** A receipt_document_url did not fetch/store and was left off the source history row. */
+  receiptDocumentsFailed: number;
   /** Prior-shop visits written as inert history (ADR 20260725-import-prior-visits). */
   visitsAdded: number;
   /** The same visit was already imported — a re-run of the same bookings export. */
   visitsSkippedExisting: number;
+  /** Unverified imported payment/refund/receipt rows added to Orders history. */
+  paymentHistoryAdded: number;
+  /** The same source financial row was already imported and was left untouched. */
+  paymentHistorySkippedExisting: number;
+  /** Internal / staff / diver notes imported onto diver profiles. */
+  notesAdded: number;
   rowsSkipped: number;
 };
 
 /**
- * A batch import can carry up to MAX_IMPORT_ROWS (5,000) rows, each with up to
- * two document URLs — an unbounded `Promise.all` over every fetch at once
+ * A batch import can carry up to MAX_IMPORT_ROWS (20,000) rows, each with up to
+ * three document URLs — an unbounded `Promise.all` over every fetch at once
  * would open thousands of simultaneous outbound connections from one staff
  * submission. Capped low and fixed regardless of row count: this is
  * resource-exhaustion protection for the server, not a per-shop rate limit.
@@ -111,36 +126,52 @@ async function mapWithConcurrency<T, R>(
 }
 
 /**
- * Fetches each row's raw waiver_document_url / medical_document_url once,
- * server-side, and re-stores it in DiveDay's own image storage — the same
- * SSRF-safe pipeline a staff-pasted dive-site image goes through
+ * Fetches each row's raw waiver/medical/receipt document URL once, server-side,
+ * and re-stores it in DiveDay's own storage — the same SSRF-safe pipeline a
+ * staff-pasted dive-site image goes through
  * (`src/lib/storage/ingest-url.ts`) — before anything is written. Network I/O
  * on purpose stays outside `commitContactImport`'s transaction; a failed or
  * unconfigured fetch drops that one document (counted, never fatal to the
  * row). Fetches run at a bounded concurrency (`DOCUMENT_FETCH_CONCURRENCY`),
  * never one `Promise.all` per document across the whole batch.
  */
-async function resolveImportWaiverDocuments(
-  rows: readonly PreparedRow[],
-): Promise<{ rows: PreparedRow[]; documentsFailed: number }> {
-  type DocField = "documentUrl" | "medicalDocumentUrl";
+async function resolveImportDocuments(rows: readonly PreparedRow[]): Promise<{
+  rows: PreparedRow[];
+  waiverDocumentsFailed: number;
+  receiptDocumentsFailed: number;
+}> {
+  type DocField = "documentUrl" | "medicalDocumentUrl" | "receiptDocumentUrl";
   const tasks: { rowIndex: number; field: DocField; url: string }[] = [];
   rows.forEach((row, rowIndex) => {
-    if (!row.waiver) return;
-    if (row.waiver.documentUrl) {
+    if (row.waiver?.documentUrl) {
       tasks.push({ rowIndex, field: "documentUrl", url: row.waiver.documentUrl });
     }
-    if (row.waiver.medicalDocumentUrl) {
+    if (row.waiver?.medicalDocumentUrl) {
       tasks.push({ rowIndex, field: "medicalDocumentUrl", url: row.waiver.medicalDocumentUrl });
     }
+    if (row.paymentHistory?.receiptDocumentUrl) {
+      tasks.push({
+        rowIndex,
+        field: "receiptDocumentUrl",
+        url: row.paymentHistory.receiptDocumentUrl,
+      });
+    }
   });
-  if (tasks.length === 0) return { rows: [...rows], documentsFailed: 0 };
+  if (tasks.length === 0) {
+    return { rows: [...rows], waiverDocumentsFailed: 0, receiptDocumentsFailed: 0 };
+  }
 
-  let documentsFailed = 0;
+  let waiverDocumentsFailed = 0;
+  let receiptDocumentsFailed = 0;
   const resolved = await mapWithConcurrency(tasks, DOCUMENT_FETCH_CONCURRENCY, async (task) => {
-    const result = await ingestImageUrl(task.url, (upload) => storeImportWaiverDocument(upload));
+    const result = await ingestImageUrl(task.url, (upload) =>
+      task.field === "receiptDocumentUrl"
+        ? storeImportReceiptDocument(upload)
+        : storeImportWaiverDocument(upload),
+    );
     if (result.status === "stored" || result.status === "unchanged") return result.url;
-    documentsFailed += 1;
+    if (task.field === "receiptDocumentUrl") receiptDocumentsFailed += 1;
+    else waiverDocumentsFailed += 1;
     return null;
   });
 
@@ -153,10 +184,24 @@ async function resolveImportWaiverDocuments(
 
   const rowsOut = rows.map((row, rowIndex) => {
     const patch = patchesByRow.get(rowIndex);
-    if (!patch || !row.waiver) return row;
-    return { ...row, waiver: { ...row.waiver, ...patch } };
+    if (!patch) return row;
+    const { receiptDocumentUrl, ...waiverPatch } = patch;
+    return {
+      ...row,
+      ...(row.waiver && Object.keys(waiverPatch).length > 0
+        ? { waiver: { ...row.waiver, ...waiverPatch } }
+        : {}),
+      ...(row.paymentHistory && receiptDocumentUrl !== undefined
+        ? {
+            paymentHistory: {
+              ...row.paymentHistory,
+              receiptDocumentUrl,
+            },
+          }
+        : {}),
+    };
   });
-  return { rows: rowsOut, documentsFailed };
+  return { rows: rowsOut, waiverDocumentsFailed, receiptDocumentsFailed };
 }
 
 const cardKey = (agency: string, identifier: string) => `${agency}:${identifier.toLowerCase()}`;
@@ -197,14 +242,25 @@ export async function commitContactImport(
     waiversSkippedExisting: 0,
     waiversSkippedNoTemplate: 0,
     waiverDocumentsFailed: 0,
+    receiptDocumentsFailed: 0,
     visitsAdded: 0,
     visitsSkippedExisting: 0,
+    paymentHistoryAdded: 0,
+    paymentHistorySkippedExisting: 0,
+    notesAdded: 0,
     rowsSkipped: prepared.rows.length - preparedRows.length,
   };
   if (preparedRows.length === 0) return summary;
 
-  const { rows, documentsFailed } = await resolveImportWaiverDocuments(preparedRows);
-  summary.waiverDocumentsFailed = documentsFailed;
+  const [shop] = await db
+    .select({ currency: shops.currency })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const { rows, waiverDocumentsFailed, receiptDocumentsFailed } =
+    await resolveImportDocuments(preparedRows);
+  summary.waiverDocumentsFailed = waiverDocumentsFailed;
+  summary.receiptDocumentsFailed = receiptDocumentsFailed;
   const now = nowDate();
 
   return db.transaction(async (tx) => {
@@ -316,6 +372,7 @@ export async function commitContactImport(
           seenNitrox,
           template,
           importedByPersonId,
+          shopCurrency: shop?.currency ?? "usd",
         });
         continue;
       }
@@ -403,6 +460,7 @@ export async function commitContactImport(
         seenNitrox,
         template,
         importedByPersonId,
+        shopCurrency: shop?.currency ?? "usd",
       });
     }
 
@@ -438,9 +496,10 @@ async function writeEvidence(
     seenNitrox: Map<string, string>;
     template: Awaited<ReturnType<typeof getCurrentWaiverTemplate>> | null;
     importedByPersonId: string;
+    shopCurrency: string;
   },
 ): Promise<void> {
-  const { row, personId, shopId, now, summary, template, importedByPersonId } = ctx;
+  const { row, personId, shopId, now, summary, template, importedByPersonId, shopCurrency } = ctx;
 
   if (row.visit) {
     // Inert history, not an operational record (ADR 20260725-import-prior-visits):
@@ -472,6 +531,49 @@ async function writeEvidence(
       .returning({ id: priorVisits.id });
     if (inserted.length > 0) summary.visitsAdded += 1;
     else summary.visitsSkippedExisting += 1;
+  }
+
+  if (row.paymentHistory) {
+    // Imported financial evidence can be useful in an aggregate, but only the
+    // pure parser decides whether an amount/currency pair exists. A source row
+    // with an ambiguous amount is still retained and rendered in Orders; its
+    // amountCents stays null, making accidental report inclusion impossible.
+    const normalizedMoney = parseImportedMoney(
+      row.paymentHistory.amountLabel,
+      row.paymentHistory.currencyLabel,
+      shopCurrency,
+    );
+    const inserted = await tx
+      .insert(importedPaymentHistory)
+      .values({
+        shopId,
+        personId,
+        occurredOn: row.paymentHistory.occurredOn,
+        direction: row.paymentHistory.direction,
+        title: row.paymentHistory.title,
+        statusLabel: row.paymentHistory.statusLabel,
+        amountLabel: row.paymentHistory.amountLabel,
+        amountCents: normalizedMoney?.amountCents ?? null,
+        currency: normalizedMoney?.currency ?? null,
+        paymentReference: row.paymentHistory.paymentReference,
+        receiptReference: row.paymentHistory.receiptReference,
+        receiptDocumentUrl: row.paymentHistory.receiptDocumentUrl,
+        sourceLabel: row.paymentHistory.sourceLabel,
+        sourceReference: row.paymentHistory.sourceReference,
+        stripeReference: row.paymentHistory.stripeReference,
+        dedupeKey: row.paymentHistory.dedupeKey,
+        importedAt: now,
+      })
+      .onConflictDoNothing({
+        target: [
+          importedPaymentHistory.shopId,
+          importedPaymentHistory.personId,
+          importedPaymentHistory.dedupeKey,
+        ],
+      })
+      .returning({ id: importedPaymentHistory.id });
+    if (inserted.length > 0) summary.paymentHistoryAdded += 1;
+    else summary.paymentHistorySkippedExisting += 1;
   }
 
   if (hasSize(row)) {
@@ -667,6 +769,33 @@ async function writeEvidence(
         });
         summary.waiversAdded += 1;
       }
+    }
+  }
+
+  if (row.notes && row.notes.trim().length > 0) {
+    const body = row.notes.trim();
+    const existing = await tx
+      .select({ id: internalNotes.id })
+      .from(internalNotes)
+      .where(
+        and(
+          eq(internalNotes.shopId, shopId),
+          eq(internalNotes.personId, personId),
+          isNull(internalNotes.bookingId),
+          eq(internalNotes.body, body),
+        ),
+      )
+      .limit(1);
+    if (existing.length === 0) {
+      await tx.insert(internalNotes).values({
+        shopId,
+        personId,
+        bookingId: null,
+        body,
+        createdByPersonId: importedByPersonId,
+        createdAt: now,
+      });
+      summary.notesAdded += 1;
     }
   }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
@@ -11,6 +11,21 @@ import { readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const repoRoot = process.cwd();
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+
+function linkedVercelOrgId() {
+  const explicitOrgId = process.env.VERCEL_ORG_ID?.trim();
+  if (explicitOrgId) return explicitOrgId;
+
+  try {
+    const project = JSON.parse(readFileSync(join(repoRoot, ".vercel", "project.json"), "utf8"));
+    return typeof project.orgId === "string" ? project.orgId.trim() : "";
+  } catch {
+    // A linked Vercel project is optional on a workstation, and CI supplies
+    // VERCEL_ORG_ID directly. Leave the CLI's existing current-scope behavior
+    // alone when neither source is available.
+    return "";
+  }
+}
 // Never a bare `process.env.CI`: it is a generic convention many local dev
 // tools set (`act`, several test runners, a shell profile left from a past
 // debugging session) -- gating unattended, no-confirmation wizard behavior on
@@ -74,6 +89,7 @@ if (deploy.status !== 0) process.exit(deploy.status ?? 1);
 // ADR 20260811-ci-deploy-full-wizard), so the ambient credentials already
 // assumed for the deploy above are reused as-is rather than swapped out.
 const syncEnvironment = { ...process.env };
+syncEnvironment.VERCEL_ORG_ID ||= linkedVercelOrgId();
 const syncProfile = process.env.INFRA_ENV_SYNC_PROFILE?.trim() || "diveday-admin";
 if (!isCiDeploy) {
   syncEnvironment.AWS_PROFILE = syncProfile;
@@ -148,9 +164,21 @@ function distribute(target, outputPath, source) {
   });
 }
 
-// Make sure the one hand-edited file exists before anything reads it, and carry
-// a pre-split `.env.local`'s manual values into it so nobody re-pastes a Stripe
-// key. Safe to run every time: it never overwrites a value.
+// Validate the registry/example relationship and the one human-edited source
+// before changing it, writing any target file, or offering a provider upload.
+// Blank manual values are a supported state; structural drift and
+// unknown/trespassing keys are not, and must be fixed before the handoff can
+// begin. Running this before env-manual matters: env-manual may regenerate its
+// scaffolding and would otherwise hide an invalid old line before the checker
+// sees it.
+readBounded(process.execPath, [join(scriptDirectory, "check-env.mjs")], {
+  stdio: "inherit",
+  timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
+});
+
+// Make sure the one hand-edited file exists before anything else reads it, and
+// carry a pre-split `.env.local`'s manual values into it so nobody re-pastes a
+// Stripe key. Safe to run every time: it never overwrites a value.
 readBounded(process.execPath, [join(scriptDirectory, "env-manual.mjs")], {
   stdio: "inherit",
   timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,

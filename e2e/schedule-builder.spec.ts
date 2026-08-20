@@ -68,7 +68,7 @@ test.describe("schedule builder", () => {
     // design/principles.md #9); the unit suite covers the per-row pill for a
     // mixed board. Either way, adding the price box did not quietly retire
     // the flag.
-    await expect(page.getByText(/None of these departures has a price yet/)).toBeVisible();
+    await expect(row.getByText("No price set")).toBeVisible();
 
     // Move — the departure slides to another day, keeping its length.
     await chooseRowAction(page, "Move", title);
@@ -248,6 +248,33 @@ test.describe("schedule builder", () => {
         `a pinned day header floats below the shop nav at ${width}px (${measured.clearance}px of dead space) — the sticky offset in ScheduleBuilder is larger than the nav`,
       ).toBeLessThanOrEqual(4);
     }
+  });
+
+  test("staff add a private charter, and verify its private charter badge in schedule and details", async ({
+    page,
+  }) => {
+    const title = `Private Charter ${e2eNow().getTime()}`;
+    const addDay = daysFromNow(2);
+
+    await page.goto(BOARD);
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(addDay);
+    await page.getByLabel("Departs").fill("10:00");
+    await page.getByLabel("Returns").fill("14:00");
+    await page.getByLabel("Seats").fill("12");
+
+    // Expand the form to access "More options" and check "Private charter"
+    await page.getByRole("button", { name: /More options/i }).click();
+    await page.locator("input[name='isPrivate']").check();
+
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+    // Private charters are intentionally hidden from the public schedule.
+    await page.goto(`/s/${SHOP}`);
+    const tripCard = page.getByRole("listitem").filter({ hasText: title });
+    await expect(tripCard).toHaveCount(0);
   });
 });
 

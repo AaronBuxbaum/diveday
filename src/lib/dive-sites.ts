@@ -177,9 +177,12 @@ export function parseDiveSiteForm(
   const parsed = diveSiteFormSchema.safeParse(entries);
   if (!parsed.success) return { ok: false, error: "invalid" };
   const { forecastLatitude, forecastLongitude, maxDepth } = parsed.data;
-  // Both or neither: a forecast needs a point, and half a point is a silent
-  // no-forecast rather than the site the staffer thought they had saved.
-  if ((forecastLatitude === "") !== (forecastLongitude === "")) {
+  // A site may be saved before its GPS location is known, but a partial pair
+  // is never meaningful and is refused until both coordinates are present.
+  if (
+    (forecastLatitude === "" && forecastLongitude !== "") ||
+    (forecastLatitude !== "" && forecastLongitude === "")
+  ) {
     return { ok: false, error: "coordinatesIncomplete" };
   }
   const maxDepthMeters = maxDepth === "" ? null : depthToMeters(maxDepth, depthUnit);
@@ -191,8 +194,7 @@ export function parseDiveSiteForm(
   // rather than refusing the save: the staffer's edit (clearing the
   // coordinates) is the deliberate act, and it is the route that has stopped
   // meaning anything, not the submission.
-  const hasCoordinates = forecastLatitude !== "" && forecastLongitude !== "";
-  const routePoints = hasCoordinates ? parseRoutePoints(parsed.data.routePoints) : [];
+  const routePoints = parseRoutePoints(parsed.data.routePoints);
   return {
     ok: true,
     fields: parsed.data,

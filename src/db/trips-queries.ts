@@ -94,7 +94,13 @@ export async function upcomingTripsWithCounts(
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
-    .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+      ),
+    )
     .groupBy(trips.id, courses.id, diveSites.id)
     .orderBy(asc(trips.startsAt));
 
@@ -126,7 +132,7 @@ export async function listTripIdsInOfflineManifestWindow(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.endsAt, now),
+        gte(trips.endsAt, new Date(now.getTime() - 60 * 60 * 1000)),
         lte(trips.startsAt, until),
       ),
     )
@@ -157,11 +163,13 @@ function upcomingTripScope(
     from: Date;
     monthEnd?: Date;
     tripType?: "fun_dive" | "course";
+    publicOnly?: boolean;
   },
 ) {
   return and(
     eq(trips.shopId, shopId),
     eq(trips.status, "scheduled"),
+    bounds.publicOnly ? eq(trips.isPrivate, false) : undefined,
     gte(trips.startsAt, bounds.from),
     bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,
     bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
@@ -206,13 +214,17 @@ export async function pagedUpcomingTripsWithCounts(
     hasSpace?: boolean;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
+    /** Hide private charters/sessions (e.g. for public storefront schedule). */
+    publicOnly?: boolean;
   } = {},
 ): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
   const now = options.now ?? nowDate();
   const limit = options.limit ?? SCHEDULE_PAGE_SIZE;
   const after = decodeCursor(options.cursor);
   const afterDate = after ? new Date(after[0]) : null;
-  const lowerBound = options.monthStart && options.monthStart > now ? options.monthStart : now;
+  const nowWithBuffer = new Date(now.getTime() - 60 * 60 * 1000);
+  const lowerBound =
+    options.monthStart && options.monthStart > nowWithBuffer ? options.monthStart : nowWithBuffer;
 
   const rows = await db
     .select({
@@ -231,6 +243,7 @@ export async function pagedUpcomingTripsWithCounts(
           from: lowerBound,
           monthEnd: options.monthEnd,
           tripType: options.tripType,
+          publicOnly: options.publicOnly,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(
@@ -468,7 +481,13 @@ export async function upcomingScheduleStats(
     })
     .from(trips)
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
-    .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+      ),
+    )
     .groupBy(trips.id)
     .as("per_trip");
 
@@ -499,6 +518,7 @@ export async function upcomingScheduleRange(
   db: AppDb,
   shopId: string,
   now: Date = nowDate(),
+  options: { publicOnly?: boolean } = {},
 ): Promise<{ first: Date | null; last: Date | null }> {
   const [range] = await db
     .select({
@@ -506,7 +526,14 @@ export async function upcomingScheduleRange(
       last: sql<string | null>`max(${trips.startsAt})`,
     })
     .from(trips)
-    .where(and(eq(trips.shopId, shopId), eq(trips.status, "scheduled"), gte(trips.startsAt, now)));
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        options.publicOnly ? eq(trips.isPrivate, false) : undefined,
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+      ),
+    );
   return {
     first: range?.first ? new Date(range.first) : null,
     last: range?.last ? new Date(range.last) : null,
@@ -560,7 +587,7 @@ export async function upcomingStaffSchedule(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.endsAt, now),
+        gte(trips.endsAt, new Date(now.getTime() - 60 * 60 * 1000)),
         lt(tripScheduleDays.startsAt, monthEndUtc),
         gt(tripScheduleDays.endsAt, monthStartUtc),
       ),
@@ -634,7 +661,8 @@ export async function listUpcomingSessionsForCourse(
         eq(trips.shopId, shopId),
         eq(trips.courseId, courseId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, now),
+        eq(trips.isPrivate, false),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     )
     .groupBy(trips.id)

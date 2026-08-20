@@ -14,9 +14,10 @@ export const ALLOWED_IMAGE_CONTENT_TYPES = [
 ] as const;
 
 /**
- * PDFs are accepted for one narrow, staff-only case: a contact-import waiver or
- * medical document scan (`storeImportWaiverDocument`, ADR
- * 20260724-import-verified-cards). They are deliberately NOT in
+ * PDFs are accepted for a narrow, staff-only contact-import case: waiver,
+ * medical, or receipt evidence (`storeImportWaiverDocument` /
+ * `storeImportReceiptDocument`, ADR 20260724-import-verified-cards and
+ * 20260816-imported-payment-history-is-evidence). They are deliberately NOT in
  * `ALLOWED_IMAGE_CONTENT_TYPES` — card, course, recap, and dive-site photos
  * stay image-only, since those are decoded, re-encoded, and rendered inline. An
  * import document is stored as-is (never rendered from its raw bytes), so it

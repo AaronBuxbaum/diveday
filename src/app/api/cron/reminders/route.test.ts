@@ -8,7 +8,6 @@ vi.mock("@/db/checkout-recovery", () => ({ sendDueCheckoutRecoveries: vi.fn() })
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("@/db/processor-erasure", () => ({ retryPendingProcessorErasures: vi.fn() }));
-vi.mock("@/db/recap", () => ({ sendDueRecaps: vi.fn() }));
 vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
 vi.mock("@/db/seed", () => ({ reapExpiredDemoShops: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({
@@ -21,7 +20,6 @@ const { sendDueCheckoutRecoveries } = await import("@/db/checkout-recovery");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
 const { retryPendingProcessorErasures } = await import("@/db/processor-erasure");
-const { sendDueRecaps } = await import("@/db/recap");
 const { sendDueReminders } = await import("@/db/reminders");
 const { reapExpiredDemoShops } = await import("@/db/seed");
 const Sentry = await import("@sentry/nextjs");
@@ -56,9 +54,6 @@ beforeEach(() => {
   vi.mocked(sendDueReminders)
     .mockReset()
     .mockResolvedValue({ scanned: 2, sent: 2, skipped: 0, failed: 0 });
-  vi.mocked(sendDueRecaps)
-    .mockReset()
-    .mockResolvedValue({ scanned: 3, sent: 3, skipped: 0, failed: 0, optedOut: 0 });
   vi.mocked(sendDueCheckoutRecoveries).mockReset().mockResolvedValue({
     scanned: 4,
     sent: 4,
@@ -133,8 +128,6 @@ describe("GET /api/cron/reminders — structured logging", () => {
         notificationRetriesSent: 1,
         remindersScanned: 2,
         remindersSent: 2,
-        recapsScanned: 3,
-        recapsSent: 3,
         checkoutRecoveriesScanned: 4,
         checkoutRecoveriesSent: 4,
         mediaDeletionsAttempted: 5,
@@ -165,14 +158,13 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
 
     expect(response).toBeDefined();
     expect(sendDueReminders).toHaveBeenCalledTimes(1);
-    expect(sendDueRecaps).toHaveBeenCalledTimes(1);
     expect(sendDueCheckoutRecoveries).toHaveBeenCalledTimes(1);
     expect(retryPendingMediaDeletions).toHaveBeenCalledTimes(1);
     expect(reapExpiredDemoShops).toHaveBeenCalledTimes(1);
   });
 
   it("still emits the summary line — and its counts — when a scan throws", async () => {
-    vi.mocked(sendDueRecaps).mockRejectedValue(new Error("boom"));
+    vi.mocked(sendDueCheckoutRecoveries).mockRejectedValue(new Error("boom"));
 
     await GET(cronRequest(`Bearer ${secret}`));
 
@@ -181,15 +173,15 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
       expect.objectContaining({
         event: "cron_reminders.scan_complete",
         scansFailed: 1,
-        failedScans: "recaps",
+        failedScans: "checkoutRecoveries",
         remindersSent: 2,
         demoShopsDeleted: 6,
       }),
     );
     // No counts at all for the scan that threw, so "nothing was due" and "this
     // never ran" can never be read as the same thing.
-    expect(line).not.toHaveProperty("recapsScanned");
-    expect(line).not.toHaveProperty("recapsSent");
+    expect(line).not.toHaveProperty("checkoutRecoveriesScanned");
+    expect(line).not.toHaveProperty("checkoutRecoveriesSent");
   });
 
   it("answers with a body that distinguishes a scan that ran from one that threw", async () => {
@@ -263,7 +255,7 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response.status).toBe(500);
-    expect(sendDueRecaps).toHaveBeenCalledTimes(1);
+    expect(sendDueCheckoutRecoveries).toHaveBeenCalledTimes(1);
     expect(summaryLine()).toEqual(
       expect.objectContaining({ scansFailed: 2, failedScans: "notificationRetries,demoShops" }),
     );
@@ -302,7 +294,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
   });
 
   it("closes the check-in as error when any scan threw", async () => {
-    vi.mocked(sendDueRecaps).mockRejectedValue(new Error("boom"));
+    vi.mocked(sendDueCheckoutRecoveries).mockRejectedValue(new Error("boom"));
 
     await GET(cronRequest(`Bearer ${secret}`));
 

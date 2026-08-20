@@ -7,6 +7,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManageStaffAccounts } from "@/db/authz";
@@ -126,7 +127,7 @@ export default async function StaffingPage({
         </div>
       ) : null}
 
-      <section className="mt-8 rounded-2xl border border-border bg-surface p-5">
+      <SectionCard as="div" padding="lg" className="mt-8">
         {/* `QueryForm`, not a native GET form: moving the window is a filter
             over this page, and a document reload dropped the manager back at
             the top of it every time. */}
@@ -145,7 +146,7 @@ export default async function StaffingPage({
             </FieldActions>
           </FieldGrid>
         </QueryForm>
-      </section>
+      </SectionCard>
 
       {/* One line about crewing, not a table of it. Which departures still
           need people is Today's question — it is the surface that can answer
@@ -157,6 +158,8 @@ export default async function StaffingPage({
           quiet lines — a bordered box around good news is a border the page
           has not earned. */}
       {view.crewGaps.needCrew > 0 ? (
+        // This is an operational warning panel, not a neutral section: the
+        // warning tone tells the manager that a departure still needs crew.
         <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4">
           {/* 16px, not 14: this is the page's one operational message, and the
               dock test (design principle 2) sets the floor for the text a
@@ -214,10 +217,7 @@ export default async function StaffingPage({
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {view.staff.map((member) => (
-              <article
-                key={member.person.id}
-                className="rounded-xl border border-border bg-surface p-4"
-              >
+              <SectionCard as="article" key={member.person.id}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="font-semibold">{member.person.fullName}</h3>
@@ -292,7 +292,7 @@ export default async function StaffingPage({
                     </ul>
                   )}
                 </div>
-              </article>
+              </SectionCard>
             ))}
           </div>
         )}
@@ -304,15 +304,13 @@ export default async function StaffingPage({
           primary ("Invite your crew"), two first-choice buttons for one
           decision. The empty state is the whole answer until there is a team. */}
       {canManage && staff.length > 0 ? (
-        <section
-          className="mt-8 rounded-2xl border border-border bg-surface p-5"
-          aria-labelledby="add-shift-heading"
+        <SectionCard
+          className="mt-8"
+          padding="lg"
+          title={t("staffing.addShift.heading")}
+          description={t("staffing.addShift.detail")}
         >
-          <h2 id="add-shift-heading" className="text-lg font-semibold">
-            {t("staffing.addShift.heading")}
-          </h2>
-          <p className="mt-1 text-sm text-muted">{t("staffing.addShift.detail")}</p>
-          <FieldGrid as="form" action={createShiftAction} columns={2} className="mt-4">
+          <FieldGrid as="form" action={createShiftAction} columns={2}>
             <Field label={t("staffing.addShift.person")}>
               <select name="personId" required className={controlClass}>
                 <option value="">{t("staffing.addShift.choosePerson")}</option>
@@ -367,7 +365,7 @@ export default async function StaffingPage({
               </FormStatus>
             </FieldActions>
           </FieldGrid>
-        </section>
+        </SectionCard>
       ) : null}
     </main>
   );

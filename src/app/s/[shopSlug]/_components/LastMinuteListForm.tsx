@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
-import { DiveDeclarationFields } from "@/components/DiveDeclarationFields";
+import { DiveCertificationField } from "@/components/DiveDeclarationFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -76,12 +76,7 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
               className={controlClass}
             />
           </Field>
-          {/* Keeps the two date fields together on their own row. It must span
-              the same two subgrid rows a `Field` does — a one-row spacer knocks
-              every later field half a row out of step, which is what turned
-              this grid into a staircase — and it only exists in the two-column
-              layout, or it would add a blank gap on a phone. */}
-          <div aria-hidden="true" className="hidden sm:block sm:row-span-2" />
+          <DiveCertificationField />
           <Field label={t("lastMinute.availableFrom")} hint={t("common.optional")}>
             <input name="availableFrom" type="date" className={controlClass} />
           </Field>
@@ -89,10 +84,6 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
             <input name="availableUntil" type="date" className={controlClass} />
           </Field>
         </FieldGrid>
-        {/* What the diver can dive, so the shop never mails them a deal on a
-            boat they could not board (FU-20260813). Optional, and the answer
-            informs a staffer rather than filtering anything. */}
-        <DiveDeclarationFields />
         <div className="flex flex-wrap items-center gap-3">
           <SubmitButton
             pendingLabel={t("lastMinute.submitting")}

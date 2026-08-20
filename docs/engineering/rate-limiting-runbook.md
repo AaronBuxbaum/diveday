@@ -26,6 +26,7 @@ cannot see it.
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
 | Password-reset request | `src/app/forgot-password/actions.ts` | IP **and** requested email, checked concurrently | `RATE_LIMITS.passwordResetRequestByIp` (5/hour) + `RATE_LIMITS.passwordResetRequestByEmail` (3/15min) |
 | Account-token actions (verify, reset submit, invite accept, unsubscribe confirm) | `src/app/verify/[token]/actions.ts`, `reset-password/[token]/actions.ts`, `invite/[token]/actions.ts`, `unsubscribe/[token]/actions.ts` | IP, checked before the token is looked up | `RATE_LIMITS.accountTokenAction` (20/hour) |
+| RFC 8058 one-click unsubscribe | `src/app/unsubscribe/[token]/one-click/route.ts` | capability token, checked before the token is looked up | `RATE_LIMITS.oneClickUnsubscribe` (10/hour) |
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
 | Post-trip tip checkout | same file, `startTipAction` | IP **and** booking | `RATE_LIMITS.tipStart` (10/hour), spent on both dimensions |
 | Review submit / revise | same file, `submitReviewAction` | IP **and** booking | `RATE_LIMITS.reviewSubmitByIp` (30/hour) + `RATE_LIMITS.reviewSubmitByToken` (10/hour) |

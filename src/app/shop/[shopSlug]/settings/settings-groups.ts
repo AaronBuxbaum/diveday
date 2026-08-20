@@ -2,10 +2,9 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 
 /**
  * The settings hub's one list of groups, in render order. Both of the hub's
- * consumers derive from it — `SettingsPage.tsx`'s `SettingsGroup` sections and
- * `_components/SettingsGroupAnchors.tsx`'s jump row — so the page can never
- * render a section the anchor row has no name for, and the pair of tests that
- * read this list fails if either side forgets a group that is added here.
+ * `SettingsPage.tsx` renders its sections from this one list. It remains a
+ * registry rather than three local constants so a new section cannot drift
+ * from the hub's section order or its test coverage.
  *
  * It used to carry a second list, `SETTINGS_DESTINATIONS`: the six full-page
  * settings surfaces, which a sub-nav card rendered as grouped pills above

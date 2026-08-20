@@ -3,7 +3,12 @@ import { nowDate } from "@/lib/clock";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
-import { type CardSighting, type CertificationReviewRefusal, reviewNoteFor } from "./readiness";
+import {
+  activeCertificationReviewerId,
+  type CardSighting,
+  type CertificationReviewRefusal,
+  reviewNoteFor,
+} from "./readiness";
 import { bookings, type CertificationAgency, nitroxCertifications, people, shops } from "./schema";
 
 export type NewNitroxCertification = {
@@ -61,6 +66,8 @@ export async function reviewNitroxCertification(
     certificationId: string;
     status: "verified";
     reviewNote?: string;
+    /** The active staffer who made this certification decision, if this is a live review. */
+    reviewedByPersonId?: string;
     /** Required for, and only meaningful on, a still-unsighted self-declaration. */
     sighting?: CardSighting;
   },
@@ -68,6 +75,12 @@ export async function reviewNitroxCertification(
   | { ok: true; certification: typeof nitroxCertifications.$inferSelect }
   | { ok: false; reason: CertificationReviewRefusal }
 > {
+  const reviewedByPersonId = input.reviewedByPersonId
+    ? await activeCertificationReviewerId(db, input.shopId, input.reviewedByPersonId)
+    : null;
+  if (input.reviewedByPersonId && !reviewedByPersonId) {
+    return { ok: false, reason: "staff_not_found" };
+  }
   const [existing] = await db
     .select({
       id: nitroxCertifications.id,
@@ -97,6 +110,7 @@ export async function reviewNitroxCertification(
         status: input.status,
         reviewNote: reviewNoteFor(input.reviewNote),
         reviewedAt: nowDate(),
+        ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
         ...(sighting
           ? { agency: sighting.agency, identifier: sighting.identifier.trim() }
           : undefined),
@@ -127,11 +141,14 @@ export async function reviewNitroxCertification(
  */
 export async function archiveNitroxCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; deletedByPersonId?: string },
 ) {
   const [row] = await db
     .update(nitroxCertifications)
-    .set({ deletedAt: nowDate() })
+    .set({
+      deletedAt: nowDate(),
+      ...(input.deletedByPersonId ? { deletedByPersonId: input.deletedByPersonId } : {}),
+    })
     .where(
       and(
         eq(nitroxCertifications.id, input.certificationId),
@@ -177,7 +194,7 @@ export async function restoreNitroxCertification(
   if (conflict) return false;
   const [row] = await db
     .update(nitroxCertifications)
-    .set({ deletedAt: null })
+    .set({ deletedAt: null, deletedByPersonId: null })
     .where(
       and(
         eq(nitroxCertifications.id, input.certificationId),

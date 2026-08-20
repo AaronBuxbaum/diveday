@@ -9,8 +9,9 @@ import { DiveDeclarationFields } from "./DiveDeclarationFields";
 afterEach(cleanup);
 
 /**
- * **The one question a stranger is asked about their own diving**, on both
- * public opt-in forms (ADR 20260814-self-declared-cards).
+ * **The one level question a stranger is asked about their own diving**, on
+ * both public opt-in forms (ADR 20260814-self-declared-cards). The nitrox
+ * declaration belongs only to the trip-specific wait list.
  *
  * The interesting behaviour is the contradiction it refuses to collect: a
  * joiner who says they hold no card and also ticks "I'm certified for nitrox"
@@ -19,12 +20,12 @@ afterEach(cleanup);
  * they told the shop about an enriched-air card — the same broken promise as
  * asking a question and discarding the answer.
  */
-function renderFields() {
+function renderFields(props: { showNitrox?: boolean } = {}) {
   return render(
     // The same two namespaces the public forms mount it under: `common` for the
     // question, `course` for the level words it shares with the course pages.
     <DiverIntlProvider locale="en-US" timeZone="America/New_York" namespaces={["common", "course"]}>
-      <DiveDeclarationFields />
+      <DiveDeclarationFields {...props} />
     </DiverIntlProvider>,
   );
 }
@@ -40,6 +41,24 @@ describe("DiveDeclarationFields", () => {
     // so the whole select reads in one direction.
     expect(options.slice(0, 3)).toEqual(["", NO_CERTIFICATION_ANSWER, "open_water"]);
     expect(options).toHaveLength(7);
+  });
+
+  it("keeps the level explanation in an accessible info hoverover", () => {
+    renderFields();
+
+    expect(
+      screen.getByRole("button", { name: "Why we ask about certification" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Helps the shop pick which trips to tell you about/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Nothing here is checked/)).toBeInTheDocument();
+  });
+
+  it("can omit nitrox from the broad deal-list form", () => {
+    renderFields({ showNitrox: false });
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
   it("clears and disables the nitrox tick when the diver says they hold no card", async () => {

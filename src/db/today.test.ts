@@ -356,6 +356,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -383,6 +384,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       fullName: "Nora Quinn",
       email: "nora@example.com",
       availableFrom: nextYear,
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -407,6 +409,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
     const sent = await sendLastMinuteDealBlast(
       db,
@@ -453,7 +456,7 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
-    expect(nitroxAction?.detail).toContain("without a verified card");
+    expect(nitroxAction?.detail).toContain("without verified certification");
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {

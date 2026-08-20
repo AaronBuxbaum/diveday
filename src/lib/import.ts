@@ -57,7 +57,13 @@
  *     it is declined — a visit with no date can't be placed on a timeline, and
  *     no date is invented. The source's status word and money text are carried
  *     verbatim and un-mapped, because a booking is not a dive and the amount is
- *     display-only. Nothing here feeds a gate, capacity, or reporting.
+ *     display-only. Nothing here feeds a gate or capacity.
+ *   - A source payment/refund or receipt becomes separate, **unverified
+ *     imported payment history** (ADR 20260816-imported-payment-history-is-evidence).
+ *     It never creates an order, a Stripe charge, a booking payment, or a
+ *     payment credential. Only a source amount with a clear supported currency
+ *     can contribute to the import-labelled financial aggregate; the raw label
+ *     and all ambiguous rows remain visible in Orders without changing totals.
  *
  * The published honesty table (IMPORT_HONESTY_TABLE) states the same scope in
  * the shop owner's language; keep the two in step.
@@ -78,6 +84,7 @@
 import { type CertificationAgency, certificationAgency, type DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
+import { currencyMinorUnits, isShopCurrency } from "./money";
 
 /**
  * Sized for the largest file the switching guides actually ask an owner to
@@ -163,6 +170,19 @@ export const IMPORT_FIELDS = [
   "waiver_source_name",
   "waiver_document_url",
   "medical_document_url",
+  // Financial history comes before the generic prior-visit columns. Mapping is
+  // first-match-wins, so a specific transaction/receipt export gets to claim
+  // its own columns before a booking-history fallback sees them. We
+  // intentionally do not map card number, CVC, PAN, or payment-method columns.
+  "payment_date",
+  "payment_status",
+  "payment_amount",
+  "payment_currency",
+  "payment_direction",
+  "payment_reference",
+  "receipt_reference",
+  "receipt_document_url",
+  "stripe_reference",
   // Prior-visit columns, last on purpose: their aliases are the most generic in
   // the file ("date", "amount", "description"), and field claiming is
   // first-match-wins in this order, so every specific field gets its pick first.
@@ -171,6 +191,7 @@ export const IMPORT_FIELDS = [
   "visit_status",
   "visit_amount",
   "visit_reference",
+  "internal_notes",
 ] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -240,7 +261,6 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "cert_no",
     "diver_number",
     "c_card_number",
-    "card_number",
     "certification_id",
     "certification_identifier",
     "certification_card_number",
@@ -343,6 +363,55 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "medical_scan_url",
     "medical_form_url",
   ],
+  payment_date: [
+    "payment_date",
+    "paid_at",
+    "paid_date",
+    "transaction_date",
+    "charge_date",
+    "refund_date",
+    "receipt_date",
+  ],
+  payment_status: [
+    "payment_status",
+    "transaction_status",
+    "charge_status",
+    "refund_status",
+    "payment_state",
+  ],
+  payment_amount: [
+    "payment_amount",
+    "amount_paid",
+    "total_paid",
+    "paid_amount",
+    "refund_amount",
+    "refunded_amount",
+    "transaction_amount",
+    "charge_amount",
+  ],
+  payment_currency: ["payment_currency", "transaction_currency", "currency_code", "currency"],
+  payment_direction: ["payment_direction", "transaction_type", "transaction_direction"],
+  payment_reference: [
+    "payment_reference",
+    "payment_id",
+    "transaction_id",
+    "transaction_reference",
+    "charge_reference",
+  ],
+  receipt_reference: ["receipt_reference", "receipt_id", "receipt_number", "receipt_no"],
+  receipt_document_url: [
+    "receipt_document_url",
+    "receipt_url",
+    "receipt_pdf_url",
+    "receipt_file_url",
+    "invoice_pdf_url",
+  ],
+  stripe_reference: [
+    "stripe_reference",
+    "stripe_invoice_id",
+    "stripe_payment_intent_id",
+    "stripe_charge_id",
+  ],
   // The bookings/orders exports the switching guides walk an owner through:
   // FareHarbor's Bookings and Contacts reports, Rezdy's Sales/Orders report and
   // Data export, EVE and DiveShop360 sales history, and a shop's own spreadsheet.
@@ -389,9 +458,7 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
   visit_amount: [
     "visit_amount",
     "amount",
-    "amount_paid",
     "total",
-    "total_paid",
     "total_amount",
     "order_total",
     "booking_total",
@@ -412,7 +479,27 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "confirmation_number",
     "confirmation_code",
     "reference",
-    "transaction_id",
+  ],
+  internal_notes: [
+    "internal_notes",
+    "internal_note",
+    "notes",
+    "note",
+    "staff_notes",
+    "staff_note",
+    "customer_notes",
+    "customer_note",
+    "admin_notes",
+    "admin_note",
+    "diver_notes",
+    "diver_note",
+    "comments",
+    "comment",
+    "remarks",
+    "remark",
+    "general_notes",
+    "memo",
+    "memos",
   ],
 };
 
@@ -423,6 +510,21 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
  */
 const MEDICAL_HEADER_PATTERN =
   /medical|health|rstc|allerg|physician|doctor|condition|diagnos|medication|liability|indemnif/i;
+
+/**
+ * A source may call a certification identifier a "card number", but that
+ * exact generic header is indistinguishable from a PAN. Refuse the ambiguous
+ * aliases at the mapping boundary instead of relying on every future alias
+ * list to remember the payment-data rule. Explicit certification-prefixed
+ * headers (and known `c_card_number`) remain safe certification evidence.
+ */
+const SENSITIVE_PAYMENT_HEADER_PATTERN =
+  /^(?:card_number|card_no|pan|primary_account_number|cvc|cvv|security_code|payment_method(?:_id)?|(?:stripe_)?payment_method_id|payment_token|card_token|card_on_file_token)$/;
+
+// `amount_cents` is a PostgreSQL `integer`. Parsing a value that JavaScript
+// can represent but Postgres cannot would turn one hostile source cell into a
+// failed import transaction, so leave that amount visible-but-unaggregated.
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
 
 /**
  * Row identity for the published scope table below — the stable code each
@@ -444,7 +546,9 @@ export type ImportScopeRowId =
   | "role"
   | "cardOnFile"
   | "pastVisits"
-  | "receiptsService";
+  | "paymentHistory"
+  | "serviceHistory"
+  | "diverNotes";
 
 /**
  * Published scope table — what the importer takes. The words live in the
@@ -477,7 +581,9 @@ export const IMPORT_HONESTY_TABLE: {
   { id: "role", scope: "included" },
   { id: "cardOnFile", scope: "stays-behind" },
   { id: "pastVisits", scope: "included" },
-  { id: "receiptsService", scope: "stays-behind" },
+  { id: "paymentHistory", scope: "included" },
+  { id: "serviceHistory", scope: "stays-behind" },
+  { id: "diverNotes", scope: "included" },
 ];
 
 /** Normalize a header for alias lookup: lower, trim, punctuation/space → single "_". */
@@ -583,6 +689,8 @@ export type ImportIssueCode =
   | "visit_date_unreadable"
   | "visit_no_reference"
   | "visit_no_date"
+  | "payment_history_date_unreadable"
+  | "payment_history_no_date"
   | "no_name"
   | "merged_duplicate"
   | "no_email_new_record";
@@ -702,6 +810,197 @@ export type PreparedVisit = {
 };
 
 /**
+ * A source-system payment, refund, or receipt. Unlike `PreparedVisit`, this
+ * can reach the financial aggregate when (and only when) its amount can be
+ * read with a supported currency and its source wording gives it a direction.
+ * It still remains an unverified source row, never a local order or Stripe
+ * payment.
+ */
+export type PreparedImportedPaymentHistory = {
+  /** Validated calendar date, shop-local. */
+  occurredOn: CalendarDate;
+  /** A conservative source-derived direction, not a DiveDay payment status. */
+  direction: "payment" | "refund" | "unknown";
+  title: string | null;
+  statusLabel: string | null;
+  /** Raw money text; may be null for a receipt-only row. */
+  amountLabel: string | null;
+  /** Raw source currency text, if a dedicated column carried it. */
+  currencyLabel: string | null;
+  paymentReference: string | null;
+  receiptReference: string | null;
+  /** Raw URL until the server-side commit re-stores it or drops it. */
+  receiptDocumentUrl: string | null;
+  sourceLabel: string | null;
+  sourceReference: string | null;
+  /** A source-exported Stripe object id; never treated as verified on import. */
+  stripeReference: string | null;
+  dedupeKey: string;
+};
+
+/**
+ * The narrow directions we can infer from a source's own transaction wording.
+ * A cancellation, booking, or price alone is deliberately `unknown`: it may
+ * be a reservation that never settled. A negative amount is a refund signal,
+ * but we still preserve its source label and unverified marker everywhere.
+ */
+export function importedPaymentDirection(input: {
+  directionLabel: string | null;
+  statusLabel: string | null;
+  amountLabel: string | null;
+}): PreparedImportedPaymentHistory["direction"] {
+  const directionLabel = input.directionLabel ?? "";
+  // A dedicated direction column is the one place a source can plainly say
+  // "payment" without also saying whether it succeeded. Treat that narrow
+  // vocabulary as authoritative, but do not let a status such as "payment
+  // failed" become money merely because it contains the word payment.
+  if (/\b(refund(?:ed)?|reversal|reversed|chargeback|returned)\b/i.test(directionLabel)) {
+    return "refund";
+  }
+  if (/\b(payment|charge(?:d)?|sale|purchase)\b/i.test(directionLabel)) {
+    return "payment";
+  }
+  const labels = [input.statusLabel].filter((value): value is string => Boolean(value));
+  if (
+    labels.some((value) =>
+      /\b(refund(?:ed)?|reversal|reversed|chargeback|returned)\b/i.test(value),
+    ) ||
+    (input.amountLabel && /^\s*(?:-|\()/.test(input.amountLabel))
+  ) {
+    return "refund";
+  }
+  if (labels.some((value) => /\b(paid|complete(?:d)?|captured|settled|succeeded)\b/i.test(value))) {
+    return "payment";
+  }
+  return "unknown";
+}
+
+/**
+ * Parse a source amount *only* when its currency is unambiguous enough to
+ * name. The raw label stays on the record either way. A dollar glyph takes the
+ * shop's configured dollar currency, because that is the only context we have
+ * for an otherwise ambiguous `$`; a non-dollar shop does not get a guessed
+ * currency. Currency codes and the non-dollar symbols below identify themselves
+ * and can be stored even when they later remain outside this shop's aggregate.
+ */
+export function parseImportedMoney(
+  amountLabel: string | null,
+  currencyLabel: string | null,
+  shopCurrency: string,
+): { amountCents: number; currency: string } | null {
+  if (!amountLabel) return null;
+  const explicitCurrency = currencyLabel?.trim().toLowerCase();
+  const codeInAmount = amountLabel.match(/\b([a-z]{3})\b/i)?.[1]?.toLowerCase();
+  const dollarCurrencies = new Set(["usd", "cad", "aud", "nzd", "sgd"]);
+  const prefixedDollar = amountLabel.match(/\b(us|ca|au|nz|sg)\$/i)?.[1]?.toLowerCase();
+  const prefixedDollarCurrency =
+    prefixedDollar === "us"
+      ? "usd"
+      : prefixedDollar === "ca"
+        ? "cad"
+        : prefixedDollar === "au"
+          ? "aud"
+          : prefixedDollar === "nz"
+            ? "nzd"
+            : prefixedDollar === "sg"
+              ? "sgd"
+              : null;
+  const labelledCurrency =
+    explicitCurrency && isShopCurrency(explicitCurrency) ? explicitCurrency : null;
+  const codeCurrency = codeInAmount && isShopCurrency(codeInAmount) ? codeInAmount : null;
+  const symbolCurrency = amountLabel.includes("€")
+    ? "eur"
+    : amountLabel.includes("£")
+      ? "gbp"
+      : amountLabel.includes("¥")
+        ? "jpy"
+        : null;
+  const namedInAmount = prefixedDollarCurrency ?? codeCurrency ?? symbolCurrency;
+
+  // A dedicated currency field is useful only when it agrees with the source
+  // amount's own unambiguous notation. `EUR` beside `US$165` is not a value we
+  // can responsibly add to a shop total; keep the raw label on the source row
+  // but leave its numeric fields null. A bare dollar remains contextual, but
+  // never gets to masquerade as a non-dollar currency.
+  if (labelledCurrency && namedInAmount && labelledCurrency !== namedInAmount) return null;
+  if (codeCurrency && symbolCurrency && codeCurrency !== symbolCurrency) return null;
+  if (
+    labelledCurrency &&
+    amountLabel.includes("$") &&
+    !prefixedDollarCurrency &&
+    !dollarCurrencies.has(labelledCurrency)
+  ) {
+    return null;
+  }
+
+  const currency =
+    labelledCurrency ??
+    namedInAmount ??
+    (amountLabel.includes("$") && dollarCurrencies.has(shopCurrency.toLowerCase())
+      ? shopCurrency.toLowerCase()
+      : null);
+  if (!currency || !isShopCurrency(currency)) return null;
+
+  let numeric = amountLabel
+    .replace(/\b[a-z]{3}\b/gi, "")
+    // A few exports write US$ / CA$ rather than a bare glyph. Currency still
+    // comes from the glyph plus shop context above; this just leaves a number
+    // for the conservative numeric parser rather than an unexplained "US".
+    .replace(/\b(?:us|ca|au|nz|sg)\$/gi, "")
+    .replace(/[€£¥$]/g, "")
+    .replace(/\s/g, "");
+  if (/^\(.*\)$/.test(numeric)) numeric = numeric.slice(1, -1);
+  numeric = numeric.replace(/^[+-]/, "");
+  if (!/^\d[\d.,]*$/.test(numeric)) return null;
+
+  const fractionDigits = Math.round(Math.log10(currencyMinorUnits(currency)));
+  const lastDot = numeric.lastIndexOf(".");
+  const lastComma = numeric.lastIndexOf(",");
+  const decimalAt =
+    lastDot >= 0 && lastComma >= 0
+      ? Math.max(lastDot, lastComma)
+      : lastDot >= 0 && numeric.length - lastDot - 1 <= fractionDigits
+        ? lastDot
+        : lastComma >= 0 && numeric.length - lastComma - 1 <= fractionDigits
+          ? lastComma
+          : -1;
+  const whole = (decimalAt >= 0 ? numeric.slice(0, decimalAt) : numeric).replace(/[.,]/g, "");
+  const fraction = decimalAt >= 0 ? numeric.slice(decimalAt + 1).replace(/[.,]/g, "") : "";
+  if (!whole || fraction.length > fractionDigits) return null;
+  const minorText = `${whole}${fraction.padEnd(fractionDigits, "0")}`;
+  const amountCents = Number(minorText);
+  if (!Number.isSafeInteger(amountCents) || amountCents > POSTGRES_INTEGER_MAX) return null;
+  return { amountCents, currency };
+}
+
+/** Stable source/content key for a re-imported payment/refund/receipt row. */
+export function importedPaymentHistoryDedupeKey(entry: {
+  occurredOn: string;
+  direction: PreparedImportedPaymentHistory["direction"];
+  title: string | null;
+  statusLabel: string | null;
+  amountLabel: string | null;
+  paymentReference: string | null;
+  receiptReference: string | null;
+  receiptDocumentUrl: string | null;
+  sourceReference: string | null;
+  stripeReference: string | null;
+}): string {
+  const normalized = (value: string) => value.trim().toLowerCase();
+  if (entry.stripeReference) return `stripe:${normalized(entry.stripeReference)}`;
+  if (entry.paymentReference) return `payment:${normalized(entry.paymentReference)}`;
+  if (entry.receiptReference) return `receipt:${normalized(entry.receiptReference)}`;
+  if (entry.sourceReference) {
+    return `source:${normalized(entry.sourceReference)}|${entry.direction}|${normalized(
+      entry.amountLabel ?? "",
+    )}`;
+  }
+  return `row:${entry.occurredOn}|${entry.direction}|${normalized(entry.title ?? "")}|${normalized(
+    entry.statusLabel ?? "",
+  )}|${normalized(entry.amountLabel ?? "")}|${normalized(entry.receiptDocumentUrl ?? "")}`;
+}
+
+/**
  * The key that makes re-importing a bookings export idempotent.
  *
  * The prior system's own booking/order id is the honest key when the file
@@ -763,6 +1062,10 @@ export type PreparedRow = {
    * (ADR 20260725-import-prior-visits).
    */
   visit: PreparedVisit | null;
+  /** Unverified source payment/refund/receipt history, separate from live orders. */
+  paymentHistory: PreparedImportedPaymentHistory | null;
+  /** Internal / staff / diver notes imported into the diver's record. */
+  notes: string | null;
   /**
    * `import` writes the person and everything on the row. `merge` is a row whose
    * email already appeared earlier in the same file: it is the *same diver*, so
@@ -823,6 +1126,9 @@ export type PreparedImport = {
     withWaiver: number;
     /** Prior visits this file records, across importable and merge rows. */
     withVisit: number;
+    /** Unverified payment/refund/receipt source rows this file records. */
+    withPaymentHistory: number;
+    withNotes: number;
   };
   /** Set when the file has no header row, or no recognizable identity column. */
   fatal: ImportFatal | null;
@@ -1131,6 +1437,8 @@ export function prepareContactImport(text: string): PreparedImport {
       withNitrox: 0,
       withWaiver: 0,
       withVisit: 0,
+      withPaymentHistory: 0,
+      withNotes: 0,
     },
     fatal: null,
   };
@@ -1183,6 +1491,10 @@ export function prepareContactImport(text: string): PreparedImport {
     const header = rawHeader.trim();
     const normalized = normalizeHeader(header);
     if (!normalized) return;
+    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized)) {
+      unmappedColumns.push(header);
+      return;
+    }
     const field = IMPORT_FIELDS.find(
       (candidate) =>
         !claimedFields.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
@@ -1559,6 +1871,91 @@ export function prepareContactImport(text: string): PreparedImport {
       });
     }
 
+    // Financial source evidence is deliberately built separately from the
+    // prior visit above. A booking can remain a useful visit even where no
+    // payment settled, and a receipt can be useful financial history even
+    // where the old system had no usable booking record. The one safe fallback
+    // is its booking date/title/status/amount, which lets a conventional sales
+    // export contribute a clearly labelled, unverified source payment without
+    // creating a local order.
+    let paymentHistory: PreparedImportedPaymentHistory | null = null;
+    const paymentDateRaw = clean(at(cells, "payment_date"));
+    const paymentStatus = freeText(clean(at(cells, "payment_status"))) ?? visitStatus;
+    const paymentAmount = freeText(clean(at(cells, "payment_amount"))) ?? visitAmount;
+    const paymentCurrency = freeText(clean(at(cells, "payment_currency")));
+    const paymentDirectionLabel = freeText(clean(at(cells, "payment_direction")));
+    const paymentReference = freeText(clean(at(cells, "payment_reference")));
+    const receiptReference = freeText(clean(at(cells, "receipt_reference")));
+    const receiptDocumentUrl = clean(at(cells, "receipt_document_url"));
+    const stripeReference = freeText(clean(at(cells, "stripe_reference")));
+    const direction = importedPaymentDirection({
+      directionLabel: paymentDirectionLabel,
+      statusLabel: paymentStatus,
+      amountLabel: paymentAmount,
+    });
+    const namesFinancialEvidence = Boolean(
+      paymentAmount ||
+        paymentReference ||
+        receiptReference ||
+        receiptDocumentUrl ||
+        stripeReference ||
+        (paymentStatus && direction !== "unknown") ||
+        paymentDirectionLabel,
+    );
+    if (namesFinancialEvidence) {
+      const occurredOnRaw = paymentDateRaw ?? visitDateRaw;
+      if (!occurredOnRaw) {
+        // A generic booking row already has its own visit_no_date note. Avoid
+        // showing that same missing input twice; an explicitly financial row
+        // still gets the financial-history explanation it needs.
+        if (!namesAVisit) {
+          issues.push({ level: "warning", code: "payment_history_no_date" });
+        }
+      } else {
+        const parsed = parseCardDate(occurredOnRaw);
+        if (!parsed) {
+          // Same courtesy for a shared booking date: the visit warning already
+          // says it could not be read. A dedicated payment date gets its own
+          // precise warning instead.
+          if (occurredOnRaw !== visitDateRaw || !namesAVisit) {
+            issues.push({
+              level: "warning",
+              code: "payment_history_date_unreadable",
+              params: { value: occurredOnRaw },
+            });
+          }
+        } else {
+          const occurredOn = parsed.date;
+          paymentHistory = {
+            occurredOn,
+            direction,
+            title: visitTitle,
+            statusLabel: paymentStatus,
+            amountLabel: paymentAmount,
+            currencyLabel: paymentCurrency,
+            paymentReference,
+            receiptReference,
+            receiptDocumentUrl,
+            sourceLabel,
+            sourceReference: visitReference,
+            stripeReference,
+            dedupeKey: importedPaymentHistoryDedupeKey({
+              occurredOn,
+              direction,
+              title: visitTitle,
+              statusLabel: paymentStatus,
+              amountLabel: paymentAmount,
+              paymentReference,
+              receiptReference,
+              receiptDocumentUrl,
+              sourceReference: visitReference,
+              stripeReference,
+            }),
+          };
+        }
+      }
+    }
+
     let action: PreparedRow["action"] = "import";
     let mergedIntoRow: number | null = null;
     if (!fullName) {
@@ -1605,6 +2002,8 @@ export function prepareContactImport(text: string): PreparedImport {
       sizes,
       waiver: action === "skip" ? null : waiver,
       visit: action === "skip" ? null : visit,
+      paymentHistory: action === "skip" ? null : paymentHistory,
+      notes: action === "skip" ? null : clean(at(cells, "internal_notes")),
       action,
       mergedIntoRow,
       issues,
@@ -1630,6 +2029,8 @@ export function prepareContactImport(text: string): PreparedImport {
       withNitrox: written.filter((row) => row.nitrox).length,
       withWaiver: written.filter((row) => row.waiver).length,
       withVisit: written.filter((row) => row.visit).length,
+      withPaymentHistory: written.filter((row) => row.paymentHistory).length,
+      withNotes: written.filter((row) => Boolean(row.notes)).length,
     },
     fatal: null,
   };

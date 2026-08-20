@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { z } from "zod";
+import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
-import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { UndoToast } from "@/components/UndoToast";
-import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { FieldActions } from "@/components/ui/form";
-import { canPersonDeleteDiver } from "@/db/authz";
+import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
-import { canPersonImportShopData } from "@/db/import";
+import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { canDeleteDiver, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireStaffSession } from "@/lib/session";
@@ -60,12 +54,6 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   invalid: { tone: "danger", key: "divers.page.noticeInvalid" },
 };
 
-const diverSchema = z.object({
-  fullName: z.string().trim().min(2).max(120),
-  email: z.union([z.literal(""), z.email().max(320)]),
-  phone: z.string().trim().max(40),
-});
-
 export default async function DiversPage({
   params,
   searchParams,
@@ -102,10 +90,14 @@ export default async function DiversPage({
   //
   // Together, not in series: the page already waits on the list query, and a
   // roster read is not the place to add a second sequential hop.
-  const [canDelete, canImport] = await Promise.all([
-    canPersonDeleteDiver(db, shop.id, session.user.personId),
-    canPersonImportShopData(db, shop.id, session.user.personId),
-  ]);
+  // Both permissions come from the same live staff-role read. The old route
+  // asked each helper to independently load the person, account, and roles;
+  // that was six sequential database round trips on a cold Vercel request,
+  // making the otherwise bounded roster occasionally cross the five-second
+  // runtime limit.
+  const liveRoles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
+  const canDelete = liveRoles !== null && canDeleteDiver(liveRoles);
+  const canImport = liveRoles !== null && canImportShopData(liveRoles);
   const requested = isDiverFilter(filterParam) ? filterParam : "all";
   const filter = requested === "removed" && !canDelete ? "all" : requested;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
@@ -128,43 +120,18 @@ export default async function DiversPage({
     return search.size ? `${roster}?${search}` : roster;
   };
 
-  async function addDiverAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const parsed = diverSchema.safeParse(Object.fromEntries(formData));
-    const roster = shopPath(staff.user.shopSlug, "divers");
-    if (!parsed.success) redirect(noticeUrl(roster, "invalid"));
-    const diver = await createDiver(await getDb(), {
-      shopId: staff.user.shopId,
-      fullName: parsed.data.fullName,
-      email: parsed.data.email,
-      phone: parsed.data.phone,
-    });
-    revalidateAndRedirect(
-      roster,
-      diver
-        ? // `?edit=1` opens the diver record's details form on arrival. This
-          // form asks for three fields; date of birth, dive insurance, and the
-          // emergency contact the manifest prints are all one collapsed
-          // disclosure away, and the front desk had to know to go looking for
-          // it while the diver is still standing there.
-          `${shopPath(staff.user.shopSlug, "divers", diver.id)}?edit=1`
-        : noticeUrl(roster, "duplicate"),
-    );
-  }
-
   async function restoreDiverAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
-    const db = await getDb();
+    const activeDb = await getDb();
     // Restoring is the inverse of the owner/manager-only deletion, so it takes
     // the same gate (H-14, ADR 20260724-role-authorization).
     const roster = shopPath(staff.user.shopSlug, "divers");
-    if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
+    if (!(await canPersonDeleteDiver(activeDb, staff.user.shopId, staff.user.personId))) {
       revalidateAndRedirect(roster, noticeUrl(roster, "not-authorized"));
     }
     const personId = String(formData.get("personId") ?? "");
-    const restored = personId && (await restoreDiver(db, staff.user.shopId, personId));
+    const restored = personId && (await restoreDiver(activeDb, staff.user.shopId, personId));
     revalidateAndRedirect(roster, noticeUrl(roster, restored ? "restored" : "restore-refused"));
   }
 
@@ -220,63 +187,6 @@ export default async function DiversPage({
         </ShopNotice>
       ) : null}
 
-      {/* The id is the door the roster's empty state opens: with nobody on
-          file, "add one here" used to be prose pointing at a collapsed
-          disclosure two sections up, which is not a way forward. `scroll-mt`
-          keeps the summary clear of the sticky header once it is scrolled to.
-
-          At rest this is a button-shaped summary, nothing more. It used to be
-          a full-width bordered card — the largest object on the screen — for
-          the roster's *rare* path: the front desk arrives here to find a
-          person, not to mint one (design principle 8, "collapse the rare
-          path"). The card chrome now belongs to the open state only, where a
-          form actually stands in it. */}
-      <details id="add-diver" className="group/add mt-8 scroll-mt-24">
-        <summary
-          className={buttonClass({
-            variant: "secondary",
-            className: "list-none [&::-webkit-details-marker]:hidden",
-          })}
-        >
-          {t("divers.page.addDiverSummary")}{" "}
-          <span
-            aria-hidden="true"
-            className="text-lg font-normal transition-transform duration-200 group-open/add:rotate-45"
-          >
-            +
-          </span>
-        </summary>
-        <div className={sectionCardClass({ padding: "lg", className: "mt-3" })}>
-          <p className="text-sm text-muted">{t("divers.page.addDiverBody")}</p>
-          {/* The same name/email/phone trio every seat-a-diver door wears
-            (src/components/seat-diver/). This one mints a person without a
-            departure, so nothing here is required but the name — and its own
-            validator takes a longer address and phone than a seating does, so
-            it passes those caps rather than inheriting the tighter ones. */}
-          <PersonFieldTrio
-            className="mt-4"
-            as="form"
-            action={addDiverAction}
-            email="optional"
-            nameLabel={t("divers.page.fullNameLabel")}
-            emailLabel={t("divers.page.emailLabel")}
-            phoneLabel={t("divers.page.phoneLabel")}
-            optionalHint={t("divers.page.optionalHint")}
-            emailMaxLength={320}
-            phoneMaxLength={40}
-          >
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("divers.page.adding")}
-                className={buttonClass({ size: "lg" })}
-              >
-                {t("divers.page.addDiver")}
-              </SubmitButton>
-            </FieldActions>
-          </PersonFieldTrio>
-        </div>
-      </details>
-
       <DiverList
         page={diverPage}
         shopSlug={shopSlug}
@@ -284,6 +194,7 @@ export default async function DiversPage({
         filter={filter}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         restoreAction={canDelete ? restoreDiverAction : null}
+        quickAddAction={createDiverFromSearchAction}
         pager={
           <Pager
             page={diverPage.page}
@@ -295,6 +206,8 @@ export default async function DiversPage({
           />
         }
         copy={{
+          addDiverLabel: t("divers.list.addDiverAction"),
+          addDiverWithName: t.raw("divers.list.addDiverWithName"),
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewDivingToday: t("divers.list.viewDivingToday"),
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),
@@ -318,7 +231,6 @@ export default async function DiversPage({
           noDiversOnFile: t("divers.list.noDiversOnFile"),
           tryDifferentSearch: t("divers.list.tryDifferentSearch"),
           addOneHere: t("divers.list.addOneHere"),
-          emptyAddAction: t("divers.list.emptyAddAction"),
           emptyShowAll: t("divers.list.emptyShowAll"),
           emptyImportBody: t("divers.list.emptyImportBody"),
           emptyImportAction: t("divers.list.emptyImportAction"),
@@ -329,6 +241,8 @@ export default async function DiversPage({
           toConfirmText: t.raw("divers.list.toConfirmText"),
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderLevel: t("divers.list.tableHeaderLevel"),
+          tableHeaderAttention: t("divers.list.tableHeaderAttention"),
+          noAttention: t("divers.list.noAttention"),
         }}
       />
     </main>

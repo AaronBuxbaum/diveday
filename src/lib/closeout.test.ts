@@ -3,6 +3,7 @@ import {
   assembleDayCloseout,
   buildCloseoutSnapshot,
   type CloseoutTripInput,
+  closeoutAdminTaskStatus,
   parseCloseoutSnapshot,
   shopDayOf,
 } from "./closeout";
@@ -63,6 +64,63 @@ describe("assembleDayCloseout", () => {
     expect(state.shape).toBe("no_departures");
     expect(state.departures).toEqual([]);
     expect(state.mustAcknowledge).toEqual([]);
+  });
+
+  it("keeps a quiet day open when work exists without a departure", () => {
+    const state = assembleDayCloseout({
+      trips: [],
+      gaps: [],
+      actions: [action({ id: "leftover", dueAt: null })],
+      timeZone: TZ,
+      now,
+    });
+
+    expect(state.shape).toBe("outstanding");
+    expect(state.leftovers).toHaveLength(1);
+  });
+
+  it("counts administrative follow-up as outstanding while keeping it separate from roll call", () => {
+    const state = assembleDayCloseout({
+      trips: [trip({ tripId: "t1" })],
+      gaps: [],
+      actions: [],
+      adminTasks: [
+        {
+          id: "post_dive_reports",
+          status: "pending",
+          total: 8,
+          completed: 6,
+          pending: 2,
+          failed: 0,
+        },
+      ],
+      timeZone: TZ,
+      now,
+    });
+
+    expect(state.shape).toBe("outstanding");
+    expect(state.adminTasks).toEqual([
+      {
+        id: "post_dive_reports",
+        status: "pending",
+        total: 8,
+        completed: 6,
+        pending: 2,
+        failed: 0,
+      },
+    ]);
+  });
+
+  it("derives administrative task tone from failed and pending counts", () => {
+    expect(closeoutAdminTaskStatus({ total: 8, completed: 8, pending: 0, failed: 0 })).toBe(
+      "complete",
+    );
+    expect(closeoutAdminTaskStatus({ total: 8, completed: 6, pending: 2, failed: 0 })).toBe(
+      "pending",
+    );
+    expect(closeoutAdminTaskStatus({ total: 8, completed: 6, pending: 0, failed: 2 })).toBe(
+      "attention",
+    );
   });
 
   it("makes an unreconciled after-dive count the loudest thing on the page and demands acknowledgement", () => {
@@ -275,6 +333,7 @@ describe("buildCloseoutSnapshot", () => {
       ["a2", "dismiss"],
       ["a1", "carry"],
     ]);
+    expect(snapshot.adminTasks).toEqual([]);
   });
 
   it("defaults an unstated decision to carry and ignores ids the day does not hold", () => {
@@ -293,14 +352,18 @@ describe("buildCloseoutSnapshot", () => {
   });
 
   it("drops malformed stored rows instead of crashing the trail", () => {
-    expect(parseCloseoutSnapshot(null)).toEqual({ departures: [], leftovers: [] });
-    expect(parseCloseoutSnapshot("nonsense")).toEqual({ departures: [], leftovers: [] });
+    expect(parseCloseoutSnapshot(null)).toEqual({ departures: [], leftovers: [], adminTasks: [] });
+    expect(parseCloseoutSnapshot("nonsense")).toEqual({
+      departures: [],
+      leftovers: [],
+      adminTasks: [],
+    });
     expect(
       parseCloseoutSnapshot({
         departures: [{ tripId: 7 }, { tripId: "x", title: "y", status: "all_home" }],
         leftovers: [{ id: "only-id" }, 42],
       }),
-    ).toEqual({ departures: [], leftovers: [] });
+    ).toEqual({ departures: [], leftovers: [], adminTasks: [] });
   });
 });
 

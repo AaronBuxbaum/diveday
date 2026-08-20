@@ -93,13 +93,15 @@ const bookingConfirmationSchema = z.object({
 const waiverRequestSchema = z.object({
   kind: z.literal("waiver_request"),
   waiverRecordId: z.uuid(),
-  bookingId: z.uuid(),
+  /** Present for trip-issued links; omitted for an independent person waiver. */
+  bookingId: z.uuid().optional(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  /** Present when the link was requested from a departure; omitted otherwise. */
+  tripTitle: z.string().trim().min(1).max(200).optional(),
   completionUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -121,6 +123,22 @@ const waitlistInviteSchema = z.object({
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
   unsubscribeUrl: z.url().max(2_000),
+});
+
+const tripInvitationSchema = z.object({
+  kind: z.literal("trip_invitation"),
+  invitationId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  bookingUrl: z.url().max(2_000),
+  invitedAt: z.date(),
 });
 
 // A staff-triggered last-minute-fill blast (docs ADR
@@ -508,6 +526,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   bookingConfirmationSchema,
   waiverRequestSchema,
   waitlistInviteSchema,
+  tripInvitationSchema,
   tripReminder7dSchema,
   tripReminder24hSchema,
   tripRecapSchema,
@@ -540,6 +559,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
     // fresh send, while a double-submit of the same tap still dedups at the
     // notification_send_queue level.
+    case "trip_invitation":
+      return `trip-invitation/${notification.invitationId}/${notification.invitedAt.toISOString()}`;
     case "waitlist_invite":
       return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
     // One reminder per booking per cadence — the kind alone keys it.

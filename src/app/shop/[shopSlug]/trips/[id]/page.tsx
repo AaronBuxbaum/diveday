@@ -12,7 +12,6 @@ import { listDiveSites } from "@/db/dive-sites";
 import { listDepartureBoardedByTrip } from "@/db/manifests";
 import { countOpenTripOrders } from "@/db/orders";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
-import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { crewShiftCoverage } from "@/db/staffing";
@@ -48,8 +47,7 @@ import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
-import { RecapNoteSection } from "./_components/RecapNoteSection";
-import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
+import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
@@ -61,11 +59,10 @@ import {
   cancelSeriesAction,
   cancelTripAction,
   clearConditionsAction,
-  deleteRecapPhotoAction,
+  recordTripPrintPdfAction,
   reinstateTripAction,
   saveConditionsAction,
   saveDetails,
-  saveRecapShoutoutAction,
   saveRequirementsAction,
   setSeriesRepeatAction,
   updateSeriesCadenceAction,
@@ -162,7 +159,6 @@ export default async function ManageTripPage({
     series,
     scheduleDays,
     canConfigure,
-    recapPhotos,
     blowoutCalled,
     pulseReadiness,
     pulsePrepDivers,
@@ -178,7 +174,6 @@ export default async function ManageTripPage({
     getTripSeriesSummary(db, shop.id, tripId),
     listTripScheduleDays(db, shop.id, tripId),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
-    listRecapPhotosForTrip(db, shop.id, tripId),
     // Whether this trip's cancellation was a called blow-out — the cascade
     // record is the surface a weather morning is worked from, so the trip page
     // must always offer the way back to it (ADR 20260804-blowout-cascade).
@@ -289,10 +284,6 @@ export default async function ManageTripPage({
   const sectionsOnPage = new Set([
     ...(canConfigure ? ["details", "requirements"] : []),
     "conditions",
-    "recap-note",
-    // The gallery renders nothing at all once the last photo is gone, so the
-    // removal that emptied it has no section to land in and falls back.
-    ...(recapPhotos.length > 0 ? ["recap-photos"] : []),
     "lifecycle",
     ...(canConfigure && series ? ["series"] : []),
   ]);
@@ -375,9 +366,7 @@ export default async function ManageTripPage({
     <>
       <FlashParams params={["notice", "count", "form"]} />
       <TripPageHeader
-        title={trip.title}
-        startsAt={trip.startsAt}
-        endsAt={trip.endsAt}
+        trip={trip}
         locale={locale}
         timeZone={shop.timezone}
         badge={
@@ -397,19 +386,25 @@ export default async function ManageTripPage({
         }
         actions={
           <>
-            <Link
-              href={publicTripPath(shopSlug, tripId)}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("trips.detail.viewBookingPage")}
-            </Link>
             <CopyLinkButton
               path={publicTripPath(shopSlug, tripId)}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}
+            />
+            <Link
+              href={publicTripPath(shopSlug, tripId)}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "link", size: "sm" })}
+            >
+              {t("trips.detail.viewBookingPage")}
+            </Link>
+            <PrintTripBundleButton
+              href={shopPath(shopSlug, "trips", tripId, "print")}
+              label={t("shared.printButton.label")}
+              popupBlockedLabel={t("shared.printButton.popupBlocked")}
+              recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
             />
           </>
         }
@@ -666,36 +661,6 @@ export default async function ManageTripPage({
         timezone={shop.timezone}
         temperatureUnit={temperatureUnitFor(shop)}
         depthUnit={shop.depthUnit}
-      />
-
-      {/* Only once the boat is back. The note is what the crew wants divers to
-          read *about the day they just had* — "the eagle ray on the second
-          dive", a thank-you to the group — and it rides out on the recap the
-          nightly run sends after a departure ends. Offered on a trip that has
-          not sailed, it was a blank box asking staff to write the highlight of
-          something that has not happened yet, sitting in the middle of the
-          surface where they set that trip up. The close-out puts it where it
-          belongs (`/close-out`, ADR 20260804-day-closeout): tonight's ended
-          departures each carry this editor, and this section is the same note
-          on the trip's own record afterwards, for the days when the evening
-          got away from someone. */}
-      {departed ? (
-        <RecapNoteSection
-          action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
-          status={noticeForForm(tripNotice, "recap-note")}
-          shoutout={trip.recapShoutout}
-          locale={locale}
-        />
-      ) : null}
-
-      {/* Diver-shared recap photos sit beside the crew's own shout-out — both
-          are the post-trip recap's content, and moderating one moved off the
-          Guests tab to slim it (task 156, UX persona lens 17). */}
-      <RecapPhotoGallery
-        photos={recapPhotos}
-        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "recap-photos")}
-        locale={locale}
       />
 
       {canConfigure && series ? (

@@ -19,6 +19,11 @@ export function publicSchedulePath(shopSlug: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}`;
 }
 
+/** The shop's public review archive. */
+export function publicReviewsPath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}/reviews`;
+}
+
 /** One departure's public booking page. */
 export function publicTripPath(shopSlug: string, tripId: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/trips/${tripId}`;

@@ -282,7 +282,7 @@
       "mediaKind": {
         "course_photo": "Foto del curso",
         "recap_photo": "Foto del resumen",
-        "certification_card": "Foto de la tarjeta",
+        "certification_card": "Evidencia de certificación",
         "waiver_document": "Documento de exención",
         "dive_site_photo": "Foto del sitio de buceo"
       },
@@ -400,7 +400,7 @@
   "export": {
     "eyebrow": "Ajustes",
     "title": "Exportar datos",
-    "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, tarjetas, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
+    "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, registros de certificación, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
     "downloadButton": {
       "idle": "Descargar exportación",
       "acknowledged": "En camino — revisa tus descargas"
@@ -413,13 +413,13 @@
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {
       "label": "No incluido, a propósito:",
-      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
+      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
   "import": {
     "eyebrow": "Ajustes",
     "title": "Importar contactos",
-    "description": "Trae buceadores, tarjetas, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay. Abajo está lo que se transfiere.",
+    "description": "Trae buceadores, registros de certificación, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay. Abajo está lo que se transfiere.",
     "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
     "notice": {
       "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
@@ -450,16 +450,16 @@
         "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
       },
       "certificationCard": {
-        "what": "Tarjeta de certificación",
+        "what": "Registro de certificación",
         "detail": "Se importa verificada y marcada como importada, fecha de repaso incluida — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
       },
       "specialtyCards": {
-        "what": "Tarjetas de especialidad (profundidad, naufragios, nocturna, traje seco)",
-        "detail": "Se importan como tarjetas de especialidad verificadas, marcadas como importadas; cada una sigue necesitando la confirmación del personal antes de la inmersión que la exige."
+        "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
+        "detail": "Se importan como certificaciones de especialidad verificadas, marcadas como importadas; cada una sigue necesitando la confirmación del personal antes de la inmersión que la exige."
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Se importa como una tarjeta de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
+        "detail": "Se importa como una certificación de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
       },
       "signedWaivers": {
         "what": "Exenciones firmadas y aptitud médica",
@@ -474,16 +474,24 @@
         "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
       },
       "cardOnFile": {
-        "what": "Tarjeta guardada / pagos",
-        "detail": "Se queda con tu procesador de pagos — DiveDay nunca importa datos de tarjetas ni de pagos."
+        "what": "Tarjeta guardada / credencial de pago",
+        "detail": "Se queda con tu procesador de pagos. DiveDay nunca importa números de tarjeta, CVC, métodos de pago ni credenciales de pago reutilizables."
       },
       "pastVisits": {
         "what": "Visitas pasadas (qué reservaron y cuándo)",
         "detail": "Cada fila de reserva se convierte en historial de visitas — no es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
       },
-      "receiptsService": {
-        "what": "Recibos e historial de taller",
-        "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — DiveDay guarda tallas, no equipos concretos."
+      "paymentHistory": {
+        "what": "Historial de pagos y recibos",
+        "detail": "Las filas de pagos, reembolsos y recibos del origen se importan como historial sin verificar en Pedidos. Una cantidad claramente interpretada en la moneda de tu centro se indica en el agregado de ingresos/reembolsos; nunca se convierte en un pedido Stripe activo ni en un pago de reserva."
+      },
+      "serviceHistory": {
+        "what": "Historial de mantenimiento de equipo",
+        "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
+      },
+      "diverNotes": {
+        "what": "Notas internas y del buceador",
+        "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
       }
     },
     "wizard": {
@@ -520,31 +528,44 @@
         "waiver_source_name": "Origen del waiver",
         "waiver_document_url": "Documento del waiver",
         "medical_document_url": "Documento médico",
+        "payment_date": "Fecha de pago",
+        "payment_status": "Estado del pago",
+        "payment_amount": "Importe del pago",
+        "payment_currency": "Moneda del pago",
+        "payment_direction": "Dirección de pago / reembolso",
+        "payment_reference": "Referencia de pago",
+        "receipt_reference": "Referencia del recibo",
+        "receipt_document_url": "Documento del recibo",
+        "stripe_reference": "Referencia de Stripe",
         "visit_date": "Fecha de visita anterior",
         "visit_title": "Visita anterior",
         "visit_status": "Estado de la visita anterior",
         "visit_amount": "Importe de la visita anterior",
-        "visit_reference": "Referencia de reserva"
+        "visit_reference": "Referencia de reserva",
+        "internal_notes": "Notas internas"
       },
       "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
       "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
       "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Consulta “Qué se importa” arriba para ver qué significa eso y qué no.",
+      "paymentHistoryRowsNotice": "{count, plural, one {# fila de pago, reembolso o recibo del origen} other {# filas de pago, reembolso o recibo del origen}} se importarán como historial sin verificar. Nunca crean pedidos ni cargos en Stripe.",
       "stats": {
         "diversInFile": "Buceadores en el archivo",
-        "extraCardRows": "Filas de tarjetas extra",
+        "extraCardRows": "Filas de certificación extra",
         "skipped": "Omitidas",
-        "cards": "Tarjetas",
+        "cards": "Certificaciones",
         "specialties": "Especialidades",
-        "nitroxCards": "Tarjetas de nitrox",
+        "nitroxCards": "Certificaciones de nitrox",
         "waivers": "Waivers",
-        "pastVisits": "Visitas anteriores"
+        "pastVisits": "Visitas anteriores",
+        "paymentHistory": "Historial de pagos / recibos",
+        "internalNotes": "Notas internas"
       },
       "table": {
         "rowNumber": "#",
         "name": "Nombre",
         "email": "Correo",
-        "card": "Tarjeta",
+        "card": "Certificación",
         "waiver": "Waiver",
         "notes": "Notas",
         "noName": "— sin nombre —",
@@ -563,11 +584,11 @@
       "submitting": "Importando…",
       "result": {
         "summary": "Importado. {added} añadidos, {updated} actualizados.",
-        "cardsLine": "{cardsAdded, plural, one {# tarjeta} other {# tarjetas}}, {specialtyAdded, plural, one {# tarjeta de especialidad} other {# tarjetas de especialidad}} y {nitroxAdded, plural, one {# tarjeta de nitrox} other {# tarjetas de nitrox}} importadas y marcadas como importadas, con confirmación de un toque en cada buceador.",
-        "rowsMergedNote": " {count} fila(s) añadieron tarjetas a un buceador que trajo una fila anterior.",
-        "cardsSkippedNote": " {count} tarjeta(s) ya presentes en esos registros se dejaron sin tocar.",
+        "cardsLine": "{cardsAdded, plural, one {# certificación} other {# certificaciones}}, {specialtyAdded, plural, one {# certificación de especialidad} other {# certificaciones de especialidad}} y {nitroxAdded, plural, one {# certificación de nitrox} other {# certificaciones de nitrox}} importadas y marcadas como importadas, con confirmación de un toque en cada buceador.",
+        "rowsMergedNote": " {count} fila(s) añadieron certificaciones a un buceador que trajo una fila anterior.",
+        "cardsSkippedNote": " {count} certificación(es) ya presentes en esos registros se dejaron sin tocar.",
         "rowsSkippedNote": " {count} fila(s) omitidas.",
-        "cardsHeldByAnother": "{count} número(s) de tarjeta del archivo ya están en otro buceador de tu centro, así que esas tarjetas no se añadieron a nadie. Revisa el archivo por si hay un número repetido, y luego introduce esas tarjetas a mano.",
+        "cardsHeldByAnother": "{count} número(s) de certificación del archivo ya están en otro buceador de tu centro, así que esos registros no se añadieron a nadie. Revisa el archivo por si hay un número repetido y luego revisa y añade los registros de certificación en DiveDay.",
         "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación — tócala en el registro del buceador y la puerta se abre.",
         "waiversLine": "{count, plural, one {# waiver} other {# waivers}} importados como aceptados, marcados “importado” en el perfil del buceador.",
         "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
@@ -575,6 +596,10 @@
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
         "visitsLine": "{count, plural, one {# visita anterior añadida} other {# visitas anteriores añadidas}} al historial del centro de los buceadores.",
         "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están — volver a ejecutar la misma exportación no duplica el historial de nadie.",
+        "paymentHistoryLine": "{count, plural, one {# registro de pago / recibo del origen sin verificar} other {# registros de pago / recibo del origen sin verificar}} añadidos a Pedidos.",
+        "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como están.",
+        "notesLine": "{count, plural, one {# nota interna} other {# notas internas}} importadas a perfiles de buceadores.",
+        "receiptDocumentsFailedNote": " {count} enlace(s) de documento de recibo no se pudieron descargar y se dejaron fuera del registro del origen.",
         "seeRoster": "Ver el listado"
       }
     },
@@ -582,28 +607,30 @@
       "emailInvalid": "El correo “{email}” no parece válido — importado sin correo.",
       "expiryUnreadable": "La fecha de reciclaje “{value}” no se puede leer como fecha: se importa para revisión del personal, no como verificada, para que nadie embarque con una fecha adivinada.",
       "expiryAssumedMonthFirst": "La fecha de vencimiento “{value}” se leyó como {parsed} (mes primero). Revísala si tu archivo escribe el día primero.",
-      "cardMarkedUnverified": "Tu archivo marca esta tarjeta como “{status}” — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
+      "cardMarkedUnverified": "Tu archivo marca esta certificación como “{status}” — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
       "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
-      "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de tarjeta en la fila — no se importó. Una tarjeta sin número no se puede verificar.",
-      "specialtyImportedVerified": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} como verificadas desde tus registros y marcadas como importadas. Una inmersión que las exija espera a que alguien del equipo confirme haberlas visto.",
-      "specialtyImportedPending": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} para revisión del personal — ver la nota anterior.",
+      "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de certificación en la fila — no se importó. Una certificación sin número no se puede verificar.",
+      "specialtyImportedVerified": "{count, plural, one {Certificación de especialidad importada} other {# certificaciones de especialidad importadas}} como verificadas desde tus registros y marcadas como importadas. Una inmersión que las exija espera a que alguien del equipo confirme haberlas visto.",
+      "specialtyImportedPending": "{count, plural, one {Certificación de especialidad importada} other {# certificaciones de especialidad importadas}} para revisión del personal — ver la nota anterior.",
       "agencyUnrecognized": "Agencia de certificación no reconocida — importada como “otra”.",
-      "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna tarjeta de nivel. Añade esa tarjeta a mano si es una tarjeta aparte.",
+      "levelNamesSpecialty": "La certificación «{level}» nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna certificación de nivel. Añade ese registro de certificación en DiveDay si es independiente.",
       "levelIsTechnical": "La titulación “{level}” es técnica o de entornos con techo, no un peldaño recreativo: no se importa ni se interpreta como un nivel cercano. Regístrala a mano si tu centro la exige.",
-      "levelNotGated": "La certificación “{level}” no es un nivel que controlemos — tarjeta no importada. Añádela a mano si es una tarjeta real.",
-      "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de tarjeta utilizable — tarjeta no importada. Una tarjeta sin número no se puede verificar.",
-      "certImportedVerified": "Tarjeta importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
-      "certImportedPending": "Tarjeta importada para revisión del personal — ver la nota anterior.",
-      "nitroxImported": "Tarjeta de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
-      "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de tarjeta — añade y verifica una tarjeta de nitrox en DiveDay.",
+      "levelNotGated": "La certificación «{level}» no es un nivel que controlemos — certificación no importada. Añade el registro en DiveDay si tu centro necesita conservarlo.",
+      "levelNoCardNumber": "El nivel de certificación «{level}» no tiene un número de certificación utilizable — certificación no importada. Una evidencia sin número no se puede verificar.",
+      "certImportedVerified": "Certificación importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
+      "certImportedPending": "Certificación importada para revisión del personal — ver la nota anterior.",
+      "nitroxImported": "Certificación de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
+      "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación — añade y verifica la certificación de nitrox en DiveDay.",
       "waiverDateInvalid": "La fecha de aceptación del waiver “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
       "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",
       "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) — importada sin ella.",
       "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer — el buceador se importa sin esta visita.",
       "visitNoReference": "Visita importada sin referencia de reserva: una reimportación coincide por fecha, nombre e importe, así que dos reservas idénticas el mismo día entran como una sola visita.",
       "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha — el buceador se importa sin esta visita.",
+      "paymentHistoryDateUnreadable": "La fecha del historial de pagos “{value}” no es una fecha que podamos leer — ese registro del origen no se importará.",
+      "paymentHistoryNoDate": "Esta fila de pago o recibo del origen no tiene una fecha utilizable, así que no se importará.",
       "noName": "Sin nombre — fila omitida.",
-      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las tarjetas, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
+      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las certificaciones, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
       "noEmailNewRecord": "Sin correo — importado como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo."
     },
     "errors": {

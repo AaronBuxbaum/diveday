@@ -1,30 +1,29 @@
 import type { ReactNode } from "react";
 
 /**
- * A Google Maps embed with the provider's own chrome out of frame.
+ * A Google Maps embed whose route overlay can keep the provider's attribution
+ * visible without changing the map frame the route was drawn against.
  *
  * The classic `output=embed` map draws its own furniture at the edges — a
  * "View larger map" chip top-left, pan/zoom controls in a corner, and a bottom
  * bar carrying "Keyboard shortcuts", "Map data ©…", "Terms" and "Report a map
- * error". On a route briefing none of it is reachable (the frame is
- * deliberately not interactive — see `DiveSiteMap`) so it is pure noise sitting
- * on top of the reef the shop drew a line across.
+ * error". The route surfaces keep the corner controls out of the drawing area,
+ * but expose the provider's bottom attribution strip below it.
  *
  * The chrome cannot be turned off by a URL parameter, so it is put *outside the
- * window* instead: the iframe is inflated symmetrically past every edge of an
- * `overflow-hidden` box. Symmetric matters — the embed centres on its own
- * query at its own zoom, so growing it equally on all four sides moves neither
- * the centre nor the scale. The pixels visible inside the box are exactly the
- * pixels that were visible before, which is what lets a route drawn in frame
- * percentages keep landing on the same water (src/lib/dive-site-route.ts).
- * Overlays are `children`, positioned against the box rather than the iframe,
- * for the same reason.
+ * window* instead: the iframe remains inflated symmetrically around the
+ * original drawing window. The outer frame grows by the same 64px that used to
+ * be hidden below it, so the iframe keeps the old dimensions and the old route
+ * pixels remain unchanged. Only the provider's bottom strip becomes visible in
+ * that added band. Overlays are positioned against the original-height inner
+ * window, not the attribution band, for the same reason.
  */
 export function MapEmbed({
   title,
   src,
   className = "",
   interactive = false,
+  showAttribution = false,
   children,
 }: {
   title: string;
@@ -38,9 +37,13 @@ export function MapEmbed({
    * should not be a stop in the tab order either.
    */
   interactive?: boolean;
+  /** Expose the provider's bottom attribution strip below the route window. */
+  showAttribution?: boolean;
   /** Overlays drawn over the map — the route SVG, a click surface. */
   children?: ReactNode;
 }) {
+  const iframeHeightClass = showAttribution ? "h-[calc(100%+4rem)]" : "h-[calc(100%+8rem)]";
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {/* The size is declared, not inferred from opposing insets. An `<iframe>`
@@ -56,13 +59,17 @@ export function MapEmbed({
         title={title}
         src={src}
         tabIndex={interactive ? undefined : -1}
-        className={`absolute -top-16 -left-16 h-[calc(100%+8rem)] w-[calc(100%+8rem)] border-0 ${
+        className={`absolute -top-16 -left-16 ${iframeHeightClass} w-[calc(100%+8rem)] border-0 ${
           interactive ? "" : "pointer-events-none"
         }`}
         loading="lazy"
         referrerPolicy="strict-origin-when-cross-origin"
       />
-      {children}
+      {showAttribution ? (
+        <div className="absolute inset-x-0 top-0 h-[calc(100%-4rem)]">{children}</div>
+      ) : (
+        children
+      )}
     </div>
   );
 }

@@ -51,7 +51,12 @@ export async function CertificationCards({
   // action row — and emphatically not opening the add-a-card form, which is a
   // different form entirely and had nothing to do with the submit.
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
-  const sectionStatus = numberError ? undefined : status;
+  // Success is page feedback, not add-card feedback. In particular, the
+  // Mark certified action returns here with a success notice; opening this
+  // disclosure for it made the unrelated add-certification form appear to
+  // have succeeded. Render the notice beside the cards, never inside the
+  // popover, regardless of its tone.
+  const sectionStatus = !numberError && status?.form === "cards" ? status : undefined;
   // The diver's own "I hold no card", still standing: set, never cleared by
   // staff, and not yet refuted by a card. `listCertificationSummaries` decides
   // the same thing for the send lists; here the list of cards below *is* the
@@ -71,92 +76,73 @@ export async function CertificationCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.certifications.description")}</p>
         </div>
-        {/* Opened by its own outcome: this form lives in a collapsed
-            `<details>`, and an answer rendered inside a shut disclosure is
-            worse than the page-top banner it replaces — invisible rather than
-            merely far away. */}
-        <details open={Boolean(sectionStatus)}>
-          {/* Through the wrapper, like every other button-shaped thing (see
-              divers/page.tsx and reviews/page.tsx): the hand-written string
-              this replaces was `buttonClass()`'s primary/md output copied out
-              by hand, so it drifted the moment either changed. `list-none` and
-              the WebKit marker rule are the `<summary>`-specific half the
-              wrapper does not own — a summary shows a disclosure triangle
-              otherwise. */}
-          <summary
-            className={buttonClass({
-              className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-            })}
-          >
+        <details className="relative ml-auto shrink-0">
+          <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
             {t("divers.certifications.addCard")}
           </summary>
-          {/* No `encType`: a function `action` is a server action, not a
-              native form post — React builds the `FormData` (files intact)
-              and ships it over its own transport, so the browser never reads
-              this attribute. Setting it anyway just trips a dev warning
-              ("Cannot specify a encType or method for a form that specifies a
-              function as the action"). */}
-          <FieldGrid
-            as="form"
-            action={addCertificationAction.bind(null, shopSlug, personId)}
-            columns={2}
-            className={sectionCardClass({
-              className: "mt-3 gap-y-3 sm:w-[32rem]",
-            })}
-          >
-            <Field label={t("divers.certifications.agency")}>
-              <select name="agency" className={controlClass}>
-                {Object.entries(AGENCY_KEYS).map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {/* The ladder is agency-neutral by design, but the words on the
-                card are not: a staffer holding a CMAS 2★ or a BSAC Sports
-                Diver has to decide which rung it is, and the answer lived only
-                in the glossary. It belongs where the picking happens
-                (docs/product/glossary.md — CMAS, RAID, GUE). */}
-            <Field
-              label={t("divers.certifications.level")}
-              description={
-                <>
-                  <span className="block">{t("divers.certifications.levelMapping")}</span>
-                  <span className="mt-1 block">
-                    {t("divers.certifications.levelMappingCaution")}
-                  </span>
-                </>
-              }
+          <div className="absolute top-full right-0 z-20 mt-2 max-w-[calc(100vw-2rem)]">
+            {/* No `encType`: a function `action` is a server action, not a
+                native form post — React builds the `FormData` (files intact)
+                and ships it over its own transport, so the browser never reads
+                this attribute. Setting it anyway just trips a dev warning
+                ("Cannot specify a encType or method for a form that specifies a
+                function as the action"). */}
+            <FieldGrid
+              as="form"
+              action={addCertificationAction.bind(null, shopSlug, personId)}
+              columns={2}
+              className={sectionCardClass({
+                className: "gap-y-3 sm:w-[32rem]",
+              })}
             >
-              <select name="level" className={controlClass}>
-                {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                  <option key={value} value={value}>
-                    {t(key)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("divers.certifications.cardNumber")}>
-              <input name="identifier" required className={controlClass} />
-            </Field>
-            <Field
-              label={t("divers.certifications.refresherDue")}
-              hint={t("divers.certifications.refresherHint")}
-            >
-              <input name="expiresOn" type="date" className={controlClass} />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("divers.certifications.capturing")}
-                className={buttonClass({ variant: "secondary" })}
+              <Field label={t("divers.certifications.agency")}>
+                <select name="agency" className={controlClass}>
+                  {Object.entries(AGENCY_KEYS).map(([value, key]) => (
+                    <option key={value} value={value}>
+                      {t(key)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {/* The ladder is agency-neutral by design, but the words on the
+                  card are not: a staffer holding a CMAS 2★ or a BSAC Sports
+                  Diver has to decide which rung it is, and the answer lived only
+                  in the glossary. It belongs where the picking happens
+                  (docs/product/glossary.md — CMAS, RAID, GUE). */}
+              <Field label={t("divers.certifications.level")}>
+                <select name="level" className={controlClass}>
+                  {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+                    <option key={value} value={value}>
+                      {t(key)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t("divers.certifications.cardNumber")}>
+                <input name="identifier" required className={controlClass} />
+              </Field>
+              <Field
+                label={t("divers.certifications.refresherDue")}
+                hint={t("divers.certifications.refresherHint")}
               >
-                {t("divers.certifications.captureForReview")}
-              </SubmitButton>
-              <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
-            </FieldActions>
-          </FieldGrid>
+                <input name="expiresOn" type="date" className={controlClass} />
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("divers.certifications.capturing")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("divers.certifications.captureForReview")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </div>
         </details>
+        {sectionStatus ? (
+          <div className="basis-full">
+            <DiverFormStatus status={sectionStatus} shopSlug={shopSlug} locale={locale} />
+          </div>
+        ) : null}
       </div>
       {noCertificationDeclared ? (
         /* **The one statement on this record a staffer could not correct.**
@@ -216,14 +202,14 @@ export async function CertificationCards({
            is behind the owner/manager export gate. An archived card keeps a
            visible row for the same reason.
 
-           The date, not the name: the staff member is on the row
-           (`no_certification_cleared_by_person_id`) and in the export, but
-           resolving it to a name needs a join this component does not have —
-           `_components` here take their data as props and never read the
-           database (FU-20260815-a-cleared-not-certified-stamp-does-not-name-who-cleared-it). */
+           The actor name is resolved by `getDiverProfile`; this component only
+           renders the prop, keeping `_components` database-free. */
         <p className="mt-4 text-sm text-muted">
           {t("divers.certifications.noCertificationClearedNote", {
             date: formatShortDate(diver.person.noCertificationClearedAt, locale, shop.timezone),
+            name:
+              diver.noCertificationClearedByName ??
+              t("divers.certifications.noCertificationClearedByUnknown"),
           })}
         </p>
       ) : null}
@@ -295,6 +281,14 @@ export async function CertificationCards({
                   </p>
                   {card.reviewNote ? (
                     <p className="mt-1 text-sm text-muted italic">{card.reviewNote}</p>
+                  ) : null}
+                  {card.reviewedAt && card.reviewedByName ? (
+                    <p className="mt-1 text-sm text-muted">
+                      {t("divers.certifications.verifiedBy", {
+                        name: card.reviewedByName,
+                        date: formatShortDate(card.reviewedAt, locale, shop.timezone),
+                      })}
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

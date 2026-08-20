@@ -97,6 +97,10 @@
       "statusAll": "All statuses",
       "diverLabel": "Diver",
       "diverPlaceholder": "Search by name",
+      "rangeLabel": "Date range",
+      "rangeRecent": "Last {days} days",
+      "rangeAll": "All orders",
+      "rangeCustom": "Custom dates",
       "fromLabel": "From",
       "toLabel": "To",
       "apply": "Apply filters",
@@ -105,9 +109,9 @@
     "filteredByDiver": "Showing orders for {name}.",
     "filteredByTrip": "Showing orders for {title}.",
     "openFilteredTrip": "Open the departure",
-    "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
-    "emptyFiltered": "No orders match these filters.",
-    "emptyNoPayments": "No orders yet — connect payments and the front desk can send its first order from here.",
+    "emptyAll": "No DiveDay orders yet — they show up here as soon as the front desk sends one.",
+    "emptyFiltered": "No DiveDay orders match these filters.",
+    "emptyNoPayments": "No DiveDay orders yet — connect payments and the front desk can send its first order from here.",
     "table": {
       "diver": "Diver",
       "trip": "Trip",
@@ -118,11 +122,27 @@
     "pagination": {
       "total": "{count, plural, one {# order} other {# orders}}"
     },
-    "range": {
-      "recentNote": "Showing the last {days} days. Older orders are still here.",
-      "showAll": "Show every order",
-      "allNote": "Showing every order the shop has ever raised.",
-      "showRecent": "Back to the last {days} days"
+    "importedHistory": {
+      "sectionLabel": "Imported payment history",
+      "heading": "Imported payment history",
+      "detail": "Imported payment, refund, and receipt records are unverified. They use source status rather than an order status; only a clear amount in this shop's currency contributes to the separately labelled revenue/refund aggregate. They are never live Stripe orders or booking payments.",
+      "unverified": "Unverified import",
+      "table": {
+        "source": "Source record",
+        "status": "Source status"
+      },
+      "direction": {
+        "payment": "Source payment",
+        "refund": "Source refund",
+        "unknown": "Source record"
+      },
+      "receiptReference": "Receipt {reference}",
+      "openReceipt": "Open receipt",
+      "stripeReference": "Stripe reference: {reference}",
+      "amountNotProvided": "Amount not provided",
+      "pagination": {
+        "total": "{count, plural, one {# imported source record} other {# imported source records}}"
+      }
     },
     "paymentOps": {
       "sectionLabel": "Payments that need a check",

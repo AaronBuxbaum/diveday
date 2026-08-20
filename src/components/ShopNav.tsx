@@ -58,6 +58,7 @@ export function ShopNav({
   navCounts,
   locale,
   setLocale,
+  createDiverAction,
 }: {
   shopSlug: string;
   shopName: string;
@@ -75,6 +76,7 @@ export function ShopNav({
    * shop header, so one definition has to reach both from above.
    */
   setLocale: (locale: string) => Promise<void>;
+  createDiverAction: (formData: FormData) => Promise<void>;
 }) {
   const root = staffShopRoot(shopSlug);
   const t = staffTranslator(locale);
@@ -150,6 +152,7 @@ export function ShopNav({
               languages={languages}
               setLocaleAction={setLocale}
               signOutAction={signOutAction}
+              createDiverAction={createDiverAction}
               copy={{
                 language: t("shared.shopNav.language"),
                 groupSession: t("shared.commandPalette.groupSession"),
@@ -161,6 +164,7 @@ export function ShopNav({
                 emptyShort: t("shared.commandPalette.emptyShort"),
                 emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
                 groupDivers: t("shared.commandPalette.groupDivers"),
+                addDiver: t("shared.commandPalette.addDiver"),
                 groupTrips: t("shared.commandPalette.groupTrips"),
                 groupDiveSites: t("shared.commandPalette.groupDiveSites"),
                 groupCourses: t("shared.commandPalette.groupCourses"),
@@ -198,6 +202,7 @@ export function ShopNav({
         gates={navGates}
         counts={navCounts}
         labels={destinationLabels}
+        closeOutLabel={t("shared.shopNavLinks.closeOutShort")}
         navAriaLabel={t("shared.shopNavLinks.primaryNavAriaLabel")}
         badgeLabels={badgeLabels}
         moreLabel={t("shared.shopNavLinks.more")}

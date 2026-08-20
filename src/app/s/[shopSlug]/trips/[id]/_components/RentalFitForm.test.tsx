@@ -180,7 +180,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     expect(indicator).toHaveTextContent("Select sizes to confirm your gear match.");
   });
 
-  it("renders 'Gear matched and pre-packed' when all sizes are confirmed", () => {
+  it("renders the recorded-size and dock-check message when all sizes are confirmed", () => {
     const confirmedFit = { ...emptyFit, rentsBcd: true, bcdSize: "M" };
     renderDiver(
       <RentalFitForm
@@ -198,7 +198,9 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+    expect(indicator).toHaveTextContent(
+      "Sizes recorded — the crew will confirm your fit at the dock.",
+    );
   });
 
   it("updates dynamically when user checks a rental and inputs a size", () => {
@@ -234,10 +236,12 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     fireEvent.change(bcdSelect, { target: { value: "L" } });
 
     // Indicator should now light up
-    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+    expect(indicator).toHaveTextContent(
+      "Sizes recorded — the crew will confirm your fit at the dock.",
+    );
   });
 
-  it("renders 'Gear matched' for wetsuit once wetsuit size is provided", () => {
+  it("renders the recorded-size message for a wetsuit once its size is provided", () => {
     const wetsuitFit = { ...emptyFit, rentsWetsuit: true };
     const { container } = renderDiver(
       <RentalFitForm
@@ -263,10 +267,12 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     ) as HTMLSelectElement;
     fireEvent.change(wetsuitSelect, { target: { value: "M" } });
 
-    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+    expect(indicator).toHaveTextContent(
+      "Sizes recorded — the crew will confirm your fit at the dock.",
+    );
   });
 
-  it("renders 'Gear matched' for mask/fins immediately because fin size is optional", () => {
+  it("renders the recorded-size message for mask/fins because fin size is optional", () => {
     const finsFit = { ...emptyFit, rentsMaskFins: true };
     renderDiver(
       <RentalFitForm
@@ -284,7 +290,9 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+    expect(indicator).toHaveTextContent(
+      "Sizes recorded — the crew will confirm your fit at the dock.",
+    );
   });
 
   it("confirms gear match when BCD size is provided even if optional fin size is empty", () => {
@@ -312,7 +320,9 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     fireEvent.change(bcdSelect, { target: { value: "L" } });
 
     // Should be confirmed even though fin size is not provided
-    expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+    expect(indicator).toHaveTextContent(
+      "Sizes recorded — the crew will confirm your fit at the dock.",
+    );
   });
 });
 

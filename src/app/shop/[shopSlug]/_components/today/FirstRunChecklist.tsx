@@ -47,6 +47,9 @@ function ChecklistStep({
   action: React.ReactNode;
 }) {
   return (
+    // These are compact steps inside the primary-toned onboarding panel, not
+    // page sections. They stay inset and retain their tighter radius so the
+    // checklist reads as one guided object rather than nested full cards.
     <li className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
         <span

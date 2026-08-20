@@ -38,6 +38,7 @@ export type CommandPaletteCopy = {
   emptyShort: string;
   emptyNoMatches: string;
   groupDivers: string;
+  addDiver: string;
   groupTrips: string;
   groupDiveSites: string;
   groupCourses: string;
@@ -76,6 +77,7 @@ export function CommandPalette({
   languages,
   setLocaleAction,
   signOutAction,
+  createDiverAction,
   copy,
 }: {
   shopSlug: string;
@@ -92,6 +94,8 @@ export function CommandPalette({
   setLocaleAction: (locale: string) => Promise<void>;
   /** The same Server Action the shop-name menu's Sign out submits to. */
   signOutAction: () => Promise<void>;
+  /** Creates a typed search identity and lands on its Diver record. */
+  createDiverAction: (formData: FormData) => Promise<void>;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -161,7 +165,8 @@ export function CommandPalette({
   }, [query]);
 
   const groups = useMemo<PaletteGroup[]>(() => {
-    const q = query.trim().toLowerCase();
+    const rawQuery = query.trim();
+    const q = rawQuery.toLowerCase();
     const goto: PaletteItem[] = [];
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
       goto.push({ key: "goto:boarding", label: copy.goToBoarding, href: boatBoardingHref });
@@ -191,15 +196,31 @@ export function CommandPalette({
       }
     }
     const out: PaletteGroup[] = [];
-    if (results.divers.length > 0) {
+    const diverItems: PaletteItem[] = results.divers.map((diver) => ({
+      key: `diver:${diver.id}`,
+      label: diver.fullName,
+      detail: diver.detail ?? undefined,
+      href: `${root}/divers/${diver.id}`,
+    }));
+    if (q.length >= 2) {
+      const formData = new FormData();
+      formData.set("query", rawQuery);
+      diverItems.push({
+        key: "diver:add",
+        label: copy.addDiver,
+        detail: rawQuery,
+        run: () => startTransition(() => createDiverAction(formData)),
+      });
+    }
+    // Destination commands take precedence over the catch-all "add a diver"
+    // result when both match the same query. Typing "Add a booking" should
+    // make the exact navigation command the first keyboard selection, not
+    // send the query text to the diver form.
+    if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
+    if (diverItems.length > 0) {
       out.push({
         heading: copy.groupDivers,
-        items: results.divers.map((diver) => ({
-          key: `diver:${diver.id}`,
-          label: diver.fullName,
-          detail: diver.detail ?? undefined,
-          href: `${root}/divers/${diver.id}`,
-        })),
+        items: diverItems,
       });
     }
     if (results.trips.length > 0) {
@@ -244,7 +265,6 @@ export function CommandPalette({
         })),
       });
     }
-    if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
     // The second door to the language switcher, beside the one behind the
     // shop's name. Only the languages *not* in force: a row that changes
     // nothing is not a command. Matched on the group heading and on each
@@ -314,6 +334,7 @@ export function CommandPalette({
     locale,
     setLocaleAction,
     signOutAction,
+    createDiverAction,
   ]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
@@ -457,6 +478,7 @@ export function CommandPalette({
                               id={`${listId}-${item.key}`}
                               type="button"
                               role="option"
+                              aria-label={item.label}
                               aria-selected={isActive}
                               tabIndex={-1}
                               onMouseMove={() =>

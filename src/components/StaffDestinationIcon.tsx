@@ -54,6 +54,14 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, React.ReactNode>> = {
       <path d="M3 9.5h18" />
     </>
   ),
+  // The signed-off day: a checklist closed after the boat is home.
+  closeOut: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="m8 12 2.5 2.5L16 9" />
+      <path d="M8 7h8" />
+    </>
+  ),
   // Money in: a receipt.
   orders: (
     <>

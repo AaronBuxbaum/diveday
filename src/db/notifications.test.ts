@@ -12,11 +12,14 @@ import {
   sendNotification,
 } from "./notifications";
 import {
+  bookings,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
+  waiverRecords,
+  waiverTemplates,
 } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -37,7 +40,7 @@ async function seededBooking() {
 
 describe("notification delivery status", () => {
   it("queues a retryable provider failure and drains it later", async () => {
-    const { db, shop, booking } = await seededBooking();
+    const { db, shop, trip, booking } = await seededBooking();
     const notification: Notification = {
       kind: "booking_confirmation",
       bookingId: booking.bookingId,
@@ -46,7 +49,7 @@ describe("notification delivery status", () => {
       locale: "en-US",
       diverName: "Nora Quinn",
       shopName: shop.name,
-      tripTitle: "Two-Tank Reef",
+      tripTitle: trip.title,
       startsAt: new Date("2026-08-01T12:00:00.000Z"),
       endsAt: new Date("2026-08-01T15:00:00.000Z"),
       timezone: shop.timezone,
@@ -82,7 +85,46 @@ describe("notification delivery status", () => {
     expect(attempts).toBe(2);
     await expect(
       db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
-    ).resolves.toMatchObject([{ status: "sent", providerMessageId: "retry-success" }]);
+    ).resolves.toMatchObject([
+      { status: "sent", providerMessageId: "retry-success", payload: null },
+    ]);
+  });
+
+  it("clears the payload when a retry reaches a terminal failure", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    const notification: Notification = {
+      kind: "booking_confirmation",
+      bookingId: booking.bookingId,
+      shopId: shop.id,
+      to: "nora@example.com",
+      locale: "en-US",
+      diverName: "Nora Quinn",
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: new Date("2026-08-01T12:00:00.000Z"),
+      endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      timezone: shop.timezone,
+    };
+    let attempts = 0;
+    const provider: NotificationProvider = {
+      async send() {
+        attempts += 1;
+        return attempts === 1
+          ? { status: "failed", retryable: true, errorCode: "temporary_failure" }
+          : { status: "failed", retryable: false, errorCode: "permanent_failure" };
+      },
+    };
+
+    await sendNotification(db, notification, provider);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({ failed: 1 });
+    await expect(
+      db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
+    ).resolves.toMatchObject([{ status: "failed", payload: null, errorCode: "permanent_failure" }]);
   });
 
   it("shows a failed booking email on the shop dashboard query", async () => {
@@ -196,6 +238,39 @@ describe("provider-reported delivery events", () => {
     return { db, shop, trip, booking, providerMessageId };
   }
 
+  async function independentWaiverDelivery(providerMessageId = "waiver-message-id") {
+    const { db, shop, booking } = await seededBooking();
+    const [bookingRow] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, booking.bookingId))
+      .limit(1);
+    if (!bookingRow) throw new Error("booking row missing");
+    const [template] = await db
+      .select()
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shop.id))
+      .limit(1);
+    if (!template) throw new Error("waiver template missing");
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: shop.id,
+        bookingId: null,
+        personId: bookingRow.personId,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        tokenHash: `test-token-${providerMessageId}`,
+        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
+        deliveryProviderMessageId: providerMessageId,
+      })
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("waiver record insert failed");
+    return { db, shop, booking, providerMessageId, recordId: record.id };
+  }
+
   it("raises a bounce as a staff issue even though the send itself succeeded", async () => {
     const { db, shop, booking, providerMessageId } = await sentConfirmation();
 
@@ -297,6 +372,98 @@ describe("provider-reported delivery events", () => {
         occurredAt: new Date("2026-07-24T18:00:00.000Z"),
       }),
     ).resolves.toBe("unknown_message");
+  });
+
+  it("reports stale for out-of-order duplicate events on independent waivers", async () => {
+    const { db, recordId, providerMessageId } = await independentWaiverDelivery();
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "delivered",
+        detail: null,
+        occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+      }),
+    ).resolves.toBe("applied");
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "bounced",
+        detail: "mailbox unavailable",
+        occurredAt: new Date("2026-07-24T17:00:00.000Z"),
+      }),
+    ).resolves.toBe("stale");
+    const [record] = await db
+      .select({ status: waiverRecords.deliveryProviderStatus })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, recordId));
+    expect(record?.status).toBe("delivered");
+  });
+
+  it("scopes independent-waiver provider events to the given shop", async () => {
+    const providerMessageId = "shared-provider-message-id";
+    const { db, shop } = await independentWaiverDelivery(providerMessageId);
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-provider-scope", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [otherPerson] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Other Diver" })
+      .returning();
+    if (!otherPerson) throw new Error("second shop person insert failed");
+    const [otherTemplate] = await db
+      .insert(waiverTemplates)
+      .values({
+        shopId: otherShop.id,
+        title: "Other waiver",
+        body: "Other waiver template body.",
+        version: 1,
+      })
+      .returning();
+    if (!otherTemplate) throw new Error("second shop template insert failed");
+    const [otherRecord] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: otherShop.id,
+        bookingId: null,
+        personId: otherPerson.id,
+        templateId: otherTemplate.id,
+        templateTitle: otherTemplate.title,
+        templateVersion: otherTemplate.version,
+        templateBody: otherTemplate.body,
+        tokenHash: "other-shop-token-hash",
+        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
+        deliveryProviderMessageId: providerMessageId,
+      })
+      .returning({ id: waiverRecords.id });
+    if (!otherRecord) throw new Error("second shop waiver insert failed");
+
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        shopId: shop.id,
+        status: "bounced",
+        detail: "mailbox unavailable",
+        occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+      }),
+    ).resolves.toBe("applied");
+
+    const [updatedOwn] = await db
+      .select({ status: waiverRecords.deliveryProviderStatus })
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.shopId, shop.id),
+          eq(waiverRecords.deliveryProviderMessageId, providerMessageId),
+        ),
+      );
+    const [updatedOther] = await db
+      .select({ status: waiverRecords.deliveryProviderStatus })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, otherRecord.id));
+    expect(updatedOwn?.status).toBe("bounced");
+    expect(updatedOther?.status).toBeNull();
   });
 
   it("clears the old bounce when staff re-send the same notification", async () => {

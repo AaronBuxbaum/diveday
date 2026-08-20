@@ -208,7 +208,8 @@ export async function seedCertGates(
     },
     {
       title: "Nitrox Two-Tank — Benwood Wreck",
-      description: "Long, shallow bottom time on EANx32. Enriched-air card required to board.",
+      description:
+        "Long, shallow bottom time on EANx32. Enriched-air certification required to board.",
       startsAt: at(32, 8, 30),
       endsAt: at(32, 12, 30),
       capacity: 9,

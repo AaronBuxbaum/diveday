@@ -55,8 +55,8 @@
       },
       "instructor": {
         "title": "Enseñando y certificando buceadores",
-        "desc": "Buceadores guarda las tarjetas de certificación y el historial de especialidades de cada uno.",
-        "tryThis": "Abre Buceadores para revisar una tarjeta de certificación antes de clase."
+        "desc": "Buceadores guarda los registros de certificación y el historial de especialidades de cada uno.",
+        "tryThis": "Abre Buceadores para revisar un registro de certificación antes de clase."
       },
       "divemaster": {
         "title": "Preparando a los buceadores para embarcar",

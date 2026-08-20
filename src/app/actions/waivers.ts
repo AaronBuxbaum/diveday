@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
-import { issueAndDeliverWaiver } from "@/db/waiver-issue";
+import { issueAndDeliverPersonWaiver, issueAndDeliverWaiver } from "@/db/waiver-issue";
 import { trackEvent } from "@/lib/analytics";
 import { requireStaffSession } from "@/lib/session";
 import type { WaiverSendState, WaiverSendSurface } from "./waiver-send-types";
@@ -30,6 +30,7 @@ const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string, tripId?: string
   blockers: (shopSlug) => `/shop/${shopSlug}`,
   check_in: (shopSlug) => `/shop/${shopSlug}/check-in`,
   roster: (shopSlug, tripId) => `/shop/${shopSlug}/trips/${tripId}/guests`,
+  diver: (shopSlug, _tripId) => `/shop/${shopSlug}/divers`,
 };
 
 export async function sendWaiversAction(
@@ -42,6 +43,7 @@ export async function sendWaiversAction(
 ): Promise<WaiverSendState> {
   const session = await requireStaffSession();
   const bookingIds = [...new Set(formData.getAll("bookingId").map(String).filter(Boolean))];
+  const personId = String(formData.get("personId") ?? "").trim() || undefined;
   const db = await getDb();
 
   const state: WaiverSendState = {
@@ -53,11 +55,19 @@ export async function sendWaiversAction(
     // Only the roster's bulk control (checkbox-sourced selection) can ever
     // submit with zero ids — every other surface's bookingIds prop is fixed
     // and non-empty, so this can't misfire there.
-    emptySelection: bookingIds.length === 0,
+    emptySelection: bookingIds.length === 0 && !personId,
   };
+  const exposeLinks = formData.get("exposeLink") === "true";
 
-  for (const bookingId of bookingIds) {
-    const result = await issueAndDeliverWaiver(db, session.user.shopId, bookingId);
+  const results: Array<
+    { kind: "booking"; bookingId: string } | { kind: "person"; personId: string }
+  > = bookingIds.map((bookingId) => ({ kind: "booking", bookingId }));
+  if (personId) results.push({ kind: "person" as const, personId });
+  for (const target of results) {
+    const result =
+      target.kind === "person"
+        ? await issueAndDeliverPersonWaiver(db, session.user.shopId, target.personId)
+        : await issueAndDeliverWaiver(db, session.user.shopId, target.bookingId);
     if (!result.ok) {
       if (result.reason === "already_completed") {
         state.alreadyDone.push(result.diverName ?? "A diver");
@@ -68,6 +78,9 @@ export async function sendWaiversAction(
     }
     if (result.delivery === "sent") {
       state.sent.push(result.diverName);
+      if (exposeLinks) {
+        state.links.push({ name: result.diverName, token: result.token, reason: "sent" });
+      }
     } else {
       state.links.push({ name: result.diverName, token: result.token, reason: result.delivery });
     }
@@ -88,6 +101,9 @@ export async function sendWaiversAction(
       break;
     case "roster":
       path = SURFACE_PATH.roster(shopSlug, tripId);
+      break;
+    case "diver":
+      path = `${SURFACE_PATH.diver(shopSlug)}${personId ? `/${personId}` : ""}`;
       break;
     default:
       path = undefined;

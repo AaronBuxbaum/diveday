@@ -1,4 +1,9 @@
-import type { CloseoutDepartureStatus, CloseoutShape, LeftoverDecision } from "@/lib/closeout";
+import type {
+  CloseoutAdminTaskStatus,
+  CloseoutDepartureStatus,
+  CloseoutShape,
+  LeftoverDecision,
+} from "@/lib/closeout";
 import type { RollCallGapReason } from "@/lib/today";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -30,6 +35,13 @@ export const CLOSEOUT_STATUS_KEYS: Record<CloseoutDepartureStatus, StaffMessageK
   still_out: "closeout.departures.status.stillOut",
   count_open: "closeout.departures.status.countOpen",
   not_departed: "closeout.departures.status.notDeparted",
+};
+
+/** The administrative task chip; its tone is derived in `src/lib/closeout.ts`. */
+export const CLOSEOUT_ADMIN_STATUS_KEYS: Record<CloseoutAdminTaskStatus, StaffMessageKey> = {
+  complete: "closeout.admin.status.complete",
+  pending: "closeout.admin.status.pending",
+  attention: "closeout.admin.status.attention",
 };
 
 /** Each gap reason's own sentence — deliberately never a shared one (DOM-H3). */

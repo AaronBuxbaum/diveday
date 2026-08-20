@@ -22,6 +22,19 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await page.getByRole("link", { name: "Board divers" }).first().click();
   await expect(page).toHaveURL(/\/manifest/);
 
+  const boatMode = page.getByRole("group", { name: "Boat mode" });
+  await expect(boatMode).toBeVisible();
+  const distanceFromPageEnd = await boatMode.evaluate((element) => {
+    element.scrollIntoView({ block: "end" });
+    const scrolling = document.scrollingElement;
+    return scrolling
+      ? scrolling.scrollHeight - (scrolling.scrollTop + element.getBoundingClientRect().bottom)
+      : 0;
+  });
+  // The grouped device controls sit near the end of the manifest while still
+  // leaving room for the page's footer spacing.
+  expect(distanceFromPageEnd).toBeLessThan(80);
+
   const subNav = page.getByRole("navigation", { name: "Trip" });
   for (const tab of ["Overview", "Guests", "Manifest", "Prep"]) {
     await expect(subNav.getByText(tab, { exact: true })).toBeVisible();
@@ -31,16 +44,19 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await subNav.getByRole("link", { name: "Guests" }).click();
   await expect(page).toHaveURL(/\/guests/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
+  await expect(boatMode).toHaveCount(0);
 
   await page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: "Prep" }).click();
   await expect(page).toHaveURL(/\/prep/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
+  await expect(boatMode).toHaveCount(0);
 
   await page
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Manifest" })
     .click();
   await expect(page).toHaveURL(/\/manifest/);
+  await expect(boatMode).toBeVisible();
 
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -48,6 +64,7 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
+  await expect(boatMode).toHaveCount(0);
 });
 
 test("staff can view or copy a trip's public booking page from its overview", async ({

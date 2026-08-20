@@ -649,7 +649,7 @@ export async function seedHistory(
         templateVersion: template.version,
         templateBody: template.body,
         status: "completed" as const,
-        tokenHash: `hist-waiver-${waiverToken}`,
+        tokenHash: `hist-waiver-${shopId}-${waiverToken}`,
         expiresAt: at(365, 12),
         signedName: "Signed on file",
         signatureMethod: "in_person",
@@ -744,8 +744,8 @@ export async function seedHistory(
             amountPaidCents: row.total,
             description: row.title,
             stripeAccountId: "acct_demo",
-            stripeCustomerId: `cus_demo_${invoiceSeq}`,
-            stripeInvoiceId: `in_demo_${invoiceSeq}`,
+            stripeCustomerId: `cus_demo_${shopId}_${invoiceSeq}`,
+            stripeInvoiceId: `in_demo_${shopId}_${invoiceSeq}`,
             finalizedAt: row.date,
             paidAt: row.date,
             createdAt: row.date,
@@ -784,7 +784,7 @@ export async function seedHistory(
         bookingId: booking.id,
         status: state as "pending" | "paid" | "expired",
         stripeAccountId: "acct_demo",
-        stripeSessionId: `cs_tip_demo_${i + 1}`,
+        stripeSessionId: `cs_tip_demo_${shopId}_${i + 1}`,
         checkoutUrl: state === "pending" ? "https://checkout.stripe.com/c/pay/demo-tip" : null,
         currency: "usd",
         amountCents: i % 3 === 0 ? 2_500 : 1_500,
@@ -805,9 +805,11 @@ export async function seedHistory(
     "Vis was unreal and the crew found us a turtle on the second tank.",
     "Calm, unhurried briefing — exactly what I wanted for my first boat dive back.",
     "Choppy ride out, but the reef more than made up for it.",
+    "The crew made a busy weekend feel easy, thoughtful, and beautifully organized.",
+    "A warm, patient crew and a brilliant final drift over the reef.",
   ];
-  // The written reviews go on three *different* departures, so the public list
-  // reads like a shop's history rather than one memorable boat day.
+  // The written reviews go on different departures, so the public list reads
+  // like a shop's history rather than one memorable boat day.
   const commentedTrips = new Set<string>();
   const reviewRows = plans
     .map((plan, i) => {
@@ -817,9 +819,9 @@ export async function seedHistory(
         commentedTrips.size < reviewComments.length && !commentedTrips.has(booking.tripId);
       if (wantsComment) commentedTrips.add(booking.tripId);
       const comment = wantsComment ? reviewComments[commentedTrips.size - 1] : null;
-      // The third written review stays unpublished — that is the "waiting on
+      // The fifth written review stays unpublished — that is the "waiting on
       // you" card the staff Reviews page exists to clear.
-      const isPublished = comment === null || commentedTrips.size < 3;
+      const isPublished = comment === null || commentedTrips.size < 5;
       const createdAt = new Date(plan.createdAt.getTime() + 6 * 60 * 60 * 1000);
       return {
         shopId,
@@ -828,6 +830,7 @@ export async function seedHistory(
         personId: plan.personId,
         rating: i % 3 === 0 ? 5 : 4,
         comment,
+        isStandout: Boolean(comment && isPublished && commentedTrips.size <= 4),
         isPublished,
         publishedAt: isPublished ? createdAt : null,
         createdAt,

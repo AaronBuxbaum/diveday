@@ -4,6 +4,18 @@ import { describe, expect, it } from "vitest";
 import { contextValue, runPostDeployWizard } from "./post-deploy-wizard.mjs";
 import { SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
+const allHandoffsNeedUpdate = {
+  awsProfiles: true,
+  vercelEnvironment: true,
+  githubSecrets: true,
+  cdkVariables: true,
+  githubEnvironment: true,
+  sesDns: true,
+};
+
+const wizard = (options) =>
+  runPostDeployWizard({ checkUpdates: allHandoffsNeedUpdate, ...options });
+
 describe("post-deploy wizard", () => {
   it("honors CDK context values", () => {
     expect(
@@ -19,9 +31,9 @@ describe("post-deploy wizard", () => {
   });
 
   it("runs only the selected handoffs and derives SES DNS records from AWS", async () => {
-    const answers = ["yes", "yes", "yes", "y", "no", "no", "yes"];
+    const answers = ["yes", "yes", "y", "no", "no", "yes", "yes"];
     const commands = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => answers.shift() ?? "no",
       cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
       credentialsDocument: "AWS_ACCESS_KEY_ID=deployer-id\n",
@@ -40,7 +52,6 @@ describe("post-deploy wizard", () => {
         process.execPath,
         [expect.stringContaining("import-vercel-env.mjs"), ".env.vercel", "production"],
       ],
-      ["pnpm", ["exec", "vercel", "--prod", "--archive=tgz"]],
       [process.execPath, [expect.stringContaining("sync-github-secrets.mjs"), ".env.github"]],
       [
         "aws",
@@ -122,6 +133,7 @@ describe("post-deploy wizard", () => {
           "v=spf1 include:amazonses.com ~all",
         ],
       ],
+      ["pnpm", ["exec", "vercel", "--prod", "--archive=tgz"]],
     ]);
   });
 
@@ -131,7 +143,7 @@ describe("post-deploy wizard", () => {
     // updated. A workstation run keeps the CLI's own prompt.
     const vercelDeploy = async (ciUnattended) => {
       const commands = [];
-      await runPostDeployWizard({
+      await wizard({
         ask: async () => "yes",
         ciUnattended,
         cdkArguments: [],
@@ -145,7 +157,8 @@ describe("post-deploy wizard", () => {
         log: () => {},
       });
       return commands.find(
-        ({ command, arguments_ }) => command === "pnpm" && arguments_[1] === "vercel",
+        ({ command, arguments_ }) =>
+          command === "pnpm" && arguments_[1] === "vercel" && arguments_[2] === "--prod",
       );
     };
 
@@ -164,6 +177,156 @@ describe("post-deploy wizard", () => {
     ]);
   });
 
+  it("keeps the Vercel production deploy last even when DNS is skipped", async () => {
+    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
+    const commands = [];
+    await wizard({
+      ask: async () => answers.shift() ?? "no",
+      cdkArguments: [],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        return "";
+      },
+      log: () => {},
+    });
+
+    expect(commands).toEqual([
+      { command: "pnpm", arguments_: ["exec", "vercel", "--prod", "--archive=tgz"] },
+    ]);
+  });
+
+  it("does not ask about handoffs that are already current", async () => {
+    const questions = [];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async (question) => {
+        questions.push(question);
+        return "no";
+      },
+      checkUpdates: {
+        awsProfiles: false,
+        vercelEnvironment: false,
+        githubSecrets: false,
+        cdkVariables: false,
+        githubEnvironment: false,
+        sesDns: false,
+      },
+      cdkArguments: [],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        return "";
+      },
+      log: () => {},
+    });
+
+    expect(questions).toEqual(["Deploy the linked Vercel project to Production? [y/N] "]);
+    expect(commands).toEqual([]);
+  });
+
+  it("checks DNS before asking and omits the question when every record exists", async () => {
+    const questions = [];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async (question) => {
+        questions.push(question);
+        return "no";
+      },
+      checkUpdates: {
+        awsProfiles: true,
+        vercelEnvironment: true,
+        githubSecrets: true,
+        cdkVariables: true,
+        githubEnvironment: true,
+      },
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_ORG_ID: "team_123" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        if (arguments_[2] === "dns" && arguments_[3] === "ls") {
+          return [
+            "rec_1 first._domainkey.ses.example.com CNAME first.dkim.amazonses.com. 3600",
+            "rec_2 mail.ses.example.com MX 10 feedback-smtp.us-east-2.amazonses.com. 3600",
+            "rec_3 mail.ses.example.com TXT v=spf1 include:amazonses.com ~all 3600",
+          ].join("\n");
+        }
+        return "";
+      },
+      log: () => {},
+    });
+
+    expect(questions).not.toContain("Add the SES DNS records through Vercel DNS? [y/N] ");
+    expect(commands.map(({ command, arguments_ }) => [command, arguments_])).toEqual([
+      [
+        "aws",
+        [
+          "sesv2",
+          "get-email-identity",
+          "--email-identity",
+          "ses.example.com",
+          "--query",
+          "DkimAttributes.Tokens",
+          "--output",
+          "json",
+        ],
+      ],
+      [
+        "pnpm",
+        ["exec", "vercel", "dns", "ls", "dive.day", "--limit", "100", "--scope", "team_123"],
+      ],
+    ]);
+  });
+
+  it("passes the Vercel org scope to SES DNS checks and additions", async () => {
+    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async () => answers.shift() ?? "no",
+      checkUpdates: {
+        awsProfiles: true,
+        vercelEnvironment: true,
+        githubSecrets: true,
+        cdkVariables: true,
+        githubEnvironment: true,
+      },
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2", VERCEL_ORG_ID: "team_123" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        return "";
+      },
+      log: () => {},
+    });
+
+    const dnsCommands = commands.filter(
+      ({ command, arguments_ }) => command === "pnpm" && arguments_[2] === "dns",
+    );
+    expect(dnsCommands[0].arguments_).toEqual([
+      "exec",
+      "vercel",
+      "dns",
+      "ls",
+      "dive.day",
+      "--limit",
+      "100",
+      "--scope",
+      "team_123",
+    ]);
+    expect(dnsCommands.slice(1)).toHaveLength(3);
+    expect(
+      dnsCommands
+        .slice(1)
+        .every(({ arguments_ }) => arguments_.slice(-2).join(" ") === "--scope team_123"),
+    ).toBe(true);
+  });
+
   it("syncs the infra-deploy environment only on a workstation, never in CI", async () => {
     // The CI path skips this outright: it would have the deploy job rewrite
     // the very approval gate it is running inside, add the CI PAT's owner as
@@ -171,7 +334,7 @@ describe("post-deploy wizard", () => {
     // 403 on 2026-08-12, ADR 20260812-env-sync-is-workstation-only).
     const environmentSync = async (ciUnattended) => {
       const commands = [];
-      await runPostDeployWizard({
+      await wizard({
         ask: async () => "yes",
         ciUnattended,
         cdkArguments: [],
@@ -197,9 +360,9 @@ describe("post-deploy wizard", () => {
   });
 
   it("skips a Vercel DNS record already present by name, type, and value", async () => {
-    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
+    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => answers.shift() ?? "no",
       cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
       credentialsDocument: "",
@@ -224,9 +387,9 @@ describe("post-deploy wizard", () => {
   });
 
   it("does not treat a superset domain as a match for an existing DNS record", async () => {
-    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
+    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => answers.shift() ?? "no",
       cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
       credentialsDocument: "",
@@ -253,9 +416,9 @@ describe("post-deploy wizard", () => {
   });
 
   it("reads the CDK CI role ARNs from the stack outputs and pipes them to the sync script", async () => {
-    const answers = ["no", "no", "no", "no", "yes", "no", "no"];
+    const answers = ["no", "no", "no", "yes", "no", "no", "no"];
     const commands = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => answers.shift() ?? "no",
       cdkArguments: [],
       credentialsDocument: "",
@@ -316,7 +479,7 @@ describe("post-deploy wizard", () => {
     // cloud runner hit on `pnpm check:repo` on 2026-08-14; the answer here is
     // that no step may be unbounded, not that a particular ceiling is right.
     const commands = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => "yes",
       cdkArguments: [],
       credentialsDocument: "",
@@ -339,9 +502,9 @@ describe("post-deploy wizard", () => {
   });
 
   it("creates the infra-deploy GitHub Environment when asked", async () => {
-    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
+    const answers = ["no", "no", "no", "no", "yes", "no", "no"];
     const commands = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => answers.shift() ?? "no",
       cdkArguments: [],
       credentialsDocument: "",
@@ -363,10 +526,10 @@ describe("post-deploy wizard", () => {
   });
 
   it("falls back to adding every DNS record when listing existing ones fails", async () => {
-    const answers = ["no", "no", "no", "no", "no", "no", "yes"];
+    const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
     const messages = [];
-    await runPostDeployWizard({
+    await wizard({
       ask: async () => answers.shift() ?? "no",
       cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
       credentialsDocument: "",

@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CertificationSummary } from "@/db/self-declared-cards";
-import type { CertificationLevel } from "@/lib/readiness";
+import type { CertificationLevel, CertRequirementSource } from "@/lib/readiness";
 import type { Waitlist } from "./types";
 import { WaitlistSection } from "./WaitlistSection";
 
@@ -24,11 +24,11 @@ function entry(id: string, fullName: string, createdAt: Date): Waitlist[number] 
 function renderSection(
   waitlist: Waitlist,
   certificationSummaries: Map<string, CertificationSummary> = new Map(),
-  minimumCertificationLevel: CertificationLevel | null = null,
+  departureRequirement: CertRequirementSource | null = null,
 ) {
   return render(
     <WaitlistSection
-      minimumCertificationLevel={minimumCertificationLevel}
+      departureRequirement={departureRequirement}
       waitlist={waitlist}
       shopSlug="blue-mantis"
       tripId="trip-1"
@@ -41,6 +41,10 @@ function renderSection(
       timezone="America/New_York"
     />,
   );
+}
+
+function requirement(minimumCertificationLevel: CertificationLevel): CertRequirementSource {
+  return { minimumCertificationLevel, requiredSpecialties: [], requiresNitrox: false };
 }
 
 /**
@@ -118,7 +122,7 @@ describe("WaitlistSection declared level", () => {
     // Names the absence, not the source. "Open Water (self-declared)" parsed as
     // "we know they're Open Water" with a footnote about provenance — and on a
     // phone-width row the footnote is the first thing to truncate.
-    const line = screen.getByText(/Open Water — diver's word, no card/);
+    const line = screen.getByText(/Open Water — unconfirmed/);
     expect(line).toBeVisible();
     // Warning-toned, the same treatment an imported specialty card gets so it
     // is never scanned as a plain level.
@@ -147,7 +151,7 @@ describe("WaitlistSection declared level", () => {
     // differ for one diver, which is why each is marked separately.
     const line = screen.getByText(/Advanced Open Water/);
     expect(line.textContent).not.toMatch(/Advanced Open Water — diver's word/);
-    expect(line.textContent).toMatch(/Nitrox — diver's word, no card/);
+    expect(line.textContent).toMatch(/Nitrox — unconfirmed/);
     // One unchecked claim anywhere on the line tones the whole line: the row is
     // a single decision ("do I invite this person?"), and the weakest fact on
     // it is the one that has to survive a glance.
@@ -188,7 +192,7 @@ describe("WaitlistSection declared level", () => {
       ]),
     );
 
-    const line = screen.getByText(/Not certified yet — diver's word/);
+    const line = screen.getByText(/Not certified yet — unconfirmed/);
     expect(line).toBeVisible();
     // Somebody's word, nobody's card — the same tone every unchecked claim on
     // this row wears.
@@ -219,7 +223,7 @@ describe("WaitlistSection below the departure's bar", () => {
   const summaries = (over?: Partial<CertificationSummary>) => new Map([["p-a", card(over)]]);
 
   it("says a carded diver ranks below this departure's minimum", () => {
-    renderSection(waiting, summaries(), "advanced_open_water");
+    renderSection(waiting, summaries(), requirement("advanced_open_water"));
 
     const line = screen.getByText("Open Water · below this departure's minimum");
     expect(line).toBeVisible();
@@ -230,18 +234,24 @@ describe("WaitlistSection below the departure's bar", () => {
   });
 
   it("keeps both marks when the level is also only the diver's word", () => {
-    renderSection(waiting, summaries({ levelSelfDeclared: true }), "advanced_open_water");
-
-    const line = screen.getByText(
-      "Open Water — diver's word, no card · below this departure's minimum",
+    renderSection(
+      waiting,
+      summaries({ levelSelfDeclared: true }),
+      requirement("advanced_open_water"),
     );
+
+    const line = screen.getByText("Open Water — unconfirmed · below this departure's minimum");
     expect(line).toBeVisible();
     // Two facts, two carriers: unchecked tones the row, under the bar is words.
     expect(line).toHaveClass("text-warning");
   });
 
   it("says nothing of the sort about a diver at or above the bar", () => {
-    renderSection(waiting, summaries({ level: "advanced_open_water" }), "advanced_open_water");
+    renderSection(
+      waiting,
+      summaries({ level: "advanced_open_water" }),
+      requirement("advanced_open_water"),
+    );
 
     const line = screen.getByText("Advanced Open Water");
     expect(line).toBeVisible();
@@ -255,19 +265,19 @@ describe("WaitlistSection below the departure's bar", () => {
     expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
   });
 
-  it("does not rank a diver who is not on the ladder", () => {
-    // Silence, and a stated "I hold no card", are both un-rankable: only a
-    // caller comparing two rungs can honestly say "below". The deal panel lifts
-    // "not certified yet" because it is capped and has to; this row states the
-    // answer it has and claims no comparison it cannot make.
+  it("marks a diver who said they have no card as below any departure bar", () => {
+    // The shared predicate treats a stated absence of a card as below a rung,
+    // specialty, or nitrox requirement without pretending "none" is a ladder
+    // level. This row states the same fact as the deal panel, but does not move.
     renderSection(
       waiting,
       new Map([["p-a", card({ level: null, noCertificationDeclared: true })]]),
-      "advanced_open_water",
+      requirement("advanced_open_water"),
     );
 
-    expect(screen.getByText(/Not certified yet — diver's word/)).toBeVisible();
-    expect(screen.queryByText(/below this departure's minimum/)).toBeNull();
+    expect(
+      screen.getByText(/Not certified yet — unconfirmed · below this departure's minimum/),
+    ).toBeVisible();
   });
 
   it("leaves the order alone: the mark lifts nobody", () => {
@@ -281,7 +291,7 @@ describe("WaitlistSection below the departure's bar", () => {
         ["p-a", card({ level: "instructor" })],
         ["p-b", card()],
       ]),
-      "advanced_open_water",
+      requirement("advanced_open_water"),
     );
 
     const names = [...document.querySelectorAll("li p.font-medium")].map((node) =>

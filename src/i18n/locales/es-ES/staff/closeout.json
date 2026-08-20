@@ -1,7 +1,17 @@
 {
   "title": "Cierre del día",
   "notice": {
-    "closed": "Día cerrado. El registro está abajo — hasta mañana."
+    "closed": "Día cerrado. El registro está abajo — hasta mañana.",
+    "acknowledgeRequired": "Confirma el barco abierto o el recuento pendiente antes de cerrar el día.",
+    "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
+    "recapAttention": "Algunos resúmenes requieren atención. Revisa los informes posteriores a la inmersión abajo.",
+    "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
+    "recapLocked": "Este resumen ya se envió. Ya no se pueden cambiar la nota ni las fotos.",
+    "crewPhotoAdded": "Foto del equipo añadida a este cierre.",
+    "crewPhotoRemoved": "Foto del equipo eliminada.",
+    "crewPhotoLimit": "Este cierre ya tiene el máximo de fotos del equipo.",
+    "crewPhotoUnsupported": "La carga de fotos todavía no está configurada para este centro.",
+    "crewPhotoFailed": "No se pudo añadir esa foto. Revisa el archivo e inténtalo de nuevo."
   },
   "headline": {
     "allClear": "Todos de vuelta",
@@ -36,6 +46,62 @@
       "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó — # buceador sin resultado en la salida.} other {El recuento en muelle nunca se terminó — # buceadores sin resultado en la salida.}}",
       "noRollCall": "No se registró pase de lista en esta salida."
     }
+  },
+  "admin": {
+    "heading": "Cierre administrativo",
+    "subtitle": "Seguimiento de los barcos que ya están de vuelta.",
+    "status": {
+      "complete": "Completo",
+      "pending": "En curso",
+      "attention": "Requiere atención"
+    },
+    "postDiveReports": {
+      "label": "Informes posteriores a la inmersión",
+      "description": "Envía a cada buceador el resumen de una salida completada.",
+      "progress": "{completed} de {total} enviados.",
+      "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
+      "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}",
+      "retry": "Reintentar informes fallidos",
+      "retrying": "Reintentando informes fallidos…"
+    }
+  },
+  "recap": {
+    "summaryHeading": "Resumen",
+    "heading": "Envío del resumen",
+    "waiting": "El envío automático del resumen comienza en {remaining}.",
+    "due": "Los resúmenes se enviarán en 1 h.",
+    "paused": "El envío automático del resumen está pausado.",
+    "failed": "Falló el envío automático del resumen.",
+    "noScheduledReturn": "Sin hora de regreso programada. Los resúmenes no se enviarán automáticamente.",
+    "send": "Enviar resumen ahora",
+    "sending": "Enviando resumen…",
+    "pause": "Pausar envío automático",
+    "pausing": "Pausando envío automático…",
+    "unpause": "Reanudar envío automático",
+    "unpausing": "Reanudando envío automático…",
+    "lessThanMinute": "menos de un minuto",
+    "aboutMinutes": "{count, plural, one {1 minuto} other {# minutos}}",
+    "aboutHours": "{count, plural, one {1 hora} other {# horas}}",
+    "sent": "Este resumen se envió a las {time}. La nota y las fotos están bloqueadas.",
+    "summarySent": "Este resumen se envió hace aproximadamente {duration}.",
+    "summaryWaiting": "Este resumen se enviará automáticamente en aproximadamente {duration}.",
+    "summaryDue": "Este resumen está listo para enviarse.",
+    "summaryPaused": "El envío del resumen está pausado.",
+    "summaryFailed": "Falló el envío automático del resumen.",
+    "summaryNoScheduled": "Este resumen no se enviará automáticamente."
+  },
+  "crewPhotos": {
+    "heading": "Fotos del equipo",
+    "description": "Guarda las fotos de los instructores con este cierre. Solo las ve el personal y no se añaden a los resúmenes de los buceadores.",
+    "photoAlt": "Foto del equipo de esta salida",
+    "add": "Añadir una foto del equipo",
+    "upload": "Subir foto",
+    "adding": "Subiendo foto…",
+    "remove": "Eliminar",
+    "confirmRemove": "¿Eliminar esta foto del equipo del cierre?",
+    "removeConfirmButton": "Eliminar foto",
+    "removeCancel": "Conservar foto",
+    "removing": "Eliminando foto…"
   },
   "leftovers": {
     "heading": "Lo que quedó de hoy",

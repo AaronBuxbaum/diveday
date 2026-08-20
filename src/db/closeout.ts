@@ -4,7 +4,9 @@ import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
   buildCloseoutSnapshot,
+  type CloseoutAdminTask,
   type CloseoutSnapshot,
+  closeoutAdminTaskStatus,
   type DayCloseoutState,
   type LeftoverDecision,
   parseCloseoutSnapshot,
@@ -12,7 +14,15 @@ import {
 } from "@/lib/closeout";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
-import { bookings, dayCloseouts, people, trips } from "./schema";
+import {
+  bookings,
+  dayCloseouts,
+  notificationDeliveries,
+  people,
+  recapPhotos,
+  tripRecapPhotos,
+  trips,
+} from "./schema";
 import { getTodayWork, listRollCallGaps } from "./today";
 
 /**
@@ -42,6 +52,14 @@ export type DayCloseout = {
   closeCount: number;
 };
 
+/** The only close-out refusal: an open person-safety state needs an explicit acknowledgement. */
+export class CloseoutAcknowledgementRequired extends Error {
+  constructor() {
+    super("close-out acknowledgement required");
+    this.name = "CloseoutAcknowledgementRequired";
+  }
+}
+
 /**
  * Today's departures in the shop's own calendar day — backwards-looking on
  * purpose, like `listRollCallGaps`: the boats this surface reconciles have
@@ -56,6 +74,8 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       recapShoutout: trips.recapShoutout,
+      recapAutoSendPaused: trips.recapAutoSendPaused,
+      recapAutoSendAt: trips.recapAutoSendAt,
     })
     .from(trips)
     .where(
@@ -68,21 +88,122 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
       ),
     );
   if (rows.length === 0) return [];
-  const counts = await db
-    .select({ tripId: bookings.tripId, booked: count() })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(
-          bookings.tripId,
-          rows.map((row) => row.id),
+  const [counts, photos, crewPhotos, recapDeliveries] = await Promise.all([
+    db
+      .select({ tripId: bookings.tripId, booked: count() })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(
+            bookings.tripId,
+            rows.map((row) => row.id),
+          ),
+          ne(bookings.status, "cancelled"),
         ),
-        ne(bookings.status, "cancelled"),
+      )
+      .groupBy(bookings.tripId),
+    db
+      .select({
+        id: recapPhotos.id,
+        imageUrl: recapPhotos.imageUrl,
+        caption: recapPhotos.caption,
+        diverName: people.fullName,
+        bookingId: recapPhotos.bookingId,
+        tripId: recapPhotos.tripId,
+      })
+      .from(recapPhotos)
+      .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(
+        and(
+          eq(recapPhotos.shopId, shopId),
+          inArray(
+            recapPhotos.tripId,
+            rows.map((row) => row.id),
+          ),
+        ),
+      )
+      .orderBy(desc(recapPhotos.createdAt)),
+    db
+      .select({
+        id: tripRecapPhotos.id,
+        imageUrl: tripRecapPhotos.imageUrl,
+        tripId: tripRecapPhotos.tripId,
+      })
+      .from(tripRecapPhotos)
+      .where(
+        and(
+          eq(tripRecapPhotos.shopId, shopId),
+          inArray(
+            tripRecapPhotos.tripId,
+            rows.map((row) => row.id),
+          ),
+        ),
+      )
+      .orderBy(desc(tripRecapPhotos.createdAt)),
+    db
+      .select({
+        tripId: bookings.tripId,
+        bookingStatus: bookings.status,
+        deliveryStatus: notificationDeliveries.status,
+        attemptedAt: notificationDeliveries.attemptedAt,
+      })
+      .from(bookings)
+      .leftJoin(
+        notificationDeliveries,
+        and(
+          eq(notificationDeliveries.bookingId, bookings.id),
+          eq(notificationDeliveries.shopId, shopId),
+          eq(notificationDeliveries.kind, "trip_recap"),
+        ),
+      )
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(
+            bookings.tripId,
+            rows.map((row) => row.id),
+          ),
+        ),
       ),
-    )
-    .groupBy(bookings.tripId);
+  ]);
   const bookedByTrip = new Map(counts.map((row) => [row.tripId, Number(row.booked)]));
+  const photosByTrip = new Map<string, typeof photos>();
+  for (const photo of photos) {
+    const list = photosByTrip.get(photo.tripId) ?? [];
+    list.push(photo);
+    photosByTrip.set(photo.tripId, list);
+  }
+  const crewPhotosByTrip = new Map<string, typeof crewPhotos>();
+  for (const photo of crewPhotos) {
+    const list = crewPhotosByTrip.get(photo.tripId) ?? [];
+    list.push(photo);
+    crewPhotosByTrip.set(photo.tripId, list);
+  }
+  const recapStateByTrip = new Map<
+    string,
+    { total: number; sent: number; failed: number; latest: Date | null }
+  >();
+  for (const delivery of recapDeliveries) {
+    if (delivery.bookingStatus === "cancelled" || delivery.bookingStatus === "no_show") continue;
+    const state = recapStateByTrip.get(delivery.tripId) ?? {
+      total: 0,
+      sent: 0,
+      failed: 0,
+      latest: null,
+    };
+    state.total++;
+    if (delivery.deliveryStatus === "sent") {
+      state.sent++;
+      if (delivery.attemptedAt && (!state.latest || delivery.attemptedAt > state.latest)) {
+        state.latest = delivery.attemptedAt;
+      }
+    } else if (delivery.deliveryStatus === "failed") {
+      state.failed++;
+    }
+    recapStateByTrip.set(delivery.tripId, state);
+  }
   return rows.map((row) => ({
     tripId: row.id,
     title: row.title,
@@ -90,7 +211,85 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
     endsAt: row.endsAt,
     booked: bookedByTrip.get(row.id) ?? 0,
     recapShoutout: row.recapShoutout,
+    recapAutoSendPaused: row.recapAutoSendPaused,
+    recapAutoSendAt: row.recapAutoSendAt,
+    recapFailed: (recapStateByTrip.get(row.id)?.failed ?? 0) > 0,
+    recapSentAt:
+      recapStateByTrip.get(row.id)?.total === recapStateByTrip.get(row.id)?.sent
+        ? (recapStateByTrip.get(row.id)?.latest ?? null)
+        : null,
+    photos: photosByTrip.get(row.id) ?? [],
+    crewPhotos: crewPhotosByTrip.get(row.id) ?? [],
   }));
+}
+
+/**
+ * Post-dive reports are a task over existing notification state, not a second
+ * delivery system. A missing `trip_recap` row is pending; a send or provider
+ * failure needs attention; every successful send is complete. Only returned
+ * trips in today's shop-local day participate in the ritual.
+ */
+async function postDiveReportTask(
+  db: AppDb,
+  shopId: string,
+  tripsToday: Awaited<ReturnType<typeof todaysTrips>>,
+  now: Date,
+): Promise<CloseoutAdminTask | null> {
+  const endedTripIds = tripsToday.filter((trip) => trip.endsAt <= now).map((trip) => trip.tripId);
+  if (endedTripIds.length === 0) return null;
+
+  const rows = await db
+    .select({
+      deliveryStatus: notificationDeliveries.status,
+      providerStatus: notificationDeliveries.providerStatus,
+    })
+    .from(bookings)
+    .leftJoin(
+      notificationDeliveries,
+      and(
+        eq(notificationDeliveries.bookingId, bookings.id),
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.kind, "trip_recap"),
+      ),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.tripId, endedTripIds),
+        ne(bookings.status, "cancelled"),
+        ne(bookings.status, "no_show"),
+      ),
+    );
+  if (rows.length === 0) return null;
+
+  const failedProviderStatuses = new Set(["bounced", "complained", "failed", "suppressed"]);
+  let completed = 0;
+  let failed = 0;
+  for (const row of rows) {
+    if (
+      row.deliveryStatus === "failed" ||
+      row.deliveryStatus === "not_configured" ||
+      (row.providerStatus !== null && failedProviderStatuses.has(row.providerStatus))
+    ) {
+      failed++;
+    } else if (row.deliveryStatus === "sent") {
+      completed++;
+    }
+  }
+  const pending = rows.length - completed - failed;
+  return {
+    id: "post_dive_reports",
+    total: rows.length,
+    completed,
+    pending,
+    failed,
+    status: closeoutAdminTaskStatus({
+      total: rows.length,
+      completed,
+      pending,
+      failed,
+    }),
+  };
 }
 
 async function assembleState(
@@ -108,10 +307,12 @@ async function assembleState(
     listRollCallGaps(db, shopId, now),
     getTodayWork(db, shopId, shopSlug, timeZone, now, undefined, t, locale, includeOpsAlerts),
   ]);
+  const adminTask = await postDiveReportTask(db, shopId, tripsToday, now);
   return assembleDayCloseout({
     trips: tripsToday,
     gaps,
     actions: work.actions,
+    adminTasks: adminTask ? [adminTask] : [],
     timeZone,
     now,
   });
@@ -204,6 +405,7 @@ export async function closeDay(
     t?: StaffTranslator;
     locale?: string;
     includeOpsAlerts?: boolean;
+    acknowledged?: boolean;
   },
 ): Promise<DayCloseoutRecord> {
   const now = input.now ?? nowDate();
@@ -226,6 +428,9 @@ export async function closeDay(
     input.locale ?? "en-US",
     input.includeOpsAlerts ?? false,
   );
+  if (state.mustAcknowledge.length > 0 && !input.acknowledged) {
+    throw new CloseoutAcknowledgementRequired();
+  }
   const outstanding = buildCloseoutSnapshot(state, input.decisions);
   const [row] = await db
     .insert(dayCloseouts)

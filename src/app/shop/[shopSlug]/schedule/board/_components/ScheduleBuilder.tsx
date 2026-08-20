@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
@@ -55,6 +55,10 @@ export type BuilderTrip = {
    * boat's list have no result recorded at it.
    */
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
+  diveMode?: "boat" | "shore" | "pool";
+  boatName?: string | null;
+  startsAt?: Date;
+  endsAt?: Date;
 };
 
 export type BuilderDay = {
@@ -70,9 +74,12 @@ export type BuilderDay = {
    */
   parts: { weekday: string; day: string; month: string };
   trips: BuilderTrip[];
+  boatWarning?: string | null;
 };
 
 export type BuilderOption = { id: string; title: string };
+export type BuilderCourseOption = BuilderOption & { agency: string };
+export type BuilderBoatOption = { id: string; name: string; capacity: number };
 
 /**
  * What the add-a-departure panel's two selects offer. Fetched when the panel
@@ -80,7 +87,13 @@ export type BuilderOption = { id: string; title: string };
  * props on every board render: a shop's whole course catalogue and every dive
  * site it dives, shipped to a browser for two controls behind a closed panel.
  */
-export type BuilderOptions = { courses: BuilderOption[]; diveSites: BuilderOption[] };
+export type BuilderOptions = {
+  courses: BuilderCourseOption[];
+  diveSites: BuilderOption[];
+  boats?: BuilderBoatOption[];
+  hasShoreDiving?: boolean;
+  hasPoolDiving?: boolean;
+};
 
 /**
  * Everything the price box needs that is neither copy nor a value — all of it
@@ -153,6 +166,7 @@ export type BuilderCopy = {
   priceDescription: string;
   course: string;
   optional: string;
+  courseAgencyLabels: { padi: string; ssi: string; other: string };
   diveSite: string;
   ordinaryTrip: string;
   decideLater: string;
@@ -180,6 +194,8 @@ export type BuilderCopy = {
   courseNoCardRequired: string;
   descriptionLabel: string;
   descriptionPlaceholder: string;
+  isPrivateLabel: string;
+  isPrivateHint: string;
   daysLabel: string;
   daysDescription: string;
   payAtBookingLegend: string;
@@ -210,6 +226,19 @@ export type BuilderCopy = {
   endsNever: string;
   endsOnChoice: string;
   endsOnLabel: string;
+  requestPlanHeading?: string;
+  requestPlanDescription?: string;
+  requestPlanRecommendation?: string;
+  requestPlanDivers?: string;
+  requestPlanPerson?: string;
+  requestPlanBoatRecommendation?: string;
+  requestPlanBoatExceeded?: string;
+  diveModeLabel?: string;
+  modeBoat?: string;
+  modeShore?: string;
+  modePool?: string;
+  boatSelectLabel?: string;
+  unassignedBoat?: string;
 };
 
 /**
@@ -224,6 +253,28 @@ export type BuilderInitialCourse = {
   title: string;
   /** The admission line the old full form showed under the select, pre-resolved. */
   requirement: string;
+};
+
+export type BuilderInitialSite = {
+  id: string;
+  name: string;
+};
+
+/**
+ * Lead context handed from Requests to the one trip-creation form. Checked
+ * rows become invitations only; they do not become bookings or consume seats.
+ */
+export type BuilderRequestPlan = {
+  estimatedDivers: number;
+  suggestedCapacity: number;
+  suggestedBoatName?: string | null;
+  exceedsKnownBoats?: boolean;
+  requests: Array<{
+    id: string;
+    name: string;
+    subject: string;
+    divers: number;
+  }>;
 };
 
 /** Everything the panel needs that only matters once "More options" is open. */
@@ -272,6 +323,8 @@ function AddPanel({
   copy,
   more,
   initialCourse,
+  initialSite,
+  requestPlan,
   startExpanded,
   onAdd,
   onCancel,
@@ -283,6 +336,8 @@ function AddPanel({
   copy: BuilderCopy;
   more: BuilderMoreOptions;
   initialCourse: BuilderInitialCourse | null;
+  initialSite?: BuilderInitialSite | null;
+  requestPlan?: BuilderRequestPlan | null;
   /** Opened straight into its full depth — a link that meant the whole form. */
   startExpanded: boolean;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
@@ -296,6 +351,10 @@ function AddPanel({
   const [courseId, setCourseId] = useState(initialCourse?.id ?? "");
   const onCourse = initialCourse !== null && courseId === initialCourse.id;
 
+  const [diveMode, setDiveMode] = useState<"boat" | "shore" | "pool">("boat");
+  const [selectedBoatId, setSelectedBoatId] = useState<string>("");
+  const [capacity, setCapacity] = useState<number>(requestPlan?.suggestedCapacity ?? 12);
+
   /**
    * The two facts both depths ask for, held here so the disclosure can never
    * eat them: collapsed they are the "Dives" box and the "Dive site" select,
@@ -304,7 +363,7 @@ function AddPanel({
    * open More options, and still be scheduling three dives.
    */
   const [plannedDives, setPlannedDives] = useState(2);
-  const [diveSiteId, setDiveSiteId] = useState("");
+  const [diveSiteId, setDiveSiteId] = useState(initialSite?.id ?? "");
   /**
    * The dive plan is mounted from the first expansion onward and only hidden
    * afterwards — never unmounted, because React drops an unmounted subtree's
@@ -313,7 +372,7 @@ function AddPanel({
    * would overwrite the cards with the quick row again.
    */
   const [diveSeed, setDiveSeed] = useState<{ count: number; siteId: string } | null>(
-    startExpanded ? { count: 2, siteId: "" } : null,
+    startExpanded || initialSite ? { count: 2, siteId: initialSite?.id ?? "" } : null,
   );
   const toggleExpanded = () => {
     setExpanded((current) => {
@@ -331,6 +390,57 @@ function AddPanel({
       columns={1}
       className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
+      {requestPlan ? (
+        <fieldset className="sticky top-4 z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
+          <legend className="px-1 text-sm font-semibold text-primary">
+            {copy.requestPlanHeading ?? ""}
+          </legend>
+          <p className="text-sm text-muted">{copy.requestPlanDescription ?? ""}</p>
+          <p className="mt-2 text-sm font-medium">
+            {fill(copy.requestPlanRecommendation ?? "", {
+              capacity: requestPlan.suggestedCapacity,
+              divers: requestPlan.estimatedDivers,
+            })}
+          </p>
+          {requestPlan.suggestedBoatName ? (
+            <p className="mt-1 text-sm text-muted font-medium">
+              {fill(copy.requestPlanBoatRecommendation ?? "", {
+                boatName: requestPlan.suggestedBoatName,
+                capacity: requestPlan.suggestedCapacity,
+              })}
+            </p>
+          ) : null}
+          {requestPlan.exceedsKnownBoats ? (
+            <p className="mt-1 text-sm text-warning font-medium">
+              {copy.requestPlanBoatExceeded ?? ""}
+            </p>
+          ) : null}
+          <ul className="mt-3 grid gap-2">
+            {requestPlan.requests.map((request) => (
+              <li key={request.id}>
+                <label className="flex min-h-11 items-start gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="inquiryId"
+                    value={request.id}
+                    defaultChecked
+                    className="mt-1 size-4 accent-primary"
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-medium">
+                      {fill(copy.requestPlanPerson ?? "", {
+                        name: request.name,
+                        divers: request.divers,
+                      })}
+                    </span>
+                    <span className="block text-muted">{request.subject}</span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      ) : null}
       <Field label={copy.whatIsIt}>
         <input
           name="title"
@@ -368,6 +478,21 @@ function AddPanel({
           placeholder={copy.descriptionPlaceholder}
           className={controlClass}
         />
+      </Field>
+      <Field label={null} className={expanded ? undefined : "hidden"}>
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
+          <input
+            type="checkbox"
+            name="isPrivate"
+            value="true"
+            disabled={!expanded}
+            className="size-4 rounded border-border"
+          />
+          <div className="flex flex-col">
+            <span>{copy.isPrivateLabel}</span>
+            <span className="text-xs font-normal text-muted">{copy.isPrivateHint}</span>
+          </div>
+        </label>
       </Field>
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>
@@ -421,6 +546,56 @@ function AddPanel({
           className={`${controlClass} tabular-nums sm:w-40`}
         />
       </Field>
+      {options?.hasShoreDiving ||
+      options?.hasPoolDiving ||
+      (options?.boats && options.boats.length > 0) ? (
+        <FieldGrid columns={2} className="gap-y-4">
+          {options?.hasShoreDiving || options?.hasPoolDiving ? (
+            <Field label={copy.diveModeLabel ?? "Dive mode"}>
+              <select
+                name="diveMode"
+                value={diveMode}
+                onChange={(event) => setDiveMode(event.target.value as "boat" | "shore" | "pool")}
+                className={controlClass}
+              >
+                <option value="boat">{copy.modeBoat ?? "Boat dive"}</option>
+                {options.hasShoreDiving ? (
+                  <option value="shore">{copy.modeShore ?? "Shore dive"}</option>
+                ) : null}
+                {options.hasPoolDiving ? (
+                  <option value="pool">{copy.modePool ?? "Pool session"}</option>
+                ) : null}
+              </select>
+            </Field>
+          ) : (
+            <input type="hidden" name="diveMode" value="boat" />
+          )}
+          {diveMode === "boat" && options?.boats && options.boats.length > 0 ? (
+            <Field label={copy.boatSelectLabel ?? "Assigned boat"} hint={copy.optional}>
+              <select
+                name="boatId"
+                value={selectedBoatId}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  setSelectedBoatId(id);
+                  const boat = options?.boats?.find((b) => b.id === id);
+                  if (boat) setCapacity(boat.capacity);
+                }}
+                className={controlClass}
+              >
+                <option value="">{copy.unassignedBoat ?? "Any / unassigned"}</option>
+                {options.boats.map((boat) => (
+                  <option key={boat.id} value={boat.id}>
+                    {boat.name} ({boat.capacity} seats)
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
+        </FieldGrid>
+      ) : (
+        <input type="hidden" name="diveMode" value="boat" />
+      )}
       <FieldGrid columns={2} className="gap-y-4">
         <Field label={copy.seats}>
           <input
@@ -429,7 +604,8 @@ function AddPanel({
             required
             min={1}
             max={60}
-            defaultValue={12}
+            value={capacity}
+            onChange={(event) => setCapacity(Number(event.target.value))}
             className={`${controlClass} tabular-nums`}
           />
         </Field>
@@ -473,6 +649,8 @@ function AddPanel({
       </FieldGrid>
       {/* `<fieldset disabled>` reaches every control inside it, so this whole
           block leaves the submission in one attribute while it is hidden. */}
+      {/* A legend names this payment control group; it must remain a
+          fieldset rather than becoming a generic SectionCard. */}
       <fieldset
         hidden={!expanded}
         disabled={!expanded}
@@ -586,10 +764,28 @@ function AddPanel({
                 </option>
               </>
             ) : (
-              options.courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
+              Object.entries(
+                options.courses.reduce<Record<string, BuilderCourseOption[]>>((groups, course) => {
+                  const key = course.agency.trim().toLowerCase() || "other";
+                  const group = groups[key] ?? [];
+                  group.push(course);
+                  groups[key] = group;
+                  return groups;
+                }, {}),
+              ).map(([agency, courses]) => (
+                <optgroup
+                  key={agency}
+                  label={
+                    copy.courseAgencyLabels[agency as keyof typeof copy.courseAgencyLabels] ??
+                    (agency === "other" ? copy.courseAgencyLabels.other : agency.toUpperCase())
+                  }
+                >
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.title}
+                    </option>
+                  ))}
+                </optgroup>
               ))
             )}
           </select>
@@ -610,6 +806,9 @@ function AddPanel({
             className={controlClass}
           >
             <option value="">{copy.decideLater}</option>
+            {initialSite && options === null ? (
+              <option value={initialSite.id}>{initialSite.name}</option>
+            ) : null}
             {options === null ? (
               <option value="" disabled>
                 {copy.optionsLoading}
@@ -647,6 +846,8 @@ function AddPanel({
           copy={more.diveFields}
         />
       )}
+      {/* A legend names this recurrence control group; it must remain a
+          fieldset rather than becoming a generic SectionCard. */}
       <fieldset
         hidden={!expanded}
         disabled={!expanded}
@@ -739,6 +940,8 @@ export function ScheduleBuilder({
   copy,
   more,
   initialCourse,
+  initialSite,
+  requestPlan,
   openAdd,
 }: {
   shopSlug: string;
@@ -754,6 +957,10 @@ export function ScheduleBuilder({
   more: BuilderMoreOptions;
   /** Set when the board was reached from a course's "schedule a session" control. */
   initialCourse: BuilderInitialCourse | null;
+  /** Set when the board was reached from a dive site's "schedule departure" control. */
+  initialSite?: BuilderInitialSite | null;
+  /** Requests selected from the Requests page, or null for an ordinary add. */
+  requestPlan?: BuilderRequestPlan | null;
   /**
    * Whether to arrive with the add panel already open, and how deep. Every
    * former door to `/trips/new` now lands here instead, and a link that used to
@@ -763,6 +970,8 @@ export function ScheduleBuilder({
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
+  const [closingMenu, setClosingMenu] = useState<string | null>(null);
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The top add panel is opened by *links* — the header's "Add a departure",
   // the empty board's call to action, the former /trips/new doors — all of
@@ -784,7 +993,7 @@ export function ScheduleBuilder({
   const cancelTopAdd = () => {
     setOpen(null);
     const params = new URLSearchParams(searchParams);
-    for (const key of ["add", "date", "course"]) params.delete(key);
+    for (const key of ["add", "date", "course", "requests", "site"]) params.delete(key);
     router.replace(`${pathname}${params.size > 0 ? `?${params}` : ""}`, { scroll: false });
     document.querySelector<HTMLElement>("[data-board-add]")?.focus();
   };
@@ -796,7 +1005,30 @@ export function ScheduleBuilder({
   const windowTrips = days.flatMap((day) => day.trips);
   const unpricedCount = windowTrips.filter((trip) => trip.priceCents === null).length;
   const allUnpriced = unpricedCount >= 3 && unpricedCount === windowTrips.length;
-  const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
+  const closeMenu = useCallback((menuKey: string) => {
+    setClosingMenu(menuKey);
+    if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
+    menuCloseTimer.current = setTimeout(() => {
+      setOpen((current) => (current === menuKey ? null : current));
+      setClosingMenu((current) => (current === menuKey ? null : current));
+    }, 450);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
+    };
+  }, []);
+
+  const toggle = (panel: string) => {
+    if (open === panel) {
+      if (panel.startsWith("menu:")) closeMenu(panel);
+      else setOpen(null);
+      return;
+    }
+    setClosingMenu(null);
+    setOpen(panel);
+  };
 
   // The add panel's selects, fetched the first time any add panel opens and
   // kept for the rest of the visit — the catalogue does not change while a
@@ -820,6 +1052,7 @@ export function ScheduleBuilder({
     toggleRefs.current[key] = el;
   };
   const closePanel = (key: string) => {
+    setClosingMenu(null);
     setOpen(null);
     toggleRefs.current[key]?.focus();
   };
@@ -838,11 +1071,11 @@ export function ScheduleBuilder({
       const target = event.target;
       if (target instanceof Element && target.closest(`[data-row-menu="${CSS.escape(tripId)}"]`))
         return;
-      setOpen(null);
+      closeMenu(menuKey);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setOpen(null);
+      closeMenu(menuKey);
       toggleRefs.current[menuKey]?.focus();
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -851,7 +1084,7 @@ export function ScheduleBuilder({
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   // The schedule route has no dynamic id, so if `cacheComponents: true`'s
   // Activity-based navigation is ever re-enabled, this instance could
@@ -918,6 +1151,8 @@ export function ScheduleBuilder({
           copy={copy}
           more={more}
           initialCourse={initialCourse}
+          initialSite={initialSite}
+          requestPlan={requestPlan}
           startExpanded={openAdd === "expanded"}
           onAdd={actions.add}
           onCancel={cancelTopAdd}
@@ -985,6 +1220,12 @@ export function ScheduleBuilder({
                 </button>
               ) : null}
             </div>
+            {day.boatWarning ? (
+              <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning flex items-center gap-2">
+                <span aria-hidden="true">⚠️</span>
+                <span>{day.boatWarning}</span>
+              </div>
+            ) : null}
             {canConfigure && open === `add:${day.dateIso}` ? (
               <AddPanel
                 dateIso={day.dateIso}
@@ -993,6 +1234,7 @@ export function ScheduleBuilder({
                 copy={copy}
                 more={more}
                 initialCourse={null}
+                requestPlan={null}
                 startExpanded={false}
                 onAdd={actions.add}
                 onCancel={() => closePanel(`add:${day.dateIso}`)}
@@ -1063,6 +1305,9 @@ export function ScheduleBuilder({
                           </Link>
                           <p className="mt-0.5 text-sm text-muted">
                             {[
+                              trip.boatName ? `⛵ ${trip.boatName}` : null,
+                              trip.diveMode === "shore" ? copy.modeShore : null,
+                              trip.diveMode === "pool" ? copy.modePool : null,
                               trip.courseTitle
                                 ? fill(copy.courseLabel, { title: trip.courseTitle })
                                 : null,
@@ -1193,8 +1438,14 @@ export function ScheduleBuilder({
                                 failure. Inline, nothing can ever be obscured,
                                 and the actions sit beside the row they act on
                                 (design/principles.md #10). */}
-                            {open === `menu:${trip.id}` ? (
-                              <div className="flex items-center gap-1 animate-scale-in">
+                            {open === `menu:${trip.id}` || closingMenu === `menu:${trip.id}` ? (
+                              <div
+                                className={`flex items-center gap-1 ${
+                                  closingMenu === `menu:${trip.id}`
+                                    ? "pointer-events-none animate-board-menu-out"
+                                    : "animate-board-menu-in"
+                                }`}
+                              >
                                 <button
                                   type="button"
                                   ref={focusOnMount}

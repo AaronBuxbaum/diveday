@@ -30,13 +30,16 @@ function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: Wa
       >
         /waivers/{link.token.slice(0, 8)}…
       </a>
-      <Copyable
-        layout="inline"
-        value={url || `/waivers/${link.token}`}
-        copyLabel={copyText.copyLink}
-        copiedLabel={copyText.copied}
-        failedLabel={copyText.copyFailed}
-      />
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true">🔗</span>
+        <Copyable
+          layout="inline"
+          value={url || `/waivers/${link.token}`}
+          copyLabel={copyText.copyLink}
+          copiedLabel={copyText.copied}
+          failedLabel={copyText.copyFailed}
+        />
+      </span>
     </div>
   );
 }
@@ -74,6 +77,7 @@ function reasonCopy(
  * "the shop's email is broken" or the reverse. */
 function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: WaiverSendCopy }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
+    sent: links.filter((link) => link.reason === "sent"),
     no_email: links.filter((link) => link.reason === "no_email"),
     no_app_origin: links.filter((link) => link.reason === "no_app_origin"),
     unconfigured: links.filter((link) => link.reason === "unconfigured"),
@@ -88,8 +92,10 @@ function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: Waiver
         return (
           <div key={reason} className="mt-2">
             <p className="text-muted">
-              {reasonCopy(copy, reason, group.length)} — share{" "}
-              {group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther}:
+              {reason === "sent"
+                ? fill(copy.sent, { names: group.map((link) => link.name).join(", ") })
+                : reasonCopy(copy, reason, group.length)}{" "}
+              — share {group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther}:
             </p>
             <div className="mt-2 flex flex-col gap-1.5">
               {group.map((link) => (
@@ -151,12 +157,14 @@ export function WaiverSendControl({
   surface,
   tripId,
   bookingIds,
+  personId,
   label,
   hint,
   pendingLabel,
   confirmMessage,
   className,
   wrapperClassName,
+  exposeLink = false,
   copy,
 }: {
   shopSlug: string;
@@ -164,6 +172,8 @@ export function WaiverSendControl({
   /** Required when surface is "roster" — which trip's guests page to revalidate. */
   tripId?: string;
   bookingIds: string[];
+  /** A person-scoped waiver target, independent of any booking or schedule. */
+  personId?: string;
   label: string;
   /** Short trailing detail (e.g. "tap to resend") — the roster's richer status pill uses this. */
   hint?: string;
@@ -174,6 +184,8 @@ export function WaiverSendControl({
   className?: string;
   /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
   wrapperClassName?: string;
+  /** Show freshly issued private links even when email delivery succeeded. */
+  exposeLink?: boolean;
   copy: WaiverSendCopy;
 }) {
   const [state, formAction] = useActionState(
@@ -202,6 +214,8 @@ export function WaiverSendControl({
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
+        {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+        {exposeLink ? <input type="hidden" name="exposeLink" value="true" /> : null}
         {/* Resending is a send, not a reversible edit (principle 7,
             docs/design/principles.md) — a resend to someone who already got
             one guards with a real confirm, not an undo. */}

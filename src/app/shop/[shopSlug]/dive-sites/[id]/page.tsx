@@ -5,18 +5,20 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
-  copyDiveSite,
   deleteDiveSite,
   getDiveSite,
+  getDiveSiteTemplateUpdate,
   listDiveSiteCreatures,
-  listDiveSites,
   listUpcomingTripsForSite,
+  pullDiveSiteTemplateUpdates,
   SITE_NAME_TAKEN,
+  undoDiveSiteTemplateUpdate,
   updateDiveSiteForForm,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
@@ -25,6 +27,10 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
+import type {
+  DiveSiteTemplateField,
+  DiveSiteTemplateUpdateMode,
+} from "@/lib/dive-site-template-sync";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -61,6 +67,10 @@ const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   saved: "diveSites.edit.savedNotice",
   copied: "diveSites.edit.copiedNotice",
+  "template-updated": "diveSites.edit.templateUpdates.updated",
+  "template-replaced": "diveSites.edit.templateUpdates.replaced",
+  "template-undone": "diveSites.edit.templateUpdates.undone",
+  "template-update-unavailable": "diveSites.edit.templateUpdates.unavailable",
 };
 
 // Only the archive action still refuses through the URL; a rejected *save*
@@ -70,12 +80,35 @@ const ERROR_KEYS: Record<string, StaffMessageKey> = {
   invalid: "diveSites.edit.errorInvalid",
 };
 
+const TEMPLATE_FIELD_KEYS: Record<DiveSiteTemplateField, StaffMessageKey> = {
+  description: "diveSites.edit.templateUpdates.fields.description",
+  locationName: "diveSites.edit.templateUpdates.fields.locationName",
+  forecastLatitude: "diveSites.edit.templateUpdates.fields.coordinates",
+  forecastLongitude: "diveSites.edit.templateUpdates.fields.coordinates",
+  marineLife: "diveSites.edit.templateUpdates.fields.marineLife",
+  marineLifeDescription: "diveSites.edit.templateUpdates.fields.marineLifeDescription",
+  difficultyLevel: "diveSites.edit.templateUpdates.fields.difficultyLevel",
+  depthRange: "diveSites.edit.templateUpdates.fields.depthRange",
+  maxDepthMeters: "diveSites.edit.templateUpdates.fields.maxDepthMeters",
+  expectedBottomTimeMinutes: "diveSites.edit.templateUpdates.fields.expectedBottomTimeMinutes",
+  currentNote: "diveSites.edit.templateUpdates.fields.currentNote",
+  divePlan: "diveSites.edit.templateUpdates.fields.divePlan",
+  fitTone: "diveSites.edit.templateUpdates.fields.fitTone",
+  fitNote: "diveSites.edit.templateUpdates.fields.fitNote",
+  fieldGuideTipsHeading: "diveSites.edit.templateUpdates.fields.fieldGuideTipsHeading",
+  landmarks: "diveSites.edit.templateUpdates.fields.landmarks",
+  minimumCertificationLevel: "diveSites.edit.templateUpdates.fields.minimumCertificationLevel",
+  requiredSpecialties: "diveSites.edit.templateUpdates.fields.requiredSpecialties",
+  requiresNitrox: "diveSites.edit.templateUpdates.fields.requiresNitrox",
+  creatures: "diveSites.edit.templateUpdates.fields.creatures",
+};
+
 export default async function EditDiveSitePage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; undo?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id } = await params;
@@ -83,7 +116,7 @@ export default async function EditDiveSitePage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
-  const { notice, error } = await searchParams;
+  const { notice, error, undo } = await searchParams;
   const back = shopPath(shopSlug, "dive-sites");
   const db = await getDb();
   const [site, shop] = await Promise.all([
@@ -108,6 +141,7 @@ export default async function EditDiveSitePage({
     listUpcomingTripsForSite(db, session.user.shopId, id),
     listDiveSiteCreatures(db, session.user.shopId, id),
   ]);
+  const templateUpdate = await getDiveSiteTemplateUpdate(db, session.user.shopId, id);
 
   async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";
@@ -201,21 +235,6 @@ export default async function EditDiveSitePage({
     revalidateAndRedirect(`${back}/${id}`, noticeUrl(`${back}/${id}`, "saved"));
   }
 
-  async function copyAction() {
-    "use server";
-    const activeSession = await requireStaffSession();
-    const activeDb = await getDb();
-    const names = new Set(
-      (await listDiveSites(activeDb, activeSession.user.shopId)).map((entry) => entry.name),
-    );
-    let copyName = `${site.name} copy`;
-    let number = 2;
-    while (names.has(copyName)) copyName = `${site.name} copy ${number++}`;
-    const copy = await copyDiveSite(activeDb, activeSession.user.shopId, id, copyName);
-    if (!copy) notFound();
-    revalidateAndRedirect(back, noticeUrl(`${back}/${copy.id}`, "copied"));
-  }
-
   async function deleteAction() {
     "use server";
     const activeSession = await requireStaffSession();
@@ -226,12 +245,55 @@ export default async function EditDiveSitePage({
     );
   }
 
+  async function pullTemplateAction(formData: FormData) {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const mode = formData.get("mode");
+    if (mode !== "preserve-shop-edits" && mode !== "replace-template-copy") {
+      revalidateAndRedirect(
+        `${back}/${id}`,
+        noticeUrl(`${back}/${id}`, "template-update-unavailable"),
+      );
+    }
+    const result = await pullDiveSiteTemplateUpdates(
+      await getDb(),
+      activeSession.user.shopId,
+      id,
+      mode as DiveSiteTemplateUpdateMode,
+    );
+    revalidateAndRedirect(
+      `${back}/${id}`,
+      noticeUrl(
+        `${back}/${id}`,
+        result.status === "updated"
+          ? result.mode === "replace-template-copy"
+            ? "template-replaced"
+            : "template-updated"
+          : "template-update-unavailable",
+        result.status === "updated" ? { undo: "true" } : undefined,
+      ),
+    );
+  }
+
+  async function undoTemplateAction() {
+    "use server";
+    const activeSession = await requireStaffSession();
+    const result = await undoDiveSiteTemplateUpdate(await getDb(), activeSession.user.shopId, id);
+    revalidateAndRedirect(
+      `${back}/${id}`,
+      noticeUrl(
+        `${back}/${id}`,
+        result.status === "undone" ? "template-undone" : "template-update-unavailable",
+      ),
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
           refresh and back-navigation — the same one-shot rule the rest of
           `/shop/**` follows. */}
-      <FlashParams params={["notice", "error"]} />
+      <FlashParams params={["notice", "error", "undo"]} />
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         {t("diveSites.backToLibrary")}
       </Link>
@@ -240,54 +302,14 @@ export default async function EditDiveSitePage({
           eyebrow={t("diveSites.catalogEyebrow")}
           title={site.name}
           description={t("diveSites.edit.description")}
+          align="start"
           actions={
-            <>
-              <form action={copyAction}>
-                <SubmitButton
-                  pendingLabel={t("diveSites.edit.copying")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("diveSites.edit.copyAndTailor")}
-                </SubmitButton>
-              </form>
-              <details className="w-full sm:w-auto">
-                {/* The real `danger` variant, not a hand-copied approximation
-                    of it: this string had drifted to `border-danger/30` where
-                    the variant is `/40` and `py-2` where every other button on
-                    the page is `py-2.5`, so the one destructive control here
-                    read a shade lighter and a pixel shorter than the danger
-                    buttons it opens. `w-full sm:w-auto` keeps the phone
-                    behaviour the `<details>` around it already asks for, which
-                    the block `flex` used to give for free. */}
-                <summary
-                  className={buttonClass({
-                    variant: "danger",
-                    className: "w-full sm:w-auto",
-                  })}
-                >
-                  {t("diveSites.edit.archiveSite")}
-                </summary>
-                <form
-                  action={deleteAction}
-                  className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm sm:w-72"
-                >
-                  <p className="text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
-                  <SubmitButton
-                    pendingLabel={t("diveSites.edit.archiving")}
-                    className={buttonClass({ variant: "danger-solid", className: "mt-3" })}
-                  >
-                    {t("diveSites.edit.archiveSite")}
-                  </SubmitButton>
-                  {/* The archive refusal is the one thing on this page that
-                      still travels by URL, and it belongs on the archive form
-                      — not in a banner over a briefing the staffer never
-                      touched. */}
-                  <FormStatus tone="danger" className="mt-2">
-                    {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
-                  </FormStatus>
-                </form>
-              </details>
-            </>
+            <Link
+              href={`/shop/${shopSlug}/schedule/board?add=1&site=${site.id}`}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("diveSites.edit.scheduleDeparture")}
+            </Link>
           }
         />
       </div>
@@ -295,13 +317,80 @@ export default async function EditDiveSitePage({
           *different* site's record, which is news the whole page carries. The
           save confirmation went to the form that earned it, and the archive
           refusal to the archive button. */}
-      {notice === "copied" && noticeKey ? (
+      {noticeKey &&
+      (notice === "copied" ||
+        notice === "template-updated" ||
+        notice === "template-replaced" ||
+        notice === "template-undone" ||
+        notice === "template-update-unavailable") ? (
         <p
-          role="status"
-          className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success-strong"
+          role={notice === "template-update-unavailable" ? "alert" : "status"}
+          className={`mt-6 rounded-lg px-3 py-2 text-sm font-medium ${
+            notice === "template-update-unavailable"
+              ? "bg-danger/10 text-danger-strong"
+              : "bg-success/10 text-success-strong"
+          }`}
         >
           {t(noticeKey)}
         </p>
+      ) : null}
+      {undo === "true" && (notice === "template-updated" || notice === "template-replaced") ? (
+        <UndoToast
+          message={t("diveSites.edit.templateUpdates.undoMessage")}
+          action={undoTemplateAction}
+          fields={{}}
+          pendingLabel={t("diveSites.edit.templateUpdates.undoing")}
+          undoLabel={t("diveSites.edit.templateUpdates.undo")}
+        />
+      ) : null}
+      {templateUpdate ? (
+        <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
+          <h2 className="text-base font-semibold">{t("diveSites.edit.templateUpdates.title")}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {templateUpdate.legacyBaseline
+              ? t("diveSites.edit.templateUpdates.legacyDescription", {
+                  latest: templateUpdate.latestVersion,
+                })
+              : t("diveSites.edit.templateUpdates.description", {
+                  current: templateUpdate.currentVersion,
+                  latest: templateUpdate.latestVersion,
+                })}
+          </p>
+          {templateUpdate.diff.length > 0 ? (
+            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              {templateUpdate.diff.map((change) => (
+                <li
+                  key={change.field}
+                  className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+                >
+                  <span>{t(TEMPLATE_FIELD_KEYS[change.field])}</span>
+                  <span className="shrink-0 text-xs font-medium text-muted">
+                    {change.shopChanged
+                      ? t("diveSites.edit.templateUpdates.shopEdit")
+                      : t("diveSites.edit.templateUpdates.templateChange")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-muted">
+              {t("diveSites.edit.templateUpdates.noFieldChanges")}
+            </p>
+          )}
+          <p className="mt-4 text-sm text-muted">
+            {t("diveSites.edit.templateUpdates.replaceCopyHint")}
+          </p>
+          <form action={pullTemplateAction} className="mt-5">
+            <input type="hidden" name="mode" value="replace-template-copy" />
+            <SubmitButton
+              pendingLabel={t("diveSites.edit.templateUpdates.replacing")}
+              className={buttonClass()}
+              confirmMessage={t("diveSites.edit.templateUpdates.replaceConfirm")}
+            >
+              {t("diveSites.edit.templateUpdates.replaceCopy")}
+            </SubmitButton>
+          </form>
+        </section>
       ) : null}
       {upcomingTrips.length > 0 ? (
         <SectionCard title={t("diveSites.edit.upcomingHeading")} className="mt-8 overflow-hidden">
@@ -357,6 +446,32 @@ export default async function EditDiveSitePage({
           {t("diveSites.edit.saveBriefing")}
         </SubmitButton>
       </SiteFormShell>
+      <details
+        open={Boolean(error)}
+        className="mt-10 rounded-2xl border border-danger/30 bg-danger/5"
+      >
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-semibold text-danger [&::-webkit-details-marker]:hidden sm:px-5">
+          <span>{t("diveSites.edit.archiveSite")}</span>
+          <span aria-hidden="true" className="text-lg font-normal">
+            +
+          </span>
+        </summary>
+        <div className="border-t border-danger/20 p-4 text-sm sm:p-5">
+          <h2 className="font-semibold">{t("diveSites.edit.archiveConfirmTitle")}</h2>
+          <p className="mt-1 max-w-2xl text-muted">{t("diveSites.edit.archiveConfirmBody")}</p>
+          <form action={deleteAction} className="mt-4">
+            <SubmitButton
+              pendingLabel={t("diveSites.edit.archiving")}
+              className={buttonClass({ variant: "danger-solid" })}
+            >
+              {t("diveSites.edit.archiveSite")}
+            </SubmitButton>
+            <FormStatus tone="danger" className="mt-2">
+              {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
+            </FormStatus>
+          </form>
+        </div>
+      </details>
     </main>
   );
 }

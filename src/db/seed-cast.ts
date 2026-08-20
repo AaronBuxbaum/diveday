@@ -94,7 +94,7 @@ export const RELIEF_INSTRUCTOR_NAME = "Talia Okonkwo";
 export const customerDefs: Array<{ fullName: string; emergencyContact?: [string, string] }> = [
   { fullName: "Priya Sharma", emergencyContact: ["Asha Sharma (sister)", "+1-305-555-0231"] },
   { fullName: "Tom Okafor", emergencyContact: ["Ngozi Okafor (wife)", "+1-305-555-0232"] },
-  { fullName: "Lena Fischer", emergencyContact: ["Jonas Fischer (husband)", "+49-30-555-0233"] },
+  { fullName: "Lena Fischer", emergencyContact: ["Jonas Fischer (father)", "+49-30-555-0233"] },
   { fullName: "Diego Alvarez", emergencyContact: ["Rosa Alvarez (mother)", "+1-786-555-0234"] },
   { fullName: "June Park", emergencyContact: ["Min-ho Park (father)", "+1-305-555-0235"] },
   { fullName: "Omar Haddad", emergencyContact: ["Layla Haddad (sister)", "+1-305-555-0236"] },
