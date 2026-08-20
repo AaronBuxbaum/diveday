@@ -131,7 +131,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
 in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **i18n-copy**,
-**design-review**, **brand-voice**, **schema-change**, **debug**, **instant-navigation**,
+**copy-restraint**, **design-review**, **brand-voice**, **schema-change**, **debug**, **instant-navigation**,
 **e2e-and-visual**, **visual-triage**, **adr**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
 Other providers
@@ -258,6 +258,19 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   green, and four hours wrong on the screen a diver uses to decide when to leave. A value with no
   instant in it (a date-only calendar date, a wall-clock time of day) says `timeZone: "UTC"`
   explicitly instead — see `src/lib/calendar-date.ts`. `pnpm check:timezone` enforces the rest.
+- **Every sentence earns its place, or it is deleted.** Before writing a string — and every time
+  you read past an existing one — ask whether the reader would get something wrong without it.
+  Only two kinds survive: one carrying a state or consequence the surface cannot show on its own,
+  and one that is genuine delight. A caption restating its own heading ("Crew" / "Who's running
+  this trip."), a clause explaining which rule won ("Readiness always enforces the stricter of the
+  site and this trip."), a second manual path to what a nearby button already does, and an apology
+  for a refusal all go — deleted, not shortened, along with the element that held them. Deleting a
+  key means all three edits in one change: the call site, `en-US`, and `es-ES`. See the
+  **copy-restraint** skill. Where restraint and accessibility genuinely conflict, build for the
+  standard user and record the trade in
+  [docs/design/accessibility-tradeoffs.md](docs/design/accessibility-tradeoffs.md) — never a
+  follow-up, never silence. That licence stops at safety surfaces (manifests, roll call, cert
+  gating, medical flags), at keyboard reach, and at anything that costs the sighted user nothing.
 - **Copy comes from a message bundle, never a component.** Diver copy in
   `src/i18n/locales/<locale>/diver.json`, staff copy in `staff/<namespace>.json` (one file per area — a
   new area is a new file plus one import in `staff/index.ts`, so parallel branches stop colliding in
@@ -323,6 +336,29 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   H-49" is now a sufficient *why*. And **H-02's retention windows and the erasure path** are
   promises about data we *will* hold; they stand. This rule expires the moment the first pilot shop
   has real divers in the system — Aaron will say so, and it is not an agent's call to make.
+- **Every delete is soft, and the word on screen is still "Delete."** A user pointing at a thing and
+  asking for it gone sets `deleted_at`; the row stays and history holds (ADR
+  20260820-every-delete-is-soft, extending 20260719-crud-archive-semantics to every entity). This is
+  the default, not a list of blessed tables: a new table holding anything a user can delete gets
+  `deleted_at`, a partial index over the live rows only, and `deleted_at is null` in every
+  active-workspace read. The column is `deleted_at` — `archived_at` is not a second spelling of it.
+  **Never say so.** Not Archive, Unarchive, Deactivate, Retire, Hide, or "soft delete" in anything a
+  person reads — button, confirm, toast, notice, filter, empty state; a staff list of deleted records
+  is "Deleted" and its action is "Restore". No sentence explains which history survived: a caption
+  reassuring the reader about an outcome they never doubted earns nothing, and "archive" makes a
+  shop stop mid-afternoon to work out whether we mean the thing they asked for. Reversibility is a
+  promise we keep, not a concept they hold. **Two exceptions.** *Legal erasure*, where an obligation
+  requires real destruction — it stays one-way, stays a separate column from `deleted_at`
+  (`people.anonymized_at` plus its check constraint), never becomes the primary action, and is the
+  one place the distinction *is* expressed, because the reader is choosing between two outcomes and
+  one has no undo. And *machinery nobody pointed at*: H-02's bounded retention prune, child rows
+  rewritten wholesale when their parent saves (`trip_dives`, `trip_schedule_days` — a replace), a
+  single-use token consumed on use, seed and test teardown. This does **not** touch the rule above
+  it: "There is no legacy. Delete it." governs the *tree* — a dead table still gets dropped, a dead
+  code path still gets deleted. This one governs *rows at runtime*. Two divergences are known and
+  not yet fixed: `deleteTrip` (`src/db/trips-schedule.ts`) still hard-deletes an empty departure and
+  five child tables, and 49 en-US strings (plus their `es-ES` pairs and the e2e specs asserting on
+  them) still say Archive.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->

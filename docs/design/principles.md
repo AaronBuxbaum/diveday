@@ -64,6 +64,24 @@ build it. Three carve-outs:
   against a reader of the device's storage, not against someone holding the unlocked phone, and the
   page says so.
 
+**Every sentence earns its place, or it goes.** Brevity is not "write it shorter" — it is a
+standing question asked of each string: *would the reader get something wrong without this?* If
+no, delete it, and delete the element that held it. Two kinds of sentence survive the question —
+one carrying a state or consequence the surface cannot show on its own, and one that is a real
+moment of delight. A caption restating its own heading, a clause explaining which rule won, a
+second manual path to what a button beside it already does, and an apology for a refusal are all
+noise wearing the costume of helpfulness. The filter, its five deletions, and the sweep are in the
+[copy-restraint](../../.claude/skills/copy-restraint/SKILL.md) skill; apply it whenever you write,
+edit, or merely read past a user-facing string.
+
+**Accessibility is not the tiebreaker.** Where a genuinely more accessible option and a genuinely
+better standard-user experience conflict, build the standard-user one and record the trade in
+[accessibility-tradeoffs.md](accessibility-tradeoffs.md). That register is narrow on purpose: it
+covers visible prose and presentation, never keyboard reach, never a mutating control's accessible
+name, and never a safety surface — principle 6 holds on manifests, roll call, cert gating, and
+medical flags without exception. A choice that costs the sighted mouse user nothing (an
+`aria-label`, a role, a focus ring) is not a trade at all; skipping it is a defect.
+
 **The name is DiveDay** — one word, two capitals. Use it as the actor when the system does
 something on the user's behalf ("DiveDay will catch up when you're back in service"), and
 otherwise stay out of the way: the product speaks as the shop's own tool, not as a character
@@ -96,7 +114,23 @@ visible way out — never a silent truncation.
 
 Animation exists to explain (where did it go, what changed), 150–250 ms, ease-out
 (`--ease-out-soft`), transform/opacity only. Everything respects `prefers-reduced-motion` — the
-kill-switch in `globals.css` stays.
+kill-switch in `globals.css` stays, and it kills `animation-delay` as well as duration, so a
+stagger cannot survive it.
+
+**Motion that leaves does not use an ease-out curve.** `--ease-out-soft` front-loads almost all of
+its travel, which is right for something arriving and wrong for something departing: an exit on it
+reads as an instant jump, a long dead pause, and then a hard cut. Exits take `--ease-in-soft` —
+slow off the mark, then away — which is why the schedule board's row menu could feel
+simultaneously too fast to see and 450 ms long.
+
+**One earned exception to the 250 ms ceiling: a disclosure that unfolds.** A group of controls
+revealed on request (the board's "⋯" row menu) animates per child with a stagger, so the sequence
+runs longer than any one element's motion — 260 ms in and 280 ms out, staggered 50 ms, so the
+whole gesture lands inside principle 3's 400 ms. The stagger *is* the effect; without it the same
+motion is a 16 px nudge nobody notices. A spring (`--ease-spring`, which overshoots and settles) is
+rationed like `--accent`: it claims the thing has weight, which is true of something being unfolded
+and a lie about anything that merely appears. A JS unmount timer paired with an exit animation
+names the CSS it must outlast, and vice versa.
 
 ## 6. Trustworthy by inspection
 
@@ -298,8 +332,12 @@ one argument and a scrolls-until-answered count; a one-pager has one ask.
 - [ ] Buttons and button-shaped links via `buttonClass()`; labels centered in the target
 - [ ] Stacked form fields via `<Field>`/`<FieldGrid>`; controls aligned across columns
 - [ ] Loading = content-shaped skeletons; no layout shift
-- [ ] Motion ≤ 250 ms, transform/opacity, reduced-motion respected
+- [ ] Motion ≤ 250 ms (a staggered disclosure may reach 400 ms), transform/opacity,
+      exits on `--ease-in-soft` not `--ease-out-soft`, reduced-motion respected
 - [ ] Copy: verbs on buttons, teaching empty state, actionable errors
+- [ ] Every remaining sentence survives the copy-restraint question — no caption restating
+      its heading, no clause explaining which rule won, no apology, no second path to a
+      button already on screen
 - [ ] State never conveyed by color alone
 - [ ] Keyboard reachable, focus visible, semantic HTML
 - [ ] One primary action per view/section; the rest are demoted, merged, or disclosed — not a
