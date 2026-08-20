@@ -254,6 +254,26 @@ export async function waiverLinkFromResult(page: Page, resultNotice: Locator): P
 }
 
 /**
+ * The diver record's own "Copy link" channel button, which behaves nothing
+ * like `waiverLinkFromResult`'s roster control: the tap copies immediately
+ * (no second confirming button inside a result strip to click), and the
+ * outcome is a `Toast` — a plain, non-interactive `role="status"` line, not a
+ * box with a control inside it. Caller has already clicked "Copy link";
+ * this waits for that toast to settle to its own resolved text and reads the
+ * clipboard, the same deterministic signal `waiverLinkFromResult` uses.
+ */
+export async function waiverLinkFromToast(page: Page): Promise<string> {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await expect(page.getByRole("status")).toHaveText(/^(Copied|Try again)$/);
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  const path = copied.startsWith("http") ? new URL(copied).pathname : copied;
+  if (!path.startsWith("/waivers/")) {
+    throw new Error(`expected a /waivers/ bearer link on the clipboard, got ${copied}`);
+  }
+  return path;
+}
+
+/**
  * The schedule board pages a fixed number of departures at a time and has no
  * text search — a trip scheduled far enough out (or created earlier in the
  * same test) can land past the first page. Pages through "Show later

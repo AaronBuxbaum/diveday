@@ -4,6 +4,7 @@ import {
   openTripTab,
   sendWaiverForFirstDiver,
   waiverLinkFromResult,
+  waiverLinkFromToast,
 } from "./helpers";
 
 /** The seeded charter every waiver flow in this file starts from. */
@@ -518,19 +519,24 @@ test("a diver without a booking can receive an independent waiver from their rec
   // "Copy link" is the one that never depends on a provider: it issues the
   // private link and puts it straight on the clipboard, with nothing sent. The
   // URL is never printed on the page — the clipboard is the only way to it,
-  // which is what this now proves.
+  // which is what this now proves. The tap copies immediately (a `Toast`, not
+  // a result strip with a second button inside it — see `waiverLinkFromToast`).
   await page.getByRole("button", { name: "Copy link" }).click();
-  const firstHref = await waiverLinkFromResult(page, page.getByRole("status"));
+  const firstHref = await waiverLinkFromToast(page);
 
   /**
    * The whole point of the row: a staffer who copies the link and then sends it
    * must be handing over one URL, not two of which only the last one works
    * (ADR 20260820-waiver-links-are-reused-not-reissued). Tapping a *different*
-   * channel is the real shape of the mistake — copy it, then text it.
+   * channel is the real shape of the mistake — text it (the e2e fleet
+   * configures no SMS provider, so it fails; the button's own ring and name
+   * say so, never a banner — see WaiverDeliveryActions), then fall back to
+   * the same "Copy link".
    */
   await page.getByRole("button", { name: "Text waiver" }).click();
-  await expect(page.getByRole("status")).toContainText("send texts from this deployment yet");
-  expect(await waiverLinkFromResult(page, page.getByRole("status"))).toBe(firstHref);
+  await expect(page.getByRole("button", { name: /Text waiver.*Not set up/ })).toBeVisible();
+  await page.getByRole("button", { name: "Copy link" }).click();
+  expect(await waiverLinkFromToast(page)).toBe(firstHref);
 
   // And it is the diver's live link, not a stale echo: it still opens.
   await page.goto(firstHref);
