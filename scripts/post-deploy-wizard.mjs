@@ -410,7 +410,7 @@ export async function runPostDeployWizard({
     // production build, not a single API request.
     run(
       "pnpm",
-      ["exec", "vercel", "--prod", ...(ciUnattended ? ["--yes"] : [])],
+      ["exec", "vercel", "--prod", "--archive=tgz", ...(ciUnattended ? ["--yes"] : [])],
       SUBPROCESS_TIMEOUTS.build,
     );
   }

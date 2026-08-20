@@ -1799,7 +1799,7 @@ exports.handler = async (event) => {
         title: "Mint a Vercel token and link the project for the CI deploy job",
         category: "Credentials",
         when: "once, before the first CI-run post-deploy wizard, and again if the token is revoked",
-        why: "The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.",
+        why: "The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod --archive=tgz`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.",
         run: [
           "Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.",
           "gh secret set VERCEL_TOKEN --env infra-deploy",
@@ -1846,7 +1846,7 @@ exports.handler = async (event) => {
         why: "Vercel runs the app; CDK runs the infrastructure. Neither deploy pipeline can write to the other, so a local CLI authenticated to both is the narrow hand-off point. The target file excludes workstation and CI credentials before Vercel sees it.",
         run: [
           "node scripts/import-vercel-env.mjs .env.vercel production",
-          "pnpm exec vercel --prod",
+          "pnpm exec vercel --prod --archive=tgz",
         ],
         store:
           ".env.vercel (gitignored) is the full Vercel target file, generated from the completed .env.local. The importer supplies every nonblank entry to Vercel Production; it deliberately excludes APP_SECRET_SEED and every REG_SUIT_* value. The generic deployer credential is not a dotenv value at all.",
