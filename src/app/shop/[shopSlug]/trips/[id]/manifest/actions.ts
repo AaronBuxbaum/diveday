@@ -7,6 +7,7 @@ import type { RollCallResult } from "@/app/shop/[shopSlug]/trips/[id]/_component
 import {
   addBuddyTeamMember,
   type BuddyTeamMemberInput,
+  type BuddyTeamRefusal,
   dissolveBuddyTeam,
   formBuddyTeam,
   removeBuddyTeamMember,
@@ -185,11 +186,31 @@ const teamSchema = z.object({ teamId: z.string().uuid() });
  * is also what makes this whole file safe: these actions never referenced
  * anything from the render but plain strings and numbers.)
  */
-function buddyErrorCode(reason: string): string {
-  if (reason === "duplicate_member") return "duplicate";
-  if (reason === "already_teamed") return "teamed";
-  if (reason === "too_few_members") return "few";
-  return "generic";
+/**
+ * What a team refusal is called in `?buddyError=`, which the manifest page
+ * resolves to a sentence.
+ *
+ * Keyed by the domain union rather than taking a `string`, which is what this
+ * was: an `if` ladder over four spellings with a `return "generic"` at the end,
+ * so a tenth refusal silently became "generic" and nobody found out. The five
+ * that genuinely share the generic message say so by name here — the manifest
+ * page has one sentence for "that didn't work", and these are the cases where
+ * it is the honest one.
+ */
+const BUDDY_ERROR_CODE: Record<BuddyTeamRefusal, string> = {
+  duplicate_member: "duplicate",
+  already_teamed: "teamed",
+  too_few_members: "few",
+  staff_not_found: "generic",
+  trip_unavailable: "generic",
+  booking_unavailable: "generic",
+  crew_unavailable: "generic",
+  team_not_found: "generic",
+  not_a_member: "generic",
+};
+
+function buddyErrorCode(reason: BuddyTeamRefusal): string {
+  return BUDDY_ERROR_CODE[reason];
 }
 
 // Web Push opt-in for this device (ADR 20260804-manifest-web-push). Both
