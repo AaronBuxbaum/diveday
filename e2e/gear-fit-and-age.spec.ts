@@ -309,7 +309,6 @@ test.describe("minimum age (H-08, fail open)", () => {
       }),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: /readiness page/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
     const readyUrl = page.url();
     // Fails open with no date on file: nothing age-related shown yet.

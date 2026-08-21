@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DiverRentalFit } from "@/db/rental-fit";
 import type { RentalPricing } from "@/lib/rentals";
@@ -135,6 +136,49 @@ describe("RentalFitForm nitrox gate", () => {
     );
 
     expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeInTheDocument();
+  });
+});
+
+describe("RentalFitForm nitrox card", () => {
+  function renderNitrox(props: { wantsNitrox: boolean; nitroxCardVerified: boolean }) {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "nitrox"]}
+        course={{ nitroxCompatible: true }}
+        pricing={defaultPricing}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+        {...props}
+      />,
+    );
+  }
+
+  it("asks for the card once the diver asks for nitrox", async () => {
+    // This replaced a paragraph telling the diver to "share the certification
+    // details with the shop" — an instruction on a page that could simply take
+    // them. Same contract as the booking gate: believed for planning, sighted
+    // before the dive.
+    const user = userEvent.setup();
+    renderNitrox({ wantsNitrox: false, nitroxCardVerified: false });
+    expect(screen.queryByLabelText(/nitrox card number/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: /nitrox/i }));
+    expect(screen.getByLabelText(/nitrox card number/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/nitrox agency/i)).toBeInTheDocument();
+  });
+
+  it("does not ask a diver whose card the shop has already sighted", () => {
+    renderNitrox({ wantsNitrox: true, nitroxCardVerified: true });
+    expect(screen.queryByLabelText(/nitrox card number/i)).not.toBeInTheDocument();
+  });
+
+  it("leaves both fields optional, so wanting nitrox never needs a card to hand", () => {
+    renderNitrox({ wantsNitrox: true, nitroxCardVerified: false });
+    expect(screen.getByLabelText(/nitrox card number/i)).not.toBeRequired();
+    expect(screen.getByLabelText(/nitrox agency/i)).not.toBeRequired();
   });
 });
 

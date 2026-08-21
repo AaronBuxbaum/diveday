@@ -5,7 +5,7 @@ import { withinCancellationWindow } from "@/lib/deposits";
 import { publicAppUrl } from "@/lib/notifications";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
-import { verifiedNitroxPersonIds } from "./nitrox";
+import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
 import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
@@ -121,6 +121,12 @@ export type ReadyPageData = {
   };
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
+  /**
+   * A live nitrox card exists for this diver, sighted or not. Only decides
+   * whether the fit form still asks for one — never a fill or boarding gate
+   * (`nitroxCardOnFilePersonIds`).
+   */
+  nitroxCardOnFile: boolean;
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
   /** True when the shop can actually take a card for this trip right now. */
@@ -208,11 +214,12 @@ export async function getReadyPageData(
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
 
-  const [rentalFit, payment, stripeAccount, nitroxVerified] = await Promise.all([
+  const [rentalFit, payment, stripeAccount, nitroxVerified, nitroxOnFile] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
     getBookingPayment(db, row.shopId, bookingId),
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
+    nitroxCardOnFilePersonIds(db, row.shopId),
   ]);
   const settled =
     payment?.status === "paid" ||
@@ -333,6 +340,7 @@ export async function getReadyPageData(
     },
     wantsNitrox: row.wantsNitrox,
     nitroxCardVerified: nitroxVerified.has(row.personId),
+    nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
     canPay,
     cancelPreview,

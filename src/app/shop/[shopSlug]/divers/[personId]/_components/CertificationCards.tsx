@@ -232,6 +232,15 @@ export async function CertificationCards({
             // list and reads that way: no agency, no number, and no one-tap
             // certify (ADR 20260814-self-declared-cards).
             const selfDeclared = isUnsightedSelfDeclaration(card);
+            // A claim with **no number in it** — the booking form's level
+            // dropdown, which never asks for one. That is a different thing
+            // from the card a diver typed into `/ready`, which carries a real
+            // agency and a real number and wears `selfDeclaredAt` only so the
+            // one-tap promote below still demands a sighting. Keying the two
+            // lines beneath on `selfDeclared` alone told a staffer reviewing a
+            // typed card "no certification number yet" — while hiding the very
+            // number they needed to check it against.
+            const claimWithoutANumber = selfDeclared && !card.identifier;
             return (
               <li
                 key={card.id}
@@ -248,12 +257,14 @@ export async function CertificationCards({
                           public form never asks — naming one would invent
                           evidence, so the level stands alone until a staffer
                           sights the real card. */}
-                      {selfDeclared ? null : <>{t(AGENCY_KEYS[card.agency])} · </>}
+                      {claimWithoutANumber ? null : <>{t(AGENCY_KEYS[card.agency])} · </>}
                       {t(CERTIFICATION_LEVEL_KEYS[card.level])}
                     </span>
                   </p>
                   <p className="mt-1 break-all text-sm text-muted">
-                    {selfDeclared ? t("divers.certifications.selfDeclaredLabel") : card.identifier}
+                    {claimWithoutANumber
+                      ? t("divers.certifications.selfDeclaredLabel")
+                      : card.identifier}
                     {card.expiresAt ? (
                       <span className={expired ? "font-medium text-danger" : undefined}>
                         {t(

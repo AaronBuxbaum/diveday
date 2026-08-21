@@ -158,6 +158,49 @@ describe("buildDiverChecklist", () => {
     const cert = items.find((item) => item.category === "certification");
     expect(cert?.state).toBe("action");
     expect(cert?.detailCode).toBe("certification_multiple_needed");
+    // ...and names each of them, so the readiness page can put an entry form
+    // under every card rather than clearing them one page-load at a time.
+    expect(cert?.actionable.map((blocker) => blocker.code)).toEqual([
+      "certification_missing",
+      "specialty_missing",
+      "nitrox_missing",
+    ]);
+  });
+
+  it("carries the specialty a blocker names, so the form can ask for the right card", () => {
+    const items = buildDiverChecklist(requirement({ requiredSpecialties: ["deep", "wreck"] }), {
+      status: "blocked",
+      blockers: [
+        { code: "specialty_missing", params: { specialty: "deep" } },
+        { code: "specialty_missing", params: { specialty: "wreck" } },
+      ],
+    });
+    const cert = items.find((item) => item.category === "certification");
+    expect(cert?.actionable.map((blocker) => blocker.params?.specialty)).toEqual(["deep", "wreck"]);
+  });
+
+  it("leaves `actionable` empty for work that is the shop's, not the diver's", () => {
+    // A pending card and an unconfirmed import are both "waiting": there is
+    // nothing to type, and offering a form would ask a diver to re-send what
+    // the shop already holds.
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [{ code: "certification_pending" }, { code: "specialty_import_unconfirmed" }],
+    });
+    const cert = items.find((item) => item.category === "certification");
+    expect(cert?.state).toBe("waiting");
+    expect(cert?.actionable).toEqual([]);
+  });
+
+  it("leaves `actionable` empty on a done item and on a setup hold", () => {
+    const done = buildDiverChecklist(requirement(), ready);
+    expect(done.every((item) => item.actionable.length === 0)).toBe(true);
+
+    const unconfigured = buildDiverChecklist(null, {
+      status: "blocked",
+      blockers: [{ code: "requirements_not_configured" }],
+    });
+    expect(unconfigured[0]?.actionable).toEqual([]);
   });
 
   it("collapses to a single reassuring line when the shop hasn't configured the trip", () => {

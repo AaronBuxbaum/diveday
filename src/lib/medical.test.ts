@@ -19,7 +19,7 @@ describe("medical questionnaires", () => {
   });
 
   it("matches the 2026 PDF version and exposes the conditional boxes", () => {
-    expect(RSTC_QUESTIONNAIRE.version).toBe(2);
+    expect(RSTC_QUESTIONNAIRE.version).toBe(3);
     expect(RSTC_QUESTIONNAIRE.questions).toHaveLength(44);
     expect(RSTC_QUESTIONNAIRE.questions.find((question) => question.id === "q1")?.referral).toBe(
       false,
@@ -35,7 +35,7 @@ describe("medical questionnaires", () => {
     for (const question of RSTC_QUESTIONNAIRE.questions.filter((q) => q.parentId === "q1")) {
       answers.responses[question.id] = false;
     }
-    expect(applicableMedicalQuestions(RSTC_QUESTIONNAIRE, answers.responses)).toHaveLength(16);
+    expect(applicableMedicalQuestions(RSTC_QUESTIONNAIRE, answers.responses)).toHaveLength(15);
     expect(calculateMedicalResult(answers)).toMatchObject({ status: "clear" });
     expect(needsPhysicianReview(emptyMedicalAnswers(RSTC_QUESTIONNAIRE))).toBe(false);
   });
@@ -61,6 +61,59 @@ describe("medical questionnaires", () => {
     });
     expect(calculateMedicalResult(incomplete).status).toBe("incomplete");
     expect(findQuestionnaireVersion("rstc", 1)).toBeNull();
+  });
+
+  it("still reads a v2 record under v2's rules after the dental item moved into Box C", () => {
+    // v2 asked "still healing from a dental procedure" of every diver; v3 puts
+    // it where the published form does, as Box C's fifth item behind q4. A
+    // diver who answered no to q4 and yes to the dental question is somebody a
+    // physician was asked to see. Read under v3 that answer is not applicable
+    // and the record would come back clear — which is a boarding hold lifting
+    // itself. The version stamp on the stored row is the only thing standing
+    // between those two readings, so this is the test that guards it.
+    const v2 = findQuestionnaireVersion("rstc", 2);
+    expect(v2?.version).toBe(2);
+    const dental = v2?.questions.find((question) => question.id === "dental_recovery");
+    expect(dental).toMatchObject({ section: "dental", referral: true });
+    expect(dental?.parentId).toBeUndefined();
+
+    const responses: Record<string, boolean> = Object.fromEntries(
+      (v2?.questions ?? [])
+        .filter((question) => !question.parentId)
+        .map((question) => [question.id, false]),
+    );
+    responses.dental_recovery = true;
+
+    expect(
+      needsPhysicianReview({ questionnaireId: "rstc", questionnaireVersion: 2, responses }),
+    ).toBe(true);
+
+    // And the same answers stamped v3 are not silently "clear" either: under v3
+    // `dental_recovery` is not a question at all, so validation refuses the row
+    // rather than dropping the answer on the floor.
+    expect(
+      needsPhysicianReview({ questionnaireId: "rstc", questionnaireVersion: 3, responses }),
+    ).toBe(true);
+  });
+
+  it("puts the dental item where the published form puts it", () => {
+    // Checked against the 2026-01-01 PDF (product 10346 EN): Box C carries five
+    // items and the fifth is the dental one. Appended rather than inserted,
+    // because `box_c_1`..`box_c_4` are the stored answer keys.
+    const boxC = RSTC_QUESTIONNAIRE.questions.filter((question) => question.section === "box_c");
+    expect(boxC.map((question) => question.id)).toEqual([
+      "box_c_1",
+      "box_c_2",
+      "box_c_3",
+      "box_c_4",
+      "box_c_5",
+    ]);
+    expect(boxC[4]).toMatchObject({ parentId: "q4", referral: true });
+    expect(boxC[4]?.prompt).toContain("dental");
+    // Nothing outside a Box is asked of everyone any more.
+    expect(RSTC_QUESTIONNAIRE.questions.some((question) => question.section === "dental")).toBe(
+      false,
+    );
   });
 
   it("fails closed for an unknown questionnaire or unrecognized question", () => {
@@ -106,25 +159,25 @@ describe("live questionnaire progress", () => {
     const progress = medicalProgress(RSTC_QUESTIONNAIRE, {});
     expect(progress.outcome).toBe("unanswered");
     expect(progress.answered).toBe(0);
-    // Ten numbered questions plus the dental check — never the 44-question
+    // The ten numbered questions and nothing else — never the 44-question
     // definition, most of which no answer has made applicable.
-    expect(progress.total).toBe(11);
+    expect(progress.total).toBe(10);
     expect(progress.primaryRemaining).toBe(10);
   });
 
   it("counts only the questions an answer has made applicable", () => {
     // q1 opens Box A, which has five questions of its own.
     const progress = medicalProgress(RSTC_QUESTIONNAIRE, { q1: true });
-    expect(progress.total).toBe(16);
+    expect(progress.total).toBe(15);
     expect(progress.answered).toBe(1);
-    expect(progress.remaining).toBe(15);
+    expect(progress.remaining).toBe(14);
     expect(progress.primaryRemaining).toBe(9);
   });
 
   it("is clear only when every applicable question is answered no", () => {
     expect(medicalProgress(RSTC_QUESTIONNAIRE, allNo).outcome).toBe("clear");
-    const { dental_recovery: _omitted, ...missingDental } = allNo;
-    expect(medicalProgress(RSTC_QUESTIONNAIRE, missingDental).outcome).not.toBe("clear");
+    const { q4: _omitted, ...missingQ4 } = allNo;
+    expect(medicalProgress(RSTC_QUESTIONNAIRE, missingQ4).outcome).not.toBe("clear");
   });
 
   it("reports a referral the moment one is given, before the form is complete", () => {

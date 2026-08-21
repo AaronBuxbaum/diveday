@@ -1,5 +1,13 @@
 {
   "divingOptionsHeading": "Opciones de buceo",
+  "boatDivingLabel": "Buceo desde barco",
+  "boatDivingDescription": "Si lo desactivas, la lista de barcos desaparece con él.",
+  "boatEnabled": "Buceo desde barco",
+  "boatDisabled": "Sin buceo desde barco",
+  "shoreGroupSizeLabel": "Buceadores por salida",
+  "shoreGroupSizeHint": "Se usa al planificar las solicitudes por día.",
+  "divingOptionsNone": "Elige al menos un tipo de buceo.",
+  "divingOptionsGroupSizeInvalid": "Los buceadores por salida deben estar entre 1 y 60.",
   "shoreDivingLabel": "Buceo desde costa",
   "shoreDivingDescription": "Actívalo si ofreces inmersiones desde la costa (será una opción al crear salidas).",
   "poolDivingLabel": "Buceo en piscina",

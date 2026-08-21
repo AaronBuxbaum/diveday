@@ -116,6 +116,68 @@ describe("dock-day rhythm", () => {
   });
 });
 
+describe("a day that never leaves the shore", () => {
+  const start = new Date("2026-07-18T12:00:00Z");
+  const end = new Date("2026-07-18T17:00:00Z");
+
+  it("drops the ride out, because a shore diver walks to the water", () => {
+    const afloat = beats(dockDayOffsets(rhythm(), 2, undefined, undefined, "boat"));
+    const ashore = beats(dockDayOffsets(rhythm(), 2, undefined, undefined, "shore"));
+    expect(afloat).toContain("boatRide1");
+    expect(ashore).not.toContain("boatRide1");
+    // Everything else survives: the same arrival, briefing and two dives.
+    expect(ashore).toEqual([
+      "arrive",
+      "briefing",
+      "departure",
+      "dive1",
+      "surfaceInterval1",
+      "dive2",
+    ]);
+  });
+
+  it("never names a ride between dives either, however long the shop's leg is", () => {
+    // A 90-minute leg beats the 60-minute interval and would take the window's
+    // name on a boat. On a beach there is no leg to take it.
+    // Zero-indexed by leg: entry 1 is the run before dive 2.
+    const legs = [20, 90];
+    const afloat = beats(dockDayOffsets(rhythm(), 2, undefined, legs, "boat"));
+    const ashore = beats(dockDayOffsets(rhythm(), 2, undefined, legs, "shore"));
+    expect(afloat).toContain("boatRide2");
+    expect(ashore).not.toContain("boatRide2");
+    expect(ashore).toContain("surfaceInterval1");
+  });
+
+  it("treats a pool session the same way", () => {
+    const pool = beats(dockDayOffsets(rhythm(), 1, undefined, undefined, "pool"));
+    expect(pool.some((beat) => beat.startsWith("boatRide"))).toBe(false);
+  });
+
+  it("still bounds the water half at the published return", () => {
+    // The truncation rule is about the trip's own window, not about the hull —
+    // a shore day that overruns its stated return must still stop at it.
+    const tight = dockDayTimeline(
+      start,
+      rhythm({ bottomTimeMinutes: 200 }),
+      end,
+      3,
+      undefined,
+      undefined,
+      "shore",
+    );
+    expect(tight.every((entry) => entry.at <= end)).toBe(true);
+    expect(beats(tight)).not.toContain("dive3");
+  });
+
+  it("defaults to a boat when nobody says otherwise", () => {
+    // Every existing call site and every trip row predates this argument, and
+    // `trips.dive_mode` defaults to boat — so the omitted case must not change.
+    expect(beats(dockDayOffsets(rhythm(), 2))).toEqual(
+      beats(dockDayOffsets(rhythm(), 2, undefined, undefined, "boat")),
+    );
+  });
+});
+
 describe("parsing a submitted rhythm", () => {
   const complete = {
     dockCallMinutes: "30",

@@ -1307,7 +1307,7 @@ archived.
   answers are all no. Staff activity explains issued/started/signed/blocked/replaced from stored
   evidence.
 - **Conditional RSTC medical questionnaire** — the versioned UHMS/DMSC 2026 participant form,
-  including Boxes A-G and the page-two dental question, lives in `src/lib/medical.ts`; yes/no
+  including Boxes A-G, lives in `src/lib/medical.ts`; yes/no
   responses persist on the signed waiver record with shop-scoped access controls.
 - **Sign once** — a completed signature is held against the diver and satisfies the gate on any of
   their bookings while current ([waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md)).

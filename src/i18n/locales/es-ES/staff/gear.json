@@ -55,8 +55,7 @@
     "neverPickedUp": "Nunca recogido · vencía el {dueOn}"
   },
   "empty": {
-    "heading": "Aún no hay equipo en el registro",
-    "body": "Agrega tu primera unidad etiquetada — un chaleco, un regulador, un tanque — y DiveDay registrará quién la tiene, cuándo vuelve y cuándo toca mantenimiento. Un centro que no rastrea unidades no pierde nada: las tallas y la lista de preparación siguen igual que siempre."
+    "heading": "Aún no hay equipo en el registro"
   },
   "fleet": {
     "ariaLabel": "La flota",
@@ -174,12 +173,12 @@
       "retiring": "Retirando…",
       "delete": "Eliminar unidad",
       "deleting": "Eliminando…",
-      "deleteWarning": "Eliminarla borra también su historial de mantenimiento y alquiler. Una unidad que cumplió su vida se retira, no se elimina."
+      "deleteWarning": "Eliminarla borra también su historial de mantenimiento y alquiler."
     }
   },
   "prep": {
     "heading": "Asignaciones de alquiler",
-    "description": "Qué unidad etiquetada se lleva cada buceador que alquila. Asignarla aquí la reserva para las fechas de la salida — dos buceadores no pueden recibir la misma.",
+    "description": "Qué unidad etiquetada se lleva cada buceador que alquila, reservada para las fechas de la salida.",
     "outLabel": "fuera",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No hay {kindLabel} libre para estas fechas.",

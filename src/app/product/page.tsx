@@ -163,10 +163,12 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       title: t("marketing.product.notCovered.workOrders.title"),
       detail: t("marketing.product.notCovered.workOrders.detail"),
     },
-    {
-      title: t("marketing.product.notCovered.gearSerials.title"),
-      detail: t("marketing.product.notCovered.gearSerials.detail"),
-    },
+    // "Gear serial numbers" used to sit here, saying DiveDay tracked sizes but
+    // not individual units or service history. The gear register shipped
+    // 2026-08-15 (ADR 20260815-minimal-gear-register) and does both — one row
+    // per tagged unit, who has it, when it is due back, and its service clocks
+    // — so the claim was false the day it shipped. A "what we don't do" list is
+    // only worth anything while every line on it is true.
     {
       title: t("marketing.product.notCovered.agencyLine.title"),
       detail: t("marketing.product.notCovered.agencyLine.detail"),

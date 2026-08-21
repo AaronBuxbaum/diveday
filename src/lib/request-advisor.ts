@@ -30,14 +30,28 @@ export type RequestAdvice = {
   strategy: "transparent-headcount-v1";
 };
 
+/**
+ * What the shop can put a day's requests on.
+ *
+ * A boat shop answers with its hulls, and the answer is a *fact* — a 12-seat
+ * boat holds twelve people. A shore-and-pool shop has no hull to ask, so it
+ * answers with a *preference*: how many divers one guide takes into the water
+ * at a time. The two are not interchangeable, which is why turning boat diving
+ * off does not simply hide the boat line and keep sizing days against a
+ * phantom 12-seat default.
+ */
+export type DepartureShape =
+  | { kind: "boats"; boats: readonly BoatAdvisorInput[] }
+  | { kind: "group"; groupSize: number | null };
+
 export type RequestAdvisor = (
   requests: readonly RequestAdvisorInput[],
-  boats?: readonly BoatAdvisorInput[],
+  shape?: DepartureShape,
 ) => RequestAdvice;
 
 /** The only default we assume about a departure: a common 12-seat starting point. */
 export const DEFAULT_DEPARTURE_CAPACITY = 12;
-const MAX_DEPARTURE_CAPACITY = 60;
+export const MAX_DEPARTURE_CAPACITY = 60;
 
 /**
  * A transparent, zero-cost baseline for turning requests into a planning hint.
@@ -48,9 +62,11 @@ const MAX_DEPARTURE_CAPACITY = 60;
  *
  * When the shop has configured boats, the advisor finds the smallest boat
  * that fits the group, or flags if the party size exceeds every known boat.
- * Nothing here books a seat, clears a diver, or chooses a real boat.
+ * When the shop runs no boats it sizes the day against its own stated group
+ * size instead, and never names a hull. Nothing here books a seat, clears a
+ * diver, or chooses a real boat.
  */
-export const transparentHeadcountAdvisor: RequestAdvisor = (requests, boats) => {
+export const transparentHeadcountAdvisor: RequestAdvisor = (requests, shape) => {
   const experienceMix: Record<CourseInquiryExperience, number> = {
     never: 0,
     tried: 0,
@@ -73,8 +89,15 @@ export const transparentHeadcountAdvisor: RequestAdvisor = (requests, boats) => 
   let suggestedBoat: { id: string; name: string; capacity: number } | null = null;
   let exceedsKnownBoats = false;
 
-  if (boats && boats.length > 0) {
-    const sortedBoats = [...boats].sort((a, b) => a.capacity - b.capacity);
+  if (shape?.kind === "group") {
+    // No hull to ask, so the shop's own guide-to-diver number is the divisor.
+    // `exceedsKnownBoats` stays false and `suggestedBoat` stays null: there is
+    // no boat to exceed, and a warning about one would be nonsense on a beach.
+    const groupSize = shape.groupSize ?? DEFAULT_DEPARTURE_CAPACITY;
+    suggestedCapacity = Math.min(MAX_DEPARTURE_CAPACITY, Math.max(1, groupSize));
+    suggestedDepartureCount = Math.max(1, Math.ceil(estimatedDivers / suggestedCapacity));
+  } else if (shape?.kind === "boats" && shape.boats.length > 0) {
+    const sortedBoats = [...shape.boats].sort((a, b) => a.capacity - b.capacity);
     const fittingBoat = sortedBoats.find((boat) => boat.capacity >= estimatedDivers);
     if (fittingBoat) {
       suggestedBoat = {
@@ -106,8 +129,22 @@ export const transparentHeadcountAdvisor: RequestAdvisor = (requests, boats) => 
 /** Injection point for a future shop-specific strategy or offline model. */
 export function adviseRequests(
   requests: readonly RequestAdvisorInput[],
-  boats?: readonly BoatAdvisorInput[],
+  shape?: DepartureShape,
   advisor: RequestAdvisor = transparentHeadcountAdvisor,
 ): RequestAdvice {
-  return advisor(requests, boats);
+  return advisor(requests, shape);
+}
+
+/**
+ * The one place that turns a shop row into a `DepartureShape`, so the two
+ * callers (the Requests page and the schedule board) cannot disagree about what
+ * a shop with boat diving off is planning against.
+ */
+export function departureShapeFor(
+  shop: { hasBoatDiving: boolean; shoreGroupSize: number | null },
+  boats: readonly BoatAdvisorInput[],
+): DepartureShape {
+  return shop.hasBoatDiving
+    ? { kind: "boats", boats }
+    : { kind: "group", groupSize: shop.shoreGroupSize };
 }

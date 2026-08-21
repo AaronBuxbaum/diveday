@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
-import { getShopBySlug } from "@/db/shops";
+import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { seededTestDb } from "@/test/db";
@@ -13,6 +13,7 @@ import {
   findElements,
   hiddenInputNamesIn,
   hrefsIn,
+  inputNamesIn,
   selectNamesIn,
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -244,6 +245,39 @@ describe("the data-compliance queues in the Data group", () => {
     });
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
     expect(hiddenInputNamesIn(element)).not.toContain("obligationId");
+  });
+});
+
+describe("the diving options a shop runs", () => {
+  it("offers boat alongside shore and pool, and the boat list with it", async () => {
+    const element = await renderSettings("owner");
+    const names = inputNamesIn(element);
+    expect(names).toContain("hasBoatDiving");
+    expect(names).toContain("hasShoreDiving");
+    expect(names).toContain("hasPoolDiving");
+    // The seeded shop runs boats, so the fleet editor is reachable and the
+    // group-size question — which only exists when there is no hull to ask —
+    // is not.
+    expect(names).toContain("capacity");
+    expect(names).not.toContain("shoreGroupSize");
+  });
+
+  it("takes the boat list away when the shop says it runs no boats", async () => {
+    const element = await renderSettings("owner", async (db, session) => {
+      await setShopDivingOptions(db, session.user.shopId, {
+        hasBoatDiving: false,
+        hasShoreDiving: true,
+        hasPoolDiving: true,
+        shoreGroupSize: 6,
+      });
+    });
+    const names = inputNamesIn(element);
+    // No hull to name, so the whole Boats row is gone rather than sitting there
+    // empty — and the question that replaces it is asked instead.
+    expect(names).not.toContain("boatId");
+    expect(names).toContain("shoreGroupSize");
+    // The option itself stays on offer, so the shop can turn boats back on.
+    expect(names).toContain("hasBoatDiving");
   });
 });
 

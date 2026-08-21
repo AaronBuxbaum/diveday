@@ -102,6 +102,14 @@ test.describe("a shop that stops filling nitrox", () => {
       .click();
     // The booking form is controlled, so wait for hydration before typing.
     await expect(anon.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    // Read off the trip page itself, before booking: a booked diver lands on
+    // `/ready/<token>`, which names no trip (ADR 20260820-one-page-after-booking).
+    // Reused below instead of clicking back through the schedule as staff.
+    // After the hydration wait above, never before it — the click that got here
+    // has not necessarily finished navigating, and reading the URL early sees
+    // the schedule it came from.
+    const tripId = anon.url().match(/\/trips\/([^/?]+)/)?.[1];
+    if (!tripId) throw new Error("trip page URL missing a trip id");
     await anon.getByLabel("Name").fill("Priya Sharma");
     await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
@@ -110,11 +118,8 @@ test.describe("a shop that stops filling nitrox", () => {
     await anon.locator('input[name="nitrox"]').filter({ visible: true }).check();
     await anon.getByRole("button", { name: "Save rental fit" }).click();
     await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
+    // The diver's own readiness page, which is where they came back to.
     const bookingUrl = anon.url();
-    // The trip id rides along in the confirmation URL — reuse it below
-    // instead of clicking back through the schedule as staff.
-    const tripId = bookingUrl.match(/\/trips\/([^/?]+)/)?.[1];
-    if (!tripId) throw new Error("booking confirmation URL missing a trip id");
 
     await page.goto(`/shop/${SHOP}/settings`);
     await openSettingsRow(page, "What we rent");
@@ -253,11 +258,47 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   const nitrox = page.locator('input[name="nitrox"]').filter({ visible: true });
   await expect(nitrox).toHaveCount(1);
   await nitrox.check();
+
+  // Ticking it asks for the card rather than explaining why we can't reserve
+  // one. Both fields optional: wanting nitrox never needs the card to hand.
+  await expect(page.getByLabel("Nitrox card number")).toBeVisible();
+  await page.getByLabel("Nitrox agency").selectOption("padi");
+  await page.getByLabel("Nitrox card number").fill("EANX-E2E-001");
   await page.getByRole("button", { name: "Save rental fit" }).click();
 
-  // The request stuck (checkbox stays on) and the flag still explains what's needed.
+  // The request stuck, and the card the diver typed is now on the record — so
+  // the ask is gone and the checkbox is still on.
   await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
-  await expect(page.getByText("Your Nitrox request is on file")).toBeVisible();
+  await expect(page.getByLabel("Nitrox card number")).toHaveCount(0);
+});
+
+test("an incomplete nitrox card keeps the request and keeps asking", async ({ page }) => {
+  // A number with no agency is uncheckable, so `recordDiverNitroxCard` files
+  // nothing — and because it files nothing, the ask must still be there. The
+  // failure this guards against is the opposite: half a card written as a
+  // card-on-file, which would take the question away and leave a staffer with
+  // an agency-less row to verify.
+  await page.goto("/s/blue-mantis");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name").fill("Half Card");
+  await page.getByLabel("Email").fill(`halfcard+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Half/ })).toBeVisible();
+
+  const nitrox = page.locator('input[name="nitrox"]').filter({ visible: true });
+  await nitrox.check();
+  // The number without an agency — the incomplete half.
+  await page.getByLabel("Nitrox card number").fill("EANX-NO-AGENCY");
+  await page.getByRole("button", { name: "Save rental fit" }).click();
+
+  // The request stuck; the card did not, so the form still asks for it.
+  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
+  await expect(page.getByLabel("Nitrox card number")).toBeVisible();
 });
 
 test("a course taught on air offers no nitrox request, at the same shop that fills it", async ({

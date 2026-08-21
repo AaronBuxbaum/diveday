@@ -95,6 +95,28 @@ export function diveDeclarationInput(formData: FormData) {
 }
 
 /**
+ * The same answer, read for one diver in a party.
+ *
+ * The booking form asks the certification question inside every diver's own
+ * fieldset (`certificationLevel-0`…`certificationLevel-5`), because a party of
+ * four is four different cards and asking the booker once left three seats
+ * unscreened. The wait lists still ask one person and use the bare-name reader
+ * above.
+ *
+ * **No nitrox field, at any index.** The nitrox tick is rendered on no form in
+ * the product, and the booking action has refused to honour a hand-crafted one
+ * since the tamper asymmetry was found (ADR
+ * 20260820-attested-at-booking-verified-at-boarding). Not reading it here is
+ * that refusal made structural rather than remembered.
+ */
+export function diveDeclarationInputAt(formData: FormData, index: number) {
+  return {
+    certificationLevel: formData.get(`certificationLevel-${index}`) || undefined,
+    nitroxCertified: undefined,
+  };
+}
+
+/**
  * The parsed answers, in the shape `recordSelfDeclaredCards` takes.
  *
  * The one `<select>` carries two different kinds of answer, and they are split

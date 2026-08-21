@@ -34,7 +34,7 @@ import {
 } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { adviseRequests } from "@/lib/request-advisor";
+import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -233,7 +233,10 @@ export default async function ScheduleBoardPage({
       experienceLevel: request.experienceLevel,
       courseId: request.courseId,
     })),
-    shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
+    departureShapeFor(
+      shop,
+      shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
+    ),
   );
   const requestPlan: BuilderRequestPlan | null =
     requestRows.length > 0
@@ -553,7 +556,9 @@ export default async function ScheduleBoardPage({
     );
   }
 
-  if (shopBoats.length > 0) {
+  // "More departures than boats" is only a warning to a shop that runs boats.
+  // A shore operation's hull rows are dormant, not a fleet to be outrun.
+  if (shop.hasBoatDiving && shopBoats.length > 0) {
     for (const day of builderDays) {
       const boatTrips = day.trips.filter(
         (t): t is typeof t & { startsAt: Date; endsAt: Date } =>

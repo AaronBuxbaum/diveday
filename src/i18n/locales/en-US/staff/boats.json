@@ -1,5 +1,13 @@
 {
   "divingOptionsHeading": "Diving options",
+  "boatDivingLabel": "Boat diving",
+  "boatDivingDescription": "Turn off and the boat list goes with it.",
+  "boatEnabled": "Boat diving",
+  "boatDisabled": "No boat diving",
+  "shoreGroupSizeLabel": "Divers per departure",
+  "shoreGroupSizeHint": "Used when planning requests into days.",
+  "divingOptionsNone": "Pick at least one kind of diving.",
+  "divingOptionsGroupSizeInvalid": "Divers per departure must be between 1 and 60.",
   "shoreDivingLabel": "Shore diving",
   "shoreDivingDescription": "Enable if you offer shore dives (which will be an option when building trips).",
   "poolDivingLabel": "Pool diving",

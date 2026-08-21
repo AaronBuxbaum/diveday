@@ -6,14 +6,14 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { rescheduleBooking, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { setBookingNitrox } from "@/db/nitrox";
+import { createNitroxCertification, recordDiverNitroxCard, setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocale } from "@/db/people";
-import { createCertification } from "@/db/readiness";
+import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
-import { certificationAgency, certificationLevel } from "@/db/schema";
+import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
@@ -149,6 +149,12 @@ const fitSchema = z.object({
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
   nitrox: z.string().optional(),
+  // The nitrox card, asked for beside the request itself. Both optional and
+  // both meaningless without the other — `recordDiverNitroxCard` files a row
+  // only when the pair is complete, because a number with no agency is not
+  // something a staffer can check against anything.
+  nitroxAgency: z.string().optional(),
+  nitroxIdentifier: z.string().trim().max(60).optional(),
   bcdSize: z.string().trim().max(20),
   wetsuitSize: z.string().trim().max(20),
   finSize: z.string().trim().max(20),
@@ -190,10 +196,21 @@ export async function saveFitFromReady(token: string, formData: FormData) {
   // an unrelated save (a note, a size) never silently clears a request
   // recorded while the shop still offered it.
   if (nitroxAvailableOn(ctx.data.shop.rentalItems, ctx.data.trip.course)) {
+    const wantsNitrox = parsed.data.nitrox === "on";
     await setBookingNitrox(ctx.db, {
       shopId: ctx.data.shop.id,
       bookingId: ctx.bookingId,
-      wantsNitrox: parsed.data.nitrox === "on",
+      wantsNitrox,
+    });
+    // The card the diver typed beside the request, if they had it to hand,
+    // through the one writer both surfaces share (`recordDiverNitroxCard`).
+    await recordDiverNitroxCard(ctx.db, {
+      shopId: ctx.data.shop.id,
+      personId: ctx.data.person.id,
+      wantsNitrox,
+      agency: parsed.data.nitroxAgency,
+      identifier: parsed.data.nitroxIdentifier,
+      now: nowDate(),
     });
   }
   const result = saved ? "saved=fit" : "error=fit";
@@ -431,11 +448,92 @@ export async function saveCertificationFromReady(token: string, formData: FormDa
     agency: parsed.data.agency,
     level: parsed.data.level,
     identifier: parsed.data.identifier,
+    // **Stamped as the diver's own word, because that is what it is.** Without
+    // it the row is byte-for-byte a staff transcription of a card somebody
+    // held, and `reviewCertification`'s one-tap promote — which asks for a
+    // sighting only from an unsighted self-declaration — would launder a
+    // number typed on a phone into `verified`, the state readiness and the
+    // fill gate both read. `security-reviewer`, 2026-08-20.
+    selfDeclaredAt: nowDate(),
     ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
   });
   // `createCertification` returns null when a live card already holds this
   // shop/agency/number — most often the diver's own card, already on file and
   // possibly already verified. Say so rather than reporting a failure: there is
   // nothing for them to fix, and re-typing it would only be refused again.
+  revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
+}
+
+/**
+ * A specialty card the trip demands — Deep, Wreck, Night, Drysuit.
+ *
+ * The number is **required**, unlike the level declaration a booking form takes:
+ * `specialty_certifications.identifier` is `NOT NULL`, because a specialty is a
+ * yes/no gate on a materially riskier dive and there is no version of one that
+ * is only a claim with no number behind it.
+ *
+ * `selfDeclaredAt` is what makes this form safe to offer at all. It is why
+ * `specialty_certifications` gained the column on 2026-08-20: without it a row a
+ * diver typed is byte-for-byte a staff transcription, and
+ * `reviewSpecialtyCertification`'s ordinary one-tap confirm would promote an
+ * invented number to `verified` — the state that clears a depth gate past 18 m.
+ * With it, that tap asks the staffer for the card in their hand.
+ */
+const specialtySchema = z.object({
+  agency: z.enum(certificationAgency.enumValues),
+  specialty: z.enum(diveSpecialty.enumValues),
+  identifier: z.string().trim().min(2).max(60),
+  expiresAt: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || undefined)
+    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
+});
+
+export async function saveSpecialtyFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = specialtySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=cert`);
+
+  const created = await createSpecialtyCertification(ctx.db, {
+    // Shop and person come from the verified capability, never the form.
+    shopId: ctx.data.shop.id,
+    personId: ctx.data.person.id,
+    agency: parsed.data.agency,
+    specialty: parsed.data.specialty,
+    identifier: parsed.data.identifier,
+    selfDeclaredAt: nowDate(),
+    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
+  });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
+}
+
+/**
+ * A nitrox card, from the diver rather than the counter.
+ *
+ * Same contract as the two above: filed `pending`, cleared only by a staffer.
+ * `authorizesNitroxFill` reads `verified` and nothing else, so this can put a
+ * number on the record and can never put enriched air in a cylinder.
+ */
+const nitroxCertSchema = z.object({
+  agency: z.enum(certificationAgency.enumValues),
+  identifier: z.string().trim().min(2).max(60),
+});
+
+export async function saveNitroxCertificationFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = nitroxCertSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=cert`);
+
+  const created = await createNitroxCertification(ctx.db, {
+    shopId: ctx.data.shop.id,
+    personId: ctx.data.person.id,
+    agency: parsed.data.agency,
+    identifier: parsed.data.identifier,
+    selfDeclaredAt: nowDate(),
+  });
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
 }

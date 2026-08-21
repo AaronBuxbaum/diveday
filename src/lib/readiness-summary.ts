@@ -45,6 +45,16 @@ export type DiverChecklistItem = {
    * action it enables (sign the waiver, pay the balance). Absent on a done item.
    */
   code?: ReadinessBlockerCode;
+  /**
+   * **Every** blocker in this category that is on the diver, worst first —
+   * because a category is one *line* but can be several *jobs*. A diver short a
+   * level card, a Deep card and a nitrox card has one certification row and
+   * three things to send, and `code` alone can only name the first: the
+   * readiness page reads this to put an entry form under each one, rather than
+   * clearing them one page-load at a time. Empty on a done item, and on a
+   * category whose only blockers are the shop's to finish.
+   */
+  actionable: readonly ReadinessBlocker[];
 };
 
 /**
@@ -160,6 +170,9 @@ export function buildDiverChecklist(
         category: "setup",
         state: "waiting",
         detailCode: blocker ? blocker.code : "setup_generic",
+        // Nothing here is the diver's to send — a setup blocker is the shop
+        // finishing its own configuration.
+        actionable: [],
       },
     ];
   }
@@ -195,18 +208,23 @@ export function buildDiverChecklist(
     const blockers = byCategory.get(category) ?? [];
     const blocker = worstBlocker(blockers);
     if (!blocker) {
-      items.push({ category, state: "done", detailCode: DONE_DETAIL_CODE[category] });
+      items.push({
+        category,
+        state: "done",
+        detailCode: DONE_DETAIL_CODE[category],
+        actionable: [],
+      });
       continue;
     }
     const state = BLOCKER_STATE[blocker.code];
     // A diver short several cards needs to know it's more than one thing — one
     // generic "share your card" line would leave them thinking a single card clears it.
-    const actionable = blockers.filter((b) => BLOCKER_STATE[b.code] === "action").length;
+    const actionable = blockers.filter((b) => BLOCKER_STATE[b.code] === "action");
     const detailCode: ChecklistDetailCode =
-      category === "certification" && actionable > 1
+      category === "certification" && actionable.length > 1
         ? "certification_multiple_needed"
         : blocker.code;
-    items.push({ category, state, detailCode, code: blocker.code });
+    items.push({ category, state, detailCode, code: blocker.code, actionable });
   }
   return items;
 }

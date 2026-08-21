@@ -59,6 +59,7 @@ import {
   shopOffersNitrox,
   toRentableKinds,
 } from "@/lib/rentals";
+import { MAX_DEPARTURE_CAPACITY } from "@/lib/request-advisor";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -661,22 +662,61 @@ export async function dischargeProcessorErasureAction(formData: FormData) {
   revalidatePath(shopPath(session.user.shopSlug, "settings"));
 }
 
-/** Saves whether the shop offers shore diving and/or pool diving. */
+/** Saves which of boat, shore and pool diving the shop runs. */
 export async function saveDivingOptionsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
 
+  const hasBoatDiving = formData.get("hasBoatDiving") === "on";
   const hasShoreDiving = formData.get("hasShoreDiving") === "on";
   const hasPoolDiving = formData.get("hasPoolDiving") === "on";
 
+  // Unticking all three would leave the builder with no mode to offer and trip
+  // creation still defaulting to `boat` — a shop disowning the only kind of
+  // departure it can make. The DB check refuses it too; this is the half that
+  // says so in words instead of raising.
+  if (!hasBoatDiving && !hasShoreDiving && !hasPoolDiving) {
+    revalidateAndRedirect(
+      settings,
+      noticeUrl(settings, "diving-options-none", { form: "divingOptions" }),
+    );
+    return;
+  }
+
+  // Only read the group size when it is the thing being used. A boat shop sizes
+  // a day against its hulls, so leaving a stale number behind would be a
+  // preference nothing reads, waiting to surprise whoever turns boats off later.
+  const shoreGroupSize = hasBoatDiving ? null : parseGroupSize(formData.get("shoreGroupSize"));
+  if (shoreGroupSize === "invalid") {
+    revalidateAndRedirect(
+      settings,
+      noticeUrl(settings, "diving-options-group-size-invalid", { form: "divingOptions" }),
+    );
+    return;
+  }
+
   const db = await getDb();
-  await setShopDivingOptions(db, session.user.shopId, { hasShoreDiving, hasPoolDiving });
+  await setShopDivingOptions(db, session.user.shopId, {
+    hasBoatDiving,
+    hasShoreDiving,
+    hasPoolDiving,
+    shoreGroupSize,
+  });
 
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
   );
+}
+
+/** Blank is a real answer ("we have not said"); a number must be a sane one. */
+function parseGroupSize(raw: FormDataEntryValue | null): number | null | "invalid" {
+  const text = typeof raw === "string" ? raw.trim() : "";
+  if (!text) return null;
+  const size = Number(text);
+  if (!Number.isInteger(size) || size < 1 || size > MAX_DEPARTURE_CAPACITY) return "invalid";
+  return size;
 }
 
 /** Creates a new boat for the shop. */

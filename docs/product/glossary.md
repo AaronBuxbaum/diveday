@@ -195,6 +195,14 @@ new domain concept, define it here in the same PR.
   refuses**: a diver this shop has never carded books as before, the same trade-off H-08 settled
   for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
   were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
+  **One narrow exception since 2026-08-20**, on the public booking form only: when the shortfall
+  is a *level* and it rests on the rung this submitter just typed, the seat is sold with a warning
+  under their own answer rather than refused — the case H-30 itself describes as "a response to
+  what this submitter just typed rather than a disclosure about somebody on file". The refusal
+  stands everywhere else: on a shortfall resting on the shop's **record** (H-30's own case, where
+  the diver typed nothing and no warning could have reached them), on a **specialty or nitrox**
+  gate (no field on the form can answer either), and at every staff door, reschedule and seat
+  claim. See **Admission advisory** below.
   Two carve-outs: an **identity-unconfirmed** booking is not judged by the matched record's cards
   (H-13), and on a **course session** the *course's* own `minimum_certification_level` is the
   admission rule, because continuing education dives at the sites it certifies people for — an AOW
@@ -203,6 +211,12 @@ new domain concept, define it here in the same PR.
   (`src/lib/trip-admission.ts`), called from exactly one place.
   See [20260803-trip-admission-at-booking](../architecture/decisions/20260803-trip-admission-at-booking.md).
   Distinct from **course admission**, which is a course's own enrolment rule and fails *closed*.
+- **Admission advisory** — what a trip asks for that a diver's record does not yet answer, on a
+  booking that **went through anyway**. Deliberately a different word, and a different field, from
+  a refusal: one means the seat was not sold, the other means it was. Carried back on the success
+  result of `createBookingRecord` when `admissionGate: "advise"` and the shortfall is a
+  declared-level one; the public booking form is the only caller that asks for it. It is advice
+  about a *sale*, never about boarding — readiness still clears on a sighted card and nothing else.
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **PADI Scuba Diver** — a real certification one rung *below* Open Water: limited to 12 m and
@@ -812,7 +826,7 @@ new domain concept, define it here in the same PR.
   shop's **jurisdiction** (the 2026 UHMS/DMSC RSTC participant form by default). Defined as data
   in `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version and the
   server-side yes/no answers, so a later edit never re-interprets signed evidence. Questions 3,
-  5, and 10, the affirmative answers in an applicable Box, and the page-two dental question are
+  5, and 10 and the affirmative answers in an applicable Box are
   physician referrals; a parent question can therefore be yes and still clear when its Box is all
   no. Unknown or incomplete questionnaires **fail closed** (review required), never waved through.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:

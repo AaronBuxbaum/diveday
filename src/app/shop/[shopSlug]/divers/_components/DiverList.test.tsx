@@ -89,6 +89,23 @@ function renderList({
   );
 }
 
+describe("DiverList search", () => {
+  it("opens with the search box focused, so a staffer can just start typing", () => {
+    // Check-in has done this since it shipped and the roster had not, which is
+    // the one difference between two pages a staffer uses for the same reason:
+    // they arrive holding a name. Pinned here because the focus goes through a
+    // ref (biome forbids `autoFocus`), so nothing else would fail if the ref
+    // were dropped from the input in a later edit.
+    renderList();
+    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+  });
+
+  it("keeps the focus on the search box when the roster arrives filtered", () => {
+    renderList({ query: "nobody" });
+    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+  });
+});
+
 describe("DiverList empty state", () => {
   it("does not offer a separate add diver button before typing", () => {
     renderList();

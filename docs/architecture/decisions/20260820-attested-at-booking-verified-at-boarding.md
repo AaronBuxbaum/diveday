@@ -68,7 +68,10 @@ A shop mid-backfill gets the gate its records already justify.
 **What this costs, stated plainly.** Three things, none of them accidental:
 
 1. **The sale-time gate is not an enforcement boundary and must never be documented, tested, or
-   relied on as one.** Its refusals are advice with a stop attached.
+   relied on as one.** Its refusals are advice with a stop attached — and since 2026-08-20, on one
+   narrow path, advice with no stop: a *level* shortfall resting on the rung this submitter just
+   typed is warned about under their own select and sold. A shortfall resting on the shop's own
+   record, and any specialty or nitrox shortfall, still stop (see H-30's amendment).
 2. **A stranger can now cost somebody else a seat.** The public opt-ins are anonymous, and an
    anonymous poster who guesses a real diver's email writes a claim onto that diver's record. The
    anti-displacement rule in `recordSelfDeclaredCards` means this can never happen to a diver who
@@ -139,7 +142,11 @@ poor fit for a cancellation cascade, and it should be looked at before a pilot s
 **The gate covers the lead booker only.** A party booking asks one person and sells up to six seats;
 every other member runs the gate with no declaration and fails open. Not a regression — nobody was
 asked before — but the gate screens one seat in four on the commonest shape at a Florida shop, and
-this ADR should not be read as claiming otherwise.
+this ADR should not be read as claiming otherwise. **Fixed 2026-08-20:** the question is now asked
+inside every diver's own fieldset (`certificationLevel-0`…`-5`), and each answer is judged and
+recorded against that person. Two consequences of asking six people through one anonymous form —
+the widened write surface, and the fact that seats 2-6 are the *organizer's* word rendered as "diver's
+word" — are filed at FU-20260820-six-strangers-per-anonymous-post rather than assumed.
 
 **Fixed here as well:** the "I'm not certified yet" answer was collected on the booking form and
 discarded, which is the exact "ask a question and discard the answer" failure ADR

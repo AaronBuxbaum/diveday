@@ -10,9 +10,12 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
+import { DECLARABLE_CERTIFICATION_LEVELS, NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -271,6 +274,7 @@ export function BookSpotSection({
   errorMessage,
   requirementHeading,
   requirementNote,
+  minimumCertificationLevel,
   payAtBooking,
   perDiverPriceCents,
   currency,
@@ -297,6 +301,15 @@ export function BookSpotSection({
    */
   requirementHeading?: string;
   requirementNote?: string;
+  /**
+   * The level this departure asks for, as a bare ladder code, so each diver's
+   * own answer can be measured against it as they pick it. Separate from
+   * `requirementNote` above, which is a finished sentence about the trip and
+   * says nothing about the person reading it. Undefined when no level is
+   * demanded — a specialty-only or nitrox-only gate is not something a level
+   * select can warn about.
+   */
+  minimumCertificationLevel?: CertificationLevel;
   payAtBooking: boolean;
   perDiverPriceCents: number | null;
   /** The shop's currency — this is a list price, so it follows the shop, not a payment row. */
@@ -331,6 +344,45 @@ export function BookSpotSection({
       current[index] === cents ? current : { ...current, [index]: cents },
     );
   }, []);
+  /**
+   * **A warning, not a stop.** A diver who says "Open Water" on an Advanced
+   * charter is told so at the moment they say it — and then buys the seat
+   * anyway (product owner, 2026-08-20, closing
+   * FU-20260820-the-sale-gate-bites-only-the-honest). The refusal it replaced
+   * only ever caught the diver who answered *honestly and short*: naming a
+   * higher rung, or leaving the field at "Rather not say", both walked
+   * straight through. So the gate punished honesty, and handed the refused
+   * diver the answer to give on the next attempt.
+   *
+   * Nothing here is a safety decision. Boarding is still `calculateReadiness`
+   * over a card a staffer has sighted, and that is unchanged.
+   *
+   * **"I'm not certified yet" gets its own sentence, not silence.** It is the
+   * one answer certain to be below the gate, and the commonest answer at a shop
+   * selling Discover Scuba — a person who has just told an ordinary charter
+   * they hold no card at all will be blocked at readiness and turned away at
+   * the dock. Course sessions never reach here (the page passes no level for
+   * one), so this is always a charter. Pointing them at the shop is the only
+   * thing that helps; a rung they do not hold is not.
+   */
+  const belowRequirementFor = useCallback(
+    (level: string) => {
+      if (!minimumCertificationLevel) return null;
+      if (!level) return null;
+      if (level === NO_CERTIFICATION_ANSWER) return tRoot("booking.certNoneOnGatedTrip");
+      if (!DECLARABLE_CERTIFICATION_LEVELS.includes(level as CertificationLevel)) return null;
+      if (
+        certificationRank(level as CertificationLevel) >=
+        certificationRank(minimumCertificationLevel)
+      ) {
+        return null;
+      }
+      return tRoot("booking.certBelowRequirement", {
+        required: tRoot(DIVER_CERTIFICATION_LEVEL_KEYS[minimumCertificationLevel]),
+      });
+    },
+    [minimumCertificationLevel, tRoot],
+  );
   const showGearFields = payAtBooking && hasAnyRentalPricing(rentalPricing);
   // Shrinking the party leaves a stale subtotal behind for the dropped slot
   // (BookingGearFields unmounts, but its last report stays in state) — sum
@@ -392,6 +444,8 @@ export function BookSpotSection({
             onSizeChange={setPartySize}
             contactEmail={contactEmail}
             contactPhone={contactPhone}
+            askCertification
+            belowRequirementFor={belowRequirementFor}
           />
           {showGearFields
             ? Array.from({ length: partySize }, (_, index) => (
@@ -408,14 +462,11 @@ export function BookSpotSection({
                 />
               ))
             : null}
-          {/* What the diver holds, asked at the sale and believed there (ADR
-              20260820-attested-at-booking-verified-at-boarding). It describes
-              the lead booker, the same question in the same words the wait list
-              and the deal list ask, and it is read by the admission gate for
-              this submission — a claim that clears the boat's requirement buys
-              the seat, and the sighting is still owed before boarding. Nothing
-              is written unless the booking completes. */}
-          <DiveDeclarationFields showNitrox={false} />
+          {/* The certification question used to sit here, once, describing the
+              lead booker only — so a party of four answered it for one seat and
+              the other three ran the gate with nothing. It now lives inside
+              each diver's own fieldset in `BookingPartyFields`, which is where
+              a person's own answer belongs. */}
           {perDiverPriceCents && gearTotalCents > 0 ? (
             <p className="-mt-2 text-sm font-medium tabular-nums">
               {t("totalDueAtCheckout", {

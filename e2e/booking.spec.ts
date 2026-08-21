@@ -65,24 +65,33 @@ test.describe("staff", () => {
       .getByLabel("What kind of dive would make your day?")
       .fill("A relaxed pace and macro photography");
     await page.getByRole("button", { name: "Book these spots" }).click();
+    // Booking lands on the diver's own readiness page, not a branch of the
+    // trip page — one page after booking, and the one the confirmation email
+    // links to (ADR 20260820-one-page-after-booking).
+    await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
-    // The waiver is the real next step, so the confirmation offers it directly
-    // rather than one hop further on the readiness page. No email provider is
-    // configured in the e2e fleet, so nothing left the building — and the page
-    // must not claim two emails are coming when they aren't.
+    // No email provider is configured in the e2e fleet, so nothing left the
+    // building — and the page must not claim two emails are coming when they
+    // aren't.
     await expect(page.getByText(/Two emails are on their way/)).toHaveCount(0);
-    await page.getByRole("button", { name: "Sign your waiver now" }).click();
-    await expect(page).toHaveURL(/\/waivers\//);
-    await page.goBack();
 
-    // WP-3: the confirmation takes the top — it sits above the pre-trip content
-    // (pack list, briefings), not buried at the bottom of a long page.
+    // WP-3: the celebration takes the top — it sits above the pre-trip content
+    // (pack list, briefings), not buried at the bottom of a long page. Asserted
+    // before the waiver hop below, because `?booked=1` is a one-shot flash
+    // param: coming back to this URL afterwards is the ordinary checklist, with
+    // no earned moment to measure.
     const confirmationBox = await page
       .getByRole("heading", { name: /You’re on the boat, Nora/ })
       .boundingBox();
     const packBox = await page.getByRole("heading", { name: "Pack with confidence" }).boundingBox();
     expect(confirmationBox?.y ?? 0).toBeLessThan(packBox?.y ?? Number.POSITIVE_INFINITY);
+
+    // The waiver is the real next step, and the checklist offers it directly.
+    await page.getByRole("button", { name: "Sign your waiver" }).click();
+    await expect(page).toHaveURL(/\/waivers\//);
+    await page.goBack();
+    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
 
     // Both named spots are held atomically.
     await page.goto("/s/blue-mantis");
@@ -384,10 +393,14 @@ test.describe("as owner", () => {
   });
 });
 
-// CR-003: the confirmation panel is authorized by a signed `confirm`
-// capability in the `?booking=` param, never by the raw booking id — a
-// tampered or cross-trip token must never surface someone else's booking.
-test("a tampered or cross-trip confirmation token reveals nothing", async ({ page }) => {
+// CR-003, restated against the destination booking actually has (ADR
+// 20260820-one-page-after-booking): the page a booked diver lands on is
+// authorized by a signed `readiness` capability in the path, never by a raw
+// booking id — a tampered token must reveal nothing, and the `?booking=` branch
+// it replaced must be gone rather than merely unused.
+test("a tampered readiness token reveals nothing, and ?booking= no longer opens a door", async ({
+  page,
+}) => {
   await page.goto("/s/blue-mantis");
   await page
     .locator("li")
@@ -398,29 +411,24 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Casey Ford");
   await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
+  const tripUrl = page.url();
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
   await expect(page.getByRole("heading", { name: /You’re on the boat, Casey/ })).toBeVisible();
 
-  const confirmedUrl = new URL(page.url());
-  const realToken = confirmedUrl.searchParams.get("booking");
+  const realToken = new URL(page.url()).pathname.split("/").pop();
   expect(realToken).toBeTruthy();
 
-  // A garbage token on the same trip must not show the confirmation.
-  const tamperedUrl = new URL(confirmedUrl);
-  tamperedUrl.searchParams.set("booking", "not-a-real-token");
-  await page.goto(tamperedUrl.toString());
+  // A garbage token in the same position must not open the booking.
+  await page.goto("/ready/not-a-real-token?booked=1");
   await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
 
-  // A real, valid token — but presented on a different trip — must not
-  // authorize that trip's confirmation either.
-  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
-  await page
-    .locator("li")
-    .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
-    .click();
-  const otherTripUrl = new URL(page.url());
-  otherTripUrl.searchParams.set("booking", realToken ?? "");
-  await page.goto(otherTripUrl.toString());
+  // And the branch this replaced is gone: a real, live capability presented in
+  // the old `?booking=` slot on the trip page opens nothing at all. It is the
+  // wrong purpose for that param, the param is only read inside the embed now,
+  // and no unframed booking mints a `confirm` token in the first place.
+  await page.goto(`${tripUrl}?booking=${realToken}`);
   await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "Grab a spot" })).toBeVisible();
 });

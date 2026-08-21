@@ -694,7 +694,6 @@ export default async function WaiverPage({
                 noLabel: t("waiver.answerNo"),
                 referralReassurance: t("waiver.yesReassurance"),
                 followUpReassurance: t("waiver.yesOpensFollowUps"),
-                dentalHeading: t("waiver.dentalHeading"),
                 outcomeClear: t("waiver.outcomeClear"),
                 outcomeReferral: t("waiver.outcomeReferral"),
                 outcomeFollowUpsOpen: t("waiver.outcomeFollowUpsOpen"),

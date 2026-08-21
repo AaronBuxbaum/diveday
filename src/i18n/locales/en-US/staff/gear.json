@@ -55,8 +55,7 @@
     "neverPickedUp": "Never picked up · was due {dueOn}"
   },
   "empty": {
-    "heading": "No gear on the register yet",
-    "body": "Add your first tagged unit — a BCD, a regulator, a tank — and DiveDay will track who has it, when it's due back, and when it needs service. Shops that don't track units lose nothing: sizes and the prep list work exactly as before."
+    "heading": "No gear on the register yet"
   },
   "fleet": {
     "ariaLabel": "The fleet",
@@ -174,12 +173,12 @@
       "retiring": "Retiring…",
       "delete": "Delete unit",
       "deleting": "Deleting…",
-      "deleteWarning": "Deleting removes its service and rental history too. A unit that earned its keep gets retired instead."
+      "deleteWarning": "Deleting removes its service and rental history too."
     }
   },
   "prep": {
     "heading": "Rental assignments",
-    "description": "Which tagged unit each renting diver takes. Assigning here reserves it for the departure's dates — two divers can't be promised the same one.",
+    "description": "Which tagged unit each renting diver takes, reserved for the departure's dates.",
     "outLabel": "out",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No {kindLabel} free for these dates.",

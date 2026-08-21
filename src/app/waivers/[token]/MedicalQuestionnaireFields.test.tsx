@@ -33,7 +33,6 @@ const COPY = {
   noLabel: "No",
   referralReassurance: "A yes is not a no — it just means we check with a doctor first.",
   followUpReassurance: "A yes here only opens a few follow-up questions.",
-  dentalHeading: "One last check, for everyone",
   outcomeClear: "No medical evaluation is required.",
   outcomeReferral: "A doctor should confirm you are fit to dive.",
   outcomeFollowUpsOpen: "A few follow-up questions are still open.",
@@ -44,8 +43,8 @@ const LABELS = { copy: COPY };
 
 /**
  * A minimal questionnaire with the one shape that matters: a primary question
- * that opens a box, two children inside it, an unrelated primary, and a dental
- * question. Built by hand rather than sliced from the real form so the
+ * that opens a box, two children inside it, and an unrelated primary. Built by
+ * hand rather than sliced from the real form so the
  * branching assertions do not move every time the published form is renumbered
  * — the real form is exercised separately below.
  */
@@ -82,12 +81,6 @@ const BRANCHING: MedicalQuestionnaire = {
       id: "p2",
       prompt: "Are you pregnant?",
       section: "primary",
-      referral: true,
-    },
-    {
-      id: "d1",
-      prompt: "Have you had recent dental surgery?",
-      section: "dental",
       referral: true,
     },
   ],
@@ -274,10 +267,9 @@ describe("the live outcome", () => {
     render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
 
     await user.click(radiosFor("Have you ever had problems with your heart?").no);
-    await user.click(radiosFor("Are you pregnant?").no);
     expect(screen.queryByText(COPY.outcomeClear)).not.toBeInTheDocument();
 
-    await user.click(radiosFor("Have you had recent dental surgery?").no);
+    await user.click(radiosFor("Are you pregnant?").no);
     expect(screen.getByText(COPY.outcomeClear)).toBeInTheDocument();
   });
 
@@ -296,7 +288,6 @@ describe("the live outcome", () => {
 
     await user.click(radiosFor("Have you ever had problems with your heart?").yes);
     await user.click(radiosFor("Are you pregnant?").no);
-    await user.click(radiosFor("Have you had recent dental surgery?").no);
 
     expect(screen.getByText(COPY.outcomeFollowUpsOpen)).toBeInTheDocument();
   });
@@ -312,7 +303,6 @@ describe("the live outcome", () => {
 
     await user.click(heart.no);
     await user.click(radiosFor("Are you pregnant?").no);
-    await user.click(radiosFor("Have you had recent dental surgery?").no);
     expect(screen.getByText(COPY.outcomeClear)).toBeInTheDocument();
     expect(screen.queryByText(COPY.outcomeReferral)).not.toBeInTheDocument();
   });
@@ -321,9 +311,9 @@ describe("the live outcome", () => {
 describe("progress scope", () => {
   /**
    * `QuestionnaireProgress` counts `data-question-scope="primary"` radios only.
-   * The bar used to open at "0 of 11" — ten numbered questions plus the dental
-   * check — against a form that asks ten, and then *grew* as a diver's own yes
-   * answers opened Boxes.
+   * The bar used to open at "0 of 11" — ten numbered questions plus a dental
+   * check the form does not ask separately — against a form that asks ten, and
+   * then *grew* as a diver's own yes answers opened Boxes.
    */
   it("marks page-one questions apart from the follow-ups a yes opens", async () => {
     const user = userEvent.setup();
@@ -338,9 +328,9 @@ describe("progress scope", () => {
     expect(primaryNames.size).toBe(
       RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "primary").length,
     );
-    // The dental check must answer to the same rule as a Box: required, but not
-    // one of the ten the bar counts.
-    expect(primaryNames.has("q_dental_recovery")).toBe(false);
+    // The dental check is Box C's fifth item, so like every Box question it is
+    // required once its parent opens and is never one of the ten the bar counts.
+    expect(primaryNames.has("q_box_c_5")).toBe(false);
 
     // Opening a Box adds follow-up radios and leaves the primary count alone.
     await user.click(radiosFor(RSTC_QUESTIONNAIRE.questions[0].prompt).yes);
@@ -353,7 +343,7 @@ describe("progress scope", () => {
     expect(afterOpening.size).toBe(primaryNames.size);
     expect(
       document.querySelectorAll('input[data-question-scope="follow-up"]').length,
-    ).toBeGreaterThan(primaryNames.size);
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -372,27 +362,31 @@ describe("form wiring", () => {
     expect(pregnant.no).toHaveAttribute("value", "no");
   });
 
-  it("renders the dental section, which belongs to no box and no primary", () => {
+  it("renders nothing outside the ten and their boxes", () => {
+    // v2 hung a dental question off its own `dental` section, asked of everyone.
+    // The published form puts it in Box C, so no such section is rendered any
+    // more — and a questionnaire that somehow carried one must not sneak it in.
     render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+    expect(screen.getAllByRole("group")).toHaveLength(2);
     expect(
-      screen.getByRole("group", { name: "Have you had recent dental surgery?" }),
+      screen.getByRole("group", { name: "Have you ever had problems with your heart?" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Are you pregnant?" })).toBeInTheDocument();
   });
 });
 
 describe("the real published questionnaire", () => {
   it("renders every primary question and no box until one is answered", () => {
     // Guards against the component quietly dropping a section as the form is
-    // revised: primaries and dental are always visible, boxes never are.
+    // revised: primaries are always visible, boxes never are.
     render(<MedicalQuestionnaireFields questionnaire={RSTC_QUESTIONNAIRE} {...LABELS} />);
 
     const primaries = RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "primary");
-    const dental = RSTC_QUESTIONNAIRE.questions.filter((q) => q.section === "dental");
     const boxChildren = RSTC_QUESTIONNAIRE.questions.filter((q) => q.parentId);
     expect(primaries.length).toBeGreaterThan(0);
     expect(boxChildren.length).toBeGreaterThan(0);
 
-    expect(screen.getAllByRole("group")).toHaveLength(primaries.length + dental.length);
+    expect(screen.getAllByRole("group")).toHaveLength(primaries.length);
     for (const question of boxChildren) {
       expect(
         screen.queryByRole("group", { name: question.prompt }),

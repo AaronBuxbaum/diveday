@@ -187,6 +187,19 @@ export type NewCertification = {
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
   expiresAt?: CalendarDate;
+  /**
+   * **The diver typed this about themselves.** Set only by the diver-facing
+   * entry form on `/ready/[token]`; a staff capture leaves it unset, because a
+   * staffer is looking at the card.
+   *
+   * It is not decoration. `reviewCertification` asks for the agency and number
+   * off the physical card before it will promote a row `isUnsightedSelfDeclaration`
+   * is true of, and without this stamp a number typed on a phone would inherit
+   * the one-tap "Mark certified" a colleague's transcription gets — laundering
+   * an invented card into `verified`, which is the state readiness, the fill
+   * gate and every depth ceiling read (`security-reviewer`, 2026-08-20).
+   */
+  selfDeclaredAt?: Date;
 };
 
 /**
@@ -435,6 +448,12 @@ export type NewSpecialtyCertification = {
   identifier: string;
   /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
   expiresAt?: CalendarDate;
+  /**
+   * The diver typed this about themselves — see the column's own note in
+   * `src/db/schema.ts`. Set only by the entry form on `/ready/[token]`; a staff
+   * capture leaves it unset, because a staffer is looking at the card.
+   */
+  selfDeclaredAt?: Date;
 };
 
 /**
@@ -500,10 +519,16 @@ export async function reviewSpecialtyCertification(
     reviewNote?: string;
     /** The active staffer who made this certification decision, if this is a live review. */
     reviewedByPersonId?: string;
+    /**
+     * Required for, and only meaningful on, a still-unsighted self-declaration
+     * — the same contract the nitrox and level reviews carry. This tap opens a
+     * depth gate past 18 m, and a diver's typing is not a card sighting.
+     */
+    sighting?: CardSighting;
   },
 ): Promise<
   | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
-  | { ok: false; reason: ReviewRefusal | "staff_not_found" }
+  | { ok: false; reason: CertificationReviewRefusal }
 > {
   const reviewedByPersonId = input.reviewedByPersonId
     ? await activeCertificationReviewerId(db, input.shopId, input.reviewedByPersonId)
@@ -514,7 +539,11 @@ export async function reviewSpecialtyCertification(
   // Read first so a missing or deleted card is a `not_found` refusal rather
   // than an update that silently matched no rows.
   const [existing] = await db
-    .select({ id: specialtyCertifications.id })
+    .select({
+      id: specialtyCertifications.id,
+      status: specialtyCertifications.status,
+      selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
+    })
     .from(specialtyCertifications)
     .where(
       and(
@@ -526,6 +555,14 @@ export async function reviewSpecialtyCertification(
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
 
+  // A card the diver typed is not a card anybody has seen. Same guard as the
+  // nitrox review beside it, and for a stronger reason: this one opens a depth
+  // gate past 18 m.
+  const sighting = isUnsightedSelfDeclaration(existing) ? input.sighting : undefined;
+  if (isUnsightedSelfDeclaration(existing) && !sighting?.identifier.trim()) {
+    return { ok: false, reason: "card_sighting_required" };
+  }
+
   const [certification] = await db
     .update(specialtyCertifications)
     .set({
@@ -533,6 +570,9 @@ export async function reviewSpecialtyCertification(
       reviewNote: reviewNoteFor(input.reviewNote),
       reviewedAt: nowDate(),
       ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
+      ...(sighting
+        ? { agency: sighting.agency, identifier: sighting.identifier.trim() }
+        : undefined),
     })
     .where(
       and(

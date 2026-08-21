@@ -80,6 +80,21 @@ test.describe("as owner", () => {
     await expect(page.getByRole("link", { name: "← All trips" })).toHaveCount(0);
     const backLink = page.getByRole("link", { name: "Back to the schedule" });
     await expect(backLink).toHaveAttribute("href", /embed=1/);
+
+    // The one door out of the frame, followed for real. It points at a *route*
+    // rather than a `/ready/<token>` minted while this page rendered: a
+    // readiness token is stored hashed, so the page cannot read an existing one
+    // back, and minting per render wrote a row per reload and eventually
+    // retired the readiness link `bookSpot` had already emailed. The route
+    // trades this booking's confirm token for the capability at tap time.
+    const readinessLink = page.getByRole("link", { name: /readiness page/ });
+    await expect(readinessLink).toHaveAttribute("href", /\/ready\?booking=/);
+    await readinessLink.click();
+    // Landed on a real capability page — the token in the path is the one the
+    // route just issued, and it opens the readiness page rather than the
+    // "this link isn't available" notice a dead capability would render.
+    await expect(page).toHaveURL(/\/ready\/[^/?]+$/);
+    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
   });
 });
 

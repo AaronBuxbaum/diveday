@@ -142,6 +142,11 @@ function noticeMessages(
     "backup-not-authorized": { tone: "danger", text: t("backup.notice.not-authorized") },
     "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
     "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
+    "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
+    "diving-options-group-size-invalid": {
+      tone: "danger",
+      text: t("boats.divingOptionsGroupSizeInvalid"),
+    },
     "boat-created": { tone: "success", text: t("boats.boatCreated") },
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
     "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
@@ -512,6 +517,7 @@ export default async function SettingsPage({
     shopCurrency.toUpperCase(),
   ].join(" · ");
   const divingOptionsValue = [
+    shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
     shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
     shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
   ].join(" · ");
@@ -1033,7 +1039,23 @@ export default async function SettingsPage({
             >
               <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
               <FieldGrid as="form" action={saveDivingOptionsAction} columns={1} className="mt-4">
+                {/* Boat first, and on by default: it is what the product assumed
+                    before this row existed, and what `trips.dive_mode` still
+                    defaults to. Turning it off is what hides the Boats row
+                    below and takes the hull out of the Requests planner. */}
                 <label className="flex min-h-11 items-center gap-3 text-sm">
+                  <input
+                    name="hasBoatDiving"
+                    type="checkbox"
+                    defaultChecked={shop.hasBoatDiving}
+                    className="size-4 accent-primary"
+                  />
+                  <div>
+                    <p className="font-medium">{t("boats.boatDivingLabel")}</p>
+                    <p className="text-xs text-muted">{t("boats.boatDivingDescription")}</p>
+                  </div>
+                </label>
+                <label className="flex min-h-11 items-center gap-3 text-sm mt-2">
                   <input
                     name="hasShoreDiving"
                     type="checkbox"
@@ -1057,6 +1079,27 @@ export default async function SettingsPage({
                     <p className="text-xs text-muted">{t("boats.poolDivingDescription")}</p>
                   </div>
                 </label>
+                {/* Only asked of a shop with no hull. A boat shop's answer to
+                    "how many on a departure" is the boat's capacity, which is a
+                    fact rather than a preference — so asking would invite a
+                    second, disagreeing number. */}
+                {shop.hasBoatDiving ? null : (
+                  <Field
+                    label={t("boats.shoreGroupSizeLabel")}
+                    hint={t("boats.shoreGroupSizeHint")}
+                    className="mt-2"
+                  >
+                    <input
+                      name="shoreGroupSize"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={60}
+                      defaultValue={shop.shoreGroupSize ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                )}
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("boats.divingOptionsSubmitting")}
@@ -1068,100 +1111,107 @@ export default async function SettingsPage({
               </FieldGrid>
             </SettingsRow>
 
-            <SettingsRow
-              heading={t("boats.heading")}
-              value={boatsValue}
-              open={activeSection === "boats"}
-            >
-              <SectionNotice banner={banner} section="boats" active={activeSection} />
-              <div className="space-y-4 mt-4">
-                {shopBoats.length === 0 ? (
-                  <p className="text-sm text-muted italic">{t("boats.noBoats")}</p>
-                ) : (
-                  <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-                    {shopBoats.map((boat) => (
-                      <form
-                        key={boat.id}
-                        action={updateBoatAction}
-                        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
-                      >
-                        <input type="hidden" name="boatId" value={boat.id} />
-                        <div className="flex-1 w-full">
-                          <input
-                            name="name"
-                            type="text"
-                            required
-                            defaultValue={boat.name}
-                            placeholder={t("boats.nameLabel")}
-                            className={controlClass}
-                          />
-                        </div>
-                        <div className="w-full sm:w-32 flex items-center gap-2">
-                          <input
-                            name="capacity"
-                            type="number"
-                            required
-                            min={1}
-                            defaultValue={boat.capacity}
-                            placeholder={t("boats.capacityLabel")}
-                            className={`${controlClass} tabular-nums`}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          <SubmitButton
-                            pendingLabel={t("boats.submitting")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("boats.submit")}
-                          </SubmitButton>
-                          <button
-                            formAction={deleteBoatAction}
-                            type="submit"
-                            className={buttonClass({ variant: "danger", size: "sm" })}
-                          >
-                            {t("boats.deleteBoat")}
-                          </button>
-                        </div>
-                      </form>
-                    ))}
-                  </div>
-                )}
+            {/* A shore-and-pool shop has no hulls to name, so the row is gone
+                rather than empty — an empty control for a thing you do not own
+                is a question you have to answer twice. Existing boat rows are
+                left alone: turning the option back on brings the fleet back
+                exactly as it was. */}
+            {shop.hasBoatDiving ? (
+              <SettingsRow
+                heading={t("boats.heading")}
+                value={boatsValue}
+                open={activeSection === "boats"}
+              >
+                <SectionNotice banner={banner} section="boats" active={activeSection} />
+                <div className="space-y-4 mt-4">
+                  {shopBoats.length === 0 ? (
+                    <p className="text-sm text-muted italic">{t("boats.noBoats")}</p>
+                  ) : (
+                    <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+                      {shopBoats.map((boat) => (
+                        <form
+                          key={boat.id}
+                          action={updateBoatAction}
+                          className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
+                        >
+                          <input type="hidden" name="boatId" value={boat.id} />
+                          <div className="flex-1 w-full">
+                            <input
+                              name="name"
+                              type="text"
+                              required
+                              defaultValue={boat.name}
+                              placeholder={t("boats.nameLabel")}
+                              className={controlClass}
+                            />
+                          </div>
+                          <div className="w-full sm:w-32 flex items-center gap-2">
+                            <input
+                              name="capacity"
+                              type="number"
+                              required
+                              min={1}
+                              defaultValue={boat.capacity}
+                              placeholder={t("boats.capacityLabel")}
+                              className={`${controlClass} tabular-nums`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <SubmitButton
+                              pendingLabel={t("boats.submitting")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("boats.submit")}
+                            </SubmitButton>
+                            <button
+                              formAction={deleteBoatAction}
+                              type="submit"
+                              className={buttonClass({ variant: "danger", size: "sm" })}
+                            >
+                              {t("boats.deleteBoat")}
+                            </button>
+                          </div>
+                        </form>
+                      ))}
+                    </div>
+                  )}
 
-                <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
-                  <h4 className="text-sm font-medium mb-3">{t("boats.createTitle")}</h4>
-                  <form
-                    action={createBoatAction}
-                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
-                  >
-                    <div className="flex-1 w-full">
-                      <input
-                        name="name"
-                        type="text"
-                        required
-                        placeholder={t("boats.nameLabel")}
-                        className={controlClass}
-                      />
-                    </div>
-                    <div className="w-full sm:w-32">
-                      <input
-                        name="capacity"
-                        type="number"
-                        required
-                        min={1}
-                        placeholder={t("boats.capacityLabel")}
-                        className={`${controlClass} tabular-nums`}
-                      />
-                    </div>
-                    <SubmitButton
-                      pendingLabel={t("boats.submitting")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                  <div className="border border-dashed border-border rounded-lg p-4 bg-surface-sunken">
+                    <h4 className="text-sm font-medium mb-3">{t("boats.createTitle")}</h4>
+                    <form
+                      action={createBoatAction}
+                      className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
                     >
-                      {t("boats.addBoat")}
-                    </SubmitButton>
-                  </form>
+                      <div className="flex-1 w-full">
+                        <input
+                          name="name"
+                          type="text"
+                          required
+                          placeholder={t("boats.nameLabel")}
+                          className={controlClass}
+                        />
+                      </div>
+                      <div className="w-full sm:w-32">
+                        <input
+                          name="capacity"
+                          type="number"
+                          required
+                          min={1}
+                          placeholder={t("boats.capacityLabel")}
+                          className={`${controlClass} tabular-nums`}
+                        />
+                      </div>
+                      <SubmitButton
+                        pendingLabel={t("boats.submitting")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("boats.addBoat")}
+                      </SubmitButton>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            </SettingsRow>
+              </SettingsRow>
+            ) : null}
           </SettingsRowList>
         </SettingsGroup>
 

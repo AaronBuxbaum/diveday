@@ -594,6 +594,11 @@ export async function reviewSpecialtyAction(
           shopId: staff.user.shopId,
           certificationId,
           status: "verified",
+          // A specialty card the diver typed on their own readiness link asks
+          // for the card in the staffer's hand, exactly as the nitrox branch
+          // above does — and for a stronger reason: this tap opens a depth gate
+          // past 18 m. An imported or staff-captured card is still one tap.
+          sighting: sightingFromForm(formData),
           reviewedByPersonId: staff.user.personId,
         })
     : ({ ok: false, reason: "not_found" } as const);

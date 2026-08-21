@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
+import { DIVER_CERTIFICATION_AGENCY_KEYS } from "@/i18n/readiness-labels";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
@@ -21,6 +22,17 @@ import {
 import type { RentalFit } from "./types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+
+/**
+ * The agencies the nitrox card question offers, derived from the one diver-facing
+ * agency map rather than from `certificationAgency.enumValues` — this is a
+ * Client Component, and importing the schema to read an enum would pull drizzle
+ * into a diver's browser bundle. The server action validates against the real
+ * enum, so a hand-crafted value is refused there rather than trusted here.
+ */
+const NITROX_AGENCIES = Object.keys(
+  DIVER_CERTIFICATION_AGENCY_KEYS,
+) as (keyof typeof DIVER_CERTIFICATION_AGENCY_KEYS)[];
 
 /**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
@@ -68,6 +80,7 @@ export function RentalFitForm({
   pricing,
   wantsNitrox,
   nitroxCardVerified,
+  nitroxCardOnFile = false,
   plannedDives,
   saved,
   currency,
@@ -84,6 +97,12 @@ export function RentalFitForm({
   pricing: RentalPricing;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
+  /**
+   * A live nitrox card exists for this diver, sighted or not. Decides only
+   * whether this form still asks for a number — never whether a tank gets
+   * enriched air, which stays `authorizesNitroxFill`.
+   */
+  nitroxCardOnFile?: boolean;
   plannedDives: number;
   saved: boolean;
   /**
@@ -315,11 +334,46 @@ export function RentalFitForm({
             {nitroxRequested ? (
               nitroxCardVerified ? (
                 <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
+              ) : nitroxCardOnFile ? (
+                // Already answered. Asking again would be the ask-and-discard
+                // failure ADR 20260814-self-declared-cards was written against
+                // — a diver types their card, saves, and is shown the same
+                // empty boxes because the row landed `pending` rather than
+                // `verified`.
+                <p className="mt-2 text-sm text-muted">{t("rental.nitroxCardOnFile")}</p>
               ) : (
-                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
-                  {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
-                  {t("rental.nitroxNeedsVerification")}
-                </p>
+                // **Ask for the card instead of explaining why we can't reserve
+                // one.** This used to be a paragraph telling the diver to
+                // "share the certification details with the shop" — a dead end
+                // on a page that could simply take them. Same contract as the
+                // rest of the product: the number is believed for planning and
+                // sighted before the dive (ADR
+                // 20260820-attested-at-booking-verified-at-boarding). Nothing
+                // typed here clears a fill; `authorizesNitroxFill` reads
+                // `verified`, which only a staffer can set.
+                <FieldGrid columns={2} className="mt-2">
+                  <Field label={t("rental.nitroxAgency")}>
+                    <select name="nitroxAgency" defaultValue="" className={controlClass}>
+                      <option value="">{t("rental.nitroxAgencyChoose")}</option>
+                      {NITROX_AGENCIES.map((agency) => (
+                        <option key={agency} value={agency}>
+                          {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label={t("rental.nitroxNumber")} hint={t("rental.nitroxNumberHint")}>
+                    <input
+                      name="nitroxIdentifier"
+                      maxLength={60}
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
               )
             ) : nitroxCardVerified ? null : (
               <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerificationRequired")}</p>

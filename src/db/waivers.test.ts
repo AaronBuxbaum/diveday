@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
-import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -326,6 +326,45 @@ describe("waiver records (in-memory PGlite)", () => {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers,
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
+  });
+
+  /**
+   * **Readable is not signable.** v2 stays in `findQuestionnaireVersion` so an
+   * already-signed record can still be interpreted under the questions its
+   * diver actually answered. It must never be a set of questions somebody can
+   * sign *today*: `completeWaiver` takes the version from the client, so
+   * without `requireCurrent` a caller could answer the corrected form under the
+   * version it corrected — and v2's dental question is exactly the item v3
+   * moved into Box C behind a question 4 yes. An all-no v2 set computes
+   * `clear`, so this is refused for its version and nothing else.
+   */
+  it("refuses a retired questionnaire version for a new signature", async () => {
+    const { db, person, shop, booking } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    const retired = findQuestionnaireVersion(RSTC_QUESTIONNAIRE.id, 2);
+    if (!retired) throw new Error("v2 must stay readable for already-signed records");
+
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: emptyMedicalAnswers(retired),
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "invalid_medical" });
+    // Refused before the record was touched, like every other refusal here:
+    // the diver comes back to a link they can still sign under v3.
+    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
+
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
         now,
       }),
     ).toMatchObject({ ok: true, status: "completed" });

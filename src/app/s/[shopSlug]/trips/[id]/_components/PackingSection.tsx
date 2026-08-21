@@ -1,6 +1,7 @@
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import {
+  type DiveMode,
   type DockDayStep,
   dockDayTimeline,
   exposureSuitFor,
@@ -34,6 +35,20 @@ const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   crewBriefing: "trip.providedItems.crewBriefing",
 };
+
+/**
+ * **"Departure" is a boat word.** A shore diver walks to the entry and a pool
+ * session is already at the water, so the one beat anchored on `startsAt` needs
+ * three spellings; every other beat reads the same however the diver gets wet.
+ * `boatRide` never reaches here off a boat — `dockDayOffsets` drops it.
+ */
+function timelineStepKey(step: DockDayStep, diveMode: DiveMode): DiverMessageKey {
+  if (step === "departure") {
+    if (diveMode === "shore") return "trip.timeline.departureShore";
+    if (diveMode === "pool") return "trip.timeline.departurePool";
+  }
+  return `trip.timeline.${step}` as DiverMessageKey;
+}
 
 function StepIcon({ step, className }: { step: DockDayStep; className?: string }) {
   switch (step) {
@@ -331,6 +346,7 @@ export function PackingSection({
                         divesThisDay,
                         siteBottomTimes,
                         legTravelTimes,
+                        trip.diveMode,
                       );
                       return timeline.map((entry, entryIndex) => (
                         <li
@@ -355,7 +371,9 @@ export function PackingSection({
                               })}
                             </span>
                             <span className="text-muted text-sm leading-normal">
-                              {t(`trip.timeline.${entry.step}`, { number: entry.number ?? 1 })}
+                              {t(timelineStepKey(entry.step, trip.diveMode), {
+                                number: entry.number ?? 1,
+                              })}
                             </span>
                           </div>
                         </li>

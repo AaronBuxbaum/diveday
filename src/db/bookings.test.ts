@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
@@ -1742,7 +1742,177 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
     });
   });
 
-  it("gates the anonymous public form too, and never seats the party it refuses", async () => {
+  it("believes each diver's own answer, not the booker's, across a party", async () => {
+    // The gate used to read one declaration for a party of up to six, so it
+    // screened one seat in four on the commonest shape at a Florida shop (ADR
+    // 20260820-attested-at-booking-verified-at-boarding's amendment). Priya
+    // books for herself and her two kids; those are three different cards.
+    const { db, shop, open } = await seededContext();
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Priya Booker",
+        email: "priya-party@example.com",
+        declared: { level: "rescue" },
+        admissionGate: "advise",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Kid One",
+        email: "kid-one@example.com",
+        declared: { level: "open_water" },
+        admissionGate: "advise",
+      },
+    ]);
+    if (!outcome.ok) throw new Error("expected both seats to be sold");
+    // The booker clears the boat's requirement on her own answer; the second
+    // diver does not, and is advised on theirs rather than on hers.
+    expect(outcome.bookings[0]?.admissionAdvisory).toBeUndefined();
+    expect(outcome.bookings[1]?.admissionAdvisory).toMatchObject({
+      requiredLevel: "rescue",
+      heldLevel: "open_water",
+    });
+
+    // And each claim landed on its own person, which is what the verify queue
+    // works from before the dive date.
+    const rows = await db
+      .select({ level: certifications.level, personId: certifications.personId })
+      .from(certifications)
+      .where(and(eq(certifications.shopId, shop.id), isNotNull(certifications.selfDeclaredAt)));
+    const byPerson = new Map(rows.map((row) => [row.personId, row.level]));
+    expect(byPerson.get(outcome.bookings[0]?.personId ?? "")).toBe("rescue");
+    expect(byPerson.get(outcome.bookings[1]?.personId ?? "")).toBe("open_water");
+  });
+
+  it("advises instead of refusing when the caller asks it to, and still seats the party", async () => {
+    // What the public booking form does since 2026-08-20: each diver is asked
+    // what they hold and warned as they answer, so the *stop* earned nothing —
+    // it only ever caught the diver who answered honestly and short, while
+    // "Rather not say" and an inflated rung both walked through
+    // (FU-20260820-the-sale-gate-bites-only-the-honest).
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Cass Marlin",
+        email: "cass@example.com",
+        // The shortfall has to rest on what this submitter typed — see the
+        // H-30 test below for what happens when it rests on the record.
+        declared: { level: "open_water" },
+        admissionGate: "advise",
+      },
+    ]);
+    if (!outcome.ok) throw new Error("expected the seat to be sold");
+    // Sold, and the unmet requirement handed back rather than thrown away, so
+    // a caller can say what the trip asks.
+    expect(outcome.bookings[0]?.admissionAdvisory).toMatchObject({
+      requiredLevel: "rescue",
+      heldLevel: "open_water",
+    });
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).toContain("Cass Marlin");
+  });
+
+  it("keeps boarding untouched: an advised booking is still blocked at readiness", async () => {
+    // The load-bearing half. The sale-time gate decides who may *buy*; nothing
+    // about who may get on the boat moved, and `calculateReadiness` still
+    // clears on a sighted card at or above the requirement.
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "shortcard@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Short Card",
+        email: "shortcard@example.com",
+        declared: { level: "open_water" },
+        admissionGate: "advise",
+      },
+    ]);
+    if (!outcome.ok) throw new Error("expected the seat to be sold");
+    const readiness = await readinessModule.getBookingReadiness(
+      db,
+      shop.id,
+      outcome.bookings[0]?.bookingId ?? "",
+    );
+    expect(readiness?.status).toBe("blocked");
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_insufficient" }),
+    );
+  });
+
+  it("keeps H-30's refusal when the shortfall rests on the record, not on this submission", async () => {
+    // H-30 is Chosen and rejected "sell the seat, refuse at the dock" outright:
+    // it "trades the oracle for a refund conversation and a diver who finds out
+    // at the water". A returning regular does not re-answer a question the shop
+    // already holds the answer to, so leaving the select alone is the modal
+    // behaviour — and there is no warning that could have reached them, because
+    // they typed nothing. They get the refusal, and their money stays in their
+    // pocket. What advises is only the case H-30 itself carves out: "a response
+    // to what this submitter just typed".
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "regular@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Cass Marlin",
+        email: "regular@example.com",
+        admissionGate: "advise",
+      },
+    ]);
+    expect(outcome).toMatchObject({ ok: false, reason: "trip_prerequisite" });
+  });
+
+  it("keeps the refusal for a specialty or nitrox gate, which no diver can answer on this form", async () => {
+    // The booking form has no specialty field and no nitrox field, so these are
+    // the one arm of the sale-time gate nobody could ever talk past. Advising
+    // them would remove the stop and put nothing in its place.
+    const { db, shop, open } = await seededContext();
+    await db
+      .update(tripRequirements)
+      .set({
+        minimumCertificationLevel: null,
+        requiredSpecialties: ["deep"],
+        requiresNitrox: false,
+      })
+      .where(and(eq(tripRequirements.tripId, open.id), eq(tripRequirements.shopId, shop.id)));
+
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Deep Hopeful",
+        email: "deep-hopeful@example.com",
+        declared: { level: "instructor" },
+        admissionGate: "advise",
+      },
+    ]);
+    expect(outcome).toMatchObject({ ok: false, reason: "trip_prerequisite" });
+  });
+
+  it("still refuses for every caller that has not asked to advise", async () => {
     const { db, shop, open } = await seededContext();
     const person = await diver(db, shop.id, "cass@example.com");
     await card(db, shop.id, person.id, { level: "open_water" });
