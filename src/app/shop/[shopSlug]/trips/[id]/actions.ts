@@ -52,7 +52,6 @@ import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
-import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
@@ -72,10 +71,10 @@ import {
   temperatureToCelsius,
   temperatureUnitFor,
 } from "@/lib/temperature-units";
-import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
+import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { tripDetailsPatch } from "@/lib/trip-details";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
-import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const detailsSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -246,60 +245,50 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     minimumBookings,
     minimumDecisionHours,
   } = parsed.data;
-  const sw = parseWallTime(date, startTime);
-  const ew = parseWallTime(date, endTime);
-  if (!sw || !ew) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
   if (!shopNow) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  const startsAt = wallTimeToUtc(sw, shopNow.timezone);
-  const endsAt = wallTimeToUtc(ew, shopNow.timezone);
-  if (endsAt <= startsAt) redirect(noticeUrl(back, "end-before-start"));
-  // Day one's window, repeated across however many days the departure runs.
-  // Each day is converted on its own date so a trip that straddles a DST
-  // change keeps the wall-clock time the shop actually promised.
-  const meetingDays = tripMeetingDays({ start: sw, end: ew }, dayCount);
-  if (!meetingDays) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  const scheduleDays = meetingDays.map((day, index) => ({
-    dayNumber: index + 1,
-    startsAt: wallTimeToUtc(day.start, shopNow.timezone),
-    endsAt: wallTimeToUtc(day.end, shopNow.timezone),
-  }));
-  const lastDay = scheduleDays.at(-1);
-  if (!lastDay) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  // What the numbers in the price boxes mean — the shop's own currency.
-  const tripCurrency = toShopCurrency(shopNow.currency);
-  const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency);
-  const depositCents =
-    depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency);
-  // The ceiling every other price validator applies (course fees, rental
-  // pricing, order line items). These two were the odd ones out with no
-  // `.max()` at all, so a forged submit could store a ten-million-dollar trip
-  // or overflow the integer column outright (security-reviewer finding).
-  // Checked on the converted minor units, not the typed number, because the
-  // schemas are module-level and parse before the shop's currency is known.
-  if (
-    (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) ||
-    (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
-  ) {
+  // One pipeline, shared with the board's add panel (`src/lib/trip-details.ts`).
+  // Editing a departure now applies the same rules creating one does — an
+  // impossible calendar day is refused, and a free-cancellation window with no
+  // minimum beside it is not stored as a policy. Both were the board's rules
+  // only until that module existed.
+  const details = tripDetailsPatch(
+    {
+      date,
+      startTime,
+      endTime,
+      dayCount,
+      priceDollars,
+      depositDollars,
+      cancellationWindowHours,
+      minimumBookings,
+      minimumDecisionHours,
+    },
+    shopNow,
+  );
+  if (!details.ok) {
+    if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
     redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
+  const dives = tripDiveDraftsFromForm(formData, plannedDives);
+
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
-    startsAt,
+    startsAt: details.patch.startsAt,
     // The whole departure, first day's departure to last day's return.
-    endsAt: lastDay.endsAt,
-    scheduleDays,
+    endsAt: details.patch.endsAt,
+    scheduleDays: details.patch.scheduleDays,
     capacity,
     plannedDives,
-    priceCents: priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency),
-    depositCents: depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency),
-    cancellationWindowHours: cancellationWindowHours ?? null,
-    minimumBookings: minimumBookings ?? null,
-    minimumDecisionHours: minimumDecisionHours ?? null,
-    diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
-    dives: tripDiveDraftsFromForm(formData, plannedDives),
+    priceCents: details.patch.priceCents,
+    depositCents: details.patch.depositCents,
+    cancellationWindowHours: details.patch.cancellationWindowHours,
+    minimumBookings: details.patch.minimumBookings,
+    minimumDecisionHours: details.patch.minimumDecisionHours,
+    diveSiteId: dives[0]?.diveSiteId ?? null,
+    dives,
   });
   if (!outcome.ok) {
     if (outcome.reason === "capacity_below_booked") {
