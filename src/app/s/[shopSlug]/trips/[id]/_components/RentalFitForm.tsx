@@ -338,21 +338,21 @@ export function RentalFitForm({
                   : t("rental.nitroxReserveNoPrice")}
               </span>
             </label>
-            {/* The one line under the box, and only ever one. Locked, it says
-                where the card goes — the single sentence that makes a disabled
-                control honest rather than broken. Unlocked and ticked, it says
-                what the crew will then do. Unticked, it says nothing: this used
-                to greet every diver who scrolled past with a paragraph about
-                verification they had not asked about, which is the copy that
-                went with this rework. */}
-            {nitroxLocked || (nitroxRequested && !nitroxCardVerified && !nitroxCardOnFile) ? (
-              // Two states, one sentence, because the missing thing is the same
-              // one: the box is locked until a card arrives, and a request
-              // grandfathered in from the booking form has a ticked box with no
-              // card behind it. It names what to add and where, which is what
-              // makes a disabled control read as a step rather than a fault.
+            {/* The one line under the box, and only ever one.
+                `nitroxCardEntryOffered` alone gates the pointer, and it has to
+                be the *only* thing that gates it: the sentence names a control
+                ("add your nitrox card above"), so it may not render on a page
+                that is not showing one. It covers both states that want it,
+                because the prop is only true when no card is on file — the box
+                locked shut, and a request grandfathered in from the booking
+                form sitting ticked with nothing behind it.
+                Everything else answers only when there is something true to
+                say: what the crew will do about a card they have. A request
+                with no card on a page that cannot take one says nothing at all,
+                rather than claiming a card exists or pointing nowhere. */}
+            {nitroxCardEntryOffered ? (
               <p className="mt-2 text-sm text-muted">{t("rental.nitroxNeedsCard")}</p>
-            ) : nitroxRequested ? (
+            ) : nitroxRequested && (nitroxCardVerified || nitroxCardOnFile) ? (
               <p className="mt-2 text-sm text-muted">
                 {t(nitroxCardVerified ? "rental.nitroxVerifiedNote" : "rental.nitroxCardOnFile")}
               </p>

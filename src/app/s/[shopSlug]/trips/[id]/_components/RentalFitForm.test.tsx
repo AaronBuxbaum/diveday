@@ -212,6 +212,19 @@ describe("RentalFitForm nitrox card gate", () => {
     expect(box).toBeChecked();
   });
 
+  it("never points at a card disclosure the page is not showing", () => {
+    // A departure gating on nothing renders no certification row, so `/ready`
+    // offers no card entry — and a diver can still arrive here carrying a
+    // request made on the booking form, which gates nothing. The pointer copy
+    // names a control ("add your nitrox card above"); rendering it with no such
+    // control on the page is a dead end, and claiming a card is on file would
+    // be worse. Say nothing.
+    renderNitrox({ wantsNitrox: true, nitroxCardVerified: false });
+    expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeEnabled();
+    expect(screen.queryByText(/add your nitrox card above/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/check your nitrox card/i)).not.toBeInTheDocument();
+  });
+
   it("leaves the box alone on a page offering no card disclosure", () => {
     // A departure that gates on nothing renders no certification row, so there
     // is nowhere on the page for a card to go — and a locked box pointing at a
