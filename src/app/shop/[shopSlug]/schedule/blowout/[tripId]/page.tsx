@@ -11,15 +11,13 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
-import { getDb } from "@/db/client";
 import type { PaymentStatus } from "@/db/schema";
-import { getShopById } from "@/db/shops";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { callBlowoutAction, resumeBlowoutAction } from "./actions";
@@ -79,18 +77,12 @@ export default async function BlowoutPage({
   params: Promise<{ shopSlug: string; tripId: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
-  const [session, { shopSlug, tripId }, { notice }, db] = await Promise.all([
-    requireStaffSession(),
-    params,
-    searchParams,
-    getDb(),
-  ]);
+  const [{ shopSlug, tripId }, { notice }] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { db, shop } = await requireShopSurface(shopSlug);
   const [locale, trip, blowout] = await Promise.all([
     requestLocale(shop.defaultLocale),
     getTripWithBooked(db, shop.id, tripId),

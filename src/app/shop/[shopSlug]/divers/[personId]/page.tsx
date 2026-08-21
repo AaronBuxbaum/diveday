@@ -9,15 +9,13 @@ import {
   canPersonOverrideGearRequest,
   canPersonRefund,
 } from "@/db/authz";
-import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
-import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { ActivitySection } from "./_components/ActivitySection";
@@ -78,16 +76,14 @@ export default async function DiverDetailPage({
     activity?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
   const { notice, undo, cardType, by, gate, form, edit, noteBody, activity } = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  const locale = await requestLocale(shop?.defaultLocale);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // `includeRemoved`: a removed diver's record has to stay reachable, because
   // this page is where the way back lives once the roster's undo toast is gone

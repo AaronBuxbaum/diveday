@@ -13,7 +13,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
@@ -55,17 +55,16 @@ export default function NewDiveSitePage({ params }: { params: Promise<{ shopSlug
 }
 
 async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string }> }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const back = `/shop/${shopSlug}/dive-sites`;
-  const shop = await getShopById(await getDb(), session.user.shopId);
-  const locale = await requestLocale(shop?.defaultLocale);
+  const { shop } = await requireShopSurface(shopSlug);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // The species picker previews what a *diver* will read off this site's
   // briefing, so its words come from the diver bundle -- in the staffer's own
   // language, resolved from the same locale.
   const diverT = diverTranslator(locale);
-  const depthUnit = shop?.depthUnit ?? "meters";
+  const depthUnit = shop.depthUnit ?? "meters";
 
   async function createAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";

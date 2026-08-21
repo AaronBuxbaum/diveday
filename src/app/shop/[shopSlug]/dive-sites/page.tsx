@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
@@ -34,7 +33,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
@@ -68,12 +67,9 @@ export default async function DiveSitesPage({
     template?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice, q, page, view, template } = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // A template's field guide is diver copy, so the catalog preview reads it
@@ -367,7 +363,7 @@ async function CatalogView({
   const activeSession = await requireStaffSession();
   const db = await getDb();
   const shop = await getShopById(db, activeSession.user.shopId);
-  const locationIsProvided = !!(shop?.addressStreet && shop?.addressLocality);
+  const locationIsProvided = !!(shop.addressStreet && shop.addressLocality);
 
   if (!locationIsProvided) {
     return (
@@ -400,7 +396,7 @@ async function CatalogView({
   }
 
   const shopCoordinates =
-    shop?.latitude != null && shop?.longitude != null
+    shop.latitude != null && shop.longitude != null
       ? { latitude: shop.latitude, longitude: shop.longitude }
       : null;
 

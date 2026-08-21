@@ -10,14 +10,12 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { getDb } from "@/db/client";
 import { findSimilarDivers, listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "@/db/operations";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
-import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripInvitations } from "@/db/trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "@/db/trip-promos";
@@ -34,7 +32,7 @@ import {
   orderLastMinuteRecipients,
 } from "@/lib/last-minute-list";
 import { combineCertRequirements } from "@/lib/readiness";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
@@ -142,7 +140,6 @@ async function TripGuestsBody({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: TripGuestsSearchParams;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -163,11 +160,10 @@ async function TripGuestsBody({
     confirmPhone,
   } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  const { db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
   const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];

@@ -13,7 +13,6 @@ import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { createDiver, findSimilarDivers } from "@/db/divers";
-import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -23,7 +22,7 @@ import {
   diverPhoneSchema,
   diverSearchPrefill,
 } from "@/lib/person-fields";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 
 export const instant = true;
@@ -73,7 +72,6 @@ export default async function NewDiverPage({
     confirmPhone?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const {
     notice,
@@ -91,9 +89,7 @@ export default async function NewDiverPage({
     confirmPhone,
   } = await searchParams;
 
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return null;
+  const { db, shop } = await requireShopSurface(shopSlug);
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);

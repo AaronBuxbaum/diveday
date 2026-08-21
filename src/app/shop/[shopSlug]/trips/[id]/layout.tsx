@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
-import { getDb } from "@/db/client";
-import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
@@ -44,13 +43,16 @@ export default async function TripLayout({
   // the activity-count query never compares arbitrary text with a UUID column
   // and turns a normal typo into the trip error boundary.
   if (!uuidParam(id)) notFound();
-  const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
-  const trip = shop ? await getTripWithBooked(db, shop.id, id) : null;
+  // The same call every page beneath this layout makes. It used to resolve the
+  // shop by slug while its children resolved it by session id — one row, two
+  // queries, same request — and it left the layout relying on the shop shell
+  // two levels up for the cross-tenant check rather than making it itself.
+  const { db, shop } = await requireShopSurface(shopSlug);
+  const trip = await getTripWithBooked(db, shop.id, id);
   const guestCount = trip?.booked ?? 0;
   // Staff read the nav in the language their own device asks for, same
   // negotiation as every trip page (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const subNavCopy: TripSubNavCopy = {
     ariaLabel: t("trips.subNav.ariaLabel"),

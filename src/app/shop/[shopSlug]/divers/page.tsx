@@ -7,14 +7,13 @@ import { UndoToast } from "@/components/UndoToast";
 import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
-import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { canDeleteDiver, canImportShopData } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { CertificationLevel } from "@/lib/readiness";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { DiverList } from "./_components/DiverList";
 
@@ -67,12 +66,9 @@ export default async function DiversPage({
     filter?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice, deleted, q, page, filter: filterParam } = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return null;
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const query = q?.trim() ?? "";

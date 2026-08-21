@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Copyable } from "@/components/Copyable";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -16,9 +15,7 @@ import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManagePaymentSettings } from "@/db/authz";
-import { getDb } from "@/db/client";
 import { listShopPromoCodes } from "@/db/shop-promos";
-import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listOutstandingLastMinutePromos } from "@/db/trip-promos";
 import { requestLocale } from "@/i18n/request";
@@ -27,8 +24,8 @@ import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
-import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
+import { requireShopSurface } from "@/lib/session";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import {
   createPromoAction,
   deletePromoAction,
@@ -114,7 +111,6 @@ export default async function PromosPage({
     dealsPage?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const {
     notice,
@@ -128,12 +124,6 @@ export default async function PromosPage({
     page,
     dealsPage,
   } = await searchParams;
-  const db = await getDb();
-  const allowed = await canPersonManagePaymentSettings(
-    db,
-    session.user.shopId,
-    session.user.personId,
-  );
   // Lands on Today, with its own notice code so the reader gets the
   // promo-specific explanation (`promos.notice.notAuthorized`) rather than a
   // message about a different surface they never asked for (task 82, UX
@@ -141,11 +131,13 @@ export default async function PromosPage({
   // that could explain it; Settings is owner/manager work now and takes the
   // same gate this one just failed, so that landing became a second bounce
   // that dropped the reason on the floor.
-  if (!allowed) redirect(noticeUrl(shopPath(shopSlug), "promos-not-authorized"));
+  const { session, db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManagePaymentSettings,
+    refusal: { notice: "promos-not-authorized" },
+  });
 
   const now = nowDate();
-  const [shop, promoPage, stripeAccount, dealPage] = await Promise.all([
-    getShopById(db, session.user.shopId),
+  const [promoPage, stripeAccount, dealPage] = await Promise.all([
     // A non-numeric or missing `?page=`/`?dealsPage=` reads as page 1; each
     // query clamps it into range, so a bookmarked page past the end of either
     // list lands on that list's last real page.

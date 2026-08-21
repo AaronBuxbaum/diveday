@@ -11,10 +11,8 @@ import { sectionCardClass } from "@/components/ui/card";
 import { controlClass } from "@/components/ui/form";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { getDb } from "@/db/client";
 import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "@/db/gear";
 import { listTripPrepDivers } from "@/db/rental-fit";
-import { getShopById } from "@/db/shops";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
@@ -33,7 +31,7 @@ import {
 import { rankUnitsForSize, tripReservationWindow } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
@@ -97,7 +95,6 @@ export default async function TripPrepPage({
     group?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
   const { notice, group } = await searchParams;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
@@ -105,11 +102,10 @@ export default async function TripPrepPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  const { db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   if (!shop) notFound();
   const trip = await getTripWithBooked(db, shop.id, tripId);

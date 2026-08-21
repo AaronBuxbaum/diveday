@@ -9,7 +9,6 @@ import {
   RelevantBookingRequests,
 } from "@/components/seat-diver/BookingRequestCards";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
-import { getDb } from "@/db/client";
 import {
   type DateRequestRow,
   listDateRequestsByIds,
@@ -17,7 +16,6 @@ import {
 } from "@/db/course-inquiries";
 import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
 import { canPersonViewShopReports } from "@/db/reporting";
-import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -25,7 +23,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
@@ -98,7 +96,6 @@ export default async function NewBookingDiverPage({
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
-  const session = await requireStaffSession();
   const { shopSlug, tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -106,10 +103,7 @@ export default async function NewBookingDiverPage({
   if (!uuidParam(tripId)) notFound();
   const { diverq, notice, gate, request, confirmName, confirmEmail, confirmPhone } =
     await searchParams;
-  const db = await getDb();
-  // Scoped by the session's own shop, never the URL slug.
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);

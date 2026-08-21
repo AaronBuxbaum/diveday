@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
@@ -13,21 +12,19 @@ import {
 import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { getDb } from "@/db/client";
 import {
   type DateRequestRow,
   listDateRequestsByIds,
   listDateRequestsForCalendarDates,
 } from "@/db/course-inquiries";
 import { canPersonViewShopReports } from "@/db/reporting";
-import { getShopById } from "@/db/shops";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 
@@ -80,13 +77,9 @@ export default async function NewBookingPage({
   searchParams: Promise<{ page?: string; request?: string }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { page, request } = await searchParams;
-  const db = await getDb();
-  // Scoped by the session's own shop, never the URL slug.
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const requestId = request ? uuidParam(request) : null;

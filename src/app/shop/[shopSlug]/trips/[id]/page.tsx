@@ -7,13 +7,11 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { hasTripBlowout } from "@/db/blowouts";
-import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { listDepartureBoardedByTrip } from "@/db/manifests";
 import { countOpenTripOrders } from "@/db/orders";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
-import { getShopById } from "@/db/shops";
 import { crewShiftCoverage } from "@/db/staffing";
 import {
   getTripCrewAssignments,
@@ -36,7 +34,7 @@ import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
@@ -111,20 +109,15 @@ export default async function ManageTripPage({
     gate?: string | string[];
   }>;
 }) {
-  // The session, route params, and db handle don't depend on one another —
-  // resolve them together instead of serially.
-  const [session, { shopSlug, id: tripId }, { notice, count, form, gate }, db] = await Promise.all([
-    requireStaffSession(),
+  const [{ shopSlug, id: tripId }, { notice, count, form, gate }] = await Promise.all([
     params,
     searchParams,
-    getDb(),
   ]);
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   // Locale and the trip row both depend on `shop` but not on each other.
