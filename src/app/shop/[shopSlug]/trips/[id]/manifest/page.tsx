@@ -87,7 +87,6 @@ export default async function TripManifestPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  if (!shop) notFound();
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
   const [completeManifests, buddyTeamsList, bookingNotes, diverNotes] = await Promise.all([

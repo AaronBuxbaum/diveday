@@ -165,7 +165,6 @@ async function TripGuestsBody({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  if (!shop) notFound();
   const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
