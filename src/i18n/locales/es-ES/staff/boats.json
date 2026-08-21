@@ -4,10 +4,11 @@
   "boatDivingDescription": "Si lo desactivas, la lista de barcos desaparece con él.",
   "boatEnabled": "Buceo desde barco",
   "boatDisabled": "Sin buceo desde barco",
-  "shoreGroupSizeLabel": "Buceadores por salida",
-  "shoreGroupSizeHint": "Se usa al planificar las solicitudes por día.",
+  "diversPerDivemasterLabel": "Buceadores por divemaster",
+  "diversPerDivemasterHint": "Tu objetivo para cada inmersión. Las salidas se muestran respecto a él; no rechaza nada.",
+  "diversPerDivemasterValue": "{ratio}:1 buceadores por divemaster",
+  "divingOptionsRatioInvalid": "Los buceadores por divemaster deben estar entre 1 y 20.",
   "divingOptionsNone": "Elige al menos un tipo de buceo.",
-  "divingOptionsGroupSizeInvalid": "Los buceadores por salida deben estar entre 1 y 60.",
   "shoreDivingLabel": "Buceo desde costa",
   "shoreDivingDescription": "Actívalo si ofreces inmersiones desde la costa (será una opción al crear salidas).",
   "poolDivingLabel": "Buceo en piscina",
@@ -45,6 +46,8 @@
   "unassignedBoat": "Cualquiera / sin asignar",
   "requestBoatSuggestion": "Embarcación sugerida: {boatName} ({capacity} plazas)",
   "requestBoatExceeded": "El número de personas supera la capacidad de la embarcación más grande.",
+  "requestCrewSuggestion": "Lleva {divemasters, plural, one {# divemaster} other {# divemasters}} — tu objetivo de {ratio}:1.",
   "requestPlanBoatRecommendation": "Embarcación sugerida: {boatName} ({capacity} plazas)",
-  "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande"
+  "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande",
+  "requestPlanCrewSuggestion": "Lleva {divemasters, plural, one {# divemaster} other {# divemasters}} — tu objetivo de {ratio}:1."
 }

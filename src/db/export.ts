@@ -659,11 +659,11 @@ export async function loadShopExportBundleInput(
             "has_boat_diving",
             "has_shore_diving",
             "has_pool_diving",
-            // Only meaningful with boat diving off, but exported unconditionally
-            // beside its siblings: the bundle is also the backup, and a shore
-            // shop restoring from one must come back planning its days against
-            // its own number rather than the 12-seat default.
-            "shore_group_size",
+            // The shop's target diver-to-divemaster ratio, stored as the divers
+            // half (ADR 20260820-shop-divemaster-ratio). The bundle is also the
+            // backup, and a shop restoring from one must come back planning and
+            // crewing against its own number rather than the default.
+            "divers_per_divemaster",
             "contact_email",
             "contact_phone",
             "address_street",
@@ -705,7 +705,7 @@ export async function loadShopExportBundleInput(
               shop.hasBoatDiving,
               shop.hasShoreDiving,
               shop.hasPoolDiving,
-              shop.shoreGroupSize,
+              shop.diversPerDivemaster,
               shop.contactEmail,
               shop.contactPhone,
               shop.addressStreet,

@@ -4,10 +4,11 @@
   "boatDivingDescription": "Turn off and the boat list goes with it.",
   "boatEnabled": "Boat diving",
   "boatDisabled": "No boat diving",
-  "shoreGroupSizeLabel": "Divers per departure",
-  "shoreGroupSizeHint": "Used when planning requests into days.",
+  "diversPerDivemasterLabel": "Divers per divemaster",
+  "diversPerDivemasterHint": "Your target for every dive. Departures are shown against it; nothing is refused by it.",
+  "diversPerDivemasterValue": "{ratio}:1 divers per divemaster",
+  "divingOptionsRatioInvalid": "Divers per divemaster must be between 1 and 20.",
   "divingOptionsNone": "Pick at least one kind of diving.",
-  "divingOptionsGroupSizeInvalid": "Divers per departure must be between 1 and 60.",
   "shoreDivingLabel": "Shore diving",
   "shoreDivingDescription": "Enable if you offer shore dives (which will be an option when building trips).",
   "poolDivingLabel": "Pool diving",
@@ -45,6 +46,8 @@
   "unassignedBoat": "Any / unassigned boat",
   "requestBoatSuggestion": "Suggested boat: {boatName} ({capacity} seats)",
   "requestBoatExceeded": "Party size exceeds largest boat capacity.",
+  "requestCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} — your {ratio}:1 target.",
   "requestPlanBoatRecommendation": "Suggested boat: {boatName} ({capacity} seats)",
-  "requestPlanBoatExceeded": "Group exceeds largest boat capacity"
+  "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
+  "requestPlanCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} — your {ratio}:1 target."
 }

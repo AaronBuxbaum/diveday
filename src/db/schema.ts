@@ -113,13 +113,22 @@ export const shops = pgTable(
     hasShoreDiving: boolean("has_shore_diving").notNull().default(false),
     hasPoolDiving: boolean("has_pool_diving").notNull().default(false),
     /**
-     * How many divers this shop puts on one departure when there is no hull to
-     * ask. Only consulted by the Requests planner, and only for a shop with
-     * boat diving off — a boat shop's answer is the boat's capacity, which is a
-     * fact rather than a preference. Null means "we have not said", and the
-     * planner falls back to `DEFAULT_DEPARTURE_CAPACITY`.
+     * The shop's target diver-to-divemaster ratio, stored as the divers half:
+     * `5` is "5:1". It applies to every dive the shop runs, fun dives and
+     * course sessions alike, and it binds nothing — DiveDay shows a departure
+     * against it and sizes a day's requests by it, and refuses nothing
+     * (`src/lib/divemaster-ratio.ts`).
+     *
+     * Not null, because every suggestion needs a number and a null would only
+     * be a second spelling of the default. A shop that has never opened the
+     * settings row runs at `DEFAULT_DIVERS_PER_DIVEMASTER`, which is visible
+     * and editable there rather than hidden in a fallback.
+     *
+     * It replaced `shore_group_size` ("Divers per departure"), which only a
+     * boatless shop was asked for and only the Requests planner read (ADR
+     * 20260820-shop-divemaster-ratio).
      */
-    shoreGroupSize: integer("shore_group_size"),
+    diversPerDivemaster: integer("divers_per_divemaster").notNull().default(6),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -226,12 +235,13 @@ export const shops = pgTable(
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
     check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
     check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
-    // Bounded at both ends, matching `parseGroupSize` in the settings action.
-    // A DB constraint looser than the action it backs lets any other caller
-    // persist a number the planner will not honour (`coderabbitai`).
+    // Bounded at both ends, matching `parseDiversPerDivemaster` in the settings
+    // action. A DB constraint looser than the action it backs lets any other
+    // caller persist a number the surfaces will not honour (`coderabbitai`);
+    // above twenty the number has stopped describing supervision at all.
     check(
-      "shops_shore_group_size_in_range",
-      sql`${table.shoreGroupSize} > 0 and ${table.shoreGroupSize} <= 60`,
+      "shops_divers_per_divemaster_in_range",
+      sql`${table.diversPerDivemaster} >= 1 and ${table.diversPerDivemaster} <= 20`,
     ),
     /**
      * A shop that runs no dives at all cannot schedule one, and every create

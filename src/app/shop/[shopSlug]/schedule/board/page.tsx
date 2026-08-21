@@ -243,6 +243,8 @@ export default async function ScheduleBoardPage({
       ? {
           estimatedDivers: requestAdvice.estimatedDivers,
           suggestedCapacity: requestAdvice.suggestedCapacity,
+          suggestedDivemasters: requestAdvice.suggestedDivemasters,
+          diversPerDivemaster: shop.diversPerDivemaster,
           suggestedBoatName: requestAdvice.suggestedBoat?.name ?? null,
           exceedsKnownBoats: requestAdvice.exceedsKnownBoats,
           requests: requestRows.map((request) => ({
@@ -384,6 +386,7 @@ export default async function ScheduleBoardPage({
     requestPlanPerson: st.raw("schedule.builder.requestPlanPerson"),
     requestPlanBoatRecommendation: st.raw("boats.requestPlanBoatRecommendation"),
     requestPlanBoatExceeded: st("boats.requestPlanBoatExceeded"),
+    requestPlanCrewSuggestion: st("boats.requestPlanCrewSuggestion"),
     diveModeLabel: st("boats.diveModeLabel"),
     modeBoat: st("boats.modeBoat"),
     modeShore: st("boats.modeShore"),

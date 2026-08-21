@@ -7,10 +7,48 @@ import type { StaffList } from "./types";
 
 afterEach(cleanup);
 
+/**
+ * The shop's own target ratio (ADR 20260820-shop-divemaster-ratio) is advice,
+ * and advice that is being met is not news. `underTargetNote` is null the
+ * moment the departure clears the target, and nothing may remain on screen
+ * congratulating the shop about it (design principle 9).
+ */
+describe("the shop's divemaster target", () => {
+  const props = {
+    tripId: "trip-1",
+    staff: [] as StaffList,
+    crewIds: [],
+    crewRoles: {},
+    onShiftIds: null,
+    shopSlug: "blue-mantis",
+    updateCrewAction: async () => ({ ok: true }),
+  };
+
+  it("says how short the departure is, without refusing anything", () => {
+    render(
+      <CrewSection
+        {...props}
+        crewGapCode="none"
+        copy={{
+          ...COPY,
+          underTargetNote: "9 divers with no divemaster — your 6:1 target wants 2 divemasters.",
+        }}
+      />,
+    );
+    expect(screen.getByText(/your 6:1 target wants 2 divemasters/)).toBeTruthy();
+  });
+
+  it("says nothing at all once the target is met", () => {
+    render(<CrewSection {...props} crewGapCode="none" copy={COPY} />);
+    expect(screen.queryByText(/target wants/)).toBeNull();
+  });
+});
+
 const COPY: CrewSectionCopy = {
   heading: "Crew",
   courseNeedsInstructor: "This course needs an instructor.",
   overRatioWarning: null,
+  underTargetNote: null,
   noStaff: "No staff on file yet.",
   notAssignedYet: "Nobody assigned yet.",
   assignLabel: "Assign crew",

@@ -29,6 +29,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { countInWaterCrew } from "@/lib/crew-roles";
+import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
 import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
@@ -243,16 +244,40 @@ export default async function ManageTripPage({
   // booking gate, the staffing window, and Today, so a divemaster rostered as
   // this trip's captain stops buying two students' worth of capacity here too
   // (DOM-M3).
+  const inWaterCrew = countInWaterCrew(
+    assignedCrew.map((entry) => ({
+      tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
+      shopRoles: entry.roles,
+    })),
+  );
   const crewGap = courseCrewGap({
     course: trip.course,
-    ...countInWaterCrew(
-      assignedCrew.map((entry) => ({
-        tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
-        shopRoles: entry.roles,
-      })),
-    ),
+    ...inWaterCrew,
     booked: trip.booked,
   });
+  // The shop's own target, measured off the same crew count and reported
+  // separately from the two agency gates above — it applies to every
+  // departure, course or fun dive, and it refuses nothing
+  // (src/lib/divemaster-ratio.ts). A course session short of both says both
+  // things: the agency cap is why a seat is refused, this is what the shop
+  // wanted its own boat to look like.
+  const ratioGap = divemasterRatioGap({
+    divers: trip.booked,
+    divemasterCount: inWaterDivemasterCount(inWaterCrew),
+    diversPerDivemaster: shop.diversPerDivemaster,
+  });
+  const underTargetNote =
+    ratioGap.code === "none"
+      ? null
+      : t("trips.crew.underTarget", {
+          divers: ratioGap.divers,
+          divemasters: ratioGap.divemasterCount,
+          ratio: shop.diversPerDivemaster,
+          // The total the target wants, not the shortfall: "wants 1 more" than
+          // none reads as arithmetic about nothing when the boat has no
+          // divemaster at all, which is the case that matters most.
+          needed: ratioGap.needed,
+        });
   // Two rules, two sentences: the entry-level cap is PADI's published Open
   // Water training figure and a certified assistant raises it; the intro cap is
   // PADI's tighter published Discover Scuba open-water figure (HD-6) that an
@@ -611,6 +636,7 @@ export default async function ManageTripPage({
           heading: t("trips.crew.heading"),
           courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
           overRatioWarning,
+          underTargetNote,
           noStaff: t("trips.crew.noCrew"),
           notAssignedYet: t("trips.crew.notAssignedYet"),
           assignLabel: t("shared.today.departureBoard.assignCrewLabel"),

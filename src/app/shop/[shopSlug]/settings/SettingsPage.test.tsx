@@ -255,11 +255,15 @@ describe("the diving options a shop runs", () => {
     expect(names).toContain("hasBoatDiving");
     expect(names).toContain("hasShoreDiving");
     expect(names).toContain("hasPoolDiving");
-    // The seeded shop runs boats, so the fleet editor is reachable and the
-    // group-size question — which only exists when there is no hull to ask —
-    // is not.
+    // The seeded shop runs boats, so the fleet editor is reachable.
     expect(names).toContain("capacity");
-    expect(names).not.toContain("shoreGroupSize");
+  });
+
+  it("asks a boat shop for its divemaster target too", async () => {
+    // The "divers per departure" this replaced was only ever asked of a shop
+    // with no hull. The target is about who is in the water, which is a
+    // question a boat has as much as a beach does.
+    expect(inputNamesIn(await renderSettings("owner"))).toContain("diversPerDivemaster");
   });
 
   it("takes the boat list away when the shop says it runs no boats", async () => {
@@ -268,14 +272,15 @@ describe("the diving options a shop runs", () => {
         hasBoatDiving: false,
         hasShoreDiving: true,
         hasPoolDiving: true,
-        shoreGroupSize: 6,
+        diversPerDivemaster: 6,
       });
     });
     const names = inputNamesIn(element);
     // No hull to name, so the whole Boats row is gone rather than sitting there
-    // empty — and the question that replaces it is asked instead.
+    // empty.
     expect(names).not.toContain("boatId");
-    expect(names).toContain("shoreGroupSize");
+    // The target survives losing the fleet — it never depended on one.
+    expect(names).toContain("diversPerDivemaster");
     // The option itself stays on offer, so the shop can turn boats back on.
     expect(names).toContain("hasBoatDiving");
   });
