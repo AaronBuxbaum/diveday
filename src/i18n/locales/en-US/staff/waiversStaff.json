@@ -1,10 +1,10 @@
 {
   "eyebrow": "Settings",
   "title": "Waiver template",
-  "description": "Every diver signs this one release. Edit it to fit your shop.",
+  "description": "Every diver signs this one release.",
   "banner": {
     "savedNew": "Saved as a new version.",
-    "savedFirst": "Your waiver is saved. Every future edit is kept as a new version.",
+    "savedFirst": "Your waiver is saved.",
     "invalid": "That didn't save. The release needs to be at least a few sentences long."
   },
   "fieldLabel": "Release text",
@@ -14,7 +14,7 @@
   "saveWaiver": "Save waiver",
   "releaseTextHeading": "Release text",
   "releaseDescription": {
-    "current": "The release every new link sends. Saving replaces it for new links; already-signed waivers keep the text they were signed against.",
+    "current": "Saving replaces this for new links; already-signed waivers keep the text they were signed against.",
     "sample": "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."
   },
   "versionInfo": "Version {version} · saved {date}",
@@ -26,7 +26,6 @@
   "signatures": {
     "eyebrow": "Settings",
     "title": "Signatures",
-    "description": "Every signed release on file — who signed, which trip, any medical follow-up. Signed waivers are tamper-evident; an altered record is flagged.",
     "signedRecordHeading": "Signed record",
     "heading": "Signed records",
     "noSignedRecords": "No signed records yet.",

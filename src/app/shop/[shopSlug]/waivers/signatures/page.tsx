@@ -203,10 +203,14 @@ export default async function WaiverSignaturesPage({
 
   return (
     <>
+      {/* No description under the title. The one that stood here listed the
+          columns the rows below already carry, then explained that a signed
+          waiver is tamper-evident — a mechanism whose only observable state is
+          the "Integrity verified" / "Integrity mismatch" badge each row
+          already wears. */}
       <ShopPageHeader
         eyebrow={t("waiversStaff.signatures.eyebrow")}
         title={t("waiversStaff.signatures.title")}
-        description={t("waiversStaff.signatures.description")}
       />
 
       {highlighted ? (
