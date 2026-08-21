@@ -29,20 +29,19 @@ redirects to `/ready` rather than re-rendering a `?booking=` branch in place (AD
 20260820-one-page-after-booking), which is a whole extra page load. Both are the product working as
 intended.
 
-It then went red on CI twice: run 32439332010 over the 30s budget, run 32440808953 over 60s. Both
-were reported against `page.waitForLoadState("networkidle")` on line 59, which reads like a hang and
-is not one — that call settles in **2ms**, and both scans find zero violations. It is only where the
-test-level deadline happened to land.
+None of that is why it went red on 2026-08-21 — that was a `networkidle` wait that never settled on
+CI, removed in PR #585, and is written up separately as
+`FU-20260821-ready-never-reaches-network-idle`. The setup cost is a standing problem, not that
+incident.
 
 ## Why it isn't already done
 
-PR #585 needed to un-red `main`, and the safe move there was a ceiling (120s) rather than a
-restructure of a test I had already misdiagnosed once — the first attempt at that PR raised the
-budget to 60s on the wrong theory, that `/ready` had made the axe scan expensive. It had not: the
-confirmation scan is 1.86s.
+PR #585 was un-redding `main`, and restructuring this test's setup was not the change to make under
+that pressure — especially having already misdiagnosed the failure there twice as cost.
 
-A bigger number is not a fix, though. It buys nothing back and the next product change that adds a
-step will spend it too.
+The 19s stands on its own, though. It is the largest single test cost in the suite, it doubled
+without anyone noticing, and every future step added to booking or the schedule board will be paid
+here again.
 
 ## Proposed change
 
