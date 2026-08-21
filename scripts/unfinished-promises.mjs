@@ -25,7 +25,7 @@
  *      here is what happens next", which is exactly right.
  *
  * Both together, and it blocks — feeding the reason back so the session either
- * does the work, files it in `docs/product/follow-ups/`, or says plainly that it
+ * does the work, files it as a `needs-triage` GitHub issue, or says plainly that it
  * is handing it over. Any of those three is a good ending. Silence is not.
  *
  * **It fails open, always.** A hook that blocks a turn because it could not
@@ -147,8 +147,8 @@ function main() {
       "",
       "Pick one, then finish the turn:",
       "  - DO IT NOW. If it is the next thing, it belongs in this turn.",
-      "  - FILE IT. docs/product/follow-ups/, copied from TEMPLATE.md, so a cold reader",
-      "    can run it. That is what the register is for.",
+      "  - FILE IT. A GitHub issue labelled needs-triage (see docs/agents/issue-tracker.md's",
+      "    Filing a follow-up section), so a cold reader can run it.",
       "  - HAND IT OVER explicitly. Ask the question, or say plainly that you are",
       "    stopping and what you need — a turn that ends on a question is fine.",
       "",

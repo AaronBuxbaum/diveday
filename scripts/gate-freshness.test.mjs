@@ -7,7 +7,7 @@ import {
   gateIdsIn,
   latestDateIn,
   movementFor,
-  parseFollowUpEntry,
+  parseFollowUpIssue,
   parseGateRows,
   parseThirtyDayList,
   reconcileThirtyDays,
@@ -205,19 +205,18 @@ describe("movementFor", () => {
   });
 });
 
-describe("parseFollowUpEntry", () => {
-  const entry = `# FU-20260701-widen-the-pager — Widen the pager on the orders index
+describe("parseFollowUpIssue", () => {
+  const issue = {
+    number: 701,
+    title: "Widen the pager on the orders index",
+    createdAt: "2026-07-01T14:32:00Z",
+    labels: [{ name: "needs-triage" }],
+    body: "**Kind:** improvement\n**Effort:** M\n**Touches:** `src/components/Pager.tsx`\n",
+  };
 
-- **Status:** Open
-- **Raised:** 2026-07-01 — noticed while reading nearby code
-- **Kind:** improvement
-- **Effort:** M
-- **Touches:** \`src/components/Pager.tsx\`
-`;
-
-  it("takes the age date from the id, which is exact and survives a shallow clone", () => {
-    expect(parseFollowUpEntry("FU-20260701-widen-the-pager.md", entry)).toMatchObject({
-      id: "FU-20260701-widen-the-pager",
+  it("takes the age date from GitHub's own createdAt", () => {
+    expect(parseFollowUpIssue(issue)).toMatchObject({
+      id: "#701",
       raisedOn: "2026-07-01",
       status: "Open",
       kind: "improvement",
@@ -225,14 +224,17 @@ describe("parseFollowUpEntry", () => {
     });
   });
 
-  it("ignores the folder's non-entry files rather than aging them", () => {
-    expect(parseFollowUpEntry("README.md", "# Follow-ups")).toBeNull();
-    expect(parseFollowUpEntry("TEMPLATE.md", "# FU-YYYYMMDD-short-slug")).toBeNull();
+  it("reads Waiting and Parked off the label set, needs-triage alone means Open", () => {
+    expect(
+      parseFollowUpIssue({ ...issue, labels: [...issue.labels, { name: "waiting-on-external" }] }),
+    ).toMatchObject({ status: "Waiting" });
+    expect(
+      parseFollowUpIssue({ ...issue, labels: [...issue.labels, { name: "parked" }] }),
+    ).toMatchObject({ status: "Parked" });
   });
 
-  it("falls back to a placeholder rather than throwing on a half-written entry", () => {
-    expect(parseFollowUpEntry("FU-20260701-stub.md", "# FU-20260701-stub — a stub")).toMatchObject({
-      status: "—",
+  it("falls back to a placeholder rather than throwing on a half-written body", () => {
+    expect(parseFollowUpIssue({ ...issue, body: "" })).toMatchObject({
       kind: "—",
       effort: "—",
     });
@@ -240,47 +242,41 @@ describe("parseFollowUpEntry", () => {
 });
 
 describe("ageFollowUps", () => {
-  const file = (filename, kind) => ({
-    filename,
-    contents: `- **Status:** Open\n- **Kind:** ${kind}\n- **Effort:** S\n`,
+  const issue = (number, createdAt, kind) => ({
+    number,
+    title: `issue ${number}`,
+    createdAt,
+    labels: [{ name: "needs-triage" }],
+    body: `**Kind:** ${kind}\n**Effort:** S\n`,
   });
 
-  it("ages every entry from its filename date, oldest first", () => {
+  it("ages every issue from its createdAt date, oldest first", () => {
     const aged = ageFollowUps(
       [
-        file("FU-20260724-newer.md", "question"),
-        file("FU-20260608-oldest.md", "risk"),
-        file("FU-20260702-middle.md", "cleanup"),
+        issue(3, "2026-07-24T00:00:00Z", "question"),
+        issue(1, "2026-06-08T00:00:00Z", "risk"),
+        issue(2, "2026-07-02T00:00:00Z", "cleanup"),
       ],
       NOW,
     );
     expect(aged.map((entry) => [entry.id, entry.days])).toEqual([
-      ["FU-20260608-oldest", 55],
-      ["FU-20260702-middle", 31],
-      ["FU-20260724-newer", 9],
+      ["#1", 55],
+      ["#2", 31],
+      ["#3", 9],
     ]);
     expect(aged[0].kind).toBe("risk");
   });
 
   it("breaks ties on id so the report is stable run to run", () => {
     const aged = ageFollowUps(
-      [file("FU-20260702-second.md", "risk"), file("FU-20260702-first.md", "risk")],
+      [issue(2, "2026-07-02T00:00:00Z", "risk"), issue(1, "2026-07-02T00:00:00Z", "risk")],
       NOW,
     );
-    expect(aged.map((entry) => entry.id)).toEqual(["FU-20260702-first", "FU-20260702-second"]);
+    expect(aged.map((entry) => entry.id)).toEqual(["#1", "#2"]);
   });
 
-  it("returns nothing for an empty register — README and TEMPLATE are not entries", () => {
+  it("returns nothing for an empty list", () => {
     expect(ageFollowUps([], NOW)).toEqual([]);
-    expect(
-      ageFollowUps(
-        [
-          { filename: "README.md", contents: "# Follow-ups" },
-          { filename: "TEMPLATE.md", contents: "- **Kind:** improvement" },
-        ],
-        NOW,
-      ),
-    ).toEqual([]);
   });
 });
 

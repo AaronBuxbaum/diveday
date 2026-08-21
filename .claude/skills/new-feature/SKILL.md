@@ -30,9 +30,10 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
 7. **Document** — update whatever your change invalidated: glossary for new terms, overview
    for structure, roadmap checkbox, ADR index.
 8. **File the follow-ups** — the slice you deliberately left for later, the question the build
-   raised, the risk you saw in passing: one file each in `docs/product/follow-ups/` from that
-   folder's `TEMPLATE.md`, each ending in a prompt a fresh session could run. A vertical slice
-   *should* generate these; that is what makes it a slice. List them in the PR description.
+   raised, the risk you saw in passing: one GitHub issue each, labelled `needs-triage` (see
+   [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing a follow-up"
+   section), each ending in a prompt a fresh session could run. A vertical slice *should* generate
+   these; that is what makes it a slice. List them by number in the PR description.
 9. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
    PR with a summary and screenshots. Keep draft until CI is green.
 10. **Close the visual loop** — pushing is not the end of the turn. A UI change that shifts pixels

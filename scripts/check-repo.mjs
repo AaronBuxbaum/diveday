@@ -16,11 +16,16 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Every check below is a static/lint-style pass over the repo, not a network call or a
-// build — none has ever legitimately needed more than a few seconds. Bounding each one
-// means a single stuck check (a git subprocess wedged on a lock, a runaway glob) turns
-// into a loud, specific failure within this many seconds instead of hanging the whole
-// `pnpm check` — and everything that shells out to it — forever with no diagnosis.
+// Every check below is a static/lint-style pass over the repo, not a build — none has ever
+// legitimately needed more than a few seconds. Bounding each one means a single stuck check
+// (a git subprocess wedged on a lock, a runaway glob) turns into a loud, specific failure
+// within this many seconds instead of hanging the whole `pnpm check` — and everything that
+// shells out to it — forever with no diagnosis.
+//
+// One exception: `follow-ups` calls `gh issue list`, a real network round trip. It fails
+// open (exits 0 with a warning) when `gh` cannot answer rather than blocking a commit on
+// network state — see check-follow-ups.mjs's module doc comment — but it still pays this
+// timeout like every other check here if `gh` itself wedges.
 const CHECK_TIMEOUT_MS = 90_000;
 
 // label -> script path (relative to this file's directory)

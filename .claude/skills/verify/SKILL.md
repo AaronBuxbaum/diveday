@@ -58,8 +58,9 @@ uncertified diver, a nitrox request with no verified card).
 
 ## 5. File what you're leaving behind
 
-Before you report done, empty your head into `docs/product/follow-ups/` — one file per item, copied
-from that folder's `TEMPLATE.md`, committed with the change:
+Before you report done, empty your head into GitHub issues — one issue per item, labelled
+`needs-triage` (see [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing
+a follow-up" section):
 
 - the improvement you can see but were not asked for
 - the question whose answer would have changed what you built
@@ -67,10 +68,10 @@ from that folder's `TEMPLATE.md`, committed with the change:
 - the assumption you made where the other branch deserves a human's look
 - work you started and deliberately stopped (say what is half-done, and where)
 
-Then say in your closing message that you filed them, by id. A thought that exists only in your
-final message is gone the moment the session ends — that is the whole reason the register exists.
-`pnpm check:follow-ups` will refuse an entry whose prompt is too thin to run cold. Filing is never
-a substitute for the work you were asked to do, and never the answer to a failing test.
+Then say in your closing message that you filed them, by issue number. A thought that exists only
+in your final message is gone the moment the session ends — that is the whole reason the tracker
+exists. `pnpm check:follow-ups` will refuse an issue whose prompt is too thin to run cold. Filing is
+never a substitute for the work you were asked to do, and never the answer to a failing test.
 
 ## Report honestly
 
