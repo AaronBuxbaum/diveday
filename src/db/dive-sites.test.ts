@@ -7,7 +7,7 @@ import {
   createDiveSiteForForm,
   currentGlobalDiveSiteVersions,
   deleteDiveSite,
-  diveSiteLibraryStats,
+  diveSiteLibrarySize,
   getDiveSiteTemplateUpdate,
   importGlobalDiveSiteTemplate,
   listDiveSites,
@@ -425,10 +425,10 @@ describe("dive-site library paging and search", () => {
     const unfiltered = await listDiveSitesPage(db, stranger);
     expect(unfiltered.rows).toEqual([]);
     expect(unfiltered.total).toBe(0);
-    expect((await diveSiteLibraryStats(db, stranger)).total).toBe(0);
+    expect(await diveSiteLibrarySize(db, stranger)).toBe(0);
   });
 
-  it("leaves archived sites out of both the page and the counters", async () => {
+  it("leaves deleted sites out of both the page and the count", async () => {
     const { db, shop } = await seededShopContext();
     const site = await createDiveSite(db, {
       shopId: shop.id,
@@ -437,32 +437,28 @@ describe("dive-site library paging and search", () => {
       forecastLatitude: 25.1,
       forecastLongitude: -80.2,
     });
-    const before = await diveSiteLibraryStats(db, shop.id);
+    const before = await diveSiteLibrarySize(db, shop.id);
 
     expect(await deleteDiveSite(db, shop.id, site.id)).toBe(true);
-    const after = await diveSiteLibraryStats(db, shop.id);
-    expect(after.total).toBe(before.total - 1);
-    expect(after.withForecastPoints).toBe(before.withForecastPoints - 1);
+    expect(await diveSiteLibrarySize(db, shop.id)).toBe(before - 1);
     expect((await listDiveSitesPage(db, shop.id, { query: "Retired Ledge" })).total).toBe(0);
   });
 
   it("counts the whole library, not the page or the search that is showing", async () => {
     const { db, shop } = await seededShopContext();
     await seedSites(db, shop.id, 30);
-    const stats = await diveSiteLibraryStats(db, shop.id);
+    const size = await diveSiteLibrarySize(db, shop.id);
     const everything = await listDiveSites(db, shop.id);
 
-    expect(stats.total).toBe(everything.length);
-    expect(stats.withForecastPoints).toBe(
-      everything.filter((site) => site.forecastLatitude !== null && site.forecastLongitude !== null)
-        .length,
-    );
-    expect(stats.fromTemplates).toBe(everything.filter((site) => site.sourceTemplateId).length);
-    // The counters are what a staffer trusts to know the library's size, so
-    // they must not move when a search narrows the grid below them.
+    expect(size).toBe(everything.length);
+    // The count is the one question the library page asks it — "is there
+    // anything here at all?" — and it decides between the day-one empty state
+    // and the searchable table. So it must not move when a search narrows the
+    // table below it, or a shop whose search matched nothing would be shown
+    // "start your first site" on top of its thirty.
     const narrowed = await listDiveSitesPage(db, shop.id, { query: "north wall" }, { pageSize: 5 });
     expect(narrowed.rows).toHaveLength(5);
-    expect((await diveSiteLibraryStats(db, shop.id)).total).toBe(stats.total);
+    expect(await diveSiteLibrarySize(db, shop.id)).toBe(size);
   });
 });
 
