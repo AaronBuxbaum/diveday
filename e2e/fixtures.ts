@@ -291,6 +291,19 @@ export const test = base.extend<
     // appears on. Aborting it immediately keeps every test's network
     // footprint inside this worker's own server, matching the same
     // no-third-party-dependency principle.
+    //
+    // **It also means no page carrying one of these iframes can be waited on
+    // with `networkidle`, and on a CI runner that is permanent.** An aborted
+    // iframe navigation commits `chrome-error://chromewebdata/` in a child
+    // frame, and Playwright only fires the main frame's `networkidle` once
+    // *every* child frame reports idle. On CI runs 32439332010, 32440808953 and
+    // 32441820119 that cost `e2e/a11y.spec.ts` its entire test budget three
+    // times over on `/ready`, whose shop-location map is the page's only child
+    // frame — 112 seconds during which the page requested nothing whatsoever.
+    // It does not reproduce on macOS, so treat the platform half as unproven;
+    // the rule that follows from it does not depend on the platform. Wait for
+    // something the destination page renders (`pnpm check:e2e-hygiene` refuses
+    // the alternative), never for the network to go quiet.
     await context.route("https://maps.google.com/**", (route) => route.abort());
     await use(context);
   },

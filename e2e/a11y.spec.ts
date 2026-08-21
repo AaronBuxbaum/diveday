@@ -4,6 +4,7 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  acceptAgeAttestation,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -57,12 +58,30 @@ async function expectNoA11yViolations(page: Page) {
   // 32441820119 the booking scan consumed its entire budget and died on that
   // line — at 30s, then 60s, then 120s, exactly the budget each time. A slow
   // test passes at *some* budget; this one never would, because `/ready` does
-  // not reach network idle on a CI runner at all (it settles in 2ms locally, so
-  // it never reproduced here). The failure read as a hang in `waitForLoadState`
-  // and was twice misdiagnosed as cost, which is precisely the "deterministic
-  // failure converted into an intermittent one" that `check:e2e-hygiene` refuses
-  // this API for. Why that page never goes idle is a real question about the
-  // product, not the test: FU-20260821-ready-never-reaches-network-idle.
+  // not reach network idle on a CI runner at all (it settles in ~0.5s locally,
+  // so it never reproduced here). The failure read as a hang in
+  // `waitForLoadState` and was twice misdiagnosed as cost, which is precisely
+  // the "deterministic failure converted into an intermittent one" that
+  // `check:e2e-hygiene` refuses this API for.
+  //
+  // **What was in flight, from the trace of run 32441820119: nothing.** The
+  // page's last network event was the shop-location Google Maps iframe on
+  // `/ready` (`ShopCard`, src/app/ready/[token]/page.tsx) — `GET
+  // https://maps.google.com/maps?…&output=embed`, which *this suite's own*
+  // `context.route` abort in e2e/fixtures.ts failed 137ms before the wait even
+  // started, leaving that child frame committed on `chrome-error://chromewebdata/`.
+  // For the remaining 112 seconds the page requested nothing at all. So the
+  // page is not retrying, polling, or holding a connection open: `/api/vitals`
+  // only beacons on `visibilitychange`/`pagehide`, CloudWatch RUM never loads
+  // its SDK without `NEXT_PUBLIC_RUM_*` (unset fleet-wide), and the add-to-
+  // calendar Route Handler is a bare `<a>` that `next/link` never prefetches.
+  // What never arrived was Playwright's frame-tree `networkidle` lifecycle
+  // event, which only fires once **every** child frame reports idle — and that
+  // aborted map frame is the page's only one. It does not wedge on macOS
+  // (measured at 523ms against a warm e2e server), so the Linux-runner half of
+  // that is unproven; the useful half is that the culprit is a third-party
+  // iframe this harness deliberately kills, not anything a diver's phone does.
+  // Which is the whole argument for waiting on content instead.
   //
   // **Order still matters.** The title assertion is last, immediately before
   // `analyze()`, so the document axe reads is the one this checked. Asserting it
@@ -92,6 +111,31 @@ async function expectNoA11yViolations(page: Page) {
 
 signedInAsOwner();
 
+/**
+ * The seeded departure the booking scan books a seat on
+ * (`src/db/seed-trips.ts`). Four things have to be true of it at once, and this
+ * one is the shortest path to all four:
+ *
+ * - **Future, with free seats.** It sails four days out and nothing is booked
+ *   on it; `/api/test/reset` puts the seat back before the next test.
+ * - **A per-diver price**, because the price line is part of the booking page
+ *   this scans — $195 here.
+ * - **No gate a brand-new diver could fail.** Admission is checked when the
+ *   seat is *sold* (`src/lib/trip-admission.ts`), so the night, wreck and drift
+ *   departures would refuse this booking outright. A Discover Scuba session
+ *   states no minimum at all (`minimumCertificationLevel: null`) — an intro
+ *   class is the one boat an uncertified diver belongs on.
+ * - **No dive site**, which rules out every priced reef and wreck charter: a
+ *   site brings the Google Maps iframe and the externally hosted site photos
+ *   that keep the seeded reef briefing out of this file ("Absent, and why",
+ *   below). The one priced charter with no site is the night dive, and that is
+ *   the one gated on a specialty.
+ *
+ * Its single day also keeps the page to one meeting window rather than the
+ * multi-day schedule the other uncertified-friendly course sessions render.
+ */
+const BOOKING_TRIP = "Discover Scuba — Pool & Reef";
+
 test.describe("automated accessibility scans (specialist optimization audit §3)", () => {
   test("the public schedule has no automated a11y violations", async ({ page }) => {
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
@@ -102,55 +146,63 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   test("the trip booking page and its confirmation have no automated a11y violations", async ({
     page,
   }) => {
-    // Six navigations, a sign-out, a booking, and two full axe scans. Every leg
-    // is load-bearing: the scan has to happen on the *signed-out* page (a staff
-    // session adds a preview banner no diver sees) and on the confirmation, and
-    // neither can be reached without the trip this creates. Same treatment, and
-    // the same reasoning, as the cost-bound tests in add-diver.spec.ts.
+    // Two navigations, a booking, and two full axe scans. Every leg is
+    // load-bearing: the scan has to happen on the *signed-out* page (a staff
+    // session adds a preview banner no diver sees) and on the confirmation.
     //
-    // **This is the most expensive test in the file, and the cost is setup.**
-    // Measured on an idle worker at 22.3s total: the booking-page scan is 1.65s
-    // (876ms settling, 759ms in axe) and the confirmation scan is 1.86s (2ms
-    // settling, 1841ms in axe). The other ~19s is reaching those two states —
-    // filling the add panel on the schedule board, signing out, and booking.
-    // That is what the budget is for, and the real fix is to stop building a
-    // trip through the UI to get one
-    // (FU-20260821-the-a11y-booking-scan-pays-19s-for-setup).
+    // **The setup used to cost more than the scans.** Until 2026-08-21 this
+    // test built its own departure through the schedule board's add panel —
+    // six fields, a server action, and a status wait — for a trip whose only
+    // requirement is "future, bookable, priced per diver". `blue-mantis`
+    // already seeds one (`src/db/seed-trips.ts`), and `schedule.spec.ts`
+    // already covers building a departure, so that setup was re-testing the
+    // board rather than reaching a state. Gone, the whole ~19s of it.
+    //
+    // Phases, walked against a warm e2e server: public schedule 4.7s, click
+    // through to the trip 3.3s, booking-page scan 4.6s, hydrate + fill + book
+    // 7.4s, confirmation scan 4.7s — 22.7s. **Read every one of those as an
+    // upper bound**: the machine was at a 1-minute load average of ~100 at the
+    // time, and `analyze()` alone cost 4.6s per scan there against the 0.76s
+    // and 1.84s the *same two scans* cost on an idle worker. Both scans report
+    // zero violations.
     //
     // The budget is **not** what broke on 2026-08-21, and raising it twice did
     // not help: see the note in `expectNoA11yViolations` above, where a
     // `networkidle` wait that never settled on CI was consuming whatever number
-    // stood here. 60s is sized from the 22.3s measurement, not from that
-    // episode. Measure before touching it.
-    test.setTimeout(60_000);
-    const title = `A11y Scan Trip ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/schedule/board?add=full");
-    await page.getByLabel("What is it").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(5));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:30");
-    await page.getByLabel("Seats").fill("6");
-    await page.getByLabel(/Price per diver/).fill("120");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toContainText(title);
+    // stood here. 45s is sized from that contended 22.7s, so it has room for a
+    // loaded CI runner and none for a hang. Measure before touching it.
+    test.setTimeout(45_000);
 
     // A staff session adds a preview banner to the booking page
     // (src/app/s/[shopSlug]/trips/[id]/page.tsx) that no diver ever sees, so
-    // sign out and scan the page exactly as a real visitor gets it.
-    await signOut(page);
+    // drop the session and scan the page exactly as a real visitor gets it.
+    // `clearCookies` rather than `signOut()`: the helper drives the identity
+    // menu, which only exists on a `/shop/**` page, and this test no longer has
+    // a reason to load one — the same door trip-admission.spec.ts and
+    // reviews.spec.ts already use to read a surface as a diver.
+    await page.context().clearCookies();
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
-      .filter({ hasText: title })
-      .getByRole("link")
+      // Not `exact`: the row's link is labelled "<title> · N spots left".
+      .filter({ hasText: BOOKING_TRIP })
+      .getByRole("link", { name: BOOKING_TRIP })
       .click();
-    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: BOOKING_TRIP })).toBeVisible();
     await expectNoA11yViolations(page);
 
+    // The booking form is controlled, so wait for hydration before typing —
+    // the same gate nitrox.spec.ts and certifications.spec.ts use, and one the
+    // created-trip version of this test never needed because filling the add
+    // panel had already settled the page it navigated from.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Ada Reef");
     await page.getByLabel("Email", { exact: true }).fill(`ada-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    // An intro course asks the booker to attest to every diver's age, which a
+    // charter does not — so this is one more control the scan above covers.
+    await acceptAgeAttestation(page);
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Ada/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
@@ -244,7 +296,8 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
  *
  * Split into three tests rather than one, and grouped by the part of the shop
  * they belong to, so a failure names a neighbourhood rather than "the staff
- * scan". Each scan costs ~3.5s here (the `networkidle` wait dominates), which
+ * scan". Each scan costs ~3.5s here (the navigation and `analyze()`, since the
+ * `networkidle` wait that used to dominate it is gone), which
  * is what every `test.setTimeout` below is sized from.
  *
  * Every staff route reachable by a *typed* URL is in a table below — there are
@@ -775,14 +828,18 @@ test.describe("automated accessibility scans of the staff overlays", () => {
  * ## Absent, and why
  *
  * The seeded reef trip's public briefing (`/s/blue-mantis/trips/<id>`) is not
- * here. It is the one diver surface `expectNoA11yViolations` cannot scan: the
- * page embeds a Google Maps terrain iframe (which the context fixture in
- * e2e/fixtures.ts aborts) and externally hosted site photos proxied through
- * `/_next/image` (which the sealed e2e fleet can never fetch), so the document
- * never reaches the `networkidle` state the scan waits for and the test hangs
- * until its own timeout. A public trip *booking* page is covered instead by
- * "the trip booking page and its confirmation" above, which scans a trip the
- * test creates — no dive site, so no map and no photos.
+ * here — the one diver surface nothing in this file scans. It embeds a Google
+ * Maps terrain iframe (which the context fixture in e2e/fixtures.ts aborts) and
+ * externally hosted site photos proxied through `/_next/image` (which the
+ * sealed e2e fleet can never fetch). The reason written here used to be that
+ * the document therefore never reached the `networkidle` state the scan waited
+ * for; that wait is gone (see `expectNoA11yViolations`), so the reason is gone
+ * with it, and a probe against a warm e2e server scanned the page clean in
+ * 1.5s. Bringing it in is its own change, filed as
+ * FU-20260821-scan-the-reef-briefing-now-that-networkidle-is-gone. Until then a
+ * public trip *booking* page is covered by "the trip booking page and its
+ * confirmation" above, on the one seeded departure that carries a price and no
+ * dive site — so no map and no photos.
  */
 test.describe("automated accessibility scans of the signed-out surfaces", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
