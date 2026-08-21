@@ -267,6 +267,7 @@ export default async function ReportsPage({
               href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
               aria-label={t("reports.previousMonth")}
               className={navClass}
+              scroll={false}
             >
               <span aria-hidden="true">←</span>
             </Link>
@@ -306,6 +307,7 @@ export default async function ReportsPage({
               href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
               aria-label={t("reports.nextMonth")}
               className={navClass}
+              scroll={false}
             >
               <span aria-hidden="true">→</span>
             </Link>

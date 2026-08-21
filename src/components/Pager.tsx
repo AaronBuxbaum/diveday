@@ -56,7 +56,11 @@ export function Pager({
       className={`flex items-center justify-between gap-3${className ? ` ${className}` : ""}`}
     >
       {page > 1 ? (
-        <Link href={href(page - 1)} className={buttonClass({ variant: "secondary", size: "sm" })}>
+        <Link
+          href={href(page - 1)}
+          scroll={false}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
           {t("shared.pager.previous")}
         </Link>
       ) : (
@@ -64,7 +68,11 @@ export function Pager({
       )}
       <p className="text-sm text-muted">{total ? `${position} · ${total}` : position}</p>
       {page < pageCount ? (
-        <Link href={href(page + 1)} className={buttonClass({ variant: "secondary", size: "sm" })}>
+        <Link
+          href={href(page + 1)}
+          scroll={false}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
           {t("shared.pager.next")}
         </Link>
       ) : (

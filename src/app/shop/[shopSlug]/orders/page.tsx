@@ -496,6 +496,7 @@ export default async function OrdersIndexPage({
             {hasFilters ? (
               <Link
                 href={`/shop/${shopSlug}/orders`}
+                scroll={false}
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
@@ -547,6 +548,7 @@ export default async function OrdersIndexPage({
           {hasFilters ? (
             <Link
               href={`/shop/${shopSlug}/orders`}
+              scroll={false}
               className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
             >
               {t("orders.index.filters.clear")}

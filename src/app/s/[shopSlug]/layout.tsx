@@ -7,7 +7,6 @@ import { setLocaleAction } from "@/app/actions/set-locale";
 import { DemoBanner } from "@/components/DemoBanner";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
-import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
@@ -76,7 +75,6 @@ export default function PublicShopLayout({
       <Suspense fallback={<PublicShopChromePlaceholder label={fallbackT} />}>
         <PublicShopChrome params={params} />
       </Suspense>
-      <PreserveFormScroll />
       <div id="public-shop-main-content" tabIndex={-1} className="flex-1 outline-none">
         {/* Words for `error.tsx`, which renders below this layout and above the
             page (ADR 20260803-error-boundary-copy-bridge). A boundary is a file
