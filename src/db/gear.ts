@@ -60,6 +60,14 @@ function optional(value: string | undefined) {
   return value?.trim() || null;
 }
 
+/**
+ * The register's own live-rows filter (ADR 20260820-every-delete-is-soft).
+ * Every read that means "the fleet" carries it; the two that deliberately do
+ * not are the deleted-units list this page offers Restore from, and the export
+ * bundle, where a shop takes everything it owns, tombstones included.
+ */
+const liveGearItem = () => isNull(gearItems.deletedAt);
+
 // ---------------------------------------------------------------------------
 // Items
 // ---------------------------------------------------------------------------
@@ -140,7 +148,9 @@ export async function updateGearItem(
         purchasedOn,
         updatedAt: nowDate(),
       })
-      .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
+      .where(
+        and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId), liveGearItem()),
+      )
       .returning();
     return item ? { ok: true, item } : { ok: false, reason: "not_found" };
   } catch (error) {
@@ -156,9 +166,9 @@ export type SetGearItemStatusOutcome =
   | { ok: false; reason: "not_found" };
 
 /**
- * Move a unit between in service / needs service / retired. The service note
- * travels with `needs_service` ("inflator sticks") and is cleared on the way
- * back in — a stale complaint on a fixed unit reads as an open one.
+ * Move a unit between in service and needs service. The service note travels
+ * with `needs_service` ("inflator sticks") and is cleared on the way back in —
+ * a stale complaint on a fixed unit reads as an open one.
  */
 export async function setGearItemStatus(
   db: AppDb,
@@ -171,30 +181,124 @@ export async function setGearItemStatus(
       serviceNote: input.status === "in_service" ? null : optional(input.serviceNote),
       updatedAt: nowDate(),
     })
-    .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
+    .where(
+      and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId), liveGearItem()),
+    )
     .returning();
   return item ? { ok: true, item } : { ok: false, reason: "not_found" };
 }
 
 export type DeleteGearItemOutcome =
   | { ok: true; deleted: GearItem }
-  | { ok: false; reason: "not_found" };
+  | { ok: false; reason: "not_found" | "reserved" };
 
 /**
- * Remove a unit outright — for the mistyped row, not the worn-out rig.
- * Service and rental history cascade away with it, which is exactly why
- * `retired` exists for a unit that actually lived: retiring preserves the
- * history, deleting is for rows that never should have existed.
+ * Take a unit off the register — soft, like every other delete (ADR
+ * 20260820-every-delete-is-soft). It stamps `deleted_at` and leaves the row
+ * where it is, so the unit's service events and every rental window it ever
+ * carried stay attached and a restore is one column write.
+ *
+ * **Refuses a unit that is still provisioned**, the same call `deleteTrip`
+ * makes for a departure with a roster: a unit reserved for a departure still
+ * to come, or one out on a rental right now, is somebody's kit for the
+ * weekend, and hiding it from the register would leave a diver's assignment
+ * pointing at a unit nobody can find. The refusal names nothing here — the
+ * surface knows which reservation holds it — and the way out is the same page's
+ * Release or Mark returned.
+ *
+ * A lapsed claim nobody ever collected does **not** block: that unit is on the
+ * wall (the same call `listAvailableGearUnits` makes), and its stale row goes
+ * quiet with the unit and comes back with it.
+ *
+ * The guard is checked under a row lock, so a reservation landing mid-delete
+ * loses the race rather than being silently hidden with its unit.
  */
 export async function deleteGearItem(
   db: AppDb,
-  input: { shopId: string; gearItemId: string },
+  input: {
+    shopId: string;
+    gearItemId: string;
+    todayLocal: CalendarDate;
+    deletedByPersonId?: string;
+  },
 ): Promise<DeleteGearItemOutcome> {
-  const [deleted] = await db
-    .delete(gearItems)
-    .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
-    .returning();
-  return deleted ? { ok: true, deleted } : { ok: false, reason: "not_found" };
+  return db.transaction(async (tx) => {
+    const [item] = await tx
+      .select()
+      .from(gearItems)
+      .where(
+        and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId), liveGearItem()),
+      )
+      .limit(1)
+      .for("update");
+    if (!item) return { ok: false, reason: "not_found" } as const;
+
+    const [held] = await tx
+      .select({ value: count() })
+      .from(gearReservations)
+      .where(
+        and(
+          eq(gearReservations.shopId, input.shopId),
+          eq(gearReservations.gearItemId, input.gearItemId),
+          isNull(gearReservations.returnedAt),
+          or(
+            // Out the door now, whatever its window says…
+            isNotNull(gearReservations.checkedOutAt),
+            // …or spoken for today or on a day still to come.
+            gte(gearReservations.reservedUntil, input.todayLocal),
+          ),
+        ),
+      );
+    if ((held?.value ?? 0) > 0) return { ok: false, reason: "reserved" } as const;
+
+    const [deleted] = await tx
+      .update(gearItems)
+      .set({
+        deletedAt: nowDate(),
+        deletedByPersonId: input.deletedByPersonId ?? null,
+        updatedAt: nowDate(),
+      })
+      .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
+      .returning();
+    return deleted
+      ? ({ ok: true, deleted } as const)
+      : ({ ok: false, reason: "not_found" } as const);
+  });
+}
+
+export type RestoreGearItemOutcome =
+  | { ok: true; item: GearItem }
+  | { ok: false; reason: "not_found" | "duplicate_label" };
+
+/**
+ * Put a deleted unit back on the register — the undo toast's action, and the
+ * deleted list's. The tag freed up when the unit went, so another unit may be
+ * wearing it now: the partial unique index refuses that, and so does this,
+ * rather than putting two "BCD #14"s on one wall.
+ */
+export async function restoreGearItem(
+  db: AppDb,
+  input: { shopId: string; gearItemId: string },
+): Promise<RestoreGearItemOutcome> {
+  try {
+    const [item] = await db
+      .update(gearItems)
+      .set({ deletedAt: null, deletedByPersonId: null, updatedAt: nowDate() })
+      .where(
+        and(
+          eq(gearItems.id, input.gearItemId),
+          eq(gearItems.shopId, input.shopId),
+          isNotNull(gearItems.deletedAt),
+        ),
+      )
+      .returning();
+    return item ? { ok: true, item } : { ok: false, reason: "not_found" };
+  } catch (error) {
+    if (violatesUniqueIndex(error, "gear_items_shop_label_unique")) {
+      return { ok: false, reason: "duplicate_label" };
+    }
+    throw error;
+  }
 }
 
 /** Units physically out the door right now — checked out and not yet home. */
@@ -217,7 +321,7 @@ export async function countGearItems(db: AppDb, shopId: string): Promise<number>
   const [row] = await db
     .select({ value: count() })
     .from(gearItems)
-    .where(eq(gearItems.shopId, shopId));
+    .where(and(eq(gearItems.shopId, shopId), liveGearItem()));
   return row?.value ?? 0;
 }
 
@@ -279,7 +383,9 @@ export async function recordGearService(
     const [item] = await tx
       .select({ id: gearItems.id, status: gearItems.status })
       .from(gearItems)
-      .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
+      .where(
+        and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId), liveGearItem()),
+      )
       .limit(1);
     if (!item) return { ok: false, reason: "not_found" } as const;
 
@@ -523,7 +629,13 @@ export async function reserveGearUnit(
       const [item] = await tx
         .select({ id: gearItems.id, status: gearItems.status })
         .from(gearItems)
-        .where(and(eq(gearItems.id, input.gearItemId), eq(gearItems.shopId, input.shopId)))
+        .where(
+          and(
+            eq(gearItems.id, input.gearItemId),
+            eq(gearItems.shopId, input.shopId),
+            liveGearItem(),
+          ),
+        )
         .limit(1);
       if (!item) return { ok: false, reason: "not_found" } as const;
       if (item.status !== "in_service")
@@ -827,6 +939,7 @@ export async function listGearItems(
 ) {
   const filter = and(
     eq(gearItems.shopId, shopId),
+    liveGearItem(),
     options.kind ? eq(gearItems.kind, options.kind) : undefined,
   );
   const pageSize = options.pageSize ?? 50;
@@ -913,9 +1026,66 @@ export async function countGearItemsByKind(
   const rows = await db
     .select({ kind: gearItems.kind, value: count() })
     .from(gearItems)
-    .where(eq(gearItems.shopId, shopId))
+    .where(and(eq(gearItems.shopId, shopId), liveGearItem()))
     .groupBy(gearItems.kind);
   return new Map(rows.map((row) => [row.kind, row.value]));
+}
+
+/** One deleted unit, as the register's Deleted list renders it. */
+export type DeletedGearItemRow = {
+  id: string;
+  kind: GearItemKind;
+  label: string;
+  size: string | null;
+  deletedAt: Date;
+};
+
+/**
+ * The units that have been deleted — the way back to one. Without this the
+ * undo lasts as long as a toast and then the unit is unreachable: gone from
+ * the fleet, its own URL a 404, and nothing left that can restore it (the
+ * same hole the diver roster's Deleted view was added to close).
+ */
+export async function listDeletedGearItems(
+  db: AppDb,
+  shopId: string,
+  options: { page?: number; pageSize?: number } = {},
+) {
+  const filter = and(eq(gearItems.shopId, shopId), isNotNull(gearItems.deletedAt));
+  return offsetPage<DeletedGearItemRow>({
+    page: options.page,
+    pageSize: options.pageSize ?? 50,
+    countRows: async () => {
+      const [row] = await db.select({ value: count() }).from(gearItems).where(filter);
+      return row?.value ?? 0;
+    },
+    fetchRows: async (offset, limit) => {
+      const rows = await db
+        .select({
+          id: gearItems.id,
+          kind: gearItems.kind,
+          label: gearItems.label,
+          size: gearItems.size,
+          deletedAt: gearItems.deletedAt,
+        })
+        .from(gearItems)
+        .where(filter)
+        .orderBy(desc(gearItems.deletedAt), asc(gearItems.label))
+        .offset(offset)
+        .limit(limit);
+      // The filter proves the stamp; this narrows the type without a cast.
+      return rows.flatMap((row) => (row.deletedAt ? [{ ...row, deletedAt: row.deletedAt }] : []));
+    },
+  });
+}
+
+/** How many units are deleted — the register's Deleted chip appears on it. */
+export async function countDeletedGearItems(db: AppDb, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shopId), isNotNull(gearItems.deletedAt)));
+  return row?.value ?? 0;
 }
 
 export type GearItemDetail = {
@@ -933,7 +1103,7 @@ export async function getGearItemDetail(
   const [item] = await db
     .select()
     .from(gearItems)
-    .where(and(eq(gearItems.id, gearItemId), eq(gearItems.shopId, shopId)))
+    .where(and(eq(gearItems.id, gearItemId), eq(gearItems.shopId, shopId), liveGearItem()))
     .limit(1);
   if (!item) return null;
 
@@ -1022,6 +1192,7 @@ export async function listAvailableGearUnits(
     .where(
       and(
         eq(gearItems.shopId, shopId),
+        liveGearItem(),
         options.kind ? eq(gearItems.kind, options.kind) : undefined,
         eq(gearItems.status, "in_service"),
         notExists(
@@ -1101,6 +1272,7 @@ export async function listTripGearAssignments(
         eq(gearReservations.shopId, shopId),
         eq(bookings.tripId, tripId),
         isNull(gearReservations.returnedAt),
+        liveGearItem(),
       ),
     )
     .orderBy(asc(gearItems.kind), asc(gearItems.label));
@@ -1176,7 +1348,12 @@ async function listReturnRows(
       .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
       .leftJoin(trips, eq(trips.id, bookings.tripId))
       .where(
-        and(eq(gearReservations.shopId, shopId), isNull(gearReservations.returnedAt), windowFilter),
+        and(
+          eq(gearReservations.shopId, shopId),
+          isNull(gearReservations.returnedAt),
+          liveGearItem(),
+          windowFilter,
+        ),
       )
       .orderBy(asc(gearReservations.reservedUntil), asc(gearItems.label))
   );
@@ -1191,7 +1368,7 @@ export type GearServiceDueRow = {
 
 /**
  * Working units whose most urgent clock is overdue or runs out within
- * `withinDays`. Retired units keep their history but stop asking for care.
+ * `withinDays`. A deleted unit keeps its history and stops asking for care.
  */
 export async function listGearServiceDue(
   db: AppDb,
@@ -1202,7 +1379,7 @@ export async function listGearServiceDue(
   const items = await db
     .select({ id: gearItems.id, kind: gearItems.kind, label: gearItems.label })
     .from(gearItems)
-    .where(and(eq(gearItems.shopId, shopId), ne(gearItems.status, "retired")))
+    .where(and(eq(gearItems.shopId, shopId), liveGearItem()))
     .orderBy(asc(gearItems.kind), asc(gearItems.label));
   if (items.length === 0) return [];
 

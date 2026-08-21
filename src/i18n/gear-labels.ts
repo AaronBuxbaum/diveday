@@ -40,7 +40,6 @@ export function gearItemKindLabel(t: StaffTranslator, kind: GearItemKind): strin
 const STATUS_KEYS: Record<GearItemStatus, StaffMessageKey> = {
   in_service: "gear.status.inService",
   needs_service: "gear.status.needsService",
-  retired: "gear.status.retired",
 };
 
 export function gearStatusLabel(t: StaffTranslator, status: GearItemStatus): string {

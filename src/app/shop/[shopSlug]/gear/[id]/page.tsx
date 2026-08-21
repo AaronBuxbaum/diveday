@@ -49,6 +49,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
   "already-checked-out": { tone: "warning", key: "gear.notice.alreadyCheckedOut" },
   "not-found": { tone: "danger", key: "gear.notice.notFound" },
+  // The refused delete. It renders beside the Delete control naming the
+  // reservation that holds the unit; this banner is the fallback for the race
+  // where that reservation was closed between the refusal and this render.
+  "unit-held": { tone: "danger", key: "gear.notice.unitHeld" },
   invalid: { tone: "danger", key: "gear.notice.invalid" },
   "empty-label": { tone: "danger", key: "gear.notice.emptyLabel" },
   "duplicate-label": { tone: "danger", key: "gear.notice.duplicateLabel" },
@@ -89,6 +93,27 @@ export default async function GearUnitPage({
   const openReservations = reservations.filter((reservation) => !reservation.returnedAt);
   const settled = reservations.filter((reservation) => reservation.returnedAt);
 
+  /**
+   * A refused delete is about the unit's reservations, so it is worded from
+   * them rather than from the redirect: the same rule that keeps the holder's
+   * name out of the query string keeps the sentence true to what the page is
+   * showing. `deleteGearItem` refuses on exactly this shape — still out, or
+   * spoken for today or later.
+   */
+  const holding =
+    notice === "unit-held"
+      ? (openReservations.find(
+          (reservation) =>
+            reservation.checkedOutAt !== null || reservation.reservedUntil >= todayLocal,
+        ) ?? null)
+      : null;
+  const held = holding
+    ? {
+        name: holding.personName,
+        until: formatCalendarDate(holding.reservedUntil, locale),
+      }
+    : null;
+
   const identity = [gearItemKindLabel(t, item.kind), item.size, item.brandModel, item.serialNumber]
     .filter(Boolean)
     .join(" · ");
@@ -117,7 +142,9 @@ export default async function GearUnitPage({
         />
       </div>
 
-      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+      {banner && !held ? (
+        <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
+      ) : null}
 
       <div className="mt-8 space-y-10">
         {/* Eight words don't need a card of their own: the panel exists only
@@ -315,7 +342,7 @@ export default async function GearUnitPage({
           </FieldGrid>
         </SectionCard>
 
-        <StatusCard item={item} t={t} />
+        <StatusCard item={item} held={held} t={t} />
       </div>
     </main>
   );
@@ -499,10 +526,20 @@ function ServiceCard({
 }
 
 /**
- * The three ways a unit leaves the wall, gentlest first. Retiring keeps the
- * history; deleting is for rows that never should have existed, and says so.
+ * The two ways a unit leaves the wall: off to the bench, or off the register
+ * altogether. `held` is the reservation the delete would strand — present only
+ * when the shop has just tried it and been refused, and worded from the page's
+ * own read so the holder's name never rides in the URL.
  */
-function StatusCard({ item, t }: { item: GearItemDetail["item"]; t: StaffTranslator }) {
+function StatusCard({
+  item,
+  held,
+  t,
+}: {
+  item: GearItemDetail["item"];
+  held: { name: string; until: string } | null;
+  t: StaffTranslator;
+}) {
   return (
     <SectionCard
       padding="lg"
@@ -547,18 +584,6 @@ function StatusCard({ item, t }: { item: GearItemDetail["item"]; t: StaffTransla
         )}
 
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-          {item.status !== "retired" ? (
-            <form action={setGearItemStatusAction}>
-              <input type="hidden" name="gearItemId" value={item.id} />
-              <input type="hidden" name="status" value="retired" />
-              <SubmitButton
-                pendingLabel={t("gear.unit.status.retiring")}
-                className={buttonClass({ variant: "ghost", size: "sm" })}
-              >
-                {t("gear.unit.status.retire")}
-              </SubmitButton>
-            </form>
-          ) : null}
           <form action={deleteGearItemAction}>
             <input type="hidden" name="gearItemId" value={item.id} />
             <SubmitButton
@@ -568,7 +593,9 @@ function StatusCard({ item, t }: { item: GearItemDetail["item"]; t: StaffTransla
               {t("gear.unit.status.delete")}
             </SubmitButton>
           </form>
-          <p className="text-xs text-muted">{t("gear.unit.status.deleteWarning")}</p>
+          <FormStatus>
+            {held ? t("gear.unit.status.deleteHeld", { name: held.name, until: held.until }) : null}
+          </FormStatus>
         </div>
       </div>
     </SectionCard>

@@ -238,3 +238,35 @@ The open question this cannot answer is whether shops keep the register faithful
 enough for the count to mean anything. That is now §C3 of the first-call script,
 and the answer changes how loudly this should be presented — or whether it earns
 its place at all.
+
+
+## Amendment 2026-08-21 — `retired` is gone; deleting a unit is the soft delete
+
+Three things above are superseded by [20260820-every-delete-is-soft](20260820-every-delete-is-soft.md),
+on the product owner's call: the `gear_item_status` sketch's third value, the
+"escape hatch" that told a shop to retire every unit, and the 2026-08-20
+amendment's line that "the register's history-preserving exit stays `retired`".
+
+`gear_item_status` is now two values, `in_service` and `needs_service`. What
+`retired` described — a unit the shop still owns, still has history for, and
+will not rent again — turned out to be a soft delete wearing a word that ADR
+ships banned: it kept the row, kept the service events, and dropped the unit out
+of every picker, which is what `deleted_at` does for every other entity. So
+`gear_items` carries `deleted_at` + `deleted_by_person_id` and a live-rows-only
+partial index (the unique tag index too, so deleting "BCD #14" frees the tape
+for the unit that replaces it and a restore is refused rather than doubling it),
+every register read filters on it, and the escape hatch is *delete every unit*,
+which loses nothing.
+
+**Deleting refuses a unit that is still provisioned** — reserved for a day still
+to come, or out on a rental now — the same call `deleteTrip` makes for a
+departure with a roster, and for the same reason: hiding the unit would leave a
+diver's assignment pointing at kit nobody can find. A lapsed claim nobody ever
+collected does not block, matching what `listAvailableGearUnits` already
+believes about where that unit physically is. The refusal is not a silent
+no-op: it lands beside the Delete control naming the reservation that holds
+the unit, worded from the page's own read so no diver's name rides in a URL.
+
+The way back is the register's **Deleted** view, whose action is **Restore** —
+without it the undo would last as long as a toast, and the unit's own URL is a
+404 the moment it is deleted.

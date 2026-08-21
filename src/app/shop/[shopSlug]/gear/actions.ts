@@ -6,6 +6,7 @@ import {
   checkOutGearReservation,
   createGearItem,
   releaseGearReservation,
+  restoreGearItem,
   returnGearReservation,
 } from "@/db/gear";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
@@ -42,20 +43,28 @@ export async function createGearItemAction(formData: FormData) {
 }
 
 /**
- * The undo half of deleting a unit: recreate it from what the toast carried.
- * Service and rental history do not come back — deleting is for rows that
- * never should have existed, and the unit page says so before offering it.
+ * Put a deleted unit back — the undo toast's action, and the Deleted list's.
+ * It clears the stamp on the row the shop already had, so the unit returns
+ * with its service history and its rental windows attached.
  */
 export async function restoreGearItemAction(formData: FormData) {
   const { session, gear } = await requireGearSurface();
-  const parsed = unitFormSchema.safeParse(Object.fromEntries(formData));
+  const parsed = z.object({ gearItemId: z.uuid() }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
 
-  const outcome = await createGearItem(await getDb(), {
+  const outcome = await restoreGearItem(await getDb(), {
     shopId: session.user.shopId,
-    ...parsed.data,
+    gearItemId: parsed.data.gearItemId,
   });
-  revalidateAndRedirect(gear, noticeUrl(gear, outcome.ok ? "restored" : outcome.reason));
+  // A tag collision on the way back is its own code: plain `duplicate-label`
+  // is the add form's refusal and would render on that form's Tag field,
+  // pointing a staffer at a box they never typed in.
+  const refusal = outcome.ok
+    ? "restored"
+    : outcome.reason === "duplicate_label"
+      ? "restore-duplicate-label"
+      : outcome.reason;
+  revalidateAndRedirect(gear, noticeUrl(gear, refusal));
 }
 
 const reservationActionSchema = z.object({ reservationId: z.uuid() });

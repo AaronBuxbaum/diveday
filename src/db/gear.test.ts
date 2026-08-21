@@ -13,14 +13,17 @@ import {
   getGearItemDetail,
   latestServiceClocks,
   listAvailableGearUnits,
+  listDeletedGearItems,
   listGearDueBack,
   listGearItems,
   listGearServiceDue,
+  listGearServiceEvents,
   listOverdueGearReservations,
   listTripGearAssignments,
   recordGearService,
   releaseGearReservation,
   reserveGearUnit,
+  restoreGearItem,
   returnGearReservation,
   setGearItemStatus,
   updateGearItem,
@@ -168,20 +171,97 @@ describe("gear items", () => {
     expect(back).toMatchObject({ ok: true, item: { status: "in_service", serviceNote: null } });
   });
 
-  it("deletes a unit and hands the row back for undo; other tenants cannot reach it", async () => {
+  it("deletes a unit softly — off the register, history intact — and other tenants cannot reach it", async () => {
     const { db, shop } = await gearShopContext();
     const rival = await rivalShop(db);
     const item = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "gopro", label: "GoPro A" }),
     );
+    expect(
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: item.id,
+        kind: "service",
+        servicedOn: "2026-08-01",
+        nextDueOn: "2027-08-01",
+        note: "housing seal replaced",
+      }),
+    ).toEqual({ ok: true });
 
-    expect(await deleteGearItem(db, { shopId: rival.id, gearItemId: item.id })).toEqual({
-      ok: false,
-      reason: "not_found",
+    expect(
+      await deleteGearItem(db, { shopId: rival.id, gearItemId: item.id, todayLocal: TODAY }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    const deleted = await deleteGearItem(db, {
+      shopId: shop.id,
+      gearItemId: item.id,
+      todayLocal: TODAY,
     });
-    const deleted = await deleteGearItem(db, { shopId: shop.id, gearItemId: item.id });
     expect(deleted).toMatchObject({ ok: true, deleted: { label: "GoPro A" } });
+
+    // Off the register and out of its own record…
     expect(await countGearItems(db, shop.id)).toBe(0);
+    expect((await listGearItems(db, shop.id, { todayLocal: TODAY })).rows).toHaveLength(0);
+    expect(await getGearItemDetail(db, shop.id, item.id)).toBeNull();
+    // …but the row and its care history are still there, which is the point.
+    expect(await listGearServiceEvents(db, shop.id, item.id)).toHaveLength(1);
+    const gone = await listDeletedGearItems(db, shop.id);
+    expect(gone.rows.map((row) => row.label)).toEqual(["GoPro A"]);
+
+    // And the tag it wore is free while it is gone, then refused on the way back.
+    const replacement = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "gopro", label: "GoPro A" }),
+    );
+    expect(await restoreGearItem(db, { shopId: shop.id, gearItemId: item.id })).toEqual({
+      ok: false,
+      reason: "duplicate_label",
+    });
+
+    await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: replacement.id,
+      kind: "gopro",
+      label: "GoPro B",
+    });
+    expect(await restoreGearItem(db, { shopId: shop.id, gearItemId: item.id })).toMatchObject({
+      ok: true,
+      item: { label: "GoPro A", deletedAt: null },
+    });
+    expect(await countGearItems(db, shop.id)).toBe(2);
+    expect(await listGearServiceEvents(db, shop.id, item.id)).toHaveLength(1);
+  });
+
+  it("refuses to delete a unit that is reserved for later or out on a rental", async () => {
+    const { db, shop } = await gearShopContext();
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #11" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const reserved = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: bcd.id,
+      bookingId: maya.bookingId,
+      // The seeded departure is in September; TODAY is 2026-08-20.
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+    });
+    if (!reserved.ok) throw new Error(`reservation failed: ${reserved.reason}`);
+
+    expect(
+      await deleteGearItem(db, { shopId: shop.id, gearItemId: bcd.id, todayLocal: TODAY }),
+    ).toEqual({ ok: false, reason: "reserved" });
+
+    // Out the door and past its window still refuses: it is with a diver.
+    await checkOutGearReservation(db, { shopId: shop.id, reservationId: reserved.reservation.id });
+    expect(
+      await deleteGearItem(db, { shopId: shop.id, gearItemId: bcd.id, todayLocal: "2026-09-30" }),
+    ).toEqual({ ok: false, reason: "reserved" });
+
+    // Home again, and the unit is the shop's to take off the register.
+    await returnGearReservation(db, { shopId: shop.id, reservationId: reserved.reservation.id });
+    expect(
+      await deleteGearItem(db, { shopId: shop.id, gearItemId: bcd.id, todayLocal: "2026-09-30" }),
+    ).toMatchObject({ ok: true });
   });
 });
 
@@ -309,7 +389,7 @@ describe("gear service history", () => {
     expect(detail?.item).toMatchObject({ status: "in_service", serviceNote: null });
   });
 
-  it("surfaces due and overdue clocks, most urgent first, and lets retired units rest", async () => {
+  it("surfaces due and overdue clocks, most urgent first, and lets deleted units rest", async () => {
     const { db, shop } = await gearShopContext();
     const overdueTank = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-02" }),
@@ -320,7 +400,7 @@ describe("gear service history", () => {
     const healthyBcd = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #3" }),
     );
-    const retired = mustCreate(
+    const deletedUnit = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-99" }),
     );
 
@@ -347,12 +427,12 @@ describe("gear service history", () => {
     });
     await recordGearService(db, {
       shopId: shop.id,
-      gearItemId: retired.id,
+      gearItemId: deletedUnit.id,
       kind: "visual_inspection",
       servicedOn: "2024-01-01",
       nextDueOn: "2025-01-01",
     });
-    await setGearItemStatus(db, { shopId: shop.id, gearItemId: retired.id, status: "retired" });
+    await deleteGearItem(db, { shopId: shop.id, gearItemId: deletedUnit.id, todayLocal: TODAY });
 
     const due = await listGearServiceDue(db, shop.id, TODAY, 7);
     expect(due.map((row) => row.label)).toEqual(["AL80-02", "Reg #3"]);
@@ -445,7 +525,7 @@ describe("gear reservations", () => {
     ).toBe(true);
   });
 
-  it("refuses a pulled or retired unit, a foreign booking, and an inverted window", async () => {
+  it("refuses a pulled unit, a foreign booking, and an inverted window", async () => {
     const { db, shop } = await gearShopContext();
     const rival = await rivalShop(db);
     const reg = mustCreate(

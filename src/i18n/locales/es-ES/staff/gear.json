@@ -8,8 +8,7 @@
   },
   "status": {
     "inService": "En servicio",
-    "needsService": "Necesita mantenimiento",
-    "retired": "Retirado"
+    "needsService": "Necesita mantenimiento"
   },
   "serviceKinds": {
     "service": "Servicio",
@@ -78,6 +77,14 @@
     },
     "neverPickedUp": "Reservado para {name} · nunca recogido"
   },
+  "deleted": {
+    "filter": "Eliminadas ({count})",
+    "title": "Eliminadas",
+    "on": "Eliminada el {date}",
+    "restore": "Restaurar",
+    "restoring": "Restaurando…",
+    "restoreUnit": "Restaurar {label}"
+  },
   "addUnit": {
     "door": "Agregar equipo",
     "title": "Agregar una unidad",
@@ -103,7 +110,7 @@
     "restored": "Unidad restaurada.",
     "updated": "Guardado.",
     "deleted": "Unidad eliminada.",
-    "deletedToast": "Unidad eliminada. Su historial de mantenimiento y alquiler se fue con ella.",
+    "unitHeld": "Esa unidad sigue comprometida — libérala o márcala como devuelta primero.",
     "serviceLogged": "Registrado.",
     "returned": "Marcado como devuelto — la unidad está en casa.",
     "checkedOut": "Entregado.",
@@ -114,6 +121,7 @@
     "invalid": "No se guardó — revisa el formulario e inténtalo de nuevo.",
     "emptyLabel": "Dale una etiqueta a la unidad — así la encontrarás con las manos mojadas.",
     "duplicateLabel": "Otra unidad ya lleva esa etiqueta.",
+    "restoreDuplicateLabel": "Otra unidad lleva esa etiqueta ahora — renómbrala y luego restaura esta.",
     "invalidDate": "Esa fecha no existe — revísala.",
     "dueNotAfterService": "La próxima fecha de vencimiento tiene que ser posterior a la del servicio.",
     "allHome": "Todo en casa — cada unidad está de vuelta en la pared.",
@@ -169,11 +177,9 @@
       "pullNotePlaceholder": "El inflador se atasca",
       "reinstate": "Devolver al servicio",
       "reinstating": "Devolviendo…",
-      "retire": "Retirar definitivamente",
-      "retiring": "Retirando…",
       "delete": "Eliminar unidad",
       "deleting": "Eliminando…",
-      "deleteWarning": "Eliminarla borra también su historial de mantenimiento y alquiler."
+      "deleteHeld": "{name} tiene esta unidad hasta el {until} — libérala o márcala como devuelta primero."
     }
   },
   "prep": {

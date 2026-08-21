@@ -61,7 +61,7 @@
   "timelineBuddyFormed": "Equipo de buceo creado",
   "timelineBuddyDissolved": "Equipo de buceo deshecho",
   "timelineBuddyMemberAdded": "Integrante añadido al equipo de buceo",
-  "timelineBuddyMemberRemoved": "Integrante retirado del equipo de buceo",
+  "timelineBuddyMemberRemoved": "Integrante quitado del equipo de buceo",
   "timelineBuddyMembers": "Integrantes en ese momento: {names}",
   "actionCleared": "Registro anulado (corrección)",
   "recordedByName": "Registrado por {name}",

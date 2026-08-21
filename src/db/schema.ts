@@ -4176,16 +4176,17 @@ export const gearItemKind = pgEnum("gear_item_kind", [
 ]);
 
 /**
- * A unit's fitness for renting. `needs_service` pulls it out of the
- * assignable pool without losing it; `retired` is the non-destructive end of
- * life that preserves its service and rental history (the register's escape
- * hatch — retiring every unit returns a shop to sizes-only prep).
+ * A unit's fitness for renting: on the wall, or off it for bench work.
+ * `needs_service` pulls a unit out of the assignable pool without losing it,
+ * and the note beside it says why.
+ *
+ * There is deliberately no third value for the end of a unit's life. That was
+ * `retired` until 2026-08-21, and it was a soft delete wearing a banned name
+ * (ADR 20260820-every-delete-is-soft): a unit a shop is finished with is
+ * *deleted*, which stamps `deleted_at` below and keeps every service event and
+ * rental window attached to the row.
  */
-export const gearItemStatus = pgEnum("gear_item_status", [
-  "in_service",
-  "needs_service",
-  "retired",
-]);
+export const gearItemStatus = pgEnum("gear_item_status", ["in_service", "needs_service"]);
 
 /**
  * What kind of care a service event records. `service` is the manufacturer
@@ -4234,12 +4235,35 @@ export const gearItems = pgTable(
     status: gearItemStatus("status").notNull().default("in_service"),
     /** Staff free text set alongside `needs_service` ("inflator sticks"). */
     serviceNote: text("service_note"),
+    /**
+     * Set when staff delete a unit (ADR 20260820-every-delete-is-soft). The row
+     * stays, and so do its `gear_service_events` and `gear_reservations` — a
+     * fleet's care history is the last thing a delete should take, and it is
+     * what makes putting the unit back a single column write.
+     *
+     * `deleteGearItem` refuses a unit that is still provisioned (reserved for
+     * later, or out on a rental now), so a stamped row is never one somebody is
+     * waiting on. Every register read filters on this column.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who deleted it, so the act is not anonymous. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("gear_items_shop_label_unique").on(table.shopId, table.label),
-    index("gear_items_shop_kind_idx").on(table.shopId, table.kind),
+    // Partial on the live rows, so deleting "BCD #14" frees that tag for the
+    // unit that replaces it on the wall — and `restoreGearItem` refuses rather
+    // than resurrecting a second unit wearing the same tape.
+    uniqueIndex("gear_items_shop_label_unique")
+      .on(table.shopId, table.label)
+      .where(sql`${table.deletedAt} is null`),
+    // Partial for the same reason: every read that means "the fleet" carries
+    // `deleted_at is null`, and deleted units are rare enough that indexing the
+    // tombstones beside them would pay for nothing.
+    index("gear_items_shop_kind_idx")
+      .on(table.shopId, table.kind)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
