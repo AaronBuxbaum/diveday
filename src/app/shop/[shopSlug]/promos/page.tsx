@@ -343,7 +343,7 @@ export default async function PromosPage({
         </FieldGrid>
       </SectionCard>
 
-      <h2 className="mt-8 font-medium">{t("promos.yourCodes")}</h2>
+      <h2 className="mt-8 text-lg font-semibold">{t("promos.yourCodes")}</h2>
       {promos.length === 0 ? (
         <EmptyState>
           <h3 className="font-medium">{t("promos.empty.heading")}</h3>
@@ -481,7 +481,7 @@ export default async function PromosPage({
         className="mt-4"
       />
 
-      <h2 className="mt-10 font-medium">{t("promos.tripDeals.heading")}</h2>
+      <h2 className="mt-10 text-lg font-semibold">{t("promos.tripDeals.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
       {tripDeals.length === 0 ? (
         // A trip deal is sent from a departure, never from here, so the door is

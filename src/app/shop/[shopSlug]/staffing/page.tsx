@@ -184,7 +184,7 @@ export default async function StaffingPage({
       <section className="mt-8" aria-labelledby="working-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="working-heading" className="text-xl font-semibold">
+            <h2 id="working-heading" className="text-lg font-semibold">
               {t("staffing.working.heading")}
             </h2>
             <p className="mt-1 text-sm text-muted">

@@ -52,7 +52,7 @@ import { type ReactNode, useId } from "react";
  * as a rendering bug, not as structure. If that is where you have arrived, the
  * inner thing is one of the three above.
  *
- * ## Headings
+ * ## Headings: what size, and where one goes
  *
  * `title` renders the staff type scale (`text-lg`, or `text-base` for a card
  * inside a group that already owns the `h2`). The **marketing pages keep their
@@ -60,6 +60,36 @@ import { type ReactNode, useId } from "react";
  * 36px display type where `text-base` would turn a page's one checkable proof
  * into fine print. A design system that flattens a deliberately different
  * surface is not being consistent, it is being indiscriminate.
+ *
+ * *Placement* is the other half, and the marketing exemption does not reach it:
+ * a heading goes **inside the card it names, above the group it governs**. One
+ * question decides which — would the heading still be telling the truth if the
+ * card under it disappeared, multiplied, or swapped for an `EmptyState`?
+ *
+ * - **No**: the heading and the card live and die together, so it is the card's
+ *   `title` and this component renders the `h2` and derives its
+ *   `aria-labelledby`. A bare heading floated above a single card splits one
+ *   object into two — the named region and the visible border disagree, so a
+ *   screen reader lands on an unnamed panel while the heading sits ownerless in
+ *   the gutter.
+ * - **Yes**: the body is plural — sibling cards, a grid of object cards, a
+ *   `padding="none"` shell of divided rows, anything that swaps to an
+ *   `EmptyState`. The heading stands above as a bare
+ *   `<h2 className="text-lg font-semibold">`, the *same* scale a card's own
+ *   `h2` gets, because a section speaks at one volume whether its heading sits
+ *   inside one card or above five. Each card under it steps down with
+ *   `titleAs="h3"`, or carries the object's own name.
+ *
+ * Two corollaries. A `<details>` never takes a bare heading above it: the
+ * `<summary>` *is* the heading and the control, and a closed disclosure under a
+ * floated heading is a heading over apparently nothing that a reader will press
+ * and open nothing. And a band — a search or filter form wearing this chrome —
+ * takes no heading at all; its field labels are its words.
+ *
+ * The full grammar, including the "one card or a group?" line and the anatomies
+ * that hand-spell their heading (a tone panel, an eyebrow, a `<form>` card,
+ * which this component's element set excludes): the "Where a heading goes"
+ * section of docs/design/forms-and-controls.md.
  */
 
 const PADDING = {

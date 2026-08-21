@@ -559,7 +559,11 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
-  const releaseTextarea = page.getByLabel("Release text");
+  // By role, not by label: the section is a `SectionCard` titled "Release text",
+  // which derives its own `aria-labelledby` from that title, so the accessible
+  // name is carried by both the region and the textarea inside it. `getByLabel`
+  // matches both and trips strict mode. The box is what this test means.
+  const releaseTextarea = page.getByRole("textbox", { name: "Release text" });
   await expect(releaseTextarea).toHaveValue(/scuba diving/);
   await releaseTextarea.fill(
     "Revised release: I accept the inherent risks of boat charters and open-water diving for this trip.",

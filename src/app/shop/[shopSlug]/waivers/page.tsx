@@ -106,25 +106,33 @@ export default async function WaiverTemplatesPage({
         description={t("waiversStaff.description")}
       />
 
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">{t("waiversStaff.releaseTextHeading")}</h2>
-        <p className="mt-1 text-sm text-muted">
-          {current
+      {/* One card, one subject, so the heading is the card's: the release text
+          is the section, and a heading floated above it named a region the
+          border disagreed with. The version line is a status about the text in
+          the box, so it rides the header row beside the heading rather than
+          becoming a second description under it. */}
+      <SectionCard
+        padding="lg"
+        className="mt-10"
+        title={t("waiversStaff.releaseTextHeading")}
+        description={
+          current
             ? t("waiversStaff.releaseDescription.current")
-            : t("waiversStaff.releaseDescription.sample")}
-        </p>
-        {current ? (
-          <p className="mt-2 text-sm text-muted">
-            {t("waiversStaff.versionInfo", {
-              version: current.version,
-              date: formatShortDate(current.createdAt, locale, shop.timezone),
-            })}
-          </p>
-        ) : null}
-        <SectionCard as="div" padding="lg" className="mt-4">
-          {editForm}
-        </SectionCard>
-      </section>
+            : t("waiversStaff.releaseDescription.sample")
+        }
+        actions={
+          current ? (
+            <p className="text-sm text-muted">
+              {t("waiversStaff.versionInfo", {
+                version: current.version,
+                date: formatShortDate(current.createdAt, locale, shop.timezone),
+              })}
+            </p>
+          ) : null
+        }
+      >
+        {editForm}
+      </SectionCard>
     </>
   );
 }
