@@ -53,6 +53,11 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     bootSize: optional(input.bootSize),
     finSize: optional(input.finSize),
     weightPreference: optional(input.weightPreference),
+    // This writer *is* the fit being stated — by the diver's gear form or by
+    // staff editing it. `saveRentalFitNote` deliberately never sets it, which
+    // is what keeps a note-only row off the packing list (see the column's own
+    // comment in schema.ts).
+    fitStatedAt: nowDate(),
     updatedAt: nowDate(),
   };
   // The note is the diver's own words to the crew ("titanium hip, I run heavy").
@@ -65,6 +70,48 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     .onConflictDoUpdate({
       target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
       set: withNote,
+    })
+    .returning();
+  return profile ?? null;
+}
+
+/**
+ * The diver's own words to the crew ("titanium hip, I run heavy"), saved on
+ * their own.
+ *
+ * The note used to be the last field of the rental-fit form, so it could only
+ * be written by a save that also carried every size and checkbox. It is its own
+ * question on `/ready` now (issue 627), and a diver answering it must not
+ * blank the sizes they set last week — so this writes the note column and the
+ * clock, and nothing else. The `optional()` trim means an emptied box clears
+ * the note rather than storing whitespace, which is the diver taking their
+ * words back.
+ *
+ * Same tenant proof as `saveRentalFit` above: a copied URL cannot write a note
+ * into another shop's record.
+ */
+export async function saveRentalFitNote(
+  db: AppDb,
+  input: { shopId: string; personId: string; note: string },
+) {
+  const [person] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!person) return null;
+
+  // `fitStatedAt` is conspicuously absent, and must stay absent: it is the one
+  // thing separating "this diver stated a fit" from "this row exists because
+  // they left a note". Setting it here would put six unasked-for pieces on the
+  // boat's packing list (schema.ts, `fit_stated_at`).
+  const values = { note: optional(input.note), updatedAt: nowDate() };
+  const [profile] = await db
+    .insert(rentalFitProfiles)
+    .values({ shopId: input.shopId, personId: input.personId, ...values })
+    .onConflictDoUpdate({
+      target: [rentalFitProfiles.shopId, rentalFitProfiles.personId],
+      set: values,
     })
     .returning();
   return profile ?? null;
@@ -135,6 +182,12 @@ export type DiverRentalFit = {
   weightPreference: string | null;
   /** The diver's own words to the crew — theirs to read and rewrite. */
   note: string | null;
+  /**
+   * Null when this row exists only to hold the note above, so the diver has
+   * never actually answered the gear question. `/ready` reads it to decide
+   * whether its "Gear and setup" row is done.
+   */
+  fitStatedAt: Date | null;
 };
 
 export function toDiverRentalFit(
@@ -155,6 +208,7 @@ export function toDiverRentalFit(
     finSize: profile.finSize,
     weightPreference: profile.weightPreference,
     note: profile.note,
+    fitStatedAt: profile.fitStatedAt,
   };
 }
 

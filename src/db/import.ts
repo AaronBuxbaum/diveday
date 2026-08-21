@@ -585,6 +585,12 @@ async function writeEvidence(
       ...(row.sizes.wetsuitSize ? { wetsuitSize: row.sizes.wetsuitSize } : {}),
       ...(row.sizes.bootSize ? { bootSize: row.sizes.bootSize } : {}),
       ...(row.sizes.finSize ? { finSize: row.sizes.finSize } : {}),
+      // A size arriving from the shop's old system *is* a stated fit — this is
+      // the column that separates a real fit from a row holding only the
+      // diver's note (schema.ts, `rental_fit_profiles.fit_stated_at`). Without
+      // it every imported diver would land as "nobody asked" and drop off the
+      // packing list, which is the opposite of what an import is for.
+      fitStatedAt: now,
     };
     await tx
       .insert(rentalFitProfiles)

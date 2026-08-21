@@ -503,18 +503,10 @@
     "namelessFallback": "buceador",
     "allSetHeading": "Lo tienes todo listo",
     "allSetBody": "El centro está terminando las últimas revisiones — ahora mismo no tienes que hacer nada.",
-    "emergencyContact": "Contacto de emergencia",
-    "emergencyContactBody": "Alguien a quien podamos llamar por ti ese día: un nombre y un teléfono al que llame la tripulación.",
-    "contactName": "Nombre del contacto",
-    "contactPhone": "Teléfono del contacto",
-    "saveContact": "Guardar contacto",
     "openingPayment": "Abriendo el pago…",
     "cancelledHeading": "Esta reserva se canceló",
     "unavailableHeading": "Este enlace de preparación no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
-    "contactSaved": "Contacto de emergencia guardado — gracias.",
-    "contactIncomplete": "Necesitamos un nombre y un teléfono para que la tripulación pueda localizar a alguien.",
-    "contactTooLong": "Ese nombre o teléfono es demasiado largo — prueba con una versión más corta.",
     "paymentReceived": "Pago recibido — lo estamos confirmando con tu centro. No tienes que hacer nada más.",
     "waiverUnavailable": "No hemos podido abrir tu exención ahora mismo. Inténtalo otra vez o pide un enlace al centro.",
     "paymentUnavailable": "No hemos podido abrir la página de pago. Tu plaza está a salvo — inténtalo otra vez o paga en el centro.",
@@ -533,6 +525,7 @@
     "stateDone": "Hecho",
     "stateAction": "Te toca",
     "stateWaiting": "En manos del centro",
+    "stateOptional": "Opcional",
     "opening": "Abriendo…",
     "signWaiver": "Firmar tu exención",
     "freshWaiverLink": "Conseguir un enlace nuevo",
@@ -576,7 +569,6 @@
       "paymentDone": "Pagado — gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada — comparte los datos de cada una y tu centro confirmará que estás listo."
     },
-    "emergencyOnFile": "Registrado — {name}.",
     "shopHeading": "Tu centro de buceo",
     "shopMapTitle": "Mapa de {shop}",
     "gearAndSetup": "Equipo y ajuste",
@@ -626,7 +618,11 @@
       "oneToFiveYears": "Hace entre uno y cinco años",
       "overFiveYears": "Hace más de cinco años",
       "never": "Todavía no he buceado"
-    }
+    },
+    "certMinimumLevel": "Esta salida es para {level} en adelante.",
+    "saveNote": "Guardar nota",
+    "noteSaved": "Guardado — la tripulación lo verá.",
+    "noteUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día."
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
@@ -777,8 +773,7 @@
       "bcd": "El chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
       "regulator": "La boquilla y la manguera que te dejan respirar aire de tu botella bajo el agua.",
       "nitrox": "Una mezcla respirable con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones."
-    },
-    "nitroxNeedsCard": "Añade arriba tu tarjeta de nitrox y la tripulación podrá apartarte un tanque de nitrox."
+    }
   },
   "party": {
     "numberOfDivers": "Número de buceadores",

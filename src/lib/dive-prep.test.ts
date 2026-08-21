@@ -42,6 +42,26 @@ function lineFor(
   return checklist.lines.find((line) => line.kind === kind && line.size === size);
 }
 
+describe("a note-only fit row", () => {
+  it("packs nothing and reads as not recorded on the roster", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Priya Sharma" }),
+        // Uma left a note on `/ready` and never opened the gear form.
+        diver({ bookingId: "b2", fullName: "Unasked Uma", fit: { ...fullFit, fitStatedAt: null } }),
+      ],
+      plannedDives: 1,
+    });
+
+    // One BCD, not two: Uma contributes no pieces at all.
+    expect(lineFor(checklist, "bcd", fullFit.bcdSize)).toMatchObject({ count: 1 });
+    expect(checklist.diverLines.find((line) => line.fullName === "Unasked Uma")).toMatchObject({
+      state: "not_recorded",
+      items: [],
+    });
+  });
+});
+
 describe("rented add-ons on the prep list", () => {
   it("packs a dive computer and a GoPro, unsized, only when rented", () => {
     const checklist = buildDivePrepChecklist({
@@ -426,6 +446,20 @@ describe("rentalFitLine", () => {
         rentsWeights: false,
       }),
     ).toEqual({ state: "own_kit" });
+  });
+
+  it("reads a row that carries only the diver's note as nobody asked", () => {
+    // `rental_fit_profiles` gained a second writer in issue 627 — the diver's
+    // free-text note, saved on its own. Every `rents_*` column defaults to
+    // true, so without `fitStatedAt` a diver who typed one sentence and nothing
+    // else would arrive on the packing list renting a full kit in no size.
+    expect(rentalFitLine({ ...fullFit, fitStatedAt: null })).toEqual({ state: "not_recorded" });
+  });
+
+  it("keeps a hand-built fit on the list — only an explicit null means note-only", () => {
+    // The offline manifest snapshot and these tests build a `RentalFit` by
+    // hand; an absent `fitStatedAt` must not silently drop a real diver.
+    expect(rentalFitLine(fullFit)).toMatchObject({ state: "rents" });
   });
 
   it("reads a flagged diver as an open job, not a size to hand over", () => {
