@@ -2,11 +2,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { createBookingParty } from "./bookings";
 import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "./closeout";
 import { addCrewRecapPhoto } from "./recap";
+import { listShopReviewsForStaff, submitTripReview } from "./reviews";
 import { bookings as bookingsTable, people, rollCallEvents, trips as tripsTable } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
-import { listStaff } from "./trips";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -241,5 +243,38 @@ describe("day close-out (in-memory PGlite)", () => {
         decisions: {},
       }),
     ).rejects.toThrow(/not a person of this shop/);
+  });
+
+  it("carries Today's deep-linked reviews row into the leftovers unchanged", async () => {
+    // Close-out renders the Today queue verbatim, so the one waiting review's
+    // anchor has to survive the trip — the evening reader gets the same door
+    // the morning one did, not the top of the index.
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Reviewing Diver",
+        email: "closeout-review@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const submitted = await submitTripReview(db, {
+      bookingId: party.bookings[0].bookingId,
+      rating: 5,
+      comment: "Crew were superb",
+    });
+    if (!submitted.ok) throw new Error(`review refused: ${submitted.reason}`);
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+
+    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
+    const rows = state.leftovers.filter((action) => action.id === "reviews:pending");
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.href).toBe(`/shop/${shop.slug}/reviews#review-${review.id}`);
   });
 });

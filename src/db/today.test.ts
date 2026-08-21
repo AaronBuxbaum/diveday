@@ -7,7 +7,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { groupActions } from "@/lib/today";
 import { dbNowPlus, seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
-import { cancelBooking } from "./bookings";
+import { cancelBooking, createBookingParty } from "./bookings";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
@@ -17,6 +17,7 @@ import { recordNotificationDelivery } from "./notifications";
 import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { saveRentalFit } from "./rental-fit";
+import { submitTripReview } from "./reviews";
 import {
   bookings as bookingsTable,
   courses,
@@ -25,6 +26,7 @@ import {
   rollCallCrewEvents as rollCallCrewEventsTable,
   rollCallEvents as rollCallEventsTable,
   tripAssignments,
+  tripReviews,
   trips as tripsTable,
   tripWaitlistEntries,
 } from "./schema";
@@ -2008,6 +2010,94 @@ describe("unclosed roll call (DOM-H3)", () => {
         shop.timezone,
       );
       expect(otherWork.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
+    });
+  });
+});
+
+describe("reviews waiting on moderation (one row, and where it lands)", () => {
+  /**
+   * Seats `names` on the demo reef trip and leaves each of them a review
+   * carrying words — words are what holds a review for staff to read
+   * (`submitTripReview`), so this is the queue row's own premise.
+   */
+  async function shopWithReviewsWaiting(names: readonly string[]) {
+    const { db, shop } = await seededShopContext();
+    const reviewIds: string[] = [];
+    if (names.length === 0) return { db, shop, reviewIds };
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find(
+      (trip) =>
+        trip.title.startsWith("Two-Tank Reef — Molasses") &&
+        trip.capacity - trip.booked >= names.length,
+    );
+    if (!reef) throw new Error("demo reef trip missing");
+    const party = await createBookingParty(
+      db,
+      names.map((fullName, index) => ({
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName,
+        email: `today-review-${index}@example.com`,
+      })),
+    );
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    for (const [index, seat] of party.bookings.entries()) {
+      const result = await submitTripReview(db, {
+        bookingId: seat.bookingId,
+        rating: 5,
+        comment: `Superb dive ${index + 1}`,
+      });
+      if (!result.ok) throw new Error(`review refused: ${result.reason}`);
+      if (result.published) throw new Error("expected a review held for moderation");
+      const [row] = await db
+        .select({ id: tripReviews.id })
+        .from(tripReviews)
+        .where(eq(tripReviews.bookingId, seat.bookingId));
+      if (!row) throw new Error("review row missing");
+      reviewIds.push(row.id);
+    }
+    return { db, shop, reviewIds };
+  }
+
+  it("emits no row at all when nothing is waiting", async () => {
+    const { db, shop } = await shopWithReviewsWaiting([]);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(work.actions.some((action) => action.id === "reviews:pending")).toBe(false);
+  });
+
+  it("lands on the one waiting review's own anchor when it is the only one", async () => {
+    const { db, shop, reviewIds } = await shopWithReviewsWaiting(["Reviewing Diver"]);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const rows = work.actions.filter((action) => action.id === "reviews:pending");
+
+    // Still one row — the destination sharpens, the queue never grows.
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "reviews_pending",
+      urgency: "later",
+      dueAt: null,
+      // `review-<id>` is the reviews list's own row anchor, the same fragment a
+      // refused hide already redirects back to.
+      href: `/shop/${shop.slug}/reviews#review-${reviewIds[0]}`,
+    });
+  });
+
+  it("keeps the bare index once there is no single review to mean", async () => {
+    const { db, shop } = await shopWithReviewsWaiting(["First Diver", "Second Diver"]);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const rows = work.actions.filter((action) => action.id === "reviews:pending");
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "reviews_pending",
+      urgency: "later",
+      dueAt: null,
+      href: `/shop/${shop.slug}/reviews`,
     });
   });
 });

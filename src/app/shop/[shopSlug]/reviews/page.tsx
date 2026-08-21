@@ -349,7 +349,10 @@ export default async function ReviewsPage({
                 <li
                   key={review.id}
                   // A refused hide comes back with `#review-<id>`, so the row
-                  // that argued is the one the browser lands on.
+                  // that argued is the one the browser lands on. Today's
+                  // `reviews:pending` row aims at the same fragment when it is
+                  // the only review waiting (`src/db/today.ts`), so this
+                  // spelling is a contract with two callers, not one.
                   // Published five-star rows carry the earned-moment tone, so
                   // this dynamic list row is not a neutral SectionCard.
                   id={`review-${review.id}`}
