@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
@@ -29,6 +29,7 @@ export function DetailsSection({
   dayCount,
   locale,
   currency,
+  warnNoPrice = true,
 }: {
   action: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Save button rather than at the top of the page. */
@@ -43,6 +44,11 @@ export function DetailsSection({
   locale: string;
   /** The shop's currency — what the numbers in these price boxes mean. */
   currency: string;
+  /**
+   * Whether a missing price is worth warning about — false on a cancelled
+   * departure, whose booking page isn't selling anything.
+   */
+  warnNoPrice?: boolean;
 }) {
   const t = staffTranslator(locale);
   // Both price boxes follow the shop's currency: whole-number entry and a
@@ -74,15 +80,17 @@ export function DetailsSection({
     // Anchor target for the builder's "No price set" flag (task 150, UX
     // persona lens 17) — a builder-created trip publishes with no price and
     // no warning; this is where staff land to fix it.
-    <section id="details" className="mt-10 scroll-mt-24">
-      <h2 className="text-lg font-semibold">{t("trips.details.heading")}</h2>
-      {trip.description ? (
-        <p className="mt-1 max-w-2xl text-sm text-muted">{trip.description}</p>
-      ) : null}
+    <SectionCard
+      id="details"
+      padding="lg"
+      title={t("trips.details.heading")}
+      className="scroll-mt-24"
+    >
+      {trip.description ? <p className="max-w-2xl text-sm text-muted">{trip.description}</p> : null}
       {/* The missing price is a problem and wears warning ink alone; settled
           facts (deposit, cancellation window) stay muted rather than
           inheriting the alarm. */}
-      {trip.priceCents === null ? (
+      {trip.priceCents === null && warnNoPrice ? (
         <p className="mt-1 text-sm font-medium text-warning-strong">
           {t("trips.details.summaryNoPrice")}
         </p>
@@ -225,7 +233,10 @@ export function DetailsSection({
               />
             </Field>
           </FieldGrid>
-          <fieldset className={sectionCardClass({ padding: "lg" })}>
+          {/* A sunken inset, not a second card: this group sits *inside* the
+              Details card, and surface never stacks on surface (see
+              SectionCard's "what is not a section card"). */}
+          <fieldset className="rounded-xl bg-surface-sunken p-4 sm:p-5">
             <legend className="px-1 text-sm font-medium">
               {t("trips.details.payAtBookingLegend")}
             </legend>
@@ -315,6 +326,6 @@ export function DetailsSection({
           </div>
         </form>
       </EditDisclosure>
-    </section>
+    </SectionCard>
   );
 }

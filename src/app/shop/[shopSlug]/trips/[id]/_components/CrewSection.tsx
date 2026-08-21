@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
@@ -181,29 +181,36 @@ export function CrewSection({
   };
 
   return (
-    <section id="crew" className="mt-10 scroll-mt-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="text-lg font-semibold">{copy.heading}</h2>
+    <SectionCard
+      id="crew"
+      padding="lg"
+      title={copy.heading}
+      // `scroll-mt-24`, the family convention (DetailsSection, RosterSection):
+      // the shop header is sticky, so anything shallower parks an anchored
+      // heading underneath it — and the pulse's "needs an instructor" fact
+      // links straight to #crew.
+      className="scroll-mt-24"
+      actions={
         <Link
           href={`/shop/${shopSlug}/staffing`}
           className="text-sm font-medium text-primary hover:underline"
         >
           {copy.manageShifts}
         </Link>
-      </div>
-
+      }
+    >
       {crewGapCode === "no_instructor" ? (
-        <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="mb-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.courseNeedsInstructor}
         </p>
       ) : null}
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
-        <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="mb-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.overRatioWarning}
         </p>
       ) : null}
       {copy.underTargetNote ? (
-        <p className="mt-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
+        <p className="mb-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
           {copy.underTargetNote}
         </p>
       ) : null}
@@ -211,11 +218,11 @@ export function CrewSection({
       {staff.length === 0 ? (
         // The shared empty-section grammar, not a bare paragraph
         // (design/principles.md #4).
-        <EmptyState className="mt-4">
+        <EmptyState>
           <p className="text-sm text-muted">{copy.noStaff}</p>
         </EmptyState>
       ) : (
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           {hasUnassignedStaff ? (
             // The select's own placeholder option already says "Assign crew…",
             // so a visible caption beside it said the same thing twice
@@ -262,9 +269,10 @@ export function CrewSection({
               <p className="text-sm text-muted">{copy.notAssignedYet}</p>
             </EmptyState>
           ) : (
-            <ul
-              className={sectionCardClass({ padding: "none", className: "divide-y divide-border" })}
-            >
+            // A sunken inset, not a card in a card — the roster is carved into
+            // the Crew card the way ShopStat's `inset` variant is (see
+            // SectionCard's "what is not a section card").
+            <ul className="divide-y divide-border rounded-xl bg-surface-sunken">
               {localCrew.map((entry) => (
                 <li
                   key={entry.id}
@@ -272,7 +280,11 @@ export function CrewSection({
                 >
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{entry.fullName}</span>
-                    <span className="text-muted">{entry.roles.join(", ")}</span>
+                    {/* No shop-role echo beside the name: the trip-role select
+                        on the same row is the operative fact once someone is
+                        aboard, and "divemaster … [Divemaster ▾]" said it twice
+                        (principle 9). The assign menu lists bare names, the
+                        same grammar as Today's departure board. */}
                     {/* Badge only for the exceptional state: at a shop that
                         schedules shifts, a normal day has every crew member on
                         one, and a green pill per row is the expected state
@@ -350,6 +362,6 @@ export function CrewSection({
           <FormStatus tone="danger">{assignError ? copy.assignFailed : null}</FormStatus>
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

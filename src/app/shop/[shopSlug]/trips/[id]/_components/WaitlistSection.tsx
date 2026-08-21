@@ -70,7 +70,7 @@ export function WaitlistSection({
     emailBody: t.raw("trips.waitlist.emailBody"),
   };
   return (
-    <section id="waitlist" className="mt-10 scroll-mt-6">
+    <section id="waitlist" className="mt-10 scroll-mt-24">
       <h2 className="text-lg font-semibold">
         {t("trips.waitlist.heading")}{" "}
         <span className="font-normal text-muted tabular-nums">{waitlist.length}</span>
