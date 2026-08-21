@@ -60,7 +60,7 @@ import {
   type DiverChecklistItem,
   nextDiverStep,
 } from "@/lib/readiness-summary";
-import { nitroxAvailableOn } from "@/lib/rentals";
+import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -382,7 +382,10 @@ function CertificationEntries({
   offerNitrox: boolean;
   t: DiverTranslator;
 }) {
-  let nitroxRequired = false;
+  // Derived first, in its own pass: this used to be a flag set from inside the
+  // `flatMap` below, which made whether the optional offer renders depend on a
+  // side effect of building an unrelated array.
+  const nitroxRequired = item.actionable.some((blocker) => NITROX_ENTRY_CODES.has(blocker.code));
   const forms = item.actionable.flatMap((blocker) => {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
       return [<CertificationEntry key={blocker.code} token={token} t={t} />];
@@ -398,7 +401,6 @@ function CertificationEntries({
       ];
     }
     if (NITROX_ENTRY_CODES.has(blocker.code)) {
-      nitroxRequired = true;
       return [<NitroxEntry key={blocker.code} token={token} t={t} />];
     }
     return [];
@@ -1062,27 +1064,26 @@ export default async function DiverReadinessPage({
   // once, whatever they answered. "Bringing my own" is a complete answer, so
   // this asks whether the row was filled in, never whether anything was rented.
   const hasRentalFit = Boolean(data.rentalFit);
+  // Whether to ask for a nitrox card nothing has asked for yet — the rule
+  // itself lives in `src/lib/rentals.ts` beside `nitroxAvailableOn`, because
+  // the card disclosure below and the rental form's request lock are two
+  // surfaces that must answer it identically.
+  const offerNitroxCard = nitroxCardWanted(shop.rentalItems, data.trip.course, {
+    verified: data.nitroxCardVerified,
+    onFile: data.nitroxCardOnFile,
+  });
   /**
-   * Offer a nitrox card the trip has not asked for.
+   * ...and whether this page can actually make that offer.
    *
-   * Two conditions, and both matter. The shop must be able to fill enriched air
-   * on *this* departure (`nitroxAvailableOn` — the same two-part gate the
-   * request box uses, so the offer and the box can never disagree), and nothing
-   * may be on file yet: a card already sitting with the shop is answered, and
-   * re-asking is the ask-and-discard failure ADR 20260814-self-declared-cards
-   * was written against.
+   * The disclosure lives inside the certification row, so it can only be
+   * rendered on a page that has one. A departure gating on nothing at all has
+   * no such row — and rather than grow a second place for a card to go, the
+   * request box stays unlocked there, exactly as it was before this rework.
    *
-   * This is also what makes the locked request box honest — the box points at a
-   * control, so the control has to be there.
+   * This single boolean is what `RentalFitForm` locks on. It holds no copy of
+   * the rule above: the form is told whether the control it would point at
+   * exists, so the lock and the offer cannot disagree.
    */
-  const offerNitroxCard =
-    nitroxAvailableOn(shop.rentalItems, data.trip.course) &&
-    !data.nitroxCardVerified &&
-    !data.nitroxCardOnFile;
-  // The offer lives inside the certification row, so it can only be made on a
-  // page that renders one. A departure gating on nothing at all has no such row
-  // — and rather than grow a second place for a card to go, the request box
-  // stays unlocked there, exactly as it was before this rework.
   const nitroxCardEntryOffered =
     offerNitroxCard && items.some((item) => item.category === "certification");
   // The emergency-contact and gear rows are rendered as their own

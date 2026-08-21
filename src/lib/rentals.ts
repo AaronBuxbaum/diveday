@@ -178,6 +178,36 @@ export function nitroxAvailableOn(
 }
 
 /**
+ * Whether to ask this diver for a nitrox card they have not been asked for yet.
+ *
+ * **The one place this rule is written**, because two surfaces read it and the
+ * answer has to be the same on both: `/ready` renders the card disclosure in
+ * its certification checklist when this is true, and the rental form locks its
+ * "I'd like nitrox" box on the same answer. Were they to drift, the page would
+ * either lock a request with nowhere to file the card that unlocks it, or offer
+ * a card nothing was waiting for.
+ *
+ * Two conditions. The shop must be able to fill enriched air on *this*
+ * departure — `nitroxAvailableOn`, so the ask and the request box are gated
+ * alike — and nothing may be on file yet. `onFile` is deliberately "a live card
+ * exists, sighted or not": a card already sitting with the shop is answered,
+ * and asking again is the ask-and-discard failure ADR
+ * 20260814-self-declared-cards was written against, where a diver types their
+ * number, saves, and is shown the same empty boxes because the row landed
+ * `pending` rather than `verified`.
+ *
+ * This decides what to *ask for*, never what a tank gets. `authorizesNitroxFill`
+ * (src/db/nitrox.ts) reads `verified` and is not this function's business.
+ */
+export function nitroxCardWanted(
+  rentalItems: readonly string[],
+  course: { nitroxCompatible: boolean } | null | undefined,
+  card: { verified: boolean; onFile: boolean },
+): boolean {
+  return nitroxAvailableOn(rentalItems, course) && !card.verified && !card.onFile;
+}
+
+/**
  * The pieces of a fit that have a **size to record**, in canonical order.
  *
  * `regulator`, `dive_computer` and `gopro` are deliberately absent: they are

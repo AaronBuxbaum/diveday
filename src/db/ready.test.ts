@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { cancelBooking, createBooking } from "./bookings";
+import { cancelBooking } from "./bookings";
 import { getReadyPageData } from "./ready";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
@@ -11,26 +11,6 @@ async function seededBooking() {
   const [entry] = await getTripRoster(db, shop.id, trip.id);
   if (!entry) throw new Error("demo booking missing");
   return { db, shop, trip, booking: entry.booking, person: entry.person };
-}
-
-const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
-
-/** A fresh unpaid booking on the seeded "open" reef trip. */
-async function _unpaidBooking() {
-  const { db, shop } = await seededShopContext();
-  const trips = await upcomingTripsWithCounts(db, shop.id);
-  const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
-  const fullTrip = trips.find((t) => t.title === "Wreck Trip — Spiegel Grove");
-  const night = trips.find((t) => t.title.startsWith("Night Dive"));
-  if (!open || !fullTrip || !night) throw new Error("expected seeded trips missing");
-  const booked = await createBooking(db, {
-    actor: "staff",
-    shopId: shop.id,
-    tripId: open.id,
-    ...visitor,
-  });
-  if (!booked.ok) throw new Error("setup booking failed");
-  return { db, shop, open, fullTrip, night, bookingId: booked.bookingId };
 }
 
 describe("getReadyPageData", () => {

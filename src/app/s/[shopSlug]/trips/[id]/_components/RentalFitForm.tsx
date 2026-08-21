@@ -98,10 +98,14 @@ export function RentalFitForm({
   nitroxCardOnFile?: boolean;
   /**
    * The page is offering a nitrox card disclosure in the certification
-   * checklist above this row — i.e. the shop can fill nitrox on this departure
-   * and nothing is on file yet. That, and only that, is what locks the request
+   * checklist above this row. That, and only that, is what locks the request
    * box below: the pointer copy names a control the diver can actually see, so
    * it must not render on a page that isn't showing one.
+   *
+   * **A decision, not a rule to re-derive.** The rule behind it is
+   * `nitroxCardWanted` (src/lib/rentals.ts), evaluated once by the page; this
+   * component deliberately keeps no copy of it, so the lock and the offer
+   * cannot drift into disagreeing about whether a card is wanted.
    */
   nitroxCardEntryOffered?: boolean;
   plannedDives: number;
