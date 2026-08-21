@@ -133,7 +133,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
 in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **i18n-copy**,
 **copy-restraint**, **design-review**, **brand-voice**, **schema-change**, **debug**, **instant-navigation**,
-**e2e-and-visual**, **visual-triage**, **adr**,
+**e2e-and-visual**, **visual-triage**, **adr**, **stacked-prs**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
 Other providers
 should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical
@@ -170,6 +170,16 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - Do not use branch-local reservation ledgers: other pending branches cannot see them.
 - Split work by vertical slice or non-overlapping paths. Trial-merge the target branch before calling
   work complete.
+- **A chain whose steps depend on each other is a stack, not one fat PR and not a serialized wait.**
+  Where step 2 cannot compile or be read without step 1 (`src/db/schema.ts` + migration → the
+  `src/db` reader → the surface), cut each branch from the one below and open each PR with its
+  `base` set to that branch, bottom one first, every body naming its position and the branch beneath
+  it. A human then registers the chain as a GitHub stack (`gh stack link <prs>`) for the cascading
+  rebase and the bottom-up atomic merge — `gh` is absent from the remote execution environment and
+  the GitHub MCP surface has no stack endpoints, so a session builds the shape and says which
+  numbers to link. This is for genuinely dependent work only: every layer pays the full CI gate, and
+  pays it again above every rebase. See the **stacked-prs** skill and ADR
+  20260821-stacked-pull-requests.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same
   spec or test name. Two sessions independently patching the same broken test race each other and
   produce conflicting fixes. If one is already in flight, coordinate in that PR's thread instead

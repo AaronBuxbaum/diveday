@@ -65,6 +65,13 @@ means a conflict rather than a collision. Both are the same declaration AGENTS.m
 in a draft PR description; the claim just makes it at the moment work starts, which is when the
 next session needs it.
 
+**A stack gets one claim, not one per layer.** Where the work is a dependent chain opened as
+stacked pull requests (AGENTS.md's *Parallel work*, the `stacked-prs` skill), `Branch:` is the
+**bottom** branch and the comment names the layers you intend to open, bottom to top. `pnpm gates`
+verifies the branch it is given, so naming the bottom one keeps the claim checkable from the moment
+the first layer exists — and three half-pushed branches in no stated order is the state this
+convention is built to prevent.
+
 **Clear it when you are done.** Remove the label when the PR merges, or when you stop. A claim you
 abandon without clearing is the failure mode this is built around, which is why it is checkable
 rather than trusted.
