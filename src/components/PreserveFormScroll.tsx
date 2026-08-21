@@ -6,6 +6,25 @@ import { Suspense, useEffect, useLayoutEffect } from "react";
 const storageKey = "diveday:form-scroll";
 
 /**
+ * The page identity this component stores, as a number rather than the path
+ * itself. One of the three surfaces that mount this is `/ready/<token>`, whose
+ * *pathname is the credential*
+ * (docs/engineering/capability-telemetry-runbook.md) — and the only question
+ * ever asked of the stored value is "is this the page I submitted from?",
+ * which a hash answers exactly as well. djb2, not a crypto digest: this runs
+ * inside a `useLayoutEffect` that must read and act in the same frame, so the
+ * async web-crypto API is unavailable to it, and there is nothing to defend
+ * against beyond leaving a live capability sitting in storage.
+ */
+function pageKey(pathname: string): number {
+  let hash = 5381;
+  for (let i = 0; i < pathname.length; i += 1) {
+    hash = ((hash << 5) + hash + pathname.charCodeAt(i)) | 0;
+  }
+  return hash;
+}
+
+/**
  * Server-action redirects refresh the current route, which normally puts the
  * viewport back at the top. Remember the viewport for same-page form actions;
  * true navigations naturally ignore the record because their path changes.
@@ -35,7 +54,10 @@ function PreserveFormScrollEffects() {
     function rememberPosition(event: SubmitEvent) {
       const form = event.target;
       if (!(form instanceof HTMLFormElement) || form.dataset.scrollReset === "true") return;
-      sessionStorage.setItem(storageKey, JSON.stringify({ pathname, y: window.scrollY }));
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({ page: pageKey(pathname), y: window.scrollY }),
+      );
     }
 
     document.addEventListener("submit", rememberPosition);
@@ -58,8 +80,8 @@ function PreserveFormScrollEffects() {
       return;
     }
     if (typeof position !== "object" || position === null) return;
-    const { pathname: savedPathname, y } = position as { pathname?: unknown; y?: unknown };
-    if (savedPathname === pathname && typeof y === "number") {
+    const { page, y } = position as { page?: unknown; y?: unknown };
+    if (page === pageKey(pathname) && typeof y === "number") {
       requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "instant" }));
     }
   }, [pathname, searchParams]);

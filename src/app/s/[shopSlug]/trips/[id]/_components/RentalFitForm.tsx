@@ -4,11 +4,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
-import { DIVER_CERTIFICATION_AGENCY_KEYS } from "@/i18n/readiness-labels";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
@@ -22,17 +20,6 @@ import {
 import type { RentalFit } from "./types";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-
-/**
- * The agencies the nitrox card question offers, derived from the one diver-facing
- * agency map rather than from `certificationAgency.enumValues` — this is a
- * Client Component, and importing the schema to read an enum would pull drizzle
- * into a diver's browser bundle. The server action validates against the real
- * enum, so a hand-crafted value is refused there rather than trusted here.
- */
-const NITROX_AGENCIES = Object.keys(
-  DIVER_CERTIFICATION_AGENCY_KEYS,
-) as (keyof typeof DIVER_CERTIFICATION_AGENCY_KEYS)[];
 
 /**
  * `src/lib/rentals.ts` returns item codes, never rendered words (see the
@@ -65,12 +52,17 @@ export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMess
 };
 
 /**
- * The diver's rental-fit capture, reused by the booking confirmation and the
- * `/ready` page. The submit target is passed in as `action` so each surface
- * binds its own (page-scoped or token-scoped) server action. `rentalItems` is
- * the shop's catalog: a diver is only offered gear the shop actually rents, and
- * a size field only appears for an item on offer. `pricing` is the shop's price
- * list; when a shop prices nothing the form keeps the "ask the shop" behaviour.
+ * The diver's rental-fit capture — the action of `/ready`'s "Gear and setup"
+ * checklist row. The submit target is passed in as `action` so the surface
+ * binds its own token-scoped server action. `rentalItems` is the shop's
+ * catalog: a diver is only offered gear the shop actually rents, and a size
+ * field only appears for an item on offer. `pricing` is the shop's price list;
+ * when a shop prices nothing the form keeps the "ask the shop" behaviour.
+ *
+ * **It renders no heading and no card of its own.** The checklist row it is the
+ * action of already names it and carries the shell — a `<SectionCard>` here
+ * would put a second title ("Rental fit") under the row's own "Gear and setup"
+ * and a surface inside a surface.
  */
 export function RentalFitForm({
   action,
@@ -81,6 +73,7 @@ export function RentalFitForm({
   wantsNitrox,
   nitroxCardVerified,
   nitroxCardOnFile = false,
+  nitroxCardEntryOffered = false,
   plannedDives,
   saved,
   currency,
@@ -98,11 +91,19 @@ export function RentalFitForm({
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
   /**
-   * A live nitrox card exists for this diver, sighted or not. Decides only
-   * whether this form still asks for a number — never whether a tank gets
-   * enriched air, which stays `authorizesNitroxFill`.
+   * A live nitrox card exists for this diver, sighted or not. Decides only what
+   * this form says about the request — never whether a tank gets enriched air,
+   * which stays `authorizesNitroxFill`.
    */
   nitroxCardOnFile?: boolean;
+  /**
+   * The page is offering a nitrox card disclosure in the certification
+   * checklist above this row — i.e. the shop can fill nitrox on this departure
+   * and nothing is on file yet. That, and only that, is what locks the request
+   * box below: the pointer copy names a control the diver can actually see, so
+   * it must not render on a page that isn't showing one.
+   */
+  nitroxCardEntryOffered?: boolean;
   plannedDives: number;
   saved: boolean;
   /**
@@ -140,6 +141,19 @@ export function RentalFitForm({
   const isConfirmed = rentedKinds.size > 0 && bcdOk && wetsuitOk;
 
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
+  /**
+   * Asking for enriched air now starts with the card, not with this box: the
+   * request is locked until one is on file, and the certification checklist
+   * above is where it goes.
+   *
+   * `!wantsNitrox` is the half that matters. A disabled checkbox submits
+   * nothing, and `saveFitFromReady` writes the absence as `wantsNitrox: false`
+   * — so locking a diver who already *has* a live request (they asked on the
+   * booking form, which gates nothing) would erase it the next time they saved
+   * a note. The gate stops a new request going in without a card; it never
+   * traps or quietly drops one already on the trip.
+   */
+  const nitroxLocked = nitroxCardEntryOffered && !wantsNitrox;
   // Follow the controls, rather than the saved profile, so the estimate is
   // useful before a diver commits their changes. A shop that doesn't fill
   // nitrox never contributes it to the estimate, whatever a stale request flag says.
@@ -150,25 +164,13 @@ export function RentalFitForm({
     plannedDives,
   });
   return (
-    // `titleAs="h3"`: this form is rendered under a heading that already owns
-    // the `h2` on both surfaces it appears on — the booking confirmation and
-    // /ready's "Gear and setup" section.
-    //
-    // `elevated={false}` for the same reason, and it is not a preference: a
-    // rental fit reserves nothing (docs/product/glossary.md — DiveDay tracks no
-    // equipment inventory, so a fit is never evidence and never replaces the
-    // dock-side check), while the cards it sits beside carry things that
-    // actually gate a diver — /ready's readiness checklist above it, and the
-    // payment and waiver steps on the confirmation. Raised, this panel read as
-    // their peer, which put a green "sizes recorded" light at the same volume
-    // as a medical referral rendered one row above it in muted grey.
-    <SectionCard
-      className="mt-5 text-left"
-      titleAs="h3"
-      elevated={false}
-      title={t("rental.heading")}
-      description={t("rental.introBody")}
-    >
+    // No card and no elevation, and it is not a preference: a rental fit
+    // reserves nothing (docs/product/glossary.md — DiveDay tracks no equipment
+    // inventory, so a fit is never evidence and never replaces the dock-side
+    // check), while the checklist rows above it carry things that actually gate
+    // a diver. Raised, this panel read as their peer, which put a green "sizes
+    // recorded" light at the same volume as a medical referral one row up.
+    <div className="text-left">
       {/* Gear-Status Light-up Indicator */}
       <div
         data-testid="gear-status-indicator"
@@ -311,11 +313,16 @@ export function RentalFitForm({
                 detail={t("rental.jargonHints.nitrox")}
               />
             </legend>
-            <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
+            <label
+              className={`mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm ${
+                nitroxLocked ? "text-muted" : ""
+              }`}
+            >
               <input
                 name="nitrox"
                 type="checkbox"
-                checked={nitroxRequested}
+                checked={nitroxRequested && !nitroxLocked}
+                disabled={nitroxLocked}
                 onChange={(event) => setNitroxRequested(event.target.checked)}
                 className="size-4 accent-primary"
               />
@@ -327,61 +334,37 @@ export function RentalFitForm({
                   : t("rental.nitroxReserveNoPrice")}
               </span>
             </label>
-            {/* What the crew will do about *this* request — so it only has
-                something to say once the box is ticked. It used to greet every
-                diver who scrolled past the section with a paragraph about
-                analyzing tanks they hadn't asked for. */}
-            {nitroxRequested ? (
-              nitroxCardVerified ? (
-                <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
-              ) : nitroxCardOnFile ? (
-                // Already answered. Asking again would be the ask-and-discard
-                // failure ADR 20260814-self-declared-cards was written against
-                // — a diver types their card, saves, and is shown the same
-                // empty boxes because the row landed `pending` rather than
-                // `verified`.
-                <p className="mt-2 text-sm text-muted">{t("rental.nitroxCardOnFile")}</p>
-              ) : (
-                // **Ask for the card instead of explaining why we can't reserve
-                // one.** This used to be a paragraph telling the diver to
-                // "share the certification details with the shop" — a dead end
-                // on a page that could simply take them. Same contract as the
-                // rest of the product: the number is believed for planning and
-                // sighted before the dive (ADR
-                // 20260820-attested-at-booking-verified-at-boarding). Nothing
-                // typed here clears a fill; `authorizesNitroxFill` reads
-                // `verified`, which only a staffer can set.
-                <FieldGrid columns={2} className="mt-2">
-                  <Field label={t("rental.nitroxAgency")}>
-                    <select name="nitroxAgency" defaultValue="" className={controlClass}>
-                      <option value="">{t("rental.nitroxAgencyChoose")}</option>
-                      {NITROX_AGENCIES.map((agency) => (
-                        <option key={agency} value={agency}>
-                          {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label={t("rental.nitroxNumber")} hint={t("rental.nitroxNumberHint")}>
-                    <input
-                      name="nitroxIdentifier"
-                      maxLength={60}
-                      autoComplete="off"
-                      autoCapitalize="characters"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      className={controlClass}
-                    />
-                  </Field>
-                </FieldGrid>
-              )
-            ) : nitroxCardVerified ? null : (
-              <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerificationRequired")}</p>
-            )}
+            {/* The one line under the box, and only ever one. Locked, it says
+                where the card goes — the single sentence that makes a disabled
+                control honest rather than broken. Unlocked and ticked, it says
+                what the crew will then do. Unticked, it says nothing: this used
+                to greet every diver who scrolled past with a paragraph about
+                verification they had not asked about, which is the copy that
+                went with this rework. */}
+            {nitroxLocked || (nitroxRequested && !nitroxCardVerified && !nitroxCardOnFile) ? (
+              // Two states, one sentence, because the missing thing is the same
+              // one: the box is locked until a card arrives, and a request
+              // grandfathered in from the booking form has a ticked box with no
+              // card behind it. It names what to add and where, which is what
+              // makes a disabled control read as a step rather than a fault.
+              <p className="mt-2 text-sm text-muted">{t("rental.nitroxNeedsCard")}</p>
+            ) : nitroxRequested ? (
+              <p className="mt-2 text-sm text-muted">
+                {t(nitroxCardVerified ? "rental.nitroxVerifiedNote" : "rental.nitroxCardOnFile")}
+              </p>
+            ) : null}
           </fieldset>
         ) : null}
 
-        {offers.has("bcd") || offers.has("wetsuit") || offers.has("mask_fins") ? (
+        {/* `weights` rides in this grid rather than in a full-width row of its
+            own below: at two columns the three size fields leave a hole beside
+            the third, and "Usual weight setup" is the same shape of answer as
+            the fields it now sits with. On a phone the grid is one column and
+            the order is unchanged. */}
+        {offers.has("bcd") ||
+        offers.has("wetsuit") ||
+        offers.has("mask_fins") ||
+        offers.has("weights") ? (
           <FieldGrid columns={2}>
             {offers.has("bcd") ? (
               <Field label={t("rental.bcdSize")}>
@@ -425,20 +408,20 @@ export function RentalFitForm({
                 />
               </Field>
             ) : null}
+            {offers.has("weights") ? (
+              <Field label={t("rental.weightSetup")} hint={t("common.optional")}>
+                <input
+                  name="weightPreference"
+                  maxLength={80}
+                  defaultValue={rentalFit?.weightPreference ?? ""}
+                  placeholder={t("rental.weightPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            ) : null}
           </FieldGrid>
         ) : null}
         <FieldGrid columns={1}>
-          {offers.has("weights") ? (
-            <Field label={t("rental.weightSetup")} hint={t("common.optional")}>
-              <input
-                name="weightPreference"
-                maxLength={80}
-                defaultValue={rentalFit?.weightPreference ?? ""}
-                placeholder={t("rental.weightPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          ) : null}
           <Field label={t("rental.anythingElse")} hint={t("common.optional")}>
             <textarea
               name="note"
@@ -462,7 +445,7 @@ export function RentalFitForm({
           </SubmitButton>
         </div>
       </form>
-    </SectionCard>
+    </div>
   );
 }
 

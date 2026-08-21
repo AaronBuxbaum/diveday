@@ -139,8 +139,13 @@ describe("RentalFitForm nitrox gate", () => {
   });
 });
 
-describe("RentalFitForm nitrox card", () => {
-  function renderNitrox(props: { wantsNitrox: boolean; nitroxCardVerified: boolean }) {
+describe("RentalFitForm nitrox card gate", () => {
+  function renderNitrox(props: {
+    wantsNitrox: boolean;
+    nitroxCardVerified: boolean;
+    nitroxCardOnFile?: boolean;
+    nitroxCardEntryOffered?: boolean;
+  }) {
     renderDiver(
       <RentalFitForm
         action={mockAction}
@@ -156,29 +161,63 @@ describe("RentalFitForm nitrox card", () => {
     );
   }
 
-  it("asks for the card once the diver asks for nitrox", async () => {
-    // This replaced a paragraph telling the diver to "share the certification
-    // details with the shop" — an instruction on a page that could simply take
-    // them. Same contract as the booking gate: believed for planning, sighted
-    // before the dive.
+  it("never asks for the card here — it is a certification, and it is captured with the others", async () => {
+    // The two boxes this form used to grow when the request was ticked now live
+    // behind the "Add your nitrox card" disclosure in the certification
+    // checklist row, beside the level and specialty cards. Asking twice for one
+    // card is how a diver ends up filing it in the place the shop is not
+    // looking.
     const user = userEvent.setup();
-    renderNitrox({ wantsNitrox: false, nitroxCardVerified: false });
-    expect(screen.queryByLabelText(/nitrox card number/i)).not.toBeInTheDocument();
-
+    renderNitrox({
+      wantsNitrox: true,
+      nitroxCardVerified: false,
+      nitroxCardOnFile: true,
+    });
     await user.click(screen.getByRole("checkbox", { name: /nitrox/i }));
-    expect(screen.getByLabelText(/nitrox card number/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/nitrox agency/i)).toBeInTheDocument();
-  });
-
-  it("does not ask a diver whose card the shop has already sighted", () => {
-    renderNitrox({ wantsNitrox: true, nitroxCardVerified: true });
     expect(screen.queryByLabelText(/nitrox card number/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/nitrox agency/i)).not.toBeInTheDocument();
   });
 
-  it("leaves both fields optional, so wanting nitrox never needs a card to hand", () => {
-    renderNitrox({ wantsNitrox: true, nitroxCardVerified: false });
-    expect(screen.getByLabelText(/nitrox card number/i)).not.toBeRequired();
-    expect(screen.getByLabelText(/nitrox agency/i)).not.toBeRequired();
+  it("locks the request until a card is on file, and says where the card goes", () => {
+    renderNitrox({
+      wantsNitrox: false,
+      nitroxCardVerified: false,
+      nitroxCardEntryOffered: true,
+    });
+    expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeDisabled();
+    expect(screen.getByText(/add your nitrox card above/i)).toBeInTheDocument();
+  });
+
+  it("unlocks the request the moment a card is on file, sighted or not", () => {
+    renderNitrox({
+      wantsNitrox: false,
+      nitroxCardVerified: false,
+      nitroxCardOnFile: true,
+    });
+    expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeEnabled();
+  });
+
+  it("never locks a request the diver already has, so saving a note cannot erase it", () => {
+    // A disabled checkbox submits nothing, and `saveFitFromReady` writes that
+    // absence as `wantsNitrox: false` — so locking a live request would delete
+    // it the next time this form was saved for any other reason. The booking
+    // form gates nothing, which is exactly where such a request comes from.
+    renderNitrox({
+      wantsNitrox: true,
+      nitroxCardVerified: false,
+      nitroxCardEntryOffered: true,
+    });
+    const box = screen.getByRole("checkbox", { name: /nitrox/i });
+    expect(box).toBeEnabled();
+    expect(box).toBeChecked();
+  });
+
+  it("leaves the box alone on a page offering no card disclosure", () => {
+    // A departure that gates on nothing renders no certification row, so there
+    // is nowhere on the page for a card to go — and a locked box pointing at a
+    // control that is not there would be a dead end.
+    renderNitrox({ wantsNitrox: false, nitroxCardVerified: false });
+    expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeEnabled();
   });
 });
 

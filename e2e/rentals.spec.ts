@@ -23,9 +23,11 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Per-piece prices show next to the gear, and the default fit — every core
   // item including the dive computer, which is default-on and part of the set —
   // is estimated at the set price ($45.00).
+  // The rental form is the "Gear and setup" checklist row's action, so its own
+  // row is the scope — there is no longer a section of its own to select.
   const fit = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Rental fit" }) })
+    .locator("li")
+    .filter({ has: page.getByRole("heading", { name: "Gear and setup" }) })
     .filter({ visible: true });
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   // The set discount is *shown*, not just silently applied: the piece-by-piece

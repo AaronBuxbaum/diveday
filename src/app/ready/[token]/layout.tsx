@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 
@@ -25,10 +26,22 @@ import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-message
  * root layout's inline script has already corrected from `navigator.languages`.
  * Same answer, same source, no blocking read — see ADR
  * 20260804-instant-navigation.
+ *
+ * `PreserveFormScroll` rides along for the same structural reason: this page is
+ * a column of forms — a card, a contact, a rental fit — each of which saves
+ * through a server action that redirects back here, and a redirect puts the
+ * viewport at the top. Without it, saving a rental fit two thirds of the way
+ * down threw the diver back to the masthead with no sign the save had
+ * landed. The staff and public shop shells have mounted it since they were
+ * written; this route had no layout to mount it in until the error-boundary
+ * bridge above created one. It owns its own `<Suspense>` boundary (it reads
+ * URL data), so it costs this layout nothing and takes no static shell with
+ * it.
  */
 export default function ReadyTokenLayout({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
+      <PreserveFormScroll />
       {children}
     </ErrorBoundaryIntlProvider>
   );

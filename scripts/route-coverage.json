@@ -68,7 +68,6 @@
       "rentals.spec.ts",
       "returning-diver.spec.ts",
       "seat-claim.spec.ts",
-      "self-service-reschedule.spec.ts",
       "trip-admission.spec.ts"
     ],
     "visual": ["booking-confirmed", "party-organizer-confirmation", "readiness"]
@@ -101,7 +100,6 @@
       "schedule-embed.spec.ts",
       "schedule-filters.spec.ts",
       "schedule-trip.spec.ts",
-      "self-service-reschedule.spec.ts",
       "seo.spec.ts",
       "tenant-isolation.spec.ts",
       "trip-admission.spec.ts",
@@ -137,7 +135,6 @@
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
-      "self-service-reschedule.spec.ts",
       "trip-admission.spec.ts"
     ],
     "visual": ["booking-confirmed-embed", "site-briefing", "site-briefing-requirements"]
@@ -309,7 +306,6 @@
       "schedule-builder.spec.ts",
       "schedule-embed.spec.ts",
       "schedule-trip.spec.ts",
-      "self-service-reschedule.spec.ts",
       "tenant-isolation.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
