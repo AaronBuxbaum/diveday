@@ -214,17 +214,31 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
-  // The blocker now carries the form that answers it.
-  await expect(page.getByRole("heading", { name: "Add your certification" })).toBeVisible();
-  await page.getByLabel("Training agency").selectOption({ label: "PADI" });
-  await page.getByLabel("Level", { exact: true }).selectOption({ label: "Advanced Open Water" });
-  await page.getByLabel("Certification number").fill(cardNumber);
-  await page.getByRole("button", { name: "Add my certification" }).click();
+  // The blocker now carries the form that answers it — collapsed, because a
+  // diver short several cards gets one disclosure per card rather than a stack
+  // of open forms.
+  const cardEntry = page
+    .locator("details")
+    .filter({ has: page.getByText("Add your certification", { exact: true }) });
+  await expect(cardEntry).toBeVisible();
+  await expect(cardEntry.getByLabel("Certification number")).toBeHidden();
+
+  await cardEntry.getByText("Add your certification", { exact: true }).click();
+  await cardEntry.getByLabel("Training agency").selectOption({ label: "PADI" });
+  await cardEntry
+    .getByLabel("Level", { exact: true })
+    .selectOption({ label: "Advanced Open Water" });
+  await cardEntry.getByLabel("Certification number").fill(cardNumber);
+  await cardEntry.getByRole("button", { name: "Add my certification" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Certification added" })).toBeVisible();
 
   // Capture, never clearance: the row must not report itself as cleared, and
   // the same number typed again is recognised rather than refused.
-  await expect(page.getByRole("heading", { name: "Add your certification" })).toHaveCount(0);
+  await expect(
+    page
+      .locator("details")
+      .filter({ has: page.getByText("Add your certification", { exact: true }) }),
+  ).toHaveCount(0);
 
   // Staff find it waiting for review on the diver's own record, and verify it.
   await signInAsOwner(page);

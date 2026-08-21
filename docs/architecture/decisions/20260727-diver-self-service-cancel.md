@@ -1,6 +1,6 @@
 # 20260727-diver-self-service-cancel — Diver self-service cancel/reschedule
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260820-shop-handles-plan-changes
 - **Date:** 2026-07-27
 
 ## Context

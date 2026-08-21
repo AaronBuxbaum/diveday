@@ -4,6 +4,7 @@ import {
   EMPTY_RENTAL_PRICING,
   hasAnyRentalPricing,
   nitroxAvailableOn,
+  nitroxCardWanted,
   offeredRentableItems,
   quoteRentalFit,
   RENTABLE_ITEMS,
@@ -112,6 +113,38 @@ describe("nitrox catalog", () => {
     // row — the two gates are an AND in that direction too.
     expect(nitroxAvailableOn(["bcd"], { nitroxCompatible: true })).toBe(false);
     expect(nitroxAvailableOn([], null)).toBe(false);
+  });
+});
+
+/**
+ * The rule `/ready` reads twice — once to render the card disclosure in its
+ * certification checklist, once (through one boolean prop) to lock the rental
+ * form's request box. It lives here so those two can never answer it
+ * differently.
+ */
+describe("nitroxCardWanted", () => {
+  const noCard = { verified: false, onFile: false };
+
+  it("asks a diver with no card on a departure the shop can fill", () => {
+    expect(nitroxCardWanted(["bcd", "nitrox"], null, noCard)).toBe(true);
+    expect(nitroxCardWanted(["bcd", "nitrox"], { nitroxCompatible: true }, noCard)).toBe(true);
+  });
+
+  it("inherits both halves of the availability gate", () => {
+    // Nothing to ask for where nothing can be filled: a shop off the gas, and
+    // a course taught on air at a shop that fills it all day.
+    expect(nitroxCardWanted(["bcd"], null, noCard)).toBe(false);
+    expect(nitroxCardWanted(["bcd", "nitrox"], { nitroxCompatible: false }, noCard)).toBe(false);
+  });
+
+  it("stops asking once a card is on file, sighted or not", () => {
+    // `onFile` is the half that matters here. A card the diver typed lands
+    // `pending`, and re-showing the same empty boxes after they saved it is
+    // the ask-and-discard failure ADR 20260814-self-declared-cards names.
+    const fills = ["bcd", "nitrox"];
+    expect(nitroxCardWanted(fills, null, { verified: false, onFile: true })).toBe(false);
+    expect(nitroxCardWanted(fills, null, { verified: true, onFile: false })).toBe(false);
+    expect(nitroxCardWanted(fills, null, { verified: true, onFile: true })).toBe(false);
   });
 });
 

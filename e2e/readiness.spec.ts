@@ -45,7 +45,9 @@ test.describe("staff-prepared trip", () => {
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Emergency contact" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Rental fit" })).toBeVisible();
+    // Gear is a checklist row like the rest now, not a section under its own
+    // heading further down the page.
+    await expect(page.getByRole("heading", { name: "Gear and setup" })).toBeVisible();
 
     // The emergency contact is transactional now — the diver fills it in place.
     await page.getByLabel("Contact name").fill("Coral Quinn");

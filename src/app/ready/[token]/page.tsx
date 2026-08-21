@@ -4,7 +4,6 @@ import { DiveBriefingsSection } from "@/app/s/[shopSlug]/trips/[id]/_components/
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
-import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
 import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
@@ -14,14 +13,12 @@ import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import {
-  resolveRevokedBookingCapability,
-  verifyBookingCapability,
-} from "@/db/booking-capabilities";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
@@ -63,12 +60,11 @@ import {
   type DiverChecklistItem,
   nextDiverStep,
 } from "@/lib/readiness-summary";
+import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
-  cancelMyBookingAction,
   payFromReady,
-  rescheduleMyBookingAction,
   saveCertificationFromReady,
   saveEmergencyContactFromReady,
   saveFitFromReady,
@@ -328,23 +324,68 @@ const NITROX_ENTRY_CODES = new Set<ReadinessBlockerCode>([
 ]);
 
 /**
- * **Every card the trip is still waiting on, each with its own form.**
+ * One collapsed disclosure, the shell every card-entry form on this page wears.
+ *
+ * Collapsed, because the row above has already said what is outstanding and a
+ * diver short three cards was being handed three stacked forms — twelve fields
+ * of agency/level/number/expiry between them, all open at once, on a phone.
+ * Shut, the same three read as a list of three things to do, and each one is a
+ * tap. `<details>` carries the open state to a screen reader itself, which is
+ * why the caret is decorative (`DisclosureCaret`).
+ */
+function CertificationDisclosure({
+  summary,
+  optionalLabel,
+  children,
+}: {
+  summary: string;
+  /** Rendered as a pill beside the summary. Present only on an offer the trip does not require. */
+  optionalLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group/cert overflow-hidden rounded-xl border border-border bg-surface-sunken/50">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-base font-semibold">
+        <DisclosureCaret className="group-open/cert:rotate-90" />
+        <span className="min-w-0 flex-1">{summary}</span>
+        {optionalLabel ? <Badge size="sm">{optionalLabel}</Badge> : null}
+      </summary>
+      <div className="border-t border-border p-4">{children}</div>
+    </details>
+  );
+}
+
+/**
+ * **Every card this departure can still take, each behind its own disclosure.**
  *
  * The certification row is one *line* but can be several *jobs*: a diver short
  * a level card, a Deep card and a nitrox card used to get one form, file it,
  * reload, and discover a second thing they had no way to see. `actionable`
  * carries every blocker that is on the diver, so all of them are answerable in
  * one sitting.
+ *
+ * `offerNitrox` is the one entry here that is not answering a blocker. A shop
+ * that fills nitrox on this departure can take a card from a diver whose trip
+ * does not demand one — and it has to be takeable *here*, because the gear
+ * row's request box is now locked until a card is on file. It wears an
+ * "Optional" pill so a list of things the boat is waiting on never quietly
+ * grows an item it is not.
  */
 function CertificationEntries({
   token,
   item,
+  offerNitrox,
   t,
 }: {
   token: string;
   item: DiverChecklistItem;
+  offerNitrox: boolean;
   t: DiverTranslator;
 }) {
+  // Derived first, in its own pass: this used to be a flag set from inside the
+  // `flatMap` below, which made whether the optional offer renders depend on a
+  // side effect of building an unrelated array.
+  const nitroxRequired = item.actionable.some((blocker) => NITROX_ENTRY_CODES.has(blocker.code));
   const forms = item.actionable.flatMap((blocker) => {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
       return [<CertificationEntry key={blocker.code} token={token} t={t} />];
@@ -364,6 +405,12 @@ function CertificationEntries({
     }
     return [];
   });
+  // Never both: a trip that demands nitrox already rendered the required one
+  // above, and a second disclosure calling the same card optional would be the
+  // page contradicting itself.
+  if (offerNitrox && !nitroxRequired) {
+    forms.push(<NitroxEntry key="nitrox-optional" token={token} optional t={t} />);
+  }
   if (forms.length === 0) return null;
   return <div className="flex flex-col gap-3">{forms}</div>;
 }
@@ -383,68 +430,64 @@ function CertificationEntries({
  */
 function CertificationEntry({ token, t }: { token: string; t: DiverTranslator }) {
   return (
-    <form
-      action={saveCertificationFromReady.bind(null, token)}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
-    >
-      <div>
-        <h4 className="text-base font-semibold">{t("ready.certHeading")}</h4>
-        <p className="mt-1 text-sm text-muted">{t("ready.certBody")}</p>
-      </div>
-      <FieldGrid columns={2}>
-        <Field label={t("ready.certAgency")}>
-          <select name="agency" required defaultValue="" className={controlClass}>
-            <option value="" disabled>
-              {t("ready.certChoose")}
-            </option>
-            {certificationAgency.enumValues.map((agency) => (
-              <option key={agency} value={agency}>
-                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+    <CertificationDisclosure summary={t("ready.certHeading")}>
+      <form action={saveCertificationFromReady.bind(null, token)} className="flex flex-col gap-3">
+        <p className="text-sm text-muted">{t("ready.certBody")}</p>
+        <FieldGrid columns={2}>
+          <Field label={t("ready.certAgency")}>
+            <select name="agency" required defaultValue="" className={controlClass}>
+              <option value="" disabled>
+                {t("ready.certChoose")}
               </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("ready.certLevel")}>
-          <select name="level" required defaultValue="" className={controlClass}>
-            <option value="" disabled>
-              {t("ready.certChoose")}
-            </option>
-            {certificationLevel.enumValues.map((level) => (
-              <option key={level} value={level}>
-                {t(DIVER_CERTIFICATION_LEVEL_KEYS[level])}
+              {certificationAgency.enumValues.map((agency) => (
+                <option key={agency} value={agency}>
+                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("ready.certLevel")}>
+            <select name="level" required defaultValue="" className={controlClass}>
+              <option value="" disabled>
+                {t("ready.certChoose")}
               </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("ready.certNumber")}>
-          <input
-            name="identifier"
-            required
-            minLength={2}
-            maxLength={60}
-            autoComplete="off"
-            // A card number is printed in caps and read off plastic at arm's
-            // length; a phone keyboard's own autocorrect is nothing but a
-            // source of wrong digits here.
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
-          <input name="expiresAt" type="date" className={controlClass} />
-        </Field>
-      </FieldGrid>
-      <div>
-        <SubmitButton
-          pendingLabel={t("ready.certSubmitting")}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {t("ready.certSubmit")}
-        </SubmitButton>
-      </div>
-    </form>
+              {certificationLevel.enumValues.map((level) => (
+                <option key={level} value={level}>
+                  {t(DIVER_CERTIFICATION_LEVEL_KEYS[level])}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("ready.certNumber")}>
+            <input
+              name="identifier"
+              required
+              minLength={2}
+              maxLength={60}
+              autoComplete="off"
+              // A card number is printed in caps and read off plastic at arm's
+              // length; a phone keyboard's own autocorrect is nothing but a
+              // source of wrong digits here.
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
+            <input name="expiresAt" type="date" className={controlClass} />
+          </Field>
+        </FieldGrid>
+        <div>
+          <SubmitButton
+            pendingLabel={t("ready.certSubmitting")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("ready.certSubmit")}
+          </SubmitButton>
+        </div>
+      </form>
+    </CertificationDisclosure>
   );
 }
 
@@ -471,53 +514,49 @@ function SpecialtyEntry({
 }) {
   const specialtyName = t(DIVER_SPECIALTY_KEYS[specialty]);
   return (
-    <form
-      action={saveSpecialtyFromReady.bind(null, token)}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
-    >
-      <input type="hidden" name="specialty" value={specialty} />
-      <h4 className="text-base font-semibold">
-        {t("ready.specialtyHeading", { specialty: specialtyName })}
-      </h4>
-      <FieldGrid columns={2}>
-        <Field label={t("ready.certAgency")}>
-          <select name="agency" required defaultValue="" className={controlClass}>
-            <option value="" disabled>
-              {t("ready.certChoose")}
-            </option>
-            {certificationAgency.enumValues.map((agency) => (
-              <option key={agency} value={agency}>
-                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+    <CertificationDisclosure summary={t("ready.specialtyHeading", { specialty: specialtyName })}>
+      <form action={saveSpecialtyFromReady.bind(null, token)} className="flex flex-col gap-3">
+        <input type="hidden" name="specialty" value={specialty} />
+        <FieldGrid columns={2}>
+          <Field label={t("ready.certAgency")}>
+            <select name="agency" required defaultValue="" className={controlClass}>
+              <option value="" disabled>
+                {t("ready.certChoose")}
               </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("ready.certNumber")}>
-          <input
-            name="identifier"
-            required
-            minLength={2}
-            maxLength={60}
-            autoComplete="off"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
-          <input name="expiresAt" type="date" className={controlClass} />
-        </Field>
-      </FieldGrid>
-      <div>
-        <SubmitButton
-          pendingLabel={t("ready.certSubmitting")}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {t("ready.certSubmit")}
-        </SubmitButton>
-      </div>
-    </form>
+              {certificationAgency.enumValues.map((agency) => (
+                <option key={agency} value={agency}>
+                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("ready.certNumber")}>
+            <input
+              name="identifier"
+              required
+              minLength={2}
+              maxLength={60}
+              autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
+            <input name="expiresAt" type="date" className={controlClass} />
+          </Field>
+        </FieldGrid>
+        <div>
+          <SubmitButton
+            pendingLabel={t("ready.certSubmitting")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("ready.certSubmit")}
+          </SubmitButton>
+        </div>
+      </form>
+    </CertificationDisclosure>
   );
 }
 
@@ -525,50 +564,67 @@ function SpecialtyEntry({
  * A nitrox card, typed in. No level and no expiry — a nitrox card is a yes/no
  * qualification and `nitrox_certifications` has no expiry state at all
  * (`src/lib/readiness.ts` raises no `nitrox_expired`).
+ *
+ * `optional` is the case where the trip demands nothing and the shop simply
+ * fills enriched air: the card is what unlocks the gear row's request box, so
+ * the offer belongs here with the other cards — pilled, so it never reads as
+ * one more thing standing between the diver and the boat.
  */
-function NitroxEntry({ token, t }: { token: string; t: DiverTranslator }) {
+function NitroxEntry({
+  token,
+  optional = false,
+  t,
+}: {
+  token: string;
+  optional?: boolean;
+  t: DiverTranslator;
+}) {
   return (
-    <form
-      action={saveNitroxCertificationFromReady.bind(null, token)}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
+    <CertificationDisclosure
+      summary={t("ready.nitroxCertHeading")}
+      optionalLabel={optional ? t("ready.certOptional") : undefined}
     >
-      <h4 className="text-base font-semibold">{t("ready.nitroxCertHeading")}</h4>
-      <FieldGrid columns={2}>
-        <Field label={t("ready.certAgency")}>
-          <select name="agency" required defaultValue="" className={controlClass}>
-            <option value="" disabled>
-              {t("ready.certChoose")}
-            </option>
-            {certificationAgency.enumValues.map((agency) => (
-              <option key={agency} value={agency}>
-                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+      <form
+        action={saveNitroxCertificationFromReady.bind(null, token)}
+        className="flex flex-col gap-3"
+      >
+        <FieldGrid columns={2}>
+          <Field label={t("ready.certAgency")}>
+            <select name="agency" required defaultValue="" className={controlClass}>
+              <option value="" disabled>
+                {t("ready.certChoose")}
               </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("ready.certNumber")}>
-          <input
-            name="identifier"
-            required
-            minLength={2}
-            maxLength={60}
-            autoComplete="off"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            className={controlClass}
-          />
-        </Field>
-      </FieldGrid>
-      <div>
-        <SubmitButton
-          pendingLabel={t("ready.certSubmitting")}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {t("ready.certSubmit")}
-        </SubmitButton>
-      </div>
-    </form>
+              {certificationAgency.enumValues.map((agency) => (
+                <option key={agency} value={agency}>
+                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("ready.certNumber")}>
+            <input
+              name="identifier"
+              required
+              minLength={2}
+              maxLength={60}
+              autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <div>
+          <SubmitButton
+            pendingLabel={t("ready.certSubmitting")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("ready.certSubmit")}
+          </SubmitButton>
+        </div>
+      </form>
+    </CertificationDisclosure>
   );
 }
 
@@ -603,6 +659,8 @@ function itemAction(
   token: string,
   canPay: boolean,
   isPrimary: boolean,
+  /** Whether the certification row should also offer an un-demanded nitrox card. */
+  offerNitrox: boolean,
   t: DiverTranslator,
 ): React.ReactNode {
   const actionButton = buttonClass(
@@ -632,7 +690,13 @@ function itemAction(
       </form>
     );
   }
-  return <CertificationEntries token={token} item={item} t={t} />;
+  // Explicitly the certification row's, rather than "whatever is left over".
+  // Every category used to fall through to here and render nothing, because an
+  // empty `actionable` produced no forms — but the optional nitrox offer does
+  // not come from `actionable`, so a waiting waiver row would have grown an
+  // "Add your nitrox card" disclosure underneath it.
+  if (item.category !== "certification") return null;
+  return <CertificationEntries token={token} item={item} offerNitrox={offerNitrox} t={t} />;
 }
 
 /**
@@ -652,9 +716,6 @@ const READY_NOTICES: Record<
   "error-contact": { tone: "danger", key: "ready.contactTooLong" },
   "error-pay": { tone: "danger", key: "ready.paymentUnavailable" },
   "pay-cancelled": { tone: "neutral", key: "ready.paymentCancelled" },
-  "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
-  "saved-rescheduled": { tone: "success", key: "ready.movedHeading" },
-  "error-reschedule": { tone: "danger", key: "ready.moveFailed" },
   // Task 49: every throttled action used to redirect with no error param at
   // all, so a rate-limited tap just looked like the button did nothing.
   "error-rate": { tone: "danger", key: "ready.rateLimited" },
@@ -675,38 +736,25 @@ const READY_NOTICES: Record<
 };
 
 /**
- * What to tell the diver about their own refund, right after they cancel —
- * derived from the booking's own current payment status, not from anything
- * the client sent back. `?cancelled=1` on the URL is only a trigger to look;
- * it carries no claim of its own, so an edited or replayed query string
- * can't be used to assert a refund that didn't happen, or hide one that did
- * (Codex finding). This collapses several distinct non-refund outcomes
- * (past the free-cancellation window, no stated window, a failed/manual
- * Stripe reversal) into one honest "still paid, shop handles it" message,
- * since none of those specific reasons survive as durable state to verify
- * against — only whether the payment row currently reads `refunded` or
- * still `paid`/`deposit_paid` does.
+ * What to tell a diver whose seat is gone about money they had already paid —
+ * derived from the booking's own current payment status and nothing else. It
+ * has never been read off the query string, and now there is no query string
+ * to read: the diver-facing cancel that used to redirect here with
+ * `?cancelled=1` is gone (ADR 20260820-shop-handles-plan-changes), so the one
+ * caller left is the staff-cancelled booking below.
+ *
+ * This collapses several distinct non-refund outcomes (past the free-
+ * cancellation window, no stated window, a failed/manual Stripe reversal) into
+ * one honest "still paid, shop handles it" message, since none of those
+ * specific reasons survive as durable state to verify against — only whether
+ * the payment row currently reads `refunded` or still `paid`/`deposit_paid`
+ * does.
  */
 function verifiedCancelNotice(paymentStatus: string | null | undefined): DiverMessageKey | null {
   if (paymentStatus === "refunded") return "ready.refundIssued";
   if (paymentStatus === "paid" || paymentStatus === "deposit_paid") return "ready.refundManual";
   return null;
 }
-
-/**
- * Why the reschedule picker isn't there, in the diver's own words. `src/db/
- * ready.ts` states which rule is in force; this is the one place each becomes
- * a sentence. `booking_closed` has no entry: that case takes the whole
- * section down to the "call the shop" line below, which says it better than a
- * paragraph next to a picker that isn't rendered.
- */
-const RESCHEDULE_BLOCKED_KEYS: Record<
-  Exclude<NonNullable<ReadyPageData["rescheduleBlocked"]>, "booking_closed">,
-  DiverMessageKey
-> = {
-  payment_settled: "ready.moveNeedsShop",
-  no_open_trips: "ready.noOtherTrips",
-};
 
 /**
  * Where the diver is actually going, and how to reach the people who will be
@@ -781,19 +829,6 @@ function ShopCard({
   );
 }
 
-/** What cancelling right now would mean for money already paid — shown before the diver commits. */
-const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey | null> = {
-  refund: "ready.cancelPreviewRefund",
-  forfeit: "ready.cancelPreviewForfeit",
-  // Genuinely paid — this trip just has no stated cancellation window, so
-  // nothing is refunded automatically. Disclosing this only after the
-  // irreversible cancel action (Codex finding) would leave a paid diver
-  // finding out too late that the shop, not an automatic reversal, decides
-  // their refund.
-  no_policy: "ready.cancelPreviewNoPolicy",
-  unpaid: null,
-};
-
 /** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
 function cancelledNotice(
   paymentStatus: string | null | undefined,
@@ -831,13 +866,12 @@ export default async function DiverReadinessPage({
     saved?: string;
     error?: string;
     pay?: string;
-    cancelled?: string;
     booked?: string;
   }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, pay, cancelled, booked } = await searchParams;
+  const { saved, error, pay, booked } = await searchParams;
   // A seat was taken in the request that redirected here — this page is the
   // one page after booking now (ADR 20260820-one-page-after-booking). It
   // switches the celebration from "you're ready" to "you're booked" and turns
@@ -855,30 +889,13 @@ export default async function DiverReadinessPage({
   const anonT = diverTranslator(await requestLocale());
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
-    // A diver's own cancel action revokes this exact token as part of
-    // cancelling, then redirects back to it with `?cancelled=1` — so the
-    // normal verified-capability path above can never show the refund
-    // notice for a self-cancel. Resolve the token with the revocation check
-    // relaxed (never the cancelled-booking or shop-scoping checks) so that
-    // one redirect still lands on an honest confirmation instead of the
-    // generic "isn't available" notice. `cancelled` is only the trigger to
-    // look — the refund copy itself comes from the booking's own current
-    // payment row, fetched fresh here, never from the query string.
-    if (cancelled) {
-      const resolved = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
-      if (resolved) {
-        const data = await getReadyPageData(db, resolved.bookingId);
-        if (data?.detail.cancelled) {
-          const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
-          return cancelledNotice(
-            payment?.status,
-            data.detail.trip.title,
-            data.detail.shop.name,
-            anonT,
-          );
-        }
-      }
-    }
+    // Revoked, expired, or never ours. There is no longer a
+    // relaxed-revocation branch here: it existed for exactly one redirect —
+    // the diver's own cancel, which revoked this token and then sent them back
+    // to it with `?cancelled=1` — and that action is gone (ADR
+    // 20260820-shop-handles-plan-changes). Nothing else in the app ever
+    // produced that parameter, so reading it now would only be a hand-typed
+    // query string asking us to resolve a dead token.
     return (
       <Notice title={anonT("ready.unavailableHeading")} text={anonT("ready.unavailableBody")} />
     );
@@ -929,14 +946,12 @@ export default async function DiverReadinessPage({
   );
 
   if (detail.cancelled) {
-    // Reached when the capability check above succeeded but the booking was
-    // cancelled in the gap before this fresh read (a tight race, not the
-    // normal self-cancel redirect — that one is revoked and handled by the
-    // branch above). `cancelled` here is still just the raw, untrusted query
-    // string; deriving the notice from it directly would reopen exactly the
-    // spoofable-notice gap already closed above (Codex finding) — a crafted
-    // `?cancelled=refunded` could claim a refund that hasn't happened. Same
-    // fix: read the booking's own current payment status fresh.
+    // The shop took this seat off the boat and this diver still holds a live
+    // link to it. Staff cancellation revokes the booking's capabilities too, so
+    // reaching here means the read above won the race against that revoke —
+    // rare, and the one path on which a diver learns from this page rather than
+    // from the shop. What it says about their money is read from the payment
+    // row, never from anything on the URL.
     const payment = await getBookingPayment(db, data.shop.id, bookingId);
     return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
   }
@@ -1038,11 +1053,6 @@ export default async function DiverReadinessPage({
   // of a dive is when a long second leg matters most.
   const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
-  const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
-  const rescheduleBlockedKey =
-    data.rescheduleBlocked && data.rescheduleBlocked !== "booking_closed"
-      ? RESCHEDULE_BLOCKED_KEYS[data.rescheduleBlocked]
-      : null;
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
   const nextStep = nextDiverStep(items);
   // The page's one primary button, chosen among the rows that render one.
@@ -1050,12 +1060,41 @@ export default async function DiverReadinessPage({
     items.find((item) => actionButtonKind(item, data.canPay) !== null) ?? null;
   const ready = detail.readiness.status === "ready";
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
-  // The emergency-contact row is rendered as its own `ChecklistRow` below,
-  // outside `items` — count it alongside the requirement-derived items so the
-  // progress bar and its label match what the diver actually sees in the list.
-  const checklistTotal = items.length + 1;
+  // A rental fit is on file — the diver has answered the gear question at least
+  // once, whatever they answered. "Bringing my own" is a complete answer, so
+  // this asks whether the row was filled in, never whether anything was rented.
+  const hasRentalFit = Boolean(data.rentalFit);
+  // Whether to ask for a nitrox card nothing has asked for yet — the rule
+  // itself lives in `src/lib/rentals.ts` beside `nitroxAvailableOn`, because
+  // the card disclosure below and the rental form's request lock are two
+  // surfaces that must answer it identically.
+  const offerNitroxCard = nitroxCardWanted(shop.rentalItems, data.trip.course, {
+    verified: data.nitroxCardVerified,
+    onFile: data.nitroxCardOnFile,
+  });
+  /**
+   * ...and whether this page can actually make that offer.
+   *
+   * The disclosure lives inside the certification row, so it can only be
+   * rendered on a page that has one. A departure gating on nothing at all has
+   * no such row — and rather than grow a second place for a card to go, the
+   * request box stays unlocked there, exactly as it was before this rework.
+   *
+   * This single boolean is what `RentalFitForm` locks on. It holds no copy of
+   * the rule above: the form is told whether the control it would point at
+   * exists, so the lock and the offer cannot disagree.
+   */
+  const nitroxCardEntryOffered =
+    offerNitroxCard && items.some((item) => item.category === "certification");
+  // The emergency-contact and gear rows are rendered as their own
+  // `ChecklistRow`s below, outside `items` — count them alongside the
+  // requirement-derived items so the progress bar and its label match what the
+  // diver actually sees in the list.
+  const checklistTotal = items.length + 2;
   const checklistDone =
-    items.filter((item) => item.state === "done").length + (hasEmergencyContact ? 1 : 0);
+    items.filter((item) => item.state === "done").length +
+    (hasEmergencyContact ? 1 : 0) +
+    (hasRentalFit ? 1 : 0);
   const noticeKey = saved
     ? `saved-${saved}`
     : error
@@ -1116,6 +1155,16 @@ export default async function DiverReadinessPage({
               shareUrl={shareTripUrl}
             />
           ) : null}
+          {/* What this page *is*, said once, at the top.
+              Divers arrive here from a booking submit or an emailed link, and
+              both of those read as a confirmation — a thing you look at once
+              and close. This one is not: it is the same URL all week, it is
+              where the cards and the gear answers go, and it restates itself
+              every time the shop moves. Nothing else on the page can say that,
+              because every other line is about the trip rather than about the
+              page. Ghost weight, under the actions, so it informs the first
+              visit and disappears into the furniture on the tenth. */}
+          <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
         </TokenPageHeader>
 
         {notice ? (
@@ -1233,7 +1282,14 @@ export default async function DiverReadinessPage({
                 label={checklistCategoryText(t, item.category)}
                 state={item.state}
                 detail={checklistDetailText(t, item)}
-                action={itemAction(item, token, data.canPay, item === primaryActionItem, t)}
+                action={itemAction(
+                  item,
+                  token,
+                  data.canPay,
+                  item === primaryActionItem,
+                  nitroxCardEntryOffered,
+                  t,
+                )}
                 t={t}
               />
             ))}
@@ -1293,42 +1349,46 @@ export default async function DiverReadinessPage({
               }
               t={t}
             />
+            {/* Gear is a pre-trip item like any other, so it is a row rather
+                than a section of its own further down. It is the second row
+                here that is not a readiness blocker — a rental fit reserves
+                nothing and gates nobody (docs/product/glossary.md) — but "what
+                the crew should have ready for me" is exactly what this list is
+                for, and a heading below the checklist made it look like
+                something else. `RentalFitForm` renders no card and no title of
+                its own for that reason: this row is its heading. */}
+            <ChecklistRow
+              label={t("ready.gearAndSetup")}
+              state={hasRentalFit ? "done" : "action"}
+              detail={t(hasRentalFit ? "ready.gearOnFile" : "ready.gearBody")}
+              action={
+                <RentalFitForm
+                  action={saveFitFromReady.bind(null, token)}
+                  rentalFit={data.rentalFit}
+                  rentalItems={data.shop.rentalItems}
+                  course={data.trip.course}
+                  pricing={data.shop.rentalPricing}
+                  currency={toShopCurrency(data.shop.currency)}
+                  wantsNitrox={data.wantsNitrox}
+                  nitroxCardVerified={data.nitroxCardVerified}
+                  nitroxCardOnFile={data.nitroxCardOnFile}
+                  nitroxCardEntryOffered={nitroxCardEntryOffered}
+                  plannedDives={data.trip.plannedDives}
+                  saved={saved === "fit"}
+                />
+              }
+              t={t}
+            />
           </ul>
         </section>
 
         <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
 
-        {/* Supporting, at visibly quieter weight than the spine: one heading
-            grammar for every page-level section from here down (text-lg
-            semibold), never a second card competing with the checklist. The
-            gear form below is a card now that the panel comes from the shared
-            component, so it carries `elevated={false}` to keep that promise
-            true — a rental fit reserves nothing, and it must not read as the
-            peer of a checklist row that can be a medical referral. */}
-        <section className="mt-10" aria-labelledby="setup-heading">
-          <h2 id="setup-heading" className="text-lg font-semibold">
-            {t("ready.gearAndSetup")}
-          </h2>
-          <RentalFitForm
-            action={saveFitFromReady.bind(null, token)}
-            rentalFit={data.rentalFit}
-            rentalItems={data.shop.rentalItems}
-            course={data.trip.course}
-            pricing={data.shop.rentalPricing}
-            currency={toShopCurrency(data.shop.currency)}
-            wantsNitrox={data.wantsNitrox}
-            nitroxCardVerified={data.nitroxCardVerified}
-            nitroxCardOnFile={data.nitroxCardOnFile}
-            plannedDives={data.trip.plannedDives}
-            saved={saved === "fit"}
-          />
-        </section>
-
         {/* What the day actually is: what to bring, and what each tank dives.
-            Below the checklist and the gear form, because this page's job is
-            still "what's left before you sail" — this is what a diver reads
-            once that is settled, and it is what they used to have to leave the
-            page to find. */}
+            Below the checklist — which now carries the gear form as its last
+            row — because this page's job is still "what's left before you
+            sail", and this is what a diver reads once that is settled. It is
+            also what they used to have to leave the page to find. */}
         {fullShop && fullTrip ? (
           <>
             <PackingSection
@@ -1351,134 +1411,6 @@ export default async function DiverReadinessPage({
             <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
           </>
         ) : null}
-
-        {/* The rare path, dressed as one: moving or cancelling a booking is a
-            minority act on a page most divers open to check what's left — so
-            it sits last among the actions, borderless under a rule instead of
-            wearing the same card the checklist earns (principle 8's collapse-
-            the-rare-path, held to what must stay visible). */}
-        {data.manageState === "closed" ? null : (
-          <section
-            className="mt-10 border-t border-border pt-6"
-            aria-labelledby="change-plans-heading"
-          >
-            <h2 id="change-plans-heading" className="text-lg font-semibold">
-              {t("ready.changePlans")}
-            </h2>
-
-            {/* The free-cancellation window, next to the act it qualifies
-                rather than in a block of fine print at the top of the page —
-                the same reasoning that moved these lines out of the trip
-                masthead and down beside the booking button. The deposit split
-                and fee breakdown stay out (`cancellationOnly`): the receipt
-                above records what was actually charged, and restating the
-                pre-purchase arithmetic would say the same fact twice
-                (design/principles.md #9). */}
-            {fullShop && fullTrip ? (
-              <TripTerms shop={fullShop} trip={fullTrip} locale={locale} cancellationOnly />
-            ) : null}
-
-            {/* Trip morning: the seat is past self-service, but this is the
-                moment a diver most needs the shop's number — and the whole
-                section used to render as nothing at all here. The policy is
-                unchanged; the silence isn't. */}
-            {data.manageState === "shop_only" ? (
-              <div className="mt-3">
-                <p className="text-base text-muted">{t("ready.manageShopOnly")}</p>
-                {/* The component's own null-render carries the no-contacts
-                    case — a wrapper element here would leave a stray empty
-                    paragraph exactly when the shop published nothing. */}
-                <ShopContactLinks
-                  phone={shop.contactPhone}
-                  email={shop.contactEmail}
-                  className="mt-2 gap-y-1 text-base"
-                />
-              </div>
-            ) : null}
-
-            {data.manageState === "self_serve" &&
-            data.rescheduleCandidates &&
-            data.rescheduleCandidates.length > 0 ? (
-              <div className="mt-3">
-                <form
-                  action={rescheduleMyBookingAction.bind(null, token)}
-                  className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center"
-                >
-                  <label htmlFor="newTripId" className="sr-only">
-                    {t("ready.pickATrip")}
-                  </label>
-                  <select id="newTripId" name="newTripId" required className={controlClass}>
-                    <option value="">{t("ready.chooseTrip")}</option>
-                    {data.rescheduleCandidates.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.title} —{" "}
-                        {formatShortDate(candidate.startsAt, locale, detail.shop.timezone)} ·{" "}
-                        {formatTimeRangeTz(
-                          candidate.startsAt,
-                          candidate.endsAt,
-                          locale,
-                          detail.shop.timezone,
-                        )}{" "}
-                        · {t("ready.spotsLeft", { count: candidate.spotsLeft })}
-                      </option>
-                    ))}
-                  </select>
-                  <InlineConfirm
-                    triggerLabel={t("ready.moveBooking")}
-                    triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
-                    message={t("ready.moveConfirm")}
-                    confirmLabel={t("ready.moveConfirmButton")}
-                    cancelLabel={t("ready.neverMind")}
-                    pendingLabel={t("ready.moving")}
-                  />
-                </form>
-              </div>
-            ) : rescheduleBlockedKey ? (
-              // Cancel survives, moving doesn't — say which rule is in force
-              // and hand over the shop's number, rather than letting the
-              // picker quietly disappear the moment a payment settles.
-              <div className="mt-3">
-                <p className="text-base text-muted">{t(rescheduleBlockedKey)}</p>
-                <ShopContactLinks
-                  phone={shop.contactPhone}
-                  email={shop.contactEmail}
-                  className="mt-2 gap-y-1 text-base"
-                />
-              </div>
-            ) : null}
-
-            {data.manageState === "self_serve" ? (
-              <div className="mt-6 border-t border-border pt-5">
-                <p className="text-base text-muted">
-                  {t("ready.cancelLead")} {cancelPreviewKey ? t(cancelPreviewKey) : null}
-                </p>
-                <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
-                  {/* Task 50: replaces window.confirm, which could only show a
-                      fixed string — never the refund preview this page already
-                      computed above. Repeating it right at the point of
-                      commitment (task 41's "reassurance at the point of
-                      anxiety" pattern, applied to a warning instead) means the
-                      diver reads it once more, right before the irreversible
-                      submit, not just once further up the page. */}
-                  <InlineConfirm
-                    triggerLabel={t("ready.cancelSpot")}
-                    triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                    message={[
-                      t("ready.cancelConfirm", { trip: detail.trip.title }),
-                      cancelPreviewKey ? t(cancelPreviewKey) : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    confirmLabel={t("ready.cancelConfirmButton")}
-                    cancelLabel={t("ready.neverMind")}
-                    pendingLabel={t("ready.cancelling")}
-                    confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-                  />
-                </form>
-              </div>
-            ) : null}
-          </section>
-        )}
 
         <ShopCard
           name={detail.shop.name}

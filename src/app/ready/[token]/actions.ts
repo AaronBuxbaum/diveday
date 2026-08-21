@@ -2,25 +2,19 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
-import { rescheduleBooking, selfCancelBooking } from "@/db/bookings";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { createNitroxCertification, recordDiverNitroxCard, setBookingNitrox } from "@/db/nitrox";
-import { sendAndRecordNotification } from "@/db/notifications";
+import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { recordDiverOwnLocale } from "@/db/people";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
-import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { trackEvent } from "@/lib/analytics";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
@@ -149,12 +143,6 @@ const fitSchema = z.object({
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
   nitrox: z.string().optional(),
-  // The nitrox card, asked for beside the request itself. Both optional and
-  // both meaningless without the other — `recordDiverNitroxCard` files a row
-  // only when the pair is complete, because a number with no agency is not
-  // something a staffer can check against anything.
-  nitroxAgency: z.string().optional(),
-  nitroxIdentifier: z.string().trim().max(60).optional(),
   bcdSize: z.string().trim().max(20),
   wetsuitSize: z.string().trim().max(20),
   finSize: z.string().trim().max(20),
@@ -202,16 +190,6 @@ export async function saveFitFromReady(token: string, formData: FormData) {
       bookingId: ctx.bookingId,
       wantsNitrox,
     });
-    // The card the diver typed beside the request, if they had it to hand,
-    // through the one writer both surfaces share (`recordDiverNitroxCard`).
-    await recordDiverNitroxCard(ctx.db, {
-      shopId: ctx.data.shop.id,
-      personId: ctx.data.person.id,
-      wantsNitrox,
-      agency: parsed.data.nitroxAgency,
-      identifier: parsed.data.nitroxIdentifier,
-      now: nowDate(),
-    });
   }
   const result = saved ? "saved=fit" : "error=fit";
   revalidateAndRedirect(base(token), `${base(token)}?${result}`);
@@ -249,157 +227,6 @@ export async function payFromReady(token: string) {
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
   redirect(url);
-}
-
-/**
- * Cancel the diver's own booking. Rate-limited harder than the rest of this
- * file (docs ADR 20260727-diver-self-service-cancel) — this is irreversible
- * and, when paid, moves money. Cancellation and refund stay the two
- * independent steps the staff path uses (docs H-07): the seat is freed by
- * `selfCancelBooking` first, and a refund failure afterward never re-opens
- * it or blocks the cancellation the diver already sees.
- */
-export async function cancelMyBookingAction(token: string) {
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel))
-      .allowed
-  ) {
-    redirect(bounceTarget(token, "rate_limited"));
-  }
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-
-  const cancelled = await selfCancelBooking(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-  });
-  if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
-  await trackEvent({ name: "booking_cancelled", source: "diver" });
-
-  // The refund outcome itself is never trusted back from the client for the
-  // notice: `?cancelled=1` here is only a trigger telling the page to look,
-  // not the source of truth. The page re-derives what actually happened from
-  // the booking's own current payment status (Codex finding) — an edited or
-  // replayed query string can't be used to claim a refund that didn't
-  // happen, or hide one that did.
-  //
-  // Caught, not left to throw (Codex finding): the cancellation above already
-  // committed and this token is already revoked, so a refund failure (a
-  // transient DB error, say) must never turn an already-successful
-  // cancellation into an error response — the diver would see a generic
-  // failure with no way to tell the destructive action actually went
-  // through, since refreshing the dead link only shows the unavailable
-  // notice. Staff can still see and fix a missed refund from the booking's
-  // payment record; the diver just needs the confirmation either way.
-  try {
-    const refund = await refundBookingOnCancellation(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
-    });
-    if (refund.status !== "no_policy" && refund.status !== "unpaid") {
-      await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
-    }
-  } catch {
-    console.error("Self-cancel refund could not be processed", { bookingId: ctx.bookingId });
-  }
-  redirect(`${base(token)}?cancelled=1`);
-}
-
-/**
- * Move the diver's own booking to a different trip. Atomic (docs ADR
- * 20260727-diver-self-service-cancel): the destination is booked before the
- * old seat is freed, so a full or newly-unavailable trip leaves the original
- * booking untouched rather than stranding the diver with neither. Only
- * offered for an unpaid booking — `rescheduleBooking` re-enforces that
- * itself, this is not the only guard.
- *
- * The old token dies with the old booking (capabilities are revoked on
- * cancel), so a successful reschedule mints a fresh readiness link for the
- * new booking and sends the diver straight there — there is no way to hand
- * back an existing token for a booking id that changed. Also emails that
- * link the same way a fresh booking's confirmation does (Codex finding):
- * the redirect is the only copy of it that exists once the diver closes
- * this tab, since every link in the original confirmation email died with
- * the source booking.
- */
-export async function rescheduleMyBookingAction(token: string, formData: FormData) {
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel))
-      .allowed
-  ) {
-    redirect(bounceTarget(token, "rate_limited"));
-  }
-  const ctx = await contextFor(token);
-  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-
-  const parsedTripId = z.uuid().safeParse(formData.get("newTripId"));
-  if (!parsedTripId.success) redirect(`${base(token)}?error=reschedule`);
-
-  const result = await rescheduleBooking(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    newTripId: parsedTripId.data,
-  });
-  if (!result.ok) redirect(`${base(token)}?error=reschedule`);
-
-  const capability = await issueBookingCapability(ctx.db, {
-    shopId: ctx.data.shop.id,
-    bookingId: result.newBookingId,
-    purpose: "readiness",
-  });
-  // The reschedule already committed even if minting this new link somehow
-  // fails — the diver just won't have a bookmark to it. A shop can still
-  // find them on the new trip's roster.
-  if (!capability) redirect(base(token));
-
-  // The redirect below is the only copy of this link that exists the moment
-  // the diver closes this tab — every readiness link from the original
-  // confirmation email died with the source booking it belonged to. Deliver
-  // a durable copy the same way a fresh booking does (Codex finding),
-  // best-effort: the reschedule already committed, so a delivery failure
-  // here must never turn it into an error page.
-  if (ctx.data.person.email) {
-    try {
-      const origin = publicAppUrl();
-      const newTrip = await getTripWithBooked(ctx.db, ctx.data.shop.id, parsedTripId.data);
-      if (origin && newTrip) {
-        await sendAndRecordNotification(ctx.db, {
-          kind: "booking_confirmation",
-          bookingId: result.newBookingId,
-          shopId: ctx.data.shop.id,
-          to: ctx.data.person.email,
-          locale: recipientLocale(
-            ctx.ownLocale ?? ctx.data.person.locale,
-            ctx.data.shop.defaultLocale,
-          ),
-          diverName: ctx.data.detail.person.fullName,
-          shopName: ctx.data.detail.shop.name,
-          tripTitle: newTrip.title,
-          startsAt: newTrip.startsAt,
-          endsAt: newTrip.endsAt,
-          timezone: ctx.data.detail.shop.timezone,
-          readinessUrl: new URL(readinessLinkPath(capability.token), `${origin}/`).toString(),
-          // `result.newBookingId` can be a *reactivated* row (the diver had,
-          // and cancelled, a seat on this trip before) that already has an
-          // earlier "booking_confirmation" send on record under the plain
-          // per-booking key. Without this, a reschedule landing inside the
-          // provider's own idempotency window would replay that earlier
-          // response — the old, now-dead readiness link — instead of
-          // delivering this one, and closing the tab would leave the diver
-          // with only revoked links (Codex finding).
-          confirmedAt: nowDate(),
-        });
-      }
-    } catch {
-      console.error("Reschedule confirmation notification could not be sent", {
-        bookingId: result.newBookingId,
-      });
-    }
-  }
-
-  redirect(`${base(capability.token)}?saved=rescheduled`);
 }
 
 /**

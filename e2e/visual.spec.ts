@@ -1531,10 +1531,10 @@ for (const scheme of ["light", "dark"] as const) {
       // The same page on the *durable* link — what a diver opens from the
       // night-before email, days after the celebration above has been flashed
       // out of the URL. Reloading without `?booked=1` is exactly how a diver
-      // reaches it, so that is how it is captured. This is a fresh unpaid
-      // booking, so the "Need to change your plans?" reschedule/cancel section
-      // (docs ADR 20260727-diver-self-service-cancel) renders too — no separate
-      // capture needed, it's part of this same full-page screenshot.
+      // reaches it, so that is how it is captured. One full-page shot covers
+      // the whole spine: the checklist with its certification disclosures shut,
+      // the gear row's rental form open inside it, and the packing and briefing
+      // sections below.
       test(`the diver readiness checklist renders true to the design (${scheme})`, async ({
         page,
       }) => {
