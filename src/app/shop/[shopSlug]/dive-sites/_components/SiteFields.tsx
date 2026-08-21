@@ -2,7 +2,7 @@ import { ImageFileInput } from "@/components/ImageFileInput";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
+import { REQUIRABLE_CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
 import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
@@ -475,7 +475,9 @@ export function SiteFields({
               className={controlClass}
             >
               <option value="">{t("diveSites.form.noLevelRequired")}</option>
-              {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+              {/* Recreational rungs only — a site may not demand a working
+                  rating of a paying diver (issue #630). */}
+              {REQUIRABLE_CERTIFICATION_LEVEL_KEYS.map(([value, key]) => (
                 <option key={value} value={value}>
                   {t(key)}
                 </option>

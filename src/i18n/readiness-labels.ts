@@ -1,11 +1,13 @@
 import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { cachedListFormat } from "@/lib/intl-cache";
-import type {
-  CertificationLevel,
-  ReadinessBlocker,
-  ReadinessBlockerCode,
-  ReadinessStatus,
+import {
+  type CertificationLevel,
+  REQUIRABLE_CERTIFICATION_LEVELS,
+  type ReadinessBlocker,
+  type ReadinessBlockerCode,
+  type ReadinessStatus,
+  type RequirableCertificationLevel,
 } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
@@ -62,6 +64,21 @@ export const CERTIFICATION_LEVEL_KEYS: Record<CertificationLevel, StaffMessageKe
   divemaster: "shared.readiness.certificationLevels.divemaster",
   instructor: "shared.readiness.certificationLevels.instructor",
 };
+
+/**
+ * **The levels a requirement picker offers**, in the order the ladder runs.
+ *
+ * Built from `REQUIRABLE_CERTIFICATION_LEVELS` rather than by filtering
+ * `CERTIFICATION_LEVEL_KEYS` at the two `<select>`s, so "what a shop may demand"
+ * has one answer and it is the domain layer's (`src/lib/readiness.ts`). The map
+ * above stays whole because a *held* Divemaster card still has to render.
+ */
+export const REQUIRABLE_CERTIFICATION_LEVEL_KEYS: readonly (readonly [
+  RequirableCertificationLevel,
+  StaffMessageKey,
+])[] = REQUIRABLE_CERTIFICATION_LEVELS.map(
+  (level) => [level, CERTIFICATION_LEVEL_KEYS[level]] as const,
+);
 
 /**
  * The one diver-facing consumer (the public course page, `course.*`
@@ -342,11 +359,9 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
-  certification_expired: "shared.readiness.blockers.certificationExpired",
   certification_insufficient: "shared.readiness.blockers.certificationInsufficient",
   specialty_missing: "shared.readiness.blockers.specialtyMissing",
   specialty_pending: "shared.readiness.blockers.specialtyPending",
-  specialty_expired: "shared.readiness.blockers.specialtyExpired",
   specialty_import_unconfirmed: "shared.readiness.blockers.specialtyImportUnconfirmed",
   nitrox_missing: "shared.readiness.blockers.nitroxMissing",
   nitrox_pending: "shared.readiness.blockers.nitroxPending",
@@ -450,14 +465,14 @@ export function tripAdmissionRefusalText(
  * only ever looked up with a `DiverTranslator`.
  */
 export const DIVER_CERTIFICATION_AGENCY_KEYS: Record<CertificationAgency, DiverMessageKey> = {
-  padi: "ready.certAgencies.padi",
-  ssi: "ready.certAgencies.ssi",
-  naui: "ready.certAgencies.naui",
-  sdi: "ready.certAgencies.sdi",
-  tdi: "ready.certAgencies.tdi",
-  cmas: "ready.certAgencies.cmas",
-  raid: "ready.certAgencies.raid",
-  gue: "ready.certAgencies.gue",
-  bsac: "ready.certAgencies.bsac",
-  other: "ready.certAgencies.other",
+  padi: "common.certification.agencies.padi",
+  ssi: "common.certification.agencies.ssi",
+  naui: "common.certification.agencies.naui",
+  sdi: "common.certification.agencies.sdi",
+  tdi: "common.certification.agencies.tdi",
+  cmas: "common.certification.agencies.cmas",
+  raid: "common.certification.agencies.raid",
+  gue: "common.certification.agencies.gue",
+  bsac: "common.certification.agencies.bsac",
+  other: "common.certification.agencies.other",
 };

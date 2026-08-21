@@ -2262,16 +2262,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "diver-profile-not-certified", scheme);
       });
 
-      // A diver holding a card past its shop refresher-due date: the
-      // "refresher due" badge renders red and the card no longer counts as
-      // valid — the safety-relevant state (H-08: cards don't expire).
-      test(`a diver with a refresher-due card renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await openDiverProfile(page, "Yusuf", "Yusuf Demir", "YD");
-        await capture(page, "diver-profile-expired", scheme);
-      });
-
       // The migrated diver, and every surface that has to say so. Her level
       // card reads verified with an "imported" provenance chip and a one-tap
       // "Confirm card" nudge (ADR 20260724-import-verified-cards), and her

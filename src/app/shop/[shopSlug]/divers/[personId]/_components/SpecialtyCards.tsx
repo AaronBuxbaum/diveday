@@ -5,8 +5,6 @@ import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
 import { CardSightingForm } from "./CardSightingForm";
@@ -20,27 +18,23 @@ import {
   heldCardStatusTone,
   isImportedCard,
   needsImportConfirm,
-  type Shop,
 } from "./shared";
 
 export function SpecialtyCards({
   diver,
   shopSlug,
   personId,
-  shop,
   locale,
   status,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
-  shop: Shop;
   locale: string;
   /** This section's own outcome, rendered beside its controls, not page-top. */
   status?: DiverNotice;
 }) {
   const t = staffTranslator(locale);
-  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   // A refused card *number* goes on the box it names — see CertificationCards.
   // Here it can only have come from the nitrox sighting form, the one control
   // on this section that asks for a number a staffer reads off a card.
@@ -108,12 +102,6 @@ export function SpecialtyCards({
               <Field label={t("divers.certifications.cardNumber")}>
                 <input name="identifier" required className={controlClass} />
               </Field>
-              <Field
-                label={t("divers.certifications.refresherDue")}
-                hint={t("divers.certifications.refresherHint")}
-              >
-                <input name="expiresOn" type="date" className={controlClass} />
-              </Field>
               <FieldActions>
                 <SubmitButton
                   pendingLabel={t("divers.certifications.capturing")}
@@ -143,8 +131,7 @@ export function SpecialtyCards({
           })}
         >
           {diver.specialtyCertifications.map((card) => {
-            const display = heldCardDisplayStatus(card, todayLocal);
-            const expired = display === "expired";
+            const display = heldCardDisplayStatus(card);
             // A card the diver typed on their own readiness link. This tap opens
             // a depth gate past 18 m, so it asks for the card in the staffer's
             // hand rather than taking the diver's word twice.
@@ -164,17 +151,6 @@ export function SpecialtyCards({
                     </p>
                     <p className="mt-1 break-all text-sm text-muted">
                       {card.identifier}
-                      {card.expiresAt ? (
-                        <span className={expired ? "font-medium text-danger" : undefined}>
-                          {expired
-                            ? t("divers.certifications.refresherOverdue", {
-                                date: formatCalendarDate(card.expiresAt),
-                              })
-                            : t("divers.certifications.refresherDueOn", {
-                                date: formatCalendarDate(card.expiresAt),
-                              })}
-                        </span>
-                      ) : null}
                       {isImportedCard(card) ? (
                         <span>
                           {" · "}
@@ -232,7 +208,7 @@ export function SpecialtyCards({
             );
           })}
           {diver.nitroxCertifications.map((card) => {
-            const display = heldCardDisplayStatus(card, todayLocal);
+            const display = heldCardDisplayStatus(card);
             // A nitrox tick from one of the public opt-in forms: no agency, no
             // number, and nobody has seen a card. This tap authorizes a gas
             // fill, so it asks for the card in the staffer's hand.

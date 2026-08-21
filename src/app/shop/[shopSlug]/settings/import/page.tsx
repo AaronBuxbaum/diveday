@@ -47,7 +47,6 @@ function importWizardCopy(t: StaffTranslator) {
     certification_level: t("settings.import.wizard.fieldLabels.certification_level"),
     certification_number: t("settings.import.wizard.fieldLabels.certification_number"),
     certification_status: t("settings.import.wizard.fieldLabels.certification_status"),
-    certification_expires_at: t("settings.import.wizard.fieldLabels.certification_expires_at"),
     specialty: t("settings.import.wizard.fieldLabels.specialty"),
     specialty_certification_number: t(
       "settings.import.wizard.fieldLabels.specialty_certification_number",
@@ -84,8 +83,6 @@ function importWizardCopy(t: StaffTranslator) {
 
   const issues: Record<ImportIssueCode, string> = {
     email_invalid: t.raw("settings.import.issues.emailInvalid"),
-    expiry_unreadable: t.raw("settings.import.issues.expiryUnreadable"),
-    expiry_assumed_month_first: t.raw("settings.import.issues.expiryAssumedMonthFirst"),
     card_marked_unverified: t.raw("settings.import.issues.cardMarkedUnverified"),
     specialty_not_gated: t.raw("settings.import.issues.specialtyNotGated"),
     specialty_no_card_number: t.raw("settings.import.issues.specialtyNoCardNumber"),

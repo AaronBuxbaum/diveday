@@ -302,7 +302,6 @@ function Notice({ title, text, glyph = "⏳" }: { title: string; text: string; g
 const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
   "certification_missing",
   "certification_self_declared",
-  "certification_expired",
   "certification_insufficient",
 ]);
 
@@ -321,10 +320,7 @@ const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
  * guard in `reviewSpecialtyCertification`, and the `isRealCard` fix in
  * `holdsRealCardOutsideLevels` are what this form rests on.
  */
-const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>([
-  "specialty_missing",
-  "specialty_expired",
-]);
+const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>(["specialty_missing"]);
 
 /**
  * A nitrox card, likewise. `nitrox_self_declared` is here because a claim is
@@ -487,9 +483,6 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
               className={controlClass}
             />
           </Field>
-          <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
-            <input name="expiresAt" type="date" className={controlClass} />
-          </Field>
         </FieldGrid>
         <div>
           <SubmitButton
@@ -555,9 +548,6 @@ function SpecialtyEntry({
               spellCheck={false}
               className={controlClass}
             />
-          </Field>
-          <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
-            <input name="expiresAt" type="date" className={controlClass} />
           </Field>
         </FieldGrid>
         <div>

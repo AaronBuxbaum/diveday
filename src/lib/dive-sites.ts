@@ -6,6 +6,7 @@ import { parseFieldGuideSelection } from "./dive-site-field-guide";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
 import { DOCK_DAY_LIMITS } from "./diver-planning";
+import { REQUIRABLE_CERTIFICATION_LEVELS } from "./readiness";
 
 /**
  * How many photos one site's gallery may hold in total — uploaded ones now,
@@ -122,9 +123,12 @@ export const diveSiteFormSchema = z.object({
    */
   landmarks: z.string().max(8_000).optional(),
   creatures: z.string().max(8_000).optional(),
+  // Recreational rungs only — a site may not demand a working rating of a
+  // paying diver (issue #630). Read off the domain layer's own list rather than
+  // respelled, so the picker and the parse cannot disagree.
   minimumCertificationLevel: z.preprocess(
     (value) => (value === "" ? null : value),
-    z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
+    z.enum(REQUIRABLE_CERTIFICATION_LEVELS).nullable(),
   ),
   // The route arrives as one JSON string from the editor's hidden input, and
   // both it and the zoom are normalised by `src/lib/dive-site-route.ts` rather

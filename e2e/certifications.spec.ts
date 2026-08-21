@@ -147,26 +147,6 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
  * and dive-site uploads that still use it.
  */
 
-test("a certification past its refresher-due date reads as refresher due, not certified", async ({
-  page,
-}) => {
-  // Yusuf Demir carries a verified card past its refresher-due date (see the seed).
-  await page.goto("/shop/blue-mantis/divers");
-  await page.getByRole("searchbox", { name: "Search divers" }).fill("Yusuf Demir");
-  await page.getByRole("link", { name: /Yusuf Demir/ }).click();
-  await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
-
-  // Real C-cards don't expire; a lapsed shop refresher-due date reads as
-  // "refresher due" (H-08), never as a still-valid "certified".
-  const refresherRow = page
-    .locator("li")
-    .filter({ hasText: "refresher" })
-    .filter({ visible: true })
-    .first();
-  await expect(refresherRow).toBeVisible();
-  await expect(refresherRow).not.toContainText("certified");
-});
-
 /**
  * The diver's own half of the same evidence loop.
  *

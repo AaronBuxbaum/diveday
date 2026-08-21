@@ -15,7 +15,6 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
 import {
   formatDateTimeTz,
   formatShortDate,
@@ -355,7 +354,6 @@ export default async function IncidentExportPage({
                         card={card}
                         agencyText={agencyText}
                         dateTime={dateTime}
-                        locale={locale}
                       />
                     </li>
                   ))}
@@ -549,13 +547,11 @@ function CertificationLine({
   card,
   agencyText,
   dateTime,
-  locale,
 }: {
   t: StaffTranslator;
   card: IncidentCertificationEvidence;
   agencyText: (agency: string) => string;
   dateTime: (isoString: string) => string;
-  locale: string;
 }) {
   const levelKey = card.level
     ? CERTIFICATION_LEVEL_KEYS[card.level as CertificationLevel]
@@ -603,17 +599,6 @@ function CertificationLine({
       {card.imported ? <> · {t("incidentExport.certImportedTag")}</> : null}
       {/* The weakest thing on the page, and it has to read that way. */}
       {card.selfDeclared ? <> · {t("incidentExport.certSelfDeclaredTag")}</> : null}
-      {card.expiresAt ? (
-        <>
-          {" "}
-          ·{" "}
-          {t("incidentExport.certRefresherDue", {
-            // Date-only value: formatted as a calendar date, never through a
-            // timezone conversion that could shift the printed day (CR-009).
-            date: formatCalendarDate(card.expiresAt, locale),
-          })}
-        </>
-      ) : null}
     </>
   );
 }

@@ -18,12 +18,10 @@ const REMINDER_ACTION_KEYS: Record<ReminderActionCode, DiverMessageKey> = {
   // reminder itself (see `REMINDER_ACTION_CODES`).
   waiver_expired: "notifications.reminderAction.waiverExpired",
   certification_missing: "notifications.reminderAction.certificationMissing",
-  certification_expired: "notifications.reminderAction.certificationExpired",
   certification_insufficient: "notifications.reminderAction.certificationInsufficient",
   certification_self_declared: "notifications.reminderAction.certificationSelfDeclared",
   nitrox_self_declared: "notifications.reminderAction.nitroxSelfDeclared",
   specialty_missing: "notifications.reminderAction.specialtyMissing",
-  specialty_expired: "notifications.reminderAction.specialtyExpired",
   nitrox_missing: "notifications.reminderAction.nitroxMissing",
   payment_due: "notifications.reminderAction.paymentDue",
 };

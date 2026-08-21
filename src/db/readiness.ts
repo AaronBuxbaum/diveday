@@ -711,17 +711,10 @@ export async function listTripReadiness(
   const tripDate = tripRow[0]?.startsAt
     ? calendarDateInTimezone(tripRow[0].startsAt, timezone)
     : null;
-  // Card validity is asked about *today* (is this card expired right now?),
-  // which is a different question from the trip date the junior band is
-  // measured on — a card expiring next week is valid today and invalid on a
-  // trip a fortnight out.
-  const todayLocal = calendarDateInTimezone(now, timezone);
-
   return rows.map((row) => {
     const depthLimit = diverDepthLimit(
       row.certifications,
       row.specialtyCertifications,
-      todayLocal,
       row.person.dateOfBirth,
       tripDate,
     );
@@ -998,7 +991,6 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         now,
-        timezone,
       }),
     };
   });

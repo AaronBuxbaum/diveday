@@ -64,11 +64,9 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   // Never "Verify card": there is no number to look up with an agency, only a
   // level the diver typed. The work is getting the card in front of somebody.
   certification_self_declared: "shared.today.blockerAction.askForCard",
-  certification_expired: "shared.today.blockerAction.updateCard",
   certification_insufficient: "shared.today.blockerAction.reviewCard",
   specialty_missing: "shared.today.blockerAction.addSpecialty",
   specialty_pending: "shared.today.blockerAction.verifySpecialty",
-  specialty_expired: "shared.today.blockerAction.updateSpecialty",
   specialty_import_unconfirmed: "shared.today.blockerAction.confirmSpecialty",
   nitrox_missing: "shared.today.blockerAction.addNitroxCard",
   nitrox_pending: "shared.today.blockerAction.verifyNitroxCard",
@@ -90,11 +88,9 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   certification_missing: "shared.today.blockerGroup.reviewCards",
   certification_pending: "shared.today.blockerGroup.verifyCards",
   certification_self_declared: "shared.today.blockerGroup.askForCards",
-  certification_expired: "shared.today.blockerGroup.updateCards",
   certification_insufficient: "shared.today.blockerGroup.reviewCards",
   specialty_missing: "shared.today.blockerGroup.reviewSpecialties",
   specialty_pending: "shared.today.blockerGroup.verifySpecialties",
-  specialty_expired: "shared.today.blockerGroup.updateSpecialties",
   specialty_import_unconfirmed: "shared.today.blockerGroup.confirmImportedSpecialties",
   nitrox_missing: "shared.today.blockerGroup.reviewNitroxCards",
   nitrox_pending: "shared.today.blockerGroup.verifyNitroxCards",

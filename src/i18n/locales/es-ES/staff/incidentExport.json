@@ -43,7 +43,6 @@
   "certStatusVerifiedNoDate": "Certificada",
   "certStatusPending": "Revisión pendiente — sin certificar",
   "certImportedTag": "Importada de un sistema anterior",
-  "certRefresherDue": "Repaso pendiente desde {date}",
   "waiverComplete": "Exención firmada el {date} — “{title}”, versión {version}.",
   "waiverCompleteAttested": "Registrado por el personal a partir de una firma en persona.",
   "waiverPaperMarkedBy": "Marcado en papel por {name}.",

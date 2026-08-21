@@ -33,16 +33,16 @@ new domain concept, define it here in the same PR.
   nitrox fill gate reads either one; a card clears on its level and its verification state. See
   **Other agency** for what the enum still cannot say.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
-  agency, a level, a cert/diver number, and an issue date. Cards **do not expire**, but shops
-  may require a refresher after long inactivity. DiveDay stores that optional date on the card
-  (`expires_at`) and, per **H-08**, the staff surface presents it as a shop-set **"refresher due"**
-  date — never an implied card expiry; a card past that date reads as "refresher due" and stops
-  satisfying readiness until refreshed.
+  agency, a level, and a cert/diver number. Cards **do not expire**, and DiveDay stores no date
+  saying otherwise: the column that once held a shop-set "refresher due" date was dropped on
+  2026-08-21 along with everything that gated on it
+  (ADR 20260821-a-card-does-not-expire, superseding H-08's relabel). What a card cannot tell you
+  is when this diver was last in the water — that is **Dive recency**, a different question asked
+  of the diver, and it is not a gate.
 - **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
   until staff certify it — staff look the card number up with the issuing agency (in the agency's
   own portal, outside DiveDay) and click **Mark certified**. There is no automated agency
-  integration. Only a certified, unexpired card at or above a trip’s required level can satisfy
-  readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
+  integration. Only a certified card at or above a trip’s required level can satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
   what readiness reads.)
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
@@ -52,17 +52,15 @@ new domain concept, define it here in the same PR.
   spreadsheet. It lands `verified` (DiveDay assumes the shop's own system already checked it) but is
   permanently flagged `imported` (a non-null `importedAt`, with an optional prior-shop
   `importedFromLabel`), so it is never mistaken for a card this shop carded on sight. A level card
-  satisfies readiness and clears depth gates on import, with its refresher-due date still applied;
-  staff get a soft one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding never waits
+  satisfies readiness and clears depth gates on import; staff get a soft one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding never waits
   on it. **Two gates do wait for that confirm.** The **enriched-air fill**: an imported nitrox card
-  gives plain air until it, because a wrong fill is the highest-consequence failure and a nitrox card
-  has no refresher-date backstop (ADR 20260724-import-verified-cards). And any **specialty** gate: an
+  gives plain air until it, because a wrong fill is the highest-consequence failure
+  (ADR 20260724-import-verified-cards). And any **specialty** gate: an
   imported specialty card is `verified` but does not clear the dive it authorizes until a staffer
   confirms it, because a specialty is what permits a materially riskier dive (deep gates depth past
   18 m) and a spreadsheet cell is not a card sighting (H-23,
-  ADR 20260725-import-specialty-cards). Two things import `pending` rather than `verified`: a card the
-  source file's own status column marks unverified, and a card whose refresher-due date cannot be
-  read — an unreadable gate input is never treated as a pass.
+  ADR 20260725-import-specialty-cards). One thing imports `pending` rather than `verified`: a card
+  the source file's own status column marks unverified.
 - **Confirm to clear** — the display state of an imported specialty card no staffer has confirmed
   yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
   warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
@@ -190,8 +188,8 @@ new domain concept, define it here in the same PR.
   and is never the boarding authority.** Readiness asks “is this diver cleared *right now*?”;
   admission refuses only a **settled impossibility** — the rung of the ladder they stand on, or a
   specialty/nitrox card they hold none of, in any state. Everything a person can still fix before
-  the boat leaves (an unsigned waiver, a card captured but not yet verified, a refresher come due,
-  a payment outstanding) is *not* a reason to refuse the sale. **Absence of evidence never
+  the boat leaves (an unsigned waiver, a card captured but not yet verified, a payment
+  outstanding) is *not* a reason to refuse the sale. **Absence of evidence never
   refuses**: a diver this shop has never carded books as before, the same trade-off H-08 settled
   for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
   were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
@@ -1207,12 +1205,12 @@ new domain concept, define it here in the same PR.
   compose into **one** gate — the **stricter** minimum level and the **union** of specialties
   ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
   That one gate is read at two moments, and they ask **different questions**:
-  - **Boarding** (**Readiness**) is the authority. It requires a **verified**, unexpired card, and
-    for an *imported specialty* card a staffer's confirm as well. Nothing else clears it.
+  - **Boarding** (**Readiness**) is the authority. It requires a **verified** card, and for an
+    *imported specialty* card a staffer's confirm as well. Nothing else clears it.
   - **Booking** (**Trip admission**) is deliberately weaker. It refuses only when the shop's own
     record of this diver makes the seat impossible, and **absence of evidence never refuses** — a
-    diver this shop has never carded books exactly as before. It ignores verification status and
-    refresher dates entirely, because both move before the boat leaves.
+    diver this shop has never carded books exactly as before. It ignores verification status
+    entirely, because that moves before the boat leaves.
 
   A booked seat is therefore never proof a diver can board, and a refused sale always means the
   dock would have refused too.

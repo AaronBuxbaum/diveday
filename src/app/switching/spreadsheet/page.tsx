@@ -141,7 +141,6 @@ const SHEET_COLUMNS = [
   "emergencyContact",
   "diveInsurance",
   "certification",
-  "refresherDue",
   "specialty",
   "nitrox",
   "rentalSizes",

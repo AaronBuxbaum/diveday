@@ -191,7 +191,6 @@ describe("prepareContactImport — safety rules", () => {
       level: "rescue",
       identifier: "RES-42",
       sourceLabel: "Calypso Divers",
-      expiresAt: null,
       status: "verified",
     });
     expect(row.issues.some((i) => i.code === "cert_imported_verified")).toBe(true);
@@ -206,7 +205,6 @@ describe("prepareContactImport — safety rules", () => {
       level: "open_water",
       identifier: "OW-7",
       sourceLabel: null,
-      expiresAt: null,
       status: "verified",
     });
   });
@@ -363,7 +361,6 @@ describe("prepareContactImport — safety rules", () => {
         specialty: "deep",
         identifier: "DP-11",
         sourceLabel: "Calypso Divers",
-        expiresAt: null,
         status: "verified",
       },
     ]);
@@ -484,57 +481,6 @@ describe("prepareContactImport — safety rules", () => {
     const prepared = prepareContactImport("full_name,email\n,orphan@example.com");
     expect(prepared.rows[0].action).toBe("skip");
     expect(prepared.rows[0].cert).toBeNull();
-  });
-
-  it("recognizes the staff-facing “refresher due” header, not only expiry spellings", () => {
-    // The label the app and the switching pages both use — a shop copying our
-    // own wording into their sheet must not have the column silently ignored.
-    const [row] = prepareContactImport(
-      "full_name,certification_level,certification_number,refresher_due\nRefresher Rae,Rescue Diver,RS-77,2031-03-02",
-    ).rows;
-    expect(row.cert).toMatchObject({ identifier: "RS-77", expiresAt: "2031-03-02" });
-  });
-
-  it("carries a card expiry across, including one already past", () => {
-    const csv = [
-      "full_name,certification_level,certification_number,certification_expires_at",
-      "Expiring,Rescue Diver,RS-1,2030-06-01",
-      "Expired,Rescue Diver,RS-2,2020-06-01",
-    ].join("\n");
-    const rows = prepareContactImport(csv).rows;
-    expect(rows[0].cert).toMatchObject({ expiresAt: "2030-06-01" });
-    // A past date is a fact readiness must see, not something to drop: the
-    // alternative is a migrated card that looks valid forever.
-    expect(rows[1].cert).toMatchObject({ expiresAt: "2020-06-01" });
-  });
-
-  it("imports a card for staff review when its refresher-due date can't be read", () => {
-    const csv =
-      "full_name,certification_level,certification_number,card_expiry\nBad Date,Rescue Diver,RS-3,next June";
-    const [row] = prepareContactImport(csv).rows;
-    // Fails closed: an unreadable gate input must not become a card that never
-    // comes due, so the card lands pending for a staffer instead.
-    expect(row.cert).toMatchObject({ identifier: "RS-3", expiresAt: null, status: "pending" });
-    expect(row.issues.some((i) => i.level === "warning" && i.code === "expiry_unreadable")).toBe(
-      true,
-    );
-  });
-
-  it("reads the date formats real exports emit, and refuses a sentinel year", () => {
-    const read = (value: string) =>
-      prepareContactImport(
-        `full_name,certification_level,certification_number,card_expiry\nD,Rescue Diver,RS-9,${value}`,
-      ).rows[0].cert;
-    // US-locale Windows (EVE) and spreadsheet defaults, not ISO alone.
-    expect(read("05/04/2030")).toMatchObject({ expiresAt: "2030-05-04" });
-    expect(read("4-May-2030")).toMatchObject({ expiresAt: "2030-05-04" });
-    // Quoted because the value itself contains the CSV separator.
-    expect(read('"May 4, 2030"')).toMatchObject({ expiresAt: "2030-05-04" });
-    // First part > 12 can only be a day, so that file is read day-first.
-    expect(read("25/12/2030")).toMatchObject({ expiresAt: "2030-12-25" });
-    // "Never expires" sentinels and impossible years are not dates we believe.
-    expect(read("9999-12-31")).toMatchObject({ expiresAt: null, status: "pending" });
-    expect(read("0000-01-01")).toMatchObject({ expiresAt: null, status: "pending" });
   });
 
   it("imports a card for staff review when the file itself says it was never verified", () => {

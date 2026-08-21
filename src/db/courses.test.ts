@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
 import { seededShopContext } from "@/test/db";
@@ -848,66 +847,6 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       });
     });
 
-    /**
-     * The card itself never lapses (glossary: cards **do not expire**);
-     * `expires_at` is the shop's own refresher-due date, and a card past it
-     * stops satisfying readiness until the diver refreshes. The vocabulary
-     * matters at the desk — "your card expired" is wrong and alarming, "your
-     * refresher is due" is what actually happened.
-     */
-    it("refuses a verified card past its refresher-due date", async () => {
-      const { db, shop } = await courseContext();
-      const session = await gatedSession(db, shop.id);
-      // The due date is a date, read against the shop's local calendar
-      // (CR-009) — the same `calendarDateInTimezone(nowDate(), shop.timezone)`
-      // the gate itself computes. A card satisfies readiness through the end
-      // of its own local due day, so "yesterday, locally" is the first day the
-      // refresher is genuinely overdue.
-      const yesterdayLocal = calendarDateInTimezone(
-        new Date(nowDate().getTime() - 24 * 60 * 60 * 1000),
-        shop.timezone,
-      );
-      const diver = await diverHoldingCard(db, shop.id, "refresher-due", {
-        expiresAt: yesterdayLocal,
-      });
-
-      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
-        ok: false,
-        reason: "course_prerequisite",
-      });
-    });
-
-    /**
-     * The import trust decision (H-20, ADR 20260724-import-verified-cards) is
-     * about *who checked the card*, not about how long ago the diver was in
-     * the water: an imported card lands `verified` "with its refresher-due
-     * date still applied" (glossary). So the two facts have to compose — the
-     * card below would enroll on its import status alone, and would enroll on
-     * its level alone, and must still be refused because the refresher is
-     * overdue. A migration that quietly waived the refresher gate for every
-     * row it brought in would put the least-recently-dived divers in the shop
-     * straight onto a course session.
-     */
-    it("refuses an imported card past its refresher-due date — importing does not waive the refresher", async () => {
-      const { db, shop } = await courseContext();
-      const session = await gatedSession(db, shop.id);
-      const yesterdayLocal = calendarDateInTimezone(
-        new Date(nowDate().getTime() - 24 * 60 * 60 * 1000),
-        shop.timezone,
-      );
-      const diver = await diverHoldingCard(db, shop.id, "imported-refresher-due", {
-        importedAt: nowDate(),
-        reviewedAt: null,
-        importedFromLabel: "Prior shop system",
-        expiresAt: yesterdayLocal,
-      });
-
-      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
-        ok: false,
-        reason: "course_prerequisite",
-      });
-    });
-
     it("refuses a verified card staff have since archived", async () => {
       const { db, shop } = await courseContext();
       const session = await gatedSession(db, shop.id);
@@ -923,14 +862,10 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       });
     });
 
-    it("admits a verified card whose refresher-due date is still ahead", async () => {
+    it("admits a verified card at the required rung", async () => {
       const { db, shop } = await courseContext();
       const session = await gatedSession(db, shop.id);
-      const tomorrowLocal = calendarDateInTimezone(
-        new Date(nowDate().getTime() + 24 * 60 * 60 * 1000),
-        shop.timezone,
-      );
-      const diver = await diverHoldingCard(db, shop.id, "valid", { expiresAt: tomorrowLocal });
+      const diver = await diverHoldingCard(db, shop.id, "valid", {});
 
       await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toMatchObject({ ok: true });
     });

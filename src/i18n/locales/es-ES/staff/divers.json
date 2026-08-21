@@ -48,7 +48,6 @@
     "cardStatus": {
       "pending": "pendiente",
       "verified": "certificado",
-      "expired": "actualización pendiente",
       "confirmToClear": "certificado · confirmar para liberar"
     }
   },
@@ -59,13 +58,9 @@
     "agency": "Agencia",
     "level": "Nivel",
     "cardNumber": "Número de certificación",
-    "refresherDue": "Vencimiento del repaso",
-    "refresherHint": "(opcional)",
     "capturing": "Capturando…",
     "captureForReview": "Capturar para revisión",
     "empty": "Aún no hay certificaciones de nivel — añade la primera arriba.",
-    "refresherOverdue": " · repaso vencido {date}",
-    "refresherDueOn": " · repaso vence {date}",
     "importedLabel": "importado",
     "importedWithSource": "importado · {source}",
     "confirming": "Confirmando…",

@@ -80,6 +80,147 @@ describe("recordSelfDeclaredCards", () => {
     expect(nitrox?.selfDeclaredAt).not.toBeNull();
   });
 
+  /**
+   * **The card fields, and the three ways they must not hurt anybody**
+   * (issue #630).
+   *
+   * They are evidence for a staffer to pre-check before the dive date, and
+   * nothing else: the row stays `pending` and stamped, `decideTripAdmission`
+   * still decides on the rung, and `reviewCertification` still refuses the
+   * one-tap promote until somebody types what is on the card in their hand.
+   */
+  describe("the agency and card number a diver typed beside their level", () => {
+    it("writes both onto the row the level lands on, still as a claim", async () => {
+      const { db, shop, person } = await joiner();
+
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "padi",
+        identifier: "PA-118824",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(card?.agency).toBe("padi");
+      expect(card?.identifier).toBe("PA-118824");
+      // Everything that makes it a claim is untouched by the extra evidence.
+      expect(card?.status).toBe("pending");
+      expect(card?.selfDeclaredAt).not.toBeNull();
+      expect(isUnsightedSelfDeclaration(card ?? { status: "pending" })).toBe(true);
+    });
+
+    it("keeps a number without an agency, filed under the enum's honest 'unstated'", async () => {
+      const { db, shop, person } = await joiner();
+
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+        identifier: "OW-4242",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(card?.identifier).toBe("OW-4242");
+      // Never an invented agency — that is the laundering the stamp exists
+      // against — and `other` is what the column already stores for "not said".
+      expect(card?.agency).toBe("other");
+    });
+
+    it("updates the diver's own earlier claim in place, number and all", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      });
+
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "ssi",
+        identifier: "SSI-77",
+      });
+
+      const cards = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(cards).toHaveLength(1);
+      expect(cards[0]?.level).toBe("rescue");
+      expect(cards[0]?.identifier).toBe("SSI-77");
+    });
+
+    /**
+     * **A number already on a live card is dropped, silently, and the level
+     * still lands.**
+     *
+     * The table carries a live unique index on (shop, agency, lower(number)),
+     * so writing a colliding number would raise 23505 *inside the booking
+     * transaction* and take the sale down. It would also be an oracle: type a
+     * number, watch whether the booking breaks, learn whether this shop holds
+     * it. Neither is worth it for an optional evidence field — so the claim
+     * degrades to exactly what a diver who left the box blank produces.
+     */
+    it("drops a number another diver's live card already holds, and says nothing", async () => {
+      const { db, shop, person } = await joiner();
+      const { person: other } = await findOrCreatePerson(db, {
+        shopId: shop.id,
+        fullName: "Marina Sol",
+        email: "marina@example.com",
+      });
+      await createCertification(db, {
+        shopId: shop.id,
+        personId: other.id,
+        agency: "padi",
+        level: "rescue",
+        identifier: "PA-999",
+      });
+
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "padi",
+        // Same number, different case: the index is case-insensitive, so the
+        // guard has to be too or the collision comes back as a 23505.
+        identifier: "pa-999",
+      });
+
+      // Recorded, not refused — the level is the thing the diver came to say.
+      expect(outcome.level).toBe("recorded");
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(card?.level).toBe("rescue");
+      expect(card?.identifier).toBeNull();
+      // The other diver's real card is untouched, which is the whole point.
+      const [theirs] = (await liveCards(db, shop.id)).filter((row) => row.personId === other.id);
+      expect(theirs?.identifier).toBe("PA-999");
+      // A staff capture, untouched: not stamped, not re-levelled, not re-numbered.
+      expect(theirs?.selfDeclaredAt).toBeNull();
+    });
+
+    it("never lets a declared number promote the row on its own", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "instructor",
+        agency: "padi",
+        identifier: "PA-1234",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      if (!card) throw new Error("no card written");
+      // The one-tap promote still demands a sighting, exactly as it does for a
+      // claim carrying no number at all: a stranger's typing is not evidence
+      // however complete it looks.
+      const promoted = await reviewCertification(db, {
+        shopId: shop.id,
+        certificationId: card.id,
+        status: "verified",
+      });
+      expect(promoted).toEqual({ ok: false, reason: "card_sighting_required" });
+    });
+  });
+
   it("records nothing when the joiner skipped both questions", async () => {
     const { db, shop, person } = await joiner();
 

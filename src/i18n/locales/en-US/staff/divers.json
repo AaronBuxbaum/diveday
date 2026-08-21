@@ -48,7 +48,6 @@
     "cardStatus": {
       "pending": "pending",
       "verified": "certified",
-      "expired": "refresher due",
       "confirmToClear": "certified · confirm to clear"
     }
   },
@@ -59,13 +58,9 @@
     "agency": "Agency",
     "level": "Level",
     "cardNumber": "Certification number",
-    "refresherDue": "Refresher due",
-    "refresherHint": "(optional)",
     "capturing": "Capturing…",
     "captureForReview": "Capture for review",
     "empty": "No level certifications yet — add their first certification above.",
-    "refresherOverdue": " · refresher overdue {date}",
-    "refresherDueOn": " · refresher due {date}",
     "importedLabel": "imported",
     "importedWithSource": "imported · {source}",
     "confirming": "Confirming…",

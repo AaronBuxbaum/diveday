@@ -3666,12 +3666,14 @@ export const certifications = pgTable(
      */
     identifier: text("identifier"),
     /**
-     * Date-only, no time-of-day or timezone (CR-009): a card is valid
-     * through the end of its own local calendar day in the shop's
-     * timezone, not a fixed UTC instant that expires early or late
-     * depending on the shop's offset. See src/lib/calendar-date.ts.
+     * **There is no expiry column here, and its absence is the decision.**
+     * Neither PADI nor SSI expires a recreational certification or mandates a
+     * refresher, so the date this table carried until 2026-08-21 modelled a
+     * rule that does not exist — and gated boarding on it
+     * (ADR 20260821-a-card-does-not-expire, superseding
+     * 20260723-certification-expiry-date-only). `waiver_records.expiresAt` is
+     * a different thing entirely and stays: a waiver really does lapse.
      */
-    expiresAt: date("expires_at", { mode: "string" }),
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -3817,8 +3819,7 @@ export const specialtyCertifications = pgTable(
     agency: certificationAgency("agency").notNull(),
     specialty: diveSpecialty("specialty").notNull(),
     identifier: text("identifier").notNull(),
-    /** Date-only, shop-local expiry — see certifications.expiresAt (CR-009). */
-    expiresAt: date("expires_at", { mode: "string" }),
+    /** No expiry column, for the reason `certifications` states. */
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

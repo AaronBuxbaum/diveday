@@ -15,11 +15,7 @@ import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData, type Role } from "@/lib/authz";
-import {
-  type CalendarDate,
-  calendarDateInTimezone,
-  isCalendarDateExpired,
-} from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
@@ -84,24 +80,18 @@ import {
 } from "./schema";
 
 /**
- * "Best card" for the flat contacts file: current cards before expired ones,
- * verified evidence before pending claims, then the highest rung — a shop
- * leaving with this file should hand its next system the strongest honest
- * claim per diver. An expired card is history, not evidence, so it only
- * represents a diver who has nothing current — and the expiry column travels
- * in contacts.csv so the destination can enforce it either way.
+ * "Best card" for the flat contacts file: verified evidence before pending
+ * claims, then the highest rung — a shop leaving with this file should hand
+ * its next system the strongest honest claim per diver.
  */
 function bestCertification<
   Card extends {
     level: (typeof certificationLevel.enumValues)[number];
     status: string;
-    expiresAt: CalendarDate | null;
   },
->(cards: Card[], todayLocal: CalendarDate): Card | undefined {
+>(cards: Card[]): Card | undefined {
   const rank = (card: Card) =>
-    (card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal) ? 0 : 2000) +
-    (card.status === "verified" ? 1000 : 0) +
-    certificationLevel.enumValues.indexOf(card.level);
+    (card.status === "verified" ? 1000 : 0) + certificationLevel.enumValues.indexOf(card.level);
   return cards.reduce<Card | undefined>(
     (best, card) => (!best || rank(card) > rank(best) ? card : best),
     undefined,
@@ -143,7 +133,7 @@ function splitName(fullName: string): { first: string; last: string } {
 export async function loadShopExportBundleInput(
   db: AppDb,
   shopId: string,
-  now: Date = nowDate(),
+  _now: Date = nowDate(),
 ): Promise<ExportBundleInput | null> {
   // One read-only repeatable-read transaction: the bundle is a relational
   // snapshot, and per-statement snapshots would let a booking that commits
@@ -153,7 +143,6 @@ export async function loadShopExportBundleInput(
     async (tx) => {
       const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
       if (!shop) return null;
-      const todayLocal = calendarDateInTimezone(now, shop.timezone);
 
       const peopleRows = await tx
         .select()
@@ -751,7 +740,6 @@ export async function loadShopExportBundleInput(
             "certification_level",
             "certification_number",
             "certification_status",
-            "certification_expires_at",
             // **"Said they hold no card" is not the same fact as "was never
             // asked", and in this file they were byte-identical.** The four
             // certification columns above are blank for both, which is the exact
@@ -780,7 +768,7 @@ export async function loadShopExportBundleInput(
           ],
           rows: peopleRows.map((row) => {
             const name = splitName(row.fullName);
-            const card = bestCertification(cardsByPerson.get(row.id) ?? [], todayLocal);
+            const card = bestCertification(cardsByPerson.get(row.id) ?? []);
             const fit = fitByPerson.get(row.id);
             const waiver = bestWaiver(waiversByPerson.get(row.id) ?? []);
             const waiverSignedAt = waiver
@@ -803,7 +791,6 @@ export async function loadShopExportBundleInput(
               card?.level,
               card?.identifier,
               card?.status,
-              card?.expiresAt,
               // Blank unless the answer still stands: cleared by a staffer,
               // refuted by a card the shop holds, or contradicted by the very
               // level this row is already exporting, and this file says nothing.
@@ -906,7 +893,6 @@ export async function loadShopExportBundleInput(
             "level",
             "identifier",
             "status",
-            "expires_at",
             "review_note",
             "reviewed_at",
             "reviewed_by_person_id",
@@ -933,7 +919,6 @@ export async function loadShopExportBundleInput(
             row.level,
             row.identifier,
             row.status,
-            row.expiresAt,
             row.reviewNote,
             row.reviewedAt,
             row.reviewedByPersonId,
@@ -956,7 +941,6 @@ export async function loadShopExportBundleInput(
             "specialty",
             "identifier",
             "status",
-            "expires_at",
             "review_note",
             "reviewed_at",
             "reviewed_by_person_id",
@@ -972,7 +956,6 @@ export async function loadShopExportBundleInput(
             row.specialty,
             row.identifier,
             row.status,
-            row.expiresAt,
             row.reviewNote,
             row.reviewedAt,
             row.reviewedByPersonId,

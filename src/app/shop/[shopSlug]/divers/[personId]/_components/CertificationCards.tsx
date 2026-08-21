@@ -6,8 +6,6 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import {
@@ -22,7 +20,6 @@ import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
   CARD_STATUS_KEYS,
-  cardDisplayStatus,
   type DiverProfile,
   isImportedCard,
   needsImportConfirm,
@@ -44,7 +41,6 @@ export async function CertificationCards({
   /** This section's own outcome, rendered beside its controls, not page-top. */
   status?: DiverNotice;
 }) {
-  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // A refused card *number* belongs on the box it names, not in this section's
@@ -120,12 +116,6 @@ export async function CertificationCards({
               </Field>
               <Field label={t("divers.certifications.cardNumber")}>
                 <input name="identifier" required className={controlClass} />
-              </Field>
-              <Field
-                label={t("divers.certifications.refresherDue")}
-                hint={t("divers.certifications.refresherHint")}
-              >
-                <input name="expiresOn" type="date" className={controlClass} />
               </Field>
               <FieldActions>
                 <SubmitButton
@@ -225,21 +215,21 @@ export async function CertificationCards({
           })}
         >
           {diver.certifications.map((card) => {
-            const display = cardDisplayStatus(card, todayLocal);
-            const expired = display === "expired";
+            const display = card.status;
             // A card the diver named for themselves on a public opt-in, which
             // nobody here has looked at yet. It is the weakest thing on this
             // list and reads that way: no agency, no number, and no one-tap
             // certify (ADR 20260814-self-declared-cards).
             const selfDeclared = isUnsightedSelfDeclaration(card);
-            // A claim with **no number in it** — the booking form's level
-            // dropdown, which never asks for one. That is a different thing
-            // from the card a diver typed into `/ready`, which carries a real
-            // agency and a real number and wears `selfDeclaredAt` only so the
-            // one-tap promote below still demands a sighting. Keying the two
-            // lines beneath on `selfDeclared` alone told a staffer reviewing a
-            // typed card "no certification number yet" — while hiding the very
-            // number they needed to check it against.
+            // A claim with **no number in it** — a diver who named a rung and
+            // left the optional card boxes blank. That is a different thing
+            // from a claim that carries a real agency and a real number (typed
+            // into `/ready`, or beside the level on the booking form since
+            // issue #630) and wears `selfDeclaredAt` only so the one-tap
+            // promote below still demands a sighting. Keying the two lines
+            // beneath on `selfDeclared` alone told a staffer reviewing a typed
+            // card "no certification number yet" — while hiding the very number
+            // they needed to check it against.
             const claimWithoutANumber = selfDeclared && !card.identifier;
             return (
               <li
@@ -253,10 +243,10 @@ export async function CertificationCards({
                       label={t(CARD_STATUS_KEYS[display])}
                     />
                     <span>
-                      {/* A self-declared row's agency is `other` because the
-                          public form never asks — naming one would invent
-                          evidence, so the level stands alone until a staffer
-                          sights the real card. */}
+                      {/* A claim carrying no number also carries no agency
+                          (`other`, the enum's "unstated"), so naming one would
+                          invent evidence: the level stands alone until a
+                          staffer sights the real card. */}
                       {claimWithoutANumber ? null : <>{t(AGENCY_KEYS[card.agency])} · </>}
                       {t(CERTIFICATION_LEVEL_KEYS[card.level])}
                     </span>
@@ -265,16 +255,6 @@ export async function CertificationCards({
                     {claimWithoutANumber
                       ? t("divers.certifications.selfDeclaredLabel")
                       : card.identifier}
-                    {card.expiresAt ? (
-                      <span className={expired ? "font-medium text-danger" : undefined}>
-                        {t(
-                          expired
-                            ? "divers.certifications.refresherOverdue"
-                            : "divers.certifications.refresherDueOn",
-                          { date: formatCalendarDate(card.expiresAt) },
-                        )}
-                      </span>
-                    ) : null}
                     {/* Provenance, on the line that already carries the card's
                         own small print — not a pill in the control row. Where
                         a card came from is a fact about the card, and it never

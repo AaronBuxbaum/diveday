@@ -18,7 +18,6 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
-import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
@@ -345,14 +344,6 @@ const certificationSchema = z.object({
   // Long enough for every agency's format, short enough that the box can never
   // be used to push a body at the column.
   identifier: z.string().trim().min(2).max(60),
-  // Optional: most recreational cards carry no expiry at all, and an empty box
-  // must never become a date.
-  expiresAt: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || undefined)
-    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
 });
 
 export async function saveCertificationFromReady(token: string, formData: FormData) {
@@ -377,7 +368,6 @@ export async function saveCertificationFromReady(token: string, formData: FormDa
     // number typed on a phone into `verified`, the state readiness and the
     // fill gate both read. `security-reviewer`, 2026-08-20.
     selfDeclaredAt: nowDate(),
-    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
   });
   // `createCertification` returns null when a live card already holds this
   // shop/agency/number — most often the diver's own card, already on file and
@@ -405,12 +395,6 @@ const specialtySchema = z.object({
   agency: z.enum(certificationAgency.enumValues),
   specialty: z.enum(diveSpecialty.enumValues),
   identifier: z.string().trim().min(2).max(60),
-  expiresAt: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || undefined)
-    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
 });
 
 export async function saveSpecialtyFromReady(token: string, formData: FormData) {
@@ -427,7 +411,6 @@ export async function saveSpecialtyFromReady(token: string, formData: FormData) 
     specialty: parsed.data.specialty,
     identifier: parsed.data.identifier,
     selfDeclaredAt: nowDate(),
-    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
   });
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
 }

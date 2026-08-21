@@ -156,7 +156,6 @@ export const IMPORT_FIELDS = [
   "certification_level",
   "certification_number",
   "certification_status",
-  "certification_expires_at",
   "specialty",
   "specialty_certification_number",
   "nitrox_certified",
@@ -271,30 +270,6 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "verified",
     "verification_status",
     "status",
-  ],
-  // The card's own refresher-due date. Applies to whichever card this row's
-  // level/specialty column produces — nitrox cards carry no expiry at all.
-  certification_expires_at: [
-    // The staff-facing name for this date is "refresher due" (H-08) — a shop
-    // whose sheet uses our own wording must be recognized, not ignored.
-    "refresher_due",
-    "refresher_due_date",
-    "refresher_date",
-    "refresher",
-    "certification_expires_at",
-    "certification_expiry",
-    "certification_expiration",
-    "certification_expiration_date",
-    "cert_expires",
-    "cert_expiry",
-    "card_expires",
-    "card_expiry",
-    "expires",
-    "expires_at",
-    "expiry",
-    "expiry_date",
-    "expiration_date",
-    "valid_until",
   ],
   specialty: [
     "specialty",
@@ -667,8 +642,6 @@ function unguardCell(value: string): string {
  */
 export type ImportIssueCode =
   | "email_invalid"
-  | "expiry_unreadable"
-  | "expiry_assumed_month_first"
   | "card_marked_unverified"
   | "specialty_not_gated"
   | "specialty_no_card_number"
@@ -730,8 +703,8 @@ export type ImportIssue = {
  * `verified` is the normal import posture — the shop's own system checked this
  * card (ADR 20260724-import-verified-cards). `pending` is the fail-closed
  * fallback for a row that undercuts that premise: the source's own status column
- * says the card was never verified, or it carries a refresher-due date nobody can
- * read. Those cards import as staff-review claims instead.
+ * says the card was never verified. Those cards import as staff-review claims
+ * instead.
  */
 export type PreparedCardStatus = "verified" | "pending";
 
@@ -740,8 +713,6 @@ export type PreparedCert = {
   level: ImportLevel;
   identifier: string;
   sourceLabel: string | null;
-  /** The card's own refresher-due date when the row carried a readable one (CR-009). */
-  expiresAt: string | null;
   status: PreparedCardStatus;
 };
 
@@ -755,18 +726,12 @@ export type PreparedSpecialty = {
   specialty: DiveSpecialty;
   identifier: string;
   sourceLabel: string | null;
-  expiresAt: string | null;
   status: PreparedCardStatus;
 };
 export type PreparedNitrox = {
   agency: ImportAgency;
   identifier: string;
   sourceLabel: string | null;
-  /**
-   * Downgraded to `pending` only by the source's own "not verified" status —
-   * never by an unreadable refresher-due date, since a nitrox card has no expiry
-   * column for that date to belong to.
-   */
   status: PreparedCardStatus;
 };
 
@@ -1284,8 +1249,8 @@ const MAX_FREE_TEXT_LENGTH = 120;
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
 /**
- * The refresher-due date a shop tracks on a card, read from the formats real
- * exports actually emit — not ISO alone. EVE runs on a US-locale Windows box and
+ * A date off an import row (a prior visit, an incident), read from the formats
+ * real exports actually emit — not ISO alone. EVE runs on a US-locale Windows box and
  * a spreadsheet writes whatever the machine's locale says, so `05/04/2030` and
  * `4-May-2030` are the common cases and ISO is the lucky one.
  *
@@ -1345,7 +1310,7 @@ export function parseCardDate(raw: string | null | undefined): {
     return null;
   }
 
-  // A two-digit year is this century: a refresher date is never in the 1900s.
+  // A two-digit year is this century: nothing an import carries is from the 1900s.
   if (yearWasTwoDigit) year += 2000;
   if (year < 1900 || year > 2200) return null;
   const candidate = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -1559,42 +1524,6 @@ export function prepareContactImport(text: string): PreparedImport {
     // imported card is stamped with where the shop verified it before.
     const sourceLabel = clean(at(cells, "waiver_source_name"));
 
-    // The card's refresher-due date, kept only when it is a real calendar date.
-    // A past date is imported as-is rather than dropped: an expired card on file
-    // is a fact readiness must see, and dropping it would leave a migrated card
-    // looking valid forever (which is what this column existing fixes).
-    // The refresher-due date the shop tracks on the card, read from the formats
-    // real exports emit (`parseCardDate`). Two things fail closed here rather
-    // than quietly producing a card that outlives its refresher:
-    //   - a value present but unreadable, or unbelievable (year 9999, a sentinel
-    //     for "never"), lands the row's cards `pending` instead of upgrading them
-    //     to no-expiry — an unreadable gate input is not a pass; and
-    //   - a date already past is imported as-is, because an overdue card on file
-    //     is a fact readiness must see.
-    let cardExpiresAt: string | null = null;
-    let expiryUnreadable = false;
-    const expiresRaw = clean(at(cells, "certification_expires_at"));
-    if (expiresRaw) {
-      const parsed = parseCardDate(expiresRaw);
-      if (!parsed) {
-        expiryUnreadable = true;
-        issues.push({
-          level: "warning",
-          code: "expiry_unreadable",
-          params: { value: expiresRaw },
-        });
-      } else {
-        cardExpiresAt = parsed.date;
-        if (parsed.assumedMonthFirst && expiresRaw !== parsed.date) {
-          issues.push({
-            level: "info",
-            code: "expiry_assumed_month_first",
-            params: { value: expiresRaw, parsed: parsed.date },
-          });
-        }
-      }
-    }
-
     // The prior system's own verification column, when it has one. A card only
     // lands `verified` on the premise that the shop's system already checked it
     // (ADR 20260724-import-verified-cards) — where the file says outright that it
@@ -1608,11 +1537,10 @@ export function prepareContactImport(text: string): PreparedImport {
         params: { status: clean(statusRaw) ?? "" },
       });
     }
-    const cardStatus: PreparedCardStatus =
-      sourceSaysUnverified || expiryUnreadable ? "pending" : "verified";
-    // A nitrox card has no expiry column, so an unreadable refresher-due date
-    // says nothing about it — only the source's own status can downgrade it.
-    const nitroxStatus: PreparedCardStatus = sourceSaysUnverified ? "pending" : "verified";
+    const cardStatus: PreparedCardStatus = sourceSaysUnverified ? "pending" : "verified";
+    // Same answer for every card kind on the row: only the source's own status
+    // can downgrade one.
+    const nitroxStatus: PreparedCardStatus = cardStatus;
 
     const levelRaw = clean(at(cells, "certification_level"));
     const certNumber = cardNumber(clean(at(cells, "certification_number")));
@@ -1652,7 +1580,6 @@ export function prepareContactImport(text: string): PreparedImport {
             specialty: named,
             identifier: specialtyNumber,
             sourceLabel,
-            expiresAt: cardExpiresAt,
             status: cardStatus,
           });
         }
@@ -1721,7 +1648,6 @@ export function prepareContactImport(text: string): PreparedImport {
           level,
           identifier: certNumber,
           sourceLabel,
-          expiresAt: cardExpiresAt,
           status: cardStatus,
         };
         issues.push({

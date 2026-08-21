@@ -76,7 +76,6 @@ export async function seedDivers(
     agency: "padi" | "ssi" | "naui" | "sdi" | "tdi";
     level: "open_water" | "advanced_open_water" | "rescue" | "divemaster";
     status: "verified" | "pending";
-    expiresAt?: string;
     /** A card brought in by the contact importer: verified but flagged imported,
      * awaiting a one-tap staff confirm (ADR 20260724-import-verified-cards). */
     importedFromLabel?: string;
@@ -91,9 +90,8 @@ export async function seedDivers(
       importedFromLabel: "Coral Coast Divers",
     },
     { index: 13, agency: "ssi", level: "open_water", status: "pending" },
-    { index: 14, agency: "padi", level: "rescue", status: "verified", expiresAt: dateAt(26) },
-    // Certified once, but the card lapsed a few weeks ago — no longer valid.
-    { index: 15, agency: "naui", level: "open_water", status: "verified", expiresAt: dateAt(-24) },
+    { index: 14, agency: "padi", level: "rescue", status: "verified" },
+    { index: 15, agency: "naui", level: "open_water", status: "verified" },
     { index: 16, agency: "sdi", level: "open_water", status: "verified" },
     { index: 17, agency: "tdi", level: "divemaster", status: "verified" },
     // The extended roster: the AOW+Deep track for the Duane wreck charter (18-20
@@ -116,7 +114,7 @@ export async function seedDivers(
     { index: 30, agency: "naui", level: "open_water", status: "verified" },
     // Lapsed a week and a half ago — a second "refresher due" case beyond
     // Yusuf's, on an agency the shop doesn't teach itself.
-    { index: 31, agency: "tdi", level: "open_water", status: "verified", expiresAt: dateAt(-10) },
+    { index: 31, agency: "tdi", level: "open_water", status: "verified" },
     { index: 32, agency: "padi", level: "open_water", status: "verified" },
     { index: 33, agency: "sdi", level: "advanced_open_water", status: "verified" },
     { index: 34, agency: "ssi", level: "open_water", status: "pending" },
@@ -130,7 +128,7 @@ export async function seedDivers(
     { index: 42, agency: "tdi", level: "advanced_open_water", status: "verified" },
     { index: 43, agency: "padi", level: "open_water", status: "verified" },
     // Expiring inside the month, same shape as Marcus's Rescue card above.
-    { index: 44, agency: "ssi", level: "open_water", status: "verified", expiresAt: dateAt(12) },
+    { index: 44, agency: "ssi", level: "open_water", status: "verified" },
     { index: 45, agency: "naui", level: "open_water", status: "verified" },
     { index: 46, agency: "padi", level: "advanced_open_water", status: "verified" },
     { index: 47, agency: "ssi", level: "open_water", status: "pending" },
@@ -164,7 +162,7 @@ export async function seedDivers(
     { index: 64, agency: "ssi", level: "advanced_open_water", status: "verified" },
     { index: 65, agency: "sdi", level: "open_water", status: "verified" },
     // Lapsed two months ago — the oldest of the three "refresher due" cases.
-    { index: 66, agency: "padi", level: "open_water", status: "verified", expiresAt: dateAt(-60) },
+    { index: 66, agency: "padi", level: "open_water", status: "verified" },
     { index: 67, agency: "tdi", level: "open_water", status: "verified" },
     { index: 69, agency: "padi", level: "open_water", status: "verified" },
     { index: 70, agency: "ssi", level: "advanced_open_water", status: "verified" },
@@ -191,7 +189,6 @@ export async function seedDivers(
         level: cert.level,
         identifier: `DEMO-${String(cert.index + 1).padStart(4, "0")}`,
         status: cert.status,
-        expiresAt: cert.expiresAt ?? null,
         // An imported card keeps reviewedAt null so the confirm nudge shows.
         importedAt: cert.importedFromLabel ? nextCreatedAt() : null,
         importedFromLabel: cert.importedFromLabel ?? null,

@@ -2,9 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { DiveCertificationField } from "@/components/DiveDeclarationFields";
+import { DiveCardFields, DiveCertificationField } from "@/components/DiveDeclarationFields";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { mailtoHref, telHref } from "@/lib/contact-links";
+import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
 
@@ -271,7 +272,7 @@ export function BookingPartyFields({
                   books for her two kids and herself; those are three different
                   cards. */}
               {askCertification ? (
-                <div className="sm:col-span-2">
+                <div className="grid gap-x-4 gap-y-3 sm:col-span-2 sm:grid-cols-2">
                   <DiveCertificationField
                     name={`certificationLevel-${index}`}
                     answer={levels[index] ?? ""}
@@ -279,6 +280,12 @@ export function BookingPartyFields({
                       setLevels((current) => ({ ...current, [index]: value }))
                     }
                     belowRequirement={belowRequirementFor?.(levels[index] ?? "") ?? null}
+                  />
+                  {/* Per diver, like the rung above it: a party of four is four
+                      different cards (issue #630). */}
+                  <DiveCardFields
+                    index={index}
+                    shown={Boolean(levels[index]) && levels[index] !== NO_CERTIFICATION_ANSWER}
                   />
                 </div>
               ) : null}

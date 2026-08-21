@@ -8,7 +8,7 @@ import type {
   WaiverRecord,
 } from "@/db/schema";
 import { checkMinimumAge } from "./age";
-import { type CalendarDate, calendarDateInTimezone, isCalendarDateExpired } from "./calendar-date";
+import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import { waiverState } from "./waivers";
 
@@ -45,6 +45,35 @@ const levelRank: Record<CertificationLevel, number> = {
 export function certificationRank(level: CertificationLevel): number {
   return levelRank[level];
 }
+
+/**
+ * **What a site or a trip may demand of a diver — the top of it is Rescue.**
+ *
+ * Deliberately a different set from `CertificationLevel`, which is what a
+ * person can *hold*. Divemaster and Instructor are working ratings: crew hold
+ * them, `src/lib/course-ratios.ts` counts them, and an instructor-led session
+ * is gated on one being assigned. None of that is a shop telling a paying
+ * diver to hold a professional rating to board a charter, which is the only
+ * thing this list is for (issue #630).
+ *
+ * It stops at Rescue because Rescue is the highest *modelled* recreational
+ * rung. Master Scuba Diver is not one: MSD is Rescue plus five specialties
+ * plus fifty dives, which a linear ladder cannot express, and the import path
+ * deliberately files it under `level_not_gated`
+ * (ADR 20260725-imported-card-sighting).
+ *
+ * The `satisfies` is the same guard `DECLARABLE_CERTIFICATION_LEVELS` carries:
+ * a rung spelled wrong here is a compile error rather than a requirement
+ * nobody can pick.
+ */
+export const REQUIRABLE_CERTIFICATION_LEVELS = [
+  "open_water",
+  "advanced_open_water",
+  "rescue",
+] as const satisfies readonly CertificationLevel[];
+
+/** A level a site or trip is allowed to demand — see the list above. */
+export type RequirableCertificationLevel = (typeof REQUIRABLE_CERTIFICATION_LEVELS)[number];
 
 /** The stricter of two levels; null means "no level demanded" and never wins. */
 export function higherCertificationLevel(
@@ -138,11 +167,9 @@ export type ReadinessBlockerCode =
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
-  | "certification_expired"
   | "certification_insufficient"
   | "specialty_missing"
   | "specialty_pending"
-  | "specialty_expired"
   | "specialty_import_unconfirmed"
   | "nitrox_missing"
   | "nitrox_pending"
@@ -180,11 +207,9 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
-  certification_expired: "certification",
   certification_insufficient: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
-  specialty_expired: "certification",
   specialty_import_unconfirmed: "certification",
   nitrox_missing: "certification",
   nitrox_pending: "certification",
@@ -241,8 +266,6 @@ export type ReadinessInput = {
   /** The shop-local calendar date the course runs, which is when age is measured. */
   courseDate?: CalendarDate | null;
   now?: Date;
-  /** The shop's IANA timezone — required so cert/specialty expiry reads against its local calendar date (CR-009), never UTC. */
-  timezone: string;
 };
 
 /** A safety surface must never treat a failed readiness lookup as a pass. */
@@ -254,19 +277,14 @@ export function unavailableReadiness(): ReadinessResult {
 }
 
 /**
- * `todayLocal` is the shop's own local calendar date (CR-009,
- * src/lib/calendar-date.ts) — a card is valid through the end of its own
- * local day, not a fixed UTC instant that reads as expired early or late
- * depending on the shop's timezone offset.
+ * **A card the shop has actually seen.** `verified` and nothing else — a
+ * recreational certification does not expire, so there is no second condition
+ * to check (ADR 20260821-a-card-does-not-expire). What keeps a diver current
+ * is when they last dived, which is a different question this does not ask
+ * (`src/lib/dive-recency.ts`, ADR 20260821-currency-is-what-catches-people).
  */
-export function validVerifiedCertification(
-  certification: Certification,
-  todayLocal: CalendarDate,
-): boolean {
-  return (
-    certification.status === "verified" &&
-    (!certification.expiresAt || !isCalendarDateExpired(certification.expiresAt, todayLocal))
-  );
+export function validVerifiedCertification(certification: Certification): boolean {
+  return certification.status === "verified";
 }
 
 /**
@@ -304,11 +322,10 @@ export function isUnsightedSelfDeclaration(card: {
 export function hasVerifiedCertificationAtLeast(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
-  todayLocal: CalendarDate,
 ): boolean {
   return certifications.some(
     (certification) =>
-      validVerifiedCertification(certification, todayLocal) &&
+      validVerifiedCertification(certification) &&
       levelRank[certification.level] >= levelRank[minimumLevel],
   );
 }
@@ -316,12 +333,9 @@ export function hasVerifiedCertificationAtLeast(
 function certificationBlocker(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
-  todayLocal: CalendarDate,
 ): ReadinessBlocker | null {
-  const verified = certifications.filter((certification) =>
-    validVerifiedCertification(certification, todayLocal),
-  );
-  if (hasVerifiedCertificationAtLeast(certifications, minimumLevel, todayLocal)) {
+  const verified = certifications.filter(validVerifiedCertification);
+  if (hasVerifiedCertificationAtLeast(certifications, minimumLevel)) {
     return null;
   }
   // `pending` means **the shop is holding something it can look up** — a card
@@ -356,14 +370,6 @@ function certificationBlocker(
   if (verified.length > 0) {
     return { code: "certification_insufficient", params: { requiredLevel: minimumLevel } };
   }
-  if (
-    certifications.some(
-      (certification) =>
-        certification.expiresAt && isCalendarDateExpired(certification.expiresAt, todayLocal),
-    )
-  ) {
-    return { code: "certification_expired" };
-  }
   // Below every state backed by something the shop holds, and above plain
   // `missing` only because it can say more: the diver told us a level and gave
   // no number, so nobody has anything to look up. Both are "the shop is holding
@@ -395,16 +401,12 @@ function certificationBlocker(
 function specialtyBlocker(
   specialtyCertifications: readonly SpecialtyCertification[],
   specialty: DiveSpecialty,
-  todayLocal: CalendarDate,
 ): ReadinessBlocker | null {
   const cards = specialtyCertifications.filter((card) => card.specialty === specialty);
-  const unexpired = (card: SpecialtyCertification) =>
-    !card.expiresAt || !isCalendarDateExpired(card.expiresAt, todayLocal);
   if (
     cards.some(
       (card) =>
         card.status === "verified" &&
-        unexpired(card) &&
         // Confirmed by a staffer, or never needed confirming (entered by hand).
         (!card.importedAt || card.reviewedAt),
     )
@@ -416,19 +418,11 @@ function specialtyBlocker(
   // `verified` check keeps the two blockers from overlapping — an imported card
   // is written `verified`, so a `pending` card is a capture awaiting review and
   // gets that message instead. Either way the gate stays shut.
-  if (
-    cards.some(
-      (card) =>
-        card.status === "verified" && card.importedAt && !card.reviewedAt && unexpired(card),
-    )
-  ) {
+  if (cards.some((card) => card.status === "verified" && card.importedAt && !card.reviewedAt)) {
     return { code: "specialty_import_unconfirmed", params: { specialty } };
   }
   if (cards.some((card) => card.status === "pending")) {
     return { code: "specialty_pending", params: { specialty } };
-  }
-  if (cards.some((card) => card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal))) {
-    return { code: "specialty_expired", params: { specialty } };
   }
   return { code: "specialty_missing", params: { specialty } };
 }
@@ -464,7 +458,6 @@ function nitroxBlocker(
  */
 export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const now = input.now ?? nowDate();
-  const todayLocal = calendarDateInTimezone(now, input.timezone);
   const blockers: ReadinessBlocker[] = [];
 
   // Evaluated ahead of — and independently of — the trip's own requirements: a
@@ -512,13 +505,12 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     const certification = certificationBlocker(
       input.certifications,
       effective.minimumCertificationLevel,
-      todayLocal,
     );
     if (certification) blockers.push(certification);
   }
 
   for (const specialty of effective.requiredSpecialties) {
-    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty, todayLocal);
+    const blocker = specialtyBlocker(input.specialtyCertifications ?? [], specialty);
     if (blocker) blockers.push(blocker);
   }
 

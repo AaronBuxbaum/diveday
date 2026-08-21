@@ -210,6 +210,8 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
         shopId: req.shopId,
         personId: person.id,
         level: req.declaration?.level,
+        agency: req.declaration?.agency,
+        identifier: req.declaration?.identifier,
         noCertification: req.declaration?.noCertification,
         nitrox: req.declaration?.nitrox,
       });

@@ -62,8 +62,6 @@ export type IncidentCertificationEvidence = {
   reviewedAt: string | null;
   /** The staffer who made that review, null for older or imported evidence. */
   reviewedByName: string | null;
-  /** Shop-set refresher-due date (date-only string), if any. */
-  expiresAt: string | null;
   /**
    * The card arrived via the contact importer and was never sighted here (ADR
    * 20260724-import-verified-cards). Must render distinctly — an imported card
@@ -365,7 +363,6 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       status: card.status,
       reviewedAt: iso(card.reviewedAt),
       reviewedByName: card.reviewedByName ?? null,
-      expiresAt: card.expiresAt ?? null,
       imported: card.importedAt !== null,
       selfDeclared: isUnsightedSelfDeclaration(card),
     })),
@@ -378,7 +375,6 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       status: card.status,
       reviewedAt: iso(card.reviewedAt),
       reviewedByName: card.reviewedByName ?? null,
-      expiresAt: card.expiresAt ?? null,
       imported: card.importedAt !== null,
       // A specialty card is never self-declared: neither public form asks.
       selfDeclared: false,
@@ -392,7 +388,6 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
       status: card.status,
       reviewedAt: iso(card.reviewedAt),
       reviewedByName: card.reviewedByName ?? null,
-      expiresAt: null,
       imported: card.importedAt !== null,
       selfDeclared: isUnsightedSelfDeclaration(card),
     })),

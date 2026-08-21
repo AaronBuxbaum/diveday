@@ -16,7 +16,6 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { diverDepthLimit } from "@/lib/depth-ceiling";
 import { shopWaiverStatus } from "@/lib/waivers";
@@ -470,9 +469,6 @@ export async function listDiverSummaries(
       db,
       shopId,
       page.rows.map(({ person }) => person),
-      // Card expiry is read against the *shop's* own calendar date (CR-009), so
-      // the roster and the diver record agree about what is still valid.
-      calendarDateInTimezone(now, timeZone),
     ),
     total: page.total,
     page: page.page,
@@ -485,7 +481,6 @@ async function summarizeDivers(
   db: AppDb,
   shopId: string,
   peopleRows: (typeof people.$inferSelect)[],
-  todayLocal: CalendarDate,
 ) {
   if (peopleRows.length === 0) return [];
   const ids = peopleRows.map((person) => person.id);
@@ -549,10 +544,8 @@ async function summarizeDivers(
       },
       /**
        * The one card that speaks for this diver on the roster: the **highest
-       * level among their verified, unexpired** certifications, or null when
-       * they hold none. An expired higher card never outranks a valid lower
-       * one — a lapsed Rescue card does not make someone a Rescue diver today —
-       * and a `pending` card says nothing until a staffer verifies it.
+       * level among their verified** certifications, or null when they hold
+       * none. A `pending` card says nothing until a staffer verifies it.
        *
        * Read straight off `diverDepthLimit` (`src/lib/depth-ceiling.ts`) rather
        * than re-derived here, so the roster's idea of "the diver's level" is
@@ -562,7 +555,7 @@ async function summarizeDivers(
        * comes from the shared `CERTIFICATION_LEVEL_KEYS` map in
        * `src/i18n/readiness-labels.ts`, the same source the diver record uses.
        */
-      certificationLevel: diverDepthLimit(cards, [], todayLocal).level,
+      certificationLevel: diverDepthLimit(cards, []).level,
       certificationCount: cards.length,
       pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
       specialtyCount: specialty.length,

@@ -442,7 +442,7 @@
       },
       "certificationCard": {
         "what": "Certification record",
-        "detail": "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry."
+        "detail": "Imported verified and flagged imported — staff give it a one-tap confirm; unrecognized levels need manual entry."
       },
       "specialtyCards": {
         "what": "Specialty certifications (deep, wreck, night, drysuit)",
@@ -505,7 +505,6 @@
         "certification_level": "Cert level",
         "certification_number": "Cert number",
         "certification_status": "Cert status",
-        "certification_expires_at": "Refresher due",
         "specialty": "Specialty",
         "specialty_certification_number": "Specialty number",
         "nitrox_certified": "Nitrox",
@@ -596,8 +595,6 @@
     },
     "issues": {
       "emailInvalid": "Email \"{email}\" doesn't look valid — imported without an email.",
-      "expiryUnreadable": "Refresher-due date \"{value}\" can't be read as a date — imported for staff review, not as verified, so nobody boards on a guessed date.",
-      "expiryAssumedMonthFirst": "Refresher-due date \"{value}\" read as {parsed} (month first). Check it if your file writes day first.",
       "cardMarkedUnverified": "Your file marks this certification \"{status}\" — imported for staff review rather than as verified, since your own records don't call it checked.",
       "specialtyNotGated": "Specialty \"{specialty}\" isn't a specialty we gate on (deep, wreck, night, drysuit) — nothing imported for it.",
       "specialtyNoCardNumber": "Specialty \"{specialty}\" has no certification number on the row — not imported. A certification without a number can't be verified.",
