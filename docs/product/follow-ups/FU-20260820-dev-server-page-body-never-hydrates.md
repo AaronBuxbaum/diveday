@@ -53,7 +53,7 @@ bug gets papered over.
 
 It still matters, because **every agent and every human developing this app works in `pnpm dev`**.
 Every form on every staff page is a full page reload there. That silently costs scroll position and
-any client-side effect (clipboard writes, toasts, inline confirms), it makes hand-verification of UI
+any client-side effect (clipboard writes, toasts, inline confirms); it makes hand-verification of UI
 work unreliable in a way that looks like a product bug, and it is the reason a real one was reported.
 
 ## Proposed change
