@@ -128,7 +128,6 @@
       "drysuit": "Cold — a 7 mm semi-dry with hood and gloves, or a drysuit if you dive one."
     },
     "dockDayRhythm": "Your dock-day rhythm",
-    "dockDayEachDay": "Each day has its own dock rhythm.",
     "dockDayLabel": "Day {number}",
     "briefingsEyebrow": "Dive briefings",
     "planTwoTank": "Your two-tank plan",
@@ -349,7 +348,6 @@
       "meters": "{value} meters",
       "feet": "{value} feet"
     },
-    "seeDates": "See dates",
     "whoCanEnroll": "Who can enroll",
     "fromTheShop": "From the shop",
     "feeCovers": "What the fee covers",
@@ -2699,7 +2697,6 @@
       "recapEyebrow": "After the boat is back",
       "recapTitle": "The day ends with a recap divers want to share.",
       "recapDescription": "The paperwork is DiveDay's job; the memory is the diver's. After the trip, each diver gets their own page to keep and share — and the shop gets remembered.",
-      "recapCardLabel": "On their recap page",
       "recapMockupLabel": "A diver's post-trip recap page with dive facts, a crew note, photos, and sharing controls.",
       "afterTripBody": "The sites they dived, a shout-out from the crew, and room for their own photos — with a nudge to bring a buddy next time.",
       "paymentEyebrow": "Getting paid",

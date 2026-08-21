@@ -128,7 +128,6 @@
       "drysuit": "Agua fría: un semiseco de 7 mm con capucha y guantes, o traje seco si buceas con uno."
     },
     "dockDayRhythm": "Cómo será tu día en el muelle",
-    "dockDayEachDay": "Cada día tiene su propio ritmo en el muelle.",
     "dockDayLabel": "Día {number}",
     "briefingsEyebrow": "Briefings de inmersión",
     "planTwoTank": "Tu plan de dos inmersiones",
@@ -349,7 +348,6 @@
       "meters": "{value} metros",
       "feet": "{value} pies"
     },
-    "seeDates": "Ver fechas",
     "whoCanEnroll": "Quién puede matricularse",
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
@@ -2699,7 +2697,6 @@
       "recapEyebrow": "Con el barco de vuelta",
       "recapTitle": "El día termina con un resumen que los buceadores quieren compartir.",
       "recapDescription": "El papeleo es trabajo de DiveDay; el recuerdo es del buceador. Después del viaje, cada buceador recibe su propia página para guardar y compartir — y el centro queda en la memoria.",
-      "recapCardLabel": "En su página de resumen",
       "recapMockupLabel": "Una página de resumen después de la inmersión, con datos del buceo, una nota de la tripulación, fotos y controles para compartir.",
       "afterTripBody": "Los sitios que bucearon, un reconocimiento del equipo y espacio para sus propias fotos — con un recordatorio de traer a un compañero la próxima vez.",
       "paymentEyebrow": "Cobrar",

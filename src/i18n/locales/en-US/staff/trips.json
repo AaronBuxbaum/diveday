@@ -230,9 +230,6 @@
     "addPersonAriaLabel": "Add {name} to the trip",
     "addToTrip": "Add to trip",
     "noMatches": "No returning diver matches “{query}”.",
-    "handEntrySummary": "New to the shop? Enter a diver by hand",
-    "handEntryDescriptionWaitlist": "For walk-ins or divers tracked in another system — puts them straight on the wait list.",
-    "handEntryDescriptionManifest": "For walk-ins or divers tracked in another system — puts them straight on the manifest.",
     "nameLabel": "Name",
     "addToWaitlist": "Add to wait list",
     "noMatchesHeading": "No returning diver by that name",
@@ -278,14 +275,9 @@
     "daysAgo": "{days}d ago",
     "emailSubject": "An invitation from {shopName}: {tripTitle}",
     "emailBody": "Hi {firstName},\n\n{shopName} has planned {tripTitle} ({tripWhen}) and would like to invite you. This is an invitation, not a booking, so no seat is held yet. If you would like to join, start here:\n{bookingUrl}\n\nSee you in the water!",
-    "directHeading": "Invite someone directly",
-    "directDescription": "Search a returning diver to contact them about this departure without adding them to it.",
-    "directFindLabel": "Find a diver to invite",
-    "directFindPlaceholder": "Name, email, or phone",
     "directInvite": "Invite",
     "directInviting": "Inviting…",
-    "directInviteAria": "Invite {name} to the departure",
-    "directNoMatches": "No returning diver matches “{query}”."
+    "directInviteAria": "Invite {name} to the departure"
   },
   "lastMinute": {
     "heading": "Last-minute deal",

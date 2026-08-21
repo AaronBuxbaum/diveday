@@ -201,7 +201,6 @@
       "connect": "Connect Stripe",
       "notConfiguredWarning": "Online payments aren’t switched on for DiveDay yet — email {email} and we’ll get it set up.",
       "connectedHeading": "Stripe account connected",
-      "disconnectedHeading": "Stripe account disconnected",
       "readyBadge": "Ready for payments",
       "notReadyBadge": "Not ready yet",
       "accountEnding": "Account ending in {last6}",

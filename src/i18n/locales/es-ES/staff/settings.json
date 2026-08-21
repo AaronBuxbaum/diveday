@@ -201,7 +201,6 @@
       "connect": "Conectar Stripe",
       "notConfiguredWarning": "Los pagos en línea todavía no están activados en DiveDay — escribe a {email} y los ponemos en marcha.",
       "connectedHeading": "Cuenta de Stripe conectada",
-      "disconnectedHeading": "Cuenta de Stripe desconectada",
       "readyBadge": "Lista para pagos",
       "notReadyBadge": "Todavía no está lista",
       "accountEnding": "Cuenta terminada en {last6}",

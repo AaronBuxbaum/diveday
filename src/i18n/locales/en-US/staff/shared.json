@@ -164,7 +164,6 @@
   "shopNavLinks": {
     "primaryNavAriaLabel": "Primary",
     "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
-    "badgeReviews": "{count, plural, one {# review waiting} other {# reviews waiting}}",
     "more": "More",
     "groupDaily": "Run the shop",
     "groupSetup": "Set up",

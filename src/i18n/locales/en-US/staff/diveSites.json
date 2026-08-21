@@ -10,7 +10,6 @@
     "gridAriaLabel": "Saved dive sites",
     "savedSites": "Saved sites",
     "withForecastPoints": "With a GPS location",
-    "withForecastPointsDetail": "Map, route, and forecast ready",
     "fromTemplates": "From templates",
     "siteDeletedNotice": "Site deleted.",
     "emptyHeading": "Start with a site your crew knows well",
@@ -186,7 +185,6 @@
   "edit": {
     "description": "Changes reach every upcoming dive that visits this site.",
     "upcomingHeading": "Upcoming dives here",
-    "copyAndTailor": "Copy and tailor",
     "copying": "Copying…",
     "deleteSite": "Delete site",
     "deleteConfirmTitle": "Delete this dive site?",
@@ -203,7 +201,6 @@
       "title": "A newer DiveDay template is ready",
       "description": "This site is on template v{current}; the latest published version is v{latest}.",
       "keepEditsDescription": "Pull the update while keeping fields you changed locally. Photos, routes, and the site name always stay yours.",
-      "recommended": "Recommended",
       "keepEdits": "Apply changes, keep my edits",
       "keepEditsHint": "Only fields still matching the old template change. Your edits stay intact.",
       "replaceCopy": "Apply template copy",

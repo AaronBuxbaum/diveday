@@ -163,7 +163,6 @@
   },
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# buceador bloqueado} other {# buceadores bloqueados}}",
-    "badgeReviews": "{count, plural, one {# reseña pendiente} other {# reseñas pendientes}}",
     "primaryNavAriaLabel": "Principal",
     "more": "Más",
     "groupDaily": "Llevar el centro",

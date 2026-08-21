@@ -38,7 +38,6 @@
   "certLevelLine": "{agency} · {level} · certificación n.º {identifier}",
   "certSpecialtyLine": "{agency} · {specialty} · certificación n.º {identifier}",
   "certNitroxLine": "{agency} · Aire enriquecido (nitrox) · certificación n.º {identifier}",
-  "certStatusVerified": "Certificada — revisada el {date}",
   "certStatusVerifiedBy": "Certificada — revisada por {name} el {date}",
   "certStatusVerifiedUnknownReviewer": "Certificada — no se registró quién la revisó ({date})",
   "certStatusVerifiedNoDate": "Certificada",
