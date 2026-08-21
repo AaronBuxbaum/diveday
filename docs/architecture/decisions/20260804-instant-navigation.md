@@ -30,6 +30,19 @@
   skeleton in an in-page `<Suspense>`, not in `loading.tsx`.** The regression guard is the
   `Accept-Language: es` describe at the end of `e2e/marketing.spec.ts`: it records, from an init
   script, whether default-locale body copy is *ever* in the document for a Spanish reader.
+- **Amended:** 2026-08-21 — the relocation the 2026-08-12 amendment describes does not run inline.
+  React 19.2 *batches* boundary reveals: the inline `$RC` script only queues the streamed content
+  (marking the boundary `<!--$~-->` and pushing the staging div onto `$RB`), and the move into the
+  boundary — plus the hydration retry that follows it — is scheduled with `requestAnimationFrame`
+  for a document's first batch. A hidden document never gets an animation frame, so a page loaded
+  in a background tab keeps its skeleton and stays unhydrated below every boundary this ADR
+  requires, until somebody looks at it. That is a property of the reveal, not of Cache Components
+  and not of `next dev`: measured on `/sign-in`, `next dev` and `next build` + `next start` are
+  identical at the same visibility (hidden: 0 of 35 controls hydrated, six `$~` boundaries;
+  visible: all of them, all `$`). Nothing here changes — what changes is how a page is inspected,
+  since a tool that renders the app in a background tab is reading the fallback this ADR installed
+  and calling it the page. The `debug` skill carries the two-line check.
+  FU-20260820-dev-server-page-body-never-hydrates was this, and is closed.
 
 ## Context
 

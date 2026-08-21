@@ -144,6 +144,42 @@ and let an auto-retrying `expect(locator)` wait for it. Under streaming SSR and 
 answers the first while failing the second, which is why URL- and time-based waits race and
 content waits don't.
 
+## A page body that never hydrates is a hidden tab, not a broken build
+
+React 19.2 batches the reveal of server-rendered Suspense boundaries. The streamed content lands in
+a staging `<div id="S:n">` at the end of `<body>`, and the inline `$RC` script only *queues* it —
+it marks the boundary `<!--$~-->` and pushes the pair onto `$RB`. The move into the boundary
+(`$RV`), and the hydration retry that follows it, are scheduled with **`requestAnimationFrame`**
+for a document's first batch — read the emitted script in `node_modules/react-dom/cjs/`, not from
+memory. A hidden document never gets an animation frame, so everything below a `loading.tsx`
+boundary sits in its staging div — visibly the skeleton, and with no React fiber on a single
+control — for as long as nobody looks at the tab.
+
+That is the whole of "staff page bodies never hydrate under `pnpm dev`, so a form tap does a native
+POST" (FU-20260820, closed 2026-08-21). It was measured through an automation surface whose tab is
+permanently `document.visibilityState === "hidden"` — Claude Code's Browser pane is one — and
+compared against a production build measured through a visible Playwright page. The two builds are
+identical at the same visibility; only the observer differed:
+
+| build | tab | hydrated / total on `/sign-in` | boundary markers | `$RB` |
+| --- | --- | --- | --- | --- |
+| `next dev` (Turbopack, Cache Components) | hidden | 0 / 35 | 6 × `$~` | 12 |
+| `next build` + `next start` | hidden | 0 / 35 | 6 × `$~` | 12 |
+| either | visible | every control | all `$` | 0 |
+
+So ask the page whether anyone is looking at it before diagnosing anything else:
+
+```js
+({ hidden: document.hidden, staged: document.querySelectorAll('div[id^="S:"]').length,
+   queued: window.$RB && window.$RB.length })
+```
+
+`hidden: true` with a non-empty `$RB` is this and nothing else. It heals the instant a frame is
+painted, which is also the trap: **a screenshot forces a frame**, so a capture taken between two
+measurements silently repairs what you were measuring, and one page reads broken and then fine in
+the same session. Look at UI through `node scripts/screenshot.mjs` or a Playwright page — both
+visible — and keep the Browser pane for reading a DOM, never for deciding whether the app works.
+
 ## A red CI run: classify before root-causing
 
 A 2026-08-07 sweep of 150 CI runs (34 failures) found that most red runs were not app or spec
@@ -215,6 +251,7 @@ question. When a failure has no local reproduction, spend the first commit makin
 | Visual capture log says "wedged, not slow" | The renderer stopped answering — the known, unattributed Chromium wedge, already probed and classified by the harness. Not app or spec code; see the e2e-and-visual skill's renderer-wedge section before touching anything |
 | `page.screenshot` blows the *test* timeout despite its own `timeout:` option | That option bounds preparation, not the protocol call — on a wedged renderer it never fires (measured: 95s past a 15s timeout, run 31147282309). `screenshotOrGiveUp` in visual.spec.ts is the driver-side bound; use it for any new screenshot |
 | axe reports `document-title` on a scan | The rule is disabled in `expectNoA11yViolations` for a reason (see its comment): React's streamed-metadata swap leaves a transient empty `<title>` no page-side wait can close. The real guarantee is the `toHaveTitle` gate above the scan |
+| A page body with no `__reactFiber$` on anything, and `<!--$~-->` markers that never resolve | The tab is hidden, not the build broken — React's batched reveal waits on an animation frame. See the hidden-tab section above; `document.hidden` answers it in one line |
 | Framework behaving "wrong" | This is **Next 16** — check `node_modules/next/dist/docs/` before assuming our bug (middleware→proxy, async `searchParams`, `connection()`) |
 | Redirect loops / auth bounces | Two layers run: `src/proxy.ts` (edge, redirects to `/sign-in` or `/`) and `requireStaffSession()` (server). Identify which bounced before changing either |
 | Sign-in silently fails in dev | `verifyCredentials` returns null for four distinct reasons (no account, disabled, bad password, no staff role) by design — check the seeded account state, don't add error leakage |
