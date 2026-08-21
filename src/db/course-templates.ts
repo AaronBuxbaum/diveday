@@ -932,6 +932,597 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     },
   },
   {
+    slug: "underwater-navigator",
+    version: 1,
+    title: "Underwater Navigator",
+    agency: "padi",
+    description: "Three dives spent learning to find your way back without asking.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Know where the boat is, and get back to it without surfacing",
+      overview:
+        "Most divers navigate by following someone. This is the course where you stop.\n\nYou work with a compass on the surface first, because a compass you are still puzzling over at depth is a compass you will not trust. Then three dives: swimming reciprocal and square patterns on the compass, estimating distance by kick cycles and by time, and reading the reef itself — the direction of the slope, the way the ripples in the sand line up, where the sun is.\n\nNatural navigation is the half most divers skip and the half that works when the compass is still on the boat. By the end you should be able to leave a fixed point, swim a pattern, and come back to it — the same skill that finds a mooring line, a wreck, and your exit.",
+      heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+      ),
+      durationText: "1–2 days · 3 dives",
+      groupSizeText: "A small group — navigation is practiced one diver at a time",
+      minimumAge: 10,
+      // The gate above matches PADI: (Junior) Open Water Diver is the agency's
+      // own floor for Underwater Navigator, and 10 is its minimum age.
+      prerequisiteNote:
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 10 years old. Divers aged 10–11 take it as Junior Open Water Divers and keep their {depth12} depth limit and supervision requirements. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Three training dives",
+        "Compass, slate, and marker floats",
+        "Tanks, weights, and boat",
+      ],
+      excludes: [
+        "Personal gear rental",
+        "Marine park fees",
+        "A compass of your own, if you buy one",
+      ],
+      scheduleDays: [
+        {
+          title: "Day 1 — compass work",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Knowledge review: the compass, natural references, and how distance is estimated",
+            "On land: setting a heading and walking it, before it costs you air",
+            "Dive 1: reciprocal headings out and back, on the compass alone",
+            "Dive 2: estimating distance by kick cycles, by time, and by tank pressure",
+          ],
+        },
+        {
+          title: "Day 2 — patterns and natural navigation",
+          timeNote: "half a day",
+          items: [
+            "Dive 3: a square pattern, then a return to the start on natural references alone",
+            "Finding a marked object from a distance, and relocating it a second time",
+            "Debrief and certification paperwork",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need my own compass?",
+          answer:
+            "No — we provide one for the course. If you buy one afterwards, buy the model you trained on where you can: a compass you read without thinking is worth more than a better one you have to study.",
+        },
+        {
+          question: "Is it all compass work?",
+          answer:
+            "About half. The rest is natural navigation — slope, sand ripples, light, surge direction — which is what you fall back on when the compass is on the boat or the site gives you nothing to sight along.",
+        },
+        {
+          question: "How is this different from the navigation dive in Advanced Open Water?",
+          answer:
+            "Depth of practice. That is one dive and an introduction; this is three dives of patterns and distance estimation until it is repeatable. The first dive here credits as the Navigation Adventure Dive, in either direction.",
+        },
+        {
+          question: "What if I get lost during the course?",
+          answer:
+            "You will, at least once, which is the point of doing it with an instructor beside you. Being wrong in front of your instructor is much cheaper than being wrong on a holiday dive.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "digital-underwater-photographer",
+    version: 1,
+    title: "Digital Underwater Photographer",
+    agency: "padi",
+    description:
+      "Two dives on getting a photo worth keeping, in the water rather than in software.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Come back with photos you actually want to show people",
+      overview:
+        "Almost everyone's first underwater photos are the same: blue, soft, and taken from too far away. Nearly all of that comes from three habits, and two dives is enough to break them.\n\nYou will learn to get close and then closer, to shoot slightly upward instead of down onto the sand, and to put light back into the picture — strobe, video light, or just the sun behind you — because water takes the red out of everything within the first few body lengths. We set your camera up together before you get wet, so you are not scrolling through menus at depth.\n\nBuoyancy is the other half of this course and it is not optional. A photographer who kneels on the reef to steady a shot is a diver doing damage; every frame here is taken hovering.",
+      heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
+      galleryPhotos: bundledGallery(
+        "Stoplight parrotfish Pickles Reef.jpg",
+        "Sponge 06 Molasses Reef 20230714.jpg",
+      ),
+      durationText: "1 day · 2 dives",
+      groupSizeText: "A small group, so your instructor can go through your frames between dives",
+      minimumAge: 10,
+      // The gate above matches PADI: (Junior) Open Water Diver is the agency's
+      // own floor for Digital Underwater Photographer, minimum age 10.
+      prerequisiteNote:
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 10 years old. Divers aged 10–11 take it as Junior Open Water Divers and keep their {depth12} depth limit and supervision requirements. Steady buoyancy matters more here than any camera does. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Two training dives",
+        "A camera and housing to borrow, if you do not have one",
+        "Tanks, weights, and boat",
+      ],
+      excludes: ["Personal gear rental", "Marine park fees", "Memory cards", "Editing software"],
+      scheduleDays: [
+        {
+          title: "Course day",
+          startTime: "08:00",
+          endTime: "16:00",
+          items: [
+            "Setup: your camera, its housing, and the handful of settings you will actually use",
+            "Dive 1: getting close, shooting slightly upward, holding position without touching anything",
+            "Surface interval: going through your own frames with your instructor, honestly",
+            "Dive 2: light and colour — strobe or video light, angle, and distance",
+            "Choosing your best few frames, and working out why the rest did not land",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need to own a camera?",
+          answer:
+            "No, we can lend you one. If you own one, bring it — the housing, the buttons, and the menus are half of what you are learning here, and they are different on every camera.",
+        },
+        {
+          question: "Will a phone work?",
+          answer:
+            "In a housing rated for the depth you are diving, yes, and plenty of good photos are taken that way. Bring the housing you actually plan to dive, not one you have never opened.",
+        },
+        {
+          question: "How good does my buoyancy need to be?",
+          answer:
+            "Good enough to hover and stay off the reef with both hands on a camera. If you are not there yet, Peak Performance Buoyancy first will do more for your photos than any lens.",
+        },
+        {
+          question: "What about video?",
+          answer:
+            "The habits carry straight over — get close, hold still, light the subject — but this course is built around stills. If video is what you care about, say so when you book and we will weight the dives that way.",
+        },
+        {
+          question: "Does this count toward Advanced Open Water?",
+          answer:
+            "Yes. The first dive credits as the Digital Underwater Photographer Adventure Dive in the Advanced Open Water Diver course, in either direction.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "drift-diver",
+    version: 1,
+    title: "Drift Diver",
+    agency: "padi",
+    description: "Two dives learning to let the current do the work.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Stop swimming against the ocean and start riding it",
+      overview:
+        "A drift dive is the laziest good diving there is. You go in, stop kicking, and let the water carry you past more reef than you could ever swim. What the course adds is everything around that: staying together, and staying findable.\n\nTwo dives cover the parts that go wrong. Entries have to be quick and everybody has to go at once. Buddy contact matters more when nothing is where you left it. A surface marker goes up before you do, so the boat knows where you are before your head appears. You will also learn to read a current — where it accelerates, where it eddies behind structure, and how to get out of one you would rather not be in.\n\nMost drift days here are live-boat: nothing anchors, the boat follows your bubbles and your marker, and it collects you wherever you surface.",
+      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "Blue Tangs Molasses Reef 1999.jpg",
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "1 day · 2 dives",
+      groupSizeText: "A small group — a drift group strung out is a group nobody can watch",
+      minimumAge: 12,
+      // The gate above matches PADI: (Junior) Open Water Diver is the agency's
+      // own floor for Drift Diver. Age is the tighter limit at 12, so a Junior
+      // Open Water Diver aged 10–11 waits.
+      prerequisiteNote:
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 12 years old. Divers aged 12–14 certify as Junior Drift Divers and keep the supervision requirements that come with their certification. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Two drift dives from the boat",
+        "Surface marker buoy and reel",
+        "Tanks, weights, and boat",
+      ],
+      excludes: [
+        "Personal gear rental",
+        "Marine park fees",
+        "A marker buoy of your own, if you buy one",
+      ],
+      scheduleDays: [
+        {
+          title: "Course day",
+          startTime: "08:00",
+          endTime: "14:30",
+          items: [
+            "Briefing: reading a current, live-boat procedure, and what the crew expects to see",
+            "Dive 1: a quick group entry, drifting in trim, and holding buddy contact",
+            "Surface interval, and an honest look at how the group held together",
+            "Dive 2: deploying a surface marker from depth, then a controlled ascent in moving water",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is a drift dive harder than an ordinary dive?",
+          answer:
+            "Easier on your legs and harder on your attention. Nothing stays where you left it, so buddy contact and marker deployment stop being paperwork and become the dive.",
+        },
+        {
+          question: "What if I get separated from the group?",
+          answer:
+            "Ascend, deploy your marker, and wait. The boat is following the group rather than sitting on an anchor, and a diver with a marker up is visible from a long way off. We rehearse this instead of hoping.",
+        },
+        {
+          question: "Do I need my own surface marker?",
+          answer:
+            "We provide one for the course. Buy your own afterwards — a marker you have sent up a dozen times goes up cleanly on the day it matters.",
+        },
+        {
+          question: "Can I take photos on a drift dive?",
+          answer:
+            "Yes, and it will teach you to shoot fast. What you cannot do is stop to frame a shot; the group will not stop with you.",
+        },
+        {
+          question: "Does this count toward Advanced Open Water?",
+          answer:
+            "Yes. The first dive credits as the Drift Adventure Dive in the Advanced Open Water Diver course, in either direction.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "boat-diver",
+    version: 1,
+    title: "Boat Diver",
+    agency: "padi",
+    description: "Two dives on being useful, and unbothered, on a dive boat.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Know where your gear goes, where to stand, and when to jump",
+      overview:
+        "Nobody is born knowing how a dive boat works. All of it is unfamiliar the first time: where your kit goes, which side you enter from, what the crew means by a live drop, why your fins go on last.\n\nTwo dives cover the routine. Setting up in the space you are given rather than the space you want. The entries a boat asks for, done without losing your mask. Tag lines and descent lines, and what they are actually for. Getting back onto a ladder in a swell without hurting yourself or the person behind you. You will pick up the vocabulary too — bow, stern, windward, and which parts of a briefing are instructions rather than scenery.\n\nSeasickness gets its own conversation, because the honest answer is that it is far easier to prevent than to cure.",
+      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      galleryPhotos: bundledGallery(
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "1 day · 2 dives",
+      groupSizeText: "A small group on an ordinary boat day, not a boat chartered for the course",
+      minimumAge: 10,
+      // The gate above matches PADI: (Junior) Open Water Diver is the agency's
+      // own floor for Boat Diver, minimum age 10.
+      prerequisiteNote:
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 10 years old. Divers aged 10–11 take it as Junior Open Water Divers and keep their {depth12} depth limit and supervision requirements. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Two dives from the boat",
+        "Tanks, weights, and the boat day",
+      ],
+      excludes: [
+        "Personal gear rental",
+        "Marine park fees",
+        "Seasickness medication",
+        "Crew gratuity",
+      ],
+      scheduleDays: [
+        {
+          title: "Course day",
+          startTime: "07:30",
+          endTime: "14:00",
+          items: [
+            "At the dock: loading, stowing, and setting up in the space you have",
+            "Underway: the briefing, the roll call, and what the crew needs from you",
+            "Dive 1: a giant stride entry, a descent on the line, and a ladder exit",
+            "Dive 2: a back roll entry, tag line work, and an exit timed to the swell",
+            "Back alongside: rinsing, unloading, and the logbook",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "I get seasick. Should I still do this?",
+          answer:
+            "Yes, and tell us before the day. Medication taken the night before works far better than anything you take once you already feel it, and the crew can put you where the boat moves least.",
+        },
+        {
+          question: "Which entry will I be asked to do?",
+          answer:
+            "Whichever the boat's layout calls for — usually a giant stride, sometimes a back roll off a low tube. You practice both here, so neither is a surprise on somebody else's boat.",
+        },
+        {
+          question: "Is this only useful on your boat?",
+          answer:
+            "No. Boats differ; the sequence does not. Stow, set up, brief, enter, dive the plan, exit, account for everyone. It transfers to a liveaboard, a panga, and a charter in a language you do not speak.",
+        },
+        {
+          question: "Does this count toward Advanced Open Water?",
+          answer:
+            "Yes. The first dive credits as the Boat Adventure Dive in the Advanced Open Water Diver course, in either direction.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "search-and-recovery-diver",
+    version: 1,
+    title: "Search and Recovery Diver",
+    agency: "padi",
+    description: "Four dives on finding what went over the side, and bringing it up safely.",
+    minimumCertificationLevel: "advanced_open_water",
+    content: {
+      ...blank,
+      summary: "Find the thing, then lift it without becoming the emergency",
+      overview:
+        "Things go over the side of boats. The dive that follows is usually three people swimming in circles somewhere near where they think it went in.\n\nThis is four dives of doing it properly. You run the standard patterns — expanding square, U-pattern, circular line search — on a compass and on a line, and learn which one suits the visibility, the bottom, and the size of what you are hunting. Then the recovery: rigging a lift bag, filling it in stages, and sending it up without being attached to it.\n\nThe lift bag is where people get hurt, so it gets the most attention. A bag that runs away takes a diver with it if the diver is holding the line, and a bag that spills at the surface drops its load straight back down onto whatever is underneath.",
+      heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
+      galleryPhotos: bundledGallery(
+        "Grouper 2 Molasses Reef 1999.jpg",
+        "Sponge 06 Molasses Reef 20230714.jpg",
+      ),
+      durationText: "2 days · 4 dives",
+      groupSizeText: "A small group — line work needs room, and a tangled pattern teaches nothing",
+      minimumAge: 12,
+      // PADI's own floor for Search and Recovery is (Junior) Advanced Open
+      // Water Diver, or (Junior) Open Water Diver holding Underwater
+      // Navigator. The app's ladder records levels, not specialty cards, so
+      // the gate above can only be the first of those two routes — say so,
+      // because a diver holding the second one deserves to know the line is
+      // ours rather than the agency's.
+      prerequisiteNote:
+        "PADI Advanced Open Water Diver or higher, and at least 12 years old. PADI also accepts an Open Water Diver holding Underwater Navigator; our system records certification levels rather than specialty cards, so if that is you, talk to us before you book — the gate is ours, not the agency's. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Four training dives, all within {depth18}",
+        "Lift bags, lines, reels, and marker floats",
+        "Tanks, weights, and boat",
+      ],
+      excludes: [
+        "Personal gear rental",
+        "Marine park fees",
+        "Actual salvage work, which we quote separately",
+      ],
+      scheduleDays: [
+        {
+          title: "Day 1 — search patterns",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Knowledge review: choosing a pattern for the visibility, the bottom, and the object",
+            "On land: tying the three knots you will need, until they are boring",
+            "Dive 1: an expanding square search on the compass",
+            "Dive 2: a circular line search, then a U-pattern along a fixed line",
+          ],
+        },
+        {
+          title: "Day 2 — recovery",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Dive 3: locating a small object, then a large one, on a planned pattern",
+            "Dive 4: rigging and filling a lift bag, and a controlled ascent of the load",
+            "Planning a search from what is actually known about where the object went in",
+            "Debrief and certification paperwork",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need to be good with knots?",
+          answer:
+            "You need three of them, and you will tie them on dry land until they are dull. A bowline you can tie in gloves and bad visibility is worth more than six knots you half-remember.",
+        },
+        {
+          question: "How heavy a load will I lift?",
+          answer:
+            "Deliberately not a heavy one. The skill is control rather than tonnage: a load that gets away from you is a runaway bag at the surface and a falling object underneath it.",
+        },
+        {
+          question: "What visibility do you run this in?",
+          answer:
+            "Whatever the day gives us, and a murky day is good training rather than a cancelled one. Line searches exist precisely because you cannot see the object until you are on top of it.",
+        },
+        {
+          question: "Will this help me find things people actually lose?",
+          answer:
+            "That is what it is for — phones, cameras, sunglasses, outboard parts, an anchor. The hard part is almost always working out where the thing went in, which is why the last dive starts on the surface with questions.",
+        },
+        {
+          question: "Does this count toward Advanced Open Water?",
+          answer:
+            "Yes. The first dive credits as the Search and Recovery Adventure Dive in the Advanced Open Water Diver course, in either direction.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sidemount-diver",
+    version: 1,
+    title: "Sidemount Diver",
+    agency: "padi",
+    description: "Confined water and three dives moving your tanks off your back onto your hips.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Two tanks, nothing on your back, and a rig you can take off in the water",
+      overview:
+        "Sidemount came out of caves for ordinary reasons: nothing on your spine, tanks you can hand up the ladder one at a time, two independent regulators, and trim you can actually adjust.\n\nThe course is a confined-water session and three open-water dives, and most of the work is fitting the harness. Bungee tension, rail position, where the tanks sit as they empty — every diver's setup is different, and yours will be wrong for the first hour. That is normal, and it is what the pool time is for.\n\nAfter that: switching regulators on a schedule so both tanks drain evenly, valve drills you can reach, and taking the whole rig off and putting it back on in the water. You finish diving a configuration you can tune yourself, which is the real point of it.",
+      heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+      galleryPhotos: bundledGallery(
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+        "Blue Tang Pickles 20080310.jpg",
+      ),
+      durationText: "2 days · confined water plus 3 dives",
+      groupSizeText: "A small group — a harness is fitted one diver at a time",
+      minimumAge: 15,
+      // The gate above matches PADI: Open Water Diver is the agency's own
+      // floor for Sidemount Diver, and its minimum age of 15 is past the
+      // Junior Open Water age band, so no junior caveat applies.
+      prerequisiteNote:
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 15 years old. This is the recreational sidemount course: it is not a technical or overhead qualification, and it does not change the depth limit your certification already carries. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Sidemount harness and two cylinders",
+        "One confined-water session and three open-water dives",
+        "Weights and boat",
+      ],
+      excludes: ["A harness or regulators of your own", "Personal gear rental", "Marine park fees"],
+      scheduleDays: [
+        {
+          title: "Day 1 — fitting and confined water",
+          startTime: "08:00",
+          endTime: "16:00",
+          items: [
+            "Knowledge review: what sidemount does, what it does not, and gas on two independent tanks",
+            "Rigging: harness, bungees, and where the tanks want to sit on you",
+            "Confined water: trim, regulator switches, and getting in and out of the rig",
+          ],
+        },
+        {
+          title: "Day 2 — open water",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Dive 1: trim and buoyancy on full tanks, and the first switching schedule",
+            "Dive 2: valve and regulator drills, and removing one tank underwater",
+            "Dive 3: an ordinary dive in the configuration, then a look at how your gas balanced",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is sidemount only for cave divers?",
+          answer:
+            "No. It came from caves, but plenty of divers use it on ordinary reefs for the trim, the back, and the redundancy. This is the recreational course; overhead environments are a separate qualification.",
+        },
+        {
+          question: "Does this let me dive deeper?",
+          answer:
+            "No. Two tanks are more gas and a second regulator, not a higher certification. Your depth limit stays the one your certification already gives you.",
+        },
+        {
+          question: "I have a bad back. Will this help?",
+          answer:
+            "Often, yes — you carry two tanks separately rather than one on your spine, and you can clip them on in the water. That is not medical advice, and a back problem is one of the things the medical questionnaire asks about.",
+        },
+        {
+          question: "Do I need to buy the gear?",
+          answer:
+            "Not for the course; the harness and cylinders are ours. If you buy afterwards, get fitted rather than ordering by size — sidemount is a rig you tune to your own body.",
+        },
+        {
+          question: "Does this count toward Advanced Open Water?",
+          answer:
+            "Yes. The first dive credits as the Sidemount Adventure Dive in the Advanced Open Water Diver course, in either direction.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "fish-identification",
+    version: 1,
+    title: "Fish Identification",
+    agency: "padi",
+    description: "Two dives learning to name what you have been swimming past.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Learn the families first, and the reef stops being a blur",
+      overview:
+        "Divers who can name fish have better dives — not because naming is the point, but because you stop scanning and start looking, and the reef fills up with animals that were there the whole time.\n\nThe trick is families rather than species. There are far fewer body shapes than there are fish, so once you can tell a grunt from a snapper by outline alone, a field guide stops being a thousand photographs and becomes a short list. Two dives, a slate, and a guide are enough to make that click.\n\nWe teach the fish that actually live here, and you record what you see: what it was, how many, and where on the reef it was. Those notes are worth keeping — a good deal of what is known about reef populations was written down by divers doing exactly this.",
+      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Molasses Reef 20080309.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "1 day · 2 dives",
+      groupSizeText: "A small group, so a guide is shared between two divers rather than six",
+      minimumAge: 10,
+      // The gate above matches PADI: (Junior) Open Water Diver is the agency's
+      // own floor for Fish Identification, minimum age 10.
+      prerequisiteNote:
+        "PADI Open Water Diver or higher, from PADI or another agency, and at least 10 years old. Divers aged 10–11 take it as Junior Open Water Divers and keep their {depth12} depth limit and supervision requirements. You will complete a medical questionnaire before the course; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Two training dives",
+        "Slates and a local field guide to borrow",
+        "Tanks, weights, and boat",
+      ],
+      excludes: ["Personal gear rental", "Marine park fees", "A field guide of your own"],
+      scheduleDays: [
+        {
+          title: "Course day",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Classroom: families and body shapes, and the local look-alikes that catch people out",
+            "Dive 1: a slow swim on a shallow reef, recording what you see as you see it",
+            "Surface interval: working your notes against the guide, together",
+            "Dive 2: a second habitat — sand, wall, or patch reef — and how the cast changes",
+            "Writing the day up, and how to submit a survey record if you want to",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need to memorise Latin names?",
+          answer:
+            "No. You need to recognise about a dozen families by shape; species names follow from there, and the guide does the rest of the work.",
+        },
+        {
+          question: "Is this only useful here?",
+          answer:
+            "The families travel even though the species do not. Learn the shapes here and you will be reading a guide in the Pacific rather than starting over.",
+        },
+        {
+          question: "What if my buoyancy is still shaky?",
+          answer:
+            "This is a slow, shallow dive spent hovering and watching, which makes it a kind specialty to take early. It tends to improve your buoyancy rather than test it.",
+        },
+        {
+          question: "Do I need a camera?",
+          answer:
+            "No, and a slate is often better. A sketch you made underwater beats a photo of a fish that swam off, because you had to look at the fish to draw it.",
+        },
+        {
+          question: "Does this count toward Advanced Open Water?",
+          answer:
+            "Yes. The first dive credits as the Fish Identification Adventure Dive in the Advanced Open Water Diver course, in either direction.",
+        },
+        {
+          question: "Can I fly afterwards?",
+          answer:
+            "Wait at least 18 hours after multiple dives before flying. That is a minimum, not a guarantee — plan your last dive day with room to spare.",
+        },
+      ],
+    },
+  },
+  {
     slug: "divemaster",
     version: 1,
     title: "Divemaster",
