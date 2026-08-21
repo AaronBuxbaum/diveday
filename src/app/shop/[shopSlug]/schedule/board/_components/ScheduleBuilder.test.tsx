@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   type BuilderCopy,
   type BuilderDay,
@@ -1086,4 +1087,92 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.queryByRole("button", { name: /Add a departure/ })).toBeNull();
     expect(screen.getByText(/limited to owners, managers, and instructors/)).toBeInTheDocument();
   });
+});
+
+/**
+ * The request-plan panel is the one place on the board where staff copy is
+ * composed on the *client* from a template the server handed over unformatted.
+ * That boundary is where issue #606 lived: `boats.requestPlanCrewSuggestion`
+ * carried an ICU plural, the page fetched it with `st()` — which formats — and
+ * so raised a `FORMATTING_ERROR` on every board render outside production,
+ * while production swallowed the error and printed the ICU source to the shop.
+ *
+ * These tests therefore take their copy from the **real** bundles through a
+ * real `staffTranslator`, not from the `COPY` fixture above: a fixture cannot
+ * throw the way the page did, and cannot leak a template the fixture doesn't
+ * carry. Both locales, and both sides of the plural.
+ */
+describe("ScheduleBuilder request plan: copy composed on the client", () => {
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
+
+  /** The half of the copy map `page.tsx` builds for this panel, built the same way. */
+  function requestPlanCopy(locale: string) {
+    const st = staffTranslator(locale);
+    return {
+      requestPlanHeading: st("schedule.builder.requestPlanHeading"),
+      requestPlanDescription: st("schedule.builder.requestPlanDescription"),
+      requestPlanRecommendation: st.raw("schedule.builder.requestPlanRecommendation"),
+      requestPlanDivers: st.raw("schedule.builder.requestPlanDivers"),
+      requestPlanPersonOne: st.raw("schedule.builder.requestPlanPersonOne"),
+      requestPlanPersonOther: st.raw("schedule.builder.requestPlanPersonOther"),
+      requestPlanBoatRecommendation: st.raw("boats.requestPlanBoatRecommendation"),
+      requestPlanBoatExceeded: st("boats.requestPlanBoatExceeded"),
+      requestPlanCrewSuggestionOne: st.raw("boats.requestPlanCrewSuggestionOne"),
+      requestPlanCrewSuggestionOther: st.raw("boats.requestPlanCrewSuggestionOther"),
+    };
+  }
+
+  function renderPlan(locale: string, divemasters: number, divers: number) {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={{ ...COPY, ...requestPlanCopy(locale) }}
+        more={MORE}
+        initialCourse={null}
+        openAdd="expanded"
+        requestPlan={{
+          estimatedDivers: divers,
+          suggestedCapacity: 12,
+          suggestedDivemasters: divemasters,
+          diversPerDivemaster: 4,
+          suggestedBoatName: "Reef Runner",
+          exceedsKnownBoats: false,
+          requests: [{ id: "inq-1", name: "Marisol", subject: "Saturday reef", divers }],
+        }}
+      />,
+    );
+  }
+
+  for (const locale of ["en-US", "es-ES"]) {
+    for (const [divemasters, divers] of [
+      [1, 1],
+      [3, 3],
+    ]) {
+      it(`renders finished sentences in ${locale} at ${divemasters} divemaster(s)`, () => {
+        const { container } = renderPlan(locale, divemasters, divers);
+
+        const panel = container.querySelector("fieldset.sticky");
+        expect(panel).not.toBeNull();
+        // The whole failure mode in one assertion: an unresolved template — an
+        // ICU plural `fill()` cannot see, or a `{name}` nobody supplied —
+        // reaches the screen as a brace.
+        expect(panel?.textContent).not.toContain("{");
+        expect(panel?.textContent).toContain(String(divemasters));
+        expect(panel?.textContent).toContain("Marisol");
+      });
+    }
+  }
 });

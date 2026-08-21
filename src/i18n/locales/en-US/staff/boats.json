@@ -47,5 +47,6 @@
   "requestCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} — your {ratio}:1 target.",
   "requestPlanBoatRecommendation": "Suggested boat: {boatName} ({capacity} seats)",
   "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
-  "requestPlanCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} — your {ratio}:1 target."
+  "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster — your {ratio}:1 target.",
+  "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters — your {ratio}:1 target."
 }

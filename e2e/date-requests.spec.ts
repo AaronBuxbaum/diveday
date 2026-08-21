@@ -110,3 +110,41 @@ test("a course page's request names the course, and reaches the same list", asyn
   await page.goto("/shop/blue-mantis/requests");
   await expect(page.getByText("About Open Water Diver").first()).toBeVisible();
 });
+
+/**
+ * The board's request-plan panel is the one surface where staff copy is
+ * composed on the *client* from a template the server handed over unformatted,
+ * and until issue #606 nothing anywhere rendered it: the crew line carried an
+ * ICU plural fetched with a formatting translator, which threw on every board
+ * render outside production and printed its own source in production. Both
+ * failures are invisible to a spec that only checks the link's href, so this
+ * one follows the link and reads the paragraph.
+ */
+test("the builder opened from a day's requests reads as finished sentences", async ({ page }) => {
+  test.setTimeout(45_000);
+
+  await page.goto("/s/blue-mantis");
+  await page.getByLabel("What would you like to dive?").fill("A drift along the wall");
+  await page.getByLabel("Your name").fill("Nadia Okonkwo");
+  await page.getByLabel("Your email").fill("drift.fan.e2e@example.com");
+  await page.getByLabel("Where you are up to").selectOption("certified");
+  await page.getByLabel("Date you’d like").fill(PREFERRED);
+  await page.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(page.getByText("Inquiry sent")).toBeVisible();
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/requests");
+  const day = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { level: 2, name: "Mar 6, 2027" }) });
+  await day.getByRole("link", { name: "Put a departure on this day" }).click();
+
+  const plan = page.getByRole("group", { name: "Starting from requests" });
+  await expect(plan).toBeVisible();
+
+  // The lead is named and counted, and the crew line is a sentence rather than
+  // the ICU template that used to survive to the screen.
+  await expect(plan.getByText("Nadia Okonkwo (1 diver)")).toBeVisible();
+  await expect(plan.getByText(/^Bring 1 divemaster — your \d+:1 target\.$/)).toBeVisible();
+  expect(await plan.innerText()).not.toContain("{");
+});

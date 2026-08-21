@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { fill } from "@/i18n/fill";
+import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import {
   MAX_DECISION_HOURS,
@@ -233,10 +233,12 @@ export type BuilderCopy = {
   requestPlanDescription?: string;
   requestPlanRecommendation?: string;
   requestPlanDivers?: string;
-  requestPlanPerson?: string;
+  requestPlanPersonOne?: string;
+  requestPlanPersonOther?: string;
   requestPlanBoatRecommendation?: string;
   requestPlanBoatExceeded?: string;
-  requestPlanCrewSuggestion?: string;
+  requestPlanCrewSuggestionOne?: string;
+  requestPlanCrewSuggestionOther?: string;
   diveModeLabel?: string;
   modeBoat?: string;
   modeShore?: string;
@@ -449,10 +451,16 @@ function AddPanel({
           ) : null}
           {requestPlan.suggestedDivemasters > 0 ? (
             <p className="mt-1 text-sm text-muted font-medium">
-              {fill(copy.requestPlanCrewSuggestion ?? "", {
-                divemasters: requestPlan.suggestedDivemasters,
-                ratio: requestPlan.diversPerDivemaster,
-              })}
+              {fill(
+                pluralForm(requestPlan.suggestedDivemasters, {
+                  one: copy.requestPlanCrewSuggestionOne ?? "",
+                  other: copy.requestPlanCrewSuggestionOther ?? "",
+                }),
+                {
+                  divemasters: requestPlan.suggestedDivemasters,
+                  ratio: requestPlan.diversPerDivemaster,
+                },
+              )}
             </p>
           ) : null}
           <ul className="mt-3 grid gap-2">
@@ -468,10 +476,13 @@ function AddPanel({
                   />
                   <span className="min-w-0">
                     <span className="block font-medium">
-                      {fill(copy.requestPlanPerson ?? "", {
-                        name: request.name,
-                        divers: request.divers,
-                      })}
+                      {fill(
+                        pluralForm(request.divers, {
+                          one: copy.requestPlanPersonOne ?? "",
+                          other: copy.requestPlanPersonOther ?? "",
+                        }),
+                        { name: request.name, divers: request.divers },
+                      )}
                     </span>
                     <span className="block text-muted">{request.subject}</span>
                   </span>
