@@ -1,6 +1,6 @@
 # 20260808-agent-follow-up-register — Keep agent follow-ups as one file per item in a checked register
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260821-follow-ups-are-github-issues
 - **Date:** 2026-08-08
 
 ## Context

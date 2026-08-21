@@ -1,7 +1,7 @@
 // Gate freshness — how long each human-owned gate in docs/product/human-decisions.md has sat
 // without recorded movement, reconciled against rollout.md's "next 30 days" list, plus how
-// long each entry in the agent follow-up register (docs/product/follow-ups/) has waited for
-// a human's triage.
+// long each open follow-up issue (label:needs-triage — see docs/agents/issue-tracker.md's
+// Filing a follow-up section) has waited for a human's triage.
 //
 // This is a REPORT, not a gate. It always exits 0 and is deliberately not part of
 // `pnpm check:repo`: every row it reports on is a human conversation, a regulator's
@@ -22,31 +22,28 @@
 //      last changed at or before it. Those ages print as "≥ N days", never as a number
 //      the evidence can't carry.
 //
-// The follow-up register needs neither kind of evidence: an entry's id *is* its date
-// (`FU-YYYYMMDD-slug`, and `pnpm check:follow-ups` already refuses a file whose **Raised:**
-// disagrees with it), so its age is exact and survives a shallow clone that `git blame`
-// cannot see past. Aging it is reported here for the same reason the gates are, and with
-// the same restraint: `pnpm check:follow-ups` deliberately does not fail on an old entry,
-// because an inbox waiting on a human's judgment is not a build failure, and nothing in
-// that folder is an agent's to close. The register's two rooms are aged separately —
-// the inbox, and `waiting/`, whose entries are blocked on an upstream release or a third
-// party's answer. Both are reported, because "waiting on upstream" is only an honest
-// answer for as long as somebody is still checking, and the age is what says otherwise.
+// The follow-up tracker needs neither kind of evidence: GitHub stamps `createdAt` on every
+// issue, exact and never affected by a shallow clone the way `git blame` is. Aging it is
+// reported here for the same reason the gates are, and with the same restraint:
+// `pnpm check:follow-ups` deliberately does not fail on an old issue, because an inbox
+// waiting on a human's judgment is not a build failure, and nothing under `label:needs-triage`
+// is an agent's to close. Issues also carrying `waiting-on-external` (blocked on an upstream
+// release or a third party's answer) are aged separately, because "waiting on upstream" is
+// only an honest answer for as long as somebody is still checking, and the age is what says
+// otherwise. Like `check-follow-ups.mjs`, this section degrades quietly (prints a note, ages
+// nothing) when `gh` cannot answer — a network hiccup is not evidence of anything.
 //
 // Time: `pnpm check:clock` guards src/lib, src/db, and src/features — not scripts/ — so
 // the bare `new Date()` in `main()` below is in bounds. Every function that reasons about
 // time still takes `now` as a parameter, because that is what makes the parsing testable
 // (`scripts/gate-freshness.test.mjs`) without a frozen wall clock.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import {
-  DIRECTORY as FOLLOW_UPS,
-  WAITING_DIRECTORY as FOLLOW_UPS_WAITING,
-} from "./check-follow-ups.mjs";
+import { LABEL, listOpenFollowUps, PARKED_LABEL, WAITING_LABEL } from "./check-follow-ups.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -140,39 +137,38 @@ export function parseThirtyDayList(markdown) {
 }
 
 /** One `- **Label:** value` line from a follow-up entry, or null. */
-function entryField(contents, label) {
-  return contents.match(new RegExp(`^- \\*\\*${label}:\\*\\*\\s*(.+)$`, "m"))?.[1].trim() ?? null;
+function bodyField(body, label) {
+  return body?.match(new RegExp(`^\\*\\*${label}:\\*\\*\\s*(.+)$`, "m"))?.[1].trim() ?? null;
 }
 
 /**
- * One follow-up entry, read from its filename and body. The date comes from the
- * `FU-YYYYMMDD-` id rather than the **Raised:** line or `git blame`: the id is the one
- * piece of evidence that is exact, always present, and unaffected by a shallow clone —
- * and `pnpm check:follow-ups` already refuses an entry whose **Raised:** date disagrees
- * with it, so there is nothing the two could say differently.
- *
- * Returns null for a filename that is not an entry (README.md, TEMPLATE.md, a stray file).
+ * One follow-up issue, read from `gh issue list`'s JSON. The date comes from GitHub's own
+ * `createdAt` — exact, always present, and unaffected by a shallow clone the way `git blame`
+ * is.
  */
-export function parseFollowUpEntry(filename, contents) {
-  const match = /^FU-(\d{4})(\d{2})(\d{2})-[^.]+\.md$/.exec(filename);
-  if (!match) return null;
+export function parseFollowUpIssue(issue) {
+  const labelNames = new Set((issue.labels ?? []).map((label) => label.name));
   return {
-    id: filename.replace(/\.md$/, ""),
-    raisedOn: `${match[1]}-${match[2]}-${match[3]}`,
-    status: entryField(contents, "Status") ?? "—",
-    kind: entryField(contents, "Kind") ?? "—",
-    effort: entryField(contents, "Effort") ?? "—",
+    id: `#${issue.number}`,
+    title: issue.title,
+    raisedOn: issue.createdAt.slice(0, 10),
+    status: labelNames.has(WAITING_LABEL)
+      ? "Waiting"
+      : labelNames.has(PARKED_LABEL)
+        ? "Parked"
+        : "Open",
+    kind: bodyField(issue.body, "Kind") ?? "—",
+    effort: bodyField(issue.body, "Effort") ?? "—",
   };
 }
 
 /**
- * Every entry in `files` (a list of `{ filename, contents }`), aged against `now` and
- * sorted oldest first, ties broken by id so the report is stable run to run.
+ * Every issue in `issues` (`gh issue list --json number,title,body,labels,createdAt`), aged
+ * against `now` and sorted oldest first, ties broken by id so the report is stable run to run.
  */
-export function ageFollowUps(files, now) {
-  return files
-    .map(({ filename, contents }) => parseFollowUpEntry(filename, contents))
-    .filter((entry) => entry !== null)
+export function ageFollowUps(issues, now) {
+  return issues
+    .map(parseFollowUpIssue)
     .map((entry) => ({ ...entry, days: daysSince(entry.raisedOn, now) }))
     .sort((a, b) => b.days - a.days || a.id.localeCompare(b.id));
 }
@@ -326,8 +322,8 @@ function printRows(heading, rows) {
   }
 }
 
-function printFollowUps(entries, { directory, heading, empty }) {
-  console.log(`\n${heading} (${directory}) — ${entries.length}`);
+function printFollowUps(entries, { heading, empty }) {
+  console.log(`\n${heading} (label:${LABEL}) — ${entries.length}`);
   if (entries.length === 0) {
     console.log(`  ${empty}`);
     return;
@@ -344,23 +340,6 @@ function printFollowUps(entries, { directory, heading, empty }) {
         `${pad(entry.effort, 7)}${padStart(`${entry.days}d`, 5)}`,
     );
   }
-}
-
-/** `{ filename, contents }` for every file in one follow-up room; [] when it is absent. */
-function readFollowUpFiles(directory) {
-  let names;
-  try {
-    names = readdirSync(path.join(ROOT, directory));
-  } catch {
-    return [];
-  }
-  return names
-    .filter((name) => name.endsWith(".md"))
-    .sort()
-    .map((filename) => ({
-      filename,
-      contents: readFileSync(path.join(ROOT, directory, filename), "utf8"),
-    }));
 }
 
 async function main() {
@@ -420,19 +399,28 @@ async function main() {
     }
   }
 
-  printFollowUps(ageFollowUps(readFollowUpFiles(FOLLOW_UPS), now), {
-    directory: FOLLOW_UPS,
-    heading: "Follow-up register — awaiting triage",
-    empty: "Empty — nothing filed is waiting on a human.",
-  });
-  // Reported separately, and reported at all: an entry parked on somebody else's
-  // release still rots, and "waiting on upstream" is only an honest answer for as
-  // long as somebody is still checking. The age is the thing that says otherwise.
-  printFollowUps(ageFollowUps(readFollowUpFiles(FOLLOW_UPS_WAITING), now), {
-    directory: FOLLOW_UPS_WAITING,
-    heading: "Follow-up register — waiting on somebody else",
-    empty: "Empty — nothing is blocked outside this repo.",
-  });
+  const followUpIssues = listOpenFollowUps(ROOT);
+  if (followUpIssues === null) {
+    console.log(
+      `\nFollow-up issues (label:${LABEL}) — could not reach \`gh issue list\`, skipped.`,
+    );
+  } else {
+    const waiting = followUpIssues.filter((issue) =>
+      (issue.labels ?? []).some((label) => label.name === WAITING_LABEL),
+    );
+    const inbox = followUpIssues.filter((issue) => !waiting.includes(issue));
+    printFollowUps(ageFollowUps(inbox, now), {
+      heading: "Follow-up issues — awaiting triage",
+      empty: "Empty — nothing filed is waiting on a human.",
+    });
+    // Reported separately, and reported at all: an issue parked on somebody else's
+    // release still rots, and "waiting on upstream" is only an honest answer for as
+    // long as somebody is still checking. The age is the thing that says otherwise.
+    printFollowUps(ageFollowUps(waiting, now), {
+      heading: "Follow-up issues — waiting on somebody else",
+      empty: "Empty — nothing is blocked outside this repo.",
+    });
+  }
 
   const stalled = reconciled.filter((item) => item.unstarted);
   const unmeasurable = reconciled.filter((item) => item.unmeasurable);

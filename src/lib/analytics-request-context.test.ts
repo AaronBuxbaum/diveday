@@ -163,9 +163,9 @@ describe("the @vercel/analytics contract this depends on", () => {
 
   it("still offers no way for a caller to supply that URL itself", () => {
     // The reason the fix is a global wrapper rather than an argument. If a
-    // future release adds an override, prefer it and delete the shim -- see the
-    // upstream request in
-    // docs/product/follow-ups/FU-20260814-vercel-analytics-url-override.md.
+    // future release adds an override, prefer it and delete the shim -- see
+    // the upstream request tracked in
+    // https://github.com/AaronBuxbaum/diveday/issues/622.
     expect(sdk).not.toMatch(/options\s*(\?\.)?\s*\.\s*url\b/);
     // Name the proposed shape too, not just the generic one. The request went
     // upstream as vercel/analytics#208, a `beforeSend` hook mirroring the
