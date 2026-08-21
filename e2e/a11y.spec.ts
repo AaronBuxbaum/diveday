@@ -90,16 +90,26 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   test("the trip booking page and its confirmation have no automated a11y violations", async ({
     page,
   }) => {
-    // Six navigations, a sign-out, a booking, and three full axe scans: 11.2s
-    // measured on an idle worker, against the file's 15s default. That 3.8s of
-    // headroom is not enough under 2-worker contention, where this test times
-    // out mid-scan — not on a violation, on the clock. Raised rather than
-    // trimmed because every leg of it is load-bearing: the scan has to happen
-    // on the *signed-out* page (a staff session adds a preview banner no diver
-    // sees) and on the confirmation, and neither can be reached without the
-    // trip this creates. Same treatment, and the same reasoning, as the
+    // Six navigations, a sign-out, a booking, and two full axe scans. Raised
+    // rather than trimmed because every leg is load-bearing: the scan has to
+    // happen on the *signed-out* page (a staff session adds a preview banner no
+    // diver sees) and on the confirmation, and neither can be reached without
+    // the trip this creates. Same treatment, and the same reasoning, as the
     // cost-bound tests in add-diver.spec.ts.
-    test.setTimeout(30_000);
+    //
+    // **The number moved, and it moved for a reason worth writing down.** It
+    // was 11.2s on an idle worker when this budget was 30s. The second scan now
+    // lands on `/ready` rather than a `?booking=` branch of the trip page (ADR
+    // 20260820-one-page-after-booking), and that page is the diver's whole
+    // pre-trip checklist, packing list and dive briefings — so axe reads far
+    // more document than it used to. Re-measured 21.9s / 23.0s / 24.3s idle
+    // after that landed, which left roughly the same margin the 15s budget had
+    // before it was raised: none that survives 2-worker contention, where CI
+    // run 32439332010 timed out on the clock mid-`waitForLoadState`, not on a
+    // violation. 60s restores the ~2.5x headroom the 30s figure originally
+    // bought. It is a cost bound on fixed work, not a wait for a race — if this
+    // ever fails again, measure before touching the number.
+    test.setTimeout(60_000);
     const title = `A11y Scan Trip ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(title);
