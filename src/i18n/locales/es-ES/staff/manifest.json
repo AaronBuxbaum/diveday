@@ -98,5 +98,7 @@
   "buddySummaryTeams": "{count, plural, =0 {Todavía no hay equipos de buceo} one {# equipo de buceo} other {# equipos de buceo}}",
   "buddySummaryUnteamed": " · {count, plural, one {# buceador sin equipo de buceo} other {# buceadores sin equipo de buceo}}",
   "noDiversLine": "No hay buceadores reservados en esta salida.",
-  "diverFactsSummaryWithMedical": "Contacto, equipo y ficha médica"
+  "diverFactsSummaryWithMedical": "Contacto, equipo y ficha médica",
+  "sharedDepthApplies": "Se aplica a {names}.",
+  "depthChip": "Aviso de profundidad"
 }

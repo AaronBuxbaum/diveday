@@ -98,5 +98,7 @@
   "buddySummaryTeams": "{count, plural, =0 {No teams yet} one {# team} other {# teams}}",
   "buddySummaryUnteamed": " · {count, plural, one {# diver not on a team} other {# divers not on a team}}",
   "noDiversLine": "No divers are booked on this departure.",
-  "diverFactsSummaryWithMedical": "Contact, gear & medical"
+  "diverFactsSummaryWithMedical": "Contact, gear & medical",
+  "sharedDepthApplies": "Applies to {names}.",
+  "depthChip": "Depth advisory"
 }

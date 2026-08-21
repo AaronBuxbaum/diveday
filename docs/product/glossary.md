@@ -295,6 +295,10 @@ new domain concept, define it here in the same PR.
   than a diver's ceiling is a **warning to staff, never a booking gate** (H-08) — an instructor may
   deliberately keep a diver shallower than the site's maximum, and that is an ordinary correct
   dive. No card on file, or no depth on file, produces no warning at all rather than a false one.
+  On screen that warning is the **depth advisory** — the sentence on a diver's roster card and
+  manifest row, and the "Depth advisory" chip a diver wears when the identical sentence applies to
+  much of the boat and is stated once above the list. Distinct from an **Admission advisory**,
+  which is about booking-time trust in a self-declared card, not depth.
   See [20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md).
 - **Depth unit** — `shops.depth_unit`, whether a shop's staff read depths in metres or feet.
   Display and entry only: storage is canonical metres, so switching it moves no stored number.

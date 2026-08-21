@@ -335,9 +335,9 @@
     "checkedInPill": "Registrado",
     "ageYears": "{age} años",
     "minorBadge": "Menor",
-    "depthWarning": "Llega a {site} {unit}, más profundo que los {limit} {unit} que habilita su certificación. No es un bloqueo: planifica más somero o confirma que el guía lo mantiene dentro de sus límites.",
-    "depthWarningJunior": "Llega a {site} {unit}, más profundo que los {limit} {unit} permitidos para su edad. No es un bloqueo: planifica más somero o confirma que el guía lo mantiene dentro de sus límites.",
-    "depthWarningNoCard": "Llega a {site} {unit} y no hay certificación registrada con la que compararlo; {limit} {unit} es el límite de iniciación. No es un bloqueo: verifica qué titulación tiene o confirma que el guía lo mantiene dentro de sus límites.",
+    "depthWarning": "Llega a {site} {unit}, más profundo que los {limit} {unit} que habilita su certificación. No es un bloqueo: planifica más somero o confirma que el guía respete esos límites.",
+    "depthWarningJunior": "Llega a {site} {unit}, más profundo que los {limit} {unit} permitidos para su edad. No es un bloqueo: planifica más somero o confirma que el guía respete esos límites.",
+    "depthWarningNoCard": "Llega a {site} {unit} y no hay certificación registrada con la que compararlo; {limit} {unit} es el límite de iniciación. No es un bloqueo: verifica qué titulación consta en su ficha o confirma que el guía respete esos límites.",
     "buddyGroupNote": "Nota de grupo de buceo:",
     "confirming": "Confirmando…",
     "confirmIdentityMessage": "¿Confirmar que esta reserva realmente es de {name}? Hazlo solo una vez que hayas verificado que es la misma persona — no alguien más compartiendo el correo.",
@@ -384,7 +384,11 @@
     "emptyHeading": "Todavía no hay nadie en este barco",
     "emptyAction": "Añadir un buceador",
     "filterEmptyHeading": "Nadie coincide con este filtro",
-    "filterEmptyAction": "{count, plural, one {Ver el # buceador a bordo} other {Ver los # buceadores a bordo}}"
+    "filterEmptyAction": "{count, plural, one {Ver el # buceador a bordo} other {Ver los # buceadores a bordo}}",
+    "sharedFactLine": "{count, plural, one {# buceador} other {# buceadores}}: {sentence}",
+    "sharedOnCard": "{count, plural, one {# bloqueo} other {# bloqueos}} en común con otros buceadores — indicados arriba.",
+    "depthChip": "Aviso de profundidad",
+    "blockersReferenceHeading": "Bloqueos"
   },
   "celebrations": {
     "heading": "Celebraciones",

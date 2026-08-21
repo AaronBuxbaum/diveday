@@ -106,11 +106,24 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}/guests`);
 
     // The warning names both numbers and says plainly that it is not a block.
+    // Eight Open Water divers resolve to the identical sentence, so it is
+    // stated once in the shared strip above the roster with its diver count
+    // (principle 9); each of their cards wears the two-word chip instead, and
+    // the sentence appears nowhere on the card itself.
     const warning = page
-      .getByText(/deeper than the .* their certification qualifies them for/)
+      .getByText(/divers: Reaches .* deeper than the .* their certification qualifies them for/)
       .first();
     await expect(warning).toBeVisible();
     await expect(warning).toContainText("Not a block");
+    const juneCard = page.locator("#roster li").filter({ hasText: "June Park" }).first();
+    await expect(juneCard.getByText("Depth advisory")).toBeVisible();
+    await expect(juneCard.getByText(/deeper than the/)).toHaveCount(0);
+    // Lena is 13, so her ceiling comes from her age, not her card — a
+    // different sentence that is hers alone, and it keeps its full text on
+    // her card: grouping must never flatten a diver whose limit differs into
+    // the boat-wide line.
+    const lenaCard = page.locator("#roster li").filter({ hasText: "Lena Fischer" }).first();
+    await expect(lenaCard.getByText(/deeper than the .* allowed at their age/)).toBeVisible();
 
     // And the diver it is about is still boardable. "Ready", not "Ready to
     // board" — the one readiness vocabulary (src/i18n/readiness-labels.ts) that
