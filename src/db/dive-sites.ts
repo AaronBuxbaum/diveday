@@ -232,24 +232,21 @@ export async function listDiveSitesPage(
 }
 
 /**
- * The three library counters, over the whole shop rather than the page being
- * shown — "Saved sites: 24" on page 1 of 4 would be a lie, and these numbers
- * are the reason the header exists.
+ * How many sites the shop holds, over the whole library rather than the page
+ * being shown — the library page asks it exactly one question, "is there
+ * anything here at all?", and a search that narrows the table to nothing must
+ * not answer it "no".
+ *
+ * It used to return three counters, for an overview strip of tiles above the
+ * list; the tiles are gone (issue #608) and so are the two aggregates only
+ * they read.
  */
-export async function diveSiteLibraryStats(db: AppDb, shopId: string) {
+export async function diveSiteLibrarySize(db: AppDb, shopId: string) {
   const [row] = await db
-    .select({
-      total: count(),
-      withForecastPoints: sql<number>`count(*) filter (where ${diveSites.forecastLatitude} is not null and ${diveSites.forecastLongitude} is not null)::int`,
-      fromTemplates: sql<number>`count(*) filter (where ${diveSites.sourceTemplateId} is not null)::int`,
-    })
+    .select({ total: count() })
     .from(diveSites)
     .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)));
-  return {
-    total: row?.total ?? 0,
-    withForecastPoints: row?.withForecastPoints ?? 0,
-    fromTemplates: row?.fromTemplates ?? 0,
-  };
+  return row?.total ?? 0;
 }
 
 export async function getDiveSite(db: AppDb, shopId: string, siteId: string) {

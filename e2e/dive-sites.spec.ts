@@ -126,8 +126,8 @@ test.describe("staff", () => {
     // round-trips with their own settles — the same aggregate-cost reasoning
     // as the tour above, not one slow step.
     test.setTimeout(30_000);
-    const library = page.getByRole("list", { name: "Saved dive sites" });
-    const cards = library.locator("li");
+    const library = page.getByRole("table", { name: "Saved dive sites" });
+    const rows = library.locator("tbody tr");
     const search = page.getByLabel("Find a site");
     // Scoped to the band itself: the staff chrome's ⌘K trigger is also a
     // button named "Search", so an unscoped locator resolves to both.
@@ -136,24 +136,22 @@ test.describe("staff", () => {
       .getByRole("button", { name: "Search" });
 
     await page.goto("/shop/blue-mantis/dive-sites");
-    // Wait for a real card before counting. `locator.count()` is a one-shot
+    // Wait for a real row before counting. `locator.count()` is a one-shot
     // query — alone among Playwright's locator methods it does *not* retry —
     // so on an `instant = true` route it happily counts the `loading.tsx`
-    // skeleton's zero `<li>`s and moves on. Every later assertion here is
+    // skeleton's zero rows and moves on. Every later assertion here is
     // auto-waiting; this one line is what makes the first one so too.
-    await expect(cards.first()).toBeVisible();
-    const seededCount = await cards.count();
+    await expect(rows.first()).toBeVisible();
+    const seededCount = await rows.count();
     expect(seededCount).toBeGreaterThan(1);
 
-    // A name search narrows the grid to the one card and says so in the URL,
+    // A name search narrows the table to the one row and says so in the URL,
     // so a found site is a link a staffer can send to a colleague.
     await search.fill("spiegel");
     await submit.click();
     await expect(page).toHaveURL(/\?q=spiegel/);
-    await expect(cards).toHaveCount(1);
-    await expect(
-      library.getByRole("heading", { level: 2, name: "Spiegel Grove", exact: true }),
-    ).toBeVisible();
+    await expect(rows).toHaveCount(1);
+    await expect(library.getByRole("link", { name: "Spiegel Grove", exact: true })).toBeVisible();
     // The site's cert gate reads as the word staff use everywhere else in the
     // app — not the raw `advanced_open_water` enum with its underscores swapped
     // for spaces, which is what this badge rendered before. `exact: true` is
@@ -166,9 +164,9 @@ test.describe("staff", () => {
     // Location is searchable too: "Pennekamp" appears in no site's *name*.
     await search.fill("pennekamp");
     await submit.click();
-    await expect(cards).toHaveCount(1);
+    await expect(rows).toHaveCount(1);
     await expect(
-      library.getByRole("heading", { level: 2, name: "Christ of the Abyss", exact: true }),
+      library.getByRole("link", { name: "Christ of the Abyss", exact: true }),
     ).toBeVisible();
 
     // A search that matches nothing says so rather than showing the library's
@@ -181,7 +179,7 @@ test.describe("staff", () => {
     // And there is always a way back to the whole library.
     await page.getByRole("link", { name: "Clear search" }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
-    await expect(cards).toHaveCount(seededCount);
+    await expect(rows).toHaveCount(seededCount);
 
     // One screenful of sites is never told it is on "page 1 of 1"; the pager
     // only exists when there is somewhere to go. (`src/db/dive-sites.test.ts`
@@ -190,12 +188,12 @@ test.describe("staff", () => {
     // that reads the library.)
     await expect(page.getByRole("navigation", { name: "Dive-site pages" })).toHaveCount(0);
     // A stale bookmark past the end lands on the last real page. It used to
-    // render an empty grid under a heading that could not be true, which is
+    // render an empty list under a heading that could not be true, which is
     // what `offsetPage` exists to stop (ADR 20260803-one-pagination-model);
     // the library reads through it now like every other paged staff list.
     await page.goto("/shop/blue-mantis/dive-sites?page=99");
     await expect(page.getByRole("heading", { level: 1, name: "Dive-site library" })).toBeVisible();
-    await expect(cards).toHaveCount(seededCount);
+    await expect(rows).toHaveCount(seededCount);
   });
 
   test("a site with no location yet says so instead of leaving the line blank", async ({
@@ -212,9 +210,11 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.goto(`/shop/blue-mantis/dive-sites?q=${encodeURIComponent(siteName)}`);
-    const card = page.getByRole("list", { name: "Saved dive sites" }).locator("li");
-    await expect(card).toHaveCount(1);
-    await expect(card.getByText("Location to add")).toBeVisible();
+    const row = page.getByRole("table", { name: "Saved dive sites" }).locator("tbody tr");
+    await expect(row).toHaveCount(1);
+    // Twice in the row's markup — once in the Location column, once folded
+    // under the name for a phone — so `.first()` rather than a strict match.
+    await expect(row.getByText("Location to add").first()).toBeVisible();
   });
 
   test("a shop draws the route it swims, and a diver reads it on the briefing", async ({
@@ -401,13 +401,20 @@ test.describe("staff", () => {
     // tailor" action does. Before that, this exact button — the catalog's only
     // action, on the state every demo shop ships in — raised an unhandled 23505
     // and crashed the page into its error boundary.
-    const existing = page.getByRole("heading", { level: 2, name: "Molasses Reef", exact: true });
-    const imported = page.getByRole("heading", { level: 2, name: "Molasses Reef 2", exact: true });
+    // The library rows are a table now (issue #608), so a site is named by the
+    // link in its first cell rather than by a card's `<h2>`.
+    const library = page.getByRole("table", { name: "Saved dive sites" });
+    const existing = library.getByRole("link", { name: "Molasses Reef", exact: true });
+    const imported = library.getByRole("link", { name: "Molasses Reef 2", exact: true });
+    // The template line is in the row twice — its own column, and folded under
+    // the name for a phone — so these read the first match rather than
+    // tripping strict mode on a pair that says the same thing.
+    const updateReady = library.getByText("Template update v2 ready.").first();
 
     await page.goto("/shop/blue-mantis/dive-sites");
     await expect(existing).toHaveCount(1);
     await expect(imported).toHaveCount(0);
-    await expect(page.getByText("Template update v2 ready.")).toBeVisible();
+    await expect(updateReady).toBeVisible();
 
     await page.getByRole("link", { name: "Browse templates" }).click();
     await expect(
@@ -433,8 +440,8 @@ test.describe("staff", () => {
     // shop's own tailored v1 copy is untouched and still offered the update.
     await expect(existing).toHaveCount(1);
     await expect(imported).toHaveCount(1);
-    await expect(page.getByText("DiveDay template v2")).toBeVisible();
-    await expect(page.getByText("Template update v2 ready.")).toBeVisible();
+    await expect(library.getByText("DiveDay template v2").first()).toBeVisible();
+    await expect(updateReady).toBeVisible();
   });
 
   test("the old /dive-sites/catalog URL still works, and keeps the page it was deep-linked to", async ({
