@@ -31,12 +31,10 @@ const confirmed = {
   person: { id: "person-1", fullName: "Ingrid Vogel", email: null },
 } as unknown as Confirmed;
 
+const readyRoute = "/s/reef-shop/trips/trip-1/ready?booking=tok";
+
 function renderNotice(
-  overrides: {
-    readinessLink?: string | null;
-    emailsOnTheWay?: boolean;
-    payCancelled?: boolean;
-  } = {},
+  overrides: { readinessLink?: string; emailsOnTheWay?: boolean; payCancelled?: boolean } = {},
 ) {
   return renderDiver(
     <EmbedBookedNotice
@@ -45,7 +43,7 @@ function renderNotice(
       locale="en-US"
       trip={trip}
       confirmed={confirmed}
-      readinessLink={overrides.readinessLink === undefined ? "/ready/tok" : overrides.readinessLink}
+      readinessLink={overrides.readinessLink ?? readyRoute}
       emailsOnTheWay={overrides.emailsOnTheWay ?? false}
       payCancelled={overrides.payCancelled ?? false}
     />,
@@ -70,20 +68,29 @@ describe("EmbedBookedNotice", () => {
   it("breaks out of the frame to reach the readiness page", () => {
     renderNotice();
     const link = screen.getByRole("link", { name: /readiness page/ });
-    expect(link).toHaveAttribute("href", "/ready/tok");
+    expect(link).toHaveAttribute("href", readyRoute);
     expect(link).toHaveAttribute("target", "_top");
   });
 
   /**
-   * No origin configured means no capability could be minted. The link is inert
-   * rather than absent: a diver who booked inside an iframe and is shown *no*
-   * way onward has no other copy of that link — the email carrying it could not
-   * be built either.
+   * The link used to render `href="#"` under `aria-disabled` whenever no
+   * capability could be minted, styled inert with `pointer-events-none`. That
+   * stops a mouse and nothing else: a keyboard Enter still activates an anchor,
+   * and `#` under `target="_top"` is a *navigation* — it replaces the shop's own
+   * page, the one thing this component exists to avoid (`coderabbitai`).
+   *
+   * It cannot happen now because the href is a route, not a minted token, and
+   * the route decides at tap time — so there is no state where this component
+   * has nowhere to point. Pinned rather than argued: an `href` that is empty or
+   * a bare fragment is the shape of the bug, whatever reintroduces it.
    */
-  it("disables the readiness link rather than dropping it when none could be issued", () => {
-    renderNotice({ readinessLink: null });
+  it("never points the top-level window at a bare fragment", () => {
+    renderNotice();
     const link = screen.getByRole("link", { name: /readiness page/ });
-    expect(link).toHaveAttribute("aria-disabled", "true");
+    const href = link.getAttribute("href") ?? "";
+    expect(href.startsWith("#")).toBe(false);
+    expect(href).not.toBe("");
+    expect(link).not.toHaveAttribute("aria-disabled");
   });
 
   it("keeps the way back into the widget, still embedded", () => {

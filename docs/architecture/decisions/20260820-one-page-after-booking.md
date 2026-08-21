@@ -76,10 +76,29 @@ the seat-is-safe line after an abandoned payment, and one `target="_top"` link o
 Everything else is one tap away in the top window, where it is not competing with the shop's own
 page for a few hundred pixels.
 
-**So the `confirm` purpose survives — read-only.** It is minted only inside the embed, verified only
-in a page render, and authorizes no mutation anywhere: all three of its actions are gone. The trip
-page ignores `?booking=` entirely outside embed mode, which is narrower than verifying a token
+**So the `confirm` purpose survives — read-only over the booking.** It is minted only inside the
+embed, and it reads or writes nothing on the booking itself: all three of its actions are gone. The
+trip page ignores `?booking=` entirely outside embed mode, which is narrower than verifying a token
 nothing issues any more.
+
+**The link out is a route, not a token minted while the page rendered** (`./ready/route.ts`,
+2026-08-21). The first cut built the `target="_top"` href by calling `issueBookingCapability` in the
+page body, which `coderabbitai` caught: a capability token is stored hashed, so a render cannot read
+an existing one back and had to mint a *new* one every time. That wrote a row per reload of an
+anonymous page, and — past `MAX_LIVE_CAPABILITIES_PER_PURPOSE` — the twentieth reload retired the
+readiness link `bookSpot` had already emailed to that diver. A reload is not a request for a
+credential; a tap is. The route verifies the `confirm` token, scopes it to the departure in the
+path, throttles on the shared `capabilityAction` bucket, and only then issues the `readiness`
+capability and redirects. So the trade is stated once, here: `confirm` proves "you booked this
+seat", and this exchanges that proof for the capability the same booking's confirmation email
+already carried — never for authority the bearer was not already sent. It is linked with a plain
+`<a>`, because `next/link` would prefetch the route and put the minting straight back on render.
+
+That also removed the case behind the second finding. The href used to fall back to `#` under
+`aria-disabled` whenever no capability came back, which reads as inert and is not:
+`pointer-events-none` stops a mouse, a keyboard Enter still activates the anchor, and `#` under
+`target="_top"` replaces the shop's own page with the embed route — the exact failure this
+component exists to avoid. A route needs no fallback.
 
 ## Alternatives considered
 

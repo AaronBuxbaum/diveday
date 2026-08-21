@@ -48,8 +48,12 @@ export function EmbedBookedNotice({
    * every other payment state now lives.
    */
   payCancelled: boolean;
-  /** Null when no readiness capability could be issued; the link then renders disabled. */
-  readinessLink: string | null;
+  /**
+   * Path to `./ready/route.ts`, which trades this booking's `confirm` token for
+   * a readiness capability and redirects. A path rather than a minted
+   * `/ready/[token]` on purpose — see the note where the page builds it.
+   */
+  readinessLink: string;
   /**
    * True only when this booking's confirmation email *and* its waiver-link
    * email both actually went out. A walk-in party member with no address of
@@ -94,16 +98,20 @@ export function EmbedBookedNotice({
           framing allowlist (ADR 20260726-schedule-embed), so a same-frame click
           would swap the working widget for a frame Content-Security-Policy
           silently blocks. The second stays inside the frame, and carries
-          `embed=1` so the schedule doesn't reload into full page chrome. */}
+          `embed=1` so the schedule doesn't reload into full page chrome.
+
+          A bare `<a>` rather than `next/link` for the first: it leaves the app
+          either way, and `next/link` would *prefetch* the route — which mints a
+          capability, putting us straight back to the per-render minting this
+          route exists to stop. */}
       <div className="mt-4 flex flex-col items-start gap-2">
-        <Link
-          href={readinessLink ?? "#"}
-          aria-disabled={readinessLink === null}
+        <a
+          href={readinessLink}
           target="_top"
-          className="inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
+          className="inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
         >
           {t("booking.trackReadiness")}
-        </Link>
+        </a>
         <Link
           href={`${publicSchedulePath(shopSlug)}?embed=1`}
           className="inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"

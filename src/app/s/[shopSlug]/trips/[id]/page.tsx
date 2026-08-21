@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { buttonClass } from "@/components/ui/button";
-import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
@@ -28,7 +28,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
@@ -299,25 +298,32 @@ export default async function TripDetailPage({
   // it is safe to send to an anonymous page — it says nothing about any reader.
   const requiredLevel = combinedRequirement?.minimumCertificationLevel ?? undefined;
 
-  // The embed's short confirmation needs exactly two facts beyond the booking
-  // itself: whether both emails went, and the link out to `/ready`. Everything
-  // the old in-page confirmation read — the payment panel, readiness, rental
-  // fit, the nitrox card, the party's claim links — now belongs to `/ready`,
-  // which reads it for every visit rather than only the one right after
-  // booking (ADR 20260820-one-page-after-booking).
-  const [emailsOnTheWay, readinessCapability] = confirmed
-    ? await Promise.all([
-        // Only say "two emails are on their way" when both actually went —
-        // a party member booked without an address of their own gets neither.
-        bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
-        issueBookingCapability(db, {
-          shopId: shop.id,
-          bookingId: confirmed.booking.id,
-          purpose: "readiness",
-        }),
-      ])
-    : [false, null];
-  const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
+  // The embed's short confirmation needs exactly one fact beyond the booking
+  // itself: whether both emails went. Everything the old in-page confirmation
+  // read — the payment panel, readiness, rental fit, the nitrox card, the
+  // party's claim links — now belongs to `/ready`, which reads it for every
+  // visit rather than only the one right after booking (ADR
+  // 20260820-one-page-after-booking).
+  //
+  // Only say "two emails are on their way" when both actually went — a party
+  // member booked without an address of their own gets neither.
+  const emailsOnTheWay = confirmed
+    ? await bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id)
+    : false;
+  // The door out to `/ready` is a *path*, resolved by `./ready/route.ts` when
+  // the diver taps it. This render mints no capability: a readiness token is
+  // stored hashed and so cannot be read back, and minting a fresh one per
+  // render both wrote a row per reload and — past
+  // `MAX_LIVE_CAPABILITIES_PER_PURPOSE` — retired the readiness link `bookSpot`
+  // had already emailed (`coderabbitai`).
+  //
+  // Always a real destination, which is the other half of what that costs: the
+  // link used to be `href="#"` whenever no capability came back, and `#` under
+  // `target="_top"` is not inert — a keyboard Enter replaced the shop's own
+  // page with the embed route. `bookingToken` is a string wherever this
+  // renders (`confirmed` exists only downstream of verifying it), and the empty
+  // case lands on the departure's public page rather than nowhere.
+  const readinessLink = `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
 
   const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= nowDate();
   // Where this departure stands against the head count it needs, if it named
