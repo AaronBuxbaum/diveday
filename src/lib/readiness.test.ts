@@ -151,6 +151,44 @@ describe("calculateReadiness", () => {
     expect(blockers).not.toContainEqual(expect.objectContaining({ code: "certification_pending" }));
   });
 
+  /**
+   * The other half of the rule above, and a regression: the exclusion is about
+   * the **number**, not the stamp.
+   *
+   * When a diver types their card in on `/ready`, `saveCertificationFromReady`
+   * stamps `selfDeclaredAt` — the `security-reviewer` fix that stops a staffer's
+   * one-tap promote laundering a typed number into `verified`. That made the row
+   * an unsighted self-declaration *carrying an identifier*, which fell to
+   * `certification_self_declared` and re-offered the entry form to the diver who
+   * had just filled it in. Re-typing the same number is refused by the unique
+   * index, so the only move the page offered could not succeed.
+   *
+   * The gate does not move — both codes are blockers, and the row is still only
+   * cleared by a sighting — which is again why this is a test rather than
+   * something anyone would notice.
+   */
+  it("says 'with the shop' about a self-declared card that carries a number", () => {
+    const blockers = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [
+        certification({
+          status: "pending",
+          level: "advanced_open_water",
+          identifier: "PADI-123456",
+          selfDeclaredAt: new Date("2026-07-17T00:00:00.000Z"),
+        }),
+      ],
+      now,
+      timezone: "UTC",
+    }).blockers;
+
+    expect(blockers).toContainEqual(expect.objectContaining({ code: "certification_pending" }));
+    expect(blockers).not.toContainEqual(
+      expect.objectContaining({ code: "certification_self_declared" }),
+    );
+  });
+
   it("still says 'with the shop' once a real card is captured beside the claim", () => {
     const blockers = calculateReadiness({
       requirement,

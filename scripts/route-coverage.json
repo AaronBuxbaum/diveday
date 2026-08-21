@@ -140,7 +140,7 @@
       "self-service-reschedule.spec.ts",
       "trip-admission.spec.ts"
     ],
-    "visual": ["site-briefing", "site-briefing-requirements"]
+    "visual": ["booking-confirmed-embed", "site-briefing", "site-briefing-requirements"]
   },
   "/shop/[shopSlug]": {
     "e2e": [

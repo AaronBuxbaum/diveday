@@ -1191,6 +1191,38 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-embed", scheme);
       });
 
+      /**
+       * **The one place a booking does not end on `/ready`** (ADR
+       * 20260820-one-page-after-booking). Inside the iframe the frame stays put
+       * — `/ready/**` is outside the framing allowlist, so redirecting there
+       * would hand a shop's own visitor a CSP-blocked frame — and
+       * `EmbedBookedNotice` says the seat is taken and offers one `target="_top"`
+       * way out.
+       *
+       * It gets its own baseline because it is a *different surface* from the
+       * `booking-confirmed` capture above, not a narrower rendering of it: short
+       * where that page is long, and the only diver-facing screen in the product
+       * whose whole job is to hand off to another window.
+       */
+      test(`the embedded booking confirmation renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/s/blue-mantis?embed=1");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        // Fixed per scheme, like `bookAVisualRegressionSeat`: the name renders,
+        // so a random one would be a permanent diff rather than a regression.
+        await page.getByLabel("Name", { exact: true }).fill("Embed Regression Diver");
+        await page.getByLabel("Email", { exact: true }).fill(`embed-visual-${scheme}@example.com`);
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        // Still framed, and still on the trip page — the assertion that this
+        // capture is of the embed branch and not a `/ready` that leaked in.
+        await expect(page).toHaveURL(/embed=1/);
+        await capture(page, "booking-confirmed-embed", scheme);
+      });
+
       // The seeded reef trip's public briefing: terrain map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
       //

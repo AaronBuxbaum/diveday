@@ -324,19 +324,30 @@ function certificationBlocker(
   if (hasVerifiedCertificationAtLeast(certifications, minimumLevel, todayLocal)) {
     return null;
   }
-  // `pending` means **a staffer is holding something** — a card was captured
-  // and is waiting on the agency lookup. A still-unsighted self-declaration is
-  // `pending` too but the shop is holding nothing at all, so it is excluded
-  // here and answered by its own code below. Conflating the two told the diver
-  // on /ready "your card is with the shop for verification" about a card that
-  // does not exist, and simultaneously withdrew the card-entry form that was
-  // their only way to send one (`CERT_ENTRY_CODES`) — a diver who ticked a
-  // dropdown was left with no move and arrived at the dock without a card.
+  // `pending` means **the shop is holding something it can look up** — a card
+  // number is on file, waiting on the agency check. A still-unsighted
+  // self-declaration *with no number* is `pending` too but the shop is holding
+  // nothing at all, so it is excluded here and answered by its own code below.
+  // Conflating the two told the diver on /ready "your card is with the shop for
+  // verification" about a card that does not exist, and simultaneously withdrew
+  // the card-entry form that was their only way to send one
+  // (`CERT_ENTRY_CODES`) — a diver who ticked a dropdown was left with no move
+  // and arrived at the dock without a card.
+  //
+  // The exclusion is about the **number**, not the stamp, which is why it asks
+  // for both. When a diver types their card in on `/ready`, the row is stamped
+  // `selfDeclaredAt` (so a staffer's one-tap promote still demands a sighting —
+  // `security-reviewer`, 2026-08-20) *and* carries an identifier. That is a
+  // number with the shop awaiting review, so it belongs here: reading it as a
+  // bare claim re-offered the entry form to a diver who had just filled it in,
+  // and re-typing the same number is refused by the unique index anyway.
+  const heldForReview = (certification: Certification) =>
+    !isUnsightedSelfDeclaration(certification) || Boolean(certification.identifier);
   if (
     certifications.some(
       (certification) =>
         certification.status === "pending" &&
-        !isUnsightedSelfDeclaration(certification) &&
+        heldForReview(certification) &&
         levelRank[certification.level] >= levelRank[minimumLevel],
     )
   ) {
@@ -354,10 +365,15 @@ function certificationBlocker(
     return { code: "certification_expired" };
   }
   // Below every state backed by something the shop holds, and above plain
-  // `missing` only because it can say more: the diver told us a level and
-  // nobody has seen a card. Both are "the shop is holding nothing usable", and
-  // both offer the diver the card-entry form.
-  if (certifications.some(isUnsightedSelfDeclaration)) {
+  // `missing` only because it can say more: the diver told us a level and gave
+  // no number, so nobody has anything to look up. Both are "the shop is holding
+  // nothing usable", and both offer the diver the card-entry form. A claim that
+  // *does* carry a number was answered as `pending` above.
+  if (
+    certifications.some(
+      (certification) => isUnsightedSelfDeclaration(certification) && !certification.identifier,
+    )
+  ) {
     return { code: "certification_self_declared" };
   }
   return { code: "certification_missing" };

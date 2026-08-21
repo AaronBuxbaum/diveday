@@ -231,11 +231,23 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Nadia Okonkwo");
   await page.getByRole("link", { name: /Nadia Okonkwo/ }).click();
+  // The number the diver typed is on the row, where a staffer checking it
+  // against the plastic can read it. A claim with no number in it — the booking
+  // form's level dropdown — says so instead; this is not that.
   const card = page.locator("li").filter({ hasText: cardNumber }).filter({ visible: true }).last();
   await expect(card).toBeVisible();
   // Pending, not trusted: the diver typed it, so it reaches the same review a
   // staff-captured card does and clears nothing until someone confirms it.
   await expect(card).toContainText("pending");
+
+  // And the confirm is **not** the one-tap promote a staff-captured card gets.
+  // A diver-typed row wears `self_declared_at`, so `reviewCertification` refuses
+  // without the agency and number read off the card in the staffer's hand —
+  // otherwise a number invented on a phone would land `verified`, the state
+  // readiness reads (`security-reviewer`, 2026-08-20).
+  await card.locator("summary").filter({ hasText: "Verify certification record" }).click();
+  await card.getByLabel("Agency").selectOption({ label: "PADI" });
+  await card.getByLabel("Certification number").fill(cardNumber);
   await card.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("marked verified");
 });

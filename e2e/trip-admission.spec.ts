@@ -380,9 +380,7 @@ test.describe("with Accept-Language: es", () => {
     // from scratch after the redirect would show up as English right here.
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: /¡Estás a bordo, Nora/ })).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Tu lista antes de la salida" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tu lista antes de la salida" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Firmar tu exención" })).toBeVisible();
   });
 });
