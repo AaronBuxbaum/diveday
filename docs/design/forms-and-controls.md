@@ -215,11 +215,12 @@ A same-page action — a form submit, a server action, a resend — never scroll
 the top of a long page and never falls back to a full browser navigation/reload. Both read as the
 same bug from the reader's chair: they tapped a button two screens down and lost their place.
 
-`PreserveFormScroll` (`src/components/PreserveFormScroll.tsx`, mounted once in each shop shell
-layout) is the fix, and it is already global: it remembers `window.scrollY` on every real `<form>`
-`submit` event and restores it once the server action's `revalidatePath`/redirect lands back on the
-same pathname. A form that posts through this pattern gets scroll preservation for free — nothing
-to add at the call site. What still breaks it:
+`PreserveFormScroll` (`src/components/PreserveFormScroll.tsx`, mounted once in the root layout) is
+the fix, and it really is global — every route gets it for free, with nothing to add at a new
+layout. It remembers `window.scrollY` on every real `<form>` `submit` event and restores it once
+the server action's `revalidatePath`/redirect lands back on the same pathname. A form that posts
+through this pattern gets scroll preservation for free — nothing to add at the call site. What
+still breaks it:
 
 - **A client-side navigation instead of a same-page action.** `router.push`/`router.replace` (and
   `<Link>`, which uses the same mechanism) default to `scroll: true` — a genuine route change, so

@@ -314,6 +314,7 @@ export default async function CheckInPage({
             {query ? (
               <Link
                 href={`/shop/${shopSlug}/check-in`}
+                scroll={false}
                 className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
               >
                 {t("checkIn.emptyClearSearch")}

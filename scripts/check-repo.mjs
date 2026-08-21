@@ -45,6 +45,7 @@ const checks = [
   ["route-coverage", "check-route-coverage.mjs"],
   ["uuid-segments", "check-uuid-segments.mjs"],
   ["notice-codes", "check-notice-codes.mjs"],
+  ["scroll-preservation", "check-scroll-preservation.mjs"],
   ["soft-delete", "check-soft-delete.mjs"],
   ["live-trips", "check-live-trips.mjs"],
   ["redirect-in-try", "check-redirect-in-try.mjs"],

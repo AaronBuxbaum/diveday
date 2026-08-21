@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
+import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { SkipLink } from "@/components/SkipLink";
 import { localeCorrectionScript } from "@/i18n/lang-script";
 import { diverTranslator } from "@/i18n/messages";
@@ -105,6 +106,13 @@ export default function RootLayout({
         <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
           {children}
         </div>
+        {/*
+         * Mounted once, here, so every route gets the same-page form-submit
+         * scroll preservation for free — see PreserveFormScroll.tsx. It owns
+         * its own `<Suspense>` boundary (it reads URL data), so it costs the
+         * root layout's static shell nothing.
+         */}
+        <PreserveFormScroll />
         <Observability />
       </body>
     </html>

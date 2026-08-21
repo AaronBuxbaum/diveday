@@ -5,7 +5,6 @@ import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
-import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { countBlockedDivers } from "@/db/blockers";
@@ -234,7 +233,6 @@ export default async function ShopLayout({
           invariant above) keeps staff of a *different* shop from silently
           saving their own shop's roster while the visible page is this one. */}
       {ownShop && session?.user && isStaff(session.user.roles) ? <OfflineManifestAutoSave /> : null}
-      <PreserveFormScroll />
       {/* Below `lg` the phone dock (StaffTabBar) owns the bottom edge, so the
           content wrapper both publishes the clearance it demands and pads
           itself by it — pages never end underneath the dock, and any fixed

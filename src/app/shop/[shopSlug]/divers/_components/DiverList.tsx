@@ -295,7 +295,7 @@ export function DiverList({
     if (!value) return;
     if (typed !== query) {
       cancelPendingSearch();
-      router.replace(hrefFor(typed, filter));
+      router.replace(hrefFor(typed, filter), { scroll: false });
       return;
     }
     if (page.total === 1 && page.divers[0]) {
