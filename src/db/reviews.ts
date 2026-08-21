@@ -762,15 +762,46 @@ export async function setReviewsPublished(
   });
 }
 
+/** What is waiting on staff, and — when it is a single review — which one. */
+export type ReviewsAwaitingModeration = {
+  /** How many reviews are waiting on staff. */
+  count: number;
+  /**
+   * The waiting review's id when there is exactly one, so Today's row can point
+   * at it (`/shop/<slug>/reviews#review-<id>`). Null at every other count: with
+   * several pending there is no "the" review to link to.
+   */
+  onlyId: string | null;
+};
+
+/**
+ * What is waiting on staff: the count Today's row words itself with, plus the
+ * one review's id when the count is exactly 1. Both come off the same aggregate
+ * so the deep link costs no second query.
+ */
+export async function readReviewsAwaitingModeration(
+  db: DbExecutor,
+  shopId: string,
+): Promise<ReviewsAwaitingModeration> {
+  const hidden = hiddenReviewExists(db);
+  const [row] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+      // Any one waiting id — only meaningful at a count of 1, which is the only
+      // count it survives below. Cast to text so the aggregate does not depend
+      // on min()/max() over uuid, which Postgres only grew in 16.
+      anyId: sql<string | null>`min(${tripReviews.id}::text)`,
+    })
+    .from(tripReviews)
+    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.isPublished, false), not(hidden)));
+  const count = row?.count ?? 0;
+  return { count, onlyId: count === 1 ? (row?.anyId ?? null) : null };
+}
+
 /** How many reviews are waiting on staff — the badge on the moderation nav entry. */
 export async function countReviewsAwaitingModeration(
   db: DbExecutor,
   shopId: string,
 ): Promise<number> {
-  const hidden = hiddenReviewExists(db);
-  const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(tripReviews)
-    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.isPublished, false), not(hidden)));
-  return row?.count ?? 0;
+  return (await readReviewsAwaitingModeration(db, shopId)).count;
 }

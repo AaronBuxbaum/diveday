@@ -66,7 +66,7 @@ import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
 import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
-import { countReviewsAwaitingModeration } from "./reviews";
+import { readReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
   nitroxCertifications,
@@ -1454,17 +1454,25 @@ export async function getTodayWork(
   // the app that never said what to do about itself. One row for the whole
   // queue (never one per review), `later` urgency and `dueAt: null` because
   // nothing sails or refunds on a review — it informs, it never nags.
-  const reviewsAwaiting = await countReviewsAwaitingModeration(db, shopId);
-  if (reviewsAwaiting > 0) {
+  // At a count of exactly 1 the row lands on that review's own anchor rather
+  // than the top of the index, since there is a single "the" review to open;
+  // at 2 or more there is not, and the destination stays the bare list. The
+  // anchor id is the reviews list's own `review-<id>`, the same fragment a
+  // refused hide already redirects back to.
+  const reviewsAwaiting = await readReviewsAwaitingModeration(db, shopId);
+  if (reviewsAwaiting.count > 0) {
+    const reviewsHref = `/shop/${shopSlug}/reviews`;
     actions.push({
       id: "reviews:pending",
       kind: "reviews_pending",
       urgency: "later",
-      subject: reviewsPendingSubjectText(t, reviewsAwaiting),
+      subject: reviewsPendingSubjectText(t, reviewsAwaiting.count),
       context: null,
       detail: reviewsPendingDetailText(t),
       actionLabel: openReviewsActionText(t),
-      href: `/shop/${shopSlug}/reviews`,
+      href: reviewsAwaiting.onlyId
+        ? `${reviewsHref}#review-${reviewsAwaiting.onlyId}`
+        : reviewsHref,
       dueAt: null,
     });
   }
