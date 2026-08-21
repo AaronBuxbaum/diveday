@@ -27,30 +27,6 @@ export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "creatures",
 ] as const;
 
-/** Prose and local field-guide choices are the fields a shop is most likely to tailor. */
-export const DIVE_SITE_TEMPLATE_SHOP_EDITABLE_FIELDS = [
-  "description",
-  "locationName",
-  "forecastLatitude",
-  "forecastLongitude",
-  "marineLife",
-  "marineLifeDescription",
-  "difficultyLevel",
-  "depthRange",
-  "maxDepthMeters",
-  "expectedBottomTimeMinutes",
-  "currentNote",
-  "divePlan",
-  "fitTone",
-  "fitNote",
-  "fieldGuideTipsHeading",
-  "landmarks",
-  "minimumCertificationLevel",
-  "requiredSpecialties",
-  "requiresNitrox",
-  "creatures",
-] as const;
-
 export type DiveSiteTemplateField = (typeof DIVE_SITE_TEMPLATE_SYNC_FIELDS)[number];
 
 export type DiveSiteTemplateSnapshot = {
@@ -196,7 +172,7 @@ function sameValue(left: unknown, right: unknown): boolean {
 /** Show fields where the latest published version actually differs. */
 export function diveSiteTemplateDiff(
   current: DiveSiteTemplateSnapshot,
-  baseline: DiveSiteTemplateSnapshot | null,
+  baseline: DiveSiteTemplateSnapshot,
   latest: DiveSiteTemplateSnapshot,
 ): DiveSiteTemplateDiff[] {
   return DIVE_SITE_TEMPLATE_SYNC_FIELDS.flatMap((field) => {
@@ -206,13 +182,7 @@ export function diveSiteTemplateDiff(
     return [
       {
         field,
-        // A historical version may predate this sync shape. Preserving the
-        // shop's value is the safe default when there is no exact baseline.
-        shopChanged: baseline
-          ? !sameValue(currentValue, baseline[field])
-          : DIVE_SITE_TEMPLATE_SHOP_EDITABLE_FIELDS.includes(
-              field as (typeof DIVE_SITE_TEMPLATE_SHOP_EDITABLE_FIELDS)[number],
-            ),
+        shopChanged: !sameValue(currentValue, baseline[field]),
         current: currentValue,
         latest: latestValue,
       },
@@ -223,7 +193,7 @@ export function diveSiteTemplateDiff(
 /** Merge a new template version while leaving shop edits intact by default. */
 export function mergedDiveSiteTemplateSnapshot(
   current: DiveSiteTemplateSnapshot,
-  baseline: DiveSiteTemplateSnapshot | null,
+  baseline: DiveSiteTemplateSnapshot,
   latest: DiveSiteTemplateSnapshot,
   mode: DiveSiteTemplateUpdateMode,
 ): DiveSiteTemplateSnapshot {
@@ -231,7 +201,7 @@ export function mergedDiveSiteTemplateSnapshot(
   return Object.fromEntries(
     DIVE_SITE_TEMPLATE_SYNC_FIELDS.map((field) => [
       field,
-      baseline && sameValue(current[field], baseline[field]) ? latest[field] : current[field],
+      sameValue(current[field], baseline[field]) ? latest[field] : current[field],
     ]),
   ) as DiveSiteTemplateSnapshot;
 }

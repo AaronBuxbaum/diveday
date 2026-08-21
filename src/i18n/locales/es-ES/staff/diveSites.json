@@ -202,7 +202,6 @@
     "templateUpdates": {
       "title": "Hay una plantilla de DiveDay más nueva",
       "description": "Este sitio usa la plantilla v{current}; la última versión publicada es la v{latest}.",
-      "baselineUnavailableDescription": "La línea base guardada de los campos de este sitio no está disponible. La actualización segura conserva tu texto actual y muestra la nueva versión para revisarla.",
       "keepEditsDescription": "Incorpora la actualización y conserva los campos que hayas cambiado localmente. El nombre, las fotos y las rutas siempre siguen siendo tuyos.",
       "recommended": "Recomendado",
       "keepEdits": "Aplicar cambios y conservar los míos",

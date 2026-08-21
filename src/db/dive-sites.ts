@@ -718,7 +718,6 @@ export type DiveSiteTemplateUpdate = {
   templateName: string;
   currentVersion: number;
   latestVersion: number;
-  baselineUnavailable: boolean;
   diff: ReturnType<typeof diveSiteTemplateDiff>;
 };
 
@@ -728,13 +727,14 @@ export type DiveSiteTemplateUpdate = {
  * immutable, so they provide the baseline without adding another snapshot
  * column to the shop's briefing.
  *
- * `baseline` (and `baselineUnavailable`) stay defensive against a missing
- * version row rather than assuming one always exists: every writer of
- * `sourceTemplateVersion` (`importGlobalDiveSiteTemplate`,
- * `pullDiveSiteTemplateUpdates`, `undoDiveSiteTemplateUpdate`) currently
- * pairs it with a real `globalDiveSiteVersions` row, and `seedDiveSiteCatalog`
- * inserts every version 1..N up front — so this should never trigger today.
- * It is not "an older site predates version tracking": there is no such era.
+ * A missing version row refuses the whole preview rather than merging against
+ * a guess: every writer of `sourceTemplateVersion`
+ * (`importGlobalDiveSiteTemplate`, `pullDiveSiteTemplateUpdates`,
+ * `undoDiveSiteTemplateUpdate`) takes it from a `globalDiveSiteVersions` row it
+ * just read, `seedDiveSiteCatalog` inserts every version 1..N up front, and
+ * nothing deletes one — so a baseline the shop's version number points at is
+ * always there, and a merge preview built without one would be inventing which
+ * fields the shop had edited.
  */
 export async function getDiveSiteTemplateUpdate(
   db: AppDb,
@@ -774,21 +774,19 @@ export async function getDiveSiteTemplateUpdate(
       .limit(1),
   ]);
   const latest = latestVersion[0];
-  if (!latest) return null;
+  const baselineRow = baselineVersion[0];
+  if (!latest || !baselineRow) return null;
   const creatures = await listDiveSiteCreatures(db, shopId, siteId);
   const currentSnapshot = diveSiteTemplateSnapshotFromSite({
     ...site,
     creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(isMarineLifeSlug),
   });
-  const baseline = baselineVersion[0]
-    ? diveSiteTemplateSnapshot(baselineVersion[0].briefing)
-    : null;
+  const baseline = diveSiteTemplateSnapshot(baselineRow.briefing);
   const latestSnapshot = diveSiteTemplateSnapshot(latest.briefing);
   return {
     templateName: latest.briefing.name,
     currentVersion: site.sourceTemplateVersion,
     latestVersion: latest.version,
-    baselineUnavailable: baseline === null,
     diff: diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot),
   };
 }
@@ -841,16 +839,15 @@ export async function pullDiveSiteTemplateUpdates(
       )
       .limit(1);
     const latest = latestVersion[0];
-    if (!latest) return { status: "unavailable" as const };
+    const baselineRow = baselineVersion[0];
+    if (!latest || !baselineRow) return { status: "unavailable" as const };
 
     const creatures = await listDiveSiteCreatures(tx, shopId, siteId);
     const currentSnapshot = diveSiteTemplateSnapshotFromSite({
       ...site,
       creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(isMarineLifeSlug),
     });
-    const baseline = baselineVersion[0]
-      ? diveSiteTemplateSnapshot(baselineVersion[0].briefing)
-      : null;
+    const baseline = diveSiteTemplateSnapshot(baselineRow.briefing);
     const latestSnapshot = diveSiteTemplateSnapshot(latest.briefing);
     const diff = diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot);
     const merged = mergedDiveSiteTemplateSnapshot(currentSnapshot, baseline, latestSnapshot, mode);
