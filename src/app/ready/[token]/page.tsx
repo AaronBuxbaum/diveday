@@ -28,7 +28,7 @@ import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { certificationAgency, certificationLevel } from "@/db/schema";
+import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
@@ -38,6 +38,7 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
+  DIVER_SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
@@ -72,6 +73,7 @@ import {
   saveEmergencyContactFromReady,
   saveFitFromReady,
   saveNitroxCertificationFromReady,
+  saveSpecialtyFromReady,
   signWaiverFromReady,
 } from "./actions";
 
@@ -296,20 +298,24 @@ const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
 ]);
 
 /**
- * **No specialty entry form, deliberately.** `specialty_certifications` has no
- * `self_declared_at` column, so a row a diver typed is byte-for-byte a staff
- * transcription of a card somebody held: the staff card list would render it
- * with the ordinary one-tap "Mark certified", and that tap would promote an
- * invented number to `verified` — which is what clears a Deep gate past 18 m.
- * The presence of any specialty row also counts as real evidence in
- * `holdsRealCardOutsideLevels`, so a typed one would silently suppress a
- * diver's later level claim.
+ * A specialty card the diver can send: the trip named one and nothing on file
+ * answers it. `specialty_import_unconfirmed` and `specialty_pending` are absent
+ * for the same reason `certification_pending` is — a real card is already with
+ * the shop, and asking again would tell a diver to re-send what they already
+ * sent.
  *
- * The level and nitrox forms are safe because both tables carry the column and
- * both `review*Certification` guards already demand a card sighting from an
- * unsighted self-declaration. Specialty waits for the same
- * (`security-reviewer`, 2026-08-20 — FU-20260820-a-typed-specialty-card-has-no-provenance).
+ * Offering this at all took a schema change. `specialty_certifications` had no
+ * `self_declared_at` column until 2026-08-20, so a row a diver typed was
+ * byte-for-byte a staff transcription and the staff list's ordinary one-tap
+ * confirm would have promoted an invented number to `verified` — the state that
+ * clears a depth gate past 18 m (`security-reviewer`). The column, the sighting
+ * guard in `reviewSpecialtyCertification`, and the `isRealCard` fix in
+ * `holdsRealCardOutsideLevels` are what this form rests on.
  */
+const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>([
+  "specialty_missing",
+  "specialty_expired",
+]);
 
 /**
  * A nitrox card, likewise. `nitrox_self_declared` is here because a claim is
@@ -342,6 +348,16 @@ function CertificationEntries({
   const forms = item.actionable.flatMap((blocker) => {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
       return [<CertificationEntry key={blocker.code} token={token} t={t} />];
+    }
+    if (SPECIALTY_ENTRY_CODES.has(blocker.code) && blocker.params?.specialty) {
+      return [
+        <SpecialtyEntry
+          key={`${blocker.code}-${blocker.params.specialty}`}
+          token={token}
+          specialty={blocker.params.specialty}
+          t={t}
+        />,
+      ];
     }
     if (NITROX_ENTRY_CODES.has(blocker.code)) {
       return [<NitroxEntry key={blocker.code} token={token} t={t} />];
@@ -410,6 +426,79 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
             // A card number is printed in caps and read off plastic at arm's
             // length; a phone keyboard's own autocorrect is nothing but a
             // source of wrong digits here.
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            className={controlClass}
+          />
+        </Field>
+        <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
+          <input name="expiresAt" type="date" className={controlClass} />
+        </Field>
+      </FieldGrid>
+      <div>
+        <SubmitButton
+          pendingLabel={t("ready.certSubmitting")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("ready.certSubmit")}
+        </SubmitButton>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * A specialty card, typed in. Same contract as the level card above — the row
+ * lands `pending` and only a staff sighting makes it count — with one
+ * difference the schema enforces rather than the form: the number is required,
+ * because `specialty_certifications.identifier` is `NOT NULL` and that table
+ * carries no self-declaration column. A specialty is what authorizes a
+ * materially riskier dive, so there is no version of it that is only a claim.
+ *
+ * The specialty itself is fixed by the blocker, not chosen: the trip asked for
+ * Deep, so this is the Deep form. Offering a picker would invite a diver to
+ * file the card they have instead of the one they were asked for.
+ */
+function SpecialtyEntry({
+  token,
+  specialty,
+  t,
+}: {
+  token: string;
+  specialty: DiveSpecialty;
+  t: DiverTranslator;
+}) {
+  const specialtyName = t(DIVER_SPECIALTY_KEYS[specialty]);
+  return (
+    <form
+      action={saveSpecialtyFromReady.bind(null, token)}
+      className="flex flex-col gap-3 rounded-xl border border-border bg-surface-sunken/50 p-4"
+    >
+      <input type="hidden" name="specialty" value={specialty} />
+      <h4 className="text-base font-semibold">
+        {t("ready.specialtyHeading", { specialty: specialtyName })}
+      </h4>
+      <FieldGrid columns={2}>
+        <Field label={t("ready.certAgency")}>
+          <select name="agency" required defaultValue="" className={controlClass}>
+            <option value="" disabled>
+              {t("ready.certChoose")}
+            </option>
+            {certificationAgency.enumValues.map((agency) => (
+              <option key={agency} value={agency}>
+                {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("ready.certNumber")}>
+          <input
+            name="identifier"
+            required
+            minLength={2}
+            maxLength={60}
+            autoComplete="off"
             autoCapitalize="characters"
             autoCorrect="off"
             spellCheck={false}

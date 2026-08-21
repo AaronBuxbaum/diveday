@@ -9,11 +9,11 @@ import { getDb } from "@/db/client";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocale } from "@/db/people";
-import { createCertification } from "@/db/readiness";
+import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
-import { certificationAgency, certificationLevel } from "@/db/schema";
+import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
@@ -498,6 +498,52 @@ export async function saveCertificationFromReady(token: string, formData: FormDa
   // shop/agency/number — most often the diver's own card, already on file and
   // possibly already verified. Say so rather than reporting a failure: there is
   // nothing for them to fix, and re-typing it would only be refused again.
+  revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
+}
+
+/**
+ * A specialty card the trip demands — Deep, Wreck, Night, Drysuit.
+ *
+ * The number is **required**, unlike the level declaration a booking form takes:
+ * `specialty_certifications.identifier` is `NOT NULL`, because a specialty is a
+ * yes/no gate on a materially riskier dive and there is no version of one that
+ * is only a claim with no number behind it.
+ *
+ * `selfDeclaredAt` is what makes this form safe to offer at all. It is why
+ * `specialty_certifications` gained the column on 2026-08-20: without it a row a
+ * diver typed is byte-for-byte a staff transcription, and
+ * `reviewSpecialtyCertification`'s ordinary one-tap confirm would promote an
+ * invented number to `verified` — the state that clears a depth gate past 18 m.
+ * With it, that tap asks the staffer for the card in their hand.
+ */
+const specialtySchema = z.object({
+  agency: z.enum(certificationAgency.enumValues),
+  specialty: z.enum(diveSpecialty.enumValues),
+  identifier: z.string().trim().min(2).max(60),
+  expiresAt: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || undefined)
+    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
+});
+
+export async function saveSpecialtyFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = specialtySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=cert`);
+
+  const created = await createSpecialtyCertification(ctx.db, {
+    // Shop and person come from the verified capability, never the form.
+    shopId: ctx.data.shop.id,
+    personId: ctx.data.person.id,
+    agency: parsed.data.agency,
+    specialty: parsed.data.specialty,
+    identifier: parsed.data.identifier,
+    selfDeclaredAt: nowDate(),
+    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
+  });
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
 }
 

@@ -3779,6 +3779,27 @@ export const specialtyCertifications = pgTable(
      */
     importedAt: timestamp("imported_at", { withTimezone: true }),
     importedFromLabel: text("imported_from_label"),
+    /**
+     * **The diver typed this about themselves**, mirroring
+     * `certifications.selfDeclaredAt` and `nitroxCertifications.selfDeclaredAt`.
+     *
+     * This table went without one until 2026-08-20 because nothing a diver
+     * could reach could write here — a fact `src/db/self-declared-cards.ts`
+     * stated in two places. The readiness page now offers a specialty entry
+     * form, and the column is what makes that safe: without it a row a diver
+     * typed is byte-for-byte a staff transcription of a card somebody held, so
+     * `reviewSpecialtyCertification`'s ordinary one-tap confirm would promote
+     * an invented number to `verified` — the state that clears a deep gate past
+     * 18 m. With it, that tap asks for the agency and number off the card in
+     * the staffer's hand, exactly as the level and nitrox cards already do
+     * (`security-reviewer`, 2026-08-20).
+     *
+     * `identifier` stays NOT NULL, unlike its two siblings: a specialty is a
+     * yes/no gate on a materially riskier dive, so there is no version of one
+     * that is only a claim with no number behind it. The diver-facing form
+     * requires the number.
+     */
+    selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */

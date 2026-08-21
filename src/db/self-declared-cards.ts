@@ -193,7 +193,9 @@ export async function recordSelfDeclaredCards(
  * A row is real when a staffer verified it, **or** when nobody ever declared it
  * — a staff capture and a CSV import both land with a null stamp.
  */
-function isRealCard(table: typeof certifications | typeof nitroxCertifications) {
+function isRealCard(
+  table: typeof certifications | typeof nitroxCertifications | typeof specialtyCertifications,
+) {
   return or(eq(table.status, "verified"), isNull(table.selfDeclaredAt));
 }
 
@@ -232,6 +234,11 @@ async function holdsRealCardOutsideLevels(
     .limit(1);
   if (realNitrox) return true;
 
+  // `isRealCard`, not mere presence: since 2026-08-20 a diver can type a
+  // specialty card on their own readiness link, and a claim must never count as
+  // the shop holding evidence about them — that is what suppresses their own
+  // level declaration. Before the column existed, every row here was
+  // staff-captured or imported and presence was the right test.
   const [liveSpecialty] = await tx
     .select({ id: specialtyCertifications.id })
     .from(specialtyCertifications)
@@ -240,6 +247,7 @@ async function holdsRealCardOutsideLevels(
         eq(specialtyCertifications.shopId, input.shopId),
         eq(specialtyCertifications.personId, input.personId),
         isNull(specialtyCertifications.deletedAt),
+        isRealCard(specialtyCertifications),
       ),
     )
     .limit(1);

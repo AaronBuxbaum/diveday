@@ -26,6 +26,7 @@ import {
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
 import { certifications, diveSites, specialtyCertifications } from "./schema";
+import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -243,6 +244,73 @@ describe("trip readiness (in-memory PGlite)", () => {
     // which is the whole value of the form — and neither cleared.
     expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "specialty_pending" }));
     expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "nitrox_pending" }));
+  });
+
+  it("refuses the one-tap confirm on a specialty card the diver typed, and takes it on a sighting", async () => {
+    // The reason `specialty_certifications` gained `self_declared_at` at all.
+    // Without the stamp a row a diver typed on their readiness link is
+    // byte-for-byte a staff transcription, so this tap would promote an
+    // invented number to `verified` — the state that clears a depth gate past
+    // 18 m (`security-reviewer`, 2026-08-20).
+    const { db, shop, rosterEntry } = await readinessContext();
+    const typed = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "DIVER-TYPED-DEEP",
+      selfDeclaredAt: nowDate(),
+    });
+    if (!typed) throw new Error("expected the typed card to insert");
+
+    // The bare tap a staff-captured card gets is refused here.
+    expect(
+      await reviewSpecialtyCertification(db, {
+        shopId: shop.id,
+        certificationId: typed.id,
+        status: "verified",
+      }),
+    ).toEqual({ ok: false, reason: "card_sighting_required" });
+
+    // With the card in the staffer's hand, it goes through — and the number
+    // they read off the plastic replaces what the diver typed.
+    const sighted = await reviewSpecialtyCertification(db, {
+      shopId: shop.id,
+      certificationId: typed.id,
+      status: "verified",
+      sighting: { agency: "ssi", identifier: "SSI-REAL-DEEP-42" },
+    });
+    expect(sighted.ok).toBe(true);
+    if (!sighted.ok) throw new Error("expected the sighted review to land");
+    expect(sighted.certification).toMatchObject({
+      status: "verified",
+      agency: "ssi",
+      identifier: "SSI-REAL-DEEP-42",
+    });
+  });
+
+  it("does not let a diver's own typed specialty card count as the shop holding evidence", async () => {
+    // `holdsRealCardOutsideLevels` used to count *any* live specialty row, which
+    // was right while nothing diver-writable could reach the table. A claim that
+    // counted as evidence would suppress the diver's own level declaration.
+    const { db, shop, rosterEntry } = await readinessContext();
+    await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      agency: "padi",
+      specialty: "wreck",
+      identifier: "DIVER-TYPED-WRECK",
+      selfDeclaredAt: nowDate(),
+    });
+
+    const outcome = await recordSelfDeclaredCards(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      level: "rescue",
+    });
+    // "card_on_file" would mean the claim was dropped on the strength of a row
+    // the diver typed themselves.
+    expect(outcome).not.toBe("card_on_file");
   });
 
   it("opens a depth gate only when a staffer says they've seen the imported card", async () => {
