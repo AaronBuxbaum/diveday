@@ -120,7 +120,12 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await markNotBoarded.click();
   // WP-6: the card settles in place — the button flips to the confirmed state
   // without a full-page redirect, so the roster position never jumps.
-  await expect(page.getByRole("button", { name: "Not boarded ☑️" }).first()).toBeVisible();
+  // The settled control's accessible name is its undo-bearing aria-label
+  // (PR #607 review) — an aria-label replaces the computed name outright, so
+  // "Not boarded ☑️" no longer matches; the visible label is unchanged.
+  await expect(
+    page.getByRole("button", { name: "Not boarded — tap again to undo" }).first(),
+  ).toBeVisible();
   await expect
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
@@ -147,7 +152,9 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .evaluateAll((cells) => cells.reduce((sum, cell) => sum + Number(cell.textContent), 0));
   expect(rowTotal).toBe(rosterTotal);
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
-  await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Not boarded — tap again to undo" })).toHaveCount(
+    2,
+  );
 });
 
 test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({
@@ -208,14 +215,16 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // rosters).
   const crewRow = crewList.getByRole("listitem").first();
   await crewRow.getByRole("button", { name: "Mark aboard" }).click();
-  await expect(crewRow.getByRole("button", { name: "Aboard ☑️" })).toBeVisible();
+  // The settled control's accessible name is its undo-bearing aria-label
+  // (PR #607 review), which replaces "Aboard ☑️" rather than extending it.
+  await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
 
   await context.setOffline(false);
   // One message for both queued events — the diver's and the crew member's go
   // through the same sync route and the same reconcile.
   await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
   // And the crew result stuck: reconciled, not rolled back by the server.
-  await expect(crewRow.getByRole("button", { name: "Aboard ☑️" })).toBeVisible();
+  await expect(crewRow.getByRole("button", { name: "Aboard — tap again to undo" })).toBeVisible();
 });
 
 test("a captain who lost the saved copy to storage eviction still lands on a page after a failed reload", async ({
@@ -591,7 +600,7 @@ test("the summary panel names who is still to call, one jump chip each", async (
     .getByRole("button", { name: "Mark boarded" });
   await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardTom.click();
-  await expect(page.getByRole("button", { name: "Boarded ☑️" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
 
   // At the dock these are people still to board — ordinary, expected, and
   // deliberately not called "missing": a recorded not-back-aboard diver is
@@ -669,7 +678,9 @@ test("a checkpoint with every diver counted stays open until the crew are called
   for (let guard = 0; guard < 20; guard += 1) {
     const remaining = await boardButtons.count();
     if (remaining === 0) break;
-    const settled = page.getByRole("button", { name: "Boarded ☑️" });
+    // The settled control's accessible name is its undo-bearing aria-label
+    // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
+    const settled = page.getByRole("button", { name: "Boarded — tap again to undo" });
     const settledBefore = await settled.count();
     const next = boardButtons.first();
     await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
@@ -695,7 +706,8 @@ test("a checkpoint with every diver counted stays open until the crew are called
   for (let guard = 0; guard < 6; guard += 1) {
     const remaining = await crewAboardButtons.count();
     if (remaining === 0) break;
-    const settled = page.getByRole("button", { name: "Aboard ☑️" });
+    // Same undo-bearing accessible name, crew side.
+    const settled = page.getByRole("button", { name: "Aboard — tap again to undo" });
     const settledBefore = await settled.count();
     const next = crewAboardButtons.first();
     await next.evaluate((button) => button.scrollIntoView({ block: "center" }));

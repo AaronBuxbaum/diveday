@@ -58,6 +58,7 @@ export function RollCallButton({
   status,
   label,
   pendingLabel,
+  ariaLabel,
   className,
   formClassName,
   noteDraftFor,
@@ -83,6 +84,17 @@ export function RollCallButton({
   status: string;
   label: string;
   pendingLabel: string;
+  /**
+   * Overrides the accessible name while the visible `label` stays put — the
+   * one case is a settled control with no done-check to point at nearby
+   * (principle 7 carves out "Not back aboard" as the sole *visible* exception;
+   * every other settled state, "Boarded ☑️" and its siblings, reads its own
+   * re-tap affordance to a sighted user from the ☑️ and the row's own green
+   * fill, neither of which reaches a screen reader). Undefined leaves the
+   * accessible name as the rendered text, unchanged for every unrecorded and
+   * pending state.
+   */
+  ariaLabel?: string;
   className: string;
   /**
    * Sizing for the `<form>` the button posts through. In the control
@@ -133,7 +145,13 @@ export function RollCallButton({
             from the DOM at submit time, and racing it is not a thing to do on
             the roll-call surface. */}
         {unsavedNote !== null ? <input type="hidden" name="note" value={unsavedNote} /> : null}
-        <button type="submit" disabled={isPending} aria-busy={isPending} className={className}>
+        <button
+          type="submit"
+          disabled={isPending}
+          aria-busy={isPending}
+          aria-label={isPending ? undefined : ariaLabel}
+          className={className}
+        >
           {isPending ? pendingLabel : label}
         </button>
       </form>

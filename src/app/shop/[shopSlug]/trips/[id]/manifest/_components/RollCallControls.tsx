@@ -94,6 +94,49 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
 }
 
 /**
+ * The one quiet-disclosure grammar every roll-call row's rare path wears —
+ * a diver's "Contact & gear" / "Add a private note" pair and a crew member's
+ * single "Emergency contact" line. Shared here rather than left for
+ * `CrewRollCall.tsx` to retype: the two lists used to carry two copies of
+ * this exact class string (a Sourcery review on PR #607 caught the second),
+ * and a future retouch — the caret's rotation, the panel's tint — now has one
+ * place to land rather than two that can quietly drift apart.
+ *
+ * Only the summary and panel treatment live here. The *grid* that pairs a
+ * diver's two disclosures side by side (`sm:grid-cols-2`) stays put in
+ * `DiverRollCall.tsx` — crew get one disclosure, not two, so there is no
+ * grid to share.
+ */
+export const ROW_DISCLOSURE_SUMMARY_CLASS =
+  "group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden";
+export const ROW_DISCLOSURE_PANEL_CLASS =
+  "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
+
+/**
+ * Where each control sits in the cluster's flex-wrap row, and how wide it
+ * claims — the "which slot, how wide" half of the layout `RollCallControls`
+ * draws below. Named here rather than left as a bare literal at each call
+ * site (a Sourcery review on PR #607 asked for exactly this): the cluster's
+ * three shapes — the affirmative, the exception paired beside it, the
+ * exception alone as the row's only control — are one thing to read and one
+ * thing to change together, not three picked apart from memory at three
+ * scattered `formClassName` props.
+ *
+ * This is a *within-this-file* consolidation, not a cross-surface one:
+ * `src/components/OfflineManifestView.tsx` hand-rolls its own equivalent
+ * buttons rather than importing `RollCallControls` itself, because
+ * `src/components` may not import from `src/app`
+ * (`pnpm check:architecture`) — the same boundary that makes `BOAT_TARGET_CLASS`
+ * above a re-derivation, not a shared import, in that file. Moving the
+ * cluster's layout (not just its fill) out to a location both sides can
+ * reach is a real architectural change, not a rename, and stays a follow-up
+ * rather than riding in in a review-response pass.
+ */
+const AFFIRMATIVE_FORM_CLASS = "w-full md:order-2 md:w-48";
+const EXCEPTION_FORM_CLASS_PAIRED = "w-full md:order-1 md:w-auto";
+const EXCEPTION_FORM_CLASS_ALONE = "w-full md:w-auto md:min-w-48";
+
+/**
  * The control cluster a roll-call row carries: one line, the affirmative
  * ("aboard") at the row's end and the exception ("not boarded" / "not back
  * aboard") beside it.
@@ -190,6 +233,18 @@ export function RollCallControls({
                 ? t("manifest.boardedCheck")
                 : t("manifest.markBoarded")
           }
+          // Once boarded, the visible ☑️ and the row's own green fill are the
+          // re-tap affordance for a sighted user — neither reaches a screen
+          // reader, so the accessible name says the same thing in words
+          // (CodeRabbit review, PR #607). Unset while unrecorded: "Mark
+          // boarded"/"Mark aboard" already read as an action, not a state.
+          ariaLabel={
+            boarded
+              ? isCrew
+                ? t("manifest.crewAboardCheckAriaLabel")
+                : t("manifest.boardedCheckAriaLabel")
+              : undefined
+          }
           pendingLabel={
             isCrew ? t("manifest.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
           }
@@ -201,7 +256,7 @@ export function RollCallControls({
               ? "border border-success bg-success/15 text-success"
               : "border border-primary bg-surface text-primary hover:bg-primary/10"
           }`}
-          formClassName="w-full md:order-2 md:w-48"
+          formClassName={AFFIRMATIVE_FORM_CLASS}
           noteDraftFor={noteDraftFor}
           copy={copy}
         />
@@ -248,6 +303,18 @@ export function RollCallControls({
                 ? t("manifest.crewMarkNotBackAboard")
                 : t("manifest.markNotBackAboard")
         }
+        // Only the departure ☑️ states get a words-say-it-too accessible name.
+        // "Not back aboard" is principle 7's one *visible* exception — it
+        // already carries its own on-screen undo sentence just below the
+        // pair, which a screen reader reaches in the same forward read, so
+        // duplicating it into the accessible name would say it twice.
+        ariaLabel={
+          recordedNotBoarded && isDeparture
+            ? isCrew
+              ? t("manifest.crewNotAboardCheckAriaLabel")
+              : t("manifest.notBoardedCheckAriaLabel")
+            : undefined
+        }
         pendingLabel={t("manifest.saving")}
         noteDraftFor={noteDraftFor}
         className={
@@ -261,9 +328,7 @@ export function RollCallControls({
                   : `${BOAT_TARGET_COMPACT_CLASS} text-danger hover:bg-danger/10`
                 : `${BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
         }
-        formClassName={
-          showBoardControl ? "w-full md:order-1 md:w-auto" : "w-full md:w-auto md:min-w-48"
-        }
+        formClassName={showBoardControl ? EXCEPTION_FORM_CLASS_PAIRED : EXCEPTION_FORM_CLASS_ALONE}
         copy={copy}
       />
       {/* One row state still says how to take it back, and only one.

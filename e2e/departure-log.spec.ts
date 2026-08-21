@@ -32,8 +32,13 @@ test("one tap from close-out opens the departure log with the recorded facts", a
     .first();
   await markBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await markBoarded.click();
+  // The settled control's accessible name is its undo-bearing aria-label
+  // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
   await expect(
-    page.locator("#roll-call-list").getByRole("button", { name: "Boarded ☑️" }).first(),
+    page
+      .locator("#roll-call-list")
+      .getByRole("button", { name: "Boarded — tap again to undo" })
+      .first(),
   ).toBeVisible();
 
   // The manifest keeps the printer and nothing else — this door moved.

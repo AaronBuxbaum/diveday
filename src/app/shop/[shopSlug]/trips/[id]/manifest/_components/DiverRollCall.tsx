@@ -30,6 +30,8 @@ import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { BuddyTeamChip } from "./BuddyTeamChip";
 import {
   ROLL_CALL_ROW_TONE,
+  ROW_DISCLOSURE_PANEL_CLASS,
+  ROW_DISCLOSURE_SUMMARY_CLASS,
   RollCallControls,
   rollCallRecordedTone,
   rollCallRowState,
@@ -149,13 +151,13 @@ function DiverFacts({
  * `<details>` as `open:` variants it grew the element's own margin and padding
  * at the instant of the tap, so the summary line jumped ~20px down the screen
  * out from under the finger that opened it.
+ *
+ * The grid is diver-specific (a crew row carries one disclosure, not a
+ * pair) and stays here; the summary/panel treatment it wraps is shared with
+ * `CrewRollCall.tsx` and lives in `RollCallControls.tsx`.
  */
 const ROW_DISCLOSURE_GRID_CLASS =
   "mt-1 grid items-start gap-x-6 print:hidden sm:max-w-4xl sm:grid-cols-2";
-const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden";
-const ROW_DISCLOSURE_PANEL_CLASS =
-  "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
  * Staff notes that belong on a diver's row, rather than in separate desk and
@@ -533,6 +535,24 @@ export function DiverRollCall({
                     timezone={timezone}
                     t={t}
                   />
+                  {/* Print-only, and deliberately kept here rather than beside
+                      the screen disclosure it mirrors below: paper has no
+                      collapsed state to open, so this is simply where the
+                      fact sits on the sheet, ahead of the audit line below —
+                      the same order the row has always printed in. Moving it
+                      to follow the screen reorder would have silently
+                      reordered what the printed manifest says, on the one
+                      surface where "trustworthy by inspection" (principle 6)
+                      means the order on the page too. */}
+                  <div className="mt-3 hidden print:block">
+                    <DiverFacts
+                      diver={diver}
+                      locale={locale}
+                      timezone={timezone}
+                      columns={2}
+                      t={t}
+                    />
+                  </div>
                   {rc && !rc.implied ? (
                     <p className="mt-3 text-sm text-muted">
                       {rc.note
@@ -579,8 +599,10 @@ export function DiverRollCall({
                   emergency contacts and six rental lists at permanent height
                   were break-glass reference standing between the captain and
                   the next name (principles 9 and 10). One tap opens them;
-                  paper always carries them (the print-only block below — a
-                  closed details contributes nothing to print). */}
+                  paper always carries them, unconditionally, in the
+                  print-only block above (beside the name, ahead of the
+                  audit line) — a closed details here contributes nothing to
+                  print, which is why that block does not live here too. */}
               <div className={ROW_DISCLOSURE_GRID_CLASS}>
                 <details className="group/facts">
                   {/* Muted, not action-blue: two of these per row down a
@@ -648,9 +670,6 @@ export function DiverRollCall({
                     />
                   </div>
                 </details>
-              </div>
-              <div className="mt-3 hidden print:block">
-                <DiverFacts diver={diver} locale={locale} timezone={timezone} columns={2} t={t} />
               </div>
             </li>
           );
