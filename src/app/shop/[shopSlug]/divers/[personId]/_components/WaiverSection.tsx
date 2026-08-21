@@ -49,6 +49,12 @@ function waiverStatusCopy(
       detail: t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) }),
     };
   }
+  // A copied link and a delivered one are different facts, and the card said
+  // "Link sent" about both. Nothing left DiveDay when a staffer took the URL —
+  // where it went next is a conversation we never saw.
+  if (diver.waiverRequest === "link_copied") {
+    return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverLinkCopied") };
+  }
   if (diver.waiverRequest === "not_signed") {
     return { label: t("divers.stats.waiverNotSigned"), detail: t("divers.stats.waiverSent") };
   }
@@ -114,6 +120,7 @@ export function WaiverSection({
             text: t("divers.stats.sendWaiverViaSms"),
             link: t("divers.stats.copyWaiverLink"),
             stateSent: t("divers.stats.waiverChannelSent"),
+            stateCopied: t("divers.stats.waiverChannelCopied"),
             stateFailed: t("divers.stats.waiverChannelFailed"),
             stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
           }}

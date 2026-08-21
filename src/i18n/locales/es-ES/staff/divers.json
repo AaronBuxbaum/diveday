@@ -303,6 +303,7 @@
     "waiverFailed": "No se pudo entregar",
     "waiverNotSigned": "Sin firmar",
     "waiverSent": "Enlace enviado; esperando la firma",
+    "waiverLinkCopied": "Enlace copiado; no enviado desde aquí",
     "waiverSigned": "Firmada",
     "waiverMedicalReview": "Revisión médica",
     "waiverGoodUntil": "Válido hasta el {date}",
@@ -312,6 +313,7 @@
     "sendWaiverViaSms": "Enviar exención por texto",
     "copyWaiverLink": "Copiar enlace",
     "waiverChannelSent": "Enviada",
+    "waiverChannelCopied": "Copiado",
     "waiverChannelFailed": "No salió",
     "waiverChannelUnavailable": "Sin configurar",
     "bookings": "Reservas"

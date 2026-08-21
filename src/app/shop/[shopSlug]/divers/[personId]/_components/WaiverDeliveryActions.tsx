@@ -28,6 +28,7 @@ export type WaiverDeliveryCopy = {
   link: string;
   /** What each channel's last outcome is called, for the button's own name. */
   stateSent: string;
+  stateCopied: string;
   stateFailed: string;
   stateUnavailable: string;
 };
@@ -47,12 +48,16 @@ const CHANNEL_STATE: Record<
   { ring: string; ink: string; mark: WaiverDeliveryMarkName }
 > = {
   sent: { ring: "ring-2 ring-success/50", ink: "text-success", mark: "sent" },
+  // Not the success ring: nothing was delivered. A staffer has the URL, and
+  // whether the diver does is a thing that happened off this screen.
+  copied: { ring: "ring-2 ring-border", ink: "text-muted", mark: "copied" },
   failed: { ring: "ring-2 ring-danger/55", ink: "text-danger", mark: "failed" },
   not_configured: { ring: "ring-2 ring-warning/55", ink: "text-warning", mark: "unavailable" },
 };
 
 function stateWord(state: WaiverChannelDeliveryState, copy: WaiverDeliveryCopy): string | null {
   if (state === "sent") return copy.stateSent;
+  if (state === "copied") return copy.stateCopied;
   if (state === "failed") return copy.stateFailed;
   if (state === "not_configured") return copy.stateUnavailable;
   return null;

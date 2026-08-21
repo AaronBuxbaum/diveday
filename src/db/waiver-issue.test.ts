@@ -19,6 +19,7 @@ import {
 import {
   completeWaiver,
   getDiverWaiverChannelStates,
+  getDiverWaiverRequestStatus,
   getWaiverForToken,
   issueWaiverRequest,
   saveWaiverDraft,
@@ -574,8 +575,71 @@ describe("getDiverWaiverChannelStates", () => {
     await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "link" });
     await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toMatchObject({
       email: "not_configured",
-      link: "sent",
+      link: "copied",
     });
+  });
+
+  /**
+   * The link channel stores `sent` — the columns answer "is there a live
+   * link", and there is — and must never read as sent. A staffer taking the
+   * URL means *they* have it; where it went next happened outside DiveDay.
+   */
+  it("calls a taken link copied, never sent", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop, personId } = await personWithNoWaiver();
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "link" });
+    await expect(getDiverWaiverChannelStates(db, shop.id, personId)).resolves.toEqual({
+      email: "unknown",
+      text: "unknown",
+      link: "copied",
+    });
+  });
+});
+
+/**
+ * The one status the diver record's waiver card reads. Copying a link used to
+ * land here as `not_signed`, which the card words as "Link sent" — a delivery
+ * we never made and cannot see.
+ */
+describe("getDiverWaiverRequestStatus", () => {
+  async function personWithNoWaiver() {
+    const { db, shop, bookingId } = await seededBooking();
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!row) throw new Error("test setup: booking has no person");
+    return { db, shop, personId: row.personId };
+  }
+
+  it("says nothing has been sent before anything is issued", async () => {
+    const { db, shop, personId } = await personWithNoWaiver();
+    await expect(getDiverWaiverRequestStatus(db, shop.id, personId)).resolves.toBe("not_sent");
+  });
+
+  it("separates a copied link from a delivered one", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, shop, personId } = await personWithNoWaiver();
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "link" });
+    await expect(getDiverWaiverRequestStatus(db, shop.id, personId)).resolves.toBe("link_copied");
+  });
+
+  it("reports a real send even when a link was taken afterwards", async () => {
+    // The record's own delivery columns are the *latest* attempt whichever way
+    // it went, so the copy overwrites them — and an email that genuinely left
+    // DiveDay must still be what the card reports.
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "ses-delivered" });
+
+    const { db, shop, personId } = await personWithNoWaiver();
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "email" });
+    await issueAndDeliverPersonWaiver(db, shop.id, personId, { channel: "link" });
+    await expect(getDiverWaiverRequestStatus(db, shop.id, personId)).resolves.toBe("not_signed");
   });
 
   it("lets a provider's verdict outrank our own send result", async () => {
