@@ -336,8 +336,8 @@ const NITROX_ENTRY_CODES = new Set<ReadinessBlockerCode>([
  * One collapsed disclosure, the shell every card-entry form on this page wears.
  *
  * Collapsed, because the row above has already said what is outstanding and a
- * diver short three cards was being handed three stacked forms — twelve fields
- * of agency/level/number/expiry between them, all open at once, on a phone.
+ * diver short three cards was being handed three stacked forms — nine fields of
+ * agency/level/number between them, all open at once, on a phone.
  * Shut, the same three read as a list of three things to do, and each one is a
  * tap. `<details>` carries the open state to a screen reader itself, which is
  * why the caret is decorative (`DisclosureCaret`).

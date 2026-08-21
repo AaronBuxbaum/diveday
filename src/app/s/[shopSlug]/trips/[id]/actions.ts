@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { createBookingParty, getBookingForTrip } from "@/db/bookings";
+import { type BookingDeclaration, createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
@@ -43,7 +43,6 @@ import {
 } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import type { CertificationLevel } from "@/lib/readiness";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import {
   hasAnyRentalPricing,
@@ -112,16 +111,30 @@ const bookSchema = z.object({
 const emailField = diverEmailSchema;
 
 /**
- * One diver's parsed answer, narrowed to the two things a booking may carry:
- * the rung they named, or the statement that they hold no card at all. A
- * declaration with neither is dropped to `undefined` — the same as "Rather not
- * say" — so an empty select never writes a row.
+ * One diver's parsed answer, narrowed to what a booking may carry: the rung
+ * they named — with the agency and card number, if they gave them — or the
+ * statement that they hold no card at all. A declaration with neither is
+ * dropped to `undefined`, the same as "Rather not say", so an empty select
+ * never writes a row.
+ *
+ * **Narrowed by listing, which is why it is worth a function.** It drops the
+ * nitrox tick, which no public form renders and which a hand-crafted post must
+ * not smuggle through. The cost of that shape is that a field added upstream is
+ * silently *not* carried until it is named here: the agency and number were
+ * added to the declaration on 2026-08-21 and reached the writer only once this
+ * function was told about them.
  */
-function declarationFor(
-  declared: DiveDeclaration | null,
-): { level?: CertificationLevel; noCertification?: boolean } | undefined {
+function declarationFor(declared: DiveDeclaration | null): BookingDeclaration | undefined {
   if (declared?.level) {
-    return { level: declared.level, noCertification: declared.noCertification };
+    return {
+      level: declared.level,
+      noCertification: declared.noCertification,
+      // The card the diver described, which travels only with a level — an
+      // agency and a number are facts *about* a rung, and `toDiveDeclaration`
+      // has already dropped both if there is no rung to describe.
+      agency: declared.agency,
+      identifier: declared.identifier,
+    };
   }
   if (declared?.noCertification) return { noCertification: true };
   return undefined;

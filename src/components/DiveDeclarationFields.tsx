@@ -9,12 +9,18 @@ import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
 } from "@/i18n/readiness-labels";
-import { MAX_CARD_NUMBER_LENGTH } from "@/lib/card-number";
+import { CARD_NUMBER_INPUT_PATTERN, MAX_CARD_NUMBER_LENGTH } from "@/lib/card-number";
 import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 
 /**
  * **"What can you dive?", asked in the same words wherever it is asked.** The
  * two wait lists ask it, and since 2026-08-20 so does the trip booking form.
+ *
+ * The *level* question is identical on all three. The card fields below it
+ * (`DiveCardFields`, added 2026-08-21) ride on the trip wait list and the
+ * booking form but not on the shop-wide deal list, which mounts
+ * `DiveCertificationField` alone: a number is worth collecting where there is a
+ * departure to pre-check it before, and the deal list has no date.
  *
  * **The answer is no longer only informational.** On the booking form
  * `decideTripAdmission` reads the level for that submission, so a diver who
@@ -210,10 +216,26 @@ export function DiveCertificationField({
 export function DiveCardFields({ shown, index }: { shown: boolean; index?: number }) {
   const t = useTranslations();
   const suffix = index === undefined ? "" : `-${index}`;
+  // **A number is only checkable if somebody knows whose portal to open.**
+  // Both boxes stay optional and skipping both is a fine answer, but a number
+  // with no agency stores as "Another agency · 1234567", and the glossary's own
+  // **Other agency** entry says a staffer then has nothing to look it up
+  // against. The number is the field a diver is *likelier* to fill — it is on
+  // the plastic in front of them — so the pairing has to be asked for rather
+  // than hoped for (`dive-domain-expert`, issue #630).
+  const [number, setNumber] = useState("");
   return (
     <div hidden={!shown} className="grid gap-x-4 gap-y-3 sm:col-span-2 sm:grid-cols-2">
       <Field label={t("common.certification.agency")} hint={t("common.optional")}>
-        <select name={`certificationAgency${suffix}`} defaultValue="" className={controlClass}>
+        <select
+          name={`certificationAgency${suffix}`}
+          defaultValue=""
+          // Required *only* once a number has been typed, and only while the
+          // pair is on screen at all — a hidden control's `required` blocks a
+          // submit the diver has no way to see, let alone fix.
+          required={shown && number.trim().length > 0}
+          className={controlClass}
+        >
           <option value="">{t("common.certification.agencyUnsaid")}</option>
           {certificationAgency.enumValues.map((agency) => (
             <option key={agency} value={agency}>
@@ -223,13 +245,22 @@ export function DiveCardFields({ shown, index }: { shown: boolean; index?: numbe
         </select>
       </Field>
       {/* No hint under the number beyond "(optional)". The level field's
-          InfoHint one row up already answers why any of this is asked, and a
-          second sentence saying the shop will check it against the card
-          restates the answer the reader has already been given. */}
+          InfoHint one row up already answers why the shop asks about
+          certification at all, and a second sentence saying they will check
+          this against the card restates the answer the reader was just given. */}
       <Field label={t("common.certification.cardNumber")} hint={t("common.optional")}>
         <input
           name={`certificationNumber${suffix}`}
+          value={number}
+          onChange={(event) => setNumber(event.target.value)}
           maxLength={MAX_CARD_NUMBER_LENGTH}
+          // The browser's own copy of the server's typo filter, and the reason
+          // it exists (`src/lib/card-number.ts`): the server silently *drops* an
+          // implausible number rather than refusing the sale over an optional
+          // field, so without this the diver walks away believing they sent
+          // something they did not. Deliberately weaker than the server check,
+          // so it can never refuse a submission the server would have taken.
+          pattern={CARD_NUMBER_INPUT_PATTERN}
           // A card number is printed in caps and read off plastic at arm's
           // length; a phone keyboard's autocorrect is nothing but a source of
           // wrong digits here. Same treatment as the /ready entry form.

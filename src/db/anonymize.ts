@@ -473,6 +473,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .update(certifications)
       .set({
         identifier: redactedUniqueValue("redacted"),
+        // The diver's own claimed number is theirs too, and it is the one a
+        // staffer never overwrote — so erasure has to reach it explicitly.
+        declaredIdentifier: null,
         reviewNote: null,
         importedFromLabel: null,
         deletedAt: card.deletedAt ?? now,

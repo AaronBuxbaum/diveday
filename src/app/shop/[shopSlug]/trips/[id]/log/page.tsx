@@ -559,9 +559,10 @@ function CertificationLine({
   const specialtyKey = card.specialty
     ? SPECIALTY_KEYS[card.specialty as keyof typeof SPECIALTY_KEYS]
     : undefined;
-  // A self-declared card has no number, and "absence is stated, never blank" is
-  // rule 2 of this document (src/lib/incident-export.ts) — a bare gap where a
-  // card number belongs reads as a missing page to an investigator.
+  // A self-declared card has no number the shop holds, and "absence is stated,
+  // never blank" is rule 2 of this document (src/lib/incident-export.ts) — a
+  // bare gap where a card number belongs reads as a missing page to an
+  // investigator. The card is separately tagged as the diver's own word below.
   const identifier = card.identifier ?? t("incidentExport.certNoNumber");
   const line =
     card.kind === "level" && levelKey

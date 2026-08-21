@@ -223,14 +223,22 @@ export async function CertificationCards({
             const selfDeclared = isUnsightedSelfDeclaration(card);
             // A claim with **no number in it** — a diver who named a rung and
             // left the optional card boxes blank. That is a different thing
-            // from a claim that carries a real agency and a real number (typed
-            // into `/ready`, or beside the level on the booking form since
-            // issue #630) and wears `selfDeclaredAt` only so the one-tap
-            // promote below still demands a sighting. Keying the two lines
-            // beneath on `selfDeclared` alone told a staffer reviewing a typed
-            // card "no certification number yet" — while hiding the very number
-            // they needed to check it against.
+            // from a claim the diver typed a number into on `/ready`, which
+            // carries a real `identifier` and wears `selfDeclaredAt` only so
+            // the one-tap promote still demands a sighting. Keying the two
+            // lines beneath on `selfDeclared` alone told a staffer reviewing a
+            // typed card "no certification number yet" — while hiding the very
+            // number they needed to check it against.
             const claimWithoutANumber = selfDeclared && !card.identifier;
+            // **The number the diver typed on a public form**, which is a third
+            // thing again and must never render like either of the others: it
+            // lives in its own column, no staffer has seen it, and it is the
+            // one a shop pre-checks with the agency before the dive date. It
+            // reads *beside* the claim mark rather than in place of the card
+            // number, because an unmarked number in this position is exactly
+            // the laundering `selfDeclaredAt` exists to prevent
+            // (`security-reviewer` + `dive-domain-expert`, issue #630).
+            const declaredNumber = selfDeclared ? card.declaredIdentifier : null;
             return (
               <li
                 key={card.id}
@@ -243,18 +251,26 @@ export async function CertificationCards({
                       label={t(CARD_STATUS_KEYS[display])}
                     />
                     <span>
-                      {/* A claim carrying no number also carries no agency
-                          (`other`, the enum's "unstated"), so naming one would
-                          invent evidence: the level stands alone until a
-                          staffer sights the real card. */}
-                      {claimWithoutANumber ? null : <>{t(AGENCY_KEYS[card.agency])} · </>}
+                      {/* `other` is the enum's "unstated", and naming it beside
+                          a level would read as an agency somebody gave. A card
+                          the shop holds always states one; a claim states one
+                          only when the diver picked it. */}
+                      {card.agency === "other" ? null : <>{t(AGENCY_KEYS[card.agency])} · </>}
                       {t(CERTIFICATION_LEVEL_KEYS[card.level])}
                     </span>
                   </p>
                   <p className="mt-1 break-all text-sm text-muted">
-                    {claimWithoutANumber
-                      ? t("divers.certifications.selfDeclaredLabel")
-                      : card.identifier}
+                    {/* Three states, and they are exclusive on purpose. A
+                        number the diver typed says "diver says <number>" — the
+                        provenance and the evidence in one phrase, because
+                        "self-declared — no number yet · diver says PA-118824"
+                        contradicted itself. A claim with nothing at all still
+                        says so. Anything else is a number the shop holds. */}
+                    {declaredNumber
+                      ? t("divers.certifications.declaredNumber", { number: declaredNumber })
+                      : claimWithoutANumber
+                        ? t("divers.certifications.selfDeclaredLabel")
+                        : card.identifier}
                     {/* Provenance, on the line that already carries the card's
                         own small print — not a pill in the control row. Where
                         a card came from is a fact about the card, and it never

@@ -245,3 +245,77 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await card.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("marked verified");
 });
+
+/**
+ * **The booking form's own card capture, end to end** (issue #630).
+ *
+ * The declaration was a rung and nothing else until 2026-08-21, which left the
+ * verify queue with nothing to pre-check before the dive date. This walks the
+ * whole path — public form to staff record — because every layer of it can drop
+ * the two fields silently and none of them fails when it does: the narrowing in
+ * `declarationFor` did exactly that, and only a look at the rendered record
+ * caught it.
+ *
+ * It also pins the two properties the reviews turned on. The number lands in
+ * `declared_identifier`, never `identifier`, so it can neither collide with a
+ * card the shop holds nor promote itself; and the row still reads as the
+ * diver's own word, so the one-tap "Mark certified" is refused and a sighting
+ * is asked for instead.
+ */
+test("a diver's card number typed at booking reaches the staff record as their word", async ({
+  page,
+}) => {
+  // A trip create, a signed-out public booking, and a sign-back-in — three
+  // multi-navigation journeys, same budget as the readiness-entry test above.
+  test.setTimeout(90_000);
+  const stamp = e2eNow().getTime();
+  const cardNumber = `PA-${stamp}`;
+  const title = `Booked Card Run ${stamp}`;
+  const diver = `Ana Ruiz ${stamp}`;
+
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "08:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
+  await signOut(page);
+
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: title })
+    .getByRole("link")
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill(diver);
+  await page.getByLabel("Email", { exact: true }).fill(`booked-card-${stamp}@example.com`);
+
+  // The card fields are not on screen until a real rung is picked: they
+  // describe a card, and there is nothing to describe before then.
+  await expect(page.getByLabel("Certification number")).toBeHidden();
+  await page.getByLabel("Certification level").selectOption({ label: "Advanced Open Water" });
+  await page.getByLabel("Certification agency").selectOption({ label: "PADI" });
+  await page.getByLabel("Certification number").fill(cardNumber);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diver);
+  await page.getByRole("link", { name: new RegExp(diver) }).click();
+
+  const card = page.locator("li").filter({ hasText: cardNumber }).filter({ visible: true }).last();
+  // The agency the diver named renders beside the rung, and the number renders
+  // as theirs — never as a number the shop transcribed off plastic.
+  await expect(card).toContainText("PADI · Advanced Open Water");
+  await expect(card).toContainText(`Diver says ${cardNumber}`);
+  await expect(card).toContainText("pending");
+
+  // Still a claim: the sighting form, not the one-tap promote.
+  await expect(
+    card.locator("summary").filter({ hasText: "Verify certification record" }),
+  ).toBeVisible();
+});

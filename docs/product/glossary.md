@@ -33,12 +33,17 @@ new domain concept, define it here in the same PR.
   nitrox fill gate reads either one; a card clears on its level and its verification state. See
   **Other agency** for what the enum still cannot say.
 - **C-card** — the certification card (physical or digital) a diver presents as proof. Has an
-  agency, a level, and a cert/diver number. Cards **do not expire**, and DiveDay stores no date
-  saying otherwise: the column that once held a shop-set "refresher due" date was dropped on
+  agency, a level, and a cert/diver number. A recreational **diver** card **does not expire**, and
+  DiveDay stores no date saying otherwise: the column that once held a shop-set "refresher due" date was dropped on
   2026-08-21 along with everything that gated on it
-  (ADR 20260821-a-card-does-not-expire, superseding H-08's relabel). What a card cannot tell you
-  is when this diver was last in the water — that is **Dive recency**, a different question asked
-  of the diver, and it is not a gate.
+  (ADR 20260821-a-card-does-not-expire, superseding H-08's relabel). Three things in diving *do*
+  lapse and DiveDay models none of them, so none was ever what that column held: a **professional
+  rating** renews annually at every agency (a lapsed Instructor is out of teaching status and
+  uninsured), **GUE** alone among the agencies in the enum states a validity on its certifications,
+  and a **CMAS** star card is permanent while the issuing national federation's licence is annual.
+  CPR/EFR and O₂-provider tickets expire too, and are a real prerequisite for Rescue and above.
+  What a card cannot tell you either way is when this diver was last in the water — that is
+  **Dive recency**, a different question asked of the diver, and it is not a gate.
 - **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
   until staff certify it — staff look the card number up with the issuing agency (in the agency's
   own portal, outside DiveDay) and click **Mark certified**. There is no automated agency
@@ -68,9 +73,14 @@ new domain concept, define it here in the same PR.
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
   one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
   list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`
-  card stamped `self_declared_at` and carries **no agency and no card number** (the forms do not yet
-  ask, and a placeholder would be read as a card number eventually — see
-  FU-20260820-collect-the-card-number-at-booking).
+  card stamped `self_declared_at`. Since 2026-08-21 the forms also ask, optionally, for the **agency
+  and card number** (issue #630), and where those land is the point: the agency rides in `agency`
+  (`other` when unstated), while the number goes to its own **`declared_identifier`** column and
+  never to `identifier`. `identifier` is what the *shop* holds, and it is a key — a number a stranger
+  can write into it fails the sale on a collision, answers "is this number on file here?" to anyone
+  who watches, and takes the card-entry form away from the real diver. Neither field gates anything;
+  both exist so a staffer can pre-check the claim with the agency before the dive date, which is what
+  "verified asynchronously" had no way to do before.
   **One gate reads it and one does not, and the split is the whole design.**
   `decideTripAdmission` — the *sale* — believes it, because the question there is "could this diver
   ever be cleared?" and a diver who names their rung has answered it. `calculateReadiness` — the
@@ -217,6 +227,17 @@ new domain concept, define it here in the same PR.
   about a *sale*, never about boarding — readiness still clears on a sighted card and nothing else.
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
+- **Requirable level** — the levels a **site or trip may demand**, which since 2026-08-21 is a
+  *different and shorter* set than the ladder above: **Open Water, Advanced Open Water, Rescue**, and
+  that is the ceiling (`REQUIRABLE_CERTIFICATION_LEVELS`, `src/lib/readiness.ts`; issue #630, ADR
+  20260821-a-card-does-not-expire). Divemaster and Instructor are working ratings — crew hold them,
+  course ratios count them, an instructor-led session is gated on one being assigned — and none of
+  that is a shop telling a paying diver to hold a professional rating to board a charter. A "pros
+  only" departure is a **course**, and `courses.minimum_certification_level` still accepts both. It
+  stops at Rescue because that is the highest *modelled* recreational rung: **Master Scuba Diver** is
+  Rescue plus five specialties plus fifty dives, which a linear ladder cannot express, so the import
+  path files it under `level_not_gated`
+  ([20260725-imported-card-sighting](../architecture/decisions/20260725-imported-card-sighting.md)).
 - **PADI Scuba Diver** — a real certification one rung *below* Open Water: limited to 12 m and
   required to dive under the direct supervision of a PADI Professional. DiveDay's ladder has no rung
   for it, so any course whose agency floor is Scuba Diver (ReActivate, for one) is gated at Open
@@ -1181,9 +1202,10 @@ new domain concept, define it here in the same PR.
   (recreationally 22–40% O₂). DiveDay models the **nitrox specialty card** separately from the
   recreational ladder (it is a yes/no gate, not a rung): captured pending, then verified. A card
   brought in by the contact importer lands `verified` and flagged imported, but — unlike a level card
-  — its fill authorization waits for a staff confirm (see **Nitrox request**), because a nitrox card
-  has no expiry to backstop a bad import and a wrong fill is the highest-consequence failure
-  (ADR 20260724-import-verified-cards).
+  — its fill authorization waits for a staff confirm (see **Nitrox request**), because a wrong fill
+  is the highest-consequence failure in the product and a spreadsheet cell is not a card sighting
+  (ADR 20260724-import-verified-cards). That reasoning used to lean on a level card having an expiry
+  to backstop a bad import; no card carries one now, and the confirm stands on its own consequence.
 - **Nitrox request** — a per-booking ask for enriched air, billed per dive, offered only when the
   shop's **rental catalog** includes nitrox (most shops don't fill it, so this is off by default).
   A diver may request it **without** a verified card on file: the request is recorded and flagged

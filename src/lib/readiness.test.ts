@@ -232,7 +232,7 @@ describe("calculateReadiness", () => {
     expect(blockers).not.toContainEqual(expect.objectContaining({ code: "nitrox_pending" }));
   });
 
-  it("is ready only with completed waiver and a verified sufficient unexpired card", () => {
+  it("is ready only with a completed waiver and a verified card at or above the bar", () => {
     expect(
       calculateReadiness({
         requirement,
@@ -367,7 +367,7 @@ describe("calculateReadiness", () => {
     ).toContainEqual(expect.objectContaining({ code }));
   });
 
-  it("is ready when a required specialty has a verified unexpired card", () => {
+  it("is ready when a required specialty has a verified card", () => {
     expect(
       calculateReadiness({
         requirement: deepRequirement,
@@ -576,6 +576,29 @@ describe("hasVerifiedCertificationAtLeast", () => {
     ).toBe(true);
     expect(
       hasVerifiedCertificationAtLeast([certification({ level: "instructor" })], "open_water"),
+    ).toBe(true);
+  });
+
+  /**
+   * **The rule the dropped column used to break** (issue #630, ADR
+   * 20260821-a-card-does-not-expire). A recreational certification does not
+   * expire, so a card sighted in 2019 clears a 2026 departure exactly as one
+   * sighted yesterday does — and this is stated positively rather than left as
+   * the absence of a check, because an absence is what somebody reinstates by
+   * accident on a safety surface.
+   */
+  it("clears on a card verified years ago — a certification does not go stale", () => {
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [
+          certification({
+            level: "advanced_open_water",
+            reviewedAt: new Date("2019-04-02T00:00:00.000Z"),
+            createdAt: new Date("2019-04-02T00:00:00.000Z"),
+          }),
+        ],
+        "advanced_open_water",
+      ),
     ).toBe(true);
   });
 

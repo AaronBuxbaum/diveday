@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
-import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
@@ -185,8 +185,6 @@ export type NewCertification = {
   agency: CertificationAgency;
   level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
   identifier: string;
-  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
-  expiresAt?: CalendarDate;
   /**
    * **The diver typed this about themselves.** Set only by the diver-facing
    * entry form on `/ready/[token]`; a staff capture leaves it unset, because a
@@ -446,8 +444,6 @@ export type NewSpecialtyCertification = {
   agency: CertificationAgency;
   specialty: DiveSpecialty;
   identifier: string;
-  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
-  expiresAt?: CalendarDate;
   /**
    * The diver typed this about themselves — see the column's own note in
    * `src/db/schema.ts`. Set only by the entry form on `/ready/[token]`; a staff

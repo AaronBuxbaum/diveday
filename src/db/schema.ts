@@ -3666,6 +3666,41 @@ export const certifications = pgTable(
      */
     identifier: text("identifier"),
     /**
+     * **The card number a diver typed about themselves**, kept deliberately
+     * apart from `identifier` above — which is what the *shop* holds.
+     *
+     * The three public forms started asking for one on 2026-08-21 (issue #630)
+     * so the verify queue has something to pre-check before the dive date. It
+     * would have been cheaper to write it into `identifier` and the column is
+     * nullable for exactly this row shape, but a `security-reviewer` pass found
+     * two things wrong with that, and both are about `identifier` being a *key*:
+     *
+     * 1. **A number already on a live card raises 23505 inside the booking
+     *    transaction** (`certifications_shop_agency_identifier_unique`), which
+     *    fails the sale — and answers "is this number on file at this shop?" for
+     *    anyone who types one and watches. Dropping the number on a collision
+     *    only moved the tell: an unsighted claim *with* a number reads as
+     *    `certification_pending` and one without reads as
+     *    `certification_self_declared`, so the difference is rendered in words
+     *    on the attacker's own readiness page.
+     * 2. **It strands the real diver.** `certification_pending` withdraws the
+     *    card-entry form (`CERT_ENTRY_CODES`) and says "your details are being
+     *    verified" — so a stranger who knows a diver's name and email could
+     *    take away that diver's only way to send their actual card.
+     *
+     * A column outside the unique index has neither problem: nothing collides,
+     * nothing is dropped, and every unsighted claim reads the same however much
+     * the diver typed. It is **never** evidence — `reviewCertification` still
+     * demands a staffer type what is on the plastic, and what they type lands in
+     * `identifier`, leaving this as the claim it was. A staffer comparing the
+     * two is the whole point.
+     *
+     * The *agency* needs no such twin: it rides in `agency` (`other` when the
+     * diver did not say), which is safe precisely because a claim's `identifier`
+     * stays NULL, and a NULL is invisible to the unique index.
+     */
+    declaredIdentifier: text("declared_identifier"),
+    /**
      * **There is no expiry column here, and its absence is the decision.**
      * Neither PADI nor SSI expires a recreational certification or mandates a
      * refresher, so the date this table carried until 2026-08-21 modelled a

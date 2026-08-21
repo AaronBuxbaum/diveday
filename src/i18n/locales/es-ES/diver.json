@@ -15,7 +15,7 @@
     "certification": {
       "level": "Nivel de certificación",
       "agency": "Agencia de certificación",
-      "agencyUnsaid": "Prefiero no decirlo",
+      "agencyUnsaid": "No lo sé",
       "agencies": {
         "padi": "PADI",
         "ssi": "SSI",

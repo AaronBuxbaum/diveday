@@ -51,9 +51,12 @@ export type IncidentCertificationEvidence = {
   /** Specialty code for `kind: "specialty"`, null otherwise. */
   specialty: string | null;
   /**
-   * The card number as the shop holds it. Null on a self-declared card, which
-   * has none — the diver named a level on a public opt-in and nobody has seen
-   * anything (`selfDeclared` below).
+   * The card number **as the shop holds it**. Null on a self-declared card: the
+   * diver named a level on a public form and nobody has seen anything
+   * (`selfDeclared` below). A number the diver typed about themselves lives in
+   * a different column and is deliberately not carried here — this document is
+   * read by an investigator, and a claim in the position of evidence is the one
+   * mistake it must never make.
    */
   identifier: string | null;
   /** Stored card status verbatim (`pending` | `verified`) — never upgraded. */

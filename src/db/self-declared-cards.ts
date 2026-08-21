@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type CertificationLevel,
@@ -98,8 +98,8 @@ export type RecordSelfDeclaredCardsInput = {
    * types what is on the card in their hand. What they change is what the verify
    * queue has to work with before the dive date, which until now was nothing.
    *
-   * A number that collides with a live card in this shop is **dropped, silently**
-   * — see `recordLevel`.
+   * The number lands in `certifications.declared_identifier`, a column outside
+   * the unique index and outside every evidence read — see that column.
    */
   agency?: CertificationAgency | null;
   identifier?: string | null;
@@ -513,23 +513,23 @@ async function recordLevel(
   // can still tell a staffer; the alternative is a stranger moving a gate.
   if (await holdsRealCardOutsideLevels(tx, input)) return "card_on_file";
 
-  // **The card the diver described, if it is safe to write it down.**
+  // **The card the diver described**, in the two places it is safe to put it.
   //
-  // The number is optional and gates nothing, so it is never worth failing a
-  // booking over — and it can fail one two ways. `certifications` carries a live
-  // unique index on (shop, agency, lower(identifier)), so a number that is
-  // already on a card in this shop raises 23505 *inside the booking
-  // transaction*, taking the sale down with it. And a number that collides is
-  // most often somebody else's card, which makes the refusal an oracle: type a
-  // number, watch whether the booking breaks, learn whether this shop holds it.
+  // The number goes to `declaredIdentifier`, never to `identifier`: that column
+  // is a *key*, and writing a stranger's typing into it makes the sale fail on
+  // a collision, answers "is this number on file here?" to anyone who watches,
+  // and — via `heldForReview` — takes the card-entry form away from the real
+  // diver. See the column's own note in schema.ts for the `security-reviewer`
+  // findings behind each of those.
   //
-  // So a collision drops the card fields and keeps the level, which is exactly
-  // the state a diver who left the boxes blank produces. Nothing is said to
-  // them, because there is nothing for them to fix and the honest cases — their
-  // own archived card, a shop that has already typed this number — are not
-  // theirs to resolve. `describedCard` returns nothing when the collision is
-  // real, and the level lands alone.
-  const card = await describedCard(tx, input);
+  // The agency does go to `agency`, and that is safe for one specific reason: a
+  // claim's `identifier` stays NULL, and a NULL is invisible to the unique
+  // index. `other` when the diver did not say — the enum's honest "unstated",
+  // never an invented agency.
+  const card = {
+    agency: input.agency ?? "other",
+    declaredIdentifier: input.identifier?.trim() || null,
+  } as const;
 
   // `find`, not `live[0]`: every row here passed the guard above, but choosing
   // by predicate rather than by position means a record that somehow holds more
@@ -543,6 +543,10 @@ async function recordLevel(
         and(
           eq(certifications.id, own.id),
           eq(certifications.shopId, input.shopId),
+          // The read above filtered deleted rows; a staff `deleteCertification`
+          // landing between the two would otherwise let an anonymous post edit
+          // a card the shop has just retracted (`security-reviewer`).
+          isNull(certifications.deletedAt),
           // Defence in depth: the guard above already proved this row is a
           // still-unsighted claim, and this re-states it in the statement that
           // actually writes, where no later refactor of the read can lose it.
@@ -556,69 +560,15 @@ async function recordLevel(
   await tx.insert(certifications).values({
     shopId: input.shopId,
     personId: input.personId,
-    // `other` when the diver did not name an agency, and inventing one would be
-    // the same laundering the `selfDeclaredAt` stamp exists to prevent: it is
-    // the enum's honest "unstated", and the staff surfaces render the level
-    // alone for a claim carrying no number.
-    agency: "other",
     level: input.level,
+    // NULL, always: the shop holds no number for this person, and that is the
+    // fact `heldForReview` and the diver's own checklist both read.
     identifier: null,
     status: "pending",
     selfDeclaredAt: now,
     ...card,
   });
   return "recorded";
-}
-
-/**
- * **The agency and number the diver typed, or nothing at all.**
- *
- * Returns a patch to spread over the row being written — `{}` when the diver
- * gave no number, and `{}` again when the number they gave is already on a live
- * card in this shop. See the call site for why a collision is answered with
- * silence rather than a refusal or a message.
- *
- * The read is the *same* condition as the partial unique index it is protecting
- * (`certifications_shop_agency_identifier_unique`: shop, agency, lower(number),
- * live rows only), because a narrower one would let a write through that the
- * index then rejects. It is not a lock — but `recordSelfDeclaredCards` is
- * already holding this person's `people` row `FOR UPDATE`, and the remaining
- * race is two *different* people's declarations landing the same number in the
- * same instant, which is not a shape an optional evidence field is worth
- * serializing the whole table for. It stays possible and it is bounded: the
- * loser's insert raises, and its booking fails with the ordinary refusal a
- * caller already handles.
- *
- * An agency with **no** number is kept: naming PADI is a fact about the card
- * that collides with nothing, and it is a real narrowing for the staffer who
- * has to check it.
- */
-async function describedCard(
-  tx: DbExecutor,
-  input: RecordSelfDeclaredCardsInput,
-): Promise<{ agency?: CertificationAgency; identifier?: string }> {
-  const identifier = input.identifier?.trim();
-  const agency = input.agency ?? undefined;
-  if (!agency && !identifier) return {};
-  if (!identifier) return { agency };
-  // A number always belongs to some agency in the index's key, and `other` is
-  // what an unstated one stores — so the collision check has to use the same
-  // value the write would.
-  const keyAgency = agency ?? "other";
-  const [taken] = await tx
-    .select({ id: certifications.id })
-    .from(certifications)
-    .where(
-      and(
-        eq(certifications.shopId, input.shopId),
-        eq(certifications.agency, keyAgency),
-        sql`lower(${certifications.identifier}) = lower(${identifier})`,
-        isNull(certifications.deletedAt),
-      ),
-    )
-    .limit(1);
-  if (taken) return agency ? { agency } : {};
-  return { agency: keyAgency, identifier };
 }
 
 /**

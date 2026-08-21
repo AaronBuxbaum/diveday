@@ -892,6 +892,11 @@ export async function loadShopExportBundleInput(
             "agency",
             "level",
             "identifier",
+            // The number the *diver* typed, which is never the number above: one
+            // is a claim and one is what the shop holds, and a file that
+            // merged them would launder the first into the second on the way
+            // back in (issue #630).
+            "declared_identifier",
             "status",
             "review_note",
             "reviewed_at",
@@ -918,6 +923,7 @@ export async function loadShopExportBundleInput(
             row.agency,
             row.level,
             row.identifier,
+            row.declaredIdentifier,
             row.status,
             row.reviewNote,
             row.reviewedAt,

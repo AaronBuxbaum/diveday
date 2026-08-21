@@ -7,11 +7,12 @@ import type { CertificationLevel } from "./readiness";
  * **What an anonymous joiner is allowed to say about their own diving**, and
  * the only shape of it the server will accept.
  *
- * The two public "tell me when something comes up" opt-ins — the shop-wide
- * last-minute-deal list and a full trip's wait list — ask an optional
- * certification level and an optional nitrox tick (`DiveDeclarationFields`).
- * Both forms post to different actions in different route segments, and both
- * parse through here, so there is one answer to "what can a stranger write".
+ * Three public forms ask — the shop-wide last-minute-deal list, a full trip's
+ * wait list, and the trip booking form — and between them they collect an
+ * optional certification level, an optional agency and card number, and an
+ * optional nitrox tick (`DiveDeclarationFields`). They post to different actions
+ * in different route segments and all parse through here, so there is one answer
+ * to "what can a stranger write".
  *
  * Two properties this file exists to guarantee:
  *

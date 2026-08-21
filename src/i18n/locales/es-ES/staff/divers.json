@@ -68,6 +68,7 @@
     "confirmCard": "Confirmar certificación",
     "verifiedBy": "Certificado por {name} el {date}.",
     "selfDeclaredLabel": "Autodeclarado — aún sin número de certificación",
+    "declaredNumber": "El buceador dice {number}",
     "sightCard": "Verificar registro de certificación",
     "sightCardHint": "El buceador nos indicó este nivel. Introduce la agencia y el número del registro de certificación que verificaste.",
     "sightNitroxCardHint": "El buceador nos indicó que tiene certificación de nitrox. Introduce lo que muestra el registro digital de certificación u otra prueba de certificación. RAID y GUE no emiten una credencial de nitrox aparte: su aire enriquecido está incluido en la credencial de nivel (RAID Open Water 20 o Advanced 35, GUE Fundamentals o Rec 1), así que registra esa credencial. Las demás agencias sí emiten una credencial de aire enriquecido aparte, y una credencial de nivel suya no sirve como prueba de nitrox.",

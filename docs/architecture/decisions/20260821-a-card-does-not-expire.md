@@ -20,6 +20,17 @@ policy that no agency asks for and most shops never set.
 The product owner reversed the relabel half of H-08 on 2026-08-21 (issue #630, combining #626 and
 #609). This ADR records the removal and the two things it deliberately leaves alone.
 
+**The claim is about a recreational *diver* card, and it is worth being exact**, because a
+divemaster reading a flat "nothing in diving expires" would be right to stop trusting the rest.
+Three things really do lapse, and **DiveDay models none of them**, so none was ever what this column
+held: a **professional rating** renews annually at every agency (a lapsed Instructor is out of
+teaching status and uninsured); **GUE** alone among the agencies in the enum states a validity on
+its certifications and requires recertification; and a **CMAS** star card is permanent while the
+national federation's licence behind it is annual and medical-linked. CPR/EFR and O₂-provider
+tickets expire too, and are a genuine prerequisite for Rescue and the professional grades. What was
+stored here was none of those: it was a shop-set refresher date on a recreational level or specialty
+card, and no agency asks for one (`dive-domain-expert`, 2026-08-21).
+
 ## Decision
 
 - **Both columns are dropped** (`drizzle/20260821223019_drop-certification-expiry`), with the
