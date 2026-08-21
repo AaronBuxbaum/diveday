@@ -42,15 +42,16 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-
 import {
   followUpMetadata,
   followUpStraight,
   LABEL,
+  listIssuesByLabel,
   listOpenFollowUps,
   PARKED_LABEL,
   WAITING_LABEL,
 } from "./check-follow-ups.mjs";
+import { ageClaims, IN_PROGRESS_LABEL, readGitFacts } from "./claims.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -345,6 +346,47 @@ function printFollowUps(entries, { heading, empty }) {
   }
 }
 
+/**
+ * Who is in flight, and whether they still exist.
+ *
+ * A stale row is the reason this section is here: it means a session claimed the issue and
+ * left nothing behind, so the label is lying and the next reader should take the work. It is
+ * still only a report — clearing the claim is a decision, and this prints the evidence for it.
+ */
+function printClaims(entries, { verifiable }) {
+  console.log(`\nClaimed — in flight (label:${IN_PROGRESS_LABEL}) — ${entries.length}`);
+  if (entries.length === 0) {
+    console.log("  Empty — nothing is claimed, every ready issue is free to pick up.");
+    return;
+  }
+  if (!verifiable) {
+    console.log("  git unreadable — claims are listed but none could be checked for staleness.");
+  }
+  const idWidth = Math.max(4, ...entries.map((entry) => entry.id.length)) + 2;
+  console.log(
+    `  ${pad("id", idWidth)}${pad("state", 15)}${pad("branch", 40)}${padStart("age", 5)}`,
+  );
+  for (const entry of entries) {
+    const branch = entry.claim ? truncate(entry.claim.branch, 38) : "—";
+    const age = entry.verdict.days === null ? "—" : `${entry.verdict.days}d`;
+    console.log(
+      `  ${pad(entry.id, idWidth)}${pad(entry.verdict.state, 15)}${pad(branch, 40)}${padStart(age, 5)}`,
+    );
+    console.log(`       ${truncate(entry.title, 92)}`);
+    console.log(`       ${entry.verdict.reason}`);
+    const owned = entry.claim ? [...entry.claim.owns, ...entry.claim.alsoTouches] : [];
+    if (owned.length > 0) console.log(`       owns ${truncate(owned.join(" "), 86)}`);
+  }
+  const stale = entries.filter((entry) => entry.verdict.state !== "live");
+  if (stale.length > 0) {
+    console.log(
+      `  ${stale.length} of ${entries.length} cannot be confirmed live (${stale
+        .map((entry) => entry.id)
+        .join(", ")}) — check before assuming the work is taken.`,
+    );
+  }
+}
+
 async function main() {
   const now = new Date();
   const register = readFileSync(path.join(ROOT, REGISTER), "utf8");
@@ -423,6 +465,20 @@ async function main() {
       heading: "Follow-up issues — waiting on somebody else",
       empty: "Empty — nothing is blocked outside this repo.",
     });
+  }
+
+  const claimIssues = listIssuesByLabel(ROOT, {
+    label: IN_PROGRESS_LABEL,
+    fields: "number,title,labels,createdAt,comments",
+    what: "claims",
+  });
+  if (claimIssues === null) {
+    console.log(
+      `\nClaimed — in flight (label:${IN_PROGRESS_LABEL}) — could not reach \`gh issue list\`, skipped.`,
+    );
+  } else {
+    const facts = readGitFacts(ROOT);
+    printClaims(ageClaims(claimIssues, facts, now), { verifiable: facts !== null });
   }
 
   const stalled = reconciled.filter((item) => item.unstarted);

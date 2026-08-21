@@ -61,8 +61,18 @@ const MIN_PROMPT_WORDS = 40;
 const REPO_PATH = /(?:src|scripts|docs|e2e|infra|drizzle)\/[\w./[\]@-]+/;
 const PLACEHOLDERS = ["short-slug", "YYYY-MM-DD", "TODO", "TBD", "src/lib/example.ts"];
 // Either word order: "close this issue" and "this issue is closed" both count.
+//
+// Tested against the prompt with its whitespace collapsed to single spaces, because the two
+// halves are routinely split by a line wrap — `[^.\n]` refuses to cross one, so a prompt
+// ending "…is fine; close\nthis issue when the last one lands." failed the check while saying
+// exactly what the check asks for (issue #632, 2026-08-21). Collapsing rather than allowing
+// `\n` in the gap keeps the original intent: the two halves must be in one sentence, not
+// merely within thirty characters of each other across a paragraph break.
 const CLOSES_ITSELF =
   /clos(?:e|es|ed|ing)\b[^.\n]{0,30}\bthis issue\b|\bthis issue\b[^.\n]{0,30}\bclos(?:e|es|ed|ing)\b/i;
+
+/** One line, for a test that must not be defeated by where a sentence happens to wrap. */
+const unwrapped = (text) => text.replace(/\s+/g, " ");
 
 const straight = (text) => text.replace(/[‘’]/g, "'");
 const words = (text) => text.split(/\s+/).filter(Boolean).length;
@@ -183,7 +193,7 @@ export function findIssueProblems(issue, { waiting = false, parked = false } = {
       if (!REPO_PATH.test(prompt)) {
         say("the prompt names no repo path — say which files to read and change");
       }
-      if (!CLOSES_ITSELF.test(prompt)) {
+      if (!CLOSES_ITSELF.test(unwrapped(prompt))) {
         say(
           'the prompt must tell the session to close this issue when the work lands (e.g. "close this issue")',
         );
@@ -198,42 +208,39 @@ export function findIssueProblems(issue, { waiting = false, parked = false } = {
   return { problems, touched };
 }
 
-/** `gh issue list --label needs-triage --state open`, bounded and JSON. Returns `null`
+/** `gh issue list --label <label> --state open`, bounded and JSON. Returns `null`
  *  (never throws) when `gh` cannot answer — unreachable, unauthenticated, not installed — so
- *  the caller can fail open rather than blocking a commit on network state. */
-export function listOpenFollowUps(root) {
+ *  every caller can fail open rather than blocking on network state. `what` names the caller
+ *  in the warning, since two different reports now share this reader. */
+export function listIssuesByLabel(root, { label, fields, what }) {
   let raw;
   try {
     raw = readBounded(
       "gh",
-      [
-        "issue",
-        "list",
-        "--label",
-        LABEL,
-        "--state",
-        "open",
-        "--limit",
-        "500",
-        "--json",
-        "number,title,body,labels,createdAt",
-      ],
+      ["issue", "list", "--label", label, "--state", "open", "--limit", "500", "--json", fields],
       { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
     );
   } catch (error) {
     console.warn(
-      `follow-ups: could not reach \`gh issue list\` (${error.code === "ETIMEDOUT" ? "timed out" : "gh failed"}) — skipping content validation. ${error.message ?? ""}`.trim(),
+      `${what}: could not reach \`gh issue list\` (${error.code === "ETIMEDOUT" ? "timed out" : "gh failed"}) — skipping. ${error.message ?? ""}`.trim(),
     );
     return null;
   }
   try {
     return JSON.parse(raw);
   } catch {
-    console.warn(
-      "follow-ups: `gh issue list` returned unparseable JSON — skipping content validation.",
-    );
+    console.warn(`${what}: \`gh issue list\` returned unparseable JSON — skipping.`);
     return null;
   }
+}
+
+/** The follow-up inbox: every open `needs-triage` issue, with the body the content check reads. */
+export function listOpenFollowUps(root) {
+  return listIssuesByLabel(root, {
+    label: LABEL,
+    fields: "number,title,body,labels,createdAt",
+    what: "follow-ups",
+  });
 }
 
 async function main() {
