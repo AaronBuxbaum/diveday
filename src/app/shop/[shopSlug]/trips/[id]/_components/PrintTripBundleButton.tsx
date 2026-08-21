@@ -32,7 +32,11 @@ export function PrintTripBundleButton({
         setPopupBlocked(popup === null);
       }}
     >
-      <button type="submit" className={buttonClass({ variant: "secondary" })}>
+      {/* `ghost sm`, like its neighbours in the header's action cluster — the
+          rarest of the three doors was the only one wearing a bordered box,
+          which put the heaviest chrome on the least-used action (principle 8).
+          The 44px touch floor comes from the base either way. */}
+      <button type="submit" className={buttonClass({ variant: "ghost", size: "sm" })}>
         {label}
       </button>
       {popupBlocked ? (

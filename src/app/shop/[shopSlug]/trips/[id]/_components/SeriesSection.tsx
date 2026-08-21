@@ -1,8 +1,7 @@
 import { RepeatFields } from "@/components/RepeatFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
@@ -16,6 +15,7 @@ import {
   weekdaysIn,
 } from "@/lib/recurrence";
 import type { FormNotice } from "@/lib/staff-notices";
+import { EditDisclosure } from "./EditDisclosure";
 
 /**
  * `recurrenceSummary` returns codes, not prose (src/lib/recurrence.ts) — this
@@ -146,16 +146,10 @@ export function SeriesSection({
   );
   return (
     // `padding="lg"`: a card a person works inside — apply, stop repeating,
-    // and the cadence editor all live in it. The heading was `text-base` and
-    // is now the one `h2` size every other section on this page already used;
-    // the card owns the gap under the header, so nothing here opens with a
-    // `mt-*` of its own.
+    // and the cadence editor all live in it. No margin of its own: the page
+    // stacks its section cards and owns the rhythm between them.
     <SectionCard
       padding="lg"
-      // `mt-10`, the gap every other section on this page already uses. The
-      // `mt-12` this carried was one of the nine drifted values, not a choice;
-      // the destructive lifecycle tail below keeps its wider one on purpose.
-      className="mt-10"
       title={t("tripSeries.panel.heading")}
       description={
         hasFuture
@@ -219,20 +213,14 @@ export function SeriesSection({
 
         {/* The rare half, collapsed: a cadence is set once and changed
             occasionally, so it costs a line at rest and opens when asked
-            (design principles #8). A `<details>`, not client state — the panel
-            around it renders on the server and this needs no JavaScript to
-            open. */}
-        <details className="group/cadence">
-          <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
-            <DisclosureCaret className="text-muted group-open/cadence:rotate-90" />
-            {t("tripSeries.panel.editCadence")}
-          </summary>
-          {/* Nested inside the series card, so it drops its shadow — surface
-              never stacks on surface. */}
-          <form
-            action={cadenceAction}
-            className={sectionCardClass({ elevated: false, className: "mt-2" })}
-          >
+            (design principles #8). The same EditDisclosure the other Overview
+            sections wear — this used to be a hand-rolled third disclosure
+            style on one page. */}
+        <EditDisclosure label={t("tripSeries.panel.editCadence")}>
+          {/* Nested inside the series card, so it wears the sunken inset —
+              surface never stacks on surface (see SectionCard's "what is not
+              a section card"). */}
+          <form action={cadenceAction} className="mt-2 rounded-xl bg-surface-sunken p-4 sm:p-5">
             <p className="max-w-prose text-sm text-muted">
               {t("tripSeries.panel.editCadenceDescription")}
             </p>
@@ -261,7 +249,7 @@ export function SeriesSection({
               {t("tripSeries.panel.saveCadence")}
             </SubmitButton>
           </form>
-        </details>
+        </EditDisclosure>
 
         {/* One switch, two directions — a series that was stopped (or arrived
             finite from before this feature existed) can be turned back on, so

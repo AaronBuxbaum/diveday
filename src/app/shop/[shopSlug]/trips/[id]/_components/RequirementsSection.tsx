@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -130,7 +130,7 @@ export function RequirementsSection({
         ].filter((line): line is string => Boolean(line));
   const requirementSummary =
     requirementLines.length > 0 ? (
-      <ul className="mt-4 grid gap-2 text-sm">
+      <ul className="grid gap-2 text-sm">
         {requirementLines.map((line) => (
           <li key={line} className="flex gap-2">
             <span aria-hidden="true" className="text-muted">
@@ -141,19 +141,19 @@ export function RequirementsSection({
         ))}
       </ul>
     ) : (
-      <p className="mt-4 text-sm text-muted">{t("trips.requirements.summaryNoneRequired")}</p>
+      <p className="text-sm text-muted">{t("trips.requirements.summaryNoneRequired")}</p>
     );
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold">{t("trips.requirements.heading")}</h2>
-      {/* A course session keeps the rules it was created with, which is a fact
-          about *this* session that nothing else on screen carries. An ordinary
-          trip's subtitle used to sit here too, restating the heading as a
-          sentence ("A diver stays blocked until every one of them checks out"),
-          and it is gone — the list below is the answer. */}
-      {trip.course ? (
-        <p className="mt-1 text-sm text-muted">{t("trips.requirements.courseDescription")}</p>
-      ) : null}
+    <SectionCard
+      padding="lg"
+      title={t("trips.requirements.heading")}
+      // A course session keeps the rules it was created with, which is a fact
+      // about *this* session that nothing else on screen carries. An ordinary
+      // trip's subtitle used to sit here too, restating the heading as a
+      // sentence ("A diver stays blocked until every one of them checks out"),
+      // and it is gone — the list below is the answer.
+      description={trip.course ? t("trips.requirements.courseDescription") : undefined}
+    >
       {trip.course ? (
         <>
           {requirementSummary}
@@ -166,7 +166,7 @@ export function RequirementsSection({
               src/lib/readiness.ts) — so the summary must never read as
               "nothing required" (dive-domain review). */}
           {requirement === null ? (
-            <p className="mt-4 text-sm font-medium text-warning-strong">
+            <p className="text-sm font-medium text-warning-strong">
               {t("trips.requirements.notConfigured")}
             </p>
           ) : (
@@ -177,10 +177,9 @@ export function RequirementsSection({
             label={t("trips.requirements.edit")}
             open={Boolean(status) || requirement === null}
           >
-            <form
-              action={action}
-              className={sectionCardClass({ padding: "lg", className: "mt-2" })}
-            >
+            {/* Flush inside the card, like the Details form — the card is the
+                container, so the editor needs no chrome of its own. */}
+            <form action={action} className="mt-2">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
                 <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
                   <input
@@ -251,11 +250,13 @@ export function RequirementsSection({
                 </div>
               </fieldset>
               <div className="mt-5 flex flex-wrap items-center gap-3">
+                {/* One weight for a section's Save — the default primary the
+                    other Overview forms share (DetailsSection's comment states
+                    the rule). Only one disclosure is open at a time, so the
+                    primaries never compete. */}
                 <SubmitButton
                   pendingLabel={t("trips.requirements.saving")}
-                  className={buttonClass({
-                    variant: "secondary",
-                  })}
+                  className={buttonClass()}
                 >
                   {t("trips.requirements.save")}
                 </SubmitButton>
@@ -265,6 +266,6 @@ export function RequirementsSection({
           </EditDisclosure>
         </>
       )}
-    </section>
+    </SectionCard>
   );
 }

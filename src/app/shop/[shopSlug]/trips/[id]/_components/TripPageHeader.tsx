@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -37,19 +36,18 @@ export function TripCapacityBadge({
  * The one header every trip surface wears.
  *
  * The four tabs — Overview, Guests, Manifest, Prep — are four readings of one
- * departure, and they used to announce it four different ways: three rendered
- * `ShopPageHeader` under a "TRIPS" eyebrow (a word that named the section a
- * staffer had just tapped through, above a tab bar that already said which
- * surface they were on), while the Manifest hand-rolled its own `<h1>` at a
- * different size with a rule under it. Two showed the seats badge, two didn't;
- * the date line was `mt-1` on one and inside `meta` on the others. Switching
- * tabs re-drew the top of the page for no reason a reader could act on.
- *
- * So the identity of the departure — its name, how full it is, when it sails —
- * is rendered here once, identically, on all four. What stays per-tab is only
- * what genuinely differs: the `description` (what *this* surface is for), the
- * `actions` (its own doors), and `extraMeta` for facts that belong to one
+ * departure, so the identity of the departure — its name, how full it is, when
+ * it sails — renders here once, identically, on all four. What stays per-tab is
+ * only what genuinely differs: the `description` (what *this* surface is for),
+ * the `actions` (its own doors), and `extraMeta` for facts that belong to one
  * reading of the trip, like Overview's dive sites or its multi-day schedule.
+ *
+ * The boat's name owns the line. It used to share its row with a shrink-proof
+ * actions column, so "Two-Tank Reef — French Reef" wrapped at half measure
+ * while three quiet controls kept a whole column to themselves; now the
+ * actions wrap in after the title and drop below it the moment the name needs
+ * the room, which on a phone is exactly the stack the old layout collapsed to
+ * anyway.
  */
 export function TripPageHeader({
   trip,
@@ -77,22 +75,31 @@ export function TripPageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <ShopPageHeader
-      title={trip.title}
-      description={description}
-      actions={actions}
-      meta={
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-3">
+    <header className="mb-8">
+      <h1 className="text-4xl font-semibold tracking-tight text-balance">{trip.title}</h1>
+      {/* One geometry for every trip, whatever the length of its name: the
+          name owns its line; beneath it, the trip's own facts — when it sails
+          (reading size, not a footnote — a staffer glances here all day), what
+          this surface is for, where it dives — read as one column, with the
+          page's doors to the right of them from `sm` up and *after* them on a
+          phone, so utility controls never interleave between the date and the
+          identity line. */}
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-x-6">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base text-muted">
             {badge}
-            <span className="text-muted">
+            <span>
               {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
               {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
             </span>
           </div>
-          {extraMeta}
+          {description ? <p className="max-w-2xl text-muted">{description}</p> : null}
+          {extraMeta ? <div className="flex flex-col gap-1.5">{extraMeta}</div> : null}
         </div>
-      }
-    />
+        {actions ? (
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-2 sm:shrink-0">{actions}</div>
+        ) : null}
+      </div>
+    </header>
   );
 }

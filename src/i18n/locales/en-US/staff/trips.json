@@ -96,7 +96,6 @@
     "overRatioWarningIntro": "{booked} booked on this intro session, crew covers {cap} — {perInstructor} per instructor for the open-water dive, and a certified assistant does not raise it. Only another instructor adds seats. Assign one before this session sails; existing bookings are unaffected.",
     "reinstate": "Reinstate trip",
     "reinstating": "Reinstating…",
-    "cancelledNotice": "Putting this trip back on the schedule is limited to owners, managers, and instructors.",
     "cancelTrip": "Cancel trip",
     "cancelling": "Cancelling…",
     "cancelHint": "Takes it off the public schedule and notifies booked divers.",
@@ -180,8 +179,6 @@
     "placeholder": "Killer vis today — thanks for diving with us. Come back for the wreck next month!",
     "saving": "Saving…",
     "save": "Save recap note",
-    "edit": "Edit note",
-    "write": "Write a note",
     "emptySummary": "No note yet — recaps go out without one."
   },
   "requirements": {

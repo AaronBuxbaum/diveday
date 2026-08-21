@@ -60,7 +60,10 @@ export default async function TripLayout({
     prep: t("trips.subNav.prep"),
   };
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
+    // `max-w-5xl`, the staff work-surface tier (docs/design/principles.md
+    // #10) — the trip family sat at the in-between `max-w-4xl` the principles
+    // call legacy, and a redesign is the sanctioned moment to move to a tier.
+    <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
       <div className="mb-6 print:hidden">
         <TripSubNav
           shopSlug={shopSlug}

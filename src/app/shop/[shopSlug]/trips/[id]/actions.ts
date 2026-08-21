@@ -12,12 +12,10 @@ import {
   restoreBooking,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
-import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -546,57 +544,6 @@ export async function cancelOffCadenceSeriesAction(
   const cancelled = await cancelOffCadenceSeriesTrips(await getDb(), s.user.shopId, seriesId);
   const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
   revalidateAndRedirect(back, noticeUrl(back, notice));
-}
-
-const recapShoutoutSchema = z.object({ recapShoutout: z.string().trim().max(400) });
-
-/** Crew-authored post-trip note that rides along on every diver's recap. */
-export async function saveRecapShoutoutAction(
-  shopSlug: string,
-  tripId: string,
-  formData: FormData,
-) {
-  const back = backPath(shopSlug, tripId);
-  const s = (await requireShopSurface(shopSlug)).session;
-  const parsed = recapShoutoutSchema.safeParse({
-    recapShoutout: formData.get("recapShoutout") ?? "",
-  });
-  if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "recap-note" }));
-  const saved = await setTripRecapShoutout(
-    await getDb(),
-    s.user.shopId,
-    tripId,
-    parsed.data.recapShoutout,
-  );
-  revalidateAndRedirect(
-    back,
-    noticeUrl(back, saved ? "recap-note" : "invalid", { form: "recap-note" }),
-  );
-}
-
-/** Take down a diver's recap photo — the shop's moderation seam. */
-export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, formData: FormData) {
-  // Overview, not Guests: the gallery moved to Overview beside the crew's own
-  // shout-out (both are the recap's content) and this `back` did not follow it,
-  // so taking a photo down teleported the staffer to a different tab and put
-  // the confirmation on a page with nothing to confirm.
-  const back = backPath(shopSlug, tripId);
-  const s = (await requireShopSurface(shopSlug)).session;
-  const photoId = String(formData.get("photoId") ?? "");
-  if (!photoId) redirect(back);
-  const db = await getDb();
-  const result = await deleteRecapPhoto(db, s.user.shopId, photoId);
-  // The row leaving is the diver-visible "removed" — never blocked on
-  // storage. The blob object is queued for deletion and retried on its own
-  // (CR-012); a provider failure surfaces on the reports page, not here.
-  if (result.deleted) {
-    await queueAndAttemptMediaDeletion(db, {
-      shopId: s.user.shopId,
-      kind: "recap_photo",
-      url: result.imageUrl,
-    });
-  }
-  revalidateAndRedirect(back, noticeUrl(back, "recap-photo-removed"));
 }
 
 /**
