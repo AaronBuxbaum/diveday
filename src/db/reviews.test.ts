@@ -12,6 +12,7 @@ import {
   listPublishedShopReviewsPage,
   listShopReviewsForStaff,
   PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE,
+  readReviewsAwaitingModeration,
   STAFF_REVIEW_PAGE_SIZE,
   setReviewPublished,
   setReviewStandout,
@@ -796,5 +797,56 @@ describe("review moderation is recorded", () => {
 
     await setReviewPublished(db, shop.id, held[2].id, true, { recordedByPersonId: ownerId });
     expect(ratingIsWithheld(await getShopReviewAggregate(db, shop.id))).toBe(false);
+  });
+});
+
+describe("readReviewsAwaitingModeration", () => {
+  it("names the single waiting review, so Today's row can point straight at it", async () => {
+    const { db, shop, bookingIds } = await reviewContext();
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      comment: "Crew were superb",
+    });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+
+    expect(await readReviewsAwaitingModeration(db, shop.id)).toEqual({
+      count: 1,
+      onlyId: review.id,
+    });
+  });
+
+  it("names nobody once there are two — there is no 'the' review to open", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["First Diver", "Second Diver"]);
+    await submitTripReview(db, {
+      bookingId: bookingIds[0],
+      rating: 5,
+      comment: "Crew were superb",
+    });
+    await submitTripReview(db, {
+      bookingId: bookingIds[1],
+      rating: 4,
+      comment: "Good second dive",
+    });
+
+    expect(await readReviewsAwaitingModeration(db, shop.id)).toEqual({ count: 2, onlyId: null });
+  });
+
+  it("names nobody when the queue is empty", async () => {
+    const { db, shop } = await reviewContext();
+
+    expect(await readReviewsAwaitingModeration(db, shop.id)).toEqual({ count: 0, onlyId: null });
+  });
+
+  it("does not count — or name — a review a hide already ruled on", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 2, comment: "Nothing to see" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
+    await setReviewPublished(db, shop.id, review.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "spam",
+    });
+
+    expect(await readReviewsAwaitingModeration(db, shop.id)).toEqual({ count: 0, onlyId: null });
   });
 });
