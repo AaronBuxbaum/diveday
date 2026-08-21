@@ -128,9 +128,12 @@ export function CrewRollCall({
         </div>
       ) : (
         <>
-          <p className="mt-1 max-w-prose text-sm text-muted">
-            {t("manifest.crewRollCallDescription")}
-          </p>
+          {/* No standing caption above the list. "Every crew member needs a
+              result of their own before this checkpoint closes" is said by the
+              summary panel — `manifest.crewAwaiting` — at the moment it is the
+              thing holding the checkpoint open, which is the only moment a
+              crew member at the rail can act on it. A permanent copy of it
+              here was the same sentence twice on one screen. */}
           {/* Per-person crew roll call — the whole crew half of the head
               count since ADR 20260804-crew-roll-call-is-per-person (DOM-H1).
               It says *who*, which is the only way the boat learns that the

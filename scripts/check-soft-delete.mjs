@@ -27,6 +27,13 @@ import { pathToFileURL } from "node:url";
  * named `archiveSite` is what the next author reads before writing the string
  * under it.
  *
+ * **"Retire" is on the list too**, and was the hole this check shipped with: the
+ * ADR bans it by name, the regex did not, and the gear register was carrying a
+ * Retire button — its own soft delete under a banned word — on the day the ADR
+ * landed. The Spanish family (`retirar`, `retirado`) is unambiguous enough to
+ * refuse outright; the ordinary sense of taking something away is `quitar` or
+ * `sacar`, and both read better anyway.
+ *
  * Spanish needs its own word list rather than a translation of the English one:
  * `archivo` is the ordinary word for a *file*, and the marketing and import
  * copy is full of it ("guarda el archivo", "44 archivos"). Only the unambiguous
@@ -41,7 +48,7 @@ const LOCALES_DIR = "src/i18n/locales";
  * Key names are shared across locales, so they are held to the English list
  * once, wherever they appear.
  */
-const KEY_PATTERN = /archiv|unarchiv|deactivat|soft[-_]?delete/i;
+const KEY_PATTERN = /archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[-_]?delete/i;
 
 /**
  * Per-locale value rules. English can afford the whole word family; Spanish
@@ -50,8 +57,8 @@ const KEY_PATTERN = /archiv|unarchiv|deactivat|soft[-_]?delete/i;
  * `desarchivar`, which has no innocent meaning at all.
  */
 const VALUE_PATTERNS = new Map([
-  ["en-US", /archiv|unarchiv|deactivat|soft[- ]?delete/i],
-  ["es-ES", /desarchiv|archivar|archivand/i],
+  ["en-US", /archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[- ]?delete/i],
+  ["es-ES", /desarchiv|archivar|archivand|retirar|retirad/i],
 ]);
 
 /**

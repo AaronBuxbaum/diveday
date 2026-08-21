@@ -38,7 +38,7 @@ export function MinimumSeatsBand({
   const deadline = formatDateTimeTz(state.decidesAt, locale, timeZone);
   return (
     <section
-      className={`mt-6 rounded-xl border p-5 ${
+      className={`mt-6 rounded-2xl border p-5 ${
         due ? "border-danger/40 bg-danger/10" : "border-warning/40 bg-warning/10"
       }`}
     >

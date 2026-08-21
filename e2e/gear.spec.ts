@@ -6,7 +6,7 @@ import { e2eNow, seededTripId } from "./helpers";
  * wall, the per-departure assignments, and the check-out/return loop. Every
  * write here lands on blue-mantis on purpose — the gear tables are
  * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed.ts),
- * so nothing a test adds, retires, or reserves leaks into the next spec.
+ * so nothing a test adds, deletes, or reserves leaks into the next spec.
  */
 
 test.describe("staff", () => {
@@ -150,6 +150,58 @@ test.describe("staff", () => {
     await expect(
       page.getByText("Second stage rebuilt on the bench", { exact: true }),
     ).toBeVisible();
+  });
+
+  /**
+   * Delete is soft (ADR 20260820-every-delete-is-soft): Reg #5 ships with an
+   * annual service on its clock and nothing reserved against it, so this walks
+   * the whole round trip and proves the history is still there at the end.
+   */
+  test("deletes a unit off the register and restores it, service clock and all", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: "Reg #5", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Reg #5" })).toBeVisible();
+    const clock = (
+      (await page.getByText("last ", { exact: false }).first().textContent()) ?? ""
+    ).trim();
+    expect(clock.length).toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Delete unit" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Unit deleted." })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Reg #5", exact: true })).toHaveCount(0);
+
+    // The way back: the register's own Deleted view, not just the toast.
+    await page.goto("/shop/blue-mantis/gear?view=deleted");
+    const deleted = page.getByRole("region", { name: "Deleted" });
+    await expect(deleted.getByText("Reg #5", { exact: true })).toBeVisible();
+    await deleted.getByRole("button", { name: "Restore Reg #5" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Unit restored." })).toBeVisible();
+
+    await page.getByRole("link", { name: "Reg #5", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Reg #5" })).toBeVisible();
+    await expect(page.getByText(clock, { exact: false })).toBeVisible();
+  });
+
+  test("refuses to delete a unit a diver still has, and says who is holding it", async ({
+    page,
+  }) => {
+    // BCD #2 ships reserved against the upcoming wreck trip (src/db/seed-gear.ts).
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: "BCD #2", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "BCD #2" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Delete unit" }).click();
+    // The refusal lands beside the control that asked for it, naming the
+    // reservation in the way — never a silent no-op. Filtered by text because
+    // Next's route announcer is a second, empty role="alert".
+    await expect(
+      page.getByRole("alert").filter({ hasText: "release or return it first" }),
+    ).toBeVisible();
+    // And the unit is still on the register.
+    await page.goto("/shop/blue-mantis/gear?kind=bcd");
+    await expect(page.getByRole("link", { name: "BCD #2", exact: true })).toBeVisible();
   });
 
   test("pulls a unit for service and the register says so out loud", async ({ page }) => {

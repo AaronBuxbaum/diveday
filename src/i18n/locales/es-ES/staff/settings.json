@@ -73,7 +73,7 @@
     "contact": {
       "heading": "Datos de contacto públicos",
       "description": "El correo y el teléfono de recepción que se imprimen en tus páginas de cursos.",
-      "detail": "Un buceador que no encuentra fecha recibe un correo ya redactado para enviarte. Usa una dirección que lea todo el equipo. Vacía la casilla para retirar el formulario.",
+      "detail": "Un buceador que no encuentra fecha recibe un correo ya redactado para enviarte. Usa una dirección que lea todo el equipo. Vacía la casilla para quitar el formulario.",
       "emailLabel": "Correo de contacto",
       "phoneLabel": "Teléfono de contacto",
       "phoneHint": "(opcional)",

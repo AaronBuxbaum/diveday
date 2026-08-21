@@ -1591,6 +1591,32 @@ export const bookingStatus = pgEnum("booking_status", [
   "no_show",
 ]);
 
+/**
+ * **How recently this diver has been in the water** — their own word, in coarse
+ * bands rather than a date (ADR 20260821-currency-is-what-catches-people).
+ *
+ * Not a card and deliberately not in `certifications`: it is a self-report about
+ * *behaviour*, it does not expire, and nothing verifies it. An honest "Advanced
+ * Open Water, 1998" with no dive since 2013 is the claim that hurts a shop, and
+ * no rung on the ladder can express it.
+ *
+ * Bands, not a date, because the answer is worth exactly as much as the diver's
+ * memory. Somebody who last dived "a few years back" cannot name the month, and
+ * a date field would invite them to invent one that then reads as precision
+ * nobody earned.
+ *
+ * `never` is a real answer and distinct from the level question's "I'm not
+ * certified yet": a diver certified last month who has not been in open water
+ * since their course is exactly the person a divemaster wants to know about.
+ */
+export const diveRecencyBand = pgEnum("dive_recency_band", [
+  "this_season",
+  "within_a_year",
+  "one_to_five_years",
+  "over_five_years",
+  "never",
+]);
+
 export const bookings = pgTable(
   "bookings",
   {
@@ -1612,6 +1638,23 @@ export const bookings = pgTable(
      */
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
+    /**
+     * The diver's own answer to "when did you last dive?", asked on `/ready`
+     * (ADR 20260821-currency-is-what-catches-people). Null is "not said" — a
+     * real state, never a default that reads as a claim.
+     *
+     * **On the booking rather than the person**, because currency is a fact with
+     * a date on it: an answer given in March is not evidence about a diver
+     * booking again in November, and a person-level column would quietly become
+     * one. Staff read the answer beside the seat it was given for; "their most
+     * recent answer" is a query over their bookings, not a stored value that
+     * silently goes stale.
+     *
+     * **Gates nothing.** No readiness blocker, no admission decision, no filter.
+     * "Last dived 5+ years ago" is a refresher conversation a divemaster has,
+     * not a refusal the software makes.
+     */
+    lastDivedBand: diveRecencyBand("last_dived_band"),
     /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
     groupPreference: text("group_preference"),
     status: bookingStatus("status").notNull().default("booked"),
@@ -4133,16 +4176,17 @@ export const gearItemKind = pgEnum("gear_item_kind", [
 ]);
 
 /**
- * A unit's fitness for renting. `needs_service` pulls it out of the
- * assignable pool without losing it; `retired` is the non-destructive end of
- * life that preserves its service and rental history (the register's escape
- * hatch — retiring every unit returns a shop to sizes-only prep).
+ * A unit's fitness for renting: on the wall, or off it for bench work.
+ * `needs_service` pulls a unit out of the assignable pool without losing it,
+ * and the note beside it says why.
+ *
+ * There is deliberately no third value for the end of a unit's life. That was
+ * `retired` until 2026-08-21, and it was a soft delete wearing a banned name
+ * (ADR 20260820-every-delete-is-soft): a unit a shop is finished with is
+ * *deleted*, which stamps `deleted_at` below and keeps every service event and
+ * rental window attached to the row.
  */
-export const gearItemStatus = pgEnum("gear_item_status", [
-  "in_service",
-  "needs_service",
-  "retired",
-]);
+export const gearItemStatus = pgEnum("gear_item_status", ["in_service", "needs_service"]);
 
 /**
  * What kind of care a service event records. `service` is the manufacturer
@@ -4191,12 +4235,35 @@ export const gearItems = pgTable(
     status: gearItemStatus("status").notNull().default("in_service"),
     /** Staff free text set alongside `needs_service` ("inflator sticks"). */
     serviceNote: text("service_note"),
+    /**
+     * Set when staff delete a unit (ADR 20260820-every-delete-is-soft). The row
+     * stays, and so do its `gear_service_events` and `gear_reservations` — a
+     * fleet's care history is the last thing a delete should take, and it is
+     * what makes putting the unit back a single column write.
+     *
+     * `deleteGearItem` refuses a unit that is still provisioned (reserved for
+     * later, or out on a rental now), so a stamped row is never one somebody is
+     * waiting on. Every register read filters on this column.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Staff member who deleted it, so the act is not anonymous. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("gear_items_shop_label_unique").on(table.shopId, table.label),
-    index("gear_items_shop_kind_idx").on(table.shopId, table.kind),
+    // Partial on the live rows, so deleting "BCD #14" frees that tag for the
+    // unit that replaces it on the wall — and `restoreGearItem` refuses rather
+    // than resurrecting a second unit wearing the same tape.
+    uniqueIndex("gear_items_shop_label_unique")
+      .on(table.shopId, table.label)
+      .where(sql`${table.deletedAt} is null`),
+    // Partial for the same reason: every read that means "the fleet" carries
+    // `deleted_at is null`, and deleted units are rare enough that indexing the
+    // tombstones beside them would pay for nothing.
+    index("gear_items_shop_kind_idx")
+      .on(table.shopId, table.kind)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

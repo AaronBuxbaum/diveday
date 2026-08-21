@@ -277,6 +277,15 @@ const NOTICE_KEYS: Record<
     field: "erase-confirm-name",
   },
   "erase-refused": { form: "erase", tone: "danger", key: "divers.notices.eraseRefused" },
+  // Erasure is offered on a deleted record only, and the action enforces it —
+  // so this arrives on a record whose erase section is not rendered. `"page"`
+  // is the only place it can be seen, and it happens to be directly above the
+  // Delete control it is asking for.
+  "erase-requires-delete": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.eraseRequiresDelete",
+  },
 
   // Emitted by half a dozen actions, so it has no single home of its own; each
   // one stamps a `?form=` and this default is only reached without one.

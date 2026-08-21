@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredVisibility } from "@/lib/depth-units";
@@ -64,17 +65,16 @@ export function ConditionsSection({
     trip.surfaceConditions,
   ].filter((part): part is string => Boolean(part));
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold">{t("trips.conditions.heading")}</h2>
+    <SectionCard padding="lg" title={t("trips.conditions.heading")}>
       {/* A hold pauses real bookings, so it must be readable without opening
           anything — warning ink, not a fact that waits behind the form. */}
       {trip.conditionsHold ? (
-        <p className="mt-1 text-sm font-medium text-warning-strong">
+        <p className="mb-1 text-sm font-medium text-warning-strong">
           {t("trips.conditions.holdOnSummary")}
         </p>
       ) : null}
       {published ? (
-        <div className="mt-1 text-sm text-muted">
+        <div className="text-sm text-muted">
           {/* No bold lead-in label: it restated the heading one line up at
               equal weight (design/principles.md #9) — the "Published …"
               timestamp below already says this is the published read. The
@@ -93,7 +93,7 @@ export function ConditionsSection({
           ) : null}
         </div>
       ) : (
-        <p className="mt-1 text-sm text-muted">{t("trips.conditions.description")}</p>
+        <p className="text-sm text-muted">{t("trips.conditions.description")}</p>
       )}
       <EditDisclosure
         label={published ? t("trips.conditions.editPublished") : t("trips.conditions.editEmpty")}
@@ -186,6 +186,6 @@ export function ConditionsSection({
           </form>
         ) : null}
       </EditDisclosure>
-    </section>
+    </SectionCard>
   );
 }

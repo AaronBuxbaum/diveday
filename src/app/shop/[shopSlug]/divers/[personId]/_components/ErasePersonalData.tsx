@@ -9,10 +9,13 @@ import type { DiverProfile } from "./shared";
 
 /**
  * The one control in the app that destroys data on purpose
- * (ADR 20260802-diver-data-erasure). Deliberately unlike "Archive
- * divers" directly above it, which is reversible and keeps everything:
+ * (ADR 20260802-diver-data-erasure). Deliberately unlike the "Delete diver"
+ * that precedes it, which is reversible and keeps everything:
  *
  * - it is rendered only for an owner (the page checks; the action re-checks),
+ * - it is rendered only on a **deleted** diver's record, so reaching it costs a
+ *   reversible act first rather than a scroll (the action enforces this too —
+ *   this page's tab may be older than the record's state),
  * - it sits behind a disclosure *and* a typed confirmation of the diver's name,
  *   so it cannot be reached by a stray tap on a phone at the counter, and
  * - its copy states plainly what is destroyed and what survives, rather than

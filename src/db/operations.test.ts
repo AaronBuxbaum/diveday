@@ -1,6 +1,9 @@
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { REDACTED_TEXT } from "@/lib/anonymization";
 import { seededShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
+import type { AppDb } from "./client";
 import {
   addDiverNote,
   addInternalNote,
@@ -11,7 +14,9 @@ import {
   listDiverNotesForTrip,
   listDiverRecordNotes,
   listTripActivity,
+  pagedDiverActivity,
 } from "./operations";
+import { people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 describe("staff-only operational context", () => {
@@ -327,5 +332,117 @@ describe("staff-only operational context", () => {
       }),
     ).resolves.toEqual({ deleted: false });
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(1);
+  });
+});
+
+/**
+ * The same append-only table the Guests tab reads, filtered to one person
+ * instead of one departure — the question a staffer at the counter actually
+ * has. Two things make a line theirs: it happened to a seat of theirs, or they
+ * did it. That pair is not a choice made here; it is the predicate
+ * `anonymizeDiver` redacts under, so what a shop can read and what an erasure
+ * destroys are the same set by construction.
+ */
+describe("a diver's own activity trail", () => {
+  /** The seeded cast's headline diver — `seed-diver-trail.ts` gives her the long one. */
+  async function seededDiver(db: AppDb, shopId: string, fullName: string) {
+    const [row] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shopId), eq(people.fullName, fullName)));
+    if (!row) throw new Error(`seeded person ${fullName} missing`);
+    return row.id;
+  }
+
+  it("reads one person's lines newest first, a page at a time", async () => {
+    const { db, shop } = await seededShopContext();
+    const priya = await seededDiver(db, shop.id, "Priya Sharma");
+
+    const first = await pagedDiverActivity(db, shop.id, priya, { pageSize: 5 });
+    expect(first.rows).toHaveLength(5);
+    expect(first.total).toBeGreaterThan(5);
+    expect(first.page).toBe(1);
+    const times = first.rows.map((row) => row.occurredAt.getTime());
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+    // Every line is about her by name — the seeded desk trail's own shape.
+    for (const row of first.rows) expect(row.message).toContain("Priya Sharma");
+
+    // Page two is the next slice, not the same one again.
+    const second = await pagedDiverActivity(db, shop.id, priya, { page: 2, pageSize: 5 });
+    expect(second.page).toBe(2);
+    expect(second.rows.map((row) => row.id)).not.toEqual(first.rows.map((row) => row.id));
+    expect(second.total).toBe(first.total);
+  });
+
+  it("lands a request past the end on the last real page, never on an empty one", async () => {
+    const { db, shop } = await seededShopContext();
+    const priya = await seededDiver(db, shop.id, "Priya Sharma");
+
+    const far = await pagedDiverActivity(db, shop.id, priya, { page: 99, pageSize: 5 });
+    expect(far.page).toBe(far.pageCount);
+    expect(far.rows.length).toBeGreaterThan(0);
+  });
+
+  it("carries what a person did, not only what was done about them", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+
+    await addInternalNote(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: rosterEntry.booking.id,
+      actorPersonId: actor.person.id,
+      body: "Bringing their own computer.",
+    });
+
+    // The staffer's own trail — a divemaster's work across every boat they ran,
+    // which is the other half of what this table records.
+    const theirs = await pagedDiverActivity(db, shop.id, actor.person.id);
+    expect(
+      theirs.rows.some((row) =>
+        row.message.startsWith(`${actor.person.fullName} added a private note`),
+      ),
+    ).toBe(true);
+  });
+
+  it("never reaches another shop's trail through the same person id", async () => {
+    const { db, shop } = await seededShopContext();
+    const priya = await seededDiver(db, shop.id, "Priya Sharma");
+    const otherShopId = "99999999-8888-4777-8666-555555555555";
+
+    expect((await pagedDiverActivity(db, shop.id, priya)).total).toBeGreaterThan(0);
+    expect(await pagedDiverActivity(db, otherShopId, priya)).toMatchObject({
+      total: 0,
+      rows: [],
+    });
+  });
+
+  /**
+   * The reader does no redaction of its own, and must not: an erased person's
+   * lines are rewritten to `[redacted]` once, inside the erasure transaction
+   * (`src/db/anonymize.ts`). A read-time filter would be a second, weaker copy
+   * of that rule — and the weaker copy is the one that gets forgotten. This
+   * asserts the outcome the staffer sees either way.
+   */
+  it("still reads redacted once the person has been erased", async () => {
+    const { db, shop } = await seededShopContext();
+    const priya = await seededDiver(db, shop.id, "Priya Sharma");
+    const owner = await seededDiver(db, shop.id, "Dana Reyes");
+    expect((await pagedDiverActivity(db, shop.id, priya)).total).toBeGreaterThan(0);
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: priya,
+      actorPersonId: owner,
+    });
+    expect(erased.ok).toBe(true);
+
+    const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 50 });
+    expect(after.rows.length).toBeGreaterThan(0);
+    for (const row of after.rows) expect(row.message).toBe(REDACTED_TEXT);
   });
 });

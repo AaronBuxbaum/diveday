@@ -19,6 +19,7 @@ import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import {
+  diveRecencyText,
   readinessBlockerText,
   readinessStatusText,
   readinessStatusTone,
@@ -30,6 +31,7 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
+import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
@@ -594,6 +596,27 @@ export function RosterSection({
                   <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
                     <span aria-hidden="true">▲</span>
                     <span>{depthWarningText(t, depth)}</span>
+                  </p>
+                ) : null}
+
+                {/* **Currency, which no card can express.** A rung says what
+                    this diver was trained to do; this says when they last did
+                    it, in their own words, and an honest "Advanced Open Water"
+                    with no dive in five years clears every gate in the product
+                    (ADR 20260821-currency-is-what-catches-people).
+
+                    Warning tone and outside the blocker list for the same
+                    reason the depth line above is: this diver boards. It is a
+                    refresher conversation and a buddy pairing, not a refusal.
+
+                    Only the two notable bands render here. A roster line on
+                    every seat saying "last dived this season" is the noise that
+                    stops the other two being read; the full answer is the diver
+                    record's to show. */}
+                {diveRecencyIsNotable(booking.lastDivedBand) ? (
+                  <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
+                    <span aria-hidden="true">▲</span>
+                    <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
                   </p>
                 ) : null}
 

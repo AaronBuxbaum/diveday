@@ -337,6 +337,60 @@ test.describe("minimum age (H-08, fail open)", () => {
 });
 
 /**
+ * The packing list's two groupings. One departure's pieces, read either down
+ * the rack (every BCD together with its sizes) or down the roster (every diver
+ * with their pieces) — both halves of packing a boat, and the choice lives in
+ * `?group=` so it is linkable rather than a client toggle that a reload loses.
+ */
+test.describe("the prep list's two groupings", () => {
+  signedInAsOwner();
+
+  test("flips between the rack and the roster, and keeps the choice in the URL", async ({
+    page,
+  }) => {
+    const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
+    await page.goto(`${tripPath}/prep`);
+    const kit = page.getByRole("region", { name: "Rental kit" });
+    // No `?group=` at all: the rack, which is what this page has always opened
+    // on and what the departure packet prints.
+    await expect(kit.getByRole("columnheader", { name: "Item" })).toBeVisible();
+
+    await kit.getByRole("link", { name: "By diver" }).click();
+    await expect(page).toHaveURL(/[?&]group=diver$/);
+    await expect(kit.getByRole("columnheader", { name: "Diver" })).toBeVisible();
+    await expect(kit.getByRole("columnheader", { name: "Kit" })).toBeVisible();
+    // The roster grouping is the same pieces, so it makes the same refusal: the
+    // flagged diver keeps their kit and still names no size to pull it in.
+    await expect(kit).toContainText("Fit at check-in");
+    await expect(kit).not.toContainText("XL");
+    // Every row is one diver, so every row is a door to that diver's record —
+    // the by-item grouping can only name them inside a comma list. A raw
+    // locator needs its own visibility filter (the fixture only patches the
+    // `getBy*` queries).
+    await expect(
+      kit.locator('a[href*="/divers/"]').filter({ visible: true }).first(),
+    ).toBeVisible();
+
+    // A real URL, so a reload lands back on the same grouping.
+    await page.reload();
+    await expect(kit.getByRole("columnheader", { name: "Diver" })).toBeVisible();
+
+    await kit.getByRole("link", { name: "By item" }).click();
+    await expect(page).toHaveURL(/[?&]group=item$/);
+    await expect(kit.getByRole("columnheader", { name: "Item" })).toBeVisible();
+  });
+
+  test("reads an unrecognised grouping as the rack rather than rendering nothing", async ({
+    page,
+  }) => {
+    const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
+    await page.goto(`${tripPath}/prep?group=whatever`);
+    const kit = page.getByRole("region", { name: "Rental kit" });
+    await expect(kit.getByRole("columnheader", { name: "Item" })).toBeVisible();
+  });
+});
+
+/**
  * The packing list on a phone. It is a dock surface — a staffer works down it
  * with a tank in the other hand — and its fourth column is a comma-joined list
  * of diver names, which at 390px crushes the item, size, and count the packer

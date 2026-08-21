@@ -6,9 +6,8 @@
   "sendAllWaivers": "{count, plural, one {Enviar # exención} other {Enviar las # exenciones}}",
   "sendingAll": "Enviando todos…",
   "emptyTitle": "Todos los barcos listos para embarcar",
-  "emptyDescription": "Ningún próximo buceador está esperando una exención, una certificación o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten atención.",
   "viewSchedule": "Ver el calendario",
-  "truncated": "Esta ventana tiene más salidas de las que una sola lista debería cargar; el resto está en el <link>calendario</link>.",
+  "truncated": "Hay más salidas de las que muestra esta lista; el resto está en el <link>calendario</link>.",
   "pagination": {
     "total": "{count, plural, one {# salida} other {# salidas}}"
   }

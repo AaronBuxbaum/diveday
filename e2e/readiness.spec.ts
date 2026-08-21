@@ -4,7 +4,7 @@ import { createTrip, daysFromNow, e2eNow, signOut } from "./helpers";
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
 
-  test("a booked diver's readiness page lets them act, and saves an emergency contact", async ({
+  test("a booked diver's readiness page lets them act, saves an emergency contact, and releases the seat", async ({
     page,
   }) => {
     // Unique title for this spec's own trip; the e2eNow() suffix keeps every
@@ -79,6 +79,35 @@ test.describe("staff-prepared trip", () => {
       "src",
       /100%20Ocean%20Drive/,
     );
+
+    // The question no form asked until 2026-08-21 (ADR
+    // 20260821-currency-is-what-catches-people). It gates nothing, so what is
+    // worth proving is that the answer round-trips and the row settles.
+    await page
+      .getByLabel("When did you last dive?")
+      .selectOption({ label: "More than five years ago" });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "the crew will see that" }),
+    ).toBeVisible();
+    await expect(page.getByText("More than five years ago")).toBeVisible();
+
+    // The diver releases their own seat (ADR
+    // 20260821-the-diver-may-release-their-own-seat). Cancelling revokes this
+    // very token, so the confirmation the diver lands on is served through the
+    // relaxed-revocation branch — which is the half of this that a unit test
+    // cannot reach. Asserted last because it ends the booking; every check
+    // above needs a live seat.
+    await page.getByRole("button", { name: "Cancel my spot" }).click();
+    await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+    await expect(page.getByRole("heading", { name: "This booking was cancelled" })).toBeVisible();
+
+    // And the seat is genuinely back on the boat, not merely hidden from the
+    // diver: the six-seat departure reads as six again, not five.
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("list", { name: "Upcoming trips" }).locator("li").filter({ hasText: title }),
+    ).toContainText("6 spots left");
   });
 });
 

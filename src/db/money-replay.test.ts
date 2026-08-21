@@ -4,12 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, recordingCheckout } from "@/test/fakes";
-import {
-  createBooking,
-  createBookingParty,
-  rescheduleBooking,
-  selfCancelBooking,
-} from "./bookings";
+import { createBooking, createBookingParty, selfCancelBooking } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
@@ -295,7 +290,16 @@ describe("a cancelled or moved seat versus the tab that kept paying", () => {
     expect(row?.status).toBe("cancelled");
   });
 
-  it("a rescheduled-away seat's old checkout cannot pay for either seat", async () => {
+  it("a released seat's old checkout cannot pay for it, or for the seat booked in its place", async () => {
+    // Written originally against `rescheduleBooking`, which cancelled the
+    // source seat and created the destination one in a single transaction.
+    // That function was deleted 2026-08-21 with the diver-facing move (ADR
+    // 20260821-the-diver-may-release-their-own-seat); a diver who wants a
+    // different Saturday now releases the seat and books the other one, which
+    // is the same two rows in the same order. The property is unchanged: a
+    // pending checkout belongs to the booking ids it was opened for, and
+    // settling it late may not pay for a cancelled seat or for one it never
+    // covered.
     const { db, shop } = await connectedShop();
     const reef = await pricedReef(db, shop.id);
     const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -310,15 +314,15 @@ describe("a cancelled or moved seat versus the tab that kept paying", () => {
     );
     if (!start.ok) throw new Error("checkout start failed");
 
-    const moved = await rescheduleBooking(db, {
+    const released = await selfCancelBooking(db, {
       shopId: shop.id,
       bookingId: booked.bookingId,
-      newTripId: night.id,
     });
-    expect(moved.ok).toBe(true);
-    if (!moved.ok) throw new Error("expected ok");
+    expect(released.ok).toBe(true);
+    const rebooked = await createBooking(db, bookingRequest(shop.id, night.id));
+    if (!rebooked.ok) throw new Error("rebooking failed");
 
-    // The old tab settles the reef checkout after the move. The source seat is
+    // The old tab settles the reef checkout afterwards. The source seat is
     // cancelled (nothing to pay for), and the night seat was never covered by
     // that session — neither may end up marked paid.
     await markCheckoutPaidBySessionId(
@@ -328,7 +332,7 @@ describe("a cancelled or moved seat versus the tab that kept paying", () => {
       REEF_PRICE_CENTS,
     );
     expect(await getBookingPayment(db, shop.id, booked.bookingId)).toBeNull();
-    expect(await getBookingPayment(db, shop.id, moved.newBookingId)).toBeNull();
+    expect(await getBookingPayment(db, shop.id, rebooked.bookingId)).toBeNull();
   });
 });
 

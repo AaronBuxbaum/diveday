@@ -5,7 +5,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
 import { seededShopContext } from "@/test/db";
-import { createBooking, rescheduleBooking } from "./bookings";
+import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createTestDb } from "./client";
 import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
@@ -464,44 +464,33 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       ).resolves.toMatchObject({ ok: true });
     });
 
-    it("refuses a diver self-service reschedule onto an age-gated course they're too young for (Codex finding, docs ADR 20260727-diver-self-service-cancel)", async () => {
-      // Reschedule's destination booking is created with the token-verified
-      // diver's own personId, not a free-typed guess — so unlike an
-      // anonymous public booking, the real age gate should apply, not the
-      // fail-open readiness-blocker-only path.
+    it("refuses a known diver too young for an age-gated course, by the real gate rather than the fail-open one", async () => {
+      // A booking created against a known `personId` — a staffer seating a
+      // diver, or any caller that already resolved who this is — carries a real
+      // date of birth rather than a free-typed guess, so the age gate applies
+      // outright instead of the fail-open readiness-blocker path an anonymous
+      // public booking gets. Written originally against `rescheduleBooking`,
+      // whose destination booking took this same path; that function was
+      // deleted 2026-08-21 (ADR 20260821-the-diver-may-release-their-own-seat)
+      // and `createBooking` is now the only way to reach the property.
       const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
       const tenYearsAgo = new Date(nowMs() - 10 * 365.25 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
-      const person = await diverWithDob(
-        db,
-        shop.id,
-        tenYearsAgo,
-        "reschedule-too-young@example.com",
-      );
-
-      const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-      const openTrip = upcoming.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
-      if (!openTrip) throw new Error("expected seeded open trip missing");
-      const original = await createBooking(db, {
-        actor: "staff",
-        shopId: shop.id,
-        tripId: openTrip.id,
-        personId: person.id,
-      });
-      if (!original.ok) throw new Error("setup booking failed");
+      const person = await diverWithDob(db, shop.id, tenYearsAgo, "too-young@example.com");
 
       await expect(
-        rescheduleBooking(db, {
+        createBooking(db, {
+          actor: "staff",
           shopId: shop.id,
-          bookingId: original.bookingId,
-          newTripId: trip.id,
+          tripId: trip.id,
+          personId: person.id,
         }),
       ).resolves.toEqual({ ok: false, reason: "course_min_age" });
-      // The refused reschedule never touched the original seat.
-      const openRoster = await getTripWithBooked(db, shop.id, openTrip.id);
-      expect(openRoster?.booked).toBe(1);
+      // A refused booking seats nobody.
+      const roster = await getTripWithBooked(db, shop.id, trip.id);
+      expect(roster?.booked).toBe(0);
     });
 
     it("measures age on the course date, so a birthday before it admits the diver", async () => {

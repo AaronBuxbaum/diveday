@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
+import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
@@ -26,7 +27,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
 import {
   filterEligibleLastMinuteRecipients,
   lastMinuteEntryMatchesTripDate,
@@ -567,23 +568,12 @@ async function TripGuestsBody({
           <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
         </summary>
         <div className="border-t border-border p-4">
-          {activity.length === 0 ? (
-            <p className="text-sm text-muted">{t("trips.guests.noActivity")}</p>
-          ) : (
-            <ol className="grid gap-2">
-              {activity.map((event) => (
-                <li
-                  key={event.id}
-                  className="flex flex-col gap-x-4 gap-y-0.5 rounded-lg bg-surface-sunken px-4 py-3 text-sm sm:flex-row sm:items-baseline sm:justify-between"
-                >
-                  <span className="min-w-0">{event.message}</span>
-                  <span className="shrink-0 text-muted tabular-nums">
-                    {formatDateTimeTz(event.occurredAt, locale, shop.timezone)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
+          <ActivityLog
+            events={activity}
+            locale={locale}
+            timeZone={shop.timezone}
+            emptyText={t("trips.guests.noActivity")}
+          />
         </div>
       </details>
     </div>

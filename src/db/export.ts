@@ -1277,6 +1277,12 @@ export async function loadShopExportBundleInput(
             "wants_nitrox",
             "conditions_briefed_at",
             "group_preference",
+            // The diver's own answer to "when did you last dive?" (ADR
+            // 20260821-currency-is-what-catches-people). A statement they made
+            // about themselves, on the seat they made it for — the same kind of
+            // record as `group_preference` beside it, and a shop moving its data
+            // elsewhere should not have to ask every returning diver again.
+            "last_dived_band",
             // The party structure a shop booked (ADR 20260804-seat-claim-links).
             // Both are real records of what happened to a seat, so both travel:
             // `party_lead_booking_id` is a booking id from this same file's `id`
@@ -1304,6 +1310,7 @@ export async function loadShopExportBundleInput(
               row.wantsNitrox,
               row.conditionsBriefedAt,
               row.groupPreference,
+              row.lastDivedBand,
               row.partyLeadBookingId,
               row.claimedAt,
               payment?.status ?? "unpaid",
@@ -1814,6 +1821,7 @@ export async function loadShopExportBundleInput(
             "purchased_on",
             "status",
             "service_note",
+            "deleted_at",
             "created_at",
             "updated_at",
           ],
@@ -1827,6 +1835,7 @@ export async function loadShopExportBundleInput(
             row.purchasedOn,
             row.status,
             row.serviceNote,
+            row.deletedAt,
             row.createdAt,
             row.updatedAt,
           ]),

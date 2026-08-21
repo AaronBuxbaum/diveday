@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildDivePrepChecklist, type PrepDiver, type RentalFit, rentalFitLine } from "./dive-prep";
+import {
+  buildDivePrepChecklist,
+  isPrepGrouping,
+  type PrepDiver,
+  type RentalFit,
+  rentalFitLine,
+} from "./dive-prep";
 
 const fullFit: RentalFit = {
   rentsBcd: true,
@@ -553,5 +559,117 @@ describe("divers with an incomplete fit", () => {
       buildDivePrepChecklist({ divers, plannedDives: 1, offeredKinds: ["wetsuit", "mask_fins"] })
         .diversWithIncompleteFit,
     ).toEqual([]);
+  });
+});
+
+describe("the same packing list grouped by diver", () => {
+  it("regroups exactly the pieces the by-item rows carry, one row per diver", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Priya Sharma" }),
+        diver({
+          bookingId: "b2",
+          fullName: "Ana Ruiz",
+          fit: { ...fullFit, bcdSize: "L", wetsuitSize: "5mm L", bootSize: "11", finSize: "L" },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    // Two groupings, one set of pieces: the totals have to agree, or the boat
+    // is being told two different things about one fit.
+    const piecesByItem = checklist.lines.reduce((sum, line) => sum + line.count, 0);
+    const piecesByDiver = checklist.diverLines.reduce((sum, row) => sum + row.items.length, 0);
+    expect(piecesByDiver).toBe(piecesByItem);
+    // Alphabetical, so it is a roster to walk rather than query order.
+    expect(checklist.diverLines.map((row) => row.fullName)).toEqual(["Ana Ruiz", "Priya Sharma"]);
+    expect(checklist.diverLines[0]).toMatchObject({
+      bookingId: "b2",
+      state: "rents",
+      // The same fixed item order the by-item rows read in — and boots ride
+      // along with the suit here too.
+      items: [
+        { kind: "bcd", size: "L", fitAtCheckIn: false },
+        { kind: "regulator", size: null, fitAtCheckIn: false },
+        { kind: "wetsuit", size: "5mm L", fitAtCheckIn: false },
+        { kind: "boots", size: "11", fitAtCheckIn: false },
+        { kind: "mask_fins", size: "L", fitAtCheckIn: false },
+        { kind: "weights", size: "6 kg", fitAtCheckIn: false },
+      ],
+    });
+  });
+
+  it("gives a diver with nothing to pull a row, and says which nothing it is", () => {
+    const ownKit: RentalFit = {
+      ...fullFit,
+      rentsBcd: false,
+      rentsRegulator: false,
+      rentsWetsuit: false,
+      rentsMaskFins: false,
+      rentsWeights: false,
+    };
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Own Kit Omar", fit: ownKit }),
+        diver({ bookingId: "b2", fullName: "Unasked Uma", fit: null }),
+      ],
+      plannedDives: 1,
+    });
+    // Neither has a by-item row to appear in, and a roster you cannot walk to
+    // the end of is not a roster.
+    expect(checklist.lines).toEqual([]);
+    expect(checklist.diverLines.map((row) => [row.fullName, row.state, row.items.length])).toEqual([
+      ["Own Kit Omar", "own_kit", 0],
+      ["Unasked Uma", "not_recorded", 0],
+    ]);
+  });
+
+  it("blanks a flagged diver's sizes in this grouping too, keeping their pieces", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Sam Whitfield",
+          fit: { ...fullFit, bcdSize: "XL", needsStaffFitAt: new Date("2026-07-20T12:00:00Z") },
+        }),
+      ],
+      plannedDives: 1,
+      now: new Date("2026-07-21T12:00:00Z"),
+    });
+    const row = checklist.diverLines[0];
+    // The count the packer loads from is intact...
+    expect(row?.items.map((piece) => piece.kind)).toEqual([
+      "bcd",
+      "regulator",
+      "wetsuit",
+      "boots",
+      "mask_fins",
+      "weights",
+    ]);
+    // ...and no piece the flag touches names a size the shop is short of.
+    expect(row?.items.find((piece) => piece.kind === "bcd")).toMatchObject({
+      size: null,
+      fitAtCheckIn: true,
+    });
+    expect(
+      row?.items.filter((piece) => piece.fitAtCheckIn).every((piece) => piece.size === null),
+    ).toBe(true);
+    // Weights are never blanked: lead is bulk stock, and usual weighting is the
+    // most safety-relevant number in the fit.
+    expect(row?.items.find((piece) => piece.kind === "weights")).toMatchObject({
+      size: "6 kg",
+      fitAtCheckIn: false,
+    });
+  });
+});
+
+describe("the packing-list grouping in the URL", () => {
+  it("takes only the two groupings the page renders", () => {
+    expect(isPrepGrouping("item")).toBe(true);
+    expect(isPrepGrouping("diver")).toBe(true);
+    // Anything else is a stale or hand-typed query string; the call site reads
+    // it as the by-item default rather than rendering nothing.
+    expect(isPrepGrouping("divers")).toBe(false);
+    expect(isPrepGrouping("Item")).toBe(false);
+    expect(isPrepGrouping(undefined)).toBe(false);
   });
 });

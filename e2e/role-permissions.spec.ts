@@ -106,11 +106,14 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("button", { name: /Add a departure/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toHaveCount(0);
 
-      // Diver deletion is hidden — and so is the strictly stricter erasure
-      // control below it, which is owner-only (ADR 20260802-diver-data-erasure).
+      // Diver deletion is hidden. Erasure is not asserted alongside it: since
+      // 2026-08-21 that control renders only on a deleted record, so on this
+      // live one it is absent for the owner too — an assertion here would pass
+      // with the owner-only gate removed entirely, which is worse than no
+      // assertion because it reads like coverage. The gate is driven per role
+      // in actions.authz.test.ts (ADR 20260802-diver-data-erasure).
       await page.goto(await firstDiverDetailHref(page));
       await expect(page.getByRole("heading", { name: "Delete", exact: true })).toHaveCount(0);
-      await expect(page.getByRole("heading", { name: "Erase personal data" })).toHaveCount(0);
 
       // On a trip's Overview, trip *definition* is hidden, but the day-of operating
       // actions the glossary assigns to crew — conditions, crew, weather cancel —
@@ -224,8 +227,16 @@ test.describe("H-14 role permissions", () => {
 
       await page.goto(await firstDiverDetailHref(page));
       await expect(page.getByRole("heading", { name: "Delete", exact: true })).toBeVisible();
-      // Erasure is the one control past removal, and only the owner has it.
-      await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeVisible();
+      // Erasure is deliberately *not* asserted here any more. It moved behind
+      // `people.deleted_at` on 2026-08-21, so it is absent on a live record for
+      // everyone including the owner, and this test is READ_ONLY — it cannot
+      // delete a diver to reach the state the control now lives in. Asserting
+      // its absence here would be a line that passes whatever the gate does.
+      // The two properties it used to carry are both still proven, on surfaces
+      // that can actually observe them: placement by "erase is absent on a live
+      // diver's record and appears once they are deleted" (e2e/divers.spec.ts),
+      // and the owner-only gate by src/app/shop/[shopSlug]/divers/[personId]/
+      // actions.authz.test.ts, which drives the action itself as each role.
 
       // Trip definition is available to the owner.
       await page.goto(await firstTripManageHref(page));

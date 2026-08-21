@@ -104,9 +104,9 @@ export function LastMinuteDealSection({
   const review = reviewLastMinuteRecipients(eligibleRecipients, requirement);
   return (
     // No top margin of its own: this renders inside a disclosure panel that
-    // owns its inset. `scroll-mt-6` stays — the send action redirects to this
+    // owns its inset. `scroll-mt-24` stays — the send action redirects to this
     // element's own `#last-minute-deal` anchor.
-    <section id="last-minute-deal" className="scroll-mt-6">
+    <section id="last-minute-deal" className="scroll-mt-24">
       <h2 className="text-lg font-semibold">{t("trips.lastMinute.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("trips.lastMinute.description")}</p>
 

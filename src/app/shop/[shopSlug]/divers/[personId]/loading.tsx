@@ -31,7 +31,7 @@ export default function DiverProfileLoading() {
           ))}
         </div>
         <div className="mt-8 flex flex-col gap-6">
-          {["waiver", "cards", "notes", "fit", "trips"].map((section) => (
+          {["waiver", "cards", "notes", "fit", "trips", "activity"].map((section) => (
             <div key={section} className={sectionCardClass({ className: "h-40" })} />
           ))}
         </div>

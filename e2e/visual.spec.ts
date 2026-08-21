@@ -2159,10 +2159,42 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers-removed", scheme);
       });
 
-      // One diver's full profile: certs, specialty cards, contact.
+      // One diver's full profile: certs, specialty cards, contact, and — since
+      // 2026-08-21 — the Activity panel at the foot of it, which is why Priya
+      // is the diver `seed-diver-trail.ts` gives a trail past one page to.
       test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
         await capture(page, "diver-profile", scheme);
+      });
+
+      /**
+       * **The record of a diver who has been deleted**, which is the only place
+       * "Erase personal data" is offered at all (ADR 20260802-diver-data-erasure,
+       * 2026-08-21 amendment). Two things this is the sole baseline for: the
+       * warning-toned Restore card at the top, and the destructive tail at the
+       * bottom — the one control in the product with no undo, in the one state
+       * it renders in.
+       *
+       * Deletes a diver rather than seeding one, because the demo shop should
+       * not permanently carry a deleted person: the roster's own "Deleted" view
+       * is photographed next door on its *empty* chrome, and a resident deleted
+       * diver would quietly change that capture too. Safe to mutate — every
+       * Playwright worker owns its database and resets the schedule before each
+       * test, which puts Felix back.
+       */
+      test(`a deleted diver's record renders true to the design (${scheme})`, async ({ page }) => {
+        await openDiverProfile(page, "Felix", "Felix Grant", "FG");
+        const record = page.url().split("?")[0] ?? "";
+        await page.getByText("Delete Felix Grant").click();
+        await page.getByRole("button", { name: "Delete diver" }).click();
+        await page.getByText("Diver deleted.").waitFor();
+        await page.goto(record);
+        // The two ends of the page this capture exists for, waited on by name
+        // so the shot can never land on a half-rendered record.
+        await page.getByText("This diver is deleted").waitFor();
+        await page.getByRole("heading", { name: "Erase personal data" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-deleted", scheme);
       });
 
       /**
@@ -2526,6 +2558,21 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Prep");
         await page.getByRole("heading", { name: "Tanks" }).waitFor();
         await capture(page, "prep", scheme);
+      });
+
+      // The same packing list read down the roster instead of down the rack:
+      // one row per diver with their pieces, including the divers who have
+      // nothing to pull. Reached through the switch itself rather than a typed
+      // `?group=diver`, so the capture also proves the control sits where a
+      // packer would look for it and that the flip keeps the page in place.
+      test(`a trip's prep list groups by diver (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Prep");
+        await page.getByRole("link", { name: "By diver" }).click();
+        // The by-item grouping has no Diver column, so this cannot resolve
+        // against the view that was on screen a moment ago.
+        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        await capture(page, "prep-by-diver", scheme);
       });
 
       // The prep page's rental-assignments panel in its lived-in state: the
@@ -3428,6 +3475,25 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "AL80-03" }).click();
         await page.getByRole("heading", { level: 1, name: "AL80-03" }).waitFor();
         await capture(page, "gear-unit", scheme);
+      });
+
+      // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):
+      // the Deleted chip in the filter band, and the list whose one act is
+      // Restore. Photographed after deleting a unit rather than seeding one —
+      // the shop's demo fleet is what a shop should see, and a permanently
+      // deleted regulator in it would be a worse demo.
+      test(`the gear register's deleted units render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/gear");
+        await page.getByRole("link", { name: "Reg #5", exact: true }).click();
+        await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
+        await page.getByRole("button", { name: "Delete unit" }).click();
+        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+
+        await page.goto("/shop/blue-mantis/gear?view=deleted");
+        await page.getByRole("button", { name: "Restore Reg #5" }).waitFor();
+        await capture(page, "gear-register-deleted", scheme);
       });
 
       // The register on its worst day, through /api/test/seed-trouble-states

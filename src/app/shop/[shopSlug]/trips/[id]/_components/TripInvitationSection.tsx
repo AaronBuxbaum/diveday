@@ -48,7 +48,7 @@ export function TripInvitationSection({
   const tripWhen = formatShortDate(tripStartsAt, locale, timezone);
 
   return (
-    <section id="invitations" className="mt-10 scroll-mt-6">
+    <section id="invitations" className="mt-10 scroll-mt-24">
       <h2 className="text-lg font-semibold">
         {t("trips.invitations.heading")}{" "}
         <span className="font-normal text-muted tabular-nums">{invitations.length}</span>

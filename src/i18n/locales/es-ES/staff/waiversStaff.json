@@ -1,10 +1,10 @@
 {
   "eyebrow": "Ajustes",
   "title": "Plantilla de exención",
-  "description": "Todos los buceadores firman esta misma exención. Edítala para que se ajuste a tu centro.",
+  "description": "Todos los buceadores firman esta misma exención.",
   "banner": {
     "savedNew": "Guardado como nueva versión.",
-    "savedFirst": "Tu exención está guardada. Cada futura edición se conserva como una nueva versión.",
+    "savedFirst": "Tu exención está guardada.",
     "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión."
   },
   "fieldLabel": "Texto de la exención",
@@ -14,7 +14,7 @@
   "saveWaiver": "Guardar exención",
   "releaseTextHeading": "Texto de la exención",
   "releaseDescription": {
-    "current": "La exención que envía cada enlace nuevo. Guardar la sustituye para los enlaces nuevos; las ya firmadas conservan el texto que se firmó.",
+    "current": "Guardar sustituye la exención para los enlaces nuevos; las ya firmadas conservan el texto que se firmó.",
     "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
   },
   "versionInfo": "Versión {version} · guardado el {date}",
@@ -26,7 +26,6 @@
   "signatures": {
     "eyebrow": "Ajustes",
     "title": "Firmas",
-    "description": "Cada exención firmada archivada: quién firmó, en qué salida y cualquier seguimiento médico. Son a prueba de manipulación: un registro alterado se marca.",
     "signedRecordHeading": "Registro firmado",
     "heading": "Registros firmados",
     "noSignedRecords": "Todavía no hay registros firmados.",

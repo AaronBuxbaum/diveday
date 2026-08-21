@@ -209,7 +209,7 @@
   },
   "/shop/[shopSlug]/gear": {
     "e2e": ["gear.spec.ts"],
-    "visual": ["gear-register", "gear-register-trouble"]
+    "visual": ["gear-register", "gear-register-deleted", "gear-register-trouble"]
   },
   "/shop/[shopSlug]/gear/[id]": {
     "e2e": ["gear.spec.ts"],
@@ -240,6 +240,7 @@
     ],
     "visual": [
       "diver-profile",
+      "diver-profile-deleted",
       "diver-profile-expired",
       "diver-profile-imported",
       "diver-profile-not-certified",
@@ -445,7 +446,7 @@
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "gear.spec.ts", "nitrox.spec.ts"],
-    "visual": ["prep", "prep-no-nitrox", "prep-assignments"]
+    "visual": ["prep", "prep-by-diver", "prep-no-nitrox", "prep-assignments"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts"],

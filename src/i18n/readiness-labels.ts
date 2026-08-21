@@ -1,4 +1,5 @@
 import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type {
   CertificationLevel,
@@ -230,6 +231,56 @@ export const SPECIALTY_KEYS: Record<DiveSpecialty, StaffMessageKey> = {
   night: "shared.readiness.specialties.night",
   drysuit: "shared.readiness.specialties.drysuit",
 };
+
+/**
+ * **How recently a diver has been in the water**, in the diver's own reading
+ * language, for the `/ready` question that collects it (ADR
+ * 20260821-currency-is-what-catches-people).
+ *
+ * Bands rather than a date, so the words have to carry the imprecision honestly:
+ * "Within the last year" and not "< 12 months", because a diver answering from
+ * memory is estimating and the phrasing should say so.
+ */
+export const DIVER_DIVE_RECENCY_KEYS: Record<DiveRecencyBand, DiverMessageKey> = {
+  this_season: "ready.diveRecency.thisSeason",
+  within_a_year: "ready.diveRecency.withinAYear",
+  one_to_five_years: "ready.diveRecency.oneToFiveYears",
+  over_five_years: "ready.diveRecency.overFiveYears",
+  never: "ready.diveRecency.never",
+};
+
+/**
+ * The same five answers as a staffer reads them, on a roster row or a prep list
+ * beside a name — shorter, because they sit in a line of other facts rather
+ * than in a select the diver is choosing from.
+ *
+ * Always rendered as the diver's word, never as a fact the shop established.
+ * Nothing verifies this and nothing ever will, so a surface that showed it
+ * plainly would be claiming an authority it does not have — the same rule the
+ * self-declared card mark exists for.
+ */
+export const STAFF_DIVE_RECENCY_KEYS: Record<DiveRecencyBand, StaffMessageKey> = {
+  this_season: "shared.diveRecency.thisSeason",
+  within_a_year: "shared.diveRecency.withinAYear",
+  one_to_five_years: "shared.diveRecency.oneToFiveYears",
+  over_five_years: "shared.diveRecency.overFiveYears",
+  never: "shared.diveRecency.never",
+};
+
+/**
+ * The staff-facing phrase for one diver's currency, or null when they were
+ * never asked — a caller renders nothing at all in that case rather than a
+ * "not said" line. Silence about currency is the state every booking taken
+ * before 2026-08-21 is in, and a roster of "Last dived: not said" would be
+ * noise on every row for weeks.
+ */
+export function diveRecencyText(
+  t: StaffTranslator,
+  band: DiveRecencyBand | null | undefined,
+): string | null {
+  if (band == null) return null;
+  return t("shared.diveRecency.lastDived", { when: t(STAFF_DIVE_RECENCY_KEYS[band]) });
+}
 
 /** The diver-facing half, on the same terms as `DIVER_CERTIFICATION_LEVEL_KEYS` above. */
 export const DIVER_SPECIALTY_KEYS: Record<DiveSpecialty, DiverMessageKey> = {

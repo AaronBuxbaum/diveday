@@ -1,9 +1,10 @@
-import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import {
@@ -17,12 +18,9 @@ import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
-import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
-  bookingCheckoutBookings,
-  bookingCheckouts,
   bookings,
   certifications,
   courses,
@@ -1064,245 +1062,37 @@ export async function selfCancelBooking(
   });
 }
 
-export type RescheduleResult =
-  | { ok: true; newBookingId: string }
-  | {
-      ok: false;
-      reason:
-        | "not_found"
-        | "already_cancelled"
-        | "not_cancellable"
-        | "trip_departed"
-        | "already_paid"
-        | "same_trip"
-        | "identity_unconfirmed"
-        | "destination_already_paid"
-        | Exclude<BookingOutcome, { ok: true }>["reason"];
-    };
-
 /**
- * Move a diver's own booking to a different trip, atomically: the new seat
- * is booked *before* the old one is freed, in one transaction, so a diver
- * can never end up holding neither (the failure mode a cancel-then-rebook
- * flow risks — the destination trip could fill, or stop qualifying, in the
- * gap between the two steps). If the new trip can't take them — full,
- * unstaffed, wrong prerequisites, already departed — the old booking is
- * left exactly as it was; nothing is lost on a rejected reschedule.
+ * Record how recently the diver says they last dived (ADR
+ * 20260821-currency-is-what-catches-people). Written from the diver's own
+ * `/ready` page, so it is scoped to the booking the capability names and
+ * refuses a cancelled seat — the same shape as `setBookingNitrox`.
  *
- * Scoped to a booking with no captured payment. A paid booking's money has
- * to move with it (a full or partial refund, a possible new charge if the
- * destination trip prices differently), which is a staff-mediated decision
- * this slice doesn't automate — a paid diver cancels (auto-refunded inside
- * the shop's stated window, same as today) and books the new trip fresh
- * (docs ADR 20260727-diver-self-service-cancel).
+ * The band is typed against the pgEnum, so nothing free-typed reaches the
+ * column and the callers cannot invent a sixth answer. There is no "clear it
+ * back to not said" path on purpose: an answer given is a thing the crew read,
+ * and a diver who mis-tapped picks a different band rather than erasing what
+ * the shop already saw.
  *
- * Reuses `createBookingRecord` for the destination trip — the same
- * capacity/course/ratio gates a fresh public booking gets, keyed to the
- * same person already on the booking being moved (never re-typed, so there
- * is no email/identity ambiguity to resolve).
- *
- * Refuses a booking still flagged `identity_unconfirmed` (H-13): that flag
- * is a deliberate, staff-only-clearable readiness blocker for a public
- * booking whose submitted name didn't match the email's existing person
- * record, and `createBookingRecord`'s known-`personId` path (the one this
- * function always uses) never sets it on the new booking — silently
- * dropping a flag only a human was supposed to be able to clear. Carries
- * `wantsNitrox` forward onto the new booking for the same reason a diver's
- * gas request shouldn't silently reset just because they moved trips.
+ * Returns false when no live booking matched, so the caller can say so rather
+ * than reporting a save that never happened.
  */
-export async function rescheduleBooking(
+export async function setBookingLastDived(
   db: AppDb,
-  input: { shopId: string; bookingId: string; newTripId: string; now?: Date },
-): Promise<RescheduleResult> {
-  const now = input.now ?? nowDate();
-  // `createBookingRecord` below can already have written the destination
-  // reactivation by the time the `destination_already_paid` gate refuses it
-  // — a plain `return { ok: false, ... }` from inside `db.transaction` only
-  // stops further writes, it does NOT undo ones already made, so that
-  // refusal would otherwise still commit the reactivation it's supposed to
-  // be blocking (Codex finding, caught by this function's own regression
-  // test). `tx.rollback()` + this outer variable is the established pattern
-  // for a refusal that must undo prior writes in the same transaction (see
-  // `inviteStaffMember`, docs ADR 20260726-staff-invite-accounts).
-  let refusal: RescheduleResult | null = null;
-  try {
-    return await db.transaction(async (tx) => {
-      // Locks the row for the rest of this transaction. Without this, two
-      // concurrent reschedules of the same booking to two *different* trips
-      // could both read status="booked" before either writes, both book their
-      // own (uncontended) destination trip, and both then unconditionally
-      // cancel the same source booking — leaving the diver double-booked on
-      // two trips off one original seat (security review finding on this ADR).
-      // Holding this lock through the whole transaction serializes that: the
-      // second caller blocks here until the first commits, then sees the row
-      // already cancelled and refuses cleanly.
-      const [row] = await tx
-        .select({
-          status: bookings.status,
-          tripId: bookings.tripId,
-          personId: bookings.personId,
-          wantsNitrox: bookings.wantsNitrox,
-          identityUnconfirmedAt: bookings.identityUnconfirmedAt,
-        })
-        .from(bookings)
-        .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
-        .limit(1)
-        .for("update");
-      if (!row) return { ok: false, reason: "not_found" };
-      if (row.status === "cancelled") return { ok: false, reason: "already_cancelled" };
-      if (row.status !== "booked") return { ok: false, reason: "not_cancellable" };
-      if (row.tripId === input.newTripId) return { ok: false, reason: "same_trip" };
-      if (row.identityUnconfirmedAt) return { ok: false, reason: "identity_unconfirmed" };
-
-      const [oldTrip] = await tx
-        .select({ startsAt: trips.startsAt })
-        .from(trips)
-        .where(and(eq(trips.id, row.tripId), liveTrip()))
-        .limit(1);
-      if (oldTrip && new Date(oldTrip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
-        return { ok: false, reason: "trip_departed" };
-      }
-
-      const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
-      // waived is a settled state exactly like paid/deposit_paid — staff decided
-      // this diver owes nothing, and rescheduling into a fresh, unpaid booking
-      // would silently drop that decision and offer them a card checkout for a
-      // trip whose fee was already waived on the seat they're leaving.
-      if (
-        payment?.status === "paid" ||
-        payment?.status === "deposit_paid" ||
-        payment?.status === "waived"
-      ) {
-        return { ok: false, reason: "already_paid" };
-      }
-
-      // Book the destination first. Every capacity/course/ratio gate a fresh
-      // public booking gets applies identically here, inside the same
-      // transaction — a full or newly-unstaffed trip fails this and returns
-      // without ever touching the old booking. `actor: "staff"` is deliberate,
-      // not a mismatch with the public-facing surface this runs behind: that
-      // gate exists to stop an anonymous form from judging a submitter by a
-      // person record they may have no relationship to, but `row.personId` here
-      // is the token-verified diver's own identity, not a free-typed guess —
-      // so the real minimum-age check applies, same as any staff-entered
-      // booking.
-      const outcome = await createBookingRecord(tx, {
-        shopId: input.shopId,
-        tripId: input.newTripId,
-        personId: row.personId,
-        actor: "staff",
-      });
-      if (!outcome.ok) return outcome;
-
-      // createBookingRecord can reactivate a previously-cancelled row on the
-      // destination trip (the diver had, and cancelled, a seat there before) —
-      // and reactivation only ever touches `status`/`conditionsBriefedAt`/
-      // `identityUnconfirmedAt`, never `booking_payments`. That row's payment
-      // can therefore still read paid/deposit_paid/waived/refunded from its
-      // earlier life (a no-policy or forfeit cancellation deliberately leaves
-      // a payment captured; a within-window cancellation leaves it refunded),
-      // which has nothing to do with this move — the diver hasn't paid
-      // anything for it. `refunded` matters here too, not just the settled
-      // statuses (Codex finding): it's a FINAL_PAYMENT_STATUSES entry, so if
-      // this were allowed through and the diver paid again for the
-      // reactivated seat, `setBookingPaymentIfNotFinal` would refuse to
-      // overwrite the stale "refunded" record — the diver would be charged
-      // while the booking still reads refunded and could even be offered
-      // payment again. Refuse rather than silently treating a stale
-      // settlement as covering the new seat, or clearing a real payment
-      // record programmatically; staff can reconcile the specific history if
-      // the diver contacts them.
-      const destinationPayment = await getBookingPayment(tx, input.shopId, outcome.bookingId);
-      if (
-        destinationPayment?.status === "paid" ||
-        destinationPayment?.status === "deposit_paid" ||
-        destinationPayment?.status === "waived" ||
-        destinationPayment?.status === "refunded"
-      ) {
-        refusal = { ok: false, reason: "destination_already_paid" };
-        tx.rollback();
-      }
-
-      // A reactivated row can also still be linked to a *pending* (never
-      // completed, never refused above) Checkout from its earlier life — a
-      // diver who started paying, abandoned the tab, then cancelled before
-      // it expired. Marking it `expired` here is a *local* decision only —
-      // it doesn't reach out to Stripe, so the hosted session itself stays
-      // genuinely completable there until Stripe's own (separate, longer)
-      // expiry, and an old tab really can still complete it after this point
-      // (Codex finding: this comment previously overclaimed otherwise). What
-      // actually closes the loophole is `markCheckoutPaidBySessionId`
-      // (src/db/checkouts.ts) refusing to process a completion for any
-      // checkout whose local status isn't `pending` or already `completed`
-      // — so a completion arriving for this now-`expired` row is ignored
-      // rather than
-      // attributing the old trip/price to the reactivated seat. Retiring it
-      // here is still worth doing on its own (keeps it out of future
-      // checkout-recovery batches, keeps the data honest), just not
-      // sufficient by itself. A no-op for a genuinely fresh booking, which
-      // has no prior checkout to find.
-      const staleCheckoutLinks = await tx
-        .select({ checkoutId: bookingCheckoutBookings.checkoutId })
-        .from(bookingCheckoutBookings)
-        .innerJoin(bookingCheckouts, eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId))
-        .where(
-          and(
-            eq(bookingCheckoutBookings.bookingId, outcome.bookingId),
-            eq(bookingCheckouts.status, "pending"),
-          ),
-        );
-      if (staleCheckoutLinks.length > 0) {
-        await tx
-          .update(bookingCheckouts)
-          .set({ status: "expired" })
-          .where(
-            inArray(
-              bookingCheckouts.id,
-              staleCheckoutLinks.map((l) => l.checkoutId),
-            ),
-          );
-      }
-
-      // Unconditional, not just when true: `createBookingRecord` can reactivate
-      // a previously-cancelled row on the destination trip (a diver who once
-      // booked, cancelled, and is now moving back onto it), and that stale row
-      // may still carry `wantsNitrox: true` from its earlier life. Only writing
-      // the true case would leave that stale request in place even though the
-      // source booking being moved doesn't want nitrox (Codex finding).
-      await tx
-        .update(bookings)
-        .set({ wantsNitrox: row.wantsNitrox })
-        .where(eq(bookings.id, outcome.bookingId));
-
-      const [cancelled] = await tx
-        .update(bookings)
-        .set({ status: "cancelled" })
-        .where(
-          and(
-            eq(bookings.id, input.bookingId),
-            eq(bookings.shopId, input.shopId),
-            eq(bookings.status, "booked"),
-          ),
-        )
-        .returning({ id: bookings.id });
-      if (!cancelled) return { ok: false, reason: "not_cancellable" };
-      await revokeBookingCapabilities(tx, {
-        shopId: input.shopId,
-        bookingId: input.bookingId,
-      });
-      // Same rule as the staff cancel above: un-collected units go back on
-      // the wall with the seat (ADR 20260815-minimal-gear-register).
-      await releaseUnclaimedGearReservations(tx, {
-        shopId: input.shopId,
-        bookingId: input.bookingId,
-      });
-
-      return { ok: true, newBookingId: outcome.bookingId };
-    });
-  } catch (error) {
-    if (refusal) return refusal;
-    throw error;
-  }
+  input: { shopId: string; bookingId: string; band: DiveRecencyBand },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ lastDivedBand: input.band })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
 }
 
 /**

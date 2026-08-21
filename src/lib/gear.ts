@@ -38,7 +38,12 @@ export type GearItemKind =
   | "tank"
   | "other";
 
-export type GearItemStatus = "in_service" | "needs_service" | "retired";
+/**
+ * Whether a unit is on the wall or off it for bench work. A unit the shop is
+ * finished with is deleted (soft, `gear_items.deleted_at`) — there is no
+ * third state and no "retired" (ADR 20260820-every-delete-is-soft).
+ */
+export type GearItemStatus = "in_service" | "needs_service";
 
 /**
  * The clocks a unit can run: manufacturer service, a tank's two independent

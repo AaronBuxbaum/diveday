@@ -34,9 +34,6 @@ const copy = {
   viewRemoved: t("divers.list.viewRemoved"),
   viewsAriaLabel: t("divers.list.viewsAriaLabel"),
   removedNote: t("divers.list.removedNote"),
-  restore: t("divers.list.restore"),
-  restoring: t("divers.list.restoring"),
-  restoreDiverLabel: t.raw("divers.list.restoreDiverLabel"),
   peopleHeading: t("divers.list.peopleHeading"),
   peopleCountLabel: t("divers.page.onFileCount", { count: 0 }),
   searchHintText: t("divers.list.searchHintText"),
@@ -69,9 +66,8 @@ function renderList({
   filter = "all" as DiverFilter,
   importHref = "/shop/blue-mantis/settings/import" as string | null,
   page = emptyPage,
-  // Owner/manager by default — the roster hands this down only to whoever may
-  // restore, and it is what makes the Deleted view exist at all.
-  restoreAction = (() => {}) as ((formData: FormData) => void) | null,
+  // Owner/manager by default — the only staffer the Deleted view exists for.
+  canRestore = true,
   quickAddAction = (() => {}) as ((formData: FormData) => void) | null,
   copyOverrides = {} as Partial<typeof copy>,
 } = {}) {
@@ -82,7 +78,7 @@ function renderList({
       query={query}
       filter={filter}
       importHref={importHref}
-      restoreAction={restoreAction}
+      canRestore={canRestore}
       quickAddAction={quickAddAction}
       copy={{ ...copy, ...copyOverrides }}
     />,
@@ -199,7 +195,7 @@ describe("DiverList roster views", () => {
   });
 
   it("hides the Deleted view from a staffer who may not restore — no chip, no explanation", () => {
-    renderList({ filter: "diving_today", restoreAction: null });
+    renderList({ filter: "diving_today", canRestore: false });
     const views = screen.getByRole("navigation", { name: "Roster views" });
     expect([...views.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
       "All divers",
@@ -213,8 +209,11 @@ describe("DiverList roster views", () => {
 /**
  * Removal was reversible in the data from the start, but nothing in the UI
  * could *find* a removed diver once the undo toast was gone: they matched no
- * search and sat in no view. This is the view that puts them back within reach,
- * and a restore that works tomorrow rather than for twelve seconds.
+ * search and sat in no view. This is the view that puts them back within reach.
+ *
+ * The restore itself is **not** here any more — see the row-actions block
+ * below. This view's job is finding the person; putting them back is a decision
+ * taken on their own record, with the record in front of you.
  */
 describe("DiverList removed view", () => {
   const removedPage: DiverPage = {
@@ -251,18 +250,6 @@ describe("DiverList removed view", () => {
     expect(screen.queryByText("Search by name, email, or phone.")).toBeNull();
   });
 
-  it("puts a restore on each row, named for the diver it restores", () => {
-    renderList({ filter: "removed", page: removedPage });
-    // One per layout (the phone cards and the table both render), each
-    // distinctly named so a screen reader is never offered two bare "Restore"s.
-    const buttons = screen.getAllByRole("button", { name: "Restore Deleted Alex" });
-    expect(buttons.length).toBeGreaterThan(0);
-    for (const button of buttons) {
-      const form = button.closest("form");
-      expect(form?.querySelector('input[name="personId"]')).toHaveValue("person-1");
-    }
-  });
-
   it("still links the row through to the diver record, which now resolves for them", () => {
     renderList({ filter: "removed", page: removedPage });
     for (const link of screen.getAllByRole("link", { name: /Deleted Alex/ })) {
@@ -270,9 +257,26 @@ describe("DiverList removed view", () => {
     }
   });
 
-  it("offers no restore to a staffer who may not restore", () => {
-    renderList({ filter: "removed", page: removedPage, restoreAction: null });
-    expect(screen.queryByRole("button", { name: /Restore/ })).toBeNull();
+  /**
+   * **A row is a link, and nothing else.**
+   *
+   * The Deleted view used to hang a "Restore" off every row, which put a
+   * consequential write on a list a staffer *scans* — one mis-tap away from a
+   * name they were only looking for, and with none of the record's context on
+   * screen. Every action on a diver now lives on that diver's record, where
+   * `RestoreDiver` states the deleted state directly above the button.
+   *
+   * Asserted on the Deleted view because that is where the last row action
+   * lived: if one ever comes back, this is the row it comes back on.
+   */
+  it("carries no buttons and no forms on a row — not even a restore", () => {
+    renderList({ filter: "removed", page: removedPage });
+    const list = screen.getByRole("list");
+    const table = screen.getByRole("table");
+    for (const rows of [list, table]) {
+      expect(rows.querySelectorAll("button")).toHaveLength(0);
+      expect(rows.querySelectorAll("form")).toHaveLength(0);
+    }
   });
 
   it("keeps the search on when a view chip is followed", () => {
@@ -333,7 +337,7 @@ describe("DiverList removed view", () => {
         shopSlug: "blue-mantis",
         filter: "needs_attention" as DiverFilter,
         importHref: null,
-        restoreAction: null,
+        canRestore: false,
         copy,
       };
       const view = render(<DiverList {...props} query="" />);

@@ -88,8 +88,10 @@ import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
+import { seedDiveRecency } from "./seed-dive-recency";
 import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
+import { seedDiverTrail } from "./seed-diver-trail";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
@@ -142,6 +144,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
  * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
+ * | `./seed-diver-trail.ts` | the same table read the other way round — what the desk has done about eight of the cast, so a diver's record opens on a history rather than an empty Activity panel |
  * | `./seed-dive-site-catalog.ts` | DiveDay's published dive-site templates — shared by every shop, never this one's |
  * | `./seed-self-declared.ts` | the two list joiners who said what they can dive, so the marks a staffer reads before a blast are ever rendered |
  * | `./seed-trip-legs.ts` | how far the boat really runs on the three departures where it is not the shop's usual twenty minutes |
@@ -716,6 +719,29 @@ export async function seedDemoSchedule(
   // (src/db/seed-self-declared.ts). Neither holds a seat, so no readiness count,
   // roster or head count moves. Rides the history flag like the list itself.
   await seedSelfDeclaredJoiners(db, shopId, opts.history !== false);
+  // Adds-only and late, like the two scenarios above: it stamps a column on
+  // seats that already exist and gates nothing, so no readiness count, head
+  // count or roster membership moves (ADR
+  // 20260821-currency-is-what-catches-people).
+  await seedDiveRecency(db, shopId);
+
+  // Adds-only and late, like the four above: the desk's trail **per diver**,
+  // so the Activity section on a diver's record opens on a real history rather
+  // than an empty panel (src/db/seed-diver-trail.ts). It writes `activity_events`
+  // and nothing else — a table read only by the Guests tab's collapsed log and
+  // by that section, never by readiness, the manifest, or a head count — so
+  // nothing seeded before it moves. Last of the adds-only group because it
+  // reads every seat the earlier scenarios sold, including the cert-gate and
+  // minimum-seats departures.
+  await seedDiverTrail(db, shopId, {
+    roster: bookingRows,
+    divers: customers,
+    // Instructor, then the divemaster and captain when the crew seed found
+    // them — the trail rotates through the crew in that order.
+    actorPersonIds: [instructor.id, divemasterId, captainId].filter(
+      (id): id is string => typeof id === "string",
+    ),
+  });
 
   // Updates-only, and the only step here that writes no rows at all: how far the
   // boat runs on the three departures where the answer is not the shop's usual

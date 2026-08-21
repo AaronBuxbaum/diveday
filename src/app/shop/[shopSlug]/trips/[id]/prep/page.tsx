@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass } from "@/components/ui/form";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "@/db/gear";
@@ -21,7 +22,14 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { buildDivePrepChecklist, rentalFitLine, UNSIZED_ITEM_KINDS } from "@/lib/dive-prep";
+import {
+  buildDivePrepChecklist,
+  isPrepGrouping,
+  type PrepGrouping,
+  type PrepPiece,
+  rentalFitLine,
+  UNSIZED_ITEM_KINDS,
+} from "@/lib/dive-prep";
 import { rankUnitsForSize, tripReservationWindow } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
@@ -69,17 +77,30 @@ export const metadata: Metadata = {
  * It is a page to work down with your hands full, so it prints, and the two
  * ways it can be wrong (a missing fit, an unverified nitrox card) are stated
  * at the top rather than buried.
+ *
+ * The packing list itself is read two ways, chosen by `?group=` and resolved
+ * server-side: down the rack (`item`, the default — six BCDs together with
+ * their sizes) or down the roster (`diver` — one row per person with their
+ * pieces). Both are the same pieces out of one `buildDivePrepChecklist` call,
+ * so the choice is a sort rather than a second source of truth, and it lives
+ * in the URL so a link to it survives being shared with whoever is loading
+ * the van (same shape as the shop home's `?view=`).
  */
 export default async function TripPrepPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    /** Which grouping; anything unrecognised reads as the by-item default. */
+    group?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice } = await searchParams;
+  const { notice, group } = await searchParams;
+  const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
@@ -122,23 +143,26 @@ export default async function TripPrepPage({
     offeredKinds: shop.rentalItems,
   });
   /**
-   * The size a staffer pulls, or the honest reason there isn't one. Shared by
-   * the phone cards and the table so the two can never drift into telling the
-   * boat different things about the same line.
+   * The size a staffer pulls, or the honest reason there isn't one — null when
+   * the piece has no size to carry at all. Shared by the phone cards, both
+   * tables, and both groupings, so none of them can drift into telling the
+   * boat different things about the same piece.
    */
-  const sizeCell = (line: (typeof checklist.lines)[number]) => {
+  const pieceSize = (piece: PrepPiece) => {
     // The count is real; the size deliberately isn't.
-    if (line.fitAtCheckIn) {
+    if (piece.fitAtCheckIn) {
       return <span className="font-medium text-warning">{t("trips.prep.fitAtCheckIn")}</span>;
     }
-    if (line.size) return line.size;
-    // An item with no size to record reads as a dash; one that should have had
-    // a size and doesn't says so, because those are different problems.
-    return UNSIZED_ITEM_KINDS.includes(line.kind) ? (
-      <span className="text-muted">—</span>
-    ) : (
+    if (piece.size) return piece.size;
+    // An item that should have had a size and doesn't says so; one with no
+    // size to record has nothing to say, because those are different problems.
+    return UNSIZED_ITEM_KINDS.includes(piece.kind) ? null : (
       <span className="text-muted">{t("trips.prep.notRecorded")}</span>
     );
+  };
+  /** The same answer in a Size column, where an unsized piece still owes a cell. */
+  const sizeCell = (piece: PrepPiece) => {
+    return pieceSize(piece) ?? <span className="text-muted">—</span>;
   };
   // A shop that has never offered nitrox can never have live nitrox data here
   // (setBookingNitrox fails closed), so this is purely cosmetic for that
@@ -184,6 +208,36 @@ export default async function TripPrepPage({
     })
     .filter((row) => row.assigned.length > 0 || row.wanted.length > 0);
   const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
+  // Both groupings are this page at a different `?group=`, so the switch's
+  // links carry no other state — a `?notice=` is spent by the time anyone taps
+  // one (`FlashParams` strips it), and there is nothing else in the query.
+  const prepPath = shopPath(shopSlug, "trips", tripId, "prep");
+  /**
+   * A diver's kit as one cell: each piece with the size to pull it in, or the
+   * one word that says why there is nothing to pull. Own kit and never-asked
+   * are kept apart here for the same reason they are kept apart everywhere
+   * else — one is an answer, the other is an open question.
+   */
+  const kitCell = (line: (typeof checklist.diverLines)[number]) =>
+    line.items.length > 0 ? (
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">
+        {line.items.map((piece) => {
+          const detail = pieceSize(piece);
+          return (
+            <li key={piece.kind}>
+              <span className="font-medium">{rentalItemLabel(t, piece.kind)}</span>
+              {detail ? <> {detail}</> : null}
+            </li>
+          );
+        })}
+      </ul>
+    ) : (
+      <span className="text-muted">
+        {line.state === "own_kit"
+          ? t("shared.rentalFit.ownKit")
+          : t("shared.rentalFit.notRecorded")}
+      </span>
+    );
 
   return (
     <>
@@ -397,9 +451,38 @@ export default async function TripPrepPage({
           ) : null}
 
           <section aria-labelledby="kit-heading" className="mt-8">
-            <h2 id="kit-heading" className="text-lg font-semibold">
-              {t("trips.prep.rentalKitHeading")}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <h2 id="kit-heading" className="text-lg font-semibold">
+                {t("trips.prep.rentalKitHeading")}
+              </h2>
+              {/* A state toggle, not two buttons: one list, two ways of
+                  walking it (design principle 8). It only appears once there
+                  is something to pull — with nothing on the list both
+                  groupings render the identical empty state, and a control
+                  that changes nothing is worse than no control. */}
+              {checklist.lines.length > 0 ? (
+                <SegmentedControl
+                  ariaLabel={t("trips.prep.groupLabel")}
+                  items={[
+                    {
+                      key: "item",
+                      label: t("trips.prep.groupByItem"),
+                      href: `${prepPath}?group=item`,
+                    },
+                    {
+                      key: "diver",
+                      label: t("trips.prep.groupByDiver"),
+                      href: `${prepPath}?group=diver`,
+                    },
+                  ]}
+                  currentKey={grouping}
+                  currentIsLink
+                  ariaCurrentValue="true"
+                  scroll={false}
+                  className="shrink-0"
+                />
+              ) : null}
+            </div>
             {checklist.lines.length === 0 ? (
               // A section inside a larger page, so h3. Two honest readings of
               // the same empty table — a genuine nothing-to-do, or fits that
@@ -427,7 +510,7 @@ export default async function TripPrepPage({
                   {t("trips.prep.rentalKitEmptyAction")}
                 </Link>
               </EmptyState>
-            ) : (
+            ) : grouping === "item" ? (
               <>
                 {/* Phone: stacked cards. Four columns at 390px put a
                     comma-joined diver list against three other columns and the
@@ -483,6 +566,64 @@ export default async function TripPrepPage({
                         <Td>{sizeCell(line)}</Td>
                         <Td numeric>{line.count}</Td>
                         <Td muted>{line.divers.join(", ")}</Td>
+                      </tr>
+                    ))}
+                  </TBody>
+                </Table>
+              </>
+            ) : (
+              /* The same pieces down the roster instead of down the rack, for
+                 the half of packing that happens per person — bagging a
+                 diver's kit, or answering "what does this one still need?"
+                 Every diver on the boat has a row, including the ones with
+                 nothing to pull: a name whose answer is "own kit" is what
+                 lets the packer stop looking for it. Same card-under-`sm`,
+                 table-above split and the same `print:` pins as the by-item
+                 view, so whichever grouping is on screen is what prints. */
+              <>
+                <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
+                  {checklist.diverLines.map((line) => (
+                    <li key={line.bookingId} className={sectionCardClass()}>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-semibold">
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${line.personId}`}
+                            className="hover:text-primary hover:underline"
+                          >
+                            {line.fullName}
+                          </Link>
+                        </p>
+                        <p className="shrink-0 text-2xl font-semibold tabular-nums">
+                          <span className="sr-only">{t("trips.prep.qtyColumn")} </span>
+                          {line.items.length}
+                        </p>
+                      </div>
+                      <div className="mt-2 text-sm">{kitCell(line)}</div>
+                    </li>
+                  ))}
+                </ul>
+                {/* Three columns rather than four, so a lower floor than the
+                    by-item table's: the kit cell wraps, and forcing 45rem
+                    would scroll a phone-width tablet sideways for nothing. */}
+                <Table minWidth="36rem" shellClassName="mt-3 hidden sm:block print:block">
+                  <THead>
+                    <Th>{t("trips.prep.diverColumn")}</Th>
+                    <Th>{t("trips.prep.kitColumn")}</Th>
+                    <Th numeric>{t("trips.prep.qtyColumn")}</Th>
+                  </THead>
+                  <TBody>
+                    {checklist.diverLines.map((line) => (
+                      <tr key={line.bookingId}>
+                        <Td className="font-medium">
+                          <Link
+                            href={`/shop/${shopSlug}/divers/${line.personId}`}
+                            className="hover:text-primary hover:underline"
+                          >
+                            {line.fullName}
+                          </Link>
+                        </Td>
+                        <Td>{kitCell(line)}</Td>
+                        <Td numeric>{line.items.length}</Td>
                       </tr>
                     ))}
                   </TBody>

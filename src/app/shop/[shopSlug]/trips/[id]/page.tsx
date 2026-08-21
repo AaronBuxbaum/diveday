@@ -26,7 +26,7 @@ import {
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { countInWaterCrew } from "@/lib/crew-roles";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
@@ -90,17 +90,12 @@ export const metadata: Metadata = {
  * the Manifest. Keeping this page free of the roster is what gives each action
  * a single home.
  *
- * **One column at every width, deliberately.** A design review asked for an
- * `lg` two-column split — the operational spine (details, requirements, crew)
- * left, the post-trip material right — on the grounds that a 1280 viewport
- * leaves the right half empty. Declined by the owner (2026-08-14), and the
- * complaint it answered no longer holds: the two post-trip sections that made
- * the page long are `departed`-gated, so before a boat sails this page is the
- * operational spine and nothing else. A second column would then have to be
+ * The composition is masthead → pulse → the section cards, one column at
+ * every width. A design review once asked for an `lg` two-column split;
+ * declined by the owner (2026-08-14) — a second column would have to be
  * filled with something, which is how a page acquires content that exists to
- * occupy space. The reading measure a single ~800px column gives is also the
- * right one for the prose these sections carry. If this changes, it changes
- * because a section was added, not because the screen is wide.
+ * occupy space. If this changes, it changes because a section was added, not
+ * because the screen is wide.
  */
 export default async function ManageTripPage({
   params,
@@ -140,15 +135,18 @@ export default async function ManageTripPage({
   const t = staffTranslator(locale);
   if (!trip) notFound();
   const cancelled = trip.status === "cancelled";
-  // "Is this trip behind us?" — the same reading the recap run makes when it
-  // decides whose recap to send (`sendDueRecaps`, src/db/recap.ts): the boat is
-  // back once its end time has passed, and a cancelled departure never sailed
-  // at all. Read through the clock, never `new Date()`, so the e2e fleet's
-  // frozen instant renders this page identically every run.
-  const departed = !cancelled && trip.endsAt <= nowDate();
+  // "Is this trip behind us?" — with the hour of grace every has-it-ended
+  // check carries (the close-out's readiness gate and Today's "home" both add
+  // it): boats run late, and the pulse dying at the scheduled minute told a
+  // staffer watching a boat still out that there was nothing left to watch. A
+  // cancelled departure never sailed at all. Read through the clock, never
+  // `new Date()`, so the e2e fleet's frozen instant renders this page
+  // identically every run.
+  const departed = !cancelled && trip.endsAt.getTime() + HOUR_MS <= nowDate().getTime();
   // The pulse — the state-of-the-boat strip that opens the page — only beats
   // for a departure that is still ahead: a cancelled or departed trip has no
-  // seats to fill or blockers to clear, and the recap material takes over.
+  // seats to fill or blockers to clear. A cancelled one puts its lifecycle
+  // band in the same slot instead; the day's write-up lives on the close-out.
   const pulseNeeded = !cancelled && !departed;
   const [
     staff,
@@ -387,6 +385,71 @@ export default async function ManageTripPage({
       : []),
   ];
 
+  // The one quiet line under the date that says what kind of departure this
+  // is: where it dives, whether it is a course session, whether it repeats.
+  // Built as keyed segments so the separators render only between facts that
+  // exist.
+  const identityFacts = [
+    diveSites.sites.length > 0 ? (
+      <span key="sites" className="flex flex-wrap items-center gap-x-2">
+        {/* One key, pluralized by ICU — not two keys picked by a ternary, so a
+            locale with a different plural rule can express it in the bundle. */}
+        <span>{t("trips.detail.diveSiteLabel", { count: diveSites.sites.length })}</span>
+        {/* Each site keeps its own link into the library card, so a two-site
+            day is two destinations — which rules out an `Intl.ListFormat`
+            join. The separator is punctuation between links, not a word to
+            translate. */}
+        {diveSites.sites.map((site, index) => (
+          <span key={site.id} className="flex items-center gap-x-2">
+            {index > 0 ? <span aria-hidden="true">·</span> : null}
+            <Link
+              href={shopPath(shopSlug, "dive-sites", site.id)}
+              className="font-medium text-primary hover:underline"
+            >
+              {site.name}
+            </Link>
+          </span>
+        ))}
+      </span>
+    ) : null,
+    diveSites.undecidedDives > 0 ? (
+      <span key="undecided">
+        {t("trips.detail.divesWithoutSite", { count: diveSites.undecidedDives })}
+      </span>
+    ) : null,
+    trip.course ? (
+      <span key="course">
+        {t.rich("trips.detail.courseSession", {
+          title: trip.course.title,
+          course: (chunks) => (
+            <Link
+              href={shopPath(shopSlug, "courses", trip.course?.slug ?? "", "edit")}
+              className="font-medium text-primary hover:underline"
+            >
+              {chunks}
+            </Link>
+          ),
+        })}
+      </span>
+    ) : null,
+    series ? (
+      <span key="series">
+        {t("trips.detail.seriesPart", {
+          summary: recurrenceSummaryText(
+            t,
+            locale,
+            recurrenceSummary({
+              intervalWeeks: series.intervalWeeks,
+              weekdays: series.weekdayMask,
+              endsOn: series.endsOn,
+            }),
+          ),
+          count: series.scheduledCount,
+        })}
+      </span>
+    ) : null,
+  ].filter((fact): fact is React.ReactElement => fact !== null);
+
   return (
     <>
       <FlashParams params={["notice", "count", "form"]} />
@@ -421,7 +484,7 @@ export default async function ManageTripPage({
               href={publicTripPath(shopSlug, tripId)}
               target="_blank"
               rel="noreferrer"
-              className={buttonClass({ variant: "link", size: "sm" })}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
             >
               {t("trips.detail.viewBookingPage")}
             </Link>
@@ -435,13 +498,25 @@ export default async function ManageTripPage({
         }
         extraMeta={
           <>
+            {/* Read off the dives, never `trip.diveSite` — that column is only
+                dive one's site copied onto the trip row, so it named one site
+                for a two-site day and named none at all when the tank without
+                a site was the first one. */}
+            {identityFacts.length > 0 ? (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                {identityFacts.map((fact, index) => (
+                  <span key={fact.key} className="flex flex-wrap items-center gap-x-2">
+                    {index > 0 ? <span aria-hidden="true">·</span> : null}
+                    {fact}
+                  </span>
+                ))}
+              </p>
+            ) : null}
             {/* A real list, not a wrapped run of spans. The days used to sit in
                 one `flex-wrap` row separated by nothing but a 12px gap, so a
-                three-day course read as "3 meeting days · same instructors each
-                day Day 1: Tue Oct 13 · 9:00 AM – 5:00 PM Day 2: …" — one
-                sentence with no seams, re-flowing differently at every width.
-                One line per day is what the diver's own booking page shows, and
-                the two now read the same. */}
+                three-day course read as one sentence with no seams. One line
+                per day is what the diver's own booking page shows, and the two
+                now read the same. */}
             {scheduleDays.length > 1 ? (
               <div className="text-sm text-muted">
                 <p>{t("trips.detail.meetingDaysSummary", { count: scheduleDays.length })}</p>
@@ -463,80 +538,6 @@ export default async function ManageTripPage({
                 </ol>
               </div>
             ) : null}
-            {trip.course ? (
-              <p className="text-sm font-medium text-primary">
-                {t.rich("trips.detail.courseSession", {
-                  title: trip.course.title,
-                  course: (chunks) => (
-                    <Link
-                      href={shopPath(shopSlug, "courses", trip.course?.slug ?? "", "edit")}
-                      className="hover:underline"
-                    >
-                      {chunks}
-                    </Link>
-                  ),
-                })}
-              </p>
-            ) : null}
-            {/* Read off the dives, never `trip.diveSite` — that column is only
-                dive one's site copied onto the trip row, so it named one site
-                for a two-site day and named none at all when the tank without
-                a site was the first one. */}
-            {diveSites.sites.length > 0 || diveSites.undecidedDives > 0 ? (
-              <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
-                {diveSites.sites.length > 0 ? (
-                  <>
-                    {/* One key, pluralized by ICU — not two keys picked by a
-                        ternary. A `length === 1 ? a : b` in the component is
-                        English's plural rule hard-coded at the call site; every
-                        other count on this page goes through
-                        `{count, plural, …}` so a locale with a different rule
-                        (or a different word order) can express it in the
-                        bundle. */}
-                    <span>
-                      {t("trips.detail.diveSiteLabel", { count: diveSites.sites.length })}
-                    </span>
-                    {/* Each site keeps its own link into the library card, so a
-                        two-site day is two destinations — which rules out an
-                        `Intl.ListFormat` join. The separator is punctuation
-                        between links, not a word to translate. */}
-                    {diveSites.sites.map((site, index) => (
-                      <span key={site.id} className="flex items-center gap-x-2">
-                        {index > 0 ? <span aria-hidden="true">·</span> : null}
-                        <Link
-                          href={shopPath(shopSlug, "dive-sites", site.id)}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {site.name}
-                        </Link>
-                      </span>
-                    ))}
-                  </>
-                ) : null}
-                {diveSites.undecidedDives > 0 ? (
-                  <span className="flex items-center gap-x-2">
-                    {diveSites.sites.length > 0 ? <span aria-hidden="true">·</span> : null}
-                    {t("trips.detail.divesWithoutSite", { count: diveSites.undecidedDives })}
-                  </span>
-                ) : null}
-              </p>
-            ) : null}
-            {series ? (
-              <p className="text-sm text-muted">
-                {t("trips.detail.seriesPart", {
-                  summary: recurrenceSummaryText(
-                    t,
-                    locale,
-                    recurrenceSummary({
-                      intervalWeeks: series.intervalWeeks,
-                      weekdays: series.weekdayMask,
-                      endsOn: series.endsOn,
-                    }),
-                  ),
-                  count: series.scheduledCount,
-                })}
-              </p>
-            ) : null}
           </>
         }
       />
@@ -550,9 +551,53 @@ export default async function ManageTripPage({
           blocked={pulseBlocked}
           capacity={trip.capacity}
           caption={pulseCaption}
-          captionTone={isFull(trip) ? "success" : undefined}
+          // The success ink is this page's one earned moment (principle 3),
+          // and a full boat where half the roster still can't board hasn't
+          // earned it — green above a strip of danger cells reads as the page
+          // contradicting itself. The words say "Full boat" either way; the
+          // celebration waits until the boat is actually clear.
+          captionTone={
+            isFull(trip) && pulseBlocked === 0 && crewGap.code === "none" ? "success" : undefined
+          }
           facts={pulseFacts}
         />
+      ) : null}
+
+      {/* The pulse's slot, kept for a cancelled departure: the strip taught
+          the eye that "the state of this boat, and what to do about it" lives
+          here, so Reinstate must not sit below four cards of forms as the last
+          element on the page (design review, 2026-08-21). The masthead badge
+          already says Cancelled — this band carries only the outcome of the
+          last lifecycle action and the ways back: reinstate for those who can,
+          the blow-out record when one was called. When neither applies and
+          there is nothing to report, it renders nothing, and the badge alone
+          says everything a viewer without the rights can act on. */}
+      {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
+        <section className="mt-8 rounded-2xl border border-danger/40 bg-danger/10 p-5">
+          <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
+            {lifecycleStatus?.text}
+          </FormStatus>
+          <div className="flex flex-wrap items-center gap-3">
+            {canConfigure ? (
+              <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
+                <SubmitButton
+                  pendingLabel={t("trips.detail.reinstating")}
+                  className={buttonClass()}
+                >
+                  {t("trips.detail.reinstate")}
+                </SubmitButton>
+              </form>
+            ) : null}
+            {blowoutCalled ? (
+              <Link
+                href={shopPath(shopSlug, "schedule", "blowout", tripId)}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("trips.detail.viewBlowout")}
+              </Link>
+            ) : null}
+          </div>
+        </section>
       ) : null}
 
       {/* Under the pulse, and deliberately not one of its facts. The pulse
@@ -587,77 +632,83 @@ export default async function ManageTripPage({
           someone who cannot change it (ADR 20260724-role-gated-surfaces-hide-
           not-explain). */}
 
-      {canConfigure ? (
-        <DetailsSection
-          action={saveDetails.bind(null, shopSlug, tripId)}
-          status={noticeForForm(tripNotice, "details")}
-          trip={trip}
-          diveSiteList={diveSiteList}
-          tripDiveList={tripDiveList}
-          startWall={startWall}
-          endWall={endWall}
-          dayCount={Math.max(1, scheduleDays.length)}
-          locale={locale}
-          currency={toShopCurrency(shop.currency)}
-        />
-      ) : null}
+      {/* The page owns the rhythm between its section cards; no card carries a
+          margin of its own (see SectionCard). */}
+      <div className="mt-10 space-y-6">
+        {canConfigure ? (
+          <DetailsSection
+            action={saveDetails.bind(null, shopSlug, tripId)}
+            status={noticeForForm(tripNotice, "details")}
+            trip={trip}
+            diveSiteList={diveSiteList}
+            tripDiveList={tripDiveList}
+            startWall={startWall}
+            endWall={endWall}
+            dayCount={Math.max(1, scheduleDays.length)}
+            locale={locale}
+            currency={toShopCurrency(shop.currency)}
+            warnNoPrice={!cancelled}
+          />
+        ) : null}
 
-      {/* Ops before content: what the trip requires and who runs it are what a
+        {/* Ops before content: what the trip requires and who runs it are what a
           staffer opening an upcoming departure needs next, so they follow the
-          details directly — the crew's day-of prediction and the post-trip
-          recap material read after them. */}
-      {canConfigure ? (
-        <RequirementsSection
-          action={saveRequirementsAction.bind(null, shopSlug, tripId)}
-          status={noticeForForm(tripNotice, "requirements")}
-          trip={trip}
-          requirement={requirement}
-          siteRequirement={siteRequirement}
-          siteNames={diveSites.sites.map((site) => site.name)}
-          locale={locale}
-        />
-      ) : null}
+          details directly — the crew's day-of prediction reads after them. */}
+        {canConfigure ? (
+          <RequirementsSection
+            action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+            status={noticeForForm(tripNotice, "requirements")}
+            trip={trip}
+            requirement={requirement}
+            siteRequirement={siteRequirement}
+            siteNames={diveSites.sites.map((site) => site.name)}
+            locale={locale}
+          />
+        ) : null}
 
-      {/* Who's aboard is manifest accuracy (glossary) — open to all staff.
+        {/* Who's aboard is manifest accuracy (glossary) — open to all staff.
           Per-person assign/unassign (updateTripCrewAction), the same mutation
           Today's DepartureBoard uses — not a whole-set replace — so two staff
           editing crew at once can no longer clobber each other (Lens 17 task
           139). */}
-      <CrewSection
-        shopSlug={shopSlug}
-        tripId={tripId}
-        staff={staff}
-        crewIds={crewIds}
-        crewRoles={Object.fromEntries(tripRoleByPerson)}
-        onShiftIds={onShiftIds}
-        crewGapCode={crewGap.code}
-        updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
-        copy={{
-          heading: t("trips.crew.heading"),
-          courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
-          overRatioWarning,
-          underTargetNote,
-          noStaff: t("trips.crew.noCrew"),
-          notAssignedYet: t("trips.crew.notAssignedYet"),
-          assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
-          assignOption: t("shared.today.departureBoard.assignCrewOption"),
-          unassignAria: t.raw("shared.today.departureBoard.unassignAria"),
-          assignFailed: t("shared.today.departureBoard.assignFailed"),
-          roleAria: t.raw("trips.crew.roleAria"),
-          roleUnspecified: t("trips.crew.roleUnspecified"),
-          roleOptions: {
-            instructor: t("trips.crew.roleInstructor"),
-            divemaster: t("trips.crew.roleDivemaster"),
-            captain: t("trips.crew.roleCaptain"),
-            crew: t("trips.crew.roleCrew"),
-          },
-          onShift: t("trips.crew.onShift"),
-          notOnShift: t("trips.crew.notOnShift"),
-          manageShifts: t("trips.crew.manageShifts"),
-        }}
-      />
+        <CrewSection
+          shopSlug={shopSlug}
+          tripId={tripId}
+          staff={staff}
+          crewIds={crewIds}
+          crewRoles={Object.fromEntries(tripRoleByPerson)}
+          // A cancelled departure isn't sailing, so its crew panel drops the
+          // live-trip nudges — the ratio gates, the shop's target, and the
+          // shift-coverage badges are all about a boat that will leave.
+          onShiftIds={cancelled ? null : onShiftIds}
+          crewGapCode={cancelled ? "none" : crewGap.code}
+          updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
+          copy={{
+            heading: t("trips.crew.heading"),
+            courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
+            overRatioWarning,
+            underTargetNote: cancelled ? null : underTargetNote,
+            noStaff: t("trips.crew.noCrew"),
+            notAssignedYet: t("trips.crew.notAssignedYet"),
+            assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
+            assignOption: t("shared.today.departureBoard.assignCrewOption"),
+            unassignAria: t.raw("shared.today.departureBoard.unassignAria"),
+            assignFailed: t("shared.today.departureBoard.assignFailed"),
+            roleAria: t.raw("trips.crew.roleAria"),
+            roleUnspecified: t("trips.crew.roleUnspecified"),
+            roleOptions: {
+              instructor: t("trips.crew.roleInstructor"),
+              divemaster: t("trips.crew.roleDivemaster"),
+              captain: t("trips.crew.roleCaptain"),
+              crew: t("trips.crew.roleCrew"),
+            },
+            onShift: t("trips.crew.onShift"),
+            notOnShift: t("trips.crew.notOnShift"),
+            manageShifts: t("trips.crew.manageShifts"),
+          }}
+        />
 
-      {/* Conditions are crew-entered (glossary) — open to all staff. Its
+        {/* Conditions are crew-entered (glossary) — open to all staff. Its
           fields are uncontrolled (`defaultValue`, not `value`), so a save or
           clear that lands via a same-route re-render rather than a fresh
           mount leaves the old value on screen — the same
@@ -671,99 +722,84 @@ export default async function ManageTripPage({
           same test) forces the remount `defaultValue` needs on any actual
           change to what these inputs show, republish-with-different-values
           included — not just the set/cleared transition this bug was found on. */}
-      <ConditionsSection
-        key={[
-          trip.waterTemperatureC,
-          trip.visibilityMeters,
-          trip.surfaceConditions,
-          trip.conditionsSummary,
-        ].join("|")}
-        saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
-        clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
-        status={noticeForForm(tripNotice, "conditions")}
-        trip={trip}
-        locale={locale}
-        timezone={shop.timezone}
-        temperatureUnit={temperatureUnitFor(shop)}
-        depthUnit={shop.depthUnit}
-      />
-
-      {canConfigure && series ? (
-        <SeriesSection
-          intervalWeeks={series.intervalWeeks}
-          weekdays={series.weekdayMask}
-          endsOn={series.endsOn}
-          anchorDate={series.anchorDate}
-          futureScheduledCount={series.futureScheduledCount}
-          horizonDays={SERIES_HORIZON_DAYS}
-          offCadence={offCadence.map((date) => ({
-            id: date.id,
-            title: date.title,
-            // Formatted here, where the request locale and the shop's zone both
-            // are — the panel is handed words, never instants.
-            label: formatShortDate(date.startsAt, locale, shop.timezone),
-            booked: date.booked,
-          }))}
-          weekdayNames={weekdayNames(locale)}
-          status={noticeForForm(tripNotice, "series")}
-          applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
-          cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
-          repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
-          cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
-          cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
-            null,
-            shopSlug,
-            tripId,
-            series.id,
-          )}
+        <ConditionsSection
+          key={[
+            trip.waterTemperatureC,
+            trip.visibilityMeters,
+            trip.surfaceConditions,
+            trip.conditionsSummary,
+          ].join("|")}
+          saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
+          clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+          status={noticeForForm(tripNotice, "conditions")}
+          trip={trip}
           locale={locale}
+          timezone={shop.timezone}
+          temperatureUnit={temperatureUnitFor(shop)}
+          depthUnit={shop.depthUnit}
         />
-      ) : null}
 
-      <section className="mt-12 border-t border-border pt-6">
-        <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
-          {lifecycleStatus?.text}
-        </FormStatus>
-        {cancelled ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {canConfigure ? (
-              <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-                <SubmitButton
-                  pendingLabel={t("trips.detail.reinstating")}
-                  className={buttonClass()}
-                >
-                  {t("trips.detail.reinstate")}
-                </SubmitButton>
-              </form>
-            ) : (
-              <p className="text-sm text-muted">{t("trips.detail.cancelledNotice")}</p>
+        {canConfigure && series ? (
+          <SeriesSection
+            intervalWeeks={series.intervalWeeks}
+            weekdays={series.weekdayMask}
+            endsOn={series.endsOn}
+            anchorDate={series.anchorDate}
+            futureScheduledCount={series.futureScheduledCount}
+            horizonDays={SERIES_HORIZON_DAYS}
+            offCadence={offCadence.map((date) => ({
+              id: date.id,
+              title: date.title,
+              // Formatted here, where the request locale and the shop's zone both
+              // are — the panel is handed words, never instants.
+              label: formatShortDate(date.startsAt, locale, shop.timezone),
+              booked: date.booked,
+            }))}
+            weekdayNames={weekdayNames(locale)}
+            status={noticeForForm(tripNotice, "series")}
+            applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
+            cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
+            repeatAction={setSeriesRepeatAction.bind(null, shopSlug, tripId, series.id)}
+            cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
+            cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
+              null,
+              shopSlug,
+              tripId,
+              series.id,
             )}
-            {blowoutCalled ? (
+            locale={locale}
+          />
+        ) : null}
+      </div>
+
+      {/* The destructive tail, for a departure that is still on the board —
+          a cancelled one carries its way back in the band up in the pulse's
+          slot instead, and repeating it down here would be the same door
+          twice. A single trip's weather cancellation is the crew's go/no-go
+          call (glossary) — open to all staff. The blow-out link leads to its
+          own confirm page (ADR 20260804-blowout-cascade): cancel *and*
+          message every diver their qualifying alternatives. The quiet cancel
+          stays for the cases with nobody to message. Each action sits on its
+          own line with its consequence beside it — one gesture per row reads
+          calmer than four controls sharing one wrapped line. */}
+      {cancelled ? null : (
+        <section className="mt-12 border-t border-border pt-8">
+          <FormStatus tone={lifecycleStatus?.tone} className="mb-4">
+            {lifecycleStatus?.text}
+          </FormStatus>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <Link
                 href={shopPath(shopSlug, "schedule", "blowout", tripId)}
-                className={buttonClass({ variant: "secondary" })}
+                className={buttonClass({ variant: "danger" })}
               >
-                {t("trips.detail.viewBlowout")}
+                {t("trips.detail.weatherBlowout")}
               </Link>
-            ) : null}
-          </div>
-        ) : (
-          // A single trip's weather cancellation is the crew's go/no-go call
-          // (glossary) — open to all staff. The blow-out link leads to its own
-          // confirm page (ADR 20260804-blowout-cascade): cancel *and* message
-          // every diver their qualifying alternatives. The quiet cancel stays
-          // for the cases with nobody to message. Reinstating is config work.
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={shopPath(shopSlug, "schedule", "blowout", tripId)}
-              className={buttonClass({ variant: "danger" })}
-            >
-              {t("trips.detail.weatherBlowout")}
-            </Link>
-            <p className="text-sm text-muted">{t("trips.detail.weatherBlowoutHint")}</p>
+              <p className="text-sm text-muted">{t("trips.detail.weatherBlowoutHint")}</p>
+            </div>
             <form
               action={cancelTripAction.bind(null, shopSlug, tripId)}
-              className="flex items-center gap-3"
+              className="flex flex-wrap items-center gap-x-3 gap-y-1"
             >
               <SubmitButton
                 pendingLabel={t("trips.detail.cancelling")}
@@ -774,8 +810,8 @@ export default async function ManageTripPage({
               <p className="text-sm text-muted">{t("trips.detail.cancelHint")}</p>
             </form>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </>
   );
 }

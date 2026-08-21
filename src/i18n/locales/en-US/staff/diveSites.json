@@ -202,7 +202,6 @@
     "templateUpdates": {
       "title": "A newer DiveDay template is ready",
       "description": "This site is on template v{current}; the latest published version is v{latest}.",
-      "baselineUnavailableDescription": "This site's saved field baseline is unavailable. The safe update keeps your current wording and shows the new version for review.",
       "keepEditsDescription": "Pull the update while keeping fields you changed locally. Photos, routes, and the site name always stay yours.",
       "recommended": "Recommended",
       "keepEdits": "Apply changes, keep my edits",

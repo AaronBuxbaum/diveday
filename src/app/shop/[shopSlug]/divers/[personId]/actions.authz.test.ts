@@ -231,10 +231,39 @@ describe("erasing a diver's personal and medical data", () => {
     expect((await personRow(db, diver)).anonymizedAt).toBeNull();
   });
 
-  it("lets an owner erase, once they have typed the diver's name back", async () => {
+  /**
+   * The state gate, which is not an authorization gate and is deliberately
+   * tested beside them: erasure is offered on a **deleted** record only, so the
+   * owner who may do it is still refused while the diver is on the roster
+   * (ADR 20260802-diver-data-erasure, 2026-08-21 amendment). The record's page
+   * renders the control by the same rule, but a tab left open on a diver who was
+   * deleted and then restored would post this exactly — which is the whole
+   * reason the action does not take the page's word for it.
+   */
+  it("refuses an owner while the diver is still on the roster", async () => {
     const { db, shop, diver, owner } = await context();
     const before = await personRow(db, diver);
     signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("confirmName", before.fullName);
+
+    const to = await redirectedTo(() => erasePersonAction(shop.slug, diver, formData));
+
+    // No `&form=`: on a live record the erase section is not rendered, so the
+    // refusal reads in the page banner instead of a section that is not there.
+    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=erase-requires-delete`);
+    const after = await personRow(db, diver);
+    expect(after.fullName).toBe(before.fullName);
+    expect(after.anonymizedAt).toBeNull();
+  });
+
+  it("lets an owner erase a deleted diver, once they have typed the name back", async () => {
+    const { db, shop, diver, owner } = await context();
+    const before = await personRow(db, diver);
+    signIn(shop, owner);
+    // Through the real removal, not a hand-written `deleted_at`: the two acts
+    // are one sequence now, and this is the order a staffer runs them in.
+    await redirectedTo(() => deletePersonAction(shop.slug, diver, new FormData()));
     const formData = new FormData();
     formData.set("confirmName", before.fullName);
 
