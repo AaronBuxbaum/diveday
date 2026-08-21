@@ -62,7 +62,12 @@ export function SpecialtyCards({
           <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
             {t("divers.specialty.addSpecialty")}
           </summary>
-          <div className="absolute top-full right-0 z-30 mt-2 max-w-[calc(100vw-2rem)]">
+          {/* z-20, matching the certification panel above it and every other
+              in-page popover in the app. At z-30 this one tied with the staff
+              header (`ShopNav`, `sticky top-0 z-30`) and won on DOM order, so
+              the specialty form painted *over* the top bar while its identical
+              sibling slid correctly under it. */}
+          <div className="absolute top-full right-0 z-20 mt-2 max-w-[calc(100vw-2rem)]">
             {/* No `encType`: a function `action` is a server action, not a
                 native form post — React builds the `FormData` (files intact)
                 and ships it over its own transport, so the browser never reads
