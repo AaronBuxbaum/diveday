@@ -18,7 +18,7 @@ blocked divers once.
 ## Why it isn't already done
 
 The manifest is a safety-critical surface (hard rules: boring code, failure-path tests,
-`dive-domain-expert` review), and its per-row content is also what prints as the coastguard
+`dive-domain-expert` review), and its per-row content is also what prints as the coast guard
 document — a change to what each row carries needs the print layout thought through
 (`print:block` duplication of disclosure content) and its own review. Too much risk to ride along
 in a visual redesign PR.
