@@ -362,6 +362,7 @@ export default async function SchedulePage({
             <Link
               href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
               aria-label={t("schedule.previousMonth")}
+              scroll={false}
               className={buttonClass({
                 variant: "ghost",
                 size: "sm",
@@ -375,6 +376,7 @@ export default async function SchedulePage({
             <Link
               href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
               aria-label={t("schedule.nextMonth")}
+              scroll={false}
               className={buttonClass({
                 variant: "ghost",
                 size: "sm",
@@ -655,6 +657,7 @@ export default async function SchedulePage({
             return (
               <Link
                 href={`${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`}
+                scroll={false}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("schedule.showEarlier")}
@@ -671,6 +674,7 @@ export default async function SchedulePage({
                 withViewParams(params);
                 return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
               })()}
+              scroll={false}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("schedule.showLater")}
@@ -689,6 +693,7 @@ export default async function SchedulePage({
                 const query = params.toString();
                 return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
               })()}
+              scroll={false}
               className="text-sm font-medium text-primary hover:underline"
             >
               {t("schedule.backToNext")}

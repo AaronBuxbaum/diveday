@@ -29,9 +29,14 @@ function pageKey(pathname: string): number {
  * viewport back at the top. Remember the viewport for same-page form actions;
  * true navigations naturally ignore the record because their path changes.
  *
- * The boundary is here rather than at the two call sites (the staff and public
- * shop shells) because it is a property of this component, not of where it is
- * mounted: `usePathname()`/`useSearchParams()` read URL data, which under Cache
+ * Mounted once, in the root layout, so every route gets this for free — it
+ * used to be mounted separately in each of the staff shop shell, the public
+ * shop shell, and the trip-prep "ready" route, which meant a new bearer-token
+ * or account-lifecycle route (password reset, a recap form, an invite accept)
+ * silently had no scroll preservation until someone remembered to add it here
+ * too. The boundary is owned by this component rather than by whatever mounts
+ * it because it is a property of this component, not of where it is mounted:
+ * `usePathname()`/`useSearchParams()` read URL data, which under Cache
  * Components is only available at runtime, so an unwrapped call takes the whole
  * route's static shell with it (`blocking-prerender-client-hook`). Owning the
  * boundary means a shell can render this without knowing that. The fallback is

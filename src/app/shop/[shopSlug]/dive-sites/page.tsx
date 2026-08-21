@@ -145,6 +145,7 @@ export default async function DiveSitesPage({
               </Link>
               <Link
                 href={catalogHref}
+                scroll={false}
                 className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
               >
                 {t("diveSites.list.browseTemplates")}
@@ -205,6 +206,7 @@ export default async function DiveSitesPage({
               {query ? (
                 <Link
                   href={`/shop/${shopSlug}/dive-sites`}
+                  scroll={false}
                   className={buttonClass({
                     variant: "secondary",
                     size: "sm",
@@ -243,6 +245,7 @@ export default async function DiveSitesPage({
               </Link>
               <Link
                 href={catalogHref}
+                scroll={false}
                 className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
               >
                 {t("diveSites.list.browseTemplates")}
@@ -363,7 +366,11 @@ async function CatalogView({
   if (!locationIsProvided) {
     return (
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <Link href={back} className="text-sm font-medium text-primary hover:underline">
+        <Link
+          href={back}
+          scroll={false}
+          className="text-sm font-medium text-primary hover:underline"
+        >
           {t("diveSites.backToLibrary")}
         </Link>
         <div className="mt-8 flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center bg-card">
@@ -427,7 +434,7 @@ async function CatalogView({
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <Link href={back} className="text-sm font-medium text-primary hover:underline">
+      <Link href={back} scroll={false} className="text-sm font-medium text-primary hover:underline">
         {t("diveSites.backToLibrary")}
       </Link>
       <div className="mt-4">
@@ -460,6 +467,7 @@ async function CatalogView({
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
                 href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
+                scroll={false}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("diveSites.catalog.preview")}
@@ -545,7 +553,11 @@ function TemplatePreview({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <Link href={backHref} className="text-sm font-medium text-primary hover:underline">
+      <Link
+        href={backHref}
+        scroll={false}
+        className="text-sm font-medium text-primary hover:underline"
+      >
         {t("diveSites.catalog.backToCatalog")}
       </Link>
       <div className="mt-4">

@@ -607,6 +607,7 @@ export default async function ScheduleBoardPage({
               <Link
                 href={`/shop/${shopSlug}/schedule/board?add=1`}
                 data-board-add
+                scroll={false}
                 className={buttonClass({ variant: "secondary" })}
               >
                 <span aria-hidden="true">+</span> {st("schedule.builder.addDeparture")}
@@ -647,6 +648,7 @@ export default async function ScheduleBoardPage({
               page for the same form. */}
           <Link
             href={`/shop/${shopSlug}/schedule/board?add=1`}
+            scroll={false}
             className={buttonClass({ className: "mt-4" })}
           >
             {st("schedule.scheduleTrip")}
@@ -692,6 +694,7 @@ export default async function ScheduleBoardPage({
             return (
               <Link
                 href={`/shop/${shopSlug}/schedule/board${query ? `?${query}` : ""}`}
+                scroll={false}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("schedule.showEarlier")}
@@ -707,6 +710,7 @@ export default async function ScheduleBoardPage({
                 if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
                 return `/shop/${shopSlug}/schedule/board?${params.toString()}`;
               })()}
+              scroll={false}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("schedule.showLater")}
@@ -715,6 +719,7 @@ export default async function ScheduleBoardPage({
           {after ? (
             <Link
               href={`/shop/${shopSlug}/schedule/board`}
+              scroll={false}
               className="text-sm font-medium text-primary hover:underline"
             >
               {t("schedule.backToNext")}
