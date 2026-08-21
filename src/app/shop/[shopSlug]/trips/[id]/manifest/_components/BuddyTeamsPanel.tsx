@@ -98,7 +98,11 @@ export function BuddyTeamsPanel({
             </span>
           </span>
         </summary>
-        <p className="mt-1 max-w-prose text-sm text-muted">{t("manifest.buddyDescription")}</p>
+        {/* No caption under the heading. "Group people the way they'll dive"
+            was the heading again in a second voice; what a reader actually
+            needs to know to build one — that crew count and that a divemaster
+            can lead several — is on the builder's own hint below, where the
+            tick boxes are. */}
         <FormStatus className="mt-2">{panelError}</FormStatus>
         {/* No empty state when there are no teams. The one this used to render
             — a 200px dashed card reading "No buddy teams yet. Tick two or more

@@ -9,7 +9,7 @@ import { sectionCardClass } from "@/components/ui/card";
 export default function WaiverSignaturesLoading() {
   return (
     <div className="animate-pulse">
-      <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-full max-w-xl" />
+      <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
       <div
         className={sectionCardClass({
           padding: "none",
