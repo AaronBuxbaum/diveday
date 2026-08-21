@@ -354,7 +354,20 @@ async function TripGuestsBody({
         locale={locale}
         timeZone={shop.timezone}
         badge={
-          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.guests.cancelledBadge")} t={t} />
+          // The roster heading below owns the seat numbers on this tab —
+          // "8 of 10 divers booked" — so a "2 spots left" pill above it would
+          // state the same fact twice (principle 9), the same reasoning that
+          // stands the badge down on Overview while the pulse beats. Two
+          // states still earn the pill: Cancelled, and the success-toned
+          // "Full" — a sold-out boat is a win worth noticing (principle 3),
+          // and "10 of 10 divers booked" in muted ink is not the noticing.
+          cancelled || isFull(trip) ? (
+            <TripCapacityBadge
+              trip={trip}
+              cancelledLabel={t("trips.guests.cancelledBadge")}
+              t={t}
+            />
+          ) : undefined
         }
         extraMeta={
           trip.course ? (

@@ -19,9 +19,22 @@ export default function ManifestLoading() {
       />
       <div className="mt-6 h-12 w-full rounded-xl bg-surface-sunken" />
       <div className={sectionCardClass({ padding: "md", className: "mt-6 h-36" })} />
-      <ul className="mt-6 flex flex-col gap-3">
+      {/* The roll call is one ruled list card, so its skeleton is the same
+          single card — not a stack of floating bars that redraws into a
+          different shape when the list streams in. */}
+      <ul
+        className={sectionCardClass({
+          padding: "none",
+          className: "mt-6 divide-y divide-border overflow-hidden",
+        })}
+      >
         {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-          <li key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
+          <li
+            key={i}
+            className="flex h-20 items-center border-l-4 border-border-strong bg-surface-sunken/60 px-4 sm:px-5"
+          >
+            <div className="h-4 w-40 max-w-full rounded bg-surface-sunken" />
+          </li>
         ))}
       </ul>
       <div className={sectionCardClass({ padding: "md", className: "mt-8 h-28" })} />

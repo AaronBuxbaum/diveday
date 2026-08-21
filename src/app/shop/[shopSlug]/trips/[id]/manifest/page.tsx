@@ -276,11 +276,12 @@ export default async function TripManifestPage({
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
-        // One line about what this page *is*. What to do at each checkpoint is
-        // said by the checkpoint nav and the "Active checkpoint" panel below,
-        // both of which name the current one; saying it a third time up here
-        // was the page explaining itself before it showed itself.
-        description={t("manifest.description")}
+        // No description line. "Divers and crew, with emergency contacts, at
+        // every checkpoint" was a caption describing the page under a tab
+        // that already names it — the checkpoint nav and the panel below say
+        // what to do, and the per-row "Contact & gear" summaries carry the
+        // emergency-contact discoverability it was keeping alive (the
+        // copy-restraint question, applied 2026-08-21).
         // Printing is an Overall-tab action. The manifest is the live dock
         // surface; keeping a second current-page printer here made it unclear
         // whether staff were getting the full packet or only this tab.

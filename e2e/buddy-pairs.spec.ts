@@ -70,23 +70,30 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const boardOmar = omarRow.getByRole("button", { name: "Mark boarded" });
   await boardOmar.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardOmar.click();
-  await expect(omarRow.getByRole("button", { name: "Boarded ☑️" })).toBeVisible();
+  // The settled control's accessible name is its undo-bearing aria-label
+  // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
+  await expect(omarRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
   await expect(
     omarRow.getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
   ).toBeVisible();
   await expect(
     page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
   ).toBeVisible();
-  // The alert informs; it never blocks. The completeness line still names
+  // The alert informs; it never blocks. The pinned count row still names
   // what actually keeps the checkpoint open — awaiting divers — beside it.
-  await expect(page.getByText(/divers? still to call\./)).toBeVisible();
+  await expect(
+    page
+      .locator('section[aria-labelledby="roll-call-progress-heading"]')
+      .locator("dl > div")
+      .filter({ hasText: "Awaiting" }),
+  ).toBeVisible();
 
   // Sam comes back aboard, and the team settles without anyone dismissing
   // anything.
   const boardSam = samRow.getByRole("button", { name: "Mark boarded" });
   await boardSam.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardSam.click();
-  await expect(samRow.getByRole("button", { name: "Boarded ☑️" })).toBeVisible();
+  await expect(samRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
   await expect(omarRow.getByText("Buddy team: Sam Whitfield", { exact: true })).toBeVisible();
   await expect(omarRow.getByText("Someone unaccounted for")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);

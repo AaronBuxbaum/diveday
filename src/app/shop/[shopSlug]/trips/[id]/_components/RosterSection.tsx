@@ -35,6 +35,7 @@ import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -260,6 +261,11 @@ export function RosterSection({
         : roster;
   const filterChipHref = (filter: RosterFilter) =>
     `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
+  // Which chips have anything behind them — see the note on the FilterChips
+  // render below.
+  const chipFilters = (["all", "needs_waiver", "blocked"] as const).filter(
+    (filter) => filter === "all" || filter === rosterFilter || filterCounts[filter] > 0,
+  );
   // A blocker or depth advisory whose sentence renders identically for much
   // of the boat is one fact about the trip, not N facts about N divers
   // (principle 9): on a requirement-heavy departure the same three sentences
@@ -333,14 +339,20 @@ export function RosterSection({
             waiver" chip beside it is how staff narrow the roster to exactly
             the rows that want one. */}
       </div>
-      {roster.length > 0 ? (
+      {roster.length > 0 && chipFilters.length > 1 ? (
         // The one vocabulary for narrowing a staff list — the pill styling
         // (including the min-h-11 dock-test floor these chips are tapped
-        // against one-handed on a moving boat) lives in FilterChips.
+        // against one-handed on a moving boat) lives in FilterChips. A chip
+        // counting zero people is "None" formatted as a filter (principle 9),
+        // so only the exception filters with someone behind them render — and
+        // when none has anyone, the whole row stands down: a boat with
+        // nothing to narrow by needs no narrowing controls. The active filter
+        // always keeps its chip, so a deep link onto an emptied filter still
+        // shows the way back out.
         <FilterChips
           label={t("trips.roster.filterAriaLabel")}
           className="mt-4"
-          chips={(["all", "needs_waiver", "blocked"] as const).map((filter) => ({
+          chips={chipFilters.map((filter) => ({
             key: filter,
             href: filterChipHref(filter),
             active: rosterFilter === filter,
@@ -400,7 +412,19 @@ export function RosterSection({
           </Link>
         </EmptyState>
       ) : (
-        <ul className="mt-5 grid gap-4">
+        // One ledger, not a stack of cards: the roster is a single list card
+        // with hairline-ruled rows — the same object grammar as the manifest's
+        // roll call and the check-in queue, so the four trip tabs read as
+        // views of one thing. A settled seat is one quiet line; only open work
+        // grows a row (principle 11 — the composition follows the content's
+        // own shape, and eight bordered cards of whitespace were the default
+        // stack pretending to be a design).
+        <ul
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-5 divide-y divide-border overflow-hidden",
+          })}
+        >
           {/* Inside the list, so mounting proves the row it scrolls to exists.
               Every door into this roster is a deep link at one diver — Today's
               queue, and the manifest's "Resolve blockers" — and a `<Link>`
@@ -479,47 +503,54 @@ export function RosterSection({
               hasEmergencyContact &&
               !booking.groupPreference &&
               (depthText === null || depthShared) &&
+              // Currency informs, never gates (ADR 20260821-currency-is-what-
+              // catches-people) — but a warning that collapses with the row is
+              // a warning nobody reads, and the diver it exists for (verified
+              // card, signed waiver, paid, years dry) is exactly the diver who
+              // satisfies every other condition here. The row stays open, like
+              // a missing emergency contact's does (dive-domain review
+              // 2026-08-21).
+              !diveRecencyIsNotable(booking.lastDivedBand) &&
               paymentSettled;
             const holdOpen = keepOpenBookingId === booking.id;
             const headerLeft = (
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="min-w-0">
-                  {/* A real target, not a 21px text line: inside the collapsed
-                      row's <summary> this link sits against another clickable
-                      surface, so it needs its own clear hit area (WCAG 2.5.8's
-                      24px floor; the dock test asks for 44). */}
-                  <Link
-                    href={`/shop/${shopSlug}/divers/${person.id}`}
-                    className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
-                  >
-                    {person.fullName}
-                  </Link>
-                  <p className="text-sm text-muted">
-                    {person.email ?? t("trips.roster.noEmailOnFile")}
-                  </p>
-                  {age !== null ? (
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-                      <span className="tabular-nums">{t("trips.roster.ageYears", { age })}</span>
-                      {/* Text, never colour alone — this is read in sunlight
-                              on a moving boat (design/principles.md #2). */}
-                      {minor ? (
-                        <Badge tone="warning" size="sm">
-                          {t("trips.roster.minorBadge")}
-                        </Badge>
-                      ) : null}
-                      {/* The cake carries the meaning; the words are just
-                              when. `sr-only` keeps that legible to a screen
-                              reader, which would otherwise hear "in 2 days" alone. */}
-                      {birthday ? (
-                        <Badge tone="primary" size="sm">
-                          <span aria-hidden="true">🎂</span>
-                          <span className="sr-only">{t("shared.birthday.label")}</span>
-                          <span className="ms-1">{birthdayText(t, birthday)}</span>
-                        </Badge>
-                      ) : null}
-                    </p>
-                  ) : null}
-                </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                {/* A real target, not a 21px text line: this link shares its
+                    row with the details caret, so it needs its own clear hit
+                    area (WCAG 2.5.8's 24px floor; the dock test asks for 44).
+                    The email and an adult's age no longer ride beside it —
+                    identity here is the name, and both facts wait in the
+                    reference panel, which is what lets a settled seat truly
+                    be one line. */}
+                <Link
+                  href={`/shop/${shopSlug}/divers/${person.id}`}
+                  className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+                >
+                  {person.fullName}
+                </Link>
+                {/* Text, never colour alone — this is read in sunlight on a
+                    moving boat (design/principles.md #2). A minor is the
+                    exception the crew is being told about, and how old the
+                    minor is changes what the crew does about it — so the
+                    badge is the manifest's own "Minor · age N" pill, the same
+                    fact in the same words on both surfaces (H-21). An adult's
+                    age is a fact, not a flag, and lives in the reference
+                    panel — the same call the manifest already made. */}
+                {minor && age !== null ? (
+                  <Badge tone="warning" size="sm" tabularNums>
+                    {t("manifest.minorAge", { age })}
+                  </Badge>
+                ) : null}
+                {/* The cake carries the meaning; the words are just when.
+                    `sr-only` keeps that legible to a screen reader, which
+                    would otherwise hear "in 2 days" alone. */}
+                {birthday ? (
+                  <Badge tone="primary" size="sm">
+                    <span aria-hidden="true">🎂</span>
+                    <span className="sr-only">{t("shared.birthday.label")}</span>
+                    <span className="ms-1">{birthdayText(t, birthday)}</span>
+                  </Badge>
+                ) : null}
               </div>
             );
             // Arrived at the counter — display only, the same pill the
@@ -531,6 +562,15 @@ export function RosterSection({
               ) : null;
             const headerBadges = (
               <>
+                {/* A note nobody knows exists was never written: the settled
+                    one-line row still says there are notes to read
+                    (dive-domain review, 2026-08-21). An unsettled row's open
+                    half already shows the notes disclosure itself. */}
+                {settled && !holdOpen && notes.length > 0 ? (
+                  <span className="text-sm text-muted">
+                    {t("trips.roster.privateStaffNotes", { count: notes.length })}
+                  </span>
+                ) : null}
                 {checkedInPill}
                 {/* One readiness vocabulary, one tone per state
                         (src/i18n/readiness-labels.ts): this badge said "Needs
@@ -680,24 +720,49 @@ export function RosterSection({
                 ) : null}
 
                 {blockerTexts.length > 0 ? (
-                  <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
-                    {uniqueBlockers.map(({ text }) => (
-                      <li key={text} className="flex gap-2">
-                        <span aria-hidden="true">!</span>
-                        <span>{text}</span>
-                      </li>
-                    ))}
-                    {/* The card must never read as "fix the one thing listed
+                  <>
+                    <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
+                      {uniqueBlockers.map(({ text }) => (
+                        <li key={text} className="flex gap-2">
+                          <span aria-hidden="true">!</span>
+                          <span>{text}</span>
+                        </li>
+                      ))}
+                      {/* The card must never read as "fix the one thing listed
                         and they're clear" when the strip above holds more of
                         this diver's blockers — the count keeps the card
                         honest, and the reference panel has their full list. */}
-                    {sharedBlockerCount > 0 ? (
-                      <li className="flex gap-2">
-                        <span aria-hidden="true">!</span>
-                        <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
-                      </li>
+                      {sharedBlockerCount > 0 ? (
+                        <li className="flex gap-2">
+                          <span aria-hidden="true">!</span>
+                          <span>
+                            {t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}
+                          </span>
+                        </li>
+                      ) : null}
+                    </ul>
+                    {/* Every named problem carries its handle. The waiver,
+                        payment, and identity blockers already do — their
+                        controls are on this card — but a certification-family
+                        blocker's fix lives on the diver's record, and the row
+                        used to state it and stop: the one dead end on the
+                        surface whose whole job is clearing people (design
+                        review 2026-08-21). One door however many of this
+                        diver's blockers are certification-shaped, shared ones
+                        included; the boat-wide strip above deliberately gets
+                        none, since a sentence about much of the roster names
+                        no single record to open. */}
+                    {blockerTexts.some(
+                      ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
+                    ) ? (
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${person.id}#cards`}
+                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                      >
+                        {t("trips.roster.reviewCertificationsLink")}
+                      </Link>
                     ) : null}
-                  </ul>
+                  </>
                 ) : null}
 
                 {/* Warning tone, not danger, and deliberately outside the
@@ -951,6 +1016,19 @@ export function RosterSection({
              */
             const reference = (
               <>
+                {/* The seat's own identity facts, moved down from the header:
+                    the roster is scanned by name and state, and the email —
+                    with an adult's age beside it — is reference the moment
+                    it is needed, not a second line on every row. */}
+                <p className="mt-3 text-sm text-muted">
+                  <span>{person.email ?? t("trips.roster.noEmailOnFile")}</span>
+                  {age !== null ? (
+                    <span className="tabular-nums">
+                      {" · "}
+                      {t("trips.roster.ageYears", { age })}
+                    </span>
+                  ) : null}
+                </p>
                 <div className="mt-3 grid gap-5 sm:grid-cols-2">
                   {/* The signed waiver's own evidence — when, and by which
                       route — and nothing else. Every state that is *not*
@@ -1094,60 +1172,60 @@ export function RosterSection({
                 </div>
               </>
             );
+            // The row's one disclosure control: a 44px caret pinned to the
+            // header line's right edge, in the same spot on every row. Ten
+            // rows used to each grow a right-aligned "Details" text line of
+            // their own — a control rendered as content, once per diver
+            // (principle 9). The summary holds only the glyph, so the
+            // diver-name link beside it is never an interactive element
+            // nested in another (axe nested-interactive); the accessible name
+            // says whose details these are.
+            const caretSummary = (
+              <summary
+                aria-label={t("trips.roster.detailsSummaryLabel", {
+                  name: person.fullName,
+                })}
+                className="absolute top-2.5 right-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground sm:right-3"
+              >
+                <DisclosureCaret
+                  direction="down"
+                  className="size-4 transition-transform group-open:rotate-180"
+                />
+              </summary>
+            );
             return (
               <li
                 key={booking.id}
                 // Today's queue deep-links straight to the diver it is about;
                 // scroll-mt keeps the row clear of the sticky shop header.
+                // `relative` anchors the caret summary to this row's header
+                // line. The list card owns the border now — a row is a ruled
+                // line in the ledger, not a floating card of its own.
                 id={`booking-${booking.id}`}
-                // A roster row is a card someone works inside — waivers, notes,
-                // an emergency contact, a removal all happen in it — so
-                // `padding="lg"`. The `grid gap-4` above is a list of like
-                // cards, which keeps its own tighter gap rather than the
-                // page's section rhythm.
-                className={sectionCardClass({ padding: "lg", className: "scroll-mt-24" })}
+                className="relative scroll-mt-24 px-4 py-2.5 sm:px-5"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pr-11">
                   {headerLeft}
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     {headerBadges}
                   </div>
                 </div>
-                {/* A settled seat collapses to its header (principle 9): the
-                    "🌊 Ready" mark is the whole story, and everything the card
-                    can still tell or do — payment corrections, notes, the
-                    reference facts — waits behind its one Details disclosure.
-                    A card with anything outstanding keeps its work in the
-                    open, exactly as before. The toggle is its own <summary>
-                    below the header rather than wrapping it: a summary is
-                    itself interactive, so the diver-name link inside it would
-                    be an interactive element nested in another (axe
-                    nested-interactive). Deep links (Today, the manifest's
-                    "Resolve blockers") land mid-page at one diver;
-                    AutoOpenDetails opens on the hash, so neither collapse can
-                    ever swallow what a link promised. */}
+                {/* A settled seat collapses to its header line (principle 9):
+                    the "🌊 Ready" mark is the whole story, and everything the
+                    row can still tell or do — payment corrections, notes, the
+                    reference facts — waits behind the caret. A row with
+                    anything outstanding keeps its work in the open, exactly
+                    as before. Deep links (Today, the manifest's "Resolve
+                    blockers") land mid-page at one diver; AutoOpenDetails
+                    opens on the hash, so neither collapse can ever swallow
+                    what a link promised. */}
                 {settled && !holdOpen ? (
-                  <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group mt-1">
-                    <summary
-                      aria-label={t("trips.roster.detailsSummaryLabel", {
-                        name: person.fullName,
-                      })}
-                      className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
-                    >
-                      {/* A note nobody knows exists was never written: the
-                          collapsed header still says there are notes to read
-                          (dive-domain review, 2026-08-21). */}
-                      {notes.length > 0 ? (
-                        <span className="mr-1">
-                          {t("trips.roster.privateStaffNotes", { count: notes.length })}
-                          <span aria-hidden="true"> ·</span>
-                        </span>
-                      ) : null}
-                      {t("trips.roster.detailsSummary")}
-                      <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-                    </summary>
-                    {outstanding}
-                    {reference}
+                  <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group">
+                    {caretSummary}
+                    <div className="pb-1.5">
+                      {outstanding}
+                      {reference}
+                    </div>
                   </AutoOpenDetails>
                 ) : (
                   <>
@@ -1155,24 +1233,10 @@ export function RosterSection({
                     <AutoOpenDetails
                       openOnHash={`booking-${booking.id}`}
                       open={holdOpen}
-                      className="group mt-3 border-t border-border pt-1"
+                      className="group"
                     >
-                      <summary
-                        // Ten of these in a list all read "Details" alone; the
-                        // accessible name says whose (same pattern as the
-                        // roster's other per-row controls).
-                        aria-label={t("trips.roster.detailsSummaryLabel", {
-                          name: person.fullName,
-                        })}
-                        className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
-                      >
-                        {t("trips.roster.detailsSummary")}
-                        <DisclosureCaret
-                          direction="down"
-                          className="size-4 group-open:rotate-180"
-                        />
-                      </summary>
-                      {reference}
+                      {caretSummary}
+                      <div className="pb-1.5">{reference}</div>
                     </AutoOpenDetails>
                   </>
                 )}

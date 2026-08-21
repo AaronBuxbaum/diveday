@@ -1273,12 +1273,24 @@ export function OfflineManifestView() {
                               );
                             }}
                             aria-busy={busyBooking === crewPersonId}
+                            // Same undo-bearing accessible name as the live
+                            // page's settled control (RollCallControls, PR
+                            // #607 review) — the two surfaces a captain
+                            // alternates between must not diverge on this
+                            // either. Unset while armed or unrecorded, where
+                            // the visible label already reads as an action.
+                            aria-label={
+                              member.state?.state === "boarded" &&
+                              !(missingCrew && confirmAboardFor === crewPersonId)
+                                ? t("manifest.crewAboardCheckAriaLabel")
+                                : undefined
+                            }
                             className={`${OFFLINE_BOAT_TARGET_CLASS} ${
                               missingCrew && confirmAboardFor === crewPersonId
                                 ? "border border-border-strong bg-surface-sunken"
                                 : member.state?.state === "boarded"
                                   ? "border border-success bg-success/15 text-success"
-                                  : "bg-primary text-primary-foreground"
+                                  : "border border-primary bg-surface text-primary"
                             }`}
                           >
                             {busyBooking === crewPersonId
@@ -1315,6 +1327,16 @@ export function OfflineManifestView() {
                               )
                             }
                             aria-busy={busyBooking === crewPersonId}
+                            // Only the departure ☑️ state gets the undo-bearing
+                            // name, same rule as the live page: after a dive
+                            // "not back aboard" already carries its own visible
+                            // undo sentence, which duplicating here would say
+                            // twice.
+                            aria-label={
+                              crewRecordedNotBoarded && isDeparture
+                                ? t("manifest.crewNotAboardCheckAriaLabel")
+                                : undefined
+                            }
                             className={
                               missingCrew
                                 ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
@@ -1622,16 +1644,26 @@ export function OfflineManifestView() {
                               );
                             }}
                             aria-busy={busyBooking === diver.bookingId}
-                            // Settles into the live page's success outline once
-                            // recorded, rather than staying a solid primary fill
-                            // that reads as "still to do" beside a label saying
-                            // it is done (RollCallControls, same two states).
+                            // The live page's exact two faces (RollCallControls):
+                            // primary-bordered while unrecorded, success outline
+                            // once boarded. A captain alternates between these
+                            // two surfaces mid-morning, and the same control
+                            // must not change costume between them — including
+                            // the settled control's undo-bearing accessible
+                            // name (PR #607 review), reusing the live page's
+                            // own key since the visible text is identical.
+                            aria-label={
+                              state?.state === "boarded" &&
+                              !(missing && confirmAboardFor === diver.bookingId)
+                                ? t("manifest.boardedCheckAriaLabel")
+                                : undefined
+                            }
                             className={`${OFFLINE_BOAT_TARGET_CLASS} ${
                               missing && confirmAboardFor === diver.bookingId
                                 ? "border border-border-strong bg-surface-sunken"
                                 : state?.state === "boarded"
                                   ? "border border-success bg-success/15 text-success"
-                                  : "bg-primary text-primary-foreground"
+                                  : "border border-primary bg-surface text-primary"
                             }`}
                           >
                             {busyBooking === diver.bookingId
@@ -1687,6 +1719,16 @@ export function OfflineManifestView() {
                           // keeps danger ink — it is the control that reports a
                           // person missing, and it must be findable at the rail
                           // without reading every word.
+                          //
+                          // Only the departure ☑️ state gets the undo-bearing
+                          // accessible name — after a dive, "not back aboard"
+                          // already carries its own visible undo sentence
+                          // below, and duplicating it here would say it twice.
+                          aria-label={
+                            recordedNotBoarded && isDeparture
+                              ? t("manifest.notBoardedCheckAriaLabel")
+                              : undefined
+                          }
                           className={
                             missing
                               ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`

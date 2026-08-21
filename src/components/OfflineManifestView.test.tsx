@@ -1251,7 +1251,11 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
       render(<OfflineManifestView />);
       await screen.findByRole("heading", { name: "Two-Tank Reef" });
-      fireEvent.click(screen.getByRole("button", { name: "Boarded ☑️" }));
+      // The settled control's accessible name is now the undo-bearing
+      // aria-label ("Boarded — tap again to undo", PR #607 review) rather
+      // than its visible "Boarded ☑️" text — an aria-label replaces the
+      // computed name outright, it does not append to it.
+      fireEvent.click(screen.getByRole("button", { name: "Boarded — tap again to undo" }));
       await waitFor(() =>
         expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
           bookingId: "diver-priya",
@@ -1761,8 +1765,13 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
 
     const priya = within(document.getElementById("offline-roll-call-diver-priya") as HTMLElement);
     expect(priya.getByText("Not boarded")).toBeInTheDocument();
-    // Left ashore is a diver accounted for, so this one *is* a settled result.
-    expect(priya.getByRole("button", { name: "Not boarded ☑️" })).toBeInTheDocument();
+    // Left ashore is a diver accounted for, so this one *is* a settled
+    // result — carrying the undo-bearing aria-label, same reasoning as the
+    // boarded control above (an aria-label replaces the accessible name,
+    // it does not append to the visible "Not boarded ☑️" text).
+    expect(
+      priya.getByRole("button", { name: "Not boarded — tap again to undo" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Not back aboard")).not.toBeInTheDocument();
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
   });
