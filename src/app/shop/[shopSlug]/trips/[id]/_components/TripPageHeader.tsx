@@ -97,7 +97,7 @@ export function TripPageHeader({
           {extraMeta ? <div className="flex flex-col gap-1.5">{extraMeta}</div> : null}
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-2 sm:shrink-0">{actions}</div>
+          <div className="flex flex-wrap items-start gap-x-1 gap-y-2 sm:shrink-0">{actions}</div>
         ) : null}
       </div>
     </header>
