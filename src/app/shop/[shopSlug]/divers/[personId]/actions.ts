@@ -1022,11 +1022,12 @@ export async function restorePersonAction(shopSlug: string, personId: string, _f
  * Erase a diver's personal and medical data (ADR 20260802-diver-data-erasure).
  *
  * Unlike removal, this cannot be undone and there is no notice offering to undo
- * it. Three things stand between a mis-click and an irreversible write: the gate
+ * it. Four things stand between a mis-click and an irreversible write: the gate
  * is owner-only and re-read from the database, `anonymizeDiver` re-checks it
- * again for itself, and the staffer must type the diver's name to confirm —
- * the confirmation is verified here against the stored record, not trusted from
- * a hidden field the form could have carried unchanged.
+ * again for itself, the diver must already be **deleted**, and the staffer must
+ * type the diver's name to confirm — the confirmation is verified here against
+ * the stored record, not trusted from a hidden field the form could have
+ * carried unchanged.
  */
 export async function erasePersonAction(shopSlug: string, personId: string, formData: FormData) {
   const context = await requireDiverActionContext(
@@ -1045,6 +1046,25 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
   // erasure request tends to name, and without this the name check reads null
   // and reports a mismatch against a record that is right there on screen.
   const profile = await getDiverProfile(db, staff.user.shopId, personId, { includeRemoved: true });
+  // **An erasure runs on a deleted record only**, which is the same rule the
+  // page renders by. Deleting first is reversible, it is the state an erasure
+  // request describes anyway, and it makes the one-way write a second decision
+  // rather than a scroll to the bottom of a record somebody opened for another
+  // reason. Enforced here and not only in the page, because a tab left open on
+  // a record that was deleted and then restored would otherwise post an erase
+  // at a diver who is back on the roster.
+  //
+  // The refusal carries no `?form=`: on a live record the erase section is not
+  // rendered at all, so an outcome filed under `erase` would land in a section
+  // that does not exist. It reads in the page banner, above the Delete control
+  // it is asking the staffer to use.
+  //
+  // A record that reads back as nothing at all falls through to the name check
+  // below, which is the honest answer for it: there is no name to match.
+  if (profile && !profile.person.deletedAt) {
+    revalidateAndRedirect(base, backTo(base, "erase-requires-delete"));
+    return;
+  }
   const typed = String(formData.get("confirmName") ?? "").trim();
   if (!profile || typed.toLowerCase() !== profile.person.fullName.trim().toLowerCase()) {
     revalidateAndRedirect(base, backTo(base, "erase-name-mismatch", "erase"));

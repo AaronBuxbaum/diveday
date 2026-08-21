@@ -80,7 +80,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
 
   // The destructive tail is deliberately not a sub-nav target: deleting a
   // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(7);
+  await expect(subNav.getByRole("link")).toHaveCount(8);
   await expect(subNav.getByRole("link", { name: /Erase|Delete/ })).toHaveCount(0);
 });
 
@@ -340,6 +340,9 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   await expect(page).toHaveURL(/filter=removed/);
   const row = page.getByRole("row").filter({ hasText: diverName });
   await expect(row).toBeVisible();
+  // And the row carries nothing to press. Every action on a diver lives on the
+  // diver's own record; a list a staffer scans holds no consequential writes.
+  await expect(row.getByRole("button")).toHaveCount(0);
 
   // Their record still opens — the restore has to have somewhere to live.
   await page.goto(recordUrl);
@@ -352,6 +355,77 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   await page.goto(`/shop/${SHOP}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
   await expect(page.getByRole("row").filter({ hasText: diverName })).toBeVisible();
+});
+
+/**
+ * **Erasure is offered on a deleted record and nowhere else.**
+ *
+ * It is the one control in the product with no undo, and it used to sit at the
+ * foot of every diver's record — including the record a staffer opens to take a
+ * payment. Deleting first is reversible, it is the state an erasure request
+ * describes anyway, and it makes the one-way write a second decision rather
+ * than a scroll (ADR 20260802-diver-data-erasure, 2026-08-21 amendment).
+ *
+ * Walked as an owner, the only role that may erase at all: for anyone else the
+ * control is absent in both states and the test would prove nothing.
+ */
+test("erase is absent on a live diver's record and appears once they are deleted", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  const diverName = `Erasable Diver ${e2eNow().getTime()}`;
+
+  await page.goto(`/shop/${SHOP}/divers`);
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
+
+  // Live: the destructive tail is Delete alone.
+  await expect(page.getByRole("heading", { name: "Delete", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeHidden();
+
+  await page.getByText(`Delete ${diverName}`).click();
+  await page.getByRole("button", { name: "Delete diver" }).click();
+  await expect(page.getByText("Diver deleted.")).toBeVisible();
+
+  // Deleted: the record says so, and now offers the erase.
+  await page.goto(`/shop/${SHOP}/divers?filter=removed&q=${encodeURIComponent(diverName)}`);
+  await page.getByRole("row").filter({ hasText: diverName }).getByRole("link").first().click();
+  await expect(page.getByText("This diver is deleted")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeVisible();
+});
+
+/**
+ * **What the shop has done about this person**, on their own record.
+ *
+ * The activity trail always existed, and its only door was a departure — the
+ * Guests tab's collapsed log, one boat at a time. So "what happened with this
+ * diver?" could only be answered by remembering which trips they were on. Priya
+ * is the seeded diver whose trail runs past one page (`seed-diver-trail.ts`),
+ * which is what makes the section's pager a rendered thing here.
+ */
+test("a diver's record carries the shop's activity about them, paged", async ({ page }) => {
+  await page.goto(`/shop/${SHOP}/divers?q=Priya`);
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  const activity = page.getByRole("region", { name: "Activity", exact: true });
+  await expect(activity).toBeVisible();
+  // Seeded lines name the staffer and the diver, the shape `recordTripActivity`
+  // writes — so the trail reads the same whether a row was seeded or earned.
+  await expect(activity.getByRole("listitem").first()).toContainText("Priya Sharma");
+
+  // The sub-nav reaches it without leaving the page — it is last on a very
+  // long scroll.
+  const nav = page.getByRole("navigation", { name: "Diver record" });
+  await expect(nav.getByRole("link", { name: "Activity" })).toHaveAttribute("href", "#activity");
+
+  const firstLine = await activity.getByRole("listitem").first().textContent();
+  await activity.getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/activity=2/);
+  await expect(
+    page.getByRole("region", { name: "Activity", exact: true }).getByRole("listitem").first(),
+  ).not.toHaveText(firstLine ?? "");
 });
 
 /**

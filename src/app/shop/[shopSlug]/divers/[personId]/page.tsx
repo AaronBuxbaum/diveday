@@ -11,7 +11,7 @@ import {
 } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
-import { listDiverRecordNotes } from "@/db/operations";
+import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -20,6 +20,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
@@ -73,6 +74,8 @@ export default async function DiverDetailPage({
     edit?: string;
     /** The deleted diver note's text, carried by the land-then-undo redirect. */
     noteBody?: string;
+    /** Which page of the Activity section is being read. Not `?page=`: this record has one paged list, and it is not the page. */
+    activity?: string;
   }>;
 }) {
   const session = await requireStaffSession();
@@ -81,7 +84,7 @@ export default async function DiverDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
-  const { notice, undo, cardType, by, gate, form, edit, noteBody } = await searchParams;
+  const { notice, undo, cardType, by, gate, form, edit, noteBody, activity } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -103,14 +106,19 @@ export default async function DiverDetailPage({
   // (H-06); flagging them for hands-on fitting stays open to all staff.
   // Erasing a diver's personal and medical data is stricter still — owner only,
   // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
-  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount, notes] = await Promise.all([
-    canPersonRefund(db, shop.id, session.user.personId),
-    canPersonDeleteDiver(db, shop.id, session.user.personId),
-    canPersonOverrideGearRequest(db, shop.id, session.user.personId),
-    canPersonErasePersonalData(db, shop.id, session.user.personId),
-    getShopStripeAccount(db, shop.id),
-    listDiverRecordNotes(db, shop.id, personId),
-  ]);
+  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount, notes, activityPage] =
+    await Promise.all([
+      canPersonRefund(db, shop.id, session.user.personId),
+      canPersonDeleteDiver(db, shop.id, session.user.personId),
+      canPersonOverrideGearRequest(db, shop.id, session.user.personId),
+      canPersonErasePersonalData(db, shop.id, session.user.personId),
+      getShopStripeAccount(db, shop.id),
+      listDiverRecordNotes(db, shop.id, personId),
+      // Shop-scoped from the session, never the slug, like every read on this
+      // page. A non-numeric `?activity=` reads as page 1 and the query clamps
+      // anything past the end, so a stale bookmark lands on the last real page.
+      pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
+    ]);
   // `orders/new` refuses outright without a payable account, so the Payments
   // section offers "Connect payments" rather than invoice buttons that bounce.
   const paymentsConnected = canAcceptPayments(stripeAccount);
@@ -304,9 +312,17 @@ export default async function DiverDetailPage({
           paymentsConnected={paymentsConnected}
         />
       </DiverSection>
+      <DiverSection id="activity">
+        <ActivitySection
+          page={activityPage}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          timezone={shop.timezone}
+        />
+      </DiverSection>
       {/* Nothing to remove twice: a removed diver gets the Restore card at the
-          top of the record instead. Erasure stays offered either way — a
-          removed diver is exactly who an erasure request tends to name. */}
+          top of the record instead. */}
       {canDelete && !removed ? (
         <RemoveDiver
           diver={diver}
@@ -316,7 +332,16 @@ export default async function DiverDetailPage({
           status={noticeForForm(diverNotice, "remove")}
         />
       ) : null}
-      {canErase ? (
+      {/* **Erasure is offered on a deleted record and nowhere else.** It is the
+          one control in the product with no undo, and it used to sit at the
+          foot of every diver's record — including the diver a staffer opened to
+          take a payment from. Deleting first is the step that makes the erase a
+          decision rather than a scroll: it is reversible, it is the state an
+          erasure request describes anyway, and it puts the record's own "This
+          diver is deleted" card on screen above the control. `erasePersonAction`
+          enforces the same rule, because this page's tab may be older than the
+          record's state (ADR 20260802-diver-data-erasure). */}
+      {canErase && removed ? (
         <ErasePersonalData
           diver={diver}
           shopSlug={shopSlug}

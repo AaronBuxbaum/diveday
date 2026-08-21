@@ -7,7 +7,13 @@
     "fit": "Tallas",
     "payments": "Pagos",
     "trips": "Salidas",
-    "history": "Historial"
+    "history": "Historial",
+    "activity": "Actividad"
+  },
+  "activity": {
+    "heading": "Actividad",
+    "empty": "Todavía no hay actividad del personal registrada.",
+    "total": "{count, plural, one {# entrada} other {# entradas}}"
   },
   "upcoming": {
     "heading": "Próximas salidas"
@@ -130,9 +136,6 @@
     "viewRemoved": "Eliminados",
     "viewsAriaLabel": "Vistas del registro",
     "removedNote": "Estos buceadores están fuera de todas las listas y de la preparación.",
-    "restore": "Restaurar",
-    "restoring": "Restaurando…",
-    "restoreDiverLabel": "Restaurar a {name}",
     "peopleHeading": "Personas",
     "searchHintText": "Busca por nombre, correo o teléfono.",
     "searchDiversLabel": "Buscar buceadores",
@@ -216,7 +219,7 @@
     "summary": "Borrar los datos personales de {name}",
     "destroyedNote": "Se destruye: nombre, correo, teléfono, fecha de nacimiento, contacto de emergencia, seguro, números y fotos de evidencia de certificación, respuestas médicas, tallas de alquiler, notas del personal, comentarios de reseñas y las fotos que compartió.",
     "keptNote": "Se conserva, sin su nombre en nada de ello: que firmó tu exención, qué versión y cuándo, además de las salidas en las que estuvo y lo que se pagó. Las exenciones firmadas siguen siendo verificables.",
-    "noUndoNote": "No se puede deshacer. Eliminarlo es la opción reversible.",
+    "noUndoNote": "No se puede deshacer.",
     "confirmLabel": "Escribe {name} para confirmar",
     "confirmHint": "Debe coincidir exactamente.",
     "erasing": "Borrando…",
@@ -354,6 +357,7 @@
     "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario del centro — pídeselo a esa persona.",
     "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
     "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad del centro, y no puedes borrar el tuyo propio.",
+    "eraseRequiresDelete": "No se ha borrado. Elimina antes a este buceador.",
     "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
     "notAuthorizedWaiver": "Tu cuenta ya no puede registrar una liberación en papel para este centro. Pide a un propietario o gerente que revise tu acceso.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",

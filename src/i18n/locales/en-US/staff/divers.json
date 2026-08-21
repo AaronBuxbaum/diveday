@@ -7,7 +7,13 @@
     "fit": "Fit",
     "payments": "Payments",
     "trips": "Trips",
-    "history": "History"
+    "history": "History",
+    "activity": "Activity"
+  },
+  "activity": {
+    "heading": "Activity",
+    "empty": "No staff activity recorded yet.",
+    "total": "{count, plural, one {# entry} other {# entries}}"
   },
   "upcoming": {
     "heading": "Upcoming trips"
@@ -130,9 +136,6 @@
     "viewRemoved": "Deleted",
     "viewsAriaLabel": "Roster views",
     "removedNote": "These divers are off every list and out of trip prep.",
-    "restore": "Restore",
-    "restoring": "Restoring…",
-    "restoreDiverLabel": "Restore {name}",
     "peopleHeading": "People",
     "searchHintText": "Search by name, email, or phone.",
     "searchDiversLabel": "Search divers",
@@ -216,7 +219,7 @@
     "summary": "Erase {name}'s personal data",
     "destroyedNote": "Destroyed: name, email, phone, date of birth, emergency contact, insurance, certification numbers and evidence photos, medical answers, rental sizes, staff notes, review comments, and any photos they shared.",
     "keptNote": "Kept, with their name gone from all of it: that they signed your release, which version, and when — plus the trips they were on and what was paid. Signed releases stay verifiable.",
-    "noUndoNote": "No undo. Deleting them instead is the reversible option.",
+    "noUndoNote": "No undo.",
     "confirmLabel": "Type {name} to confirm",
     "confirmHint": "Must match exactly.",
     "erasing": "Erasing…",
@@ -354,6 +357,7 @@
     "notAuthorizedErase": "Erasing a diver's personal data is limited to the shop owner — ask them to do it.",
     "eraseNameMismatch": "The name you typed doesn't match this diver's, so nothing was erased. Type it exactly as it appears above.",
     "eraseRefused": "This record can't be erased. Staff records keep the shop's own accountability trail, and you can't erase your own.",
+    "eraseRequiresDelete": "Not erased. Delete this diver first.",
     "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
     "notAuthorizedWaiver": "Your account can’t record a paper waiver for this shop any more. Ask an owner or manager to check your access.",
     "invalid": "Check the details and try again.",

@@ -27,6 +27,11 @@ export const DIVER_SECTIONS = [
   { id: "trips", labelKey: "divers.subNav.trips" },
   { id: "notes", labelKey: "divers.subNav.notes" },
   { id: "history", labelKey: "divers.subNav.history" },
+  // Last, and after History deliberately: History is what this diver *did* with
+  // the shop (the trips, the money), Activity is what the shop's staff did
+  // about them. The first is the one a counter errand needs; the second is the
+  // reference you go looking for.
+  { id: "activity", labelKey: "divers.subNav.activity" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 
 export type DiverSectionId = (typeof DIVER_SECTIONS)[number]["id"];
