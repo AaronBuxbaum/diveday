@@ -33,6 +33,63 @@ Create a GitHub issue.
 
 Run `gh issue view <number> --comments`.
 
+## Claiming an issue
+
+Before you start implementing, say so on the issue. This is what stops two sessions from
+discovering each other in a merge conflict.
+
+Add the `in-progress` label and post one comment:
+
+```
+## Claim
+
+**Branch:** claude/course-templates-a1b2c3
+**Worktree:** .claude/worktrees/course-templates-a1b2c3
+**Started:** 2026-08-21T09:00:00Z
+**Owns:** src/db/course-templates.ts, public/marine-life/
+**Also touches:** src/i18n/locales/en-US/staff/courses.json
+```
+
+```sh
+gh issue edit <number> --add-label in-progress
+gh issue comment <number> --body "$(cat <<'EOF'
+## Claim
+...
+EOF
+)"
+```
+
+`Owns` is the paths you expect to be the only writer of. `Also touches` is everything else you
+expect to edit — a shared message bundle, a baseline file — where another session editing it too
+means a conflict rather than a collision. Both are the same declaration AGENTS.md already asks for
+in a draft PR description; the claim just makes it at the moment work starts, which is when the
+next session needs it.
+
+**Clear it when you are done.** Remove the label when the PR merges, or when you stop. A claim you
+abandon without clearing is the failure mode this is built around, which is why it is checkable
+rather than trusted.
+
+### Why it is checkable
+
+`pnpm gates` reads every `in-progress` issue and reports each claim as **live**, **stale**, or
+**unverifiable**, by looking the branch and worktree up in `git`:
+
+- **live** — the worktree still exists, *or* the branch has a commit at or after the claim. Either
+  half is enough; a live worktree with no commits yet is ordinary early work.
+- **stale** — neither. The session left nothing behind and is gone, so the label is lying. Take the
+  work, and clear the claim as you do.
+- **unverifiable** — the claim is missing a branch, worktree or timestamp, or `git` could not be
+  read. Never assume either way from this; go and look.
+
+A claim missing any of the three facts is not a claim at all, and the parser refuses it. That is
+deliberate: a claim nobody can disprove is worse than none, because a dead session then holds a
+ticket forever and "someone is on it" stops being distinguishable from "someone was on it in
+August". This is the same lesson as the orphaned-monitor rules in AGENTS.md — the live state of the
+machine is the authority, and a registry asserting what should be true is not.
+
+Nothing here fails a build. Clearing someone else's stale claim is a judgment call, so the report
+prints the evidence and leaves the call to you.
+
 ## Filing a follow-up
 
 Where an agent leaves the things it thought of but did not do: the idea the change suggested, the

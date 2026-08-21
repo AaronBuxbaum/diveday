@@ -147,6 +147,17 @@ describe("the prompt", () => {
     expect(problemsFor(orphan).join()).toMatch(/must tell the session to close this issue/);
   });
 
+  // Issue #632 was written correctly and failed anyway: its closing sentence wrapped between
+  // "close" and "this issue", and the gap in the pattern refuses a newline. The check now tests
+  // the prompt with its whitespace collapsed, so where a sentence happens to wrap is irrelevant.
+  it("accepts a close instruction split across a line wrap", () => {
+    const wrapped = valid.body.replace(
+      /\s*Close this issue\s*when the work lands\./,
+      "\nLanding them as three PRs is fine; close\nthis issue when the last one lands.",
+    );
+    expect(problemsFor(wrapped).join()).not.toMatch(/must tell the session to close this issue/);
+  });
+
   it("accepts a past-tense close instruction too", () => {
     const past = valid.body.replace("Close this issue\nwhen the work lands.", "Closed this issue.");
     expect(problemsFor(past)).toEqual([]);
