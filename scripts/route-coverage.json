@@ -445,7 +445,7 @@
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "gear.spec.ts", "nitrox.spec.ts"],
-    "visual": ["prep", "prep-no-nitrox", "prep-assignments"]
+    "visual": ["prep", "prep-by-diver", "prep-no-nitrox", "prep-assignments"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts"],

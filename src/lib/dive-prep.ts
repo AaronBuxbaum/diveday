@@ -70,6 +70,23 @@ export type PrepDiver = {
   hasVerifiedNitroxCard: boolean;
 };
 
+/**
+ * Which way the one packing list is read: down the rack (every BCD together,
+ * with its sizes) or down the roster (every diver, with their pieces). One set
+ * of pieces, two groupings — the packer picks whichever matches how they are
+ * walking the shop this morning, and the choice rides in `?group=` so it
+ * survives a reload and a shared link.
+ */
+export type PrepGrouping = "item" | "diver";
+
+/** Narrows an untrusted `?group=`; anything else reads as the `item` default. */
+export function isPrepGrouping(value: string | undefined): value is PrepGrouping {
+  return value === "item" || value === "diver";
+}
+
+/** One piece to pull: an item, the size to pull it in, and whether that size is deferred. */
+export type PrepPiece = { kind: RentalItemKind; size: string | null; fitAtCheckIn: boolean };
+
 /** One row of the packing list: N of this item in this size, and who they're for. */
 export type PrepLine = {
   kind: RentalItemKind;
@@ -84,6 +101,26 @@ export type PrepLine = {
    * ever wrote one down.
    */
   fitAtCheckIn: boolean;
+};
+
+/**
+ * One diver's row of the same packing list: everything to pull for this
+ * person, in the same fixed item order the by-item rows use.
+ *
+ * Every diver on the roster gets a row, including the ones with nothing to
+ * pull. The by-item rows can leave them out — an item nobody rents has no row
+ * to be in — but a roster to walk down cannot: "this diver needs nothing" is
+ * the answer the packer came for, and dropping them sends someone back to the
+ * guest list to work out whether the name was handled or merely absent.
+ * `state` says which kind of nothing it is, because the fix differs: nobody
+ * asked, versus they bring their own.
+ */
+export type PrepDiverLine = {
+  bookingId: string;
+  personId: string;
+  fullName: string;
+  items: PrepPiece[];
+  state: "rents" | "own_kit" | "not_recorded";
 };
 
 export type TankPlan = {
@@ -107,6 +144,12 @@ export type DivePrepChecklist = {
   crewCount: number;
   tanks: TankPlan;
   lines: PrepLine[];
+  /**
+   * The same pieces as `lines`, regrouped one row per diver. Built in the same
+   * pass from the same `rentedItems` call, so the two groupings cannot drift
+   * into telling the boat different things about one fit.
+   */
+  diverLines: PrepDiverLine[];
   /** Divers who asked for enriched air but have no verified card — packed as air. */
   nitroxBlockers: NitroxBlocker[];
   /**
@@ -188,8 +231,6 @@ function size(value: string | null): string | null {
   return value?.trim() || null;
 }
 
-type PrepItem = { kind: RentalItemKind; size: string | null; fitAtCheckIn: boolean };
-
 /**
  * The pieces one diver's fit asks for. Boots ride along with the suit — always,
  * even with no size recorded: fins don't fit over bare feet, so a missing boot
@@ -202,15 +243,15 @@ type PrepItem = { kind: RentalItemKind; size: string | null; fitAtCheckIn: boole
  * size: the line keeps its count and reads "fit at check-in" rather than naming
  * a size the shop already knows it is short of.
  */
-function rentedItems(fit: RentalFit): PrepItem[] {
+function rentedItems(fit: RentalFit): PrepPiece[] {
   const flagged = Boolean(fit.needsStaffFitAt);
   /** A piece whose size is the thing in question — blanked when flagged. */
-  const sized = (kind: RentalItemKind, value: string | null): PrepItem =>
+  const sized = (kind: RentalItemKind, value: string | null): PrepPiece =>
     flagged
       ? { kind, size: null, fitAtCheckIn: true }
       : { kind, size: size(value), fitAtCheckIn: false };
   /** A piece with no size at all; a flag never changes what to pack. */
-  const unsized = (kind: RentalItemKind): PrepItem => ({ kind, size: null, fitAtCheckIn: false });
+  const unsized = (kind: RentalItemKind): PrepPiece => ({ kind, size: null, fitAtCheckIn: false });
   /**
    * A piece that records a value but has no stock *size* to be short of, so
    * the flag leaves it alone. Weights are the case: lead is bulk stock in 2 lb
@@ -220,13 +261,13 @@ function rentedItems(fit: RentalFit): PrepItem[] {
    * ascent. Blanking it because there's no L BCD trades a real number for
    * nothing, and "bring a range in their band" is meaningless applied to lead.
    */
-  const stated = (kind: RentalItemKind, value: string | null): PrepItem => ({
+  const stated = (kind: RentalItemKind, value: string | null): PrepPiece => ({
     kind,
     size: size(value),
     fitAtCheckIn: false,
   });
 
-  const items: PrepItem[] = [];
+  const items: PrepPiece[] = [];
   if (fit.rentsBcd) items.push(sized("bcd", fit.bcdSize));
   if (fit.rentsRegulator) items.push(unsized("regulator"));
   if (fit.rentsWetsuit) {
@@ -291,6 +332,7 @@ export function buildDivePrepChecklist(input: {
 }): DivePrepChecklist {
   const diveCount = Math.max(1, Math.trunc(input.plannedDives) || 1);
   const grouped = new Map<string, PrepLine>();
+  const diverLines: PrepDiverLine[] = [];
   const nitroxBlockers: NitroxBlocker[] = [];
   const diversWithIncompleteFit: DivePrepChecklist["diversWithIncompleteFit"] = [];
   const now = input.now ?? nowDate();
@@ -322,8 +364,18 @@ export function buildDivePrepChecklist(input: {
       });
     }
     // Nothing on file is nothing to pack from — the only case that skips the
-    // lines below.
-    if (!diver.fit) continue;
+    // lines below. The roster grouping still gets its row: a name with no
+    // answer beside it is the loose end, and leaving it out hides it.
+    if (!diver.fit) {
+      diverLines.push({
+        bookingId: diver.bookingId,
+        personId: diver.personId,
+        fullName: diver.fullName,
+        items: [],
+        state: "not_recorded",
+      });
+      continue;
+    }
     // Flagged for hands-on fitting: name them here *and* keep their pieces on
     // the list below. Their sized items carry no size (rentedItems), so the
     // count stays right without anyone laying out a size the shop is short of.
@@ -339,7 +391,18 @@ export function buildDivePrepChecklist(input: {
         ),
       });
     }
-    for (const item of rentedItems(diver.fit)) {
+    // One call, both groupings. `rentedItems` already emits in `KIND_ORDER`,
+    // so a diver's row reads down the rack in the same order the by-item rows
+    // do — and neither grouping can hold a piece the other doesn't.
+    const items = rentedItems(diver.fit);
+    diverLines.push({
+      bookingId: diver.bookingId,
+      personId: diver.personId,
+      fullName: diver.fullName,
+      items,
+      state: items.length > 0 ? "rents" : "own_kit",
+    });
+    for (const item of items) {
       const key = `${item.kind}:${item.fitAtCheckIn ? "\u0000fit" : (item.size?.toLowerCase() ?? "")}`;
       const line = grouped.get(key);
       if (line) {
@@ -382,6 +445,9 @@ export function buildDivePrepChecklist(input: {
       air: (diverCount - nitroxDivers + crewCount) * diveCount,
     },
     lines,
+    // Alphabetical, so the roster grouping is a list to walk down rather than
+    // whatever order the roster query happened to return.
+    diverLines: diverLines.sort((a, b) => a.fullName.localeCompare(b.fullName)),
     nitroxBlockers,
     diversWithIncompleteFit,
     diversNeedingStaffFit: diversNeedingStaffFit.sort((a, b) =>

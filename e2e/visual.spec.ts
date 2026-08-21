@@ -2528,6 +2528,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "prep", scheme);
       });
 
+      // The same packing list read down the roster instead of down the rack:
+      // one row per diver with their pieces, including the divers who have
+      // nothing to pull. Reached through the switch itself rather than a typed
+      // `?group=diver`, so the capture also proves the control sits where a
+      // packer would look for it and that the flip keeps the page in place.
+      test(`a trip's prep list groups by diver (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Prep");
+        await page.getByRole("link", { name: "By diver" }).click();
+        // The by-item grouping has no Diver column, so this cannot resolve
+        // against the view that was on screen a moment ago.
+        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        await capture(page, "prep-by-diver", scheme);
+      });
+
       // The prep page's rental-assignments panel in its lived-in state: the
       // wreck trip ships with seeded units already assigned (seed-gear.ts),
       // so the frame holds assigned chips with their Release taps beside
