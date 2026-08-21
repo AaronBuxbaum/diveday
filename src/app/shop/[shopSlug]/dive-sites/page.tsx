@@ -453,7 +453,7 @@ async function CatalogView({
             <p className="text-sm font-medium text-primary">
               {t("diveSites.catalog.templateVersion", { version: version.version })}
             </p>
-            <h2 className="mt-1 text-xl font-semibold">{version.briefing.name}</h2>
+            <h2 className="mt-1 text-lg font-semibold">{version.briefing.name}</h2>
             {version.briefing.locationName ? (
               <p className="mt-0.5 text-sm text-muted">{version.briefing.locationName}</p>
             ) : null}

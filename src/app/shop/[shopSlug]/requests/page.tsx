@@ -281,10 +281,7 @@ export default async function RequestsPage({
                   <>
                     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
                       <div>
-                        <h2
-                          id={`date-${group.date}`}
-                          className="text-xl font-semibold tracking-tight"
-                        >
+                        <h2 id={`date-${group.date}`} className="text-lg font-semibold">
                           {formatCalendarDate(group.date, locale)}
                         </h2>
                         <p className="mt-1 text-sm text-muted">
@@ -342,7 +339,7 @@ export default async function RequestsPage({
               but it is not a day anyone can put a boat on. */}
           {undated.length > 0 ? (
             <section aria-labelledby="no-date">
-              <h2 id="no-date" className="text-xl font-semibold tracking-tight">
+              <h2 id="no-date" className="text-lg font-semibold">
                 {t("requests.noDateHeading")}
               </h2>
               <ul className="mt-3 flex flex-col gap-3">

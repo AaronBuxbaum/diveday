@@ -47,57 +47,60 @@ export function BookActivity({
   const t = staffTranslator(locale);
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="book-activity-heading">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="book-activity-heading" className="text-lg font-semibold">
-            {t("divers.bookActivity.heading")}
-          </h2>
-        </div>
-      </div>
       <form
         action={seatExistingDiverAction.bind(null, "diver-record", shopSlug)}
-        className={sectionCardClass({
-          className: "mt-4 flex flex-col gap-3 sm:flex-row sm:items-end",
-        })}
+        className={sectionCardClass()}
       >
-        <input type="hidden" name="personId" value={personId} />
-        <FieldGrid columns={1} className="flex-1">
-          <Field label={t("divers.bookActivity.courseOrDiveLabel")}>
-            <select name="tripId" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("divers.bookActivity.chooseActivity")}
-              </option>
-              {/*
-               * Grouped by departure day, not one flat list. Staff seating a
-               * diver are working from a date the person just said out loud
-               * ("Saturday"), and a flat list repeated that date on every row
-               * while giving them nothing to scan *by* — several boats on one
-               * day looked identical until you read to the end of each line.
-               * The day is now the group heading, so each row only has to say
-               * what the outing is and what time it leaves.
-               */}
-              {groupByLocalDay(upcoming, shop.timezone, (trip) => trip.startsAt).map((group) => (
-                <optgroup key={group.day} label={formatCalendarDate(group.day, locale)}>
-                  {group.items.map((trip) => (
-                    <option key={trip.id} value={trip.id}>
-                      {formatTime(trip.startsAt, locale, shop.timezone)} ·{" "}
-                      {trip.course ? `${trip.course.title} — ` : ""}
-                      {trip.title}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </Field>
-        </FieldGrid>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <SubmitButton
-            pendingLabel={t("divers.bookActivity.booking")}
-            className={buttonClass({ size: "lg" })}
-          >
-            {t("divers.bookActivity.bookActivityButton")}
-          </SubmitButton>
-          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+        {/* One card, one subject, so the heading belongs inside it — but this
+            card is the `<form>` itself, and `SectionCard`'s element set
+            deliberately excludes `<form>`, so it cannot take a `title`. Hence
+            the one place the h2 scale is spelled by hand on this page: it is
+            `TITLE_CLASS.h2` from `@/components/ui/card`, and it moves when that
+            does. See "Where a heading goes" in
+            docs/design/forms-and-controls.md. */}
+        <h2 id="book-activity-heading" className="text-lg font-semibold">
+          {t("divers.bookActivity.heading")}
+        </h2>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <input type="hidden" name="personId" value={personId} />
+          <FieldGrid columns={1} className="flex-1">
+            <Field label={t("divers.bookActivity.courseOrDiveLabel")}>
+              <select name="tripId" required defaultValue="" className={controlClass}>
+                <option value="" disabled>
+                  {t("divers.bookActivity.chooseActivity")}
+                </option>
+                {/*
+                 * Grouped by departure day, not one flat list. Staff seating a
+                 * diver are working from a date the person just said out loud
+                 * ("Saturday"), and a flat list repeated that date on every row
+                 * while giving them nothing to scan *by* — several boats on one
+                 * day looked identical until you read to the end of each line.
+                 * The day is now the group heading, so each row only has to say
+                 * what the outing is and what time it leaves.
+                 */}
+                {groupByLocalDay(upcoming, shop.timezone, (trip) => trip.startsAt).map((group) => (
+                  <optgroup key={group.day} label={formatCalendarDate(group.day, locale)}>
+                    {group.items.map((trip) => (
+                      <option key={trip.id} value={trip.id}>
+                        {formatTime(trip.startsAt, locale, shop.timezone)} ·{" "}
+                        {trip.course ? `${trip.course.title} — ` : ""}
+                        {trip.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </Field>
+          </FieldGrid>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <SubmitButton
+              pendingLabel={t("divers.bookActivity.booking")}
+              className={buttonClass({ size: "lg" })}
+            >
+              {t("divers.bookActivity.bookActivityButton")}
+            </SubmitButton>
+            <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+          </div>
         </div>
       </form>
       {/* Not a refusal — a heads-up. The seat is real either way; the waiver
