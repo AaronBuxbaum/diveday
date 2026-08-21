@@ -90,26 +90,38 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   test("the trip booking page and its confirmation have no automated a11y violations", async ({
     page,
   }) => {
-    // Six navigations, a sign-out, a booking, and two full axe scans. Raised
-    // rather than trimmed because every leg is load-bearing: the scan has to
-    // happen on the *signed-out* page (a staff session adds a preview banner no
-    // diver sees) and on the confirmation, and neither can be reached without
-    // the trip this creates. Same treatment, and the same reasoning, as the
-    // cost-bound tests in add-diver.spec.ts.
+    // Six navigations, a sign-out, a booking, and two full axe scans. Every leg
+    // is load-bearing: the scan has to happen on the *signed-out* page (a staff
+    // session adds a preview banner no diver sees) and on the confirmation, and
+    // neither can be reached without the trip this creates. Same treatment, and
+    // the same reasoning, as the cost-bound tests in add-diver.spec.ts.
     //
-    // **The number moved, and it moved for a reason worth writing down.** It
-    // was 11.2s on an idle worker when this budget was 30s. The second scan now
-    // lands on `/ready` rather than a `?booking=` branch of the trip page (ADR
-    // 20260820-one-page-after-booking), and that page is the diver's whole
-    // pre-trip checklist, packing list and dive briefings — so axe reads far
-    // more document than it used to. Re-measured 21.9s / 23.0s / 24.3s idle
-    // after that landed, which left roughly the same margin the 15s budget had
-    // before it was raised: none that survives 2-worker contention, where CI
-    // run 32439332010 timed out on the clock mid-`waitForLoadState`, not on a
-    // violation. 60s restores the ~2.5x headroom the 30s figure originally
-    // bought. It is a cost bound on fixed work, not a wait for a race — if this
-    // ever fails again, measure before touching the number.
-    test.setTimeout(60_000);
+    // **This is the most expensive test in the file, and the cost is setup.**
+    // Measured on an idle worker at 22.3s total: the booking-page scan is 1.65s
+    // (876ms settling, 759ms in axe) and the confirmation scan is 1.86s (2ms
+    // settling, 1841ms in axe). The other ~19s is reaching those two states —
+    // filling the add panel on the schedule board, signing out, and booking.
+    //
+    // It was 11.2s when this budget was set to 30s, and roughly doubled over
+    // 2026-08-20: the schedule builder's add panel now waits on a lazy fetch of
+    // the shop's dive modes, and a booking now redirects to `/ready` instead of
+    // re-rendering a `?booking=` branch in place (ADR
+    // 20260820-one-page-after-booking), which is a whole extra page load. Both
+    // are the product working as intended; the test simply walks more of it.
+    //
+    // On CI it went over 30s (run 32439332010) and then over 60s (run
+    // 32440808953) — both times reported against `waitForLoadState`, which is
+    // only where the *test-level* deadline happened to land. That call is not
+    // the problem: it settles in 2ms, and both scans find zero violations. So
+    // this is a ceiling on a slow, fixed, passing test, not a wait on a race —
+    // a passing run still finishes in its own time and never spends the budget.
+    // 120s is sized to survive a CI runner under 2-worker contention with room
+    // to spare, rather than to be re-guessed upward a third time.
+    //
+    // The real fix is to stop building a trip through the UI to get one
+    // (FU-20260821-the-a11y-booking-scan-pays-19s-for-setup). Measure before
+    // touching this number.
+    test.setTimeout(120_000);
     const title = `A11y Scan Trip ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(title);
