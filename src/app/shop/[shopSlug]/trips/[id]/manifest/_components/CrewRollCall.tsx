@@ -172,8 +172,11 @@ export function CrewRollCall({
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
+                  {/* `md`, matching the diver rows: the control cluster is one
+                      line now, narrow enough to sit beside the name from
+                      tablet width up. */}
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0 md:flex-1">
                       <p className="flex flex-wrap items-center gap-2">
                         <strong className="text-base">{member.fullName}</strong>
                         <span className="text-sm text-muted">{member.roles.join(", ")}</span>
@@ -211,24 +214,6 @@ export function CrewRollCall({
                           alert={member.buddyAlert}
                         />
                       </p>
-                      {/* One quiet line at rest, the same grammar as a diver
-                          row's "Contact & gear". Screen only — the print block
-                          below carries the same fact unconditionally, because a
-                          closed disclosure prints nothing. */}
-                      <details className="group/crewfacts mt-1 print:hidden">
-                        <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
-                          <DisclosureCaret className="group-open/crewfacts:rotate-90" />
-                          <span className="group-hover/summary:underline">
-                            {t("manifest.emergencyContactLabel")}
-                          </span>
-                        </summary>
-                        <div className="mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
-                          <CrewFacts member={member} labelled={false} t={t} />
-                        </div>
-                      </details>
-                      <div className="mt-2 hidden print:block">
-                        <CrewFacts member={member} labelled t={t} />
-                      </div>
                       {rc && !rc.implied ? (
                         <p className="mt-2 text-sm text-muted">
                           {t("manifest.crewRollCallRecordedBy", {
@@ -250,6 +235,27 @@ export function CrewRollCall({
                       showBoardControl
                       t={t}
                     />
+                  </div>
+                  {/* One quiet line at rest, the same grammar as a diver
+                      row's "Contact & gear" — and below the controls for the
+                      same reason the diver rows keep theirs there: the row
+                      reads name → state → act, and the rare path follows the
+                      act. Screen only — the print block below carries the
+                      same fact unconditionally, because a closed disclosure
+                      prints nothing. */}
+                  <details className="group/crewfacts mt-1 print:hidden">
+                    <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
+                      <DisclosureCaret className="group-open/crewfacts:rotate-90" />
+                      <span className="group-hover/summary:underline">
+                        {t("manifest.emergencyContactLabel")}
+                      </span>
+                    </summary>
+                    <div className="mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
+                      <CrewFacts member={member} labelled={false} t={t} />
+                    </div>
+                  </details>
+                  <div className="mt-2 hidden print:block">
+                    <CrewFacts member={member} labelled t={t} />
                   </div>
                 </li>
               );

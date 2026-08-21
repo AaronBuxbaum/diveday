@@ -677,9 +677,13 @@ test("a checkpoint with every diver counted stays open until the crew are called
     await expect(settled).toHaveCount(settledBefore + 1);
   }
   await expect(boardButtons).toHaveCount(0);
-  // "divers", specifically: the crew half's own line is also "N crew members
-  // still to call", and it is *expected* to be showing at this point.
-  await expect(page.getByText(/divers? still to call/)).toHaveCount(0);
+  // The diver gap is stated by the pinned count row's "Awaiting" entry, which
+  // renders only while its number is nonzero — with every diver recorded it
+  // is gone. (The crew half keeps its own "N crew members still to call"
+  // sentence below, asserted next, because crew have no entry on that row.)
+  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
+  const awaitingEntry = progressPanel.locator("dl > div").filter({ hasText: "Awaiting" });
+  await expect(awaitingEntry).toHaveCount(0);
 
   // Every diver has a result — and the checkpoint is still open, naming why:
   // the crew, by name, are the whole crew half (ADR
@@ -742,17 +746,18 @@ test("a checkpoint with every diver counted stays open until the crew are called
     .first();
   await clearNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await clearNotBack.click();
-  await expect(page.getByText(/diver still to call/)).toBeVisible();
+  await expect(awaitingEntry).toBeVisible();
+  await expect(awaitingEntry).toContainText("1");
 
   const crewNotBack = page.getByRole("button", { name: "Mark not back aboard" }).last();
   await crewNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await crewNotBack.click();
 
-  // Both lines, at once: the diver gap in muted prose, and the crew emergency
-  // in danger tone that no clerical gap is allowed to suppress.
-  const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
+  // Both facts, at once: the diver gap on the pinned count row ("Awaiting 1"),
+  // and the crew emergency in danger tone that no clerical gap is allowed to
+  // suppress.
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
-  await expect(page.getByText(/diver still to call/)).toBeVisible();
+  await expect(awaitingEntry).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
 });
 

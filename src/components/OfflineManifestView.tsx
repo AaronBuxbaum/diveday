@@ -1278,7 +1278,7 @@ export function OfflineManifestView() {
                                 ? "border border-border-strong bg-surface-sunken"
                                 : member.state?.state === "boarded"
                                   ? "border border-success bg-success/15 text-success"
-                                  : "bg-primary text-primary-foreground"
+                                  : "border border-primary bg-surface text-primary"
                             }`}
                           >
                             {busyBooking === crewPersonId
@@ -1622,16 +1622,17 @@ export function OfflineManifestView() {
                               );
                             }}
                             aria-busy={busyBooking === diver.bookingId}
-                            // Settles into the live page's success outline once
-                            // recorded, rather than staying a solid primary fill
-                            // that reads as "still to do" beside a label saying
-                            // it is done (RollCallControls, same two states).
+                            // The live page's exact two faces (RollCallControls):
+                            // primary-bordered while unrecorded, success outline
+                            // once boarded. A captain alternates between these
+                            // two surfaces mid-morning, and the same control
+                            // must not change costume between them.
                             className={`${OFFLINE_BOAT_TARGET_CLASS} ${
                               missing && confirmAboardFor === diver.bookingId
                                 ? "border border-border-strong bg-surface-sunken"
                                 : state?.state === "boarded"
                                   ? "border border-success bg-success/15 text-success"
-                                  : "bg-primary text-primary-foreground"
+                                  : "border border-primary bg-surface text-primary"
                             }`}
                           >
                             {busyBooking === diver.bookingId

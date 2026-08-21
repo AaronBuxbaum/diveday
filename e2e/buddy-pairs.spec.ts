@@ -77,9 +77,14 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await expect(
     page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
   ).toBeVisible();
-  // The alert informs; it never blocks. The completeness line still names
+  // The alert informs; it never blocks. The pinned count row still names
   // what actually keeps the checkpoint open — awaiting divers — beside it.
-  await expect(page.getByText(/divers? still to call\./)).toBeVisible();
+  await expect(
+    page
+      .locator('section[aria-labelledby="roll-call-progress-heading"]')
+      .locator("dl > div")
+      .filter({ hasText: "Awaiting" }),
+  ).toBeVisible();
 
   // Sam comes back aboard, and the team settles without anyone dismissing
   // anything.

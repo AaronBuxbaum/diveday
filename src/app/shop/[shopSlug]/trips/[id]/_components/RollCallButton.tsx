@@ -59,6 +59,7 @@ export function RollCallButton({
   label,
   pendingLabel,
   className,
+  formClassName,
   noteDraftFor,
   copy,
 }: {
@@ -83,6 +84,13 @@ export function RollCallButton({
   label: string;
   pendingLabel: string;
   className: string;
+  /**
+   * Sizing for the `<form>` the button posts through. In the control
+   * cluster's flex row the form — not the button — is the flex item, so the
+   * "how much of the row does this control claim" classes have to land here
+   * while `className` keeps styling the button itself.
+   */
+  formClassName?: string;
   /**
    * The row whose note draft this submit should carry, when it has one. See
    * `useUnsavedNote` below for why a button posts a note at all.
@@ -110,7 +118,7 @@ export function RollCallButton({
   }, [result]);
   return (
     <>
-      <form action={formAction}>
+      <form action={formAction} className={formClassName}>
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
         {/* A note typed before anybody was called has nowhere to be saved:
@@ -130,7 +138,12 @@ export function RollCallButton({
         </button>
       </form>
       {result && !result.ok ? (
-        <p role="alert" className="mt-1 text-sm font-medium text-danger sm:basis-full">
+        // `basis-full order-3`: the cluster is a flex-wrap row at every width
+        // now, and its controls are visually ordered with `order-1`/`order-2`
+        // — so a refusal drops to its own full-width line *below* both
+        // controls instead of squeezing in as a third column or, at the
+        // default order 0, jumping above them.
+        <p role="alert" className="order-3 mt-1 basis-full text-sm font-medium text-danger">
           {result.reason === "not_ready" ? copy.blockedMessage : copy.errorRefusal}
         </p>
       ) : null}

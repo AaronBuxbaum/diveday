@@ -139,15 +139,20 @@ export function SummaryPanel({
   const crewNotBackAboard = completeness.crewReason === "crew_not_back_aboard";
   const diversNotBackAboard = completeness.reason === "divers_not_back_aboard";
   // The muted half: what is still open when nothing here is an emergency. It
-  // goes quiet whenever a danger line above already names the same gap.
+  // goes quiet whenever a danger line above already names the same gap — and
+  // for `divers_awaiting`, whose count the pinned row above now states as
+  // "Awaiting N" the moment it is nonzero, so a sentence here restated the
+  // one number a captain is already watching (principle 9). The diver gap
+  // itself can never be suppressed by a crew emergency: the pinned count row
+  // carries it, which is what DD1 asks — the crew states below keep their
+  // sentences because crew have no entry on that row.
   // `no_divers` keeps the closing sentence it has always had — an empty roster
   // is its own problem and not one this line was ever written to explain.
-  const mutedText = diversNotBackAboard
-    ? null
-    : completeness.reason === "crew_not_back_aboard"
+  const mutedText =
+    diversNotBackAboard || completeness.reason === "divers_awaiting"
       ? null
-      : completeness.reason === "divers_awaiting"
-        ? t("manifest.stillToCall", { count: summary.awaiting })
+      : completeness.reason === "crew_not_back_aboard"
+        ? null
         : completeness.reason === "crew_none_assigned"
           ? t("manifest.crewNoneAssignedYet")
           : completeness.reason === "crew_none_aboard"
@@ -245,15 +250,26 @@ export function SummaryPanel({
         {/* The counts the six tiles used to carry, folded in under the bar they
             explain. A definition list, not a grid of cards: label/number pairs
             read in one pass and cost the roll-call list no vertical space on a
-            phone. */}
-        <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-base">
-          {counts.map((count) => (
-            <div key={count.label} className="flex items-baseline gap-1.5">
-              <dt className="text-muted">{count.label}</dt>
-              <dd className="font-bold tabular-nums">{count.value}</dd>
-            </div>
-          ))}
-        </dl>
+            phone. A zero-valued entry contributes nothing — "Boarded 0 · Not
+            boarded 0 · Awaiting 8" before the first tap is three restatements
+            of the fraction above (principle 9) — so each entry appears the
+            moment its number does, and the whole row holds off until the
+            first diver result lands: at rest its sole survivor, "Awaiting 8",
+            is the arithmetic complement of the "0 of 8 recorded" fraction two
+            lines up. The entries still sum to the boat: a dropped entry is
+            exactly a zero. */}
+        {rollCallStarted && counts.some((count) => count.value > 0) ? (
+          <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-base">
+            {counts
+              .filter((count) => count.value > 0)
+              .map((count) => (
+                <div key={count.label} className="flex items-baseline gap-1.5">
+                  <dt className="text-muted">{count.label}</dt>
+                  <dd className="font-bold tabular-nums">{count.value}</dd>
+                </div>
+              ))}
+          </dl>
+        ) : null}
         {/* Everything below stays *pinned*: each of these lines says a person
             is unaccounted for, and a captain scrolling the roster must not be
             able to push that off the top of the screen. */}
