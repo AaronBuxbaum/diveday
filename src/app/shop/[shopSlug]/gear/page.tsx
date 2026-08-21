@@ -17,8 +17,10 @@ import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import {
   countCheckedOutGear,
   countGearItemsByKind,
+  type DeletedGearItemRow,
   type GearRegisterRow,
   type GearReturnRow,
+  listDeletedGearItems,
   listGearDueBack,
   listGearItems,
   listGearServiceDue,
@@ -29,6 +31,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import {
   GEAR_KIND_ORDER,
   GEAR_SERVICE_DUE_SOON_DAYS,
@@ -62,6 +65,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   invalid: { tone: "danger", key: "gear.notice.invalid" },
   "empty-label": { tone: "danger", key: "gear.notice.emptyLabel" },
   "duplicate-label": { tone: "danger", key: "gear.notice.duplicateLabel" },
+  "restore-duplicate-label": { tone: "danger", key: "gear.notice.restoreDuplicateLabel" },
   "invalid-date": { tone: "danger", key: "gear.notice.invalidDate" },
   deleted: { tone: "success", key: "gear.notice.deleted" },
   updated: { tone: "success", key: "gear.notice.updated" },
@@ -100,12 +104,8 @@ export default async function GearRegisterPage({
     notice?: string;
     page?: string;
     kind?: string;
-    undoKind?: string;
-    undoLabel?: string;
-    undoSize?: string;
-    undoSerialNumber?: string;
-    undoBrandModel?: string;
-    undoPurchasedOn?: string;
+    view?: string;
+    undoId?: string;
   }>;
 }) {
   const { shopSlug } = await params;
@@ -118,20 +118,31 @@ export default async function GearRegisterPage({
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const kind = parseKind(kindParam);
   const requestedPage = Number.parseInt(page ?? "", 10);
-  const [unitPage, countsByKind, overdue, dueBack, serviceDue, outNow] = await Promise.all([
-    listGearItems(db, shop.id, {
-      todayLocal,
-      kind,
-      page: Number.isFinite(requestedPage) ? requestedPage : 1,
-    }),
-    countGearItemsByKind(db, shop.id),
-    listOverdueGearReservations(db, shop.id, todayLocal),
-    listGearDueBack(db, shop.id, todayLocal),
-    listGearServiceDue(db, shop.id, todayLocal, GEAR_SERVICE_DUE_SOON_DAYS),
-    countCheckedOutGear(db, shop.id),
-  ]);
+  const wantedPage = Number.isFinite(requestedPage) ? requestedPage : 1;
+  // The one view that leaves the live fleet behind. Its own paging, so a long
+  // register and a long list of deleted units never share a page number.
+  const deletedView = search.view === "deleted";
+  const [unitPage, deletedPage, countsByKind, overdue, dueBack, serviceDue, outNow] =
+    await Promise.all([
+      listGearItems(db, shop.id, {
+        todayLocal,
+        kind,
+        page: deletedView ? 1 : wantedPage,
+      }),
+      listDeletedGearItems(db, shop.id, { page: deletedView ? wantedPage : 1 }),
+      countGearItemsByKind(db, shop.id),
+      listOverdueGearReservations(db, shop.id, todayLocal),
+      listGearDueBack(db, shop.id, todayLocal),
+      listGearServiceDue(db, shop.id, todayLocal, GEAR_SERVICE_DUE_SOON_DAYS),
+      countCheckedOutGear(db, shop.id),
+    ]);
   const fleetTotal = [...countsByKind.values()].reduce((sum, value) => sum + value, 0);
   const returns = [...overdue, ...dueBack];
+  // A view with nothing in it is not a view: an empty Deleted list falls back
+  // to the fleet rather than rendering a heading over nothing. A shop that has
+  // deleted its whole fleet lands here whether it asked to or not — otherwise
+  // the empty state would be the only thing left and the units unreachable.
+  const showDeleted = deletedPage.total > 0 && (deletedView || fleetTotal === 0);
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
@@ -140,36 +151,18 @@ export default async function GearRegisterPage({
   const fieldError = (field: "label" | "purchasedOn") =>
     noticeField === field && banner ? t(banner.key) : undefined;
 
-  const gearHref = (target: { kind?: GearItemKind; page?: number }) => {
+  const gearHref = (target: { kind?: GearItemKind; page?: number; deleted?: boolean }) => {
     const query = new URLSearchParams();
+    if (target.deleted) query.set("view", "deleted");
     if (target.kind) query.set("kind", target.kind);
     if ((target.page ?? 1) > 1) query.set("page", String(target.page));
     const encoded = query.toString();
     return encoded ? `/shop/${shopSlug}/gear?${encoded}` : `/shop/${shopSlug}/gear`;
   };
 
-  const undo = {
-    kind: search.undoKind,
-    label: search.undoLabel,
-    size: search.undoSize ?? "",
-    serialNumber: search.undoSerialNumber ?? "",
-    brandModel: search.undoBrandModel ?? "",
-    purchasedOn: search.undoPurchasedOn ?? "",
-  };
-
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams
-        params={[
-          "notice",
-          "undoKind",
-          "undoLabel",
-          "undoSize",
-          "undoSerialNumber",
-          "undoBrandModel",
-          "undoPurchasedOn",
-        ]}
-      />
+      <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         eyebrow={t("gear.eyebrow")}
         title={t("gear.title")}
@@ -186,18 +179,11 @@ export default async function GearRegisterPage({
         }
       />
 
-      {notice === "deleted" && undo.kind && undo.label ? (
+      {notice === "deleted" && search.undoId ? (
         <UndoToast
-          message={t("gear.notice.deletedToast")}
+          message={t("gear.notice.deleted")}
           action={restoreGearItemAction}
-          fields={{
-            kind: undo.kind,
-            label: undo.label,
-            size: undo.size,
-            serialNumber: undo.serialNumber,
-            brandModel: undo.brandModel,
-            purchasedOn: undo.purchasedOn,
-          }}
+          fields={{ gearItemId: search.undoId }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
@@ -252,7 +238,7 @@ export default async function GearRegisterPage({
           <ReturnsPanel returns={returns} t={t} locale={locale} todayLocal={todayLocal} />
         ) : null}
 
-        {fleetTotal === 0 ? (
+        {fleetTotal === 0 && !showDeleted ? (
           <EmptyState className="mt-4">
             <h2 className="font-semibold">{t("gear.empty.heading")}</h2>
             <div className="mt-4 flex flex-wrap justify-center gap-3">
@@ -262,78 +248,111 @@ export default async function GearRegisterPage({
             </div>
           </EmptyState>
         ) : (
-          <section aria-label={t("gear.fleet.ariaLabel")}>
+          <section aria-label={showDeleted ? t("gear.deleted.title") : t("gear.fleet.ariaLabel")}>
             <nav aria-label={t("gear.fleet.filterAriaLabel")} className="flex flex-wrap gap-2">
-              <Link
-                href={gearHref({})}
-                aria-current={kind === undefined ? "true" : undefined}
-                className={buttonClass({
-                  variant: kind === undefined ? "secondary" : "ghost",
-                  size: "sm",
-                })}
-              >
-                {t("gear.fleet.filterAll", { count: fleetTotal })}
-              </Link>
-              {GEAR_KIND_ORDER.filter((option) => (countsByKind.get(option) ?? 0) > 0).map(
-                (option) => (
+              {fleetTotal === 0 ? null : (
+                <>
                   <Link
-                    key={option}
-                    href={gearHref({ kind: option })}
-                    aria-current={kind === option ? "true" : undefined}
+                    href={gearHref({})}
+                    aria-current={!showDeleted && kind === undefined ? "true" : undefined}
                     className={buttonClass({
-                      variant: kind === option ? "secondary" : "ghost",
+                      variant: !showDeleted && kind === undefined ? "secondary" : "ghost",
                       size: "sm",
                     })}
                   >
-                    {t("gear.fleet.filterKind", {
-                      label: gearItemKindLabel(t, option),
-                      count: countsByKind.get(option) ?? 0,
-                    })}
+                    {t("gear.fleet.filterAll", { count: fleetTotal })}
                   </Link>
-                ),
+                  {GEAR_KIND_ORDER.filter((option) => (countsByKind.get(option) ?? 0) > 0).map(
+                    (option) => (
+                      <Link
+                        key={option}
+                        href={gearHref({ kind: option })}
+                        aria-current={!showDeleted && kind === option ? "true" : undefined}
+                        className={buttonClass({
+                          variant: !showDeleted && kind === option ? "secondary" : "ghost",
+                          size: "sm",
+                        })}
+                      >
+                        {t("gear.fleet.filterKind", {
+                          label: gearItemKindLabel(t, option),
+                          count: countsByKind.get(option) ?? 0,
+                        })}
+                      </Link>
+                    ),
+                  )}
+                </>
               )}
+              {/* The way back to a deleted unit, and the only one: it is off
+                  the fleet, off every picker, and its own URL is a 404. */}
+              {deletedPage.total > 0 ? (
+                <Link
+                  href={gearHref({ deleted: true })}
+                  aria-current={showDeleted ? "true" : undefined}
+                  className={buttonClass({
+                    variant: showDeleted ? "secondary" : "ghost",
+                    size: "sm",
+                  })}
+                >
+                  {t("gear.deleted.filter", { count: deletedPage.total })}
+                </Link>
+              ) : null}
             </nav>
 
-            <div className="mt-4">
-              <Table minWidth="45rem">
-                {/* Th children go straight into THead — it renders the row
-                    itself, and a nested <tr> falls out of the column grid.
-                    Kind and Size fold below `sm`: the phone-critical answer
-                    is the tag and where it is, and the tag already says the
-                    kind ("BCD #2"). */}
-                <THead>
-                  <Th scope="col">{t("gear.fleet.columns.unit")}</Th>
-                  <Th scope="col" hideBelow="sm">
-                    {t("gear.fleet.columns.kind")}
-                  </Th>
-                  <Th scope="col" hideBelow="sm">
-                    {t("gear.fleet.columns.size")}
-                  </Th>
-                  <Th scope="col">{t("gear.fleet.columns.service")}</Th>
-                  <Th scope="col">{t("gear.fleet.columns.where")}</Th>
-                </THead>
-                <TBody>
-                  {unitPage.rows.map((row) => (
-                    <FleetRow
-                      key={row.item.id}
-                      row={row}
-                      shopSlug={shopSlug}
-                      t={t}
-                      locale={locale}
-                      todayLocal={todayLocal}
-                    />
-                  ))}
-                </TBody>
-              </Table>
-            </div>
-            <Pager
-              page={unitPage.page}
-              pageCount={unitPage.pageCount}
-              href={(target) => gearHref({ kind, page: target })}
-              total={t("gear.fleet.pagination.total", { count: unitPage.total })}
-              t={t}
-              className="mt-4"
-            />
+            {showDeleted ? (
+              <DeletedList rows={deletedPage.rows} t={t} locale={locale} timeZone={shop.timezone} />
+            ) : (
+              <div className="mt-4">
+                <Table minWidth="45rem">
+                  {/* Th children go straight into THead — it renders the row
+                      itself, and a nested <tr> falls out of the column grid.
+                      Kind and Size fold below `sm`: the phone-critical answer
+                      is the tag and where it is, and the tag already says the
+                      kind ("BCD #2"). */}
+                  <THead>
+                    <Th scope="col">{t("gear.fleet.columns.unit")}</Th>
+                    <Th scope="col" hideBelow="sm">
+                      {t("gear.fleet.columns.kind")}
+                    </Th>
+                    <Th scope="col" hideBelow="sm">
+                      {t("gear.fleet.columns.size")}
+                    </Th>
+                    <Th scope="col">{t("gear.fleet.columns.service")}</Th>
+                    <Th scope="col">{t("gear.fleet.columns.where")}</Th>
+                  </THead>
+                  <TBody>
+                    {unitPage.rows.map((row) => (
+                      <FleetRow
+                        key={row.item.id}
+                        row={row}
+                        shopSlug={shopSlug}
+                        t={t}
+                        locale={locale}
+                        todayLocal={todayLocal}
+                      />
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+            )}
+            {showDeleted ? (
+              <Pager
+                page={deletedPage.page}
+                pageCount={deletedPage.pageCount}
+                href={(target) => gearHref({ deleted: true, page: target })}
+                total={t("gear.fleet.pagination.total", { count: deletedPage.total })}
+                t={t}
+                className="mt-4"
+              />
+            ) : (
+              <Pager
+                page={unitPage.page}
+                pageCount={unitPage.pageCount}
+                href={(target) => gearHref({ kind, page: target })}
+                total={t("gear.fleet.pagination.total", { count: unitPage.total })}
+                t={t}
+                className="mt-4"
+              />
+            )}
           </section>
         )}
 
@@ -536,6 +555,57 @@ function ReturnsPanel({
             </li>
           );
         })}
+      </ul>
+    </SectionCard>
+  );
+}
+
+/**
+ * The units that have been deleted, newest first, each with the one act this
+ * list exists for. Deliberately plainer than the fleet table: nothing here is
+ * in service, so there is no clock and nowhere it can be.
+ */
+function DeletedList({
+  rows,
+  t,
+  locale,
+  timeZone,
+}: {
+  rows: DeletedGearItemRow[];
+  t: StaffTranslator;
+  locale: string;
+  timeZone: string;
+}) {
+  return (
+    <SectionCard className="mt-4" padding="none" title={t("gear.deleted.title")}>
+      <ul className="divide-y divide-border">
+        {rows.map((row) => (
+          <li
+            key={row.id}
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-5"
+          >
+            <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+              <p className="font-medium">
+                <span className="font-mono text-sm">{row.label}</span>
+                <span className="text-muted"> · {gearItemKindLabel(t, row.kind)}</span>
+                {row.size ? <span className="text-muted"> · {row.size}</span> : null}
+              </p>
+              <p className="mt-0.5 text-sm text-muted">
+                {t("gear.deleted.on", { date: formatShortDate(row.deletedAt, locale, timeZone) })}
+              </p>
+            </div>
+            <form action={restoreGearItemAction}>
+              <input type="hidden" name="gearItemId" value={row.id} />
+              <SubmitButton
+                ariaLabel={t("gear.deleted.restoreUnit", { label: row.label })}
+                pendingLabel={t("gear.deleted.restoring")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("gear.deleted.restore")}
+              </SubmitButton>
+            </form>
+          </li>
+        ))}
       </ul>
     </SectionCard>
   );

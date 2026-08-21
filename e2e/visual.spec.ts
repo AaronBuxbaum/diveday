@@ -3430,6 +3430,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-unit", scheme);
       });
 
+      // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):
+      // the Deleted chip in the filter band, and the list whose one act is
+      // Restore. Photographed after deleting a unit rather than seeding one —
+      // the shop's demo fleet is what a shop should see, and a permanently
+      // deleted regulator in it would be a worse demo.
+      test(`the gear register's deleted units render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/gear");
+        await page.getByRole("link", { name: "Reg #5", exact: true }).click();
+        await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
+        await page.getByRole("button", { name: "Delete unit" }).click();
+        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+
+        await page.goto("/shop/blue-mantis/gear?view=deleted");
+        await page.getByRole("button", { name: "Restore Reg #5" }).waitFor();
+        await capture(page, "gear-register-deleted", scheme);
+      });
+
       // The register on its worst day, through /api/test/seed-trouble-states
       // (never seeded into blue-mantis): a checked-out unit gone overdue puts
       // the returns panel into its amber "was due" state, and a lapsed tank

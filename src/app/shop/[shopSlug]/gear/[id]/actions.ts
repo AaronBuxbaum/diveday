@@ -11,6 +11,9 @@ import {
   setGearItemStatus,
   updateGearItem,
 } from "@/db/gear";
+import { getShopById } from "@/db/shops";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -67,7 +70,7 @@ export async function updateGearItemAction(formData: FormData) {
 }
 
 const statusSchema = z.object({
-  status: z.enum(["in_service", "needs_service", "retired"]),
+  status: z.enum(["in_service", "needs_service"]),
   serviceNote: z.string().trim().max(300).optional(),
 });
 
@@ -117,28 +120,36 @@ export async function recordGearServiceAction(formData: FormData) {
 }
 
 /**
- * Deleting hands the row's fields to the register's undo toast; the unit's
- * history goes with it, which the page says out loud before offering this —
- * a unit that actually lived gets retired, not deleted.
+ * Delete stamps the row and hands the register's undo toast the unit's id —
+ * the whole record is still there, so putting it back is a restore rather
+ * than a re-typing of what the URL happened to carry.
+ *
+ * A unit that is still provisioned is refused, and the refusal lands back on
+ * this page beside the control that asked for it: the open reservation holding
+ * the unit is already rendered a card above, so the page can name it without a
+ * diver's name ever riding in a query string.
  */
 export async function deleteGearItemAction(formData: FormData) {
-  const { session, gear, gearItemId } = await requireUnitSurface(formData);
-  const outcome = await deleteGearItem(await getDb(), {
+  const { session, gear, unit, gearItemId } = await requireUnitSurface(formData);
+  const db = await getDb();
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
+
+  const outcome = await deleteGearItem(db, {
     shopId: session.user.shopId,
     gearItemId,
+    todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+    deletedByPersonId: session.user.personId,
   });
-  if (!outcome.ok) revalidateAndRedirect(gear, noticeUrl(gear, outcome.reason));
-  revalidateAndRedirect(
-    gear,
-    noticeUrl(gear, "deleted", {
-      undoKind: outcome.deleted.kind,
-      undoLabel: outcome.deleted.label,
-      undoSize: outcome.deleted.size ?? undefined,
-      undoSerialNumber: outcome.deleted.serialNumber ?? undefined,
-      undoBrandModel: outcome.deleted.brandModel ?? undefined,
-      undoPurchasedOn: outcome.deleted.purchasedOn ?? undefined,
-    }),
-  );
+  if (!outcome.ok) {
+    // `not_found` is the only one with no page left to land on.
+    const to = outcome.reason === "not_found" ? gear : unit;
+    revalidateAndRedirect(
+      to,
+      noticeUrl(to, outcome.reason === "reserved" ? "unit-held" : "not-found"),
+    );
+  }
+  revalidateAndRedirect(gear, noticeUrl(gear, "deleted", { undoId: outcome.deleted.id }));
 }
 
 const reservationSchema = z.object({ reservationId: z.uuid() });

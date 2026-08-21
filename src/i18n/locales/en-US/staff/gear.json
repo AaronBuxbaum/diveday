@@ -8,8 +8,7 @@
   },
   "status": {
     "inService": "In service",
-    "needsService": "Needs service",
-    "retired": "Retired"
+    "needsService": "Needs service"
   },
   "serviceKinds": {
     "service": "Service",
@@ -78,6 +77,14 @@
     },
     "neverPickedUp": "Reserved for {name} · never picked up"
   },
+  "deleted": {
+    "filter": "Deleted ({count})",
+    "title": "Deleted",
+    "on": "Deleted {date}",
+    "restore": "Restore",
+    "restoring": "Restoring…",
+    "restoreUnit": "Restore {label}"
+  },
   "addUnit": {
     "door": "Add gear",
     "title": "Add a unit",
@@ -103,7 +110,7 @@
     "restored": "Unit restored.",
     "updated": "Saved.",
     "deleted": "Unit deleted.",
-    "deletedToast": "Unit deleted. Its service and rental history went with it.",
+    "unitHeld": "That unit is still spoken for — release or return it first.",
     "serviceLogged": "Logged.",
     "returned": "Marked returned — the unit is home.",
     "checkedOut": "Checked out.",
@@ -114,6 +121,7 @@
     "invalid": "That didn't save — check the form and try again.",
     "emptyLabel": "Give the unit a tag — it's how you'll find it with wet hands.",
     "duplicateLabel": "Another unit already wears that tag.",
+    "restoreDuplicateLabel": "Another unit wears that tag now — rename it, then restore this one.",
     "invalidDate": "That date doesn't exist — check it.",
     "dueNotAfterService": "The next due date has to come after the service date.",
     "allHome": "All home — every unit is back on the wall.",
@@ -169,11 +177,9 @@
       "pullNotePlaceholder": "Inflator sticks",
       "reinstate": "Return to service",
       "reinstating": "Returning…",
-      "retire": "Retire",
-      "retiring": "Retiring…",
       "delete": "Delete unit",
       "deleting": "Deleting…",
-      "deleteWarning": "Deleting removes its service and rental history too."
+      "deleteHeld": "{name} has this unit until {until} — release or return it first."
     }
   },
   "prep": {
