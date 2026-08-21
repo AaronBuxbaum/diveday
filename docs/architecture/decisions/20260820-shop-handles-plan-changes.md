@@ -1,6 +1,6 @@
 # 20260820-shop-handles-plan-changes — The diver's cancel and move come out of `/ready`
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260821-the-diver-may-release-their-own-seat
 - **Date:** 2026-08-20
 - **Supersedes:** [20260727-diver-self-service-cancel](20260727-diver-self-service-cancel.md)
 
@@ -45,9 +45,9 @@ Deleted with it:
 **`selfCancelBooking` and `rescheduleBooking` stay in `src/db/bookings.ts` for now**, with their
 tests. They are correct, they are the atomic implementations of two operations a staff surface may
 well want, and `money-replay.test.ts` drives the refund-replay path through them. Removing them is
-a second decision about the *domain* layer rather than about this page, and it is filed as
-[FU-20260820-self-service-booking-mutations](../../product/follow-ups/FU-20260820-self-service-booking-mutations.md)
-rather than taken here by an agent.
+a second decision about the *domain* layer rather than about this page, and it was filed as `FU-20260820-self-service-booking-mutations` rather than taken here by an agent, and
+answered on 2026-08-21 by the ADR that supersedes this one: cancel came back, the move did not, and
+`rescheduleBooking` was deleted.
 
 ## Consequences
 
