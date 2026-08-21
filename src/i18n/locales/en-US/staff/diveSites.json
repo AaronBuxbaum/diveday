@@ -6,11 +6,7 @@
     "description": "Save a place once, then attach it to any dive on any trip.",
     "createSite": "Create a site",
     "browseTemplates": "Browse templates",
-    "overviewAriaLabel": "Dive-site overview",
     "gridAriaLabel": "Saved dive sites",
-    "savedSites": "Saved sites",
-    "withForecastPoints": "With a GPS location",
-    "fromTemplates": "From templates",
     "siteDeletedNotice": "Site deleted.",
     "emptyHeading": "Start with a site your crew knows well",
     "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
@@ -26,7 +22,12 @@
     "nitroxBadge": "Nitrox",
     "oneRequiredSpecialty": "1 required specialty",
     "manyRequiredSpecialties": "{count} required specialties",
-    "addBriefingFallback": "Add the site notes your divers will see.",
+    "table": {
+      "site": "Site",
+      "location": "Location",
+      "requirements": "Requirements",
+      "template": "Template"
+    },
     "pagination": {
       "total": "{count, plural, one {# site} other {# sites}}"
     }

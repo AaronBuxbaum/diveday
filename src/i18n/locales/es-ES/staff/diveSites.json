@@ -6,11 +6,7 @@
     "description": "Guarda un lugar una vez y añádelo a cualquier inmersión de cualquier salida.",
     "createSite": "Crear un sitio",
     "browseTemplates": "Explorar plantillas",
-    "overviewAriaLabel": "Resumen de sitios de buceo",
     "gridAriaLabel": "Sitios de buceo guardados",
-    "savedSites": "Sitios guardados",
-    "withForecastPoints": "Con ubicación GPS",
-    "fromTemplates": "De plantillas",
     "siteDeletedNotice": "Sitio eliminado.",
     "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
     "emptyBody": "Añade una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
@@ -26,7 +22,12 @@
     "nitroxBadge": "Nitrox",
     "oneRequiredSpecialty": "1 especialidad requerida",
     "manyRequiredSpecialties": "{count} especialidades requeridas",
-    "addBriefingFallback": "Añade las notas del sitio que verán tus buceadores.",
+    "table": {
+      "site": "Sitio",
+      "location": "Ubicación",
+      "requirements": "Requisitos",
+      "template": "Plantilla"
+    },
     "pagination": {
       "total": "{count, plural, one {# sitio} other {# sitios}}"
     }

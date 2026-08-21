@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
-import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -13,10 +13,11 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
+import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import {
   currentGlobalDiveSiteVersions,
-  diveSiteLibraryStats,
+  diveSiteLibrarySize,
   type GlobalDiveSiteTemplateRow,
   getGlobalDiveSiteTemplate,
   importGlobalDiveSiteTemplate,
@@ -91,16 +92,17 @@ export default async function DiveSitesPage({
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
   const query = q?.trim() ?? "";
-  const [sitePage, stats] = await Promise.all([
+  const [sitePage, librarySize] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
       { query: query || undefined },
       { page: Number.isFinite(requestedPage) ? requestedPage : 1 },
     ),
-    // Shop-wide, never page-scoped: the counters describe the library, and a
-    // search must not make a shop look like it lost half its sites.
-    diveSiteLibraryStats(db, shop.id),
+    // Shop-wide, never page- or search-scoped. It answers one question — does
+    // this shop have a library yet? — which is what separates the day-one
+    // empty state from a search that simply matched nothing.
+    diveSiteLibrarySize(db, shop.id),
   ]);
   const sites = sitePage.rows;
   const banner = noticeFromParam(notice, NOTICES);
@@ -135,7 +137,7 @@ export default async function DiveSitesPage({
         // identical primaries on one screen is what principle 8 forbids — so
         // the card owns them until there is a library to act on.
         actions={
-          stats.total === 0 ? undefined : (
+          librarySize === 0 ? undefined : (
             <>
               <Link
                 href={`/shop/${shopSlug}/dive-sites/new`}
@@ -157,28 +159,12 @@ export default async function DiveSitesPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      {/* Three tiles reading 0 / 0 / 0 teach a day-one shop nothing it doesn't
-          already know from the empty list below, and they push the one thing
-          that helps — the way to add a site — below the fold. The overview
-          returns the moment there is anything to count — and counts the whole
-          library (shop-wide stats), never the current page or search, so a
-          narrow search can't read as the shop losing sites. */}
-      {stats.total === 0 ? null : (
-        <section
-          aria-label={t("diveSites.list.overviewAriaLabel")}
-          className="mb-8 grid gap-3 sm:grid-cols-2"
-        >
-          <ShopStat label={t("diveSites.list.savedSites")} value={stats.total} tone="primary" />
-          <ShopStat label={t("diveSites.list.fromTemplates")} value={stats.fromTemplates} />
-        </section>
-      )}
-
       {/* Unconditional once there is anything to search: a library that hid
         its search box below some size would teach staff to scroll, and the
         one shop that grows past a screenful is exactly the one that never
         learned the box exists. Hidden only when the library is empty, where
         the empty state has the single thing to do. */}
-      {stats.total > 0 ? (
+      {librarySize > 0 ? (
         <QueryForm
           aria-label={t("diveSites.list.searchAriaLabel")}
           // The card's chrome without its anatomy: `QueryForm` is a `<form>`,
@@ -231,9 +217,9 @@ export default async function DiveSitesPage({
           {/* No second "Clear search" here: the search band right above this
               card already carries one whenever a query is active, and two
               identical controls is exactly what principle 8 forbids. */}
-          {query || stats.total > 0 ? null : (
+          {query || librarySize > 0 ? null : (
             // The only place these two doors exist on an empty library: the
-            // header drops its actions when `stats.total === 0` precisely so
+            // header drops its actions when the library is empty precisely so
             // this card owns them, and a shop reading "start with a site your
             // crew knows well" can start from that sentence.
             <div className="mt-4 flex flex-wrap justify-center gap-3">
@@ -254,73 +240,93 @@ export default async function DiveSitesPage({
           )}
         </EmptyState>
       ) : (
-        <ul
-          aria-label={t("diveSites.list.gridAriaLabel")}
-          className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {sites.map((site) => (
-            <li key={site.id}>
-              <Link
-                href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-                // A whole-card link, so the shell comes as a class string; the
-                // hover/lift behaviour is this list's own and rides on top.
-                className={sectionCardClass({
-                  className:
-                    "group block h-full transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-sunken",
-                })}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-semibold group-hover:text-primary">{site.name}</h2>
-                  <span
-                    aria-hidden="true"
-                    className="text-primary transition-transform group-hover:translate-x-1"
-                  >
-                    →
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-muted">
-                  {site.locationName || t("diveSites.list.locationToAdd")}
-                </p>
-                {site.sourceTemplateVersion ? (
-                  <p className="mt-2 text-xs font-medium text-primary">
-                    {(currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0) >
-                    site.sourceTemplateVersion
-                      ? t("diveSites.list.templateUpdateReady", {
-                          version: currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? "",
-                        })
-                      : t("diveSites.list.diveDayTemplateVersion", {
-                          version: site.sourceTemplateVersion,
-                        })}
-                  </p>
-                ) : null}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {site.minimumCertificationLevel ? (
-                    <Badge tone="primary" size="sm">
-                      {t(CERTIFICATION_LEVEL_KEYS[site.minimumCertificationLevel])}
-                    </Badge>
-                  ) : null}
-                  {site.requiresNitrox ? (
-                    <Badge tone="warning" size="sm">
-                      {t("diveSites.list.nitroxBadge")}
-                    </Badge>
-                  ) : null}
-                  {site.requiredSpecialties.length > 0 ? (
-                    <Badge tone="neutral" size="sm">
-                      {site.requiredSpecialties.length === 1
-                        ? t("diveSites.list.oneRequiredSpecialty")
-                        : t("diveSites.list.manyRequiredSpecialties", {
-                            count: site.requiredSpecialties.length,
-                          })}
-                    </Badge>
-                  ) : null}
-                </div>
-                <p className="mt-4 line-clamp-2 text-sm text-muted">
-                  {site.marineLife || site.description || t("diveSites.list.addBriefingFallback")}
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        // A table, not a grid of cards (issue #608). A library is a list of
+        // like things a staffer scans down one column of — name, then where it
+        // is, then what it demands — and a card grid made that scan a
+        // zig-zag across three columns at two sizes. The site's own briefing
+        // prose is the one thing the card carried that has no column: it is a
+        // paragraph, and a wrapped paragraph cell sets every row a different
+        // height. It lives one tap away, on the row's own page.
+        //
+        // No `SectionCard` around this: `<Table>` brings the same shell at the
+        // same radius, and a card inside a card reads as a rendering bug.
+        <Table shellClassName="mt-4">
+          {/* The table's accessible name, which the `<ul>` carried as an
+              `aria-label`. A caption is the element HTML has for it. */}
+          <caption className="sr-only">{t("diveSites.list.gridAriaLabel")}</caption>
+          <THead>
+            <Th>{t("diveSites.list.table.site")}</Th>
+            {/* Location and the template line fold under the site's name on a
+                phone, leaving the name beside the gates — the two a staffer is
+                answering "can this diver go here?" with — rather than four
+                columns to scroll sideways through. */}
+            <Th hideBelow="sm">{t("diveSites.list.table.location")}</Th>
+            <Th>{t("diveSites.list.table.requirements")}</Th>
+            <Th hideBelow="sm">{t("diveSites.list.table.template")}</Th>
+          </THead>
+          <TBody>
+            {sites.map((site) => {
+              const location = site.locationName || t("diveSites.list.locationToAdd");
+              const published = currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0;
+              const adopted = site.sourceTemplateVersion;
+              const updateReady = adopted !== null && published > adopted;
+              const template = !adopted
+                ? null
+                : updateReady
+                  ? t("diveSites.list.templateUpdateReady", { version: published })
+                  : t("diveSites.list.diveDayTemplateVersion", { version: adopted });
+              // An update waiting is the one thing in this column a staffer can
+              // act on, so it is the one thing that carries ink; the version a
+              // site was adopted at is provenance, and stays quiet.
+              const templateTone = updateReady ? "font-medium text-primary" : "text-muted";
+              return (
+                <tr key={site.id}>
+                  <Td align="middle">
+                    <Link
+                      href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {site.name}
+                    </Link>
+                    <div className="text-xs text-muted sm:hidden">{location}</div>
+                    {template ? (
+                      <div className={`mt-1 text-xs sm:hidden ${templateTone}`}>{template}</div>
+                    ) : null}
+                  </Td>
+                  <Td muted hideBelow="sm" align="middle">
+                    {location}
+                  </Td>
+                  <Td align="middle">
+                    <div className="flex flex-wrap gap-2">
+                      {site.minimumCertificationLevel ? (
+                        <Badge tone="primary" size="sm">
+                          {t(CERTIFICATION_LEVEL_KEYS[site.minimumCertificationLevel])}
+                        </Badge>
+                      ) : null}
+                      {site.requiresNitrox ? (
+                        <Badge tone="warning" size="sm">
+                          {t("diveSites.list.nitroxBadge")}
+                        </Badge>
+                      ) : null}
+                      {site.requiredSpecialties.length > 0 ? (
+                        <Badge tone="neutral" size="sm">
+                          {site.requiredSpecialties.length === 1
+                            ? t("diveSites.list.oneRequiredSpecialty")
+                            : t("diveSites.list.manyRequiredSpecialties", {
+                                count: site.requiredSpecialties.length,
+                              })}
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </Td>
+                  <Td hideBelow="sm" align="middle" className={`text-xs ${templateTone}`}>
+                    {template}
+                  </Td>
+                </tr>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
 
       <Pager

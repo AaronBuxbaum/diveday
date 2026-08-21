@@ -3448,10 +3448,14 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The shop's own dive-site library, which had no baseline at all until
-      // it gained a search band and a pager.
+      // it gained a search band and a pager. A table since issue #608.
       test(`the dive-site library renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites");
         await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+        // A seeded row, not just the heading: this route is `instant = true`,
+        // so the heading is already in the static shell while `loading.tsx`'s
+        // skeleton is what stands where the table will be.
+        await page.getByRole("link", { name: "Molasses Reef", exact: true }).waitFor();
         await capture(page, "dive-sites-library", scheme);
       });
 
