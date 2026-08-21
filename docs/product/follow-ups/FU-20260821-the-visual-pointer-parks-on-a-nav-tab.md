@@ -20,9 +20,12 @@ is that component's `hover:` pair. The baseline was photographed with the pointe
 tab; the new run was not. The same pill in `prep-light-vw-1280.png` is byte-identical between
 baseline and actual, so the styling itself did not move.
 
-Nothing in the spec clicks that tab, and the difference is not deterministic: the light-mode and
-390px captures of the same surface are byte-identical across the two runs. So something varies
-between runs that the spec does not control.
+Nothing in the spec clicks that tab, and **the difference is demonstrably non-deterministic**. The
+next commit on that same branch added one Markdown file and touched no code, no spec and no asset;
+reg-suit's run over it reported **12** changed and 508 passed against the same baseline, with
+`trip-guests-identity-dark-vw-1280` *passing*. So the capture flipped between two runs of a tree
+that differs by a `.md` file, and it flips in both directions — the baseline and the second run
+landed hovered, the first did not.
 
 The leading explanation, **not yet proven**: `capture()` (`e2e/visual.spec.ts`) resizes the page to
 390 and then to 1280 and calls `paintWholeDocument`, which scrolls the document through in
@@ -72,11 +75,15 @@ src/components/ShopNavLinks.tsx.
 
 The problem, with evidence: PR #593 touched only the trip prep route and reg-suit still reported
 `trip-guests-identity-dark-vw-1280.png` as changed. The entire diff is the header's current-
-destination pill rendering `hover:bg-surface-sunken hover:text-foreground` in the baseline and
-`bg-primary/10 text-primary` in the new run. No spec clicks that tab: `capture()` resizes the page
-390 -> 1280 and scrolls it through, and Chromium recomputes `:hover` under a stationary pointer on
-every resize and scroll, so a test that ends on a click leaves the cursor over whatever the new
-layout puts beneath it.
+destination pill rendering `hover:bg-surface-sunken hover:text-foreground` on one side and
+`bg-primary/10 text-primary` on the other; heights identical, no other pixel on the page moved. The
+next commit on that branch added a single Markdown file and the same surface *passed* — so it flips
+between runs of a tree that differs by a `.md` file, in both directions.
+
+Suspected mechanism, unproven: no spec clicks that tab, but `capture()` resizes the page 390 -> 1280
+and `paintWholeDocument` scrolls it through, and Chromium recomputes `:hover` under a stationary
+pointer on every resize and scroll — so a test that ends on a click leaves the cursor over whatever
+the new layout puts beneath it.
 
 Confirm the mechanism before fixing it: log the pointer position and the hovered element chain right
 before each `screenshotOrGiveUp` and run that one test twice. If it holds, the fix is to move the
