@@ -475,7 +475,11 @@ async function withRendererBound<T>(
 }
 
 async function paintWholeDocument(page: Page) {
-  const { stalled: stalledFrames, unsettled: unsettledImages } = await withRendererBound(
+  const {
+    stalled: stalledFrames,
+    unsettled: unsettledImages,
+    scrolledAway,
+  } = await withRendererBound(
     page,
     "the scroll-through and image settle",
     PAINT_STALL_MS,
@@ -597,7 +601,29 @@ async function paintWholeDocument(page: Page) {
         }
         // One more frame so anything decoded above is composited before the shot.
         await settle();
-        return { stalled, unsettled };
+
+        // **Land at the top, last.** The scroll reset used to sit above the
+        // image-settle loop, so every frame that loop awaited was a frame in
+        // which something else could scroll the page — with nothing putting it
+        // back before the shot. `ScrollToHash` is exactly that on a surface
+        // opened at a `#fragment`: it `scrollIntoView`s the target on mount, and
+        // whichever landed last decided where `position: fixed` chrome painted
+        // into the stitched full-page screenshot.
+        //
+        // Not a theory. `trip-guests-deal-seeded` (opened at
+        // `#last-minute-deal`) diffed on two of four commits of a branch whose
+        // whole diff was a test comment and some markdown — light on one, dark
+        // on another — with identical content, and only the shop header and the
+        // staff dock moved, each to where the other had been.
+        //
+        // Doing it here rather than retrying it is the point: after this line
+        // the frame is composited and the shot is taken, so there is no window
+        // left to lose. `scrolledAway` reports a page that scrolled anyway,
+        // because that is a surface fighting the capture and worth naming — not
+        // something to out-wait.
+        window.scrollTo(0, 0);
+        await settle();
+        return { stalled, unsettled, scrolledAway: window.scrollY !== 0 };
       },
       {
         frameWaitMs: FRAME_WAIT_MS,
@@ -605,10 +631,10 @@ async function paintWholeDocument(page: Page) {
         imageSettleMs: IMAGE_SETTLE_MS,
       },
     ),
-    // A stalled pass painted nothing it can report on, and the two warnings
+    // A stalled pass painted nothing it can report on, and the warnings
     // below would be lying if they claimed a count; `withRendererBound` has
     // already said what happened.
-    { stalled: 0, unsettled: 0 },
+    { stalled: 0, unsettled: 0, scrolledAway: false },
   );
   if (stalledFrames > 0) {
     console.warn(
@@ -621,6 +647,12 @@ async function paintWholeDocument(page: Page) {
       `visual: ${unsettledImages} image(s) had not finished loading within the ` +
         `${IMAGE_SETTLE_MS}ms bound at ${page.url()} — the shot may contain a partly-loaded ` +
         "photo; check the diff for a changed image tile.",
+    );
+  }
+  if (scrolledAway) {
+    console.warn(
+      `visual: ${page.url()} scrolled itself away from the top three times running — the shot's ` +
+        "sticky chrome may sit anywhere, which reads as a phantom diff. Find what is scrolling.",
     );
   }
   // Same reasoning as the frame waits: a webfont that never resolves must cost

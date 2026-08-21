@@ -46,17 +46,29 @@ async function expectNoA11yViolations(page: Page) {
   // transient in-between state — this is not a real a11y defect a visitor
   // ever perceives, just the render finishing.
   //
-  // **Order matters, and it is the whole fix here.** This used to assert the
-  // title *before* settling the network, which leaves the assertion able to
-  // pass against the document the caller was already looking at — and then the
-  // scan runs after a *new* one has swapped in, in the window before its own
-  // title lands. That is not hypothetical: it is how the add-a-booking scan
-  // went red on CI (run 30887575971, shard 1/4) with `document-title`, on the
-  // scan that follows a server action's redirect. Settling first and asserting
-  // the title last makes the title the final gate before `analyze()`, so the
-  // document axe reads is the one the assertion actually checked.
-  // diveday:allow-e2e-hygiene networkidle: axe scans the whole settled document, so there is no single element to wait for; the title assertion below is the deterministic final gate (see the comment above, CI run 30887575971)
-  await page.waitForLoadState("networkidle");
+  // **There used to be a `waitForLoadState("networkidle")` above this line, and
+  // removing it is what un-redded `main` on 2026-08-21.** It was here to settle
+  // the document before axe read it, with a `diveday:allow-e2e-hygiene`
+  // exemption arguing there was no single element to wait for. There is: every
+  // caller already gates on the surface's own heading before it scans, which is
+  // the deterministic wait, and this is the gate that follows it.
+  //
+  // What that exemption cost: on CI runs 32439332010, 32440808953 and
+  // 32441820119 the booking scan consumed its entire budget and died on that
+  // line — at 30s, then 60s, then 120s, exactly the budget each time. A slow
+  // test passes at *some* budget; this one never would, because `/ready` does
+  // not reach network idle on a CI runner at all (it settles in 2ms locally, so
+  // it never reproduced here). The failure read as a hang in `waitForLoadState`
+  // and was twice misdiagnosed as cost, which is precisely the "deterministic
+  // failure converted into an intermittent one" that `check:e2e-hygiene` refuses
+  // this API for. Why that page never goes idle is a real question about the
+  // product, not the test: FU-20260821-ready-never-reaches-network-idle.
+  //
+  // **Order still matters.** The title assertion is last, immediately before
+  // `analyze()`, so the document axe reads is the one this checked. Asserting it
+  // *first* let it pass against the document the caller was already looking at
+  // while the scan then ran on a newly swapped-in one — how the add-a-booking
+  // scan went red on CI run 30887575971 with `document-title`.
   await expect(page).toHaveTitle(/.+/);
   // `document-title` is disabled because the settle-then-gate ordering above
   // did not fully close its race: it recurred on CI run 31112513322 (2026-08-06,
@@ -90,16 +102,27 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
   test("the trip booking page and its confirmation have no automated a11y violations", async ({
     page,
   }) => {
-    // Six navigations, a sign-out, a booking, and three full axe scans: 11.2s
-    // measured on an idle worker, against the file's 15s default. That 3.8s of
-    // headroom is not enough under 2-worker contention, where this test times
-    // out mid-scan — not on a violation, on the clock. Raised rather than
-    // trimmed because every leg of it is load-bearing: the scan has to happen
-    // on the *signed-out* page (a staff session adds a preview banner no diver
-    // sees) and on the confirmation, and neither can be reached without the
-    // trip this creates. Same treatment, and the same reasoning, as the
-    // cost-bound tests in add-diver.spec.ts.
-    test.setTimeout(30_000);
+    // Six navigations, a sign-out, a booking, and two full axe scans. Every leg
+    // is load-bearing: the scan has to happen on the *signed-out* page (a staff
+    // session adds a preview banner no diver sees) and on the confirmation, and
+    // neither can be reached without the trip this creates. Same treatment, and
+    // the same reasoning, as the cost-bound tests in add-diver.spec.ts.
+    //
+    // **This is the most expensive test in the file, and the cost is setup.**
+    // Measured on an idle worker at 22.3s total: the booking-page scan is 1.65s
+    // (876ms settling, 759ms in axe) and the confirmation scan is 1.86s (2ms
+    // settling, 1841ms in axe). The other ~19s is reaching those two states —
+    // filling the add panel on the schedule board, signing out, and booking.
+    // That is what the budget is for, and the real fix is to stop building a
+    // trip through the UI to get one
+    // (FU-20260821-the-a11y-booking-scan-pays-19s-for-setup).
+    //
+    // The budget is **not** what broke on 2026-08-21, and raising it twice did
+    // not help: see the note in `expectNoA11yViolations` above, where a
+    // `networkidle` wait that never settled on CI was consuming whatever number
+    // stood here. 60s is sized from the 22.3s measurement, not from that
+    // episode. Measure before touching it.
+    test.setTimeout(60_000);
     const title = `A11y Scan Trip ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(title);
