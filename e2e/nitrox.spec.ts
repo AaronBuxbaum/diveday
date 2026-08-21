@@ -267,6 +267,35 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   await expect(page.getByLabel("Nitrox card number")).toHaveCount(0);
 });
 
+test("an incomplete nitrox card keeps the request and keeps asking", async ({ page }) => {
+  // A number with no agency is uncheckable, so `recordDiverNitroxCard` files
+  // nothing — and because it files nothing, the ask must still be there. The
+  // failure this guards against is the opposite: half a card written as a
+  // card-on-file, which would take the question away and leave a staffer with
+  // an agency-less row to verify.
+  await page.goto("/s/blue-mantis");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name").fill("Half Card");
+  await page.getByLabel("Email").fill(`halfcard+${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You’re on the boat, Half/ })).toBeVisible();
+
+  const nitrox = page.locator('input[name="nitrox"]').filter({ visible: true });
+  await nitrox.check();
+  // The number without an agency — the incomplete half.
+  await page.getByLabel("Nitrox card number").fill("EANX-NO-AGENCY");
+  await page.getByRole("button", { name: "Save rental fit" }).click();
+
+  // The request stuck; the card did not, so the form still asks for it.
+  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
+  await expect(page.getByLabel("Nitrox card number")).toBeVisible();
+});
+
 test("a course taught on air offers no nitrox request, at the same shop that fills it", async ({
   page,
 }) => {

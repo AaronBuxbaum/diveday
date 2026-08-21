@@ -129,9 +129,16 @@ export function DiveCertificationField({
         // sighted diver would see it and the screen-reader diver would not.
         // Polite rather than an alert: nothing is wrong, and it must not
         // interrupt the reader mid-option.
-        <span role="status" aria-live="polite" className="text-sm text-warning-strong">
-          {belowRequirement ?? ""}
-        </span>
+        //
+        // Rendered only when there is something to say. A party of six would
+        // otherwise put six empty live regions on the page, which is six things
+        // for a screen reader to track and nothing for it to read
+        // (`sourcery-ai`).
+        belowRequirement ? (
+          <span role="status" aria-live="polite" className="text-sm text-warning-strong">
+            {belowRequirement}
+          </span>
+        ) : undefined
       }
       aside={
         <InfoHint

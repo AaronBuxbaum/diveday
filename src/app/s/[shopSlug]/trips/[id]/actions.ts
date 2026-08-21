@@ -7,12 +7,11 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
-import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
+import { recordDiverNitroxCard, setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
-import { certificationAgency } from "@/db/schema";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -26,6 +25,7 @@ import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   type DiveDeclaration,
@@ -826,24 +826,18 @@ export async function saveRentalFitRequest(
       bookingId: ctx.capability.bookingId,
       wantsNitrox,
     });
-    // The card typed beside the request. Same four refusals as the readiness
-    // page's copy of this: no request, unknown agency, an incomplete pair, or a
-    // row that already exists. Files `pending`; only a staffer sets `verified`,
-    // which is what `authorizesNitroxFill` reads.
-    const agency = parsed.data.nitroxAgency?.trim() ?? "";
-    const identifier = parsed.data.nitroxIdentifier?.trim() ?? "";
-    if (
-      wantsNitrox &&
-      identifier.length >= 2 &&
-      (certificationAgency.enumValues as readonly string[]).includes(agency)
-    ) {
-      await createNitroxCertification(ctx.db, {
-        shopId: ctx.capability.shopId,
-        personId: ctx.confirmed.person.id,
-        agency: agency as (typeof certificationAgency.enumValues)[number],
-        identifier,
-      });
-    }
+    // The card typed beside the request, through the one writer both surfaces
+    // share. It used to be an inline copy here and another on /ready, and they
+    // drifted within the hour: this one forgot `selfDeclaredAt`, which is the
+    // entire safeguard (see `recordDiverNitroxCard`).
+    await recordDiverNitroxCard(ctx.db, {
+      shopId: ctx.capability.shopId,
+      personId: ctx.confirmed.person.id,
+      wantsNitrox,
+      agency: parsed.data.nitroxAgency,
+      identifier: parsed.data.nitroxIdentifier,
+      now: nowDate(),
+    });
   }
   const result = saved ? "fit=saved" : "error=fit";
   revalidateAndRedirect(base, `${base}?booking=${token}&${result}${embedParam(embed, "&")}`);

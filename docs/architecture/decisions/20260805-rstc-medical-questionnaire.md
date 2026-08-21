@@ -36,7 +36,7 @@ The existing controls remain mandatory:
 - A diver can write only through their own single-use, hashed bearer waiver capability. The token is rate-limited and every write is scoped to its waiver record and booking.
 - Staff reads are shop-scoped and role-gated. The roster and incident export expose only the derived review status; the signed-record disclosure shows flagged prompts only to authorized waiver reviewers.
 - Medical answers are excluded from incident exports and contact imports. Diver erasure removes the answers and re-seals the remaining waiver evidence.
-- Signed records retain the questionnaire version so a later form revision never reinterprets old evidence. Versions 1 and 2 remain readable only for already-signed records; all new links use version 3 (see the 2026-08-20 amendment).
+- Signed records retain the questionnaire version so a later form revision never reinterprets old evidence. Version 2 remains readable only so an already-signed record can be interpreted — it is refused for a *new* signature (`validateMedicalAnswers`'s `requireCurrent`, which `completeWaiver` passes), because a corrected form must never be answered under the version it corrected. Version 1 was deleted outright: it was a paraphrase DiveDay wrote that no published form ever carried, so no record could need it to be read honestly. All new links use version 3 (see the 2026-08-20 amendment).
 
 No database migration is required for this change: the current schema already provides versioned JSONB answer storage, draft persistence, integrity sealing, and erasure. The migration ledger therefore remains unchanged.
 

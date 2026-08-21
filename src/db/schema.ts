@@ -226,7 +226,13 @@ export const shops = pgTable(
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
     check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
     check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
-    check("shops_shore_group_size_positive", sql`${table.shoreGroupSize} > 0`),
+    // Bounded at both ends, matching `parseGroupSize` in the settings action.
+    // A DB constraint looser than the action it backs lets any other caller
+    // persist a number the planner will not honour (`coderabbitai`).
+    check(
+      "shops_shore_group_size_in_range",
+      sql`${table.shoreGroupSize} > 0 and ${table.shoreGroupSize} <= 60`,
+    ),
     /**
      * A shop that runs no dives at all cannot schedule one, and every create
      * path defaults to `boat`, so an all-false row would leave the builder with

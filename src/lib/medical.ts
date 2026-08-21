@@ -423,13 +423,21 @@ export type MedicalResult =
 /** Validate the exact questionnaire version before deriving a result. */
 export function validateMedicalAnswers(
   answers: MedicalAnswers,
-  options: { requireComplete?: boolean } = {},
+  options: { requireComplete?: boolean; requireCurrent?: boolean } = {},
 ): { ok: true; questionnaire: MedicalQuestionnaire } | { ok: false; missingQuestionIds: string[] } {
   const questionnaire = findQuestionnaireVersion(
     answers.questionnaireId,
     answers.questionnaireVersion,
   );
   if (!questionnaire) return { ok: false, missingQuestionIds: ["questionnaire"] };
+  // **Readable is not the same as signable.** A retired version stays in
+  // `BY_KEY` so a *stored* record can still be interpreted honestly; it must
+  // never be a set of questions somebody can sign *today*, or a corrected form
+  // could be answered under the version it corrected. `completeWaiver` passes
+  // this; every read path deliberately does not.
+  if (options.requireCurrent && !CURRENT_QUESTIONNAIRES.includes(questionnaire)) {
+    return { ok: false, missingQuestionIds: ["questionnaire"] };
+  }
   const responseKeys = new Set(Object.keys(answers.responses));
   if ([...responseKeys].some((id) => !questionnaire.questions.some((q) => q.id === id))) {
     return { ok: false, missingQuestionIds: ["questionnaire"] };
