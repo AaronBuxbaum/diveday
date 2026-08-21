@@ -56,13 +56,15 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}/guests`);
 
     // The seed gives one diver on this trip a date of birth putting them at 13
-    // (src/db/seed.ts), so the roster carries both the age and the minor badge.
-    await expect(page.getByText(/Age \d+/).first()).toBeVisible();
-
+    // (src/db/seed.ts), so the roster carries both facts in one pill — the
+    // manifest's own "Minor · age N" badge, the same words on both surfaces.
+    // An adult's age is a fact, not a flag, and waits in the row's reference
+    // panel; the minor's age is the one the crew acts on at a glance (H-21).
+    //
     // The warning-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "⚠️Minor", not
+    // (Badge.tsx toneGlyph), so the element's own text starts "⚠️Minor", not
     // "Minor" alone.
-    const minorBadge = page.getByText("⚠️Minor").first();
+    const minorBadge = page.getByText(/⚠️Minor · age \d+/).first();
     await expect(minorBadge).toBeVisible();
 
     // The whole point: being a minor is a fact the crew is told, never a gate.

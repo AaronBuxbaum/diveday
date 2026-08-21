@@ -30,6 +30,8 @@ import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { BuddyTeamChip } from "./BuddyTeamChip";
 import {
   ROLL_CALL_ROW_TONE,
+  ROW_DISCLOSURE_PANEL_CLASS,
+  ROW_DISCLOSURE_SUMMARY_CLASS,
   RollCallControls,
   rollCallRecordedTone,
   rollCallRowState,
@@ -138,21 +140,24 @@ function DiverFacts({
  * The two disclosures a diver's row carries — "Contact & gear" and "Add a
  * note" — as one set of class strings.
  *
- * **Side by side, and the summary never moves.** They used to stack, which cost
- * the row a second 44px line for a control most roll calls never touch; they
- * are peers, so they share one line and each panel opens down its own grid
- * column (an `auto`-flowed row would have pushed the neighbour sideways as one
- * opened). And the panel treatment belongs to the *panel*: hung on the
+ * **Side by side from `sm`, stacked on a phone, and the summary never moves.**
+ * They are peers, so they share one line where the width allows and each
+ * panel opens down its own grid column (an `auto`-flowed row would have pushed
+ * the neighbour sideways as one opened, and a wrapped flex row would move the
+ * second summary out from under the finger as the first panel grew). On a
+ * phone the half-columns are too narrow for the labels — "Add a private note"
+ * wrapped mid-label — so there they stack, each keeping its full width. And
+ * the panel treatment belongs to the *panel*: hung on the
  * `<details>` as `open:` variants it grew the element's own margin and padding
  * at the instant of the tap, so the summary line jumped ~20px down the screen
  * out from under the finger that opened it.
+ *
+ * The grid is diver-specific (a crew row carries one disclosure, not a
+ * pair) and stays here; the summary/panel treatment it wraps is shared with
+ * `CrewRollCall.tsx` and lives in `RollCallControls.tsx`.
  */
 const ROW_DISCLOSURE_GRID_CLASS =
   "mt-1 grid items-start gap-x-6 print:hidden sm:max-w-4xl sm:grid-cols-2";
-const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden";
-const ROW_DISCLOSURE_PANEL_CLASS =
-  "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
  * Staff notes that belong on a diver's row, rather than in separate desk and
@@ -350,7 +355,7 @@ export function DiverRollCall({
           // its name clear of the sticky checkpoint panel. Shared with the crew
           // rows, which are jump targets for the same chips: see
           // `rollCallScrollMargin` for what the two sizes are measured against.
-          const rowClass = `border-l-4 px-4 py-5 sm:px-5 ${rollCallScrollMargin(isDeparture)} ${
+          const rowClass = `border-l-4 px-4 py-4 sm:px-5 ${rollCallScrollMargin(isDeparture)} ${
             recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
           // The pill is dropped only when something else on the row is
@@ -384,16 +389,18 @@ export function DiverRollCall({
               id={`diver-row-${diver.bookingId}`}
               className={`${rowClass} transition-all duration-300`}
             >
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                {/* `lg:flex-1` so this column is the same width on every row.
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
+                {/* `md:flex-1` so this column is the same width on every row.
                     Left to size itself, a flex child takes its content's width
                     — and since the row's content is a name plus however many
                     badges that diver happens to carry, every row got a
                     different one. The two disclosures below split this column
                     in half, so "Add a note" then started at a different x on
                     each of nine rows, wandering left and right down the
-                    roster. */}
-                <div className="min-w-0 lg:flex-1">
+                    roster. `md`, not `lg`: the control cluster is one line
+                    now, narrow enough to sit beside the name column from
+                    tablet width up instead of stacking under it. */}
+                <div className="min-w-0 md:flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
                       {String(index + 1).padStart(2, "0")}
@@ -528,81 +535,15 @@ export function DiverRollCall({
                     timezone={timezone}
                     t={t}
                   />
-                  {/* The row's two secondary paths, on one line. Reference
-                      facts are disclosed on demand — nine emergency contacts
-                      and six rental lists at permanent height were dock-prep
-                      and break-glass reference standing between the captain
-                      and the next name (principles 9 and 10). One tap opens
-                      them; paper always carries them (the print-only block
-                      below — a closed details contributes nothing to print). */}
-                  <div className={ROW_DISCLOSURE_GRID_CLASS}>
-                    <details className="group/facts">
-                      {/* Muted, not action-blue: two of these per row down a
-                          nine-diver roster is eighteen links' worth of primary
-                          ink for rare paths, drowning the one link that earns
-                          it ("Resolve blockers"). The label names everything
-                          behind it — a door marked "Contact & gear" with a
-                          medical line behind it is a mislabeled door on a
-                          safety surface (design review 20260810). */}
-                      <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                        {/* The caret is what tells these lines apart from the
-                            "Resolve blockers" navigation link beside them:
-                            these disclose in place, that one leaves the page.
-                            It is the app's drawn chevron rather than the `+`
-                            that used to sit *after* the label — rotated 45° to
-                            a ✕ on open, that glyph took the summary's own
-                            `hover:underline` around with it, which is the
-                            underline-at-an-angle a review caught under an open
-                            "Contact & gear". Only the label underlines now. */}
-                        <DisclosureCaret className="group-open/facts:rotate-90" />
-                        <span className="group-hover/summary:underline">
-                          {diver.medicalWaiver
-                            ? t("manifest.diverFactsSummaryWithMedical")
-                            : t("manifest.diverFactsSummary")}
-                        </span>
-                      </summary>
-                      <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                        <DiverFacts
-                          diver={diver}
-                          locale={locale}
-                          timezone={timezone}
-                          columns={1}
-                          t={t}
-                        />
-                      </div>
-                    </details>
-                    {/* Closed, this is one quiet line — the same grammar as the
-                        facts disclosure beside it. The private note is a desk
-                        context write, not a boarding control, so it is available
-                        before any roll-call result exists and stays collapsed
-                        at rest. */}
-                    <details className="group/note">
-                      <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                        <DisclosureCaret className="group-open/note:rotate-90" />
-                        <span className="group-hover/summary:underline">
-                          {t("trips.roster.addFirstNoteSummary")}
-                        </span>
-                      </summary>
-                      <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                        <PrivateNoteForm
-                          action={addPrivateNoteAction}
-                          hiddenFields={{ bookingId: diver.bookingId }}
-                          resetKey={
-                            notesByBooking
-                              .get(diver.bookingId)
-                              ?.filter((note) => note.scope === "booking").length ?? 0
-                          }
-                          rows={2}
-                          copy={{
-                            label: t("trips.roster.addNoteLabel"),
-                            placeholder: t("shared.rollCallNote.notePlaceholder"),
-                            add: t("trips.roster.addPrivateNote"),
-                            adding: t("trips.roster.adding"),
-                          }}
-                        />
-                      </div>
-                    </details>
-                  </div>
+                  {/* Print-only, and deliberately kept here rather than beside
+                      the screen disclosure it mirrors below: paper has no
+                      collapsed state to open, so this is simply where the
+                      fact sits on the sheet, ahead of the audit line below —
+                      the same order the row has always printed in. Moving it
+                      to follow the screen reorder would have silently
+                      reordered what the printed manifest says, on the one
+                      surface where "trustworthy by inspection" (principle 6)
+                      means the order on the page too. */}
                   <div className="mt-3 hidden print:block">
                     <DiverFacts
                       diver={diver}
@@ -648,6 +589,87 @@ export function DiverRollCall({
                   noteDraftFor={{ bookingId: diver.bookingId, checkpoint }}
                   t={t}
                 />
+              </div>
+              {/* The row's two rare paths, on one line — and *below* the
+                  roll-call controls, not between the name and the tap: on a
+                  phone the row reads name → state → act, top to bottom, and
+                  these two disclosure lines used to sit in the middle of
+                  that, ~90px of dock-prep chrome between every name and its
+                  button. Reference facts are disclosed on demand — nine
+                  emergency contacts and six rental lists at permanent height
+                  were break-glass reference standing between the captain and
+                  the next name (principles 9 and 10). One tap opens them;
+                  paper always carries them, unconditionally, in the
+                  print-only block above (beside the name, ahead of the
+                  audit line) — a closed details here contributes nothing to
+                  print, which is why that block does not live here too. */}
+              <div className={ROW_DISCLOSURE_GRID_CLASS}>
+                <details className="group/facts">
+                  {/* Muted, not action-blue: two of these per row down a
+                      nine-diver roster is eighteen links' worth of primary
+                      ink for rare paths, drowning the one link that earns
+                      it ("Resolve blockers"). The label names everything
+                      behind it — a door marked "Contact & gear" with a
+                      medical line behind it is a mislabeled door on a
+                      safety surface (design review 20260810). */}
+                  <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                    {/* The caret is what tells these lines apart from the
+                        "Resolve blockers" navigation link above them:
+                        these disclose in place, that one leaves the page.
+                        It is the app's drawn chevron rather than the `+`
+                        that used to sit *after* the label — rotated 45° to
+                        a ✕ on open, that glyph took the summary's own
+                        `hover:underline` around with it, which is the
+                        underline-at-an-angle a review caught under an open
+                        "Contact & gear". Only the label underlines now. */}
+                    <DisclosureCaret className="group-open/facts:rotate-90" />
+                    <span className="group-hover/summary:underline">
+                      {diver.medicalWaiver
+                        ? t("manifest.diverFactsSummaryWithMedical")
+                        : t("manifest.diverFactsSummary")}
+                    </span>
+                  </summary>
+                  <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                    <DiverFacts
+                      diver={diver}
+                      locale={locale}
+                      timezone={timezone}
+                      columns={1}
+                      t={t}
+                    />
+                  </div>
+                </details>
+                {/* Closed, this is one quiet line — the same grammar as the
+                    facts disclosure beside it. The private note is a desk
+                    context write, not a boarding control, so it is available
+                    before any roll-call result exists and stays collapsed
+                    at rest. */}
+                <details className="group/note">
+                  <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                    <DisclosureCaret className="group-open/note:rotate-90" />
+                    <span className="group-hover/summary:underline">
+                      {t("trips.roster.addFirstNoteSummary")}
+                    </span>
+                  </summary>
+                  <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                    <PrivateNoteForm
+                      action={addPrivateNoteAction}
+                      hiddenFields={{ bookingId: diver.bookingId }}
+                      resetKey={
+                        notesByBooking
+                          .get(diver.bookingId)
+                          ?.filter((note) => note.scope === "booking").length ?? 0
+                      }
+                      rows={2}
+                      copy={{
+                        label: t("trips.roster.addNoteLabel"),
+                        placeholder: t("shared.rollCallNote.notePlaceholder"),
+                        add: t("trips.roster.addPrivateNote"),
+                        adding: t("trips.roster.adding"),
+                      }}
+                    />
+                  </div>
+                </details>
               </div>
             </li>
           );

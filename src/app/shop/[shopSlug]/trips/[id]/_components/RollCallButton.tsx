@@ -58,7 +58,9 @@ export function RollCallButton({
   status,
   label,
   pendingLabel,
+  ariaLabel,
   className,
+  formClassName,
   noteDraftFor,
   copy,
 }: {
@@ -82,7 +84,25 @@ export function RollCallButton({
   status: string;
   label: string;
   pendingLabel: string;
+  /**
+   * Overrides the accessible name while the visible `label` stays put — the
+   * one case is a settled control with no done-check to point at nearby
+   * (principle 7 carves out "Not back aboard" as the sole *visible* exception;
+   * every other settled state, "Boarded ☑️" and its siblings, reads its own
+   * re-tap affordance to a sighted user from the ☑️ and the row's own green
+   * fill, neither of which reaches a screen reader). Undefined leaves the
+   * accessible name as the rendered text, unchanged for every unrecorded and
+   * pending state.
+   */
+  ariaLabel?: string;
   className: string;
+  /**
+   * Sizing for the `<form>` the button posts through. In the control
+   * cluster's flex row the form — not the button — is the flex item, so the
+   * "how much of the row does this control claim" classes have to land here
+   * while `className` keeps styling the button itself.
+   */
+  formClassName?: string;
   /**
    * The row whose note draft this submit should carry, when it has one. See
    * `useUnsavedNote` below for why a button posts a note at all.
@@ -110,7 +130,7 @@ export function RollCallButton({
   }, [result]);
   return (
     <>
-      <form action={formAction}>
+      <form action={formAction} className={formClassName}>
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
         {/* A note typed before anybody was called has nowhere to be saved:
@@ -125,12 +145,23 @@ export function RollCallButton({
             from the DOM at submit time, and racing it is not a thing to do on
             the roll-call surface. */}
         {unsavedNote !== null ? <input type="hidden" name="note" value={unsavedNote} /> : null}
-        <button type="submit" disabled={isPending} aria-busy={isPending} className={className}>
+        <button
+          type="submit"
+          disabled={isPending}
+          aria-busy={isPending}
+          aria-label={isPending ? undefined : ariaLabel}
+          className={className}
+        >
           {isPending ? pendingLabel : label}
         </button>
       </form>
       {result && !result.ok ? (
-        <p role="alert" className="mt-1 text-sm font-medium text-danger sm:basis-full">
+        // `basis-full order-3`: the cluster is a flex-wrap row at every width
+        // now, and its controls are visually ordered with `order-1`/`order-2`
+        // — so a refusal drops to its own full-width line *below* both
+        // controls instead of squeezing in as a third column or, at the
+        // default order 0, jumping above them.
+        <p role="alert" className="order-3 mt-1 basis-full text-sm font-medium text-danger">
           {result.reason === "not_ready" ? copy.blockedMessage : copy.errorRefusal}
         </p>
       ) : null}

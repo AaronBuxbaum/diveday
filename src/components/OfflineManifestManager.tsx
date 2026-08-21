@@ -497,9 +497,15 @@ export function OfflineManifestManager({
               {busy ? copy.refreshingLabel : copy.refreshNowLabel}
             </button>
             {saved ? (
+              // `secondary`, deliberately: this is the standby door to the
+              // fallback viewer, on a panel whose chips already say the copy
+              // maintains itself — as `primary` it was the strongest control
+              // on the whole manifest, outshouting the roll call above it
+              // (principle 8; design review 2026-08-21). Still boat-sized:
+              // the moment it is needed is the moment of wet hands.
               <a
                 href={`/offline-manifest?trip=${tripId}`}
-                className={buttonClass({ variant: "primary", size: "boat" })}
+                className={buttonClass({ variant: "secondary", size: "boat" })}
               >
                 {copy.openOfflineRollCall}
               </a>
