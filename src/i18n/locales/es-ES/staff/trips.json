@@ -230,9 +230,6 @@
     "addPersonAriaLabel": "Añadir a {name} a la salida",
     "addToTrip": "Añadir a la salida",
     "noMatches": "Ningún buceador habitual coincide con “{query}”.",
-    "handEntrySummary": "¿Es nuevo en el centro? Introduce un buceador a mano",
-    "handEntryDescriptionWaitlist": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en la lista de espera.",
-    "handEntryDescriptionManifest": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en el manifiesto.",
     "nameLabel": "Nombre",
     "addToWaitlist": "Añadir a la lista de espera",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
@@ -278,14 +275,9 @@
     "daysAgo": "hace {days} d",
     "emailSubject": "Una invitación de {shopName}: {tripTitle}",
     "emailBody": "Hola {firstName},\n\n{shopName} ha programado {tripTitle} ({tripWhen}) y quiere invitarte. Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada. Si quieres apuntarte, empieza aquí:\n{bookingUrl}\n\n¡Nos vemos en el agua!",
-    "directHeading": "Invitar directamente a alguien",
-    "directDescription": "Busca a un buceador habitual para contactarle sobre esta salida sin añadirlo a ella.",
-    "directFindLabel": "Buscar un buceador para invitar",
-    "directFindPlaceholder": "Nombre, correo o teléfono",
     "directInvite": "Invitar",
     "directInviting": "Invitando…",
-    "directInviteAria": "Invitar a {name} a la salida",
-    "directNoMatches": "No hay ningún buceador habitual que coincida con «{query}»."
+    "directInviteAria": "Invitar a {name} a la salida"
   },
   "lastMinute": {
     "heading": "Oferta de última hora",

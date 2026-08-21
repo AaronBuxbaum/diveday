@@ -10,7 +10,6 @@
     "gridAriaLabel": "Sitios de buceo guardados",
     "savedSites": "Sitios guardados",
     "withForecastPoints": "Con ubicación GPS",
-    "withForecastPointsDetail": "Mapa, ruta y pronóstico listos",
     "fromTemplates": "De plantillas",
     "siteDeletedNotice": "Sitio eliminado.",
     "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
@@ -186,7 +185,6 @@
   "edit": {
     "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",
     "upcomingHeading": "Próximas inmersiones aquí",
-    "copyAndTailor": "Copiar y adaptar",
     "copying": "Copiando…",
     "deleteSite": "Eliminar sitio",
     "deleteConfirmTitle": "¿Eliminar este sitio de buceo?",
@@ -203,7 +201,6 @@
       "title": "Hay una plantilla de DiveDay más nueva",
       "description": "Este sitio usa la plantilla v{current}; la última versión publicada es la v{latest}.",
       "keepEditsDescription": "Incorpora la actualización y conserva los campos que hayas cambiado localmente. El nombre, las fotos y las rutas siempre siguen siendo tuyos.",
-      "recommended": "Recomendado",
       "keepEdits": "Aplicar cambios y conservar los míos",
       "keepEditsHint": "Solo cambian los campos que aún coinciden con la plantilla anterior.",
       "replaceCopy": "Aplicar texto de la plantilla",
