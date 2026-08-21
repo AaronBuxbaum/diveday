@@ -38,6 +38,14 @@ their payload is counts only:
 If the comment says no report was published, `reg-suit run` never got far enough to publish one —
 read the `visual-report` job log rather than assuming the pixels held still.
 
+**On a stacked pull request, read that comment on every layer.** A layer's baseline is the head
+commit of the layer below, whose S3 snapshot exists only if its own four visual shards went green in
+a run that finished first — and a cascading rebase rewrites every commit above the merge point,
+orphaning the keys published under them. So `NOTHING WAS COMPARED` is a *likelier* outcome here than
+on an ordinary branch, and it means the same thing it always does: unknown, not clean. Re-run the
+layer below and let it publish before triaging the layer above (ADR
+20260821-stacked-pull-requests).
+
 ## Fetching the report as an agent
 
 `reg-suit` prints an `index.html` report link, but that page is a client-rendered SPA — its body is

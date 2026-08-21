@@ -24,6 +24,7 @@ under the same sync duties (docs/README.md).
 | `i18n-copy` | Writing or editing any on-screen wording; a red `pnpm check:copy`; extracting a file off the copy baseline |
 | `copy-restraint` | Writing, editing, or reading past any user-facing sentence — the filter that decides whether it deserves to exist at all, and the sweep that removes explanatory, redundant, or apologetic copy |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
+| `stacked-prs` | One scope whose steps depend on each other (schema → db reader → surface) — chained base branches, GitHub stacks, cascading rebase, bottom-up merge |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |
 | `commercial-outreach` | Drafting go-to-market collateral for a stakeholder conversation — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material referenced by `docs/product/rollout.md` and `docs/product/stakeholders/commercial-and-industry.md` |
