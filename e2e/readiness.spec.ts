@@ -42,8 +42,6 @@ test.describe("staff-prepared trip", () => {
     await page.getByRole("button", { name: /^Book/ }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
 
-    // The confirmation hands the diver their readiness link — follow it.
-    await page.getByRole("link", { name: /readiness page/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Emergency contact" })).toBeVisible();
@@ -114,7 +112,6 @@ test("a booked diver's readiness page carries the packing list and the dive brie
   await page.getByLabel("Name", { exact: true }).fill("Ada Marlowe");
   await page.getByLabel("Email", { exact: true }).fill(`ada-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
-  await page.getByRole("link", { name: /readiness page/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
   // What to put in the bag, and what each tank actually dives.

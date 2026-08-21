@@ -372,8 +372,17 @@ test.describe("with Accept-Language: es", () => {
       .fill(`nora-es-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: /^Reservar (estas plazas|la última plaza)$/ }).click();
 
-    // The confirmation, and the next step it offers, in the same language.
+    // Where booking lands — the diver's own readiness page (ADR
+    // 20260820-one-page-after-booking) — and the next step it offers, both in
+    // the language the whole flow has been reading. The checklist heading is
+    // the assertion that matters most here: it is rendered by the *destination*
+    // route, so a locale that survived the booking form but was renegotiated
+    // from scratch after the redirect would show up as English right here.
+    await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: /¡Estás a bordo, Nora/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Firma tu exención ahora" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Tu lista antes de la salida" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Firmar tu exención" })).toBeVisible();
   });
 });

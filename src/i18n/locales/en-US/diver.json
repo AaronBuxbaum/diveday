@@ -257,20 +257,11 @@
     "certNoneOnGatedTrip": "This trip is for certified divers. Book if you like, then talk to the shop — they run courses and easier dives too.",
     "confirmedHeading": "You’re on the boat, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — be at the dock {minutes} minutes early and we’ll take it from there.",
-    "allSet": "You’re all set — nothing left but to show up.",
-    "nextStep": "Next: {step}",
     "paymentDepositReceived": "Deposit received",
     "paymentReceived": "Payment received",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
     "paymentSquare": "You’re square with the shop for this trip.",
     "paymentStillOpen": "Your spot is safe — payment’s still open",
-    "paymentOneThingLeft": "Finish paying for your seat",
-    "paymentBody": "Pay securely through the shop’s own payment page. If you’d rather settle at the counter, that works too.",
-    "finishPaying": "Finish paying",
-    "payNow": "Pay now",
-    "openingPayment": "Opening payment…",
-    "shopTakesOver": "You’re booked — the shop takes it from here",
-    "shopTakesOverBody": "We’re double-checking a couple of things on our side. Nothing you need to do right now.",
     "trackReadiness": "Track everything on your readiness page →",
     "errors": {
       "invalid": "Check your name and email and give it another go.",
@@ -295,8 +286,6 @@
       "noteTooLong": "Keep this note under 300 characters.",
       "promoInvalid": "That code isn't active."
     },
-    "signWaiverNow": "Sign your waiver now",
-    "openingWaiver": "Opening your waiver…",
     "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver."
   },
   "bookingGear": {

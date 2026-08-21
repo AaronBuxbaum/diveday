@@ -5,15 +5,30 @@ import { useState } from "react";
 import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
-export function TripActions({ calendarUrl }: { calendarUrl: string }) {
+export function TripActions({
+  calendarUrl,
+  shareUrl,
+}: {
+  calendarUrl: string;
+  /**
+   * What "share with a buddy" actually hands over. Defaults to the page's own
+   * URL, which is right on the public trip page and **wrong** on `/ready`,
+   * whose URL *is* a bearer capability: sharing it into a group chat would hand
+   * a buddy the power to cancel the booking and move its refund
+   * (docs/engineering/capability-telemetry-runbook.md). `/ready` passes the
+   * public trip page instead — the thing a diver means to share anyway.
+   */
+  shareUrl?: string;
+}) {
   const t = useTranslations("trip");
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function shareTrip() {
+    const url = shareUrl ?? window.location.href;
     const data = {
       title: document.title,
       text: t("shareText"),
-      url: window.location.href,
+      url,
     };
     if (navigator.share) {
       await navigator.share(data).catch((error: unknown) => {
@@ -25,7 +40,7 @@ export function TripActions({ calendarUrl }: { calendarUrl: string }) {
     // this button isn't Copyable-shaped (it shares a `buttonClass` row with
     // "Add to calendar" and only falls back to a copy when the Web Share API
     // is unavailable), but the write itself is never hand-rolled here.
-    const ok = await copyToClipboard(window.location.href);
+    const ok = await copyToClipboard(url);
     setStatus(ok ? "copied" : "failed");
     setTimeout(() => setStatus("idle"), 4000);
   }

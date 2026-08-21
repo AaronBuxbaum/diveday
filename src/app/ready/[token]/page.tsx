@@ -3,10 +3,13 @@ import { connection } from "next/server";
 import { DiveBriefingsSection } from "@/app/s/[shopSlug]/trips/[id]/_components/DiveBriefingsSection";
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
+import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
+import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
 import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import { RememberBooker } from "@/components/RememberBooker";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -19,8 +22,10 @@ import {
   resolveRevokedBookingCapability,
   verifyBookingCapability,
 } from "@/db/booking-capabilities";
+import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
+import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { certificationAgency, certificationLevel } from "@/db/schema";
@@ -38,10 +43,18 @@ import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-sum
 import { requestLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { perDiverBookingPriceCents } from "@/lib/courses";
+import {
+  formatMoneyCents,
+  formatRelativeDay,
+  formatShortDate,
+  formatTime,
+  formatTimeRangeTz,
+} from "@/lib/format";
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
-import { toShopCurrency } from "@/lib/money";
+import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import {
   buildDiverChecklist,
@@ -128,6 +141,119 @@ function ChecklistRow({
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
     </li>
+  );
+}
+
+/**
+ * What this booking has actually been charged, or null when nothing has
+ * settled. **Only the settled case**, on purpose: the unpaid states — an open
+ * Stripe session, a payable balance — are the payment checklist row's job on
+ * this page, and a second "Pay now" card beside it would be the duplication
+ * this page was collapsed to remove (ADR 20260820-one-page-after-booking). The
+ * receipt is the one thing the checklist genuinely cannot say: *how much*.
+ *
+ * The pending-checkout refresh comes with it, but **only on a return from
+ * Stripe**. A diver who has just paid routinely beats the webhook home, and
+ * without asking Stripe directly they would read "payment due" on the page
+ * they were sent to by paying. On every *other* visit the webhook has long
+ * since landed — and unlike the confirmation this replaced, which a diver saw
+ * once, this page is opened from every reminder for as long as the trip is
+ * ahead. Refreshing unconditionally would turn each of those into an outbound
+ * Stripe call for an abandoned session that is never going to change.
+ */
+async function resolvePaymentReceipt(
+  // i18n-exempt: multi-line type annotation, not copy — the scanner misreads the signature as a string.
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  bookingId: string,
+  /** This request is Stripe's own return, so an open session is worth asking about. */
+  returnedFromCheckout: boolean,
+  /**
+   * The full per-diver fare, for the balance still owed after a deposit. Null
+   * on an unpriced departure, which then quotes no balance rather than
+   * guessing one.
+   */
+  fullPriceCents: number | null,
+  /**
+   * What to show when a settled payment predates the currency column and has
+   * none of its own. A settled amount that *does* carry a currency keeps it —
+   * it is evidence of what was charged, and today's shop setting must never
+   * reinterpret it.
+   */
+  shopCurrency: ShopCurrency,
+): Promise<PaymentReceipt> {
+  const receipt = (settled: Awaited<ReturnType<typeof getBookingPayment>>): PaymentReceipt => {
+    if (settled?.status !== "paid" && settled?.status !== "deposit_paid") return null;
+    const isDeposit = settled.status === "deposit_paid";
+    return {
+      amountCents: settled.amountCents ?? null,
+      currency: settled.currency ?? shopCurrency,
+      isDeposit,
+      balanceDueCents:
+        isDeposit && fullPriceCents !== null
+          ? Math.max(0, fullPriceCents - (settled.amountCents ?? 0))
+          : 0,
+    };
+  };
+
+  const settled = await getBookingPayment(db, shopId, bookingId);
+  if (settled?.status === "paid" || settled?.status === "deposit_paid") return receipt(settled);
+  if (settled?.status === "waived" || !returnedFromCheckout) return null;
+
+  const checkout = await getLatestCheckoutForBooking(db, shopId, bookingId);
+  if (checkout?.status !== "pending") return null;
+  // The diver may have just paid and beaten the webhook home; ask Stripe.
+  const refreshed = await refreshCheckoutFromStripe(db, shopId, checkout.id);
+  return refreshed?.status === "completed"
+    ? receipt(await getBookingPayment(db, shopId, bookingId))
+    : null;
+}
+
+/** A settled charge, as this page states it back. Null when nothing has settled. */
+type PaymentReceipt = {
+  amountCents: number | null;
+  currency: string;
+  /** True when only a deposit has been paid; a balance is still owed. */
+  isDeposit: boolean;
+  /** The per-diver balance still due after a deposit, or 0 when paid in full. */
+  balanceDueCents: number;
+} | null;
+
+/**
+ * The receipt itself. Not a `SectionCard`: this panel carries a *tone* (a
+ * settled payment), which the shared card deliberately does not model. Its
+ * radius follows the canonical one so it sits at the same corner as the
+ * checklist above it.
+ */
+function PaymentReceiptPanel({
+  receipt,
+  locale,
+  t,
+}: {
+  receipt: NonNullable<PaymentReceipt>;
+  locale: string;
+  t: DiverTranslator;
+}) {
+  const depositWithBalance = receipt.isDeposit && receipt.balanceDueCents > 0;
+  // The currency comes off the settled payment row, not today's shop setting:
+  // a receipt is evidence of what was charged, and a shop that switches
+  // currency next season must not restate last season's amount (docs ADR
+  // 20260731-shop-currency). The balance is the remainder of that same charge,
+  // so it is quoted in the same currency. `formatMoneyCents` divides by *that*
+  // currency's minor unit — a ¥9,000 deposit is not ¥90.
+  const money = (cents: number) => formatMoneyCents(cents, receipt.currency, locale);
+  return (
+    <div className="mt-8 rounded-2xl border border-success/40 bg-success/10 p-4 text-left sm:p-5">
+      <h2 className="font-semibold text-success">
+        {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
+        {receipt.amountCents !== null ? ` — ${money(receipt.amountCents)}` : ""} ✅
+      </h2>
+      <p className="mt-1 text-sm text-muted">
+        {depositWithBalance
+          ? t("booking.paymentDepositBalance", { balance: money(receipt.balanceDueCents) })
+          : t("booking.paymentSquare")}
+      </p>
+    </div>
   );
 }
 
@@ -612,11 +738,27 @@ export default async function DiverReadinessPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ saved?: string; error?: string; pay?: string; cancelled?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    error?: string;
+    pay?: string;
+    cancelled?: string;
+    booked?: string;
+  }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, pay, cancelled } = await searchParams;
+  const { saved, error, pay, cancelled, booked } = await searchParams;
+  // A seat was taken in the request that redirected here — this page is the
+  // one page after booking now (ADR 20260820-one-page-after-booking). It
+  // switches the celebration from "you're ready" to "you're booked" and turns
+  // on the two lines that are only ever true in the minutes after a submit.
+  //
+  // It carries no claim of its own and authorizes nothing: the payment
+  // receipt, the checklist, and every other fact on this page are read from
+  // the booking, so a hand-edited `?booked=1` moves nothing but which of two
+  // congratulations renders.
+  const justBooked = booked === "1";
   const db = await getDb();
   // A dead link resolves no shop, so there is no `shops.default_locale` to fall
   // back to — negotiate from the visitor's own device alone for those branches,
@@ -753,6 +895,37 @@ export default async function DiverReadinessPage({
     getTripWithBooked(db, shop.id, data.trip.id),
     listTripDives(db, shop.id, data.trip.id),
   ]);
+  // What this booking has been charged, and — only in the minutes after a
+  // submit — whether both of its emails actually left the building. Both moved
+  // here from the trip page's confirmation branch (ADR
+  // 20260820-one-page-after-booking); the receipt is read on every visit,
+  // because "what did I pay?" is a question the night before too, while the
+  // emails line is only ever true right after booking.
+  const [paymentReceipt, emailsOnTheWay] = await Promise.all([
+    resolvePaymentReceipt(
+      db,
+      shop.id,
+      bookingId,
+      // The two ways a diver arrives here straight off Stripe's hosted page:
+      // paying at booking (`bookSpot`'s success_url) and paying later
+      // (`payFromReady`'s). Both are the moment the webhook may still be in
+      // flight; every other arrival is not.
+      justBooked || pay === "paid",
+      fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null,
+      toShopCurrency(shop.currency),
+    ),
+    justBooked
+      ? bookingConfirmationAndWaiverEmailsSent(db, shop.id, bookingId)
+      : Promise.resolve(false),
+  ]);
+  // Absolute where a canonical origin is configured — this one exists to be
+  // pasted into a group chat — with the relative fallback the claim links above
+  // use, so a missing APP_HOST shares a working same-origin link rather than a
+  // broken one. Never `window.location.href`: see `TripActions`' `shareUrl`.
+  const shareOrigin = publicAppUrl();
+  const tripPath = publicTripPath(shop.slug, data.trip.id);
+  const shareTripUrl = shareOrigin ? new URL(tripPath, `${shareOrigin}/`).toString() : tripPath;
+
   const briefingExtras = await listDiveSiteBriefingExtras(
     db,
     shop.id,
@@ -811,15 +984,20 @@ export default async function DiverReadinessPage({
     // needs it today: a `useTranslations` call in a client child without it
     // throws during the server render and takes the entire page down to a blank
     // 200 (which is exactly how RentalFitForm broke this surface once). Its
-    // namespaces are "rental" (RentalFitForm's own copy) and "common"
-    // ("common.optional", shared with several field hints).
+    // namespaces are "rental" (RentalFitForm's own copy), "common"
+    // ("common.optional", shared with several field hints), and "trip"
+    // (TripActions' add-to-calendar and share-with-a-buddy row).
     <DiverIntlProvider
       locale={locale}
       timeZone={detail.shop.timezone}
-      namespaces={["rental", "common"]}
+      namespaces={["rental", "common", "trip"]}
     >
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-        <FlashParams params={["saved", "error", "pay"]} />
+        {/* `booked` among them: the celebration is the moment a seat was taken,
+            not a property of the link. Leaving it in the URL would replay
+            "You're on the boat" every time a diver reopened this page from
+            their history three days later. */}
+        <FlashParams params={["saved", "error", "pay", "booked"]} />
         {/* One eyebrow, not two: this header used to stack "Your trip
             readiness" and the shop's name as two identical uppercase lines — a
             visible bug-shaped redundancy. The shop's name is the context worth
@@ -834,6 +1012,21 @@ export default async function DiverReadinessPage({
           {/* The one number that matters on the morning of the trip — a shade
               stronger than the meta line above it, never shouting. */}
           <p className="mt-1 text-base font-medium">{dockCallLine}</p>
+          {/* Put the day in a calendar, and send the trip to whoever is coming
+              — the same ghost-weight row, in the same place under the masthead,
+              as the public trip page carries. Nothing here competes with the
+              checklist below (design/principles.md #8).
+
+              `shareUrl` is the **public trip page**, never this one: this URL
+              *is* a bearer capability that can cancel the booking and move its
+              refund, and "share with a buddy" must not hand that to a group
+              chat (docs/engineering/capability-telemetry-runbook.md). */}
+          {fullShop ? (
+            <TripActions
+              calendarUrl={publicTripCalendarPath(fullShop.slug, data.trip.id)}
+              shareUrl={shareTripUrl}
+            />
+          ) : null}
         </TokenPageHeader>
 
         {notice ? (
@@ -844,10 +1037,31 @@ export default async function DiverReadinessPage({
           </div>
         ) : null}
 
-        {/* The ready state leads with the earned moment — the page's answer,
-            before any list. The not-ready state answers inside the spine card
-            below instead, so status is said once, not three times. */}
-        {ready ? (
+        {/* Client-only, per-device convenience (task 27): remember who just
+            booked so their next visit starts from a filled-in form. */}
+        {justBooked && person.email ? (
+          <RememberBooker fullName={detail.person.fullName} email={person.email} />
+        ) : null}
+
+        {/* One earned moment, never two. A diver who just booked reads that
+            they are on the boat; a diver arriving from an email reminder with
+            nothing left to do reads that they are ready. Both at once would be
+            two coral boxes celebrating two different things in one screenful,
+            and the booking is the newer news (ADR
+            20260820-one-page-after-booking). The not-ready, not-just-booked
+            state answers inside the spine card below instead, so status is
+            said once, not three times. */}
+        {/* Title only, no body. The trip page's confirmation spelled the date,
+            the time and the dock call underneath this heading because its own
+            masthead said none of them. This page's header, four lines up, says
+            all three — so the same sentence here would be the page repeating
+            itself inside one screenful. */}
+        {justBooked ? (
+          <EarnedMoment
+            className="mt-8"
+            title={t("booking.confirmedHeading", { name: firstName })}
+          />
+        ) : ready ? (
           <EarnedMoment
             className="mt-8"
             eyebrow={t("ready.allSetHeading")}
@@ -855,6 +1069,21 @@ export default async function DiverReadinessPage({
           >
             <p>{t("ready.allSetBodyReady")}</p>
           </EarnedMoment>
+        ) : null}
+
+        {/* Two messages land within seconds of each other; saying so up front
+            stops the second one reading as a duplicate or a mistake. Claimed
+            only when both actually left the building — a walk-in party member
+            with no address of their own gets neither. */}
+        {emailsOnTheWay ? (
+          <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
+        ) : null}
+
+        {/* What was actually charged. Above the checklist, because a diver who
+            has just paid is looking for exactly this, and the checklist's own
+            payment row says "done" without ever saying how much. */}
+        {paymentReceipt ? (
+          <PaymentReceiptPanel receipt={paymentReceipt} locale={locale} t={t} />
         ) : null}
 
         {/* The spine: one card that is the page's whole reason to exist —
@@ -1047,6 +1276,18 @@ export default async function DiverReadinessPage({
             <h2 id="change-plans-heading" className="text-lg font-semibold">
               {t("ready.changePlans")}
             </h2>
+
+            {/* The free-cancellation window, next to the act it qualifies
+                rather than in a block of fine print at the top of the page —
+                the same reasoning that moved these lines out of the trip
+                masthead and down beside the booking button. The deposit split
+                and fee breakdown stay out (`cancellationOnly`): the receipt
+                above records what was actually charged, and restating the
+                pre-purchase arithmetic would say the same fact twice
+                (design/principles.md #9). */}
+            {fullShop && fullTrip ? (
+              <TripTerms shop={fullShop} trip={fullTrip} locale={locale} cancellationOnly />
+            ) : null}
 
             {/* Trip morning: the seat is past self-service, but this is the
                 moment a diver most needs the shop's number — and the whole

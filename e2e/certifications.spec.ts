@@ -212,7 +212,6 @@ test("a diver types their card in from the readiness page, and staff verify it t
     .getByLabel("Email", { exact: true })
     .fill(`selfcert-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
-  await page.getByRole("link", { name: /readiness page/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
   // The blocker now carries the form that answers it.

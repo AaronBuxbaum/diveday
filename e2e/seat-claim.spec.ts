@@ -71,6 +71,9 @@ test.describe("seat claim links", () => {
     const claimUrlText = (await seatRow.locator("p.font-mono").textContent()) ?? "";
     const claimPath = claimUrlText.match(/\/claim\/[^\s/?#]+/)?.[0];
     expect(claimPath).toBeTruthy();
+    // Their own readiness page — where booking now lands, and where the claim
+    // panel lives for the whole run-up to the trip (ADR
+    // 20260820-one-page-after-booking).
     const organizerUrl = page.url();
 
     // The invited diver opens the link on their own browser profile.
@@ -106,7 +109,7 @@ test.describe("seat claim links", () => {
     ).toBeVisible();
     await claimantContext.close();
 
-    // The organizer refreshes their confirmation: claimed, no link to share.
+    // The organizer reloads their page: claimed, no link to share.
     await page.goto(organizerUrl);
     const refreshedRow = page
       .locator("section", { has: page.getByRole("heading", { name: "Your group’s seats" }) })

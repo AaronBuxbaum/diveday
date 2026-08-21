@@ -7,20 +7,11 @@ import { JsonLd } from "@/components/JsonLd";
 import { buttonClass } from "@/components/ui/button";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
-import {
-  getLatestCheckoutForBooking,
-  refreshCheckoutFromStripe,
-  retirePendingCheckoutIfRepriced,
-} from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "@/db/nitrox";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
-import { getBookingPayment } from "@/db/payments";
-import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
+import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import {
@@ -37,7 +28,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
+import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
@@ -48,7 +39,7 @@ import {
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
 import { minimumSeatsState } from "@/lib/minimum-seats";
-import { type ShopCurrency, toShopCurrency } from "@/lib/money";
+import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
@@ -56,7 +47,6 @@ import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { BookingConfirmation } from "./_components/BookingConfirmation";
 import {
   BookSpotSection,
   CancelledTripNotice,
@@ -66,13 +56,14 @@ import {
   WaitlistConfirmation,
 } from "./_components/BookingSections";
 import { DiveBriefingsSection } from "./_components/DiveBriefingsSection";
+import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { ForecastSection } from "./_components/ForecastSection";
 import { PackingSection } from "./_components/PackingSection";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
 import { TripTerms } from "./_components/TripTerms";
-import { ERROR_MESSAGE_KEYS, isErrorCode, type PaymentPanel } from "./_components/types";
+import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -124,7 +115,7 @@ export default async function TripDetailPage({
     booking?: string;
     waitlist?: string;
     error?: string;
-    fit?: string;
+    /** Stripe's cancel return, embed only — see `EmbedBookedNotice`. */
     pay?: string;
     embed?: string;
   }>;
@@ -135,14 +126,7 @@ export default async function TripDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const {
-    booking: bookingToken,
-    waitlist: waitlistId,
-    error,
-    fit,
-    pay,
-    embed,
-  } = await searchParams;
+  const { booking: bookingToken, waitlist: waitlistId, error, pay, embed } = await searchParams;
   // Embed mode is the compact surface a shop frames on its own website
   // (docs ADR 20260726-schedule-embed) — no "All trips" chrome pointing back
   // to a schedule the embedding page may never have shown at all.
@@ -231,13 +215,20 @@ export default async function TripDetailPage({
       ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
       : null;
 
-  // The confirmation renders only from a verified `confirm` capability —
-  // never from a raw booking id in the URL (design principle 6: trustworthy
-  // by inspection; CR-003). A guessed/leaked booking UUID alone is not a
-  // credential; only a token this server itself issued verifies here.
-  const confirmCapability = bookingToken
-    ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })
-    : null;
+  // The embed's short confirmation renders only from a verified `confirm`
+  // capability — never from a raw booking id in the URL (design principle 6:
+  // trustworthy by inspection; CR-003). A guessed/leaked booking UUID alone is
+  // not a credential; only a token this server itself issued verifies here.
+  //
+  // `isEmbed` first, and it is the *whole* gate: outside the frame a booking
+  // lands on `/ready` and no `confirm` token is ever minted (ADR
+  // 20260820-one-page-after-booking), so an unframed `?booking=` can only be a
+  // stale link or a guess. Refusing to look at it at all is the narrower
+  // answer than verifying a token nothing issues any more.
+  const confirmCapability =
+    isEmbed && bookingToken
+      ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })
+      : null;
   const [confirmed, waitlistConfirmation] = await Promise.all([
     confirmCapability ? getBookingForTrip(db, tripId, confirmCapability.bookingId) : null,
     waitlistId ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId) : null,
@@ -308,66 +299,25 @@ export default async function TripDetailPage({
   // it is safe to send to an anonymous page — it says nothing about any reader.
   const requiredLevel = combinedRequirement?.minimumCertificationLevel ?? undefined;
 
-  // The confirmed-booking panels draw on several more independent queries — batch them.
-  const [
-    payment,
-    readiness,
-    rentalFit,
-    nitroxCardVerified,
-    nitroxCardOnFile,
-    readinessCapability,
-    emailsOnTheWay,
-    partySeatClaims,
-  ] = confirmed
+  // The embed's short confirmation needs exactly two facts beyond the booking
+  // itself: whether both emails went, and the link out to `/ready`. Everything
+  // the old in-page confirmation read — the payment panel, readiness, rental
+  // fit, the nitrox card, the party's claim links — now belongs to `/ready`,
+  // which reads it for every visit rather than only the one right after
+  // booking (ADR 20260820-one-page-after-booking).
+  const [emailsOnTheWay, readinessCapability] = confirmed
     ? await Promise.all([
-        resolvePaymentPanel(
-          db,
-          shop.id,
-          confirmed.booking.id,
-          payAtBooking,
-          perDiverPriceCents,
-          shopCurrency,
-        ),
-        getBookingReadiness(db, shop.id, confirmed.booking.id),
-        // Projected: this page is public and the form is a client
-        // component, so staff-only fit columns must not ship to the browser.
-        getRentalFit(db, shop.id, confirmed.person.id).then(toDiverRentalFit),
-        verifiedNitroxPersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
-        // Not a gate — only whether the fit form should still ask for a card
-        // number, so a diver who typed one at 9pm is not asked again while it
-        // sits `pending` (src/db/nitrox.ts).
-        nitroxCardOnFilePersonIds(db, shop.id).then((ids) => ids.has(confirmed.person.id)),
+        // Only say "two emails are on their way" when both actually went —
+        // a party member booked without an address of their own gets neither.
+        bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
         issueBookingCapability(db, {
           shopId: shop.id,
           bookingId: confirmed.booking.id,
           purpose: "readiness",
         }),
-        // Only say "two emails are on their way" when both actually went —
-        // a party member booked without an address of their own gets neither.
-        bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
-        // The organizer's claim panel: one shareable link per still-unclaimed
-        // seat this booking leads (docs ADR 20260804-seat-claim-links).
-        // Authorized by the verified `confirm` capability above; the query
-        // itself only walks seats whose party lead is this booking, so a
-        // non-party confirmation gets an empty list and no panel.
-        issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: confirmed.booking.id }),
       ])
-    : [null, null, null, false, false, null, false, []];
+    : [false, null];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
-  // Absolute when a canonical origin is configured — these URLs exist to be
-  // pasted into a group chat — with the same-relative fallback the readiness
-  // link uses so a missing APP_HOST never renders a broken link.
-  const claimOrigin = publicAppUrl();
-  const partySeats = partySeatClaims.map((seat) => ({
-    bookingId: seat.bookingId,
-    seatName: seat.seatName,
-    claimed: seat.claimed,
-    claimUrl: seat.claim
-      ? claimOrigin
-        ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
-        : claimLinkPath(seat.claim.token)
-      : null,
-  }));
 
   const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= nowDate();
   // Where this departure stands against the head count it needs, if it named
@@ -507,30 +457,15 @@ export default async function TripDetailPage({
         follows for the now-committed diver rather than standing in the way.
       */}
         {confirmed ? (
-          <BookingConfirmation
+          <EmbedBookedNotice
             shop={shop}
             shopSlug={shopSlug}
             locale={locale}
             trip={trip}
             confirmed={confirmed}
-            readiness={readiness}
-            requirement={requirement}
-            fitRef={{
-              ...tripRef,
-              // `confirmed` is only non-null when `confirmCapability` (and thus
-              // `bookingToken`) verified, so this is always a real token here.
-              token: bookingToken as string,
-            }}
-            rentalFit={rentalFit}
-            nitroxCardVerified={nitroxCardVerified}
-            nitroxCardOnFile={nitroxCardOnFile}
-            fitSaved={fit === "saved"}
-            payment={payment}
-            payCancelled={pay === "cancelled"}
             readinessLink={readinessLink}
             emailsOnTheWay={emailsOnTheWay}
-            partySeats={partySeats}
-            terms={<TripTerms shop={shop} trip={trip} locale={locale} cancellationOnly />}
+            payCancelled={pay === "cancelled"}
           />
         ) : waitlistConfirmation ? (
           <WaitlistConfirmation
@@ -599,7 +534,10 @@ export default async function TripDetailPage({
         <PackingSection
           shop={shop}
           trip={trip}
-          rentalFit={rentalFit}
+          // No `rentalFit` here any more: the only reader who had one was the
+          // in-page confirmation, and a diver's own gear now sits beside their
+          // packing list on `/ready` (ADR 20260820-one-page-after-booking).
+          // This page is what an unbooked visitor reads, and it never had one.
           day={meetingDays[0]}
           days={meetingDays}
           multiDay={meetingDays.length > 1}
@@ -621,72 +559,4 @@ export default async function TripDetailPage({
       </main>
     </DiverIntlProvider>
   );
-}
-
-/**
- * What the confirmation says about money. Paid state comes from the booking's
- * payment row (webhook or the refresh below), never from a return-URL claim; a
- * still-open Stripe session is offered again; an expired one starts over.
- */
-async function resolvePaymentPanel(
-  // i18n-exempt: multi-line type annotation, not copy — the scanner misreads the signature as a string.
-  db: Awaited<ReturnType<typeof getDb>>,
-  shopId: string,
-  bookingId: string,
-  payAtBooking: boolean,
-  fullPriceCents: number | null,
-  /**
-   * What to show when a settled payment predates the currency column and has
-   * none of its own. A settled amount that *does* carry a currency keeps it —
-   * it is evidence of what was charged, and today's shop setting must never
-   * reinterpret it.
-   */
-  shopCurrency: ShopCurrency,
-): Promise<PaymentPanel> {
-  const paidPanel = (
-    settled: Awaited<ReturnType<typeof getBookingPayment>>,
-  ): PaymentPanel & { state: "paid" } => {
-    const isDeposit = settled?.status === "deposit_paid";
-    const balanceDueCents =
-      isDeposit && fullPriceCents !== null
-        ? Math.max(0, fullPriceCents - (settled?.amountCents ?? 0))
-        : 0;
-    return {
-      state: "paid",
-      amountCents: settled?.amountCents ?? null,
-      currency: settled?.currency ?? shopCurrency,
-      isDeposit,
-      balanceDueCents,
-    };
-  };
-
-  const settled = await getBookingPayment(db, shopId, bookingId);
-  if (settled?.status === "paid" || settled?.status === "deposit_paid") {
-    return paidPanel(settled);
-  }
-  if (settled?.status === "waived") return null;
-
-  let checkout = await getLatestCheckoutForBooking(db, shopId, bookingId);
-  if (checkout?.status === "pending") {
-    // The diver may have just paid and beaten the webhook home; ask Stripe.
-    checkout = await refreshCheckoutFromStripe(db, shopId, checkout.id);
-    if (checkout?.status === "completed") {
-      return paidPanel(await getBookingPayment(db, shopId, bookingId));
-    }
-  }
-  if (checkout?.status === "pending") {
-    // "Finish paying" links this session's Stripe URL directly, so the figure
-    // the diver lands on is the one it was minted for. Retire it if the trip
-    // has been repriced since (PAY-L2) — the panel then falls through to its
-    // "Pay now" form, which mints a fresh session at today's price.
-    checkout = await retirePendingCheckoutIfRepriced(db, shopId, checkout);
-  }
-  if (
-    checkout?.status === "pending" &&
-    checkout.checkoutUrl &&
-    (!checkout.expiresAt || checkout.expiresAt > nowDate())
-  ) {
-    return { state: "pending", checkoutUrl: checkout.checkoutUrl };
-  }
-  return payAtBooking ? { state: "payable" } : null;
 }

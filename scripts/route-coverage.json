@@ -57,11 +57,21 @@
   "/ready/[token]": {
     "e2e": [
       "a11y.spec.ts",
+      "booking.spec.ts",
+      "certifications.spec.ts",
+      "courses.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "nitrox.spec.ts",
+      "promo-codes.spec.ts",
       "readiness.spec.ts",
+      "refunds.spec.ts",
+      "rentals.spec.ts",
+      "returning-diver.spec.ts",
       "seat-claim.spec.ts",
-      "self-service-reschedule.spec.ts"
+      "self-service-reschedule.spec.ts",
+      "trip-admission.spec.ts"
     ],
-    "visual": ["readiness"]
+    "visual": ["booking-confirmed", "party-organizer-confirmation", "readiness"]
   },
   "/recap/[token]": {
     "e2e": ["a11y.spec.ts", "recap.spec.ts", "reviews.spec.ts"],
@@ -130,12 +140,7 @@
       "self-service-reschedule.spec.ts",
       "trip-admission.spec.ts"
     ],
-    "visual": [
-      "booking-confirmed",
-      "party-organizer-confirmation",
-      "site-briefing",
-      "site-briefing-requirements"
-    ]
+    "visual": ["site-briefing", "site-briefing-requirements"]
   },
   "/shop/[shopSlug]": {
     "e2e": [

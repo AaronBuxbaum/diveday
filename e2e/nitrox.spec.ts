@@ -102,6 +102,14 @@ test.describe("a shop that stops filling nitrox", () => {
       .click();
     // The booking form is controlled, so wait for hydration before typing.
     await expect(anon.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    // Read off the trip page itself, before booking: a booked diver lands on
+    // `/ready/<token>`, which names no trip (ADR 20260820-one-page-after-booking).
+    // Reused below instead of clicking back through the schedule as staff.
+    // After the hydration wait above, never before it — the click that got here
+    // has not necessarily finished navigating, and reading the URL early sees
+    // the schedule it came from.
+    const tripId = anon.url().match(/\/trips\/([^/?]+)/)?.[1];
+    if (!tripId) throw new Error("trip page URL missing a trip id");
     await anon.getByLabel("Name").fill("Priya Sharma");
     await anon.getByLabel("Email").fill(`priya+${e2eNow().getTime()}@example.com`);
     await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
@@ -110,11 +118,8 @@ test.describe("a shop that stops filling nitrox", () => {
     await anon.locator('input[name="nitrox"]').filter({ visible: true }).check();
     await anon.getByRole("button", { name: "Save rental fit" }).click();
     await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
+    // The diver's own readiness page, which is where they came back to.
     const bookingUrl = anon.url();
-    // The trip id rides along in the confirmation URL — reuse it below
-    // instead of clicking back through the schedule as staff.
-    const tripId = bookingUrl.match(/\/trips\/([^/?]+)/)?.[1];
-    if (!tripId) throw new Error("booking confirmation URL missing a trip id");
 
     await page.goto(`/shop/${SHOP}/settings`);
     await openSettingsRow(page, "What we rent");

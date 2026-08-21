@@ -3,24 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
-import { type AppDb, getDb } from "@/db/client";
-import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
+import { getDb } from "@/db/client";
+import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
-import { certificationAgency } from "@/db/schema";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
-import { getShopById, getShopBySlug } from "@/db/shops";
+import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
-import { issueWaiverRequest } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
@@ -64,18 +62,18 @@ const NO_CERT_REQUIREMENT: CertRequirementSource = {
   requiresNitrox: false,
 };
 
-/** Absolute readiness link for the confirmation email, or undefined with no origin/booking. */
-async function readinessEmailUrl(
-  dbi: AppDb,
-  shopId: string,
-  bookingId: string,
-): Promise<string | undefined> {
+/**
+ * Absolute readiness link, for the confirmation email — and for the redirect a
+ * booked diver actually follows. One capability serves both: it is where a
+ * booking lands now, so minting a second for the email would burn two of the
+ * booking's `MAX_LIVE_CAPABILITIES_PER_PURPOSE` slots to say the same thing.
+ * Undefined when no canonical origin is configured; the relative path is what
+ * the redirect uses, so a missing origin costs the email its link, never the
+ * landing.
+ */
+function readinessEmailUrl(token: string): string | undefined {
   const origin = publicAppUrl();
-  if (!origin) return undefined;
-  const capability = await issueBookingCapability(dbi, { shopId, bookingId, purpose: "readiness" });
-  return capability
-    ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
-    : undefined;
+  return origin ? new URL(readinessLinkPath(token), `${origin}/`).toString() : undefined;
 }
 
 /** Bound to each action so the public page can stay a pure renderer. */
@@ -93,36 +91,6 @@ export type TripRef = {
 function embedParam(embed: boolean | undefined, delimiter: "&" | "?"): string {
   return embed ? `${delimiter}embed=1` : "";
 }
-/**
- * `token` is a purpose-bound `confirm` capability (src/db/booking-capabilities.ts), never a raw
- * booking id: every action below re-verifies it and derives shop/booking/person identity from
- * that verification, so a bound closure can never be used to act on a booking the token doesn't
- * actually authorize (CR-003).
- */
-export type RentalFitRef = TripRef & { token: string };
-
-/**
- * Resolve a `confirm` token to its live booking context, or null on anything
- * invalid. Rate-limited by IP before verification, so this one chokepoint
- * throttles every action in this file that confirms a booking token
- * (rental fit, pay-for-booking) against both guessing and replay spam of a
- * known link (CR-013).
- */
-async function confirmContextFor(tripId: string, token: string) {
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("confirm-token", ip), RATE_LIMITS.capabilityAction)).allowed
-  ) {
-    return null;
-  }
-  const db = await getDb();
-  const capability = await verifyBookingCapability(db, { token, purpose: "confirm" });
-  if (!capability) return null;
-  const confirmed = await getBookingForTrip(db, tripId, capability.bookingId);
-  if (!confirmed) return null;
-  return { db, capability, confirmed };
-}
-
 /**
  * What a failed booking submit hands back to the form. A validation failure
  * returns per-field messages so the client re-renders in place with everything
@@ -158,27 +126,6 @@ function declarationFor(
   if (declared?.noCertification) return { noCertification: true };
   return undefined;
 }
-
-const rentalFitSchema = z.object({
-  bcd: z.string().optional(),
-  regulator: z.string().optional(),
-  wetsuit: z.string().optional(),
-  maskFins: z.string().optional(),
-  weights: z.string().optional(),
-  diveComputer: z.string().optional(),
-  gopro: z.string().optional(),
-  nitrox: z.string().optional(),
-  // The nitrox card, asked for beside the request. Optional in both halves: a
-  // diver who wants nitrox but hasn't got the card to hand still gets the
-  // request recorded, which is what the crew plans against.
-  nitroxAgency: z.string().optional(),
-  nitroxIdentifier: z.string().trim().max(60).optional(),
-  bcdSize: z.string().trim().max(20),
-  wetsuitSize: z.string().trim().max(20),
-  finSize: z.string().trim().max(20),
-  weightPreference: z.string().trim().max(80),
-  note: z.string().trim().max(300),
-});
 
 export async function bookSpot(
   { shopSlug, tripId, embed }: TripRef,
@@ -432,6 +379,14 @@ export async function bookSpot(
     getBookingForTrip(dbi, tripId, primaryBookingId),
     getTripWithBooked(dbi, shopNow.id, tripId),
   ]);
+  // Where this booking now lands, and what the confirmation email links to:
+  // the diver's own `/ready` page (ADR 20260820-one-page-after-booking). Minted
+  // here, above the email send, so both uses share the one capability.
+  const readinessCapability = await issueBookingCapability(dbi, {
+    shopId: shopNow.id,
+    bookingId: primaryBookingId,
+    purpose: "readiness",
+  });
   // This form is the diver's own — the public schedule page, submitted from
   // their device — so its `Accept-Language` is first-hand evidence of the
   // language the lead booker reads (docs ADR
@@ -462,7 +417,9 @@ export async function bookSpot(
         endsAt: tripNow.endsAt,
         timezone: shopNow.timezone,
         dockCallMinutes: shopNow.dockCallMinutes,
-        readinessUrl: await readinessEmailUrl(dbi, shopNow.id, primaryBookingId),
+        readinessUrl: readinessCapability
+          ? readinessEmailUrl(readinessCapability.token)
+          : undefined,
         packingList: shopNow.packingList,
       });
       if (delivery.status === "failed") {
@@ -529,16 +486,22 @@ export async function bookSpot(
     );
   }
 
-  // The confirmation URL/action bears a purpose-bound `confirm` capability,
-  // never the raw booking id — a leaked/guessed booking UUID must not be
-  // enough to view or mutate someone else's booking (CR-003). A same-shop
-  // recheck right after creation should never fail, but if it somehow does,
-  // fall back to the plain trip page rather than a broken/unauthenticated link.
-  const confirmCapability = await issueBookingCapability(dbi, {
-    shopId: shopNow.id,
-    bookingId: primaryBookingId,
-    purpose: "confirm",
-  });
+  // Only inside the embed widget. Everywhere else a booked diver goes straight
+  // to `/ready`, which is a capability of its own — but `/ready/**` is
+  // deliberately outside the framing allowlist (ADR 20260726-schedule-embed),
+  // so redirecting there from inside a shop's iframe would swap a working
+  // widget for a frame the CSP blocks. The embed instead stays on this page and
+  // renders a short read-only confirmation that this token authorizes, whose
+  // one way onward is a `target="_top"` link out to `/ready`. A leaked or
+  // guessed booking UUID must still not be enough to see someone else's
+  // booking (CR-003), which is why the embed's landing bears a token at all.
+  const confirmCapability = embed
+    ? await issueBookingCapability(dbi, {
+        shopId: shopNow.id,
+        bookingId: primaryBookingId,
+        purpose: "confirm",
+      })
+    : null;
 
   // Pay at booking: when the shop can take money and the trip is priced, the
   // party goes straight to the shop's own hosted Stripe Checkout. The seats
@@ -546,6 +509,25 @@ export async function bookSpot(
   // no configured origin, Stripe down — degrades to the ordinary
   // book-now-pay-later confirmation, never to a lost booking.
   const base = publicTripPath(shopSlug, tripId);
+  // Where this booking finishes. One page, not two: outside the embed that is
+  // the diver's own `/ready`, the durable link every confirmation email and
+  // reminder already carries — `?booked=1` is what tells it a seat was just
+  // taken, so it opens on the celebration rather than the checklist (ADR
+  // 20260820-one-page-after-booking). Inside the embed it is this page, still
+  // framed, bearing the read-only `confirm` token. Either way the destination
+  // is decided once, here, and Stripe's return URLs are built from it below so
+  // paying and not paying land in the same place.
+  //
+  // A capability that somehow failed to mint degrades to the plain trip page
+  // rather than a broken link — and in the embed it degrades *within the
+  // frame*, never out to a `/ready` the frame cannot show.
+  const landing = embed
+    ? confirmCapability
+      ? `${base}?booking=${confirmCapability.token}&embed=1`
+      : `${base}?embed=1`
+    : readinessCapability
+      ? `${readinessLinkPath(readinessCapability.token)}?booked=1`
+      : base;
   // `tripPromo`/`shopPromo` were already resolved above, before the party was
   // booked (task 20) — an invalid/expired/wrong-scope code now fails the
   // submit itself with a field error, rather than being silently dropped
@@ -583,42 +565,33 @@ export async function bookSpot(
         })
         .filter((line): line is NonNullable<typeof line> => line !== null)
     : [];
-  const checkoutUrl = confirmCapability
-    ? await startCheckoutUrl(dbi, {
-        shopId: shopNow.id,
-        shopSlug,
-        tripId,
-        bookingIds: outcome.bookings.map((entry) => entry.bookingId),
-        confirmToken: confirmCapability.token,
-        customerEmail: validParty[0]?.email ?? "",
-        embed,
-        promotionCode:
-          tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
-        // Whichever of the two matched, handed on so the checkout row can
-        // snapshot the discount it is actually applying (PAY-M3).
-        tripPromo: tripPromo
-          ? {
-              id: tripPromo.id,
-              code: tripPromo.code,
-              discountPercent: tripPromo.discountPercent,
-            }
-          : undefined,
-        shopPromo: shopPromo
-          ? { id: shopPromo.id, code: shopPromo.code, discountPercent: shopPromo.discountPercent }
-          : undefined,
-        gearLines,
-      })
-    : null;
+  const checkoutUrl = await startCheckoutUrl(dbi, {
+    shopId: shopNow.id,
+    tripId,
+    bookingIds: outcome.bookings.map((entry) => entry.bookingId),
+    landing,
+    customerEmail: validParty[0]?.email ?? "",
+    promotionCode:
+      tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
+    // Whichever of the two matched, handed on so the checkout row can
+    // snapshot the discount it is actually applying (PAY-M3).
+    tripPromo: tripPromo
+      ? {
+          id: tripPromo.id,
+          code: tripPromo.code,
+          discountPercent: tripPromo.discountPercent,
+        }
+      : undefined,
+    shopPromo: shopPromo
+      ? { id: shopPromo.id, code: shopPromo.code, discountPercent: shopPromo.discountPercent }
+      : undefined,
+    gearLines,
+  });
   if (checkoutUrl) {
     revalidatePath(base);
     redirect(checkoutUrl);
   }
-  revalidateAndRedirect(
-    base,
-    confirmCapability
-      ? `${base}?booking=${confirmCapability.token}${embedParam(embed, "&")}`
-      : `${base}${embedParam(embed, "?")}`,
-  );
+  revalidateAndRedirect(base, landing);
 }
 
 /** The hosted payment page for these fresh bookings, or null when pay-at-booking can't run. */
@@ -626,12 +599,17 @@ async function startCheckoutUrl(
   dbi: Awaited<ReturnType<typeof getDb>>,
   input: {
     shopId: string;
-    shopSlug: string;
     tripId: string;
     bookingIds: string[];
-    confirmToken: string;
+    /**
+     * The same path a diver who never paid would have landed on — relative, and
+     * already carrying its own query (`?booked=1`, or `?booking=…&embed=1`).
+     * Paying is a detour, not a different destination: passing the decided
+     * landing in rather than rebuilding it here is what stops the two from
+     * drifting apart the next time either one moves.
+     */
+    landing: string;
     customerEmail: string;
-    embed?: boolean;
     promotionCode?: string;
     tripPromo?: { id: string; code: string; discountPercent: number };
     shopPromo?: { id: string; code: string; discountPercent: number };
@@ -641,7 +619,7 @@ async function startCheckoutUrl(
 ): Promise<string | null> {
   const origin = publicAppUrl();
   if (!origin || !input.customerEmail) return null;
-  const returnBase = `${origin}${publicTripPath(input.shopSlug, input.tripId)}?booking=${input.confirmToken}${embedParam(input.embed, "&")}`;
+  const returnBase = `${origin}${input.landing}`;
   // The hosted Stripe line's words come from the diver's bundle, not from
   // `src/db` (docs ADR 20260731-domain-layer-copy-leaks). Both callers of this
   // helper are diver-initiated requests, so the negotiated request locale is
@@ -653,7 +631,11 @@ async function startCheckoutUrl(
     bookingIds: input.bookingIds,
     customerEmail: input.customerEmail,
     successUrl: returnBase,
-    cancelUrl: `${returnBase}&pay=cancelled`,
+    // `&` or `?` depending on what the landing already carries — every live
+    // landing has a query today, but a fallback one may not, and a malformed
+    // `…/trips/x&pay=cancelled` would return the diver to a 404 at exactly the
+    // moment they backed out of paying. `/ready` reads this shape already.
+    cancelUrl: `${returnBase}${returnBase.includes("?") ? "&" : "?"}pay=cancelled`,
     promotionCode: input.promotionCode,
     tripPromo: input.tripPromo,
     shopPromo: input.shopPromo,
@@ -662,67 +644,6 @@ async function startCheckoutUrl(
       isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
   }).catch(() => null);
   return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
-}
-
-/**
- * "Finish paying" from the confirmation panel: reuses the open Stripe session
- * when one exists, mints a new one after an expiry, and sends the diver to it.
- */
-export async function payForBooking(
-  { shopSlug, tripId, token, embed }: RentalFitRef,
-  _formData: FormData,
-) {
-  const base = publicTripPath(shopSlug, tripId);
-  const ctx = await confirmContextFor(tripId, token);
-  const checkoutUrl = ctx?.confirmed.person.email
-    ? await startCheckoutUrl(ctx.db, {
-        shopId: ctx.capability.shopId,
-        shopSlug,
-        tripId,
-        bookingIds: [ctx.capability.bookingId],
-        confirmToken: token,
-        customerEmail: ctx.confirmed.person.email,
-        embed,
-      })
-    : null;
-  if (checkoutUrl) redirect(checkoutUrl);
-  redirect(`${base}?booking=${token}&error=pay${embedParam(embed, "&")}`);
-}
-
-/**
- * "Sign your waiver now" from the confirmation panel — the same one-hop shape
- * `/ready` already offers (`signWaiverFromReady`), moved to the moment a diver
- * actually finishes booking, when the waiver is the real next step.
- *
- * A waiver URL *is* its capability, so two things keep this honest. The booking
- * comes from the verified `confirm` capability and nothing else — never a
- * booking id, party index, or person id from the client — so this can only ever
- * reach the *lead* diver's own waiver, never another party member's, whatever a
- * caller submits. And the fresh signing link is only ever handed over as a
- * redirect: it is never rendered into the confirmation page, so the URL a diver
- * may screenshot, share, or leave in browser history never carries a waiver
- * capability of its own. `confirmContextFor` rate-limits by IP ahead of
- * verification, as it does for every other action bound to this token.
- */
-export async function signWaiverFromConfirmation(
-  { shopSlug, tripId, token, embed }: RentalFitRef,
-  _formData: FormData,
-) {
-  // The public namespace, like every other redirect in this file. The old
-  // `/shop/<slug>/schedule/<id>` form still 308s here, but a refusal path that
-  // takes the redirect carries the live `confirm` token through a staff URL and
-  // into the `?callbackUrl=` of anything that bounces it — a capability has no
-  // business on a `/shop/**` path (ADR 20260803-public-shop-namespace).
-  const base = publicTripPath(shopSlug, tripId);
-  const failed = `${base}?booking=${token}&error=waiver${embedParam(embed, "&")}`;
-  const ctx = await confirmContextFor(tripId, token);
-  if (!ctx) redirect(failed);
-  const issued = await issueWaiverRequest(ctx.db, {
-    shopId: ctx.capability.shopId,
-    bookingId: ctx.capability.bookingId,
-  });
-  if (!issued.ok) redirect(failed);
-  redirect(`/waivers/${issued.token}`);
 }
 
 export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {
@@ -770,81 +691,4 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
         ? "already"
         : "unavailable";
   redirect(`${publicTripPath(shopSlug, tripId)}?error=${code}${embedParam(embed, "&")}`);
-}
-
-/**
- * Saves the diver's reusable rental fit and, separately, whether they want
- * enriched air on this booking. A diver may request nitrox before their card is
- * verified: the request is recorded and flagged (src/db/nitrox.ts), and the fill
- * is re-checked against a verified card downstream, so an uncertified request
- * never becomes a nitrox tank on its own.
- */
-export async function saveRentalFitRequest(
-  { shopSlug, tripId, token, embed }: RentalFitRef,
-  formData: FormData,
-) {
-  const base = publicTripPath(shopSlug, tripId);
-  const ctx = await confirmContextFor(tripId, token);
-  if (!ctx) redirect(`${base}?booking=${token}&error=fit${embedParam(embed, "&")}`);
-  const parsed = rentalFitSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?booking=${token}&error=fit${embedParam(embed, "&")}`);
-  const saved = await saveRentalFit(ctx.db, {
-    shopId: ctx.capability.shopId,
-    personId: ctx.confirmed.person.id,
-    rentsBcd: parsed.data.bcd === "on",
-    rentsRegulator: parsed.data.regulator === "on",
-    rentsWetsuit: parsed.data.wetsuit === "on",
-    rentsMaskFins: parsed.data.maskFins === "on",
-    rentsWeights: parsed.data.weights === "on",
-    rentsDiveComputer: parsed.data.diveComputer === "on",
-    rentsGopro: parsed.data.gopro === "on",
-    bcdSize: parsed.data.bcdSize,
-    wetsuitSize: parsed.data.wetsuitSize,
-    // Fins and boots are one shoe-size answer on the diver's form now, written
-    // to both columns so the packing list, the manifest and the CSV export all
-    // keep reading the field they already read.
-    bootSize: parsed.data.finSize,
-    finSize: parsed.data.finSize,
-    weightPreference: parsed.data.weightPreference,
-    note: parsed.data.note,
-  });
-  // The nitrox checkbox is only in this form when the shop currently fills
-  // nitrox *and* this departure's course runs on it (RentalFitForm.tsx) — when
-  // it isn't, the field is simply absent from every submission, whatever the
-  // diver's actual request. Re-derived here rather than trusted from the post,
-  // and only written when the box could have been there at all, so an
-  // unrelated save (a note, a size) never silently clears a request recorded
-  // while the shop still offered it.
-  const [shop, tripForFit] = await Promise.all([
-    getShopById(ctx.db, ctx.capability.shopId),
-    getTripWithBooked(ctx.db, ctx.capability.shopId, tripId),
-  ]);
-  if (shop && nitroxAvailableOn(shop.rentalItems, tripForFit?.course)) {
-    const wantsNitrox = parsed.data.nitrox === "on";
-    await setBookingNitrox(ctx.db, {
-      shopId: ctx.capability.shopId,
-      bookingId: ctx.capability.bookingId,
-      wantsNitrox,
-    });
-    // The card typed beside the request. Same four refusals as the readiness
-    // page's copy of this: no request, unknown agency, an incomplete pair, or a
-    // row that already exists. Files `pending`; only a staffer sets `verified`,
-    // which is what `authorizesNitroxFill` reads.
-    const agency = parsed.data.nitroxAgency?.trim() ?? "";
-    const identifier = parsed.data.nitroxIdentifier?.trim() ?? "";
-    if (
-      wantsNitrox &&
-      identifier.length >= 2 &&
-      (certificationAgency.enumValues as readonly string[]).includes(agency)
-    ) {
-      await createNitroxCertification(ctx.db, {
-        shopId: ctx.capability.shopId,
-        personId: ctx.confirmed.person.id,
-        agency: agency as (typeof certificationAgency.enumValues)[number],
-        identifier,
-      });
-    }
-  }
-  const result = saved ? "fit=saved" : "error=fit";
-  revalidateAndRedirect(base, `${base}?booking=${token}&${result}${embedParam(embed, "&")}`);
 }

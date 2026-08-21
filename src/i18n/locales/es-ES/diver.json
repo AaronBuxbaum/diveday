@@ -257,20 +257,11 @@
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
     "confirmedHeading": "¡Estás a bordo, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — preséntate en el muelle {minutes} minutos antes y nos encargamos del resto.",
-    "allSet": "Lo tienes todo listo — solo queda presentarte.",
-    "nextStep": "Siguiente: {step}",
     "paymentDepositReceived": "Señal recibida",
     "paymentReceived": "Pago recibido",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentSquare": "Estás al día con el centro para esta salida.",
     "paymentStillOpen": "Tu plaza está a salvo — el pago sigue abierto",
-    "paymentOneThingLeft": "Termina de pagar tu plaza",
-    "paymentBody": "Paga de forma segura en la página de pago del propio centro. Si prefieres pagar en el mostrador, también está bien.",
-    "finishPaying": "Terminar el pago",
-    "payNow": "Pagar ahora",
-    "openingPayment": "Abriendo el pago…",
-    "shopTakesOver": "Ya tienes tu plaza — el centro se encarga a partir de aquí",
-    "shopTakesOverBody": "Estamos revisando un par de cosas por nuestra parte. Ahora mismo no tienes que hacer nada.",
     "trackReadiness": "Sigue todos los pasos en tu página de preparación →",
     "errors": {
       "invalid": "Revisa tu nombre y correo electrónico e inténtalo de nuevo.",
@@ -295,8 +286,6 @@
       "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
       "promoInvalid": "Ese código no está activo."
     },
-    "signWaiverNow": "Firma tu exención ahora",
-    "openingWaiver": "Abriendo tu exención…",
     "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención."
   },
   "bookingGear": {

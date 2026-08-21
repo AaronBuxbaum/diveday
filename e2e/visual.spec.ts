@@ -834,12 +834,13 @@ async function tripIdWithoutSigningIn(
 }
 
 /**
- * Book the seeded reef charter as a fresh visitor and settle on the
- * confirmation. Shared by the `booking-confirmed` and `readiness` captures,
- * which each run it against their own reseeded fixture.
+ * Book the seeded reef charter as a fresh visitor and settle where booking
+ * now lands: the diver's own `/ready`, opened on `?booked=1` (ADR
+ * 20260820-one-page-after-booking). Shared by the `booking-confirmed` and
+ * `readiness` captures, which each run it against their own reseeded fixture.
  *
  * The name and email are fixed per scheme rather than unique per run: both
- * render on the confirmation, so a wall-clock or random value there would be a
+ * render on the page, so a wall-clock or random value there would be a
  * permanent diff between CI runs rather than a regression.
  */
 async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
@@ -850,6 +851,7 @@ async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
   await page.getByLabel("Email", { exact: true }).fill(`visual-regression-${scheme}@example.com`);
   await page.getByRole("button", { name: /^Book/ }).click();
   await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+  await expect(page).toHaveURL(/\/ready\//);
 }
 
 /** The IndexedDB names `src/lib/offline-manifest-store.ts` writes under. */
@@ -1438,17 +1440,22 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The moment the whole public funnel exists for, and until recently the
-       * one step of it with no baseline: the schedule, the trip page, and the
-       * readiness checklist either side of it were all captured, but the
-       * confirmation a diver actually celebrates on was not.
+       * The moment the whole public funnel exists for: `/ready` as it looks in
+       * the seconds after a seat is taken — the "You're on the boat" earned
+       * moment, the emails line, and the checklist under it (ADR
+       * 20260820-one-page-after-booking). It was a branch of the trip page
+       * until 2026-08-20; the capture keeps its name, because what it is a
+       * picture *of* — the confirmed state — has not changed.
        *
-       * It and `readiness` below each run their own booking rather than sharing
-       * one. That used to be forbidden — a second real booking inside the
-       * public tour would have moved the seat counts every capture after it
-       * depended on (CR-019) — but the per-test `demoReset` in e2e/fixtures.ts
-       * reseeds the demo shop before each of these, so each books against the
-       * same fixture and neither can see the other's seat.
+       * It and `readiness` below are now the same route in two states, and
+       * that is the point of having both: this one on `?booked=1`, the other
+       * on the plain link a shop sends the night before. They each run their
+       * own booking rather than sharing one. That used to be forbidden — a
+       * second real booking inside the public tour would have moved the seat
+       * counts every capture after it depended on (CR-019) — but the per-test
+       * `demoReset` in e2e/fixtures.ts reseeds the demo shop before each of
+       * these, so each books against the same fixture and neither can see the
+       * other's seat.
        */
       test(`the booking confirmation renders true to the design (${scheme})`, async ({ page }) => {
         // A real booking through the public form, then the capture.
@@ -1457,21 +1464,19 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "booking-confirmed", scheme);
       });
 
-      // The pre-trip checklist a diver actually uses on the way to the dock,
-      // reached by the readiness link the confirmation hands back. This is a
-      // fresh unpaid booking, so the "Need to change your plans?"
-      // reschedule/cancel section (docs ADR 20260727-diver-self-service-cancel)
-      // renders too — no separate capture needed, it's part of this same
-      // full-page screenshot.
+      // The same page on the *durable* link — what a diver opens from the
+      // night-before email, days after the celebration above has been flashed
+      // out of the URL. Reloading without `?booked=1` is exactly how a diver
+      // reaches it, so that is how it is captured. This is a fresh unpaid
+      // booking, so the "Need to change your plans?" reschedule/cancel section
+      // (docs ADR 20260727-diver-self-service-cancel) renders too — no separate
+      // capture needed, it's part of this same full-page screenshot.
       test(`the diver readiness checklist renders true to the design (${scheme})`, async ({
         page,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await bookAVisualRegressionSeat(page, scheme);
-        const readinessHref = await page
-          .getByRole("link", { name: /readiness page/ })
-          .getAttribute("href");
-        await page.goto(readinessHref ?? "/");
+        await page.goto(new URL(page.url()).pathname);
         await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
         await capture(page, "readiness", scheme);
       });
@@ -1499,6 +1504,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Use the main contact's email for this diver").check();
         await page.getByRole("button", { name: /^Book/ }).click();
         await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await expect(page).toHaveURL(/\/ready\//);
         await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
         await capture(page, "party-organizer-confirmation", scheme);
 

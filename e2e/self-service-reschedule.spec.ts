@@ -45,7 +45,6 @@ test.describe("staff-prepared trips", () => {
     await page.getByLabel("Email", { exact: true }).fill(`nemo-${suffix}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
-    await page.getByRole("link", { name: /readiness page/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
 
     // The reschedule section offers other upcoming trips (the seeded demo
@@ -117,7 +116,6 @@ test.describe("staff-prepared trips", () => {
     await page.getByLabel("Email", { exact: true }).fill(`coral-${suffix}@example.com`);
     await page.getByRole("button", { name: /^Book/ }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
-    await page.getByRole("link", { name: /readiness page/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
     const readyUrl = page.url();
 

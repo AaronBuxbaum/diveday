@@ -625,11 +625,10 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     await page.getByRole("button", { name: "Book these spots" }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Iris/ })).toBeVisible();
 
-    // Read both links off the confirmation before navigating away from it: one
-    // page visit yields both capabilities, and neither can be typed.
-    const readinessHref = await page
-      .getByRole("link", { name: /readiness page/ })
-      .getAttribute("href");
+    // Booking lands on the readiness page itself now (ADR
+    // 20260820-one-page-after-booking), so the claim link is read off the group
+    // panel here rather than off a confirmation one hop back.
+    await expect(page).toHaveURL(/\/ready\//);
     const seatRow = page
       .locator("section", { has: page.getByRole("heading", { name: "Your group’s seats" }) })
       .locator("li")
@@ -644,8 +643,6 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     // hand-off and a checklist whose rows change state as they are satisfied.
     // The densest diver-facing form surface in the product after booking, and
     // the one a diver is most likely to be filling in on a phone at a dock.
-    await page.goto(readinessHref ?? "/");
-    await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
     await expectNoA11yViolations(page);
 
