@@ -165,6 +165,21 @@ describe("counter check-in", () => {
 
   it("undoes a check-in with its own trail event, idempotently, and only for live staff", async () => {
     const { db, shop, staff, booking, personName } = await context();
+    /**
+     * How many lines this seat already carries, read before the acts below.
+     *
+     * A **delta**, not an absolute count: this is the seeded shop's busiest
+     * seat — the first booking on today's reef boat — and the demo's own desk
+     * trail writes against it (`seed-desk-trail.ts`, `seed-diver-trail.ts`).
+     * Asserting `toHaveLength(2)` made this test a tripwire on how much history
+     * the demo happens to carry, which is not what it is about: what it pins is
+     * that a check-in and its correction are *two* events, and that a refused
+     * undo adds none.
+     */
+    const trailCount = async () =>
+      (await db.select().from(activityEvents).where(eq(activityEvents.bookingId, booking.id)))
+        .length;
+    const before = await trailCount();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
@@ -189,11 +204,7 @@ describe("counter check-in", () => {
 
     // The correction is its own event — the trail keeps both taps, never
     // deletes one (design principle 7's re-tap contract).
-    const trail = await db
-      .select()
-      .from(activityEvents)
-      .where(eq(activityEvents.bookingId, booking.id));
-    expect(trail).toHaveLength(2);
+    expect(await trailCount()).toBe(before + 2);
 
     // A double-tap (a second device, a stale tab) finds the work already done.
     await expect(
@@ -213,9 +224,7 @@ describe("counter check-in", () => {
         recordedByPersonId: "00000000-0000-4000-8000-000000000000",
       }),
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
-    expect(
-      await db.select().from(activityEvents).where(eq(activityEvents.bookingId, booking.id)),
-    ).toHaveLength(2);
+    expect(await trailCount()).toBe(before + 2);
   });
 
   it("refuses to undo a booking that is cancelled rather than checked in", async () => {
@@ -280,11 +289,39 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
       agreed: true,
       medicalAnswers: clearAnswers,
     });
-    return base;
+    /**
+     * The lines this seat already carries, recorded once so the assertions
+     * below can speak about what *these calls* wrote.
+     *
+     * This is the seeded shop's busiest seat — the first booking on today's
+     * reef boat — and the demo writes real desk history against it
+     * (`seed-desk-trail.ts`, `seed-diver-trail.ts`). Asserting an empty trail
+     * outright made these tests a tripwire on how much history the demo happens
+     * to carry, which is not what they are about: what they pin is that a
+     * refused check-in writes **nothing**, and a permitted one writes exactly
+     * one line.
+     */
+    const before = new Set(
+      (
+        await base.db
+          .select({ id: activityEvents.id })
+          .from(activityEvents)
+          .where(eq(activityEvents.bookingId, base.booking.id))
+      ).map((row) => row.id),
+    );
+    return { ...base, before };
   }
 
-  async function trailFor(db: Awaited<ReturnType<typeof context>>["db"], bookingId: string) {
-    return db.select().from(activityEvents).where(eq(activityEvents.bookingId, bookingId));
+  async function trailFor(
+    db: Awaited<ReturnType<typeof context>>["db"],
+    bookingId: string,
+    before: Set<string>,
+  ) {
+    const rows = await db
+      .select()
+      .from(activityEvents)
+      .where(eq(activityEvents.bookingId, bookingId));
+    return rows.filter((row) => !before.has(row.id));
   }
 
   async function statusOf(db: Awaited<ReturnType<typeof context>>["db"], bookingId: string) {
@@ -293,7 +330,7 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
   }
 
   it("refuses a deleted person, and checks nobody in", async () => {
-    const { db, shop, staff, booking } = await readyContext();
+    const { db, shop, staff, booking, before } = await readyContext();
     // `deleteDiver`'s soft delete, which touches nothing but this column — the
     // staff roles that authorized them are all still sitting there.
     await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, staff.id));
@@ -307,11 +344,11 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
 
     expect(await statusOf(db, booking.id)).toBe("booked");
-    expect(await trailFor(db, booking.id)).toEqual([]);
+    expect(await trailFor(db, booking.id, before)).toEqual([]);
   });
 
   it("refuses a disabled account still holding a stale role row, and checks nobody in", async () => {
-    const { db, shop, staff, booking } = await readyContext();
+    const { db, shop, staff, booking, before } = await readyContext();
     // Access revoked, roster row intact — what `setStaffAccountStatus` leaves
     // behind. Sign-in already refuses this account; until now the writer did not.
     await db
@@ -332,11 +369,11 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
 
     expect(await statusOf(db, booking.id)).toBe("booked");
-    expect(await trailFor(db, booking.id)).toEqual([]);
+    expect(await trailFor(db, booking.id, before)).toEqual([]);
   });
 
   it("still lets live staff check in, and still refuses one demoted to diver", async () => {
-    const { db, shop, staff, booking } = await readyContext();
+    const { db, shop, staff, booking, before } = await readyContext();
     // The control for both refusals above: same shop, same booking, same call —
     // only the recorder's standing differs.
     await expect(
@@ -347,7 +384,7 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
       }),
     ).resolves.toMatchObject({ ok: true, bookingId: booking.id });
     expect(await statusOf(db, booking.id)).toBe("checked_in");
-    expect(await trailFor(db, booking.id)).toMatchObject([{ actorPersonId: staff.id }]);
+    expect(await trailFor(db, booking.id, before)).toMatchObject([{ actorPersonId: staff.id }]);
 
     // Demotion is the case the hand-rolled join did catch, and the rewrite must
     // keep catching it: every staff role gone, a `diver` row left. The gate runs
@@ -366,6 +403,6 @@ describe("the counter check-in recorder must be live staff (defence in depth)", 
       }),
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
     // Still just the one entry the live staff member wrote.
-    expect(await trailFor(db, booking.id)).toHaveLength(1);
+    expect(await trailFor(db, booking.id, before)).toHaveLength(1);
   });
 });

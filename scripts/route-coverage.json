@@ -240,6 +240,7 @@
     ],
     "visual": [
       "diver-profile",
+      "diver-profile-deleted",
       "diver-profile-expired",
       "diver-profile-imported",
       "diver-profile-not-certified",

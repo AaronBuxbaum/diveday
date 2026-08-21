@@ -89,6 +89,25 @@ holding a staff role** (`staff_member`) — a staff member's name on an activity
 order, or attested waiver is the shop's accountability trail, not the diver's data, and staff
 offboarding is a different problem.
 
+### Amendment, 2026-08-21 — erasure runs on a deleted record only
+
+The control shipped at the foot of **every** diver's record, which is also the record a staffer
+opens to take a payment, verify a card, or read a note. A one-way write does not belong on a page
+somebody arrives at for six other reasons: the diver must be **deleted** (`people.deleted_at` set)
+before the erase is offered or accepted.
+
+This costs nothing and buys the step that was missing. Deletion is reversible (ADR
+20260820-every-delete-is-soft), it is the state an erasure request describes anyway, and doing it
+first puts the record's own "This diver is deleted" card on screen above the control — so the
+staffer reaches the typed-name confirmation having already decided about this person once.
+
+`erasePersonAction` enforces it, not only the page: a tab left open on a record that was deleted
+and then restored would otherwise post an erase at a diver who is back on the roster. The refusal
+(`?notice=erase-requires-delete`) carries no `?form=`, because on a live record the erase section
+is not rendered — it reads in the page banner instead, directly above the Delete control it is
+asking for. `divers.erase.noUndoNote` lost its second sentence in the same change: "Deleting them
+instead is the reversible option" pointed at a step the reader has already taken.
+
 ### What is destroyed, per table
 
 The rule: **rows that are only about the person and are not evidence of a past safety event are

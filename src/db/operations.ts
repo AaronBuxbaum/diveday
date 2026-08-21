@@ -1,7 +1,8 @@
-import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
+import { offsetPage } from "./paging";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -320,13 +321,71 @@ export async function listTripActivity(db: AppDb, shopId: string, tripId: string
     .limit(50);
 }
 
-/** Count every activity line so the Guests tab can advertise what its collapsed log contains. */
-export async function countTripActivity(db: AppDb, shopId: string, tripId: string) {
-  const [row] = await db
-    .select({ count: count() })
-    .from(activityEvents)
-    .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)));
-  return row?.count ?? 0;
+/** How many lines of a diver's trail the record shows at a time. */
+export const DIVER_ACTIVITY_PAGE_SIZE = 10;
+
+/**
+ * Everything in the shop's activity trail that is **about one person**, newest
+ * first, one page at a time.
+ *
+ * Two things make an event theirs, and the pair is not arbitrary — it is
+ * exactly the predicate `anonymizeDiver` redacts under (`src/db/anonymize.ts`),
+ * so the set a shop can read here and the set an erasure destroys are the same
+ * set by construction:
+ *
+ * - it happened **to a seat of theirs** (`booking_id` is one of their bookings),
+ * - or they **did** it (`actor_person_id`) — a divemaster's own trail across
+ *   every boat they ran.
+ *
+ * Nothing is redacted at read time and nothing needs to be: an erased person's
+ * lines already read `[redacted]` in the table, written once inside the erasure
+ * transaction. A reader that filtered instead would be a second, weaker copy of
+ * that rule, and the weaker copy is the one that gets forgotten.
+ *
+ * Scoped by the caller's `shopId` on the events *and* on the booking subquery,
+ * so a person id belonging to another tenant selects nothing rather than
+ * leaking one shop's trail through the other's `personId`.
+ *
+ * Paged rather than capped: a returning diver accumulates lines for as long as
+ * they dive with the shop, and a list with no end is the surface that
+ * photographs 17,000px tall. `seq` breaks the constant `occurred_at` ties for
+ * the same reason `listTripActivity` above does.
+ */
+export async function pagedDiverActivity(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  options: { page?: number; pageSize?: number } = {},
+) {
+  const theirs = and(
+    eq(activityEvents.shopId, shopId),
+    or(
+      inArray(
+        activityEvents.bookingId,
+        db
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId))),
+      ),
+      eq(activityEvents.actorPersonId, personId),
+    ),
+  );
+  return offsetPage({
+    page: options.page,
+    pageSize: options.pageSize ?? DIVER_ACTIVITY_PAGE_SIZE,
+    countRows: async () => {
+      const [row] = await db.select({ count: count() }).from(activityEvents).where(theirs);
+      return row?.count ?? 0;
+    },
+    fetchRows: (offset, limit) =>
+      db
+        .select()
+        .from(activityEvents)
+        .where(theirs)
+        .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
+        .limit(limit)
+        .offset(offset),
+  });
 }
 
 export async function recordTripActivity(

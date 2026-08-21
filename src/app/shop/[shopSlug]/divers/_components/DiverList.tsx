@@ -45,10 +45,6 @@ export interface DiverListCopy {
   viewsAriaLabel: string;
   /** Replaces the search hint under the heading while the Removed view is on. */
   removedNote: string;
-  restore: string;
-  restoring: string;
-  /** `{name}` — one "Restore" per row needs a distinct accessible name. */
-  restoreDiverLabel: string;
   peopleHeading: string;
   /** Already pluralised for the count the badge carries — never a bare digit. */
   peopleCountLabel: string;
@@ -116,44 +112,18 @@ function levelText(diver: DiverSummary, copy: DiverListCopy): string {
 }
 
 /**
- * The way back for one removed diver, on their own row.
- *
- * The undo toast that follows a removal is twelve seconds long; this is the
- * affordance that still exists tomorrow. It refuses rather than clobbers when
- * an active diver has since claimed the removed one's email (CR-008,
- * `restoreDiver`), and the roster says so on the next render.
- */
-function RestoreRow({
-  action,
-  personId,
-  fullName,
-  copy,
-}: {
-  action: (formData: FormData) => void;
-  personId: string;
-  fullName: string;
-  copy: DiverListCopy;
-}) {
-  return (
-    <form action={action} className="relative z-10">
-      <input type="hidden" name="personId" value={personId} />
-      <SubmitButton
-        pendingLabel={copy.restoring}
-        ariaLabel={fill(copy.restoreDiverLabel, { name: fullName })}
-        className={buttonClass({ variant: "secondary", size: "sm" })}
-      >
-        {copy.restore}
-      </SubmitButton>
-    </form>
-  );
-}
-
-/**
  * The divers list filters live as you type — the input drives the URL's `?q=`
  * (debounced) and the server answers with the matching page, so the roster
  * scales to thousands of records without shipping them all to the browser.
  * Pages are `?page=` links, so back/forward and sharing keep working — and,
  * unlike the forward-only cursor this replaced, so does going back one page.
+ *
+ * **A row carries no actions — it is a link to the record, and nothing else.**
+ * The Deleted view used to hang a "Restore" off every row it listed, which put
+ * a consequential write on a list a staffer scans rather than reads, one
+ * mis-tap from a name they were only looking for. Everything a staffer can do
+ * to a diver now lives on that diver's own record, where the person is on
+ * screen and the deleted state is stated above the control (`RestoreDiver`).
  */
 export function DiverList({
   page,
@@ -161,7 +131,7 @@ export function DiverList({
   query,
   filter,
   importHref,
-  restoreAction,
+  canRestore,
   quickAddAction,
   copy,
   pager,
@@ -173,12 +143,14 @@ export function DiverList({
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
   /**
-   * The roster's own restore, bound on the server. Null for a staffer who may
-   * not restore — which is the same staffer the Removed view is hidden from,
-   * so the rows and the chip appear and disappear together (H-14, ADR
-   * 20260724-role-gated-surfaces-hide-not-explain).
+   * Whether this staffer may restore a deleted diver — owner/manager, the same
+   * gate the removal it reverses takes (H-14). It governs the Deleted chip
+   * alone: the view exists to *find* a deleted diver, and there is nothing to
+   * find there for someone who could not put them back (ADR
+   * 20260724-role-gated-surfaces-hide-not-explain). The restore itself is on
+   * the record.
    */
-  restoreAction: ((formData: FormData) => void) | null;
+  canRestore: boolean;
   /** Quick-creates a diver by query string (name/email/phone) and redirects to edit mode. */
   quickAddAction?: ((formData: FormData) => void) | null;
   copy: DiverListCopy;
@@ -205,7 +177,7 @@ export function DiverList({
     { label: copy.viewDivingToday, filter: "diving_today" },
     { label: copy.viewNeedsAttention, filter: "needs_attention" },
     { label: copy.viewMissingContact, filter: "missing_contact" },
-    ...(restoreAction ? [{ label: copy.viewRemoved, filter: "removed" as DiverFilter }] : []),
+    ...(canRestore ? [{ label: copy.viewRemoved, filter: "removed" as DiverFilter }] : []),
   ];
   const router = useRouter();
   const pathname = usePathname();
@@ -535,19 +507,6 @@ export function DiverList({
                     ) : null}
                   </span>
                 </Link>
-                {/* Outside the card's `<Link>`, not inside it: a form nested in
-                    an anchor is invalid HTML and the tap target would fight
-                    the navigation. */}
-                {filter === "removed" && restoreAction ? (
-                  <div className="mt-2">
-                    <RestoreRow
-                      action={restoreAction}
-                      personId={diver.person.id}
-                      fullName={diver.person.fullName}
-                      copy={copy}
-                    />
-                  </div>
-                ) : null}
               </li>
             ))}
           </ul>
@@ -608,17 +567,7 @@ export function DiverList({
                       and always present, so searching never redraws the table
                       shape when a result happens to have no pending work. */}
                   <Td className="align-middle">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
-                      {filter === "removed" && restoreAction ? (
-                        <RestoreRow
-                          action={restoreAction}
-                          personId={diver.person.id}
-                          fullName={diver.person.fullName}
-                          copy={copy}
-                        />
-                      ) : null}
-                    </div>
+                    <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
                   </Td>
                   <Td className="align-middle">
                     <div className="flex flex-wrap items-center gap-2">
