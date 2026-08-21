@@ -39,6 +39,7 @@ import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { RosterAllClear } from "./RosterAllClear";
+import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -148,7 +149,7 @@ export function RosterSection({
   tripDate,
   rosterFilter,
   canAddDivers,
-  savedContactBookingId,
+  keepOpenBookingId,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -158,14 +159,13 @@ export function RosterSection({
   capacity: number;
   roster: RosterEntry[];
   /**
-   * The booking whose emergency contact was just saved (`?bid=`), if any.
-   *
-   * Saving a contact moves it from work into reference, so the block the
-   * staffer was typing in lands inside the collapsed panel. This opens that
-   * one row on the way back, which is what `AutoOpenDetails`'s `open` prop is
-   * for — without it the save would look like the form vanished.
+   * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
+   * an updated payment. Acting on a card can move what they touched into the
+   * reference panel or settle the card into its collapsed state, and a
+   * control must never leave from under the finger that used it: this row
+   * renders expanded with its panel open on the way back.
    */
-  savedContactBookingId?: string;
+  keepOpenBookingId?: string;
   /** Server-rendered `?rf=` selection (task 69) — defaults to "all" upstream. */
   rosterFilter: RosterFilter;
   /**
@@ -260,6 +260,49 @@ export function RosterSection({
         : roster;
   const filterChipHref = (filter: RosterFilter) =>
     `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
+  // A blocker or depth advisory whose sentence renders identically for much
+  // of the boat is one fact about the trip, not N facts about N divers
+  // (principle 9): on a requirement-heavy departure the same three sentences
+  // used to photocopy down nine cards. Counted over the *full* roster — the
+  // strip describes the boat, so its numbers hold still while the filter
+  // chips narrow the cards below it. Each affected card keeps a one-line
+  // count in its blocker box (so a card can never read as "fix this one
+  // thing and they're clear" when more is missing) and its full per-diver
+  // list one tap away in the reference panel.
+  const blockerSentenceCounts = new Map<string, number>();
+  const advisorySentenceCounts = new Map<string, number>();
+  for (const { booking } of roster) {
+    const row = readinessByBooking.get(booking.id);
+    if (row?.readiness && row.readiness.status !== "ready") {
+      for (const blocker of row.readiness.blockers) {
+        if (UNGROUPABLE_BLOCKER_CODES.has(blocker.code)) continue;
+        const text = readinessBlockerText(t, blocker);
+        blockerSentenceCounts.set(text, (blockerSentenceCounts.get(text) ?? 0) + 1);
+      }
+    }
+    if (row?.depthAdvisory?.status === "exceeds") {
+      const text = depthWarningText(t, row.depthAdvisory);
+      advisorySentenceCounts.set(text, (advisorySentenceCounts.get(text) ?? 0) + 1);
+    }
+  }
+  const sharedBlockerTexts = new Set(
+    [...blockerSentenceCounts]
+      .filter(([, count]) => count >= SHARED_FACT_MIN)
+      .map(([sentence]) => sentence),
+  );
+  const sharedAdvisoryTexts = new Set(
+    [...advisorySentenceCounts]
+      .filter(([, count]) => count >= SHARED_FACT_MIN)
+      .map(([sentence]) => sentence),
+  );
+  const sharedFacts = [
+    ...[...blockerSentenceCounts]
+      .filter(([sentence]) => sharedBlockerTexts.has(sentence))
+      .map(([sentence, count]) => ({ sentence, count, tone: "danger" as const })),
+    ...[...advisorySentenceCounts]
+      .filter(([sentence]) => sharedAdvisoryTexts.has(sentence))
+      .map(([sentence, count]) => ({ sentence, count, tone: "warning" as const })),
+  ];
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -309,6 +352,21 @@ export function RosterSection({
                   : t("trips.roster.filterBlocked", { count: filterCounts.blocked }),
           }))}
         />
+      ) : null}
+      {sharedFacts.length > 0 ? (
+        <div className="mt-4 grid gap-2">
+          {sharedFacts.map(({ sentence, count, tone }) => (
+            <p
+              key={sentence}
+              className={`flex gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+                tone === "danger" ? "bg-danger/5 text-danger" : "bg-warning/10 text-warning-strong"
+              }`}
+            >
+              <span aria-hidden="true">{tone === "danger" ? "!" : "▲"}</span>
+              <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
+            </p>
+          ))}
+        </div>
       ) : null}
       {roster.length === 0 ? (
         // The shared empty state, not a bare paragraph: the wait list two
@@ -386,6 +444,43 @@ export function RosterSection({
             // (H-08). It sits apart from the blocker list for that reason.
             const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
             const notes = notesByBooking.get(booking.id) ?? [];
+            // This card's blockers, split against the shared strip above: the
+            // sentences the strip already states for much of the boat shrink
+            // to a one-line count here, the ones particular to this diver
+            // keep their full sentence, and the complete per-diver list waits
+            // in the reference panel.
+            const blockerTexts =
+              readiness && readiness.status !== "ready"
+                ? readiness.blockers.map((blocker) => ({
+                    blocker,
+                    text: readinessBlockerText(t, blocker),
+                  }))
+                : [];
+            const uniqueBlockers = blockerTexts.filter(
+              ({ blocker, text }) =>
+                UNGROUPABLE_BLOCKER_CODES.has(blocker.code) || !sharedBlockerTexts.has(text),
+            );
+            const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
+            const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
+            const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
+            // Nothing left to chase on this seat: it collapses to its header
+            // (principle 9, "collapse the settled row"), with everything else
+            // one tap away behind its Details disclosure. `keepOpenBookingId`
+            // is the exception that keeps faith with the card's own rule that
+            // a control never moves out from under the finger that used it —
+            // the row a staffer just acted on renders expanded once more.
+            const paymentSettled =
+              !requiresPayment || paymentStatus === "paid" || paymentStatus === "waived";
+            const settled =
+              readiness?.status === "ready" &&
+              waiverControl.action === null &&
+              waiverStatus !== "medical_review" &&
+              !identityUnconfirmed &&
+              hasEmergencyContact &&
+              !booking.groupPreference &&
+              (depthText === null || depthShared) &&
+              paymentSettled;
+            const holdOpen = keepOpenBookingId === booking.id;
             const headerLeft = (
               <div className="flex min-w-0 items-start gap-3">
                 <div className="min-w-0">
@@ -457,6 +552,13 @@ export function RosterSection({
                       {readinessStatusText(t, readiness.status)}
                     </Badge>
                   )
+                ) : null}
+                {/* The boat-wide advisory's mark on this diver — the strip
+                    above the roster carries the sentence once. */}
+                {depthShared ? (
+                  <Badge tone="warning" size="sm">
+                    {t("trips.roster.depthChip")}
+                  </Badge>
                 ) : null}
               </>
             );
@@ -577,25 +679,37 @@ export function RosterSection({
                   </p>
                 ) : null}
 
-                {readiness && readiness.status !== "ready" ? (
+                {blockerTexts.length > 0 ? (
                   <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
-                    {readiness.blockers.map((blocker) => (
-                      <li key={blocker.code} className="flex gap-2">
+                    {uniqueBlockers.map(({ text }) => (
+                      <li key={text} className="flex gap-2">
                         <span aria-hidden="true">!</span>
-                        <span>{readinessBlockerText(t, blocker)}</span>
+                        <span>{text}</span>
                       </li>
                     ))}
+                    {/* The card must never read as "fix the one thing listed
+                        and they're clear" when the strip above holds more of
+                        this diver's blockers — the count keeps the card
+                        honest, and the reference panel has their full list. */}
+                    {sharedBlockerCount > 0 ? (
+                      <li className="flex gap-2">
+                        <span aria-hidden="true">!</span>
+                        <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
+                      </li>
+                    ) : null}
                   </ul>
                 ) : null}
 
                 {/* Warning tone, not danger, and deliberately outside the
                     blocker list above: this diver can board. It says the site
                     goes deeper than their training, which the instructor may
-                    already be planning around (H-08). */}
-                {depth?.status === "exceeds" ? (
+                    already be planning around (H-08). An advisory the strip
+                    above already states for much of the boat shrinks to the
+                    chip in this card's header instead. */}
+                {depthText !== null && !depthShared ? (
                   <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
                     <span aria-hidden="true">▲</span>
-                    <span>{depthWarningText(t, depth)}</span>
+                    <span>{depthText}</span>
                   </p>
                 ) : null}
 
@@ -758,7 +872,7 @@ export function RosterSection({
                     collapsing the cards was for. The reason given for keeping
                     it open was that a contact just saved must not vanish from
                     under the staffer who typed it; that is real, and it is
-                    handled where it belongs — `savedContactBookingId` opens
+                    handled where it belongs — `keepOpenBookingId` opens
                     that row's panel on the way back. */}
                 {hasEmergencyContact ? null : <div className="mt-3">{emergencyContactBlock}</div>}
 
@@ -903,6 +1017,31 @@ export function RosterSection({
                       missing one is work and stays in the open above, so the
                       card never states the same thing twice (principle 9). */}
                   {hasEmergencyContact ? emergencyContactBlock : null}
+
+                  {/* The full per-diver list, only when the open half compressed
+                      part of it into a count — the one place this diver's whole
+                      answer is spelled out in their own card. */}
+                  {depthShared && depthText !== null ? (
+                    <div>
+                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                        {t("trips.roster.depthChip")}
+                      </p>
+                      <p className="mt-1 text-sm text-muted">{depthText}</p>
+                    </div>
+                  ) : null}
+
+                  {sharedBlockerCount > 0 ? (
+                    <div>
+                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                        {t("trips.roster.blockersReferenceHeading")}
+                      </p>
+                      <ul className="mt-1 grid gap-1 text-sm text-muted">
+                        {blockerTexts.map(({ text }) => (
+                          <li key={text}>{text}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* `-mx-3` on the row, and both controls at the same `sm`
@@ -974,36 +1113,69 @@ export function RosterSection({
                     {headerBadges}
                   </div>
                 </div>
-                {outstanding}
-                {/* Every card carries this, collapsed — including the ones with
-                    work outstanding, which used to be exactly the cards that
-                    could not be collapsed. The toggle is its own <summary>
+                {/* A settled seat collapses to its header (principle 9): the
+                    "🌊 Ready" mark is the whole story, and everything the card
+                    can still tell or do — payment corrections, notes, the
+                    reference facts — waits behind its one Details disclosure.
+                    A card with anything outstanding keeps its work in the
+                    open, exactly as before. The toggle is its own <summary>
                     below the header rather than wrapping it: a summary is
                     itself interactive, so the diver-name link inside it would
                     be an interactive element nested in another (axe
                     nested-interactive). Deep links (Today, the manifest's
                     "Resolve blockers") land mid-page at one diver;
-                    AutoOpenDetails opens this when the hash names the row, so a
-                    collapsed card never swallows what the link promised. */}
-                <AutoOpenDetails
-                  openOnHash={`booking-${booking.id}`}
-                  open={savedContactBookingId === booking.id}
-                  className="group mt-3 border-t border-border pt-1"
-                >
-                  <summary
-                    // Ten of these in a list all read "Details" alone; the
-                    // accessible name says whose (same pattern as the
-                    // roster's other per-row controls).
-                    aria-label={t("trips.roster.detailsSummaryLabel", {
-                      name: person.fullName,
-                    })}
-                    className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
-                  >
-                    {t("trips.roster.detailsSummary")}
-                    <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-                  </summary>
-                  {reference}
-                </AutoOpenDetails>
+                    AutoOpenDetails opens on the hash, so neither collapse can
+                    ever swallow what a link promised. */}
+                {settled && !holdOpen ? (
+                  <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group mt-1">
+                    <summary
+                      aria-label={t("trips.roster.detailsSummaryLabel", {
+                        name: person.fullName,
+                      })}
+                      className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
+                    >
+                      {/* A note nobody knows exists was never written: the
+                          collapsed header still says there are notes to read
+                          (dive-domain review, 2026-08-21). */}
+                      {notes.length > 0 ? (
+                        <span className="mr-1">
+                          {t("trips.roster.privateStaffNotes", { count: notes.length })}
+                          <span aria-hidden="true"> ·</span>
+                        </span>
+                      ) : null}
+                      {t("trips.roster.detailsSummary")}
+                      <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
+                    </summary>
+                    {outstanding}
+                    {reference}
+                  </AutoOpenDetails>
+                ) : (
+                  <>
+                    {outstanding}
+                    <AutoOpenDetails
+                      openOnHash={`booking-${booking.id}`}
+                      open={holdOpen}
+                      className="group mt-3 border-t border-border pt-1"
+                    >
+                      <summary
+                        // Ten of these in a list all read "Details" alone; the
+                        // accessible name says whose (same pattern as the
+                        // roster's other per-row controls).
+                        aria-label={t("trips.roster.detailsSummaryLabel", {
+                          name: person.fullName,
+                        })}
+                        className="ml-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground"
+                      >
+                        {t("trips.roster.detailsSummary")}
+                        <DisclosureCaret
+                          direction="down"
+                          className="size-4 group-open:rotate-180"
+                        />
+                      </summary>
+                      {reference}
+                    </AutoOpenDetails>
+                  </>
+                )}
               </li>
             );
           })}

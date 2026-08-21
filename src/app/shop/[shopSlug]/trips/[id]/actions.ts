@@ -1088,7 +1088,13 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
           currency: await getShopCurrency(db, s.user.shopId),
         })
       : null;
-  revalidateAndRedirect(back, noticeUrl(back, saved ? "payment" : "invalid"));
+  // `bid` rides along so the roster can hold that diver's card open on the
+  // way back: a settled card collapses, and the payment selector a staffer
+  // just used must never be what collapses it out from under them.
+  revalidateAndRedirect(
+    back,
+    saved ? noticeUrl(back, "payment", { bid: bookingId }) : noticeUrl(back, "invalid"),
+  );
 }
 
 export async function saveRequirementsAction(shopSlug: string, tripId: string, formData: FormData) {

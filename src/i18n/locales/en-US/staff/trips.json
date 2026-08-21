@@ -384,7 +384,11 @@
     "emptyHeading": "No one on this boat yet",
     "emptyAction": "Add a diver",
     "filterEmptyHeading": "Nobody matches this filter",
-    "filterEmptyAction": "{count, plural, one {Show the # diver on board} other {Show all # divers on board}}"
+    "filterEmptyAction": "{count, plural, one {Show the # diver on board} other {Show all # divers on board}}",
+    "sharedFactLine": "{count, plural, one {# diver} other {# divers}}: {sentence}",
+    "sharedOnCard": "{count, plural, one {# blocker} other {# blockers}} shared with other divers — listed above.",
+    "depthChip": "Depth advisory",
+    "blockersReferenceHeading": "Blockers"
   },
   "celebrations": {
     "heading": "Celebrations",

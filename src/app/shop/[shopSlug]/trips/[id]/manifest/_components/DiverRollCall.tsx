@@ -19,12 +19,14 @@ import {
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
+import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { BuddyTeamChip } from "./BuddyTeamChip";
 import {
   ROLL_CALL_ROW_TONE,
@@ -249,6 +251,24 @@ export function DiverRollCall({
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
   t: StaffTranslator;
 }) {
+  // The same depth advisory resolving identically for much of the roster is
+  // one fact about the plan, not nine facts about nine divers (principle 9) —
+  // on the seeded wreck trip the identical 40-word paragraph rendered inside
+  // nine of ten rows. Said once here, naming its divers; each of their rows
+  // wears a two-word chip instead. A diver whose advisory *differs* (a junior
+  // cap, no card at all) keeps the full sentence on their row, and **paper
+  // keeps every row's full advisory** — the printed manifest goes ashore, and
+  // a chip pointing at a strip is a reference paper cannot follow.
+  const advisoryDivers = new Map<string, string[]>();
+  for (const diver of divers) {
+    if (diver.depthAdvisory?.status !== "exceeds") continue;
+    const text = depthWarningText(t, diver.depthAdvisory);
+    advisoryDivers.set(text, [...(advisoryDivers.get(text) ?? []), diver.fullName]);
+  }
+  const sharedAdvisories = [...advisoryDivers.entries()].filter(
+    ([, names]) => names.length >= SHARED_FACT_MIN,
+  );
+  const sharedAdvisoryTexts = new Set(sharedAdvisories.map(([text]) => text));
   return (
     <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">
       {/* No "Shop time: Eastern Daylight Time" beside the heading. Every time
@@ -272,6 +292,29 @@ export function DiverRollCall({
           </p>
         )}
       </div>
+      {sharedAdvisories.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-2 print:hidden">
+          {sharedAdvisories.map(([text, names]) => (
+            <div
+              key={text}
+              className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong"
+            >
+              <span aria-hidden="true">▲</span>
+              <div>
+                <p>{text}</p>
+                <p className="font-semibold">
+                  {t("manifest.sharedDepthApplies", {
+                    names: cachedListFormat(locale, {
+                      style: "long",
+                      type: "conjunction",
+                    }).format(names),
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <ul
         className={sectionCardClass({
           padding: "none",
@@ -423,19 +466,38 @@ export function DiverRollCall({
                   {/* The plan for dive two is made here, on the boat, during
                       the surface interval — so the depth advisory has to be
                       here too, not only on the desk-side roster. Warning
-                      tone, never a gate (H-08). */}
+                      tone, never a gate (H-08). An advisory the strip above
+                      already states for this diver by name shrinks to its
+                      chip on screen — and stays a full sentence on paper,
+                      which cannot follow a chip to a strip. */}
                   {diver.depthAdvisory?.status === "exceeds" ? (
-                    <p className="mt-2 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong">
-                      <span aria-hidden="true">▲</span>
-                      <span>{depthWarningText(t, diver.depthAdvisory)}</span>
-                    </p>
+                    sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
+                      <>
+                        <span className="mt-2 inline-flex print:hidden">
+                          <Badge tone="warning">{t("manifest.depthChip")}</Badge>
+                        </span>
+                        <p className="mt-2 hidden gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong print:flex">
+                          <span aria-hidden="true">▲</span>
+                          <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong">
+                        <span aria-hidden="true">▲</span>
+                        <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+                      </p>
+                    )
                   ) : null}
                   {!ready ? (
                     <>
                       <ul className="mt-3 flex flex-col gap-1 text-base text-danger">
-                        {diver.readiness.blockers.map((blocker) => (
-                          <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
-                        ))}
+                        {/* Keyed on the sentence, not the code: a trip
+                            requiring two specialties yields two blockers with
+                            one code and different params. */}
+                        {diver.readiness.blockers.map((blocker) => {
+                          const text = readinessBlockerText(t, blocker);
+                          return <li key={text}>• {text}</li>;
+                        })}
                       </ul>
                       {/* At departure this unblocks boarding; after a dive the
                           diver is aboard, so it's a shore follow-up on their record.
