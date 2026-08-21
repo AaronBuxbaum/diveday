@@ -1,10 +1,8 @@
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { blockerActionLabelText, pointingLabelText } from "@/i18n/today-labels";
 import type { ReadinessBlocker } from "./readiness";
 import {
-  BLOCKER_ACTIONS,
-  isWaiverCode,
-  primaryBlocker,
+  type BlockerDestinationContext,
+  blockerDestination,
   type TodayUrgency,
   URGENCY_ORDER,
 } from "./today";
@@ -37,27 +35,25 @@ export type BlockerFix = {
  * The one-tap fix for a diver's *worst* blocker: a missing/pending/expired
  * waiver sends from here; card evidence lives on the person record; payment and
  * setup work lives on the trip roster (anchored to the diver's booking).
- * Waiver-code and label rules come from `today.ts` — one blocker→fix rule.
+ *
+ * Shaping only — `blockerDestination` (`today.ts`) decides where the link goes
+ * and what it says, so this view and the Today queue cannot drift apart about
+ * a diver they both show.
  *
  * `t` defaults to English so every existing call site keeps working unchanged;
  * a locale-aware caller passes its own (`src/db/blockers.ts`).
  */
 export function blockerFixFor(
   blockers: readonly ReadinessBlocker[],
-  ctx: { shopSlug: string; tripId: string; personId: string; bookingId: string; fullName: string },
+  ctx: BlockerDestinationContext,
   t: StaffTranslator = staffTranslator("en-US"),
 ): BlockerFix | null {
-  const blocker = primaryBlocker(blockers);
-  if (!blocker) return null;
-  const { target } = BLOCKER_ACTIONS[blocker.code];
-  const sendsWaiver = isWaiverCode(blocker.code);
-  const rosterRow = `/shop/${ctx.shopSlug}/trips/${ctx.tripId}/guests#booking-${ctx.bookingId}`;
+  const destination = blockerDestination(blockers, ctx, t);
+  if (!destination) return null;
   return {
-    label: sendsWaiver
-      ? blockerActionLabelText(t, blocker.code, false)
-      : pointingLabelText(t, target, ctx.fullName),
-    href: target === "diver" ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}` : rosterRow,
-    sendsWaiver,
+    label: destination.label,
+    href: destination.href,
+    sendsWaiver: destination.sendsWaiver,
     bookingId: ctx.bookingId,
   };
 }

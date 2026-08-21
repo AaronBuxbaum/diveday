@@ -419,6 +419,67 @@ export function primaryBlocker(blockers: readonly ReadinessBlocker[]): Readiness
   return best;
 }
 
+/**
+ * Where a staffer goes to clear a diver's *worst* blocker, and what the link
+ * says when they get there.
+ *
+ * This is the one blocker->destination rule. It used to be six identical lines
+ * in two places — here and `blockerFixFor` (`src/lib/blockers.ts`) — kept in
+ * step by a comment saying they were kept in step. The two callers are the
+ * Today queue and the by-departure blocker view, which sit one tap apart and
+ * are meant to agree about a diver (`src/db/blockers.ts` says so at the read);
+ * the readiness *data* was already shared, the destination derived from it was
+ * not. Each caller still shapes its own result — a `TodayAction` and a
+ * `BlockerFix` are different objects with different jobs — but neither decides
+ * where the link goes any more.
+ *
+ * Lives here rather than in `blockers.ts` because `BLOCKER_ACTIONS`,
+ * `isWaiverCode` and `primaryBlocker` are all here and `blockers.ts` already
+ * imports them; moving the rule the other way would invert that edge.
+ */
+export type BlockerDestination = {
+  blocker: ReadinessBlocker;
+  kind: TodayActionKind;
+  target: "trip" | "diver";
+  sendsWaiver: boolean;
+  label: string;
+  href: string;
+};
+
+export type BlockerDestinationContext = {
+  shopSlug: string;
+  tripId: string;
+  personId: string;
+  bookingId: string;
+  fullName: string;
+};
+
+export function blockerDestination(
+  blockers: readonly ReadinessBlocker[],
+  ctx: BlockerDestinationContext,
+  t: StaffTranslator = staffTranslator("en-US"),
+): BlockerDestination | null {
+  const blocker = primaryBlocker(blockers);
+  if (!blocker) return null;
+  const { kind, target } = BLOCKER_ACTIONS[blocker.code];
+  const sendsWaiver = isWaiverCode(blocker.code);
+  return {
+    blocker,
+    kind,
+    target,
+    sendsWaiver,
+    // Waiver rows send in place, so they keep the verb; a card row only opens
+    // the person record, so it points instead of pretending to act.
+    label: sendsWaiver
+      ? blockerActionLabelText(t, blocker.code, false)
+      : pointingLabelText(t, target, ctx.fullName),
+    href:
+      target === "diver"
+        ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}`
+        : `/shop/${ctx.shopSlug}/trips/${ctx.tripId}/guests#booking-${ctx.bookingId}`,
+  };
+}
+
 export type DiverBlockerInput = {
   bookingId: string;
   personId: string;
@@ -444,12 +505,20 @@ export function diverBlockerAction(
   now: Date,
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction | null {
-  const blocker = primaryBlocker(input.blockers);
-  if (!blocker) return null;
-  const { kind, target } = BLOCKER_ACTIONS[blocker.code];
+  const destination = blockerDestination(
+    input.blockers,
+    {
+      shopSlug,
+      tripId: input.tripId,
+      personId: input.personId,
+      bookingId: input.bookingId,
+      fullName: input.fullName,
+    },
+    t,
+  );
+  if (!destination) return null;
+  const { blocker, kind, sendsWaiver } = destination;
   const remaining = input.blockers.length - 1;
-  const rosterRow = `/shop/${shopSlug}/trips/${input.tripId}/guests#booking-${input.bookingId}`;
-  const waiver = isWaiverCode(blocker.code);
   const blockerText = readinessBlockerText(t, blocker);
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,
@@ -459,13 +528,9 @@ export function diverBlockerAction(
     context: input.tripTitle,
     departure: { tripId: input.tripId, label: input.tripTitle },
     detail: remaining > 0 ? blockerDetailWithRemainingText(t, blockerText, remaining) : blockerText,
-    // Waiver rows send in place, so they keep the verb; a card row only opens
-    // the person record, so it points instead of pretending to act.
-    actionLabel: waiver
-      ? blockerActionLabelText(t, blocker.code, false)
-      : pointingLabelText(t, target, input.fullName),
-    href: target === "diver" ? `/shop/${shopSlug}/divers/${input.personId}` : rosterRow,
-    ...(waiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
+    actionLabel: destination.label,
+    href: destination.href,
+    ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),
     dueAt: input.startsAt,
   };
