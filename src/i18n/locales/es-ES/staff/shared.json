@@ -652,5 +652,13 @@
     "notCertified": "Todavía sin certificación — sin confirmar",
     "nitrox": "Nitrox",
     "belowRequirement": "{value} · por debajo del mínimo de esta salida"
+  },
+  "diveRecency": {
+    "lastDived": "Última inmersión {when} — según el buceador",
+    "thisSeason": "esta temporada",
+    "withinAYear": "en el último año",
+    "oneToFiveYears": "hace entre uno y cinco años",
+    "overFiveYears": "hace más de cinco años",
+    "never": "nunca"
   }
 }

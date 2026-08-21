@@ -521,6 +521,15 @@
     "waiverUnavailable": "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
     "paymentCancelled": "Payment cancelled — your seat is still held.",
+    "cancelSpot": "Cancel my spot",
+    "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
+    "cancelConfirmButton": "Yes, cancel my spot",
+    "neverMind": "Never mind",
+    "cancelling": "Cancelling…",
+    "cancelPreviewRefund": "You’re still inside the free-cancellation window, so what you paid comes back to you.",
+    "cancelPreviewForfeit": "You’re past the free-cancellation window, so what you paid won’t be refunded.",
+    "cancelPreviewNoPolicy": "This shop doesn’t automate cancellation refunds, so nothing is refunded right away.",
+    "cancelUnavailable": "This spot can no longer be cancelled here. The shop can release it for you.",
     "refundIssued": "You paid for this trip, so a refund has been issued back to your card.",
     "refundManual": "You paid for this trip. This shop handles cancellation refunds directly — reach out to them about it.",
     "stateDone": "Done",
@@ -606,7 +615,20 @@
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep — bookmark it, and it stays up to date until you sail.",
     "gearBody": "Tell the crew what you'd like to rent, and roughly what size.",
-    "gearOnFile": "Your sizes are with the crew."
+    "gearOnFile": "Your sizes are with the crew.",
+    "lastDivedHeading": "When did you last dive?",
+    "lastDivedChoose": "Choose",
+    "saveLastDived": "Save",
+    "savingLastDived": "Saving…",
+    "lastDivedSaved": "Thanks — the crew will see that.",
+    "lastDivedUnavailable": "That did not save. Try again, or tell the crew on the day.",
+    "diveRecency": {
+      "thisSeason": "This season",
+      "withinAYear": "Within the last year",
+      "oneToFiveYears": "One to five years ago",
+      "overFiveYears": "More than five years ago",
+      "never": "I haven’t dived yet"
+    }
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",

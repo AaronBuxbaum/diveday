@@ -18,7 +18,11 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import {
+  resolveRevokedBookingCapability,
+  verifyBookingCapability,
+} from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
@@ -35,6 +39,7 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
+  DIVER_DIVE_RECENCY_KEYS,
   DIVER_SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
@@ -42,6 +47,7 @@ import { requestLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import {
   formatMoneyCents,
   formatRelativeDay,
@@ -64,8 +70,10 @@ import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
+  cancelMyBookingAction,
   payFromReady,
   saveCertificationFromReady,
+  saveDiveRecencyFromReady,
   saveEmergencyContactFromReady,
   saveFitFromReady,
   saveNitroxCertificationFromReady,
@@ -116,8 +124,13 @@ function ChecklistRow({
 }: {
   label: string;
   state: ChecklistState;
-  /** Already resolved by the caller — see `checklistDetailText`. */
-  detail: string;
+  /**
+   * Already resolved by the caller — see `checklistDetailText`. Nullable
+   * because the last-dived row has nothing to say before it is answered: the
+   * label *is* the question, and a sentence restating it would be exactly the
+   * caption the copy-restraint filter deletes.
+   */
+  detail: string | null;
   action?: React.ReactNode;
   t: DiverTranslator;
 }) {
@@ -135,7 +148,7 @@ function ChecklistRow({
           <h3 className="text-base font-semibold">{label}</h3>
           <span className={`text-sm font-semibold ${style.text}`}>{t(style.word)}</span>
         </div>
-        <p className="mt-0.5 text-base text-muted">{detail}</p>
+        {detail ? <p className="mt-0.5 text-base text-muted">{detail}</p> : null}
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
     </li>
@@ -733,15 +746,21 @@ const READY_NOTICES: Record<
   // twice. Nothing to fix, so this is neutral rather than an error.
   "saved-cert-known": { tone: "neutral", key: "ready.certKnown" },
   "error-cert": { tone: "danger", key: "ready.certInvalid" },
+  // `selfCancelBooking` refused — the seat flipped to checked-in, or the boat
+  // sailed, between this page rendering and the tap. The four refusal reasons
+  // are deliberately never distinguished to a diver (a booking-state oracle is
+  // still a leak); the shop's number is on the card below.
+  "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
+  "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
 };
 
 /**
  * What to tell a diver whose seat is gone about money they had already paid —
- * derived from the booking's own current payment status and nothing else. It
- * has never been read off the query string, and now there is no query string
- * to read: the diver-facing cancel that used to redirect here with
- * `?cancelled=1` is gone (ADR 20260820-shop-handles-plan-changes), so the one
- * caller left is the staff-cancelled booking below.
+ * derived from the booking's own current payment status and nothing else. It has
+ * never been read off the query string: `?cancelled=1` is a trigger telling the
+ * page to look, so a hand-edited URL can neither claim a refund that did not
+ * happen nor hide one that did.
  *
  * This collapses several distinct non-refund outcomes (past the free-
  * cancellation window, no stated window, a failed/manual Stripe reversal) into
@@ -829,6 +848,19 @@ function ShopCard({
   );
 }
 
+/**
+ * What cancelling right now would mean for money already paid. This is the one
+ * consequence the button cannot show on its own, which is why it is the only
+ * sentence beside it — a diver past the free-cancellation window learning that
+ * *after* the irreversible tap is the failure this exists to prevent.
+ */
+const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey | null> = {
+  refund: "ready.cancelPreviewRefund",
+  forfeit: "ready.cancelPreviewForfeit",
+  no_policy: "ready.cancelPreviewNoPolicy",
+  unpaid: null,
+};
+
 /** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
 function cancelledNotice(
   paymentStatus: string | null | undefined,
@@ -866,12 +898,13 @@ export default async function DiverReadinessPage({
     saved?: string;
     error?: string;
     pay?: string;
+    cancelled?: string;
     booked?: string;
   }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, pay, booked } = await searchParams;
+  const { saved, error, pay, cancelled, booked } = await searchParams;
   // A seat was taken in the request that redirected here — this page is the
   // one page after booking now (ADR 20260820-one-page-after-booking). It
   // switches the celebration from "you're ready" to "you're booked" and turns
@@ -889,13 +922,31 @@ export default async function DiverReadinessPage({
   const anonT = diverTranslator(await requestLocale());
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
-    // Revoked, expired, or never ours. There is no longer a
-    // relaxed-revocation branch here: it existed for exactly one redirect —
-    // the diver's own cancel, which revoked this token and then sent them back
-    // to it with `?cancelled=1` — and that action is gone (ADR
-    // 20260820-shop-handles-plan-changes). Nothing else in the app ever
-    // produced that parameter, so reading it now would only be a hand-typed
-    // query string asking us to resolve a dead token.
+    // Revoked, expired, or never ours — with one exception. The diver's own
+    // cancel revokes this exact token as part of cancelling and then redirects
+    // back to it with `?cancelled=1`, so the verified path above can never show
+    // that diver their own confirmation. Resolve the token with the revocation
+    // check relaxed — never the cancelled-booking or shop-scoping checks — so
+    // that one redirect lands on an honest confirmation rather than the generic
+    // "isn't available" notice (ADR 20260821-the-diver-may-release-their-own-seat).
+    // `cancelled` is only the trigger to look: the refund copy itself comes
+    // from the booking's own current payment row, fetched fresh here, never
+    // from the query string.
+    if (cancelled) {
+      const resolved = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
+      if (resolved) {
+        const data = await getReadyPageData(db, resolved.bookingId);
+        if (data?.detail.cancelled) {
+          const payment = await getBookingPayment(db, data.shop.id, resolved.bookingId);
+          return cancelledNotice(
+            payment?.status,
+            data.detail.trip.title,
+            data.detail.shop.name,
+            anonT,
+          );
+        }
+      }
+    }
     return (
       <Notice title={anonT("ready.unavailableHeading")} text={anonT("ready.unavailableBody")} />
     );
@@ -938,6 +989,7 @@ export default async function DiverReadinessPage({
   // night before should read at least as rich as the email that sent them
   // here, and a bare date is easy to misjudge at a glance the way a full
   // relative phrase isn't.
+  const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const relativeWhen = formatRelativeDay(
     detail.trip.startsAt,
     nowDate(),
@@ -1086,15 +1138,20 @@ export default async function DiverReadinessPage({
    */
   const nitroxCardEntryOffered =
     offerNitroxCard && items.some((item) => item.category === "certification");
-  // The emergency-contact and gear rows are rendered as their own
+  // The diver has answered the currency question at least once. Every band is
+  // a complete answer, "I haven't dived yet" included, so this asks whether the
+  // row was filled in and never what was said.
+  const hasLastDived = data.lastDivedBand != null;
+  // The emergency-contact, gear and last-dived rows are rendered as their own
   // `ChecklistRow`s below, outside `items` — count them alongside the
   // requirement-derived items so the progress bar and its label match what the
   // diver actually sees in the list.
-  const checklistTotal = items.length + 2;
+  const checklistTotal = items.length + 3;
   const checklistDone =
     items.filter((item) => item.state === "done").length +
     (hasEmergencyContact ? 1 : 0) +
-    (hasRentalFit ? 1 : 0);
+    (hasRentalFit ? 1 : 0) +
+    (hasLastDived ? 1 : 0);
   const noticeKey = saved
     ? `saved-${saved}`
     : error
@@ -1349,6 +1406,61 @@ export default async function DiverReadinessPage({
               }
               t={t}
             />
+            {/* **The question nobody was asking.** A rung is what the shop
+                gates on; currency is what actually catches people, and an
+                honest "Advanced Open Water" from 1998 with no dive since 2013
+                clears every check in this product (ADR
+                20260821-currency-is-what-catches-people). It is a row here and
+                not a field inside the certification disclosure because it is
+                asked of *everyone* — a diver whose card the shop verified years
+                ago is exactly the person worth asking.
+
+                Gates nothing, so the row never reads "action" in a way that
+                blocks: it is the third non-blocker row, beside the emergency
+                contact and gear. Once answered the select keeps the answer and
+                stays editable — no separate "on file" line, because the control
+                already shows what was said. */}
+            <ChecklistRow
+              label={t("ready.lastDivedHeading")}
+              state={hasLastDived ? "done" : "action"}
+              detail={
+                hasLastDived && data.lastDivedBand
+                  ? t(DIVER_DIVE_RECENCY_KEYS[data.lastDivedBand])
+                  : null
+              }
+              action={
+                <form
+                  action={saveDiveRecencyFromReady.bind(null, token)}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center"
+                >
+                  {/* The row's own heading is this control's label — a visible
+                      `<Field>` label would print the question twice, one line
+                      apart. Same move the trip picker on this page used to
+                      make, for the same reason. */}
+                  <select
+                    name="lastDivedBand"
+                    required
+                    aria-label={t("ready.lastDivedHeading")}
+                    defaultValue={data.lastDivedBand ?? ""}
+                    className={controlClass}
+                  >
+                    <option value="">{t("ready.lastDivedChoose")}</option>
+                    {DIVE_RECENCY_BANDS.map((band) => (
+                      <option key={band} value={band}>
+                        {t(DIVER_DIVE_RECENCY_KEYS[band])}
+                      </option>
+                    ))}
+                  </select>
+                  <SubmitButton
+                    pendingLabel={t("ready.savingLastDived")}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("ready.saveLastDived")}
+                  </SubmitButton>
+                </form>
+              }
+              t={t}
+            />
             {/* Gear is a pre-trip item like any other, so it is a row rather
                 than a section of its own further down. It is the second row
                 here that is not a readiness blocker — a rental fit reserves
@@ -1410,6 +1522,39 @@ export default async function DiverReadinessPage({
             />
             <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
           </>
+        ) : null}
+
+        {/* The diver may release their own seat; moving it is the shop's
+            (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
+            under everything the page is actually for, and above the shop card
+            whose phone number answers every plan change this button does not.
+            Rendered only when `selfCancelBooking` would actually honour it, so
+            there is no control here that could only come back refused. */}
+        {data.canCancelBooking ? (
+          <section className="border-t border-border pt-6">
+            {cancelPreviewKey ? (
+              <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
+            ) : null}
+            <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+              {/* The refund preview is repeated inside the confirm rather than
+                  left further up the page: the diver reads what it costs at the
+                  moment of commitment, not once on the way past. */}
+              <InlineConfirm
+                triggerLabel={t("ready.cancelSpot")}
+                triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                message={[
+                  t("ready.cancelConfirm", { trip: detail.trip.title }),
+                  cancelPreviewKey ? t(cancelPreviewKey) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                confirmLabel={t("ready.cancelConfirmButton")}
+                cancelLabel={t("ready.neverMind")}
+                pendingLabel={t("ready.cancelling")}
+                confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+              />
+            </form>
+          </section>
         ) : null}
 
         <ShopCard

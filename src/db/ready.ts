@@ -1,5 +1,8 @@
 import { eq } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { withinCancellationWindow } from "@/lib/deposits";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
@@ -10,6 +13,14 @@ import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fi
 import { bookings, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
+
+/**
+ * Trips run late, so "has this boat sailed?" allows an hour past the scheduled
+ * departure everywhere in the app (AGENTS.md). `selfCancelBooking` applies the
+ * same hour; this page has to, or it would hide the control for the hour the
+ * domain would still honour it.
+ */
+const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
 
 /**
  * Everything the transactional `/ready` page needs, gathered from the same
@@ -68,6 +79,13 @@ export type ReadyPageData = {
     emergencyContactPhone: string | null;
   };
   wantsNitrox: boolean;
+  /**
+   * The diver's own answer to "when did you last dive?", or null when they have
+   * not been asked or have not said (ADR 20260821-currency-is-what-catches-people).
+   * Gates nothing anywhere; `/ready` renders it as a question the diver can still
+   * answer, and the staff surfaces render it as their word.
+   */
+  lastDivedBand: DiveRecencyBand | null;
   nitroxCardVerified: boolean;
   /**
    * A live nitrox card exists for this diver, sighted or not. Only decides
@@ -79,11 +97,31 @@ export type ReadyPageData = {
   rentalFit: DiverRentalFit | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /**
+   * What cancelling right now would do to any payment already captured —
+   * shown before the diver commits, mirroring `refundBookingOnCancellation`'s
+   * decision without moving any money. Never trust this for the actual
+   * refund: the cancel action re-derives it server-side at the moment of
+   * cancellation, since "now" and payment state can both move between page
+   * load and submit.
+   */
+  cancelPreview: "refund" | "forfeit" | "no_policy" | "unpaid";
+  /**
+   * Whether a seat this diver can still release exists. Mirrors
+   * `selfCancelBooking`'s own two pre-checks exactly — a plain `booked` seat,
+   * on a departure that has not sailed — including its one-hour late-departure
+   * buffer (AGENTS.md), so the page can never render a control that could only
+   * ever come back refused. A `checked_in`/`no_show` seat is a day-of state a
+   * pre-trip link must not flip back, and a boat that has left cannot un-take
+   * someone aboard.
+   */
+  canCancelBooking: boolean;
 };
 
 export async function getReadyPageData(
   db: AppDb,
   bookingId: string,
+  now: Date = nowDate(),
 ): Promise<ReadyPageData | null> {
   const detail = await getBookingReadinessDetail(db, bookingId);
   if (!detail) return null;
@@ -94,6 +132,7 @@ export async function getReadyPageData(
       tripId: bookings.tripId,
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
+      lastDivedBand: bookings.lastDivedBand,
       status: bookings.status,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
@@ -140,6 +179,21 @@ export async function getReadyPageData(
     perDiverPriceCents && !settled && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
 
+  // `captured`, not `settled`: a waived booking has no money to give back, so
+  // it reads as `unpaid` here — the same answer `refundBookingOnCancellation`
+  // reaches, and the reason this preview is derived rather than stored.
+  const captured = payment?.status === "paid" || payment?.status === "deposit_paid";
+  const cancelPreview: ReadyPageData["cancelPreview"] = !captured
+    ? "unpaid"
+    : trip.cancellationWindowHours
+      ? withinCancellationWindow(trip, now)
+        ? "refund"
+        : "forfeit"
+      : "no_policy";
+
+  const canCancelBooking =
+    row.status === "booked" && trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
+
   return {
     detail,
     shop: {
@@ -173,9 +227,12 @@ export async function getReadyPageData(
       emergencyContactPhone: row.emergencyContactPhone,
     },
     wantsNitrox: row.wantsNitrox,
+    lastDivedBand: row.lastDivedBand,
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
     canPay,
+    cancelPreview,
+    canCancelBooking,
   };
 }

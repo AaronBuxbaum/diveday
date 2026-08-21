@@ -3,21 +3,25 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { selfCancelBooking, setBookingLastDived } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { recordDiverOwnLocale } from "@/db/people";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import { trackEvent } from "@/lib/analytics";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
+import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -227,6 +231,97 @@ export async function payFromReady(token: string) {
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
   redirect(url);
+}
+
+/**
+ * Cancel the diver's own booking. Rate-limited harder than the rest of this
+ * file — this is irreversible and, when paid, moves money. Cancellation and
+ * refund stay the two independent steps the staff path uses (docs H-07): the
+ * seat is freed by `selfCancelBooking` first, and a refund failure afterward
+ * never re-opens it or blocks the cancellation the diver already sees.
+ *
+ * The move a diver cannot make here is a *move* — rescheduling is the shop's
+ * (ADR 20260821-the-diver-may-release-their-own-seat).
+ */
+export async function cancelMyBookingAction(token: string) {
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel))
+      .allowed
+  ) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+
+  const cancelled = await selfCancelBooking(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+  });
+  if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
+  await trackEvent({ name: "booking_cancelled", source: "diver" });
+
+  // The refund outcome itself is never trusted back from the client for the
+  // notice: `?cancelled=1` here is only a trigger telling the page to look,
+  // not the source of truth. The page re-derives what actually happened from
+  // the booking's own current payment status — an edited or replayed query
+  // string cannot be used to claim a refund that did not happen, or hide one
+  // that did.
+  //
+  // Caught, not left to throw: the cancellation above already committed and
+  // this token is already revoked, so a refund failure (a transient DB error,
+  // say) must never turn an already-successful cancellation into an error
+  // response — the diver would see a generic failure with no way to tell the
+  // destructive action actually went through, since refreshing the dead link
+  // only shows the unavailable notice. Staff can still see and fix a missed
+  // refund from the booking's payment record; the diver just needs the
+  // confirmation either way.
+  try {
+    const refund = await refundBookingOnCancellation(ctx.db, {
+      shopId: ctx.data.shop.id,
+      bookingId: ctx.bookingId,
+    });
+    if (refund.status !== "no_policy" && refund.status !== "unpaid") {
+      await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
+    }
+  } catch {
+    console.error("Self-cancel refund could not be processed", { bookingId: ctx.bookingId });
+  }
+  redirect(`${base(token)}?cancelled=1`);
+}
+
+/**
+ * **How recently the diver says they last dived** (ADR
+ * 20260821-currency-is-what-catches-people).
+ *
+ * The one question on this page whose answer nothing checks and nothing gates —
+ * it is shown to the crew and that is the whole of it. Validated against the
+ * pgEnum's own tuple rather than a hand-written list, so widening the bands can
+ * never leave this refusing an answer the column accepts (the same rule
+ * `certificationSchema` follows for agency and level).
+ *
+ * There is no "prefer not to say" value to post: that answer is simply not
+ * submitting the form, which is the state every booking is in already.
+ */
+const diveRecencySchema = z.object({
+  lastDivedBand: z.enum(DIVE_RECENCY_BANDS),
+});
+
+export async function saveDiveRecencyFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = diveRecencySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=last-dived`);
+
+  // The booking comes from the verified capability, never from the form: a
+  // bearer of this token can only ever answer for its own seat.
+  const saved = await setBookingLastDived(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    band: parsed.data.lastDivedBand,
+  });
+  if (!saved) redirect(`${base(token)}?error=last-dived`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=last-dived`);
 }
 
 /**
