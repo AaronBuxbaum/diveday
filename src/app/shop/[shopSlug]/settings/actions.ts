@@ -40,6 +40,11 @@ import {
   isLookupWorthy,
   toFilterCountry,
 } from "@/lib/address-lookup";
+import {
+  DEFAULT_DIVERS_PER_DIVEMASTER,
+  MAX_DIVERS_PER_DIVEMASTER,
+  MIN_DIVERS_PER_DIVEMASTER,
+} from "@/lib/divemaster-ratio";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { isValidTimeZone } from "@/lib/format";
 import {
@@ -59,7 +64,6 @@ import {
   shopOffersNitrox,
   toRentableKinds,
 } from "@/lib/rentals";
-import { MAX_DEPARTURE_CAPACITY } from "@/lib/request-advisor";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -684,14 +688,13 @@ export async function saveDivingOptionsAction(formData: FormData) {
     return;
   }
 
-  // Only read the group size when it is the thing being used. A boat shop sizes
-  // a day against its hulls, so leaving a stale number behind would be a
-  // preference nothing reads, waiting to surprise whoever turns boats off later.
-  const shoreGroupSize = hasBoatDiving ? null : parseGroupSize(formData.get("shoreGroupSize"));
-  if (shoreGroupSize === "invalid") {
+  // Asked of every shop, boat or not: the target is about who is in the water,
+  // which is a question a beach and a hull answer the same way.
+  const diversPerDivemaster = parseDiversPerDivemaster(formData.get("diversPerDivemaster"));
+  if (diversPerDivemaster === "invalid") {
     revalidateAndRedirect(
       settings,
-      noticeUrl(settings, "diving-options-group-size-invalid", { form: "divingOptions" }),
+      noticeUrl(settings, "diving-options-ratio-invalid", { form: "divingOptions" }),
     );
     return;
   }
@@ -701,7 +704,7 @@ export async function saveDivingOptionsAction(formData: FormData) {
     hasBoatDiving,
     hasShoreDiving,
     hasPoolDiving,
-    shoreGroupSize,
+    diversPerDivemaster,
   });
 
   revalidateAndRedirect(
@@ -710,13 +713,24 @@ export async function saveDivingOptionsAction(formData: FormData) {
   );
 }
 
-/** Blank is a real answer ("we have not said"); a number must be a sane one. */
-function parseGroupSize(raw: FormDataEntryValue | null): number | null | "invalid" {
+/**
+ * Blank falls back to the default rather than storing nothing: every
+ * suggestion needs a number, and the column is not null. A typed number must
+ * be a sane one — the same bounds the `shops_divers_per_divemaster_in_range`
+ * check enforces underneath.
+ */
+function parseDiversPerDivemaster(raw: FormDataEntryValue | null): number | "invalid" {
   const text = typeof raw === "string" ? raw.trim() : "";
-  if (!text) return null;
-  const size = Number(text);
-  if (!Number.isInteger(size) || size < 1 || size > MAX_DEPARTURE_CAPACITY) return "invalid";
-  return size;
+  if (!text) return DEFAULT_DIVERS_PER_DIVEMASTER;
+  const ratio = Number(text);
+  if (
+    !Number.isInteger(ratio) ||
+    ratio < MIN_DIVERS_PER_DIVEMASTER ||
+    ratio > MAX_DIVERS_PER_DIVEMASTER
+  ) {
+    return "invalid";
+  }
+  return ratio;
 }
 
 /** Creates a new boat for the shop. */

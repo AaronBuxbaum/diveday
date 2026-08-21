@@ -140,6 +140,8 @@ function RequestAdviceCard({
   count,
   estimatedDivers,
   suggestedCapacity,
+  suggestedDivemasters,
+  diversPerDivemaster,
   suggestedBoat,
   exceedsKnownBoats,
   t,
@@ -147,6 +149,8 @@ function RequestAdviceCard({
   count: number;
   estimatedDivers: number;
   suggestedCapacity: number;
+  suggestedDivemasters: number;
+  diversPerDivemaster: number;
   suggestedBoat?: { id: string; name: string; capacity: number } | null;
   exceedsKnownBoats?: boolean;
   t: StaffTranslator;
@@ -166,6 +170,17 @@ function RequestAdviceCard({
           {t("boats.requestBoatSuggestion", {
             boatName: suggestedBoat.name,
             capacity: suggestedBoat.capacity,
+          })}
+        </p>
+      ) : null}
+      {/* The half of the recommendation that survives having no boat: who
+          needs to be in the water with these people, at the shop's own target
+          (src/lib/divemaster-ratio.ts). A day nobody asked for wants nobody. */}
+      {suggestedDivemasters > 0 ? (
+        <p className="mt-1 text-sm text-muted font-medium">
+          {t("boats.requestCrewSuggestion", {
+            divemasters: suggestedDivemasters,
+            ratio: diversPerDivemaster,
           })}
         </p>
       ) : null}
@@ -220,8 +235,8 @@ export default async function RequestsPage({
     }),
     listBoats(db, shop.id),
   ]);
-  // A boat shop plans a day against its hulls; a shore-and-pool shop plans it
-  // against the group size it stated, and is never shown a boat it hasn't got.
+  // A boat shop plans a day against its hulls and is the only kind of shop
+  // shown one; every shop, hull or not, crews it against its own target ratio.
   const departureShape = departureShapeFor(
     shop,
     shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
@@ -298,6 +313,8 @@ export default async function RequestsPage({
                       count={advice.requestCount}
                       estimatedDivers={advice.estimatedDivers}
                       suggestedCapacity={advice.suggestedCapacity}
+                      suggestedDivemasters={advice.suggestedDivemasters}
+                      diversPerDivemaster={shop.diversPerDivemaster}
                       suggestedBoat={advice.suggestedBoat}
                       exceedsKnownBoats={advice.exceedsKnownBoats}
                       t={t}

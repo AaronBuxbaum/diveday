@@ -75,10 +75,19 @@ export function WaiverActionIcon({ name }: { name: WaiverActionIconName }) {
  * thirds the size, so a button reads as one object with a state rather than two
  * pictures.
  */
-export type WaiverDeliveryMarkName = "sent" | "failed" | "unavailable";
+export type WaiverDeliveryMarkName = "sent" | "copied" | "failed" | "unavailable";
 
 const MARK_PATHS: Record<WaiverDeliveryMarkName, React.ReactNode> = {
   sent: <path d="m5 12.5 4.5 4.5L19 7" />,
+  // Two offset sheets — a copy, not a tick. The shape is the whole point:
+  // "copied" and "sent" must be told apart by someone the ring's hue does
+  // not reach, and a tick in any colour reads as delivered.
+  copied: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V6a1 1 0 0 1 1-1h9" />
+    </>
+  ),
   failed: (
     <>
       <path d="m6 6 12 12" />

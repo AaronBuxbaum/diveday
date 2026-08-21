@@ -868,7 +868,17 @@ export async function listSignedWaiversByPerson(
   return byPerson;
 }
 
-export type DiverWaiverRequestStatus = "not_sent" | "failed" | "not_signed";
+/**
+ * How far the diver's outstanding waiver has actually got.
+ *
+ * `link_copied` sits between `not_sent` and `not_signed` because a copied link
+ * is genuinely between them: a live release exists and a staffer has the URL,
+ * and nothing DiveDay can see has reached the diver. Reporting it as
+ * `not_signed` (which the surface words as "sent") credited us with a delivery
+ * that never happened; reporting it as `not_sent` would deny the link exists
+ * and offer to issue another.
+ */
+export type DiverWaiverRequestStatus = "not_sent" | "failed" | "link_copied" | "not_signed";
 
 /**
  * Persist the delivery outcome on the waiver itself, including person-scoped
@@ -950,9 +960,22 @@ const FAILED_PROVIDER_STATUSES = new Set(["bounced", "complained", "failed", "su
 /**
  * What a channel button on the diver record should wear. `unknown` is the
  * honest answer for a channel nobody has tried on this link — and the reason
- * this is a four-state code rather than a boolean.
+ * this is a five-state code rather than a boolean.
+ *
+ * `copied` is the `link` channel's only success, and it is deliberately not
+ * `sent`: a staffer taking the URL means *they* have it, and nothing at all
+ * about whether the diver does. Where it went next — a WhatsApp message, a
+ * text from the staffer's own phone, a laptop turned round on the counter —
+ * happened outside DiveDay, so claiming a send would be inventing an event we
+ * never saw. `sent` never appears on the link channel and `copied` never
+ * appears on the other two.
  */
-export type WaiverChannelDeliveryState = "unknown" | "sent" | "failed" | "not_configured";
+export type WaiverChannelDeliveryState =
+  | "unknown"
+  | "sent"
+  | "copied"
+  | "failed"
+  | "not_configured";
 
 export type WaiverChannelDeliveryStates = Record<WaiverDeliveryChannel, WaiverChannelDeliveryState>;
 
@@ -1010,7 +1033,10 @@ export async function getDiverWaiverChannelStates(
       states[row.channel] = "failed";
       continue;
     }
-    states[row.channel] = row.status;
+    // The link channel stores `sent` — those columns answer "is there a live
+    // link", and there is — but it must never *read* as sent. Nothing was
+    // delivered; a staffer picked the URL up.
+    states[row.channel] = row.channel === "link" && row.status === "sent" ? "copied" : row.status;
   }
   return states;
 }
@@ -1027,6 +1053,7 @@ export async function getDiverWaiverRequestStatus(
 ): Promise<DiverWaiverRequestStatus> {
   const [row] = await db
     .select({
+      recordId: waiverRecords.id,
       recordDeliveryStatus: waiverRecords.deliveryStatus,
       recordProviderStatus: waiverRecords.deliveryProviderStatus,
       deliveryStatus: notificationDeliveries.status,
@@ -1061,7 +1088,32 @@ export async function getDiverWaiverRequestStatus(
   ) {
     return "failed";
   }
-  return "not_signed";
+  // The record's columns are the latest attempt *whichever way it went*, so a
+  // "Copy link" tap after a real email leaves them saying `sent` about a
+  // handover nobody watched. The per-channel rows are where the two are still
+  // told apart: a message actually left DiveDay only if some channel other
+  // than `link` is standing at `sent`.
+  //
+  // A second query rather than a join: this runs on an executor that may be a
+  // transaction (one checked-out client), and it is only reached for a diver
+  // who has an outstanding link at all.
+  const channelRows = await db
+    .select({ channel: waiverDeliveries.channel, status: waiverDeliveries.status })
+    .from(waiverDeliveries)
+    .where(
+      and(eq(waiverDeliveries.shopId, shopId), eq(waiverDeliveries.waiverRecordId, row.recordId)),
+    );
+  // No per-channel rows at all means the record's own columns are all we have,
+  // and they say a message went — the notification-table fallback lands here.
+  if (channelRows.length === 0) return "not_signed";
+  // Reaching this line means the latest attempt stood at `sent`. If no channel
+  // other than `link` is standing there, the only thing that can have set it is
+  // a staffer taking the URL.
+  return channelRows.some(
+    (channelRow) => channelRow.channel !== "link" && channelRow.status === "sent",
+  )
+    ? "not_signed"
+    : "link_copied";
 }
 
 export type InPersonWaiverOutcome =

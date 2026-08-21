@@ -375,6 +375,19 @@ new domain concept, define it here in the same PR.
   card and PADI does not publish a comparably strict numeric ratio for them, so they are not
   ratio-capped. `courses.agency` is shop-set free text, so the PADI check is case- and
   whitespace-insensitive: a course typed `"PADI"` is gated exactly like `"padi"`.
+- **Target diver:divemaster ratio** — the shop's own stated ratio, `shops.divers_per_divemaster`,
+  stored as the divers half (`5` is "5:1"). Asked of every shop on its settings page and applying
+  to **every** dive, fun dive or course session alike. It **binds nothing**: it refuses no booking,
+  holds up no manifest, and blocks no crew change — DiveDay shows a departure against it
+  (`under_target`, on the trip page's Crew panel) and sizes the Requests planner's crew suggestion
+  by it. Everybody supervising in the water counts towards it, instructors included, which is where
+  it parts company with the two ratios above: those split instructors from assistants because an
+  agency's published cap does. **Do not confuse it with them.** The **entry-level** and **intro
+  in-water ratios** are sourced safety caps that refuse a seat; this is a preference, and a shop
+  cannot loosen a published cap by typing a bigger number here. It replaced "Divers per departure"
+  (`shops.shore_group_size`), which only a shop with no boat was asked for.
+  See `src/lib/divemaster-ratio.ts` and
+  [20260820-shop-divemaster-ratio](../architecture/decisions/20260820-shop-divemaster-ratio.md).
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
 
 ## Operations

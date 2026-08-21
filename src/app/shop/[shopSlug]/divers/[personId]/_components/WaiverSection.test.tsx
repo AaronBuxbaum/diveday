@@ -189,6 +189,22 @@ describe("WaiverSection", () => {
     expect(screen.getByRole("button", { name: "Record paper signature" })).toBeTruthy();
   });
 
+  /**
+   * The card said "Link sent" about a staffer taking the URL — a delivery
+   * DiveDay never made and cannot see. Copying is its own outcome, and the two
+   * must not share a sentence.
+   */
+  it("does not call a copied link a sent one", () => {
+    renderCard(diver({ email: "priya@dive.day", waiverRequest: "link_copied" }));
+    expect(screen.getByText("Link copied; not sent from here")).toBeTruthy();
+    expect(screen.queryByText("Link sent; awaiting signature")).toBeNull();
+  });
+
+  it("still says sent when a message actually went out", () => {
+    renderCard(diver({ email: "priya@dive.day", waiverRequest: "not_signed" }));
+    expect(screen.getByText("Link sent; awaiting signature")).toBeTruthy();
+  });
+
   it("leaves the form closed once the paper release has been recorded", () => {
     renderCard(diver({ email: "priya@dive.day" }), {
       form: "waiver",

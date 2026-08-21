@@ -303,6 +303,7 @@
     "waiverFailed": "Failed to deliver",
     "waiverNotSigned": "Not signed",
     "waiverSent": "Link sent; awaiting signature",
+    "waiverLinkCopied": "Link copied; not sent from here",
     "waiverSigned": "Signed",
     "waiverMedicalReview": "Medical review",
     "waiverGoodUntil": "Good until {date}",
@@ -312,6 +313,7 @@
     "sendWaiverViaSms": "Text waiver",
     "copyWaiverLink": "Copy link",
     "waiverChannelSent": "Sent",
+    "waiverChannelCopied": "Copied",
     "waiverChannelFailed": "Didn’t go out",
     "waiverChannelUnavailable": "Not set up",
     "bookings": "Bookings"

@@ -236,6 +236,7 @@ export type BuilderCopy = {
   requestPlanPerson?: string;
   requestPlanBoatRecommendation?: string;
   requestPlanBoatExceeded?: string;
+  requestPlanCrewSuggestion?: string;
   diveModeLabel?: string;
   modeBoat?: string;
   modeShore?: string;
@@ -270,6 +271,9 @@ export type BuilderInitialSite = {
 export type BuilderRequestPlan = {
   estimatedDivers: number;
   suggestedCapacity: number;
+  /** Divemasters these leads want at the shop's target, and the target itself. */
+  suggestedDivemasters: number;
+  diversPerDivemaster: number;
   suggestedBoatName?: string | null;
   exceedsKnownBoats?: boolean;
   requests: Array<{
@@ -441,6 +445,14 @@ function AddPanel({
           {requestPlan.exceedsKnownBoats ? (
             <p className="mt-1 text-sm text-warning font-medium">
               {copy.requestPlanBoatExceeded ?? ""}
+            </p>
+          ) : null}
+          {requestPlan.suggestedDivemasters > 0 ? (
+            <p className="mt-1 text-sm text-muted font-medium">
+              {fill(copy.requestPlanCrewSuggestion ?? "", {
+                divemasters: requestPlan.suggestedDivemasters,
+                ratio: requestPlan.diversPerDivemaster,
+              })}
             </p>
           ) : null}
           <ul className="mt-3 grid gap-2">

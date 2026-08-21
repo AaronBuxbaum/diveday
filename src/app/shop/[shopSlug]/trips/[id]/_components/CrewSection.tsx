@@ -18,6 +18,14 @@ export type CrewSectionCopy = {
   courseNeedsInstructor: string;
   /** Pre-rendered — already carries the booked/capacity numbers — or null when the gap isn't `over_ratio`. */
   overRatioWarning: string | null;
+  /**
+   * The shop's own diver-to-divemaster target, pre-rendered with the numbers
+   * in it, or null when this departure already meets it
+   * (`src/lib/divemaster-ratio.ts`). Advice: it refuses nothing, which is why
+   * it reads in the section's ordinary ink rather than the warning block the
+   * two agency gates above it use.
+   */
+  underTargetNote: string | null;
   /** No staff exist in the shop at all yet, so there's nobody to assign. */
   noStaff: string;
   /** Staff exist, but nobody is on this trip's crew yet. */
@@ -192,6 +200,11 @@ export function CrewSection({
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
         <p className="mt-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.overRatioWarning}
+        </p>
+      ) : null}
+      {copy.underTargetNote ? (
+        <p className="mt-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
+          {copy.underTargetNote}
         </p>
       ) : null}
 

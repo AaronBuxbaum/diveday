@@ -37,6 +37,7 @@ import {
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
+import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
   DOCK_DAY_FIELDS,
   DOCK_DAY_LIMITS,
@@ -143,9 +144,9 @@ function noticeMessages(
     "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
     "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
     "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
-    "diving-options-group-size-invalid": {
+    "diving-options-ratio-invalid": {
       tone: "danger",
-      text: t("boats.divingOptionsGroupSizeInvalid"),
+      text: t("boats.divingOptionsRatioInvalid"),
     },
     "boat-created": { tone: "success", text: t("boats.boatCreated") },
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
@@ -520,6 +521,10 @@ export default async function SettingsPage({
     shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
     shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
     shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
+    // The row's other setting, in the notation the rest of the product shows it
+    // in. A hub row states what it holds, and a target nobody can see without
+    // opening the row is a target nobody remembers they set.
+    t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
   ].join(" · ");
   const boatsValue =
     shopBoats.length > 0 ? t("boats.value", { count: shopBoats.length }) : t("boats.noBoats");
@@ -1079,27 +1084,25 @@ export default async function SettingsPage({
                     <p className="text-xs text-muted">{t("boats.poolDivingDescription")}</p>
                   </div>
                 </label>
-                {/* Only asked of a shop with no hull. A boat shop's answer to
-                    "how many on a departure" is the boat's capacity, which is a
-                    fact rather than a preference — so asking would invite a
-                    second, disagreeing number. */}
-                {shop.hasBoatDiving ? null : (
-                  <Field
-                    label={t("boats.shoreGroupSizeLabel")}
-                    hint={t("boats.shoreGroupSizeHint")}
-                    className="mt-2"
-                  >
-                    <input
-                      name="shoreGroupSize"
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={60}
-                      defaultValue={shop.shoreGroupSize ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                )}
+                {/* Asked of every shop, unlike the "divers per departure" it
+                    replaced: a hull's seat count is a fact about the boat, and
+                    this is a statement about who is in the water — which a
+                    beach, a pool and a boat all need an answer to. */}
+                <Field
+                  label={t("boats.diversPerDivemasterLabel")}
+                  hint={t("boats.diversPerDivemasterHint")}
+                  className="mt-2"
+                >
+                  <input
+                    name="diversPerDivemaster"
+                    type="number"
+                    inputMode="numeric"
+                    min={MIN_DIVERS_PER_DIVEMASTER}
+                    max={MAX_DIVERS_PER_DIVEMASTER}
+                    defaultValue={shop.diversPerDivemaster}
+                    className={controlClass}
+                  />
+                </Field>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("boats.divingOptionsSubmitting")}

@@ -276,7 +276,7 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
   return shop ?? null;
 }
 
-/** Sets whether the shop does shore diving and/or pool diving. */
+/** Sets which kinds of diving the shop runs, and its target diver-to-divemaster ratio. */
 export async function setShopDivingOptions(
   db: AppDb,
   shopId: string,
@@ -284,8 +284,8 @@ export async function setShopDivingOptions(
     hasBoatDiving: boolean;
     hasShoreDiving: boolean;
     hasPoolDiving: boolean;
-    /** Only meaningful with boat diving off; null means "we have not said". */
-    shoreGroupSize?: number | null;
+    /** The divers half of the shop's target ratio (`src/lib/divemaster-ratio.ts`). */
+    diversPerDivemaster?: number;
   },
 ) {
   const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
