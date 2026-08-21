@@ -29,8 +29,8 @@ every message bundle"; that is not what happened, and the seven-bundle gap is wo
 before anyone reads the refusal set as if it were exhaustive.
 
 `gear.json` is handled — this change trimmed `empty.body`, `unit.status.deleteWarning` and
-`prep.description`. The other six are untouched, and a scan for strings over 90 characters finds
-candidates in five of them, for example:
+`prep.description`. The other six are untouched. A scan for strings over 90 characters finds
+candidates in **four** of them — `feed` and `orderLine` are clean — for example:
 
 - `blockers.emptyDescription` — "…New bookings show up here the moment something needs attention."
   (mechanism)
@@ -38,8 +38,6 @@ candidates in five of them, for example:
   from unchanged records reproduces the same code…" (mechanism, at length)
 - `waiversStaff.signatures.description` — "…Signed waivers are tamper-evident; an altered record is
   flagged." (mechanism)
-
-`feed` and `orderLine` are clean.
 
 ## Why it isn't already done
 

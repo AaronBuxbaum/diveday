@@ -6,7 +6,7 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { rescheduleBooking, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
+import { createNitroxCertification, recordDiverNitroxCard, setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocale } from "@/db/people";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
@@ -140,47 +140,6 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
   );
 }
 
-/**
- * File the nitrox card a diver typed beside their nitrox request.
- *
- * Shared by this page and the trip page's own fit form, which mount the same
- * `RentalFitForm`. Four conditions, all of them refusals rather than
- * corrections, because this runs inside an ordinary "save my gear sizes" post
- * and must never turn one into a surprise:
- *
- * - the diver did not ask for nitrox — nothing to file a card against;
- * - the agency is not one the enum knows — a hand-crafted value, dropped;
- * - either field is blank — a number with no agency is uncheckable;
- * - the row already exists — `createNitroxCertification` returns null on the
- *   unique-index collision and that is a fine outcome, not an error.
- *
- * The row lands `pending`. `authorizesNitroxFill` reads `verified` and nothing
- * else, so this can put a number on the record and can never put enriched air
- * in a cylinder.
- */
-async function recordNitroxCardFromForm(
-  ctx: { db: Awaited<ReturnType<typeof getDb>>; data: ReadyPageData },
-  wantsNitrox: boolean,
-  fields: { nitroxAgency?: string; nitroxIdentifier?: string },
-): Promise<void> {
-  if (!wantsNitrox) return;
-  const agency = fields.nitroxAgency?.trim() ?? "";
-  const identifier = fields.nitroxIdentifier?.trim() ?? "";
-  if (!agency || identifier.length < 2) return;
-  if (!(certificationAgency.enumValues as readonly string[]).includes(agency)) return;
-  await createNitroxCertification(ctx.db, {
-    shopId: ctx.data.shop.id,
-    personId: ctx.data.person.id,
-    agency: agency as (typeof certificationAgency.enumValues)[number],
-    identifier,
-    // The diver's own word — see the level card above. This is what makes
-    // `reviewNitroxCertification` demand a sighting before it can authorize a
-    // fill, and what keeps the claim from counting as real evidence in
-    // `holdsRealCardOutsideLevels`.
-    selfDeclaredAt: nowDate(),
-  });
-}
-
 const fitSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
@@ -191,7 +150,7 @@ const fitSchema = z.object({
   gopro: z.string().optional(),
   nitrox: z.string().optional(),
   // The nitrox card, asked for beside the request itself. Both optional and
-  // both meaningless without the other — `recordNitroxCardFromForm` files a row
+  // both meaningless without the other — `recordDiverNitroxCard` files a row
   // only when the pair is complete, because a number with no agency is not
   // something a staffer can check against anything.
   nitroxAgency: z.string().optional(),
@@ -243,12 +202,16 @@ export async function saveFitFromReady(token: string, formData: FormData) {
       bookingId: ctx.bookingId,
       wantsNitrox,
     });
-    // The card the diver typed beside the request, if they had it to hand. Both
-    // fields are optional — a diver who wants nitrox but cannot find the card
-    // still gets the request recorded — and both are re-derived through the
-    // same availability gate above, so a hand-crafted post cannot file a card
-    // through a form the shop was never offered.
-    await recordNitroxCardFromForm(ctx, wantsNitrox, parsed.data);
+    // The card the diver typed beside the request, if they had it to hand,
+    // through the one writer both surfaces share (`recordDiverNitroxCard`).
+    await recordDiverNitroxCard(ctx.db, {
+      shopId: ctx.data.shop.id,
+      personId: ctx.data.person.id,
+      wantsNitrox,
+      agency: parsed.data.nitroxAgency,
+      identifier: parsed.data.nitroxIdentifier,
+      now: nowDate(),
+    });
   }
   const result = saved ? "saved=fit" : "error=fit";
   revalidateAndRedirect(base(token), `${base(token)}?${result}`);

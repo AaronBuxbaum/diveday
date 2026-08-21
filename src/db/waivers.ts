@@ -762,7 +762,16 @@ export async function completeWaiver(
 
   // The form is conditional: closed boxes are not submitted, but every
   // applicable question must be answered before signed evidence is written.
-  const medicalValidation = validateMedicalAnswers(input.medicalAnswers, { requireComplete: true });
+  // `requireCurrent`: a retired questionnaire version stays readable so stored
+  // evidence can be interpreted, but must never be the question set a *new*
+  // signature is taken against — otherwise a corrected form could be answered
+  // under the version it corrected. The page already derives the version
+  // server-side; this makes that structural rather than a property of one call
+  // site staying careful (`coderabbitai`).
+  const medicalValidation = validateMedicalAnswers(input.medicalAnswers, {
+    requireComplete: true,
+    requireCurrent: true,
+  });
   if (!medicalValidation.ok) {
     return { ok: false, reason: "invalid_medical" };
   }

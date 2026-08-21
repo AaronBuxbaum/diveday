@@ -253,6 +253,17 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     boatId,
   } = parsed.data;
 
+  // **The shop's own answer wins over the form's.** The builder's dive-mode
+  // select is populated by an options fetch that resolves *after* first paint,
+  // so for the moment before it lands the form carries `boat` — and a
+  // shore-and-pool shop submitting in that window would put a departure on a
+  // hull it has told us it does not run. Narrowing here rather than disabling
+  // the button also covers a hand-crafted post, and costs the common case (a
+  // boat shop) nothing (`coderabbitai`).
+  const offeredDiveMode = shopOffersDiveMode(shop, diveMode)
+    ? diveMode
+    : firstOfferedDiveMode(shop);
+
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
   // `parseWallTime` accepts a shape; `isValidCalendarDate` accepts a *day* —
@@ -329,8 +340,9 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     // row saying nothing and read as one on the next edit.
     minimumDecisionHours: minimumBookings ? (minimumDecisionHours ?? null) : null,
     isPrivate,
-    diveMode,
-    boatId: diveMode === "boat" ? boatId : null,
+    diveMode: offeredDiveMode,
+    // A boat is only ever assigned to a boat departure, at a shop that runs one.
+    boatId: offeredDiveMode === "boat" ? boatId : null,
   };
 
   if (repeatIntervalWeeks > 0) {
@@ -510,4 +522,31 @@ export async function removeDepartureAction(shopSlug: string, formData: FormData
   }
   await trackEvent({ name: "schedule_builder_action", action: "remove", outcome: "ok" });
   revalidateAndRedirect(back, `${back}?builder=removed`);
+}
+
+/** Whether this shop runs departures of that kind (`shops.has_*_diving`). */
+function shopOffersDiveMode(
+  shop: { hasBoatDiving: boolean; hasShoreDiving: boolean; hasPoolDiving: boolean },
+  mode: "boat" | "shore" | "pool",
+): boolean {
+  if (mode === "boat") return shop.hasBoatDiving;
+  if (mode === "shore") return shop.hasShoreDiving;
+  return shop.hasPoolDiving;
+}
+
+/**
+ * What to fall back to when the submitted mode is one this shop does not run.
+ * Boat first, matching the builder's own order and `trips.dive_mode`'s default;
+ * the `shops_offers_some_dive_mode` check guarantees one of the three is true,
+ * so the final `boat` is unreachable rather than a guess.
+ */
+function firstOfferedDiveMode(shop: {
+  hasBoatDiving: boolean;
+  hasShoreDiving: boolean;
+  hasPoolDiving: boolean;
+}): "boat" | "shore" | "pool" {
+  if (shop.hasBoatDiving) return "boat";
+  if (shop.hasShoreDiving) return "shore";
+  if (shop.hasPoolDiving) return "pool";
+  return "boat";
 }

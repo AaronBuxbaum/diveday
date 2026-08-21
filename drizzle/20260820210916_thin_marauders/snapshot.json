@@ -21391,8 +21391,8 @@
       "table": "shops"
     },
     {
-      "value": "\"shore_group_size\" > 0",
-      "name": "shops_shore_group_size_positive",
+      "value": "\"shore_group_size\" > 0 and \"shore_group_size\" <= 60",
+      "name": "shops_shore_group_size_in_range",
       "entityType": "checks",
       "schema": "public",
       "table": "shops"

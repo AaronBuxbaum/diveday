@@ -99,7 +99,10 @@ up to six people's records. Three separable pieces of work:
    in opposite order deadlock; Postgres raises 40P01, which is not a
    PartyBookingError and escapes the `.catch` as an unhandled server-action error.
    Hoist the declaration writes into one pass at the end of the transaction,
-   sorted by resolved person id.
+   sorted by resolved person id. Prove it: two independent connections, two
+   parties on *different* trips naming the same two divers in opposite order,
+   asserting neither transaction dies with `40P01`. It fails reliably before the
+   fix and passes after, which a rollback test cannot show (`coderabbitai`).
 
 2. TEST, do it regardless: add a failure-path test to src/db/bookings.test.ts
    proving a party refused at member N writes NO certifications row and NO

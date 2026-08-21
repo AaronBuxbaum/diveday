@@ -253,7 +253,7 @@
     "sailedForNext": "para la próxima salida.",
     "holdHeading": "Aquí todavía no hay nada que reservar",
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
-    "certBelowRequirement": "Esta salida es para buceadores {required}: trae tu tarjeta de certificación y la comprobamos en el centro.",
+    "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la comprobamos en el centro.",
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
     "confirmedHeading": "¡Estás a bordo, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — preséntate en el muelle {minutes} minutos antes y nos encargamos del resto.",
