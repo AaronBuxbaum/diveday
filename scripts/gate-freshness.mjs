@@ -43,7 +43,14 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { LABEL, listOpenFollowUps, PARKED_LABEL, WAITING_LABEL } from "./check-follow-ups.mjs";
+import {
+  followUpMetadata,
+  followUpStraight,
+  LABEL,
+  listOpenFollowUps,
+  PARKED_LABEL,
+  WAITING_LABEL,
+} from "./check-follow-ups.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -136,11 +143,6 @@ export function parseThirtyDayList(markdown) {
   return { writtenOn: /Written (\d{4}-\d{2}-\d{2})/.exec(markdown)?.[1] ?? null, items };
 }
 
-/** One `- **Label:** value` line from a follow-up entry, or null. */
-function bodyField(body, label) {
-  return body?.match(new RegExp(`^\\*\\*${label}:\\*\\*\\s*(.+)$`, "m"))?.[1].trim() ?? null;
-}
-
 /**
  * One follow-up issue, read from `gh issue list`'s JSON. The date comes from GitHub's own
  * `createdAt` — exact, always present, and unaffected by a shallow clone the way `git blame`
@@ -148,6 +150,7 @@ function bodyField(body, label) {
  */
 export function parseFollowUpIssue(issue) {
   const labelNames = new Set((issue.labels ?? []).map((label) => label.name));
+  const body = followUpStraight(issue.body ?? "");
   return {
     id: `#${issue.number}`,
     title: issue.title,
@@ -157,8 +160,8 @@ export function parseFollowUpIssue(issue) {
       : labelNames.has(PARKED_LABEL)
         ? "Parked"
         : "Open",
-    kind: bodyField(issue.body, "Kind") ?? "—",
-    effort: bodyField(issue.body, "Effort") ?? "—",
+    kind: followUpMetadata(body, "Kind") ?? "—",
+    effort: followUpMetadata(body, "Effort") ?? "—",
   };
 }
 

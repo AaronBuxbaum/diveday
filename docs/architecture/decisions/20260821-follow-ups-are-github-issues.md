@@ -61,13 +61,18 @@ network state. It still fails hard on real content problems once `gh` does answe
 real there rather than degrading on every PR. `pnpm gates` ages open `needs-triage` issues the same
 way it aged the file register, from `createdAt` instead of the `FU-YYYYMMDD-` id.
 
-The 12 open and 2 `waiting/` entries live in the register at the time of this decision were migrated
-to issues #609–#622 in the same change, by a script that parsed each file's metadata and sections
+The 12 open and 2 `waiting/` entries that lived in the register at the time of this decision were
+migrated to issues #609–#622 in the same change, by a script that parsed each file's metadata and sections
 into an issue body and rewrote the self-referential "delete this file" sentence into a "close this
 issue" one. The files were then deleted. A consequence of the migration, not a bug: each migrated
 issue's `createdAt` is the migration date, not the file's original `Raised` date, so
 `pnpm gates`' ages reset to zero for all fourteen — the original raised date survives only as a
-`**Originally raised:**` note in each issue's body, not as the sortable age.
+`**Originally raised:**` note in each issue's body, not as the sortable age. A fifteenth entry
+(#629) arrived the same way during this change's own PR: a concurrent PR merged into `main` mid-review
+and re-created the just-deleted `docs/product/follow-ups/` directory with one new file, filed the old
+way before that PR's author could see this decision land. It was migrated by the same script rather
+than merged in as a file, to keep the tree in the state this ADR describes rather than resurrecting
+the register for one entry.
 
 ## Alternatives considered
 
