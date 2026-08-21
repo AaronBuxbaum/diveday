@@ -652,5 +652,13 @@
     "notCertified": "Not certified yet — unconfirmed",
     "nitrox": "Nitrox",
     "belowRequirement": "{value} · below this departure's minimum"
+  },
+  "diveRecency": {
+    "lastDived": "Last dived {when} — diver’s word",
+    "thisSeason": "this season",
+    "withinAYear": "within the last year",
+    "oneToFiveYears": "one to five years ago",
+    "overFiveYears": "over five years ago",
+    "never": "never"
   }
 }

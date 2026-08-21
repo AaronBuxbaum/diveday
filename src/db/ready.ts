@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { withinCancellationWindow } from "@/lib/deposits";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
@@ -78,6 +79,13 @@ export type ReadyPageData = {
     emergencyContactPhone: string | null;
   };
   wantsNitrox: boolean;
+  /**
+   * The diver's own answer to "when did you last dive?", or null when they have
+   * not been asked or have not said (ADR 20260821-currency-is-what-catches-people).
+   * Gates nothing anywhere; `/ready` renders it as a question the diver can still
+   * answer, and the staff surfaces render it as their word.
+   */
+  lastDivedBand: DiveRecencyBand | null;
   nitroxCardVerified: boolean;
   /**
    * A live nitrox card exists for this diver, sighted or not. Only decides
@@ -124,6 +132,7 @@ export async function getReadyPageData(
       tripId: bookings.tripId,
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
+      lastDivedBand: bookings.lastDivedBand,
       status: bookings.status,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
@@ -218,6 +227,7 @@ export async function getReadyPageData(
       emergencyContactPhone: row.emergencyContactPhone,
     },
     wantsNitrox: row.wantsNitrox,
+    lastDivedBand: row.lastDivedBand,
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),

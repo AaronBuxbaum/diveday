@@ -80,6 +80,18 @@ test.describe("staff-prepared trip", () => {
       /100%20Ocean%20Drive/,
     );
 
+    // The question no form asked until 2026-08-21 (ADR
+    // 20260821-currency-is-what-catches-people). It gates nothing, so what is
+    // worth proving is that the answer round-trips and the row settles.
+    await page
+      .getByLabel("When did you last dive?")
+      .selectOption({ label: "More than five years ago" });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "the crew will see that" }),
+    ).toBeVisible();
+    await expect(page.getByText("More than five years ago")).toBeVisible();
+
     // The diver releases their own seat (ADR
     // 20260821-the-diver-may-release-their-own-seat). Cancelling revokes this
     // very token, so the confirmation the diver lands on is served through the

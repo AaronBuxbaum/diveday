@@ -88,6 +88,7 @@ import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedDateRequests } from "./seed-date-requests";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDeskTrail } from "./seed-desk-trail";
+import { seedDiveRecency } from "./seed-dive-recency";
 import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
 import { seedDiveSites } from "./seed-dive-sites";
 import { seedDivers } from "./seed-divers";
@@ -716,6 +717,11 @@ export async function seedDemoSchedule(
   // (src/db/seed-self-declared.ts). Neither holds a seat, so no readiness count,
   // roster or head count moves. Rides the history flag like the list itself.
   await seedSelfDeclaredJoiners(db, shopId, opts.history !== false);
+  // Adds-only and late, like the two scenarios above: it stamps a column on
+  // seats that already exist and gates nothing, so no readiness count, head
+  // count or roster membership moves (ADR
+  // 20260821-currency-is-what-catches-people).
+  await seedDiveRecency(db, shopId);
 
   // Updates-only, and the only step here that writes no rows at all: how far the
   // boat runs on the three departures where the answer is not the shop's usual

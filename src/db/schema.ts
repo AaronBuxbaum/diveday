@@ -1591,6 +1591,32 @@ export const bookingStatus = pgEnum("booking_status", [
   "no_show",
 ]);
 
+/**
+ * **How recently this diver has been in the water** — their own word, in coarse
+ * bands rather than a date (ADR 20260821-currency-is-what-catches-people).
+ *
+ * Not a card and deliberately not in `certifications`: it is a self-report about
+ * *behaviour*, it does not expire, and nothing verifies it. An honest "Advanced
+ * Open Water, 1998" with no dive since 2013 is the claim that hurts a shop, and
+ * no rung on the ladder can express it.
+ *
+ * Bands, not a date, because the answer is worth exactly as much as the diver's
+ * memory. Somebody who last dived "a few years back" cannot name the month, and
+ * a date field would invite them to invent one that then reads as precision
+ * nobody earned.
+ *
+ * `never` is a real answer and distinct from the level question's "I'm not
+ * certified yet": a diver certified last month who has not been in open water
+ * since their course is exactly the person a divemaster wants to know about.
+ */
+export const diveRecencyBand = pgEnum("dive_recency_band", [
+  "this_season",
+  "within_a_year",
+  "one_to_five_years",
+  "over_five_years",
+  "never",
+]);
+
 export const bookings = pgTable(
   "bookings",
   {
@@ -1612,6 +1638,23 @@ export const bookings = pgTable(
      */
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
+    /**
+     * The diver's own answer to "when did you last dive?", asked on `/ready`
+     * (ADR 20260821-currency-is-what-catches-people). Null is "not said" — a
+     * real state, never a default that reads as a claim.
+     *
+     * **On the booking rather than the person**, because currency is a fact with
+     * a date on it: an answer given in March is not evidence about a diver
+     * booking again in November, and a person-level column would quietly become
+     * one. Staff read the answer beside the seat it was given for; "their most
+     * recent answer" is a query over their bookings, not a stored value that
+     * silently goes stale.
+     *
+     * **Gates nothing.** No readiness blocker, no admission decision, no filter.
+     * "Last dived 5+ years ago" is a refresher conversation a divemaster has,
+     * not a refusal the software makes.
+     */
+    lastDivedBand: diveRecencyBand("last_dived_band"),
     /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
     groupPreference: text("group_preference"),
     status: bookingStatus("status").notNull().default("booked"),

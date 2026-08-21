@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { cancelBooking, createBooking } from "./bookings";
+import { cancelBooking, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { getReadyPageData } from "./ready";
 import { bookings } from "./schema";
@@ -109,5 +109,44 @@ describe("getReadyPageData", () => {
     const data = await getReadyPageData(db, bookingId);
     expect(data?.cancelPreview).toBe("unpaid");
     expect(data?.canCancelBooking).toBe(true);
+  });
+
+  // How recently the diver says they last dived (ADR
+  // 20260821-currency-is-what-catches-people). It gates nothing, so the only
+  // properties worth pinning are that it round-trips and that absence is a real
+  // state rather than a default.
+  it("reads back the diver's own currency answer, and nothing before they give one", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.lastDivedBand).toBeNull();
+
+    expect(
+      await setBookingLastDived(db, { shopId: shop.id, bookingId, band: "over_five_years" }),
+    ).toBe(true);
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.lastDivedBand).toBe("over_five_years");
+    // And it moves nothing else: currency is not a gate.
+    expect(data?.detail.readiness.status).toBe(
+      (await getReadyPageData(db, bookingId))?.detail.readiness.status,
+    );
+  });
+
+  it("refuses to record currency against a cancelled seat", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await cancelBooking(db, shop.id, bookingId);
+    expect(await setBookingLastDived(db, { shopId: shop.id, bookingId, band: "this_season" })).toBe(
+      false,
+    );
+  });
+
+  it("refuses to record currency for another shop's booking", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    expect(
+      await setBookingLastDived(db, {
+        shopId: "00000000-0000-4000-8000-000000000099",
+        bookingId,
+        band: "this_season",
+      }),
+    ).toBe(false);
+    expect((await getReadyPageData(db, bookingId))?.lastDivedBand).toBeNull();
   });
 });

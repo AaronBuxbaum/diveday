@@ -39,6 +39,7 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
+  DIVER_DIVE_RECENCY_KEYS,
   DIVER_SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
@@ -46,6 +47,7 @@ import { requestLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import {
   formatMoneyCents,
   formatRelativeDay,
@@ -71,6 +73,7 @@ import {
   cancelMyBookingAction,
   payFromReady,
   saveCertificationFromReady,
+  saveDiveRecencyFromReady,
   saveEmergencyContactFromReady,
   saveFitFromReady,
   saveNitroxCertificationFromReady,
@@ -121,8 +124,13 @@ function ChecklistRow({
 }: {
   label: string;
   state: ChecklistState;
-  /** Already resolved by the caller — see `checklistDetailText`. */
-  detail: string;
+  /**
+   * Already resolved by the caller — see `checklistDetailText`. Nullable
+   * because the last-dived row has nothing to say before it is answered: the
+   * label *is* the question, and a sentence restating it would be exactly the
+   * caption the copy-restraint filter deletes.
+   */
+  detail: string | null;
   action?: React.ReactNode;
   t: DiverTranslator;
 }) {
@@ -140,7 +148,7 @@ function ChecklistRow({
           <h3 className="text-base font-semibold">{label}</h3>
           <span className={`text-sm font-semibold ${style.text}`}>{t(style.word)}</span>
         </div>
-        <p className="mt-0.5 text-base text-muted">{detail}</p>
+        {detail ? <p className="mt-0.5 text-base text-muted">{detail}</p> : null}
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
     </li>
@@ -743,6 +751,8 @@ const READY_NOTICES: Record<
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
+  "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
 };
 
 /**
@@ -1128,15 +1138,20 @@ export default async function DiverReadinessPage({
    */
   const nitroxCardEntryOffered =
     offerNitroxCard && items.some((item) => item.category === "certification");
-  // The emergency-contact and gear rows are rendered as their own
+  // The diver has answered the currency question at least once. Every band is
+  // a complete answer, "I haven't dived yet" included, so this asks whether the
+  // row was filled in and never what was said.
+  const hasLastDived = data.lastDivedBand != null;
+  // The emergency-contact, gear and last-dived rows are rendered as their own
   // `ChecklistRow`s below, outside `items` — count them alongside the
   // requirement-derived items so the progress bar and its label match what the
   // diver actually sees in the list.
-  const checklistTotal = items.length + 2;
+  const checklistTotal = items.length + 3;
   const checklistDone =
     items.filter((item) => item.state === "done").length +
     (hasEmergencyContact ? 1 : 0) +
-    (hasRentalFit ? 1 : 0);
+    (hasRentalFit ? 1 : 0) +
+    (hasLastDived ? 1 : 0);
   const noticeKey = saved
     ? `saved-${saved}`
     : error
@@ -1388,6 +1403,61 @@ export default async function DiverReadinessPage({
                     </div>
                   </form>
                 )
+              }
+              t={t}
+            />
+            {/* **The question nobody was asking.** A rung is what the shop
+                gates on; currency is what actually catches people, and an
+                honest "Advanced Open Water" from 1998 with no dive since 2013
+                clears every check in this product (ADR
+                20260821-currency-is-what-catches-people). It is a row here and
+                not a field inside the certification disclosure because it is
+                asked of *everyone* — a diver whose card the shop verified years
+                ago is exactly the person worth asking.
+
+                Gates nothing, so the row never reads "action" in a way that
+                blocks: it is the third non-blocker row, beside the emergency
+                contact and gear. Once answered the select keeps the answer and
+                stays editable — no separate "on file" line, because the control
+                already shows what was said. */}
+            <ChecklistRow
+              label={t("ready.lastDivedHeading")}
+              state={hasLastDived ? "done" : "action"}
+              detail={
+                hasLastDived && data.lastDivedBand
+                  ? t(DIVER_DIVE_RECENCY_KEYS[data.lastDivedBand])
+                  : null
+              }
+              action={
+                <form
+                  action={saveDiveRecencyFromReady.bind(null, token)}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center"
+                >
+                  {/* The row's own heading is this control's label — a visible
+                      `<Field>` label would print the question twice, one line
+                      apart. Same move the trip picker on this page used to
+                      make, for the same reason. */}
+                  <select
+                    name="lastDivedBand"
+                    required
+                    aria-label={t("ready.lastDivedHeading")}
+                    defaultValue={data.lastDivedBand ?? ""}
+                    className={controlClass}
+                  >
+                    <option value="">{t("ready.lastDivedChoose")}</option>
+                    {DIVE_RECENCY_BANDS.map((band) => (
+                      <option key={band} value={band}>
+                        {t(DIVER_DIVE_RECENCY_KEYS[band])}
+                      </option>
+                    ))}
+                  </select>
+                  <SubmitButton
+                    pendingLabel={t("ready.savingLastDived")}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("ready.saveLastDived")}
+                  </SubmitButton>
+                </form>
               }
               t={t}
             />

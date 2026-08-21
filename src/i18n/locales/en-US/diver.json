@@ -615,7 +615,20 @@
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep — bookmark it, and it stays up to date until you sail.",
     "gearBody": "Tell the crew what you'd like to rent, and roughly what size.",
-    "gearOnFile": "Your sizes are with the crew."
+    "gearOnFile": "Your sizes are with the crew.",
+    "lastDivedHeading": "When did you last dive?",
+    "lastDivedChoose": "Choose",
+    "saveLastDived": "Save",
+    "savingLastDived": "Saving…",
+    "lastDivedSaved": "Thanks — the crew will see that.",
+    "lastDivedUnavailable": "That did not save. Try again, or tell the crew on the day.",
+    "diveRecency": {
+      "thisSeason": "This season",
+      "withinAYear": "Within the last year",
+      "oneToFiveYears": "One to five years ago",
+      "overFiveYears": "More than five years ago",
+      "never": "I haven’t dived yet"
+    }
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",

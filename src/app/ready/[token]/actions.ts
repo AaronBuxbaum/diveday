@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
-import { selfCancelBooking } from "@/db/bookings";
+import { selfCancelBooking, setBookingLastDived } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
@@ -21,6 +21,7 @@ import { trackEvent } from "@/lib/analytics";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
+import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -287,6 +288,40 @@ export async function cancelMyBookingAction(token: string) {
     console.error("Self-cancel refund could not be processed", { bookingId: ctx.bookingId });
   }
   redirect(`${base(token)}?cancelled=1`);
+}
+
+/**
+ * **How recently the diver says they last dived** (ADR
+ * 20260821-currency-is-what-catches-people).
+ *
+ * The one question on this page whose answer nothing checks and nothing gates —
+ * it is shown to the crew and that is the whole of it. Validated against the
+ * pgEnum's own tuple rather than a hand-written list, so widening the bands can
+ * never leave this refusing an answer the column accepts (the same rule
+ * `certificationSchema` follows for agency and level).
+ *
+ * There is no "prefer not to say" value to post: that answer is simply not
+ * submitting the form, which is the state every booking is in already.
+ */
+const diveRecencySchema = z.object({
+  lastDivedBand: z.enum(DIVE_RECENCY_BANDS),
+});
+
+export async function saveDiveRecencyFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = diveRecencySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=last-dived`);
+
+  // The booking comes from the verified capability, never from the form: a
+  // bearer of this token can only ever answer for its own seat.
+  const saved = await setBookingLastDived(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    band: parsed.data.lastDivedBand,
+  });
+  if (!saved) redirect(`${base(token)}?error=last-dived`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=last-dived`);
 }
 
 /**

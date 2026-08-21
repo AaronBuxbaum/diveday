@@ -4,6 +4,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import {
@@ -1059,6 +1060,39 @@ export async function selfCancelBooking(
     });
     return { ok: true };
   });
+}
+
+/**
+ * Record how recently the diver says they last dived (ADR
+ * 20260821-currency-is-what-catches-people). Written from the diver's own
+ * `/ready` page, so it is scoped to the booking the capability names and
+ * refuses a cancelled seat — the same shape as `setBookingNitrox`.
+ *
+ * The band is typed against the pgEnum, so nothing free-typed reaches the
+ * column and the callers cannot invent a sixth answer. There is no "clear it
+ * back to not said" path on purpose: an answer given is a thing the crew read,
+ * and a diver who mis-tapped picks a different band rather than erasing what
+ * the shop already saw.
+ *
+ * Returns false when no live booking matched, so the caller can say so rather
+ * than reporting a save that never happened.
+ */
+export async function setBookingLastDived(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; band: DiveRecencyBand },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ lastDivedBand: input.band })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
 }
 
 /**

@@ -615,7 +615,20 @@
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "gearBody": "Dile a la tripulación qué te gustaría alquilar y más o menos qué talla.",
-    "gearOnFile": "La tripulación ya tiene tus tallas."
+    "gearOnFile": "La tripulación ya tiene tus tallas.",
+    "lastDivedHeading": "¿Cuándo fue tu última inmersión?",
+    "lastDivedChoose": "Elige",
+    "saveLastDived": "Guardar",
+    "savingLastDived": "Guardando…",
+    "lastDivedSaved": "Gracias — la tripulación lo verá.",
+    "lastDivedUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
+    "diveRecency": {
+      "thisSeason": "Esta temporada",
+      "withinAYear": "En el último año",
+      "oneToFiveYears": "Hace entre uno y cinco años",
+      "overFiveYears": "Hace más de cinco años",
+      "never": "Todavía no he buceado"
+    }
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
