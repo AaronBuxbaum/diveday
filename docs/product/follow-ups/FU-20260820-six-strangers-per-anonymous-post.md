@@ -103,6 +103,10 @@ up to six people's records. Three separable pieces of work:
    parties on *different* trips naming the same two divers in opposite order,
    asserting neither transaction dies with `40P01`. It fails reliably before the
    fix and passes after, which a rollback test cannot show (`coderabbitai`).
+   Build it on the harness already in `src/db/bookings.postgres.test.ts` (lines
+   99-202) — real concurrent connections against Postgres rather than PGlite,
+   which is what a lock-ordering test needs and what a plain `.test.ts` cannot
+   give you.
 
 2. TEST, do it regardless: add a failure-path test to src/db/bookings.test.ts
    proving a party refused at member N writes NO certifications row and NO
