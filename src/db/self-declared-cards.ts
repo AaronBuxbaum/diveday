@@ -139,12 +139,30 @@ export async function recordSelfDeclaredCards(
   input: RecordSelfDeclaredCardsInput,
 ): Promise<RecordSelfDeclaredCardsOutcome> {
   const now = input.now ?? nowDate();
+  // **`no key update`, not `update`, and the difference is a deadlock.**
+  //
+  // The caller has almost always just inserted a `bookings` row naming this
+  // person, and that insert's foreign key takes a `FOR KEY SHARE` lock on this
+  // very tuple, held to commit. `FOR UPDATE` conflicts with `FOR KEY SHARE`, so
+  // two transactions that had each inserted a booking for the same diver then
+  // both asked to upgrade — and each waited for the other's key-share to be
+  // released by a commit that could not happen. Postgres broke it with `40P01`,
+  // on **one row**: an ordering rule cannot fix a lock upgrade, because there is
+  // no second lock to put in a different order.
+  //
+  // `FOR NO KEY UPDATE` does not conflict with `FOR KEY SHARE` (it is what an
+  // ordinary `UPDATE` of a non-key column takes anyway, which is exactly what
+  // `recordNoCertification` does below), while still conflicting with itself.
+  // So the thing this lock exists for is unchanged — two declaration writers on
+  // one diver are still serialized, and the read-then-write below still cannot
+  // interleave — and the only concurrency it newly permits is a foreign key
+  // pointing at this person, which never touches a card.
   const [locked] = await tx
     .select({ id: people.id })
     .from(people)
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1)
-    .for("update");
+    .for("no key update");
   // Not this shop's person (or not a person at all). Every write below is
   // narrowed by `shopId` as well, so this is a second door on the same rule —
   // but returning here keeps a caller holding a foreign id from getting an

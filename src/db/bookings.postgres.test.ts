@@ -308,4 +308,47 @@ describePostgres("createBookingParty under real concurrency", () => {
     expect(await seatsTaken(pg.db, reefTripId)).toBe(2);
     expect(await seatsTaken(pg.db, nightTripId)).toBe(2);
   });
+
+  it("does not deadlock when one diver is booked onto two trips at once", async () => {
+    // The **other** deadlock, and the one an ordering rule cannot reach: it is
+    // a lock upgrade on a single row, so there is no second lock to put in a
+    // different order. Inserting a `bookings` row takes `FOR KEY SHARE` on the
+    // diver it names, held to commit; `recordSelfDeclaredCards` then asked for
+    // `FOR UPDATE` on that same tuple, which conflicts with it. Two bookings of
+    // one diver therefore each held a key-share the other's upgrade was waiting
+    // to see released — Postgres reported it against `tuple (0,1)`, one row.
+    //
+    // This one is not about parties at all: two *single* bookings of the same
+    // returning diver are enough, which is an ordinary Saturday at a shop whose
+    // regulars book a morning and an afternoon departure.
+    const pg = await postgresTestDb();
+    const { shopId, tripId: reefTripId } = await tripWithSeats(pg.db, 4);
+    const nightTripId = await anotherTripIn(pg.db, shopId, 4);
+    const nora = await existingDiver(pg.db, shopId, "Nora Quinn", "nora@example.com");
+
+    // `FOR UPDATE` on the diver conflicts with the key-share each booking's
+    // foreign key needs, so both park at their insert and neither can reach its
+    // declaration write until the gate drops — which is what puts them both
+    // inside the window where the upgrade used to cross.
+    const gate = await holdRowLock(pg, personRowLock(nora.id));
+    const both = [reefTripId, nightTripId].map((tripId) =>
+      createBooking(pg.connect(), {
+        actor: "public" as const,
+        shopId,
+        tripId,
+        fullName: nora.fullName,
+        email: nora.email ?? "",
+        declared: { level: "rescue" as const },
+        admissionGate: "advise" as const,
+      }),
+    );
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+
+    const settled = await Promise.allSettled(both);
+    expect(settled.filter((r) => r.status === "rejected").map((r) => String(r.reason))).toEqual([]);
+    expect(settled.map((r) => r.status === "fulfilled" && r.value.ok)).toEqual([true, true]);
+    expect(await seatsTaken(pg.db, reefTripId)).toBe(1);
+    expect(await seatsTaken(pg.db, nightTripId)).toBe(1);
+  });
 });

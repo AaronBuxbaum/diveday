@@ -792,6 +792,16 @@ type PendingDeclaration = {
  * order would do; this is the one every caller can agree on without
  * coordinating, since it is a property of the row itself.
  *
+ * **This is half the fix, and it is the half that does not show up first.**
+ * There is a second deadlock underneath it that ordering cannot touch, because
+ * it is a lock *upgrade* on a single row: the `bookings` insert above takes
+ * `FOR KEY SHARE` on the diver it names, and `recordSelfDeclaredCards` used to
+ * ask for `FOR UPDATE` on that same tuple. Two submissions naming one diver
+ * each waited for the other's key-share, on one row, with no second lock to
+ * reorder. That is fixed where it lives — `self-declared-cards.ts` now takes
+ * `FOR NO KEY UPDATE` — and this sort is still needed for the genuine two-row
+ * cycle between two parties.
+ *
  * **Not a retry loop, deliberately.** Catching `40P01` and trying again hides
  * the cycle instead of removing it, and doubles the write under exactly the
  * contention that provoked it.
