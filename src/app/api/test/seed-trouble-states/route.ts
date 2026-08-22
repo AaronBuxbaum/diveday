@@ -324,11 +324,20 @@ async function boardADiverThenBlockThem(
   shopId: string,
   now: Date,
 ): Promise<void> {
-  // The next departure's roster, in booking order — whoever the app will let
-  // aboard. Ordered so the choice is stable across runs, which a capture needs.
+  // The next departure's roster, ordered **by the diver's name** — whoever the
+  // app will let aboard, chosen the same way every run.
+  //
+  // Not `bookings.id`, which is what this said first: that column is
+  // `defaultRandom()`, and `/api/test/reset` re-seeds the bookings before every
+  // test, so the "first" booking was a fresh random uuid each time. The capture
+  // boarded Diego Alvarez on one run and Ines Costa on the next, and reported
+  // as changed on the very next pull request — a baseline that moves on its own
+  // is one a reviewer learns to wave through (AGENTS.md). Seeded names do not
+  // move.
   const candidates = await db
     .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
     .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
@@ -338,7 +347,7 @@ async function boardADiverThenBlockThem(
         gte(trips.startsAt, new Date(now.getTime() - HOUR_MS)),
       ),
     )
-    .orderBy(trips.startsAt, bookings.id);
+    .orderBy(trips.startsAt, people.fullName);
 
   // **A staff person, not just any person.** `recordRollCall` refuses with
   // `staff_not_found` otherwise, and the route's shared `actor` is whichever
