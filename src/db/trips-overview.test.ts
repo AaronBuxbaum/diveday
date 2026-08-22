@@ -93,7 +93,7 @@ describe("getTripOverview", () => {
       // No crew at all, on a boat with divers: the shop's target is unmet, and
       // it informs rather than refuses.
       if (trip.booked > 0) {
-        expect(crew.ratioGap.code).not.toBe("none");
+        if (crew.ratioGap.code === "none") throw new Error("expected an unmet target");
         expect(crew.ratioGap.divemasterCount).toBe(0);
       }
     });
