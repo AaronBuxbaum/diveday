@@ -10,6 +10,7 @@ import {
   packingConfidence,
   type SiteBottomTimes,
 } from "@/lib/diver-planning";
+import { formatTime } from "@/lib/format";
 import type { RentableItemKind } from "@/lib/rentals";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
 import type { RentalFit, Shop, Trip } from "./types";
@@ -364,11 +365,12 @@ export function PackingSection({
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-4">
                             <span className="font-semibold tabular-nums text-foreground text-sm sm:w-20 sm:shrink-0">
-                              {entry.at.toLocaleTimeString(locale, {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                timeZone: shop.timezone,
-                              })}
+                              {/* `formatTime` builds the identical formatter,
+                                  and building it here instead is the ~12x tax
+                                  `check:intl-cache` exists to stop — once per
+                                  entry, on the app's most-visited public page
+                                  (issue #799). */}
+                              {formatTime(entry.at, locale, shop.timezone)}
                             </span>
                             <span className="text-muted text-sm leading-normal">
                               {t(timelineStepKey(entry.step, trip.diveMode), {

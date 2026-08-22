@@ -1,6 +1,7 @@
 import { diverTranslator } from "@/i18n/messages";
 import { depthText, seaStateText, temperatureText } from "@/i18n/unit-labels";
 import { exposureSuitFor } from "@/lib/diver-planning";
+import { formatDateTimeTz } from "@/lib/format";
 import { seaStateReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
@@ -105,10 +106,11 @@ export function ForecastSection({
           {t("trip.forecastCrewNote")}{" "}
           {trip.conditionsUpdatedAt
             ? t("trip.forecastUpdated", {
-                when: trip.conditionsUpdatedAt.toLocaleString(locale, {
-                  timeZone: shop.timezone,
-                  timeZoneName: "short",
-                }),
+                // `formatDateTimeTz`, not a bare `toLocaleString`: that one's
+                // default field set carries **seconds**, so this line read
+                // "Updated 8/22/2026, 10:33:06 AM EDT" to a diver deciding what
+                // to pack (issue #799).
+                when: formatDateTimeTz(trip.conditionsUpdatedAt, locale, shop.timezone),
               })
             : t("trip.forecastUpdateUnavailable")}
         </p>

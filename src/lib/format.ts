@@ -148,7 +148,21 @@ export function formatByteSize(bytes: number, locale = "en-US"): string {
   }).format(value);
 }
 
-/** Operational timestamp with an explicit timezone — use for signed evidence and safety events. */
+/**
+ * Operational timestamp with an explicit timezone — signed evidence, safety
+ * events, and "last updated at".
+ *
+ * **To the minute, deliberately.** The public booking page's forecast note used
+ * to build its own timestamp with a bare `toLocaleString`, and `Intl`'s default
+ * field set for that includes **seconds** — so a diver deciding what to pack
+ * read "Updated 8/22/2026, 10:33:06 AM EDT" (issue #799). A forecast is
+ * accurate to hours and that timestamp claimed a second; letting machine
+ * precision into a human sentence is what principle 4 is about.
+ *
+ * Which is the argument for one formatter rather than a per-surface field list:
+ * a call site that picks its own fields is a call site that can pick wrong, and
+ * nothing downstream would notice.
+ */
 export function formatDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     month: "short",

@@ -70,6 +70,28 @@ describe("formatDateTimeTz", () => {
   it("includes a timezone on safety-relevant timestamps", () => {
     expect(formatDateTimeTz(morning, "en-US", "UTC")).toBe("Jul 17, 7:30 AM UTC");
   });
+
+  /**
+   * **No seconds, in any locale.**
+   *
+   * The public booking page's forecast note built its own timestamp with a bare
+   * `toLocaleString`, whose default field set carries seconds — so a diver
+   * deciding what to pack read "Updated 8/22/2026, 10:33:06 AM EDT" (issue
+   * #799). The value is the same instant either way; the claim it makes is not.
+   *
+   * Asserted as "no third `:` group" rather than against a fixed string,
+   * because the failure is a *field* creeping back in and that is what a locale
+   * change would carry with it.
+   */
+  it.each(["en-US", "es-ES"])("renders to the minute in %s, never the second", (locale) => {
+    const withSeconds = new Date("2026-07-17T07:30:06Z");
+    const rendered = formatDateTimeTz(withSeconds, locale, "UTC");
+    expect(rendered).not.toMatch(/\d{1,2}:\d{2}:\d{2}/);
+    expect(rendered).not.toContain("06");
+    // And still says the two things it exists to say.
+    expect(rendered).toMatch(/7:30|07:30/);
+    expect(rendered).toContain("UTC");
+  });
 });
 
 describe("formatTimeRange", () => {
