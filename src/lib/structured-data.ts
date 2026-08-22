@@ -216,7 +216,20 @@ export function tripJsonLd(
   trip: TripForStructuredData,
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
-): JsonLdObject {
+): JsonLdObject | null {
+  // **No address, no Event.** Google requires `location.address` on an offline
+  // event; a `Place` carrying only a name is an error in the Rich Results Test
+  // and takes the whole Event out of the rich result. That was every departure
+  // this app has ever published — all the careful work below (the seat count,
+  // availability flipping on a hold, `offers` omitted rather than claiming a
+  // price of zero) thrown away on one missing object (issue #703).
+  //
+  // A shop with no address on file is a real, deliberate state, so this omits
+  // the Event rather than emitting a broken one — the same call `shopAddressOf`
+  // makes about an address made of five nulls. A missing rich result beats a
+  // warning in the shop's own Search Console.
+  const address = shopAddressOf(shop);
+  if (!address) return null;
   const url = absoluteUrl(origin, publicTripPath(shop.slug, trip.id));
   const openSeats = Math.max(0, trip.capacity - trip.booked);
   // A held or full trip is honestly SoldOut to a consumer: neither can be
@@ -233,14 +246,24 @@ export function tripJsonLd(
     description: trip.description,
     startDate: trip.startsAt.toISOString(),
     endDate: trip.endsAt.toISOString(),
+    // Scheduled even under a conditions hold. A hold pauses *bookings* for a
+    // final call — the departure is still on, at its stated time — and
+    // `EventPostponed` means moved to a later, unnamed date. Telling a diver's
+    // search result "postponed" about a boat that will probably sail is worse
+    // than saying nothing. `availability: SoldOut` below already carries the
+    // consumer-facing fact, which is that they cannot book it right now.
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url,
     maximumAttendeeCapacity: trip.capacity,
     remainingAttendeeCapacity: openSeats,
-    location: trip.diveSiteName
-      ? { "@type": "Place", name: trip.diveSiteName }
-      : { "@type": "Place", name: shop.name },
+    // The reef's name with the shop's postal address. The dive site is the
+    // searchable, differentiating part — a diver looking for "Molasses Reef
+    // dive" should land here — and the shop is where they actually turn up, so
+    // its address is the honest one. Deliberately *not* the site's own
+    // latitude/longitude: those point two miles offshore, and telling Google
+    // the event happens out at sea is worse than telling it about the dock.
+    location: { "@type": "Place", name: trip.diveSiteName ?? shop.name, address },
     organizer: shopJsonLd(shop, origin, aggregate),
     offers:
       trip.priceCents === null
@@ -261,8 +284,9 @@ export function tripPageJsonLd(
   trip: TripForStructuredData,
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
-): JsonLdObject {
-  return { "@context": SCHEMA_CONTEXT, ...tripJsonLd(shop, trip, origin, aggregate) };
+): JsonLdObject | null {
+  const event = tripJsonLd(shop, trip, origin, aggregate);
+  return event && { "@context": SCHEMA_CONTEXT, ...event };
 }
 
 /**
@@ -286,18 +310,25 @@ export function scheduleJsonLd(
   aggregate: ReviewAggregate | null = null,
   reviews: readonly ReviewForStructuredData[] = [],
 ): JsonLdObject {
-  if (trips.length === 0) {
+  // Built before the length test, not after: with no address on file every
+  // Event is omitted, and a list of zero is the same noise an empty schedule
+  // is. Positions are numbered over what survives, so the list never claims a
+  // rank nothing occupies.
+  const events = trips
+    .map((trip) => tripJsonLd(shop, trip, origin, aggregate))
+    .filter((event): event is JsonLdObject => event !== null);
+  if (events.length === 0) {
     return { "@context": SCHEMA_CONTEXT, ...shopJsonLd(shop, origin, aggregate, reviews) };
   }
   return {
     "@context": SCHEMA_CONTEXT,
     "@type": "ItemList",
     name: `Upcoming dives with ${shop.name}`,
-    numberOfItems: trips.length,
-    itemListElement: trips.map((trip, index) => ({
+    numberOfItems: events.length,
+    itemListElement: events.map((item, index) => ({
       "@type": "ListItem",
       position: index + 1,
-      item: tripJsonLd(shop, trip, origin, aggregate),
+      item,
     })),
     review: reviewsJsonLd(reviews),
   };
