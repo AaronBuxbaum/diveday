@@ -8,12 +8,13 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import {
   canPersonErasePersonalData,
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
 } from "@/db/authz";
-import { listBoats } from "@/db/boats";
+import { countBoatDepartures, listBoats } from "@/db/boats";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
@@ -450,6 +451,15 @@ export default async function SettingsPage({
       listSiteBottomTimeOverrides(db, session.user.shopId),
       listBoats(db, session.user.shopId),
     ]);
+  // **How much history each hull carries**, so the confirm can say so before a
+  // shop taps Delete. Sequential rather than a fan-out: this reads through the
+  // same executor and a shop's fleet is a handful of rows
+  // (`scripts/check-db-concurrency.mjs` is about transactions, but the shape is
+  // the same argument — there is nothing to win here).
+  const boatDepartures = new Map<string, number>();
+  for (const boat of shopBoats) {
+    boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
+  }
   // Owner-only, and tighter than the gate this panel is *read* behind: a retry
   // fires a destructive call at the shop's Stripe account and a discharge signs
   // an attestation that a diver's data is gone from the processor. The actions
@@ -1132,49 +1142,80 @@ export default async function SettingsPage({
                   ) : (
                     <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
                       {shopBoats.map((boat) => (
-                        <form
+                        <div
                           key={boat.id}
-                          action={updateBoatAction}
                           className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-surface"
                         >
-                          <input type="hidden" name="boatId" value={boat.id} />
-                          <div className="flex-1 w-full">
-                            <input
-                              name="name"
-                              type="text"
-                              required
-                              defaultValue={boat.name}
-                              placeholder={t("boats.nameLabel")}
-                              className={controlClass}
-                            />
-                          </div>
-                          <div className="w-full sm:w-32 flex items-center gap-2">
-                            <input
-                              name="capacity"
-                              type="number"
-                              required
-                              min={1}
-                              defaultValue={boat.capacity}
-                              placeholder={t("boats.capacityLabel")}
-                              className={`${controlClass} tabular-nums`}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <SubmitButton
-                              pendingLabel={t("boats.submitting")}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {t("boats.submit")}
-                            </SubmitButton>
-                            <button
-                              formAction={deleteBoatAction}
-                              type="submit"
-                              className={buttonClass({ variant: "danger", size: "sm" })}
-                            >
-                              {t("boats.deleteBoat")}
-                            </button>
-                          </div>
-                        </form>
+                          <form
+                            action={updateBoatAction}
+                            className="flex flex-1 flex-col sm:flex-row items-start sm:items-center gap-3 w-full"
+                          >
+                            <input type="hidden" name="boatId" value={boat.id} />
+                            <div className="flex-1 w-full">
+                              <input
+                                name="name"
+                                type="text"
+                                required
+                                defaultValue={boat.name}
+                                placeholder={t("boats.nameLabel")}
+                                className={controlClass}
+                              />
+                            </div>
+                            <div className="w-full sm:w-32 flex items-center gap-2">
+                              <input
+                                name="capacity"
+                                type="number"
+                                required
+                                min={1}
+                                defaultValue={boat.capacity}
+                                placeholder={t("boats.capacityLabel")}
+                                className={`${controlClass} tabular-nums`}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                              <SubmitButton
+                                pendingLabel={t("boats.submitting")}
+                                className={buttonClass({ variant: "secondary", size: "sm" })}
+                              >
+                                {t("boats.submit")}
+                              </SubmitButton>
+                            </div>
+                          </form>
+                          {/* Its own form, beside the update rather than inside
+                            it: `InlineConfirm` submits the form it sits in, and
+                            forms cannot nest. */}
+                          <form action={deleteBoatAction} className="shrink-0">
+                            <input type="hidden" name="boatId" value={boat.id} />
+                            {/* **The confirm says what the delete touches.** A
+                              hull that has carried departures is history an
+                              insurer asks about — the count is the fact a shop
+                              cannot get from this row, and it is why this is a
+                              blocking confirm rather than a bare button. A boat
+                              that never sailed goes quietly, with no message to
+                              read. Nothing is destroyed either way; the word is
+                              still "Delete" and the shop is never told about a
+                              column (ADR 20260820-every-delete-is-soft). */}
+                            {boatDepartures.get(boat.id) ? (
+                              <InlineConfirm
+                                triggerLabel={t("boats.deleteBoat")}
+                                message={t("boats.deleteBoatDepartures", {
+                                  count: boatDepartures.get(boat.id) ?? 0,
+                                })}
+                                cancelLabel={t("boats.deleteBoatCancel")}
+                                confirmLabel={t("boats.deleteBoatConfirm")}
+                                pendingLabel={t("boats.deleteBoatPending")}
+                                triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                              />
+                            ) : (
+                              <InlineConfirm
+                                triggerLabel={t("boats.deleteBoat")}
+                                confirmLabel={t("boats.deleteBoatConfirm")}
+                                pendingLabel={t("boats.deleteBoatPending")}
+                                triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                              />
+                            )}
+                          </form>
+                        </div>
                       ))}
                     </div>
                   )}
