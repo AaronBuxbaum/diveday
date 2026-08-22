@@ -442,6 +442,32 @@ describe("summarizeDay", () => {
     expect(summarizeDay([], 2)).toEqual({ code: "clear", departures: 2 });
   });
 
+  /**
+   * **"You're done" and "there's nothing here yet" must not share a message.**
+   *
+   * `clear` renders "No boats out today — and nothing is waiting on you", and
+   * the queue's empty state under it claims every booked diver has their
+   * waiver, certifications and payment in order. On a shop's first screen that
+   * is a claim about a roster that does not exist, sitting directly beneath a
+   * checklist whose third step is "Schedule your first trip" (issue #711).
+   */
+  it("separates a shop that has never sailed from a shop with a quiet day", () => {
+    expect(summarizeDay([], 0, 0, true)).toEqual({ code: "first_run" });
+    // The same shape without the first-run signal is still the earned moment.
+    expect(summarizeDay([], 0, 0, false)).toEqual({ code: "clear", departures: 0 });
+  });
+
+  it("still leads with a blocked diver, even in a shop that looks brand new", () => {
+    // First-run is checked after `blocked` deliberately: a shop with no board
+    // has nobody to block, so if one is blocked that is the more urgent truth
+    // and the quiet first-run treatment must not swallow it.
+    expect(summarizeDay([], 0, 1, true)).toEqual({
+      code: "blocked",
+      departures: 0,
+      blockedToday: 1,
+    });
+  });
+
   it("leads with the people who cannot board, not the number of rows", () => {
     // Nine divers collapsed into one row is still nine divers.
     const summary = summarizeDay([action({ urgency: "now" })], 1, 9);

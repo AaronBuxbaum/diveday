@@ -274,6 +274,15 @@ async function TodayBody({
       ? (departures.find((departure) => crewedSet.has(departure.tripId)) ?? null)
       : null;
   const firstName = session.user.name?.split(" ")[0] ?? "there";
+  const daySummaryText = summarizeDayText(
+    t,
+    summarizeDay(
+      actions,
+      departures.length,
+      departures.reduce((total, departure) => total + departure.blocked, 0),
+      showFirstRunChecklist,
+    ),
+  );
   // The page's one idea is the work (ADR 20260720-today-work-queue), so
   // instructional content sizes itself against whether any exists: a queue
   // row, a boat on today's board, or — under the instructor lens — a session
@@ -328,22 +337,21 @@ async function TodayBody({
         title={t(GREETING_KEYS[getTimeOfDayGreeting(now, shop.timezone)], { name: firstName })}
         meta={
           <>
-            <p className="max-w-2xl text-lg text-muted">
-              {summarizeDayText(
-                t,
-                summarizeDay(
-                  actions,
-                  departures.length,
-                  departures.reduce((total, departure) => total + departure.blocked, 0),
-                ),
-              )}
-              {yourBoat
-                ? ` ${t("shopHome.crewingBoat", {
-                    time: formatTime(yourBoat.startsAt, locale, shop.timezone),
-                    title: yourBoat.title,
-                  })}`
-                : ""}
-            </p>
+            {/* No sentence at all for a shop still in first-run. "No boats out
+                today" is right for a quiet Tuesday and wrong for a shop that
+                has never had a board, and anything else here would restate the
+                setup checklist directly beneath it (issue #711). */}
+            {daySummaryText ? (
+              <p className="max-w-2xl text-lg text-muted">
+                {daySummaryText}
+                {yourBoat
+                  ? ` ${t("shopHome.crewingBoat", {
+                      time: formatTime(yourBoat.startsAt, locale, shop.timezone),
+                      title: yourBoat.title,
+                    })}`
+                  : ""}
+              </p>
+            ) : null}
             {/* A day with no boats answers its follow-up question right here.
                 The summary sentence above already says "No boats out today";
                 the bordered "No boats out today" card that used to restate it
@@ -597,6 +605,7 @@ async function TodayBody({
           locale={locale}
           nowMs={now.getTime()}
           viewSwitch={queueSwitch}
+          firstRun={showFirstRunChecklist}
         />
       )}
 

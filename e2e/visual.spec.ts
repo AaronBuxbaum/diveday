@@ -1768,7 +1768,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Create shop & start trial" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}$`));
         await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
-        await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
+        // The checklist is the page now. The queue's "Nothing is waiting on
+        // you" state — a claim about a roster this shop does not have — used to
+        // render directly beneath it, and the header sentence above said "No
+        // boats out today" of a shop that has never had a board (issue #711).
+        await expect(page.getByRole("heading", { name: "Nothing is waiting on you" })).toHaveCount(
+          0,
+        );
         await capture(page, "today-empty", scheme);
 
         // **The same nothing, seen the other way.** `BlockerGroups` renders its

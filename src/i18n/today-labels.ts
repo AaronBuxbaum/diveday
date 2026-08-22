@@ -527,8 +527,15 @@ export function openGearUnitActionText(t: StaffTranslator): string {
 }
 
 /** The one-line "how's my day?" headline, resolved from `summarizeDay`'s code. */
-export function summarizeDayText(t: StaffTranslator, summary: DaySummary): string {
+/**
+ * Null for a shop still in first-run: it has nothing true to say that the setup
+ * checklist beneath it does not already say, and the page renders no sentence
+ * rather than an empty one (issue #711).
+ */
+export function summarizeDayText(t: StaffTranslator, summary: DaySummary): string | null {
   switch (summary.code) {
+    case "first_run":
+      return null;
     case "blocked":
       return t("shared.today.summary.blocked", {
         departures: summary.departures,

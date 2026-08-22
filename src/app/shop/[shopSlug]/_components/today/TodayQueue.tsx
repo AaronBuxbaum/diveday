@@ -199,6 +199,7 @@ export function TodayQueue({
   locale,
   nowMs,
   viewSwitch,
+  firstRun = false,
 }: {
   actions: readonly TodayAction[];
   shopSlug: string;
@@ -213,6 +214,11 @@ export function TodayQueue({
    * the control rides the thing it governs rather than floating above it.
    */
   viewSwitch?: React.ReactNode;
+  /**
+   * The shop has never had a departure — the same signal that decides whether
+   * the setup checklist renders, never a second one derived here.
+   */
+  firstRun?: boolean;
 }) {
   const groups = groupActions(actions);
   const t = staffTranslator(locale);
@@ -261,6 +267,20 @@ export function TodayQueue({
   };
 
   if (groups.length === 0) {
+    // **First-run renders nothing.** The empty state below is a claim about a
+    // roster — "every diver booked in the next week has their waiver,
+    // certifications, and payment in order" — and a shop on its first screen has
+    // no divers, no trips and no dive sites. It sat directly beneath a checklist
+    // whose third step is "Schedule your first trip", so the page told a shop it
+    // had cleared work it had never had, contradicted the panel above it, and
+    // wished it a good surface interval on a boat that does not exist (#711).
+    //
+    // Nothing, rather than a truer sentence: three stacked panels on a first
+    // screen is already a lot and only the checklist has an action, so a third
+    // panel saying "nothing booked yet" would restate what the checklist is
+    // there to fix (the copy-restraint skill's first deletion). The earned
+    // moment below is kept exactly as it is, for the shop that earned it.
+    if (firstRun) return null;
     return (
       <section aria-labelledby="queue-heading">
         <EmptyState>

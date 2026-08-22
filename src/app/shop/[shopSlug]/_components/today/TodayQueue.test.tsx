@@ -102,6 +102,37 @@ describe("TodayQueue urgency groups", () => {
     expect(screen.getByText("Nothing is waiting on you")).toBeInTheDocument();
   });
 
+  /**
+   * **The earned moment must not be handed to a shop that has not earned it.**
+   *
+   * "Every diver booked in the next week has their waiver, certifications, and
+   * payment in order" is a claim about a roster. A shop on its first screen has
+   * none, and read it directly beneath a checklist telling it to schedule its
+   * first trip — congratulated for clearing work it had never had, then wished
+   * a good surface interval on a boat that does not exist (issue #711).
+   */
+  it("renders nothing at all while the shop is still in first-run", () => {
+    const { container } = render(
+      <TodayQueue
+        actions={[]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        timezone="America/New_York"
+        inviteAction={inviteAction}
+        locale="en-US"
+        firstRun
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+    // Named individually, because "the panel is gone" is only half of it: none
+    // of these words may reach a shop with no divers, however the panel is
+    // later restructured.
+    expect(screen.queryByText(/waiver/i)).toBeNull();
+    expect(screen.queryByText(/Nothing is waiting on you/)).toBeNull();
+    expect(screen.queryByText(/surface interval/i)).toBeNull();
+  });
+
   it("offers the schedule as a way on from the empty queue, like the by-departure view", () => {
     render(
       <TodayQueue
