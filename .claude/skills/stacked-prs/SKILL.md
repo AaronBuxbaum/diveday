@@ -89,13 +89,28 @@ requests to repositories attached to the session, so the install is expected to 
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
   do not "fix" it by re-anchoring to the layer below.
-- **Visual regression is the one unproven part.** `reg-keygen-git-hash-plugin` should resolve
-  layer 2's baseline to layer 1's head commit, whose S3 snapshot exists only if layer 1's four
-  visual shards went green in a run that finished first; a cascading rebase orphans keys published
-  under the commits it rewrites. Read the sticky `diveday:visual-summary` comment on **every** layer
-  before triaging pixels: if it says no baseline resolved, nothing was compared, and the diff counts
-  on that layer mean nothing (see the **visual-triage** skill). Until this is measured, keep stacks
-  to chains that do not move a rendered surface.
+- **Visual regression is measured now, and the answer is "keep stacks off pixels."**
+  `reg-keygen-git-hash-plugin` resolves layer 2's baseline to **layer 1's head commit** — confirmed
+  by running its `CommitExplorer` over a throwaway two-layer stack, which needs no CI at all because
+  it reads only the local git graph. That half is fine and is what makes a stack's diffs readable.
+  What is not fine: a cascading rebase rewrites layer 1, so layer 2's key moves to a commit **no CI
+  run has published under**. Layer 1's own rebase will publish it — so whether layer 2 finds a
+  baseline is a race with layer 1's four visual shards. Losing it is not silent (the surfaces report
+  as *new*, and `diveday:visual-summary` prints that count) but "60 new" reads as noise exactly when
+  a reviewer can least afford it. So **keep stacks to chains that do not move a rendered surface**,
+  and read the sticky `diveday:visual-summary` comment on **every** layer before triaging pixels: if
+  nothing resolved, nothing was compared and that layer's counts mean nothing (see the
+  **visual-triage** skill). Full measurement in ADR
+  [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
+  including the lever if this is ever lifted: reg-suit's key generator is a plugin slot, and
+  `reg-simple-keygen-plugin` takes `expectedKey`/`actualKey` outright. It is not enough on its own —
+  an explicit key cannot conjure a snapshot layer 1 has not published yet — so the fix is that
+  plugin *plus* gating layer 2's visual job on layer 1's.
+- **Rebase a layer before you read its visual report.** A branch whose parent has fallen behind
+  `main` compares against that *parent*, while CI captures the pull request *merged with `main`* —
+  so every commit merged in between shows up as your diff. That is not a stack-specific bug, but a
+  stack is where a stale parent is most likely: PR #668 reported 60 changed surfaces of which 39
+  belonged to other people's merged work, and rebasing cut it to 21.
 
 ## Landing it
 
