@@ -732,6 +732,29 @@ async function screenshotOrGiveUp(page: Page, path: string) {
 
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
+  // Park the pointer somewhere inert, or the capture photographs whatever the
+  // test's last click left it hovering.
+  //
+  // Chromium recomputes `:hover` against a *stationary* pointer on both a
+  // resize and a scroll, and the loop below does both — `paintWholeDocument`
+  // scrolls the document through in viewport-sized steps. So the element that
+  // ends up under the last click's coordinates picks up a hover fill, and which
+  // element that is depends on a layout the capture is changing underneath it.
+  //
+  // It is not theoretical and it is not stable: reg-suit reported
+  // `trip-guests-identity-dark-vw-1280` as changed on one run and passing on
+  // the next, across a tree that differed **by one Markdown file** — the whole
+  // diff being one nav pill rendering `navClass(true)` in one run and its
+  // `hover:` pair in the other. It flips in both directions, so the risk is not
+  // only a diff to explain: a hover state can equally mask a real change, and a
+  // capture known to be noisy is one a reviewer starts waving through.
+  //
+  // Once here rather than per viewport: the pointer does not move between them,
+  // and the goal is only that it is over nothing. `(0, 0)` is the viewport
+  // corner and no surface in this suite puts an interactive element there.
+  // `capturePrint` needs none of this — `emulateMedia({ media: "print" })`
+  // already drops hover styling.
+  await page.mouse.move(0, 0);
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await paintWholeDocument(page);
