@@ -310,6 +310,36 @@ export async function listDepartureBoardedByTrip(
   tripIds: string[],
 ): Promise<Map<string, Set<string>>> {
   const byTrip = new Map<string, Set<string>>();
+  for (const [tripId, states] of await listDepartureRollCallByTrip(db, shopId, tripIds)) {
+    const aboard = new Set<string>();
+    for (const [bookingId, state] of states) if (state === "boarded") aboard.add(bookingId);
+    if (aboard.size > 0) byTrip.set(tripId, aboard);
+  }
+  return byTrip;
+}
+
+/**
+ * The same read, one step earlier: each booking's **latest departure result**,
+ * `boarded` or `not_boarded`, rather than only the set that boarded.
+ *
+ * Today's departure card needs the losing half too. "3 divers cannot board yet"
+ * is a sentence about a gate still standing in front of somebody, and it was
+ * being rendered about divers already on the boat and about divers the crew had
+ * marked as never leaving the dock (issue #698). Telling those three states
+ * apart needs the result, not the count.
+ *
+ * `not_boarded` **at departure** means "never left the dock" — benign, and
+ * genuinely accounted for. That is the narrow reading `src/db/today.ts` sets
+ * out at `isAccountedForAfterDive`, and it holds only because this query is
+ * pinned to `checkpoint = "departure"`. The same status at an after-dive
+ * checkpoint means the opposite and must never be read through this function.
+ */
+export async function listDepartureRollCallByTrip(
+  db: AppDb,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, Map<string, "boarded" | "not_boarded">>> {
+  const byTrip = new Map<string, Map<string, "boarded" | "not_boarded">>();
   if (tripIds.length === 0) return byTrip;
   const rows = await db
     .select({
@@ -339,10 +369,13 @@ export async function listDepartureBoardedByTrip(
   for (const row of rows) {
     if (seen.has(row.bookingId)) continue;
     seen.add(row.bookingId);
-    if (row.status !== "boarded") continue;
-    const aboard = byTrip.get(row.tripId) ?? new Set<string>();
-    aboard.add(row.bookingId);
-    byTrip.set(row.tripId, aboard);
+    // A `cleared` row is staff undoing a mistake: the booking has a latest
+    // event and it is neither result, so it drops out entirely rather than
+    // being remembered as its previous one.
+    if (row.status !== "boarded" && row.status !== "not_boarded") continue;
+    const states = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "not_boarded">();
+    states.set(row.bookingId, row.status);
+    byTrip.set(row.tripId, states);
   }
   return byTrip;
 }

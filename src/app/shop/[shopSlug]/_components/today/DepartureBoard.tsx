@@ -30,6 +30,9 @@ export type DepartureBoardCopy = {
   blockedWarningNamed: string;
   blockedWarningOne: string;
   blockedWarningOther: string;
+  blockedAboardNamed: string;
+  blockedAboardOne: string;
+  blockedAboardOther: string;
   noneBooked: string;
   everyoneAboard: string;
   clearToBoard: string;
@@ -58,7 +61,8 @@ function DepartureCard({
   ) => Promise<{ ok: boolean }>;
   copy: DepartureBoardCopy;
 }) {
-  const { blocked, blockedNames, ready, boarded, booked, capacity } = departure;
+  const { blocked, blockedNames, blockedAboard, blockedAshore, ready, boarded, booked, capacity } =
+    departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
   const [assignError, setAssignError] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -172,7 +176,7 @@ function DepartureCard({
             })}
           </p>
         ) : null}
-        {blocked > 0 ? (
+        {blockedAboard > 0 || blockedAshore > 0 ? (
           // The most operational sentence on the page — read in glare at the
           // dock deciding whether the boat leaves — so it holds 16px. One
           // blocked diver is named outright: the answer, not a door to it.
@@ -180,18 +184,45 @@ function DepartureCard({
           // counts line already state the blocked fact, and a third statement
           // in bold red made the card sound an alarm three times for one fact
           // (principle 9). The words carry the state; the name is the value.
-          <p className="mt-1.5 text-base">
-            {blocked === 1 && blockedNames[0]
-              ? fill(copy.blockedWarningNamed, { name: blockedNames[0] })
-              : fill(
-                  pluralForm(
-                    blocked,
-                    { one: copy.blockedWarningOne, other: copy.blockedWarningOther },
-                    locale,
-                  ),
-                  { count: blocked },
-                )}
-          </p>
+          //
+          // **Two facts, not one.** A blocked diver already on the boat and a
+          // blocked diver still ashore are different situations, and the card
+          // used to describe both — plus divers the crew had marked as never
+          // leaving the dock — as "cannot board yet". On a boat with eight
+          // aboard that reads as "there is still time" about a gate that is
+          // already behind three of them (issue #698). Aboard leads, because it
+          // is the more serious of the two; where both are true both lines
+          // render, since neither number covers the other's people.
+          <>
+            {blockedAboard > 0 ? (
+              <p className="mt-1.5 text-base">
+                {blockedAboard === 1 && blocked === 1 && blockedNames[0]
+                  ? fill(copy.blockedAboardNamed, { name: blockedNames[0] })
+                  : fill(
+                      pluralForm(
+                        blockedAboard,
+                        { one: copy.blockedAboardOne, other: copy.blockedAboardOther },
+                        locale,
+                      ),
+                      { count: blockedAboard },
+                    )}
+              </p>
+            ) : null}
+            {blockedAshore > 0 ? (
+              <p className="mt-1.5 text-base">
+                {blockedAshore === 1 && blocked === 1 && blockedNames[0]
+                  ? fill(copy.blockedWarningNamed, { name: blockedNames[0] })
+                  : fill(
+                      pluralForm(
+                        blockedAshore,
+                        { one: copy.blockedWarningOne, other: copy.blockedWarningOther },
+                        locale,
+                      ),
+                      { count: blockedAshore },
+                    )}
+              </p>
+            ) : null}
+          </>
         ) : booked === 0 ? (
           <p className="mt-2 text-base text-muted">{copy.noneBooked}</p>
         ) : boarded === booked ? (

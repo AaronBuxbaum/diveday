@@ -16,6 +16,7 @@ import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
 import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
+import { listTripReadiness } from "./readiness";
 import { saveRentalFit } from "./rental-fit";
 import { submitTripReview } from "./reviews";
 import {
@@ -154,6 +155,102 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(work.departures[0]?.boarded).toBe(1);
+  });
+
+  /**
+   * **The counts line is right; the sentence was not.** `blocked` is readiness
+   * over the whole roster and stays that. What was missing is which of those
+   * divers the card's sentence can still be about, so it stopped claiming a
+   * gate stands in front of someone already on the boat (issue #698).
+   */
+  it("splits the blocked count into those aboard and those still ashore", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await listTripReadiness(db, shop.id, reef.id);
+    const [staff] = await listStaff(db, shop.id);
+    const blockedEntry = roster.find((row) => row.readiness.status === "blocked");
+    if (!blockedEntry || !staff) throw new Error("demo fixture missing a blocked diver");
+
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const departure = before.departures.find((row) => row.tripId === reef.id);
+    if (!departure) throw new Error("reef departure missing from today's board");
+    // Nobody aboard yet: every blocked diver is genuinely still ashore, which
+    // is the state the original sentence was written for and must not change.
+    expect(departure.blockedAboard).toBe(0);
+    expect(departure.blockedAshore).toBe(departure.blocked);
+
+    // Board one of them. Readiness gates the departure checkpoint, so this
+    // takes a signed waiver first — and the diver stays `blocked` on some other
+    // count, which is exactly the case: a blocked diver may be aboard.
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: blockedEntry.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: blockedEntry.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: blockedEntry.booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+    });
+
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const boardedDeparture = after.departures.find((row) => row.tripId === reef.id);
+    if (!boardedDeparture) throw new Error("reef departure missing after roll call");
+    // Either the waiver was this diver's only blocker (they are now ready, and
+    // the blocked total drops) or it was not (they are aboard *and* blocked).
+    // Both are legitimate; what must never happen is a blocked diver aboard
+    // still being counted as one who cannot board yet.
+    expect(boardedDeparture.blockedAboard + boardedDeparture.blockedAshore).toBe(
+      boardedDeparture.blocked,
+    );
+    expect(boardedDeparture.blockedAshore).toBeLessThan(departure.blockedAshore);
+  });
+
+  /**
+   * A diver the crew marked `not_boarded` at departure never left the dock, and
+   * is in neither half — "their waiver is unsigned" is noise about a boat that
+   * has sailed without them (issue #698). `not_boarded` means the opposite at
+   * an after-dive checkpoint; this reads only the departure one.
+   */
+  it("counts a diver left ashore as neither aboard nor waiting on a gate", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await listTripReadiness(db, shop.id, reef.id);
+    const [staff] = await listStaff(db, shop.id);
+    const blockedEntry = roster.find((row) => row.readiness.status === "blocked");
+    if (!blockedEntry || !staff) throw new Error("demo fixture missing a blocked diver");
+
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const wasDeparture = before.departures.find((row) => row.tripId === reef.id);
+    if (!wasDeparture) throw new Error("reef departure missing from today's board");
+    expect(wasDeparture.blockedAshore).toBeGreaterThan(0);
+
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: blockedEntry.booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+    });
+
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const departure = after.departures.find((row) => row.tripId === reef.id);
+    if (!departure) throw new Error("reef departure missing after roll call");
+    expect(departure.blockedAboard).toBe(0);
+    expect(departure.blockedAshore).toBe(wasDeparture.blockedAshore - 1);
+    // Still on the roster, still blocked — the counts line is unchanged.
+    expect(departure.blocked).toBe(wasDeparture.blocked);
   });
 
   it("drops a cancelled booking from the boarded count, not just the booked count", async () => {
