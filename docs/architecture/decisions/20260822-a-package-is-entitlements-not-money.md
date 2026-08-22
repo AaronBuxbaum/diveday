@@ -52,6 +52,49 @@ booking cannot round, cannot drift, and cannot return more than it took.
 resolving it at booking time against the departure is a read, and the answer never depends on when
 the diver books.
 
+## Amendment, 2026-08-22: what "one dive" means is not settled either
+
+A `dive-domain-expert` and a `security-reviewer` pass over the first implementation found that this
+decision, as written, answered several product questions **silently** — and that the first of them
+is the one that may send the schema back.
+
+**The unit is the open question, and it is not an engineering call.** Every warm-water shop sells
+"ten dives" meaning ten *tanks*. Ten dives is five two-tank mornings. The first implementation spent
+one entitlement per **booking**, which makes a ten-pack buy ten two-tank charters — twenty tanks for
+the price of ten. `trips.plannedDives` already exists and the booking request already reads it, so
+the data is there; what is missing is the answer. It has a hard sub-question: a diver holding one
+dive who books a two-tank charter either has the coverage refused, or gets one tank covered and pays
+for the other, and those are different products.
+
+Six more were answered by omission rather than by decision, and each will be contested by a real
+shop:
+
+- **Does a package cover instruction?** The `scope` column defaults to `all`, so out of the box a
+  ten-pack covers an $800 course session. `fun_dives` is the safer default; `all` is the deliberate,
+  unusual choice.
+- **When exactly does a package lapse?** `validityDays` is fixed-millisecond arithmetic from the
+  purchase instant, so a package bought at 14:32 refuses the 15:00 dive on its last day, and it
+  drifts an hour across a DST boundary. It also cannot express *"valid this season"* — this
+  document's own headline example — which is a fixed end date, not a rolling window.
+- **Does a shop-cancelled departure give the dive back?** Answered *no*, by omission: a blow-out
+  never cancels its bookings, so the entitlement stays spent on a boat that never sailed — and the
+  seat lands in the owed-cash-refund queue, so the shop pays for a dive it was prepaid for.
+- **Does a no-show forfeit the dive?** Answered *yes*, by omission.
+- **Are packages transferable?** Answered *yes*, by omission: a seat claim re-points the booking's
+  person and leaves the entitlement on the buyer.
+- **Does a diver hold dives before paying the invoice?** Answered *yes*, by omission and against
+  this document's own claim: `createOrder` raises an invoice that is `open` until Stripe reports
+  payment, so entitlements exist before any money moves, and nothing revokes them when an order is
+  voided, refunded or written off.
+
+**Nothing above changes the core decision** — entitlements rather than a balance, consumption
+through `setBookingPayment`, a link undone rather than an amount credited. Both reviewers said so
+explicitly. What it changes is that the feature does not reach `bookSpot` until the unit is settled,
+because every surface above it has to agree about what it is counting.
+
+The tables shipped ahead of that answer and are unused: no production path grants an entitlement, so
+changing the unit costs a migration and nothing else (H-49, pre-pilot).
+
 ## What this decision does not settle
 
 Two questions in the originating issue are **not** engineering calls and are deliberately left open

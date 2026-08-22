@@ -1,0 +1,1 @@
+ALTER TYPE "order_line_item_kind" ADD VALUE 'dive_package' BEFORE 'merchandise';

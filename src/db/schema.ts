@@ -2902,6 +2902,15 @@ export const orderLineItemKind = pgEnum("order_line_item_kind", [
   /** Enriched air, charged per dive on top of the trip fee. */
   "nitrox",
   "deposit",
+  /**
+   * A prepaid dive package (ADR 20260822-a-package-is-entitlements-not-money).
+   * Its own kind rather than `other`, because the open revenue-recognition
+   * question in that ADR cannot be answered from a bucket that also holds air
+   * fills — whichever way it is settled, "how much of this shop's money is
+   * prepaid dives not yet taken" has to be a question the orders table can
+   * answer.
+   */
+  "dive_package",
   "merchandise",
   "other",
 ]);

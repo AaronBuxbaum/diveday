@@ -10,6 +10,7 @@ import {
 } from "@/db/authz";
 import { createBoat, deleteBoat, updateBoat } from "@/db/boats";
 import { getDb } from "@/db/client";
+import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { retryMediaDeletion } from "@/db/media-deletions";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
@@ -34,6 +35,7 @@ import {
 } from "@/db/shops";
 import {
   disconnectShopStripeAccount,
+  getShopCurrency,
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
@@ -43,6 +45,7 @@ import {
   isLookupWorthy,
   toFilterCountry,
 } from "@/lib/address-lookup";
+import { validateDivePackage } from "@/lib/dive-packages";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
   MAX_DIVERS_PER_DIVEMASTER,
@@ -331,6 +334,64 @@ export async function saveSendWindowAction(formData: FormData) {
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "send-window-saved", { saved: "sendWindow" }),
+  );
+}
+
+/**
+ * Add a prepaid dive package to the shop's price list
+ * (ADR 20260822-a-package-is-entitlements-not-money).
+ *
+ * Behind `paymentSettingsBlock` like every other price on this page: a package
+ * is what the shop charges, and `canManagePaymentSettings`'s own docstring
+ * names pricing as what it gates.
+ */
+export async function createDivePackageAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
+  const db = await getDb();
+  // The shop's own currency decides the multiplier, the same way every other
+  // price box on this page is read — 5000 in a JPY shop is ¥5,000.
+  const currency = toShopCurrency(await getShopCurrency(db, session.user.shopId));
+  const validityRaw = String(formData.get("validityDays") ?? "").trim();
+  const validated = validateDivePackage({
+    name: String(formData.get("name") ?? ""),
+    diveCount: Number(formData.get("diveCount")),
+    priceCents: majorToMinor(Number(formData.get("priceDollars")), currency),
+    scope: formData.get("scope") === "fun_dives" ? "fun_dives" : "all",
+    // Blank means "never lapses", which is the behaviour that cannot surprise
+    // anyone — not zero, which the domain rule refuses.
+    validityDays: validityRaw === "" ? null : Number(validityRaw),
+  });
+  if (!validated.ok) {
+    redirect(noticeUrl(settings, "package-invalid", { saved: "divePackages" }));
+  }
+  await createDivePackage(db, {
+    shopId: session.user.shopId,
+    createdByPersonId: session.user.personId,
+    ...validated.value,
+  });
+  revalidateAndRedirect(settings, noticeUrl(settings, "package-saved", { saved: "divePackages" }));
+}
+
+/**
+ * Stop selling one. Soft, and here that is load-bearing rather than
+ * conventional: the dives somebody already bought reference this row and must
+ * outlive it.
+ */
+export async function deleteDivePackageAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  await paymentSettingsBlock(session);
+  const packageId = String(formData.get("packageId") ?? "");
+  if (packageId) {
+    await deleteDivePackage(await getDb(), session.user.shopId, packageId);
+  }
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "package-deleted", { saved: "divePackages" }),
   );
 }
 

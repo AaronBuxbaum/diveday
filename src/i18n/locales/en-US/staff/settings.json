@@ -31,7 +31,10 @@
       "timezoneInvalid": "That isn’t a timezone we recognize — pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
       "sendWindowSaved": "Message hours saved.",
-      "sendWindowInvalid": "That didn't save. The first hour has to come before the last, on a 24-hour clock."
+      "sendWindowInvalid": "That didn't save. The first hour has to come before the last, on a 24-hour clock.",
+      "packageSaved": "Package added.",
+      "packageDeleted": "Package deleted.",
+      "packageInvalid": "That didn't save. Check the number of dives, the price, and how long it stays usable."
     },
     "timezone": {
       "heading": "Timezone",
@@ -337,6 +340,24 @@
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
       "saving": "Saving…"
+    },
+    "divePackages": {
+      "heading": "Dive packages",
+      "value": "{count, plural, =0 {No packages} one {# package} other {# packages}}",
+      "description": "Prepaid dives a diver buys once and spends across departures.",
+      "summary": "{dives} dives · {price} · {scope}",
+      "scopeAll": "Any departure",
+      "scopeFunDives": "Fun dives only",
+      "nameLabel": "What you call it",
+      "diveCountLabel": "Dives included",
+      "priceLabel": "Price",
+      "validityLabel": "Usable for (days)",
+      "validityDescription": "Leave blank and it never expires.",
+      "scopeLabel": "Covers",
+      "submit": "Add package",
+      "submitting": "Adding…",
+      "delete": "Delete",
+      "deleting": "Deleting…"
     }
   },
   "team": {

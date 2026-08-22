@@ -16,6 +16,7 @@ import {
   canPersonManageShopSettings,
 } from "@/db/authz";
 import { countBoatDepartures, listBoats } from "@/db/boats";
+import { listDivePackages } from "@/db/dive-packages";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
@@ -40,6 +41,7 @@ import {
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
+import { MAX_PACKAGE_DIVE_COUNT, MAX_PACKAGE_VALIDITY_DAYS } from "@/lib/dive-packages";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
   DOCK_DAY_FIELDS,
@@ -66,7 +68,9 @@ import { SettingsDoorRow, SettingsRow, SettingsRowList } from "./_components/Set
 import { AddressSearch } from "./AddressSearch";
 import {
   createBoatAction,
+  createDivePackageAction,
   deleteBoatAction,
+  deleteDivePackageAction,
   dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
@@ -108,6 +112,9 @@ function noticeMessages(
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     "send-window-saved": { tone: "success", text: t("settings.main.notice.sendWindowSaved") },
     "send-window-invalid": { tone: "danger", text: t("settings.main.notice.sendWindowInvalid") },
+    "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
+    "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
+    "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
@@ -379,6 +386,7 @@ const SECTION_IDS = [
   "boats",
   "rentals",
   "rentalPricing",
+  "divePackages",
   "stripe",
 ] as const;
 type SectionId = (typeof SECTION_IDS)[number];
@@ -431,6 +439,10 @@ export default async function SettingsPage({
   );
   // Only asked when the select that needs it will render — the warning below is
   // about what changing the currency would do, and most staff never see it.
+  // Only for shops that sell them — an empty list plus the add form is what a
+  // shop that has never used packages sees, and nothing else in the app changes
+  // until the first one exists.
+  const shopPackages = canPayments ? await listDivePackages(db, session.user.shopId) : [];
   const hasPricedRecords = canPayments
     ? await shopHasPricedRecords(db, session.user.shopId)
     : false;
@@ -498,6 +510,7 @@ export default async function SettingsPage({
   const addressLookupEnabled = isAddressLookupConfigured();
   const currencyMismatch = stripeCurrencyMismatch(shopCurrency, account);
   const t = staffTranslator(locale);
+  const divePackagesValue = t("settings.main.divePackages.value", { count: shopPackages.length });
   const trialDaysLeft = trialDaysRemaining(shop.createdAt, nowDate());
   const trialExpired = isTrialExpired(shop.createdAt, nowDate());
   const trialEndLabel = formatShortDate(trialEndsAt(shop.createdAt), locale, shop.timezone);
@@ -1567,6 +1580,124 @@ export default async function SettingsPage({
                       {t("settings.main.rentalPricing.submit")}
                     </SubmitButton>
                   </form>
+                </SettingsRow>
+
+                {/* **The shop's prepaid packages.** Beside the rental prices
+                    because both are the shop's own price list, and behind the
+                    same payment gate as everything else in this group. Opt-in
+                    by presence: a shop that has never defined one sees an empty
+                    list and an add form, and nothing anywhere else in the app
+                    changes until the first one exists (ADR
+                    20260822-a-package-is-entitlements-not-money). */}
+                <SettingsRow
+                  heading={t("settings.main.divePackages.heading")}
+                  value={divePackagesValue}
+                  description={t("settings.main.divePackages.description")}
+                  open={activeSection === "divePackages"}
+                >
+                  <SectionNotice banner={banner} section="divePackages" active={activeSection} />
+                  {shopPackages.length > 0 ? (
+                    <ul className="mt-4 flex flex-col gap-2">
+                      {shopPackages.map((pkg) => (
+                        <li
+                          key={pkg.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3"
+                        >
+                          <span className="min-w-0">
+                            <span className="font-medium">{pkg.name}</span>{" "}
+                            <span className="text-sm text-muted">
+                              {t("settings.main.divePackages.summary", {
+                                dives: pkg.diveCount,
+                                price: formatMoneyCents(pkg.priceCents, shop.currency, locale),
+                                scope: t(
+                                  pkg.scope === "fun_dives"
+                                    ? "settings.main.divePackages.scopeFunDives"
+                                    : "settings.main.divePackages.scopeAll",
+                                ),
+                              })}
+                            </span>
+                          </span>
+                          {/* Says "Delete", and is soft underneath (ADR
+                              20260820-every-delete-is-soft). No sentence
+                              explains that the dives somebody already bought
+                              survive: reversibility is a promise we keep, not a
+                              concept the reader holds — and here the softness
+                              is load-bearing rather than conventional, because
+                              the entitlements reference this row. */}
+                          <form action={deleteDivePackageAction}>
+                            <input type="hidden" name="packageId" value={pkg.id} />
+                            <SubmitButton
+                              pendingLabel={t("settings.main.divePackages.deleting")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("settings.main.divePackages.delete")}
+                            </SubmitButton>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <FieldGrid
+                    as="form"
+                    action={createDivePackageAction}
+                    columns={2}
+                    className="mt-4 gap-x-5 gap-y-5"
+                  >
+                    <Field label={t("settings.main.divePackages.nameLabel")}>
+                      <input name="name" required maxLength={80} className={controlClass} />
+                    </Field>
+                    <Field label={t("settings.main.divePackages.diveCountLabel")}>
+                      <input
+                        name="diveCount"
+                        type="number"
+                        inputMode="numeric"
+                        required
+                        min={1}
+                        max={MAX_PACKAGE_DIVE_COUNT}
+                        className={`${controlClass} tabular-nums`}
+                      />
+                    </Field>
+                    <Field label={t("settings.main.divePackages.priceLabel")}>
+                      <input
+                        name="priceDollars"
+                        type="number"
+                        inputMode="decimal"
+                        required
+                        min={1}
+                        step="0.01"
+                        className={`${controlClass} tabular-nums`}
+                      />
+                    </Field>
+                    <Field
+                      label={t("settings.main.divePackages.validityLabel")}
+                      description={t("settings.main.divePackages.validityDescription")}
+                    >
+                      <input
+                        name="validityDays"
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={MAX_PACKAGE_VALIDITY_DAYS}
+                        className={`${controlClass} tabular-nums`}
+                      />
+                    </Field>
+                    <Field label={t("settings.main.divePackages.scopeLabel")}>
+                      <select name="scope" defaultValue="all" className={controlClass}>
+                        <option value="all">{t("settings.main.divePackages.scopeAll")}</option>
+                        <option value="fun_dives">
+                          {t("settings.main.divePackages.scopeFunDives")}
+                        </option>
+                      </select>
+                    </Field>
+                    <FieldActions>
+                      <SubmitButton
+                        pendingLabel={t("settings.main.divePackages.submitting")}
+                        className={buttonClass({ variant: "secondary" })}
+                      >
+                        {t("settings.main.divePackages.submit")}
+                      </SubmitButton>
+                    </FieldActions>
+                  </FieldGrid>
                 </SettingsRow>
 
                 {/* The one row that opens itself: an unconnected or half-onboarded
