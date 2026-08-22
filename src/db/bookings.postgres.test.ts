@@ -3,9 +3,9 @@ import { and, count, eq, ne, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { createBooking } from "./bookings";
+import { createBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
-import { bookings, shops, trips } from "./schema";
+import { bookings, people, personRoles, shops, trips } from "./schema";
 
 /**
  * The oversell guard, under genuine contention.
@@ -198,5 +198,114 @@ describePostgres("createBooking under real concurrency", () => {
       { ok: false, reason: "already_booked" },
     ]);
     expect(await seatsTaken(pg.db, tripId)).toBe(1);
+  });
+});
+
+/** A second departure at the same shop, so one party can name the other's divers. */
+async function anotherTripIn(db: AppDb, shopId: string, capacity: number): Promise<string> {
+  const startsAt = new Date(nowDate().getTime() + 48 * HOUR_MS);
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId,
+      title: "Night Dive",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 3 * HOUR_MS),
+      capacity,
+    })
+    .returning();
+  if (!trip) throw new Error("trip insert returned no row");
+  return trip.id;
+}
+
+/** A diver this shop already holds, so a party naming them takes a lock rather than an insert. */
+async function existingDiver(db: AppDb, shopId: string, fullName: string, email: string) {
+  const [person] = await db.insert(people).values({ shopId, fullName, email }).returning();
+  if (!person) throw new Error("person insert returned no row");
+  await db.insert(personRoles).values({ personId: person.id, role: "diver" });
+  return person;
+}
+
+/** The lock the declaration pass takes, held open by the starting gate. */
+const personRowLock = (personId: string) =>
+  sql`select id from people where id = ${personId} for update`;
+
+/**
+ * The party booking's `people` lock order (issue #654).
+ *
+ * `recordSelfDeclaredCards` opens with `SELECT ... FOR UPDATE` on the diver, and
+ * a lock taken inside a transaction is held to commit — so a six-member party
+ * holds six of them. While the declaration was written from inside the per-seat
+ * path, they were taken in the order the form posted its fieldsets, and two
+ * parties on *different* trips naming the same two divers in opposite order took
+ * the same two locks in opposite order. Postgres broke the cycle with `40P01`,
+ * which is not a `PartyBookingError` and so escaped `createBookingParty`'s catch
+ * as an unhandled error: the diver got a crash, not "that seat just went".
+ *
+ * This is the file where that is provable. PGlite is single-connection and
+ * cannot hold two transactions open at once, so the unit suite can assert the
+ * write *order* but never the crash it prevents.
+ */
+describePostgres("createBookingParty under real concurrency", () => {
+  it("does not deadlock when two parties name the same divers in opposite order", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId: reefTripId } = await tripWithSeats(pg.db, 4);
+    const nightTripId = await anotherTripIn(pg.db, shopId, 4);
+
+    const nora = await existingDiver(pg.db, shopId, "Nora Quinn", "nora@example.com");
+    const ravi = await existingDiver(pg.db, shopId, "Ravi Chandra", "ravi@example.com");
+    // Named by the order the *fix* puts them in, not by the order they were
+    // created: the sort is on the resolved id, so which of the two is locked
+    // first is a property of the rows, not of this test's setup.
+    const [first, second] = [nora, ravi].sort((a, b) => (a.id < b.id ? -1 : 1));
+    if (!first || !second) throw new Error("expected two divers");
+
+    const member = (tripId: string, person: { fullName: string; email: string | null }) => ({
+      actor: "public" as const,
+      shopId,
+      tripId,
+      fullName: person.fullName,
+      // The name must match the row it resolves to, or `identityUnconfirmed`
+      // skips the declaration entirely (H-13) and no lock is ever taken.
+      email: person.email ?? "",
+      declared: { level: "rescue" as const },
+      // These trips carry no requirement row, so nothing is being talked past;
+      // it is here so an unrelated future gate cannot turn this into a refusal
+      // and quietly stop exercising the declaration write at all.
+      admissionGate: "advise" as const,
+    });
+
+    // The gate holds the row both parties want first once they agree on an
+    // order — and the row the *submitted* order makes them disagree about.
+    const gate = await holdRowLock(pg, personRowLock(first.id));
+
+    // Staged, not fired together, and that is what makes the old failure
+    // deterministic rather than a coin flip. Against the per-seat write, the
+    // reef party parks on `first` while the night party takes `second` free and
+    // then parks on `first` behind it; releasing the gate hands `first` to the
+    // reef party, which then wants `second` — held by the night party, which is
+    // still waiting on `first`. That is the cycle, every run.
+    const reefParty = createBookingParty(pg.connect(), [
+      member(reefTripId, first),
+      member(reefTripId, second),
+    ]);
+    await waitForLockWaiters(pg.db, 1);
+    const nightParty = createBookingParty(pg.connect(), [
+      member(nightTripId, second),
+      member(nightTripId, first),
+    ]);
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+
+    // `createBookingParty` rethrows anything that is not a `PartyBookingError`,
+    // so a `40P01` surfaces here as a rejection. Settled rather than awaited so
+    // the failure message names the deadlock instead of just failing the file.
+    const settled = await Promise.allSettled([reefParty, nightParty]);
+    expect(settled.filter((r) => r.status === "rejected").map((r) => String(r.reason))).toEqual([]);
+
+    // Both parties seated: the fix serializes them, it does not refuse one.
+    expect(settled.map((r) => r.status === "fulfilled" && r.value.ok)).toEqual([true, true]);
+    expect(await seatsTaken(pg.db, reefTripId)).toBe(2);
+    expect(await seatsTaken(pg.db, nightTripId)).toBe(2);
   });
 });
