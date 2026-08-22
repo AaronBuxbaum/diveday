@@ -71,9 +71,7 @@ describe("getTripPrep", () => {
       const prep = await prepFor(ctx);
       expect(prep.checklist.crewCount).toBe(0);
       // The boat still loads a tank per diver per dive — just none for Sal.
-      expect(prep.checklist.tanks.total).toBe(
-        prep.checklist.diverCount * prep.checklist.diveCount,
-      );
+      expect(prep.checklist.tanks.total).toBe(prep.checklist.diverCount * prep.checklist.diveCount);
     });
 
     it("does not count an owner or manager who is not also crew that dives", async () => {

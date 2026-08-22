@@ -5,42 +5,19 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import { canPersonConfigureTrips } from "@/db/authz";
-import { hasTripBlowout } from "@/db/blowouts";
-import { listDiveSites } from "@/db/dive-sites";
-import { listDepartureBoardedByTrip } from "@/db/manifests";
-import { countOpenTripOrders } from "@/db/orders";
-import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
-import { listTripPrepDivers } from "@/db/rental-fit";
-import { crewShiftCoverage } from "@/db/staffing";
-import {
-  getTripCrewAssignments,
-  getTripSeriesSummary,
-  getTripWithBooked,
-  listOffCadenceSeriesTrips,
-  listStaff,
-  listTripDives,
-  listTripScheduleDays,
-} from "@/db/trips";
+import { getTripOverview } from "@/db/trips-overview";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { HOUR_MS, nowDate } from "@/lib/clock";
-import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
-import { countInWaterCrew } from "@/lib/crew-roles";
-import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
+import { DSD_RATIO } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
-import { rentalFitCompleteness } from "@/lib/rentals";
-import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
@@ -121,29 +98,15 @@ export default async function ManageTripPage({
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   // Locale and the trip row both depend on `shop` but not on each other.
-  const [locale, trip] = await Promise.all([
-    requestLocale(shop.defaultLocale),
-    getTripWithBooked(db, shop.id, tripId),
-  ]);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  if (!trip) notFound();
-  const cancelled = trip.status === "cancelled";
-  // "Is this trip behind us?" — with the hour of grace every has-it-ended
-  // check carries (the close-out's readiness gate and Today's "home" both add
-  // it): boats run late, and the pulse dying at the scheduled minute told a
-  // staffer watching a boat still out that there was nothing left to watch. A
-  // cancelled departure never sailed at all. Read through the clock, never
-  // `new Date()`, so the e2e fleet's frozen instant renders this page
-  // identically every run.
-  const departed = !cancelled && trip.endsAt.getTime() + HOUR_MS <= nowDate().getTime();
-  // The pulse — the state-of-the-boat strip that opens the page — only beats
-  // for a departure that is still ahead: a cancelled or departed trip has no
-  // seats to fill or blockers to clear. A cancelled one puts its lifecycle
-  // band in the same slot instead; the day's write-up lives on the close-out.
-  const pulseNeeded = !cancelled && !departed;
-  const [
+  const overview = await getTripOverview(db, shop, tripId, session.user.personId);
+  if (!overview) notFound();
+  const {
+    trip,
+    cancelled,
+    pulseNeeded,
     staff,
-    crewAssignments,
     requirement,
     diveSiteList,
     tripDiveList,
@@ -152,111 +115,14 @@ export default async function ManageTripPage({
     scheduleDays,
     canConfigure,
     blowoutCalled,
-    pulseReadiness,
-    pulsePrepDivers,
-    pulseBoardedByTrip,
-    pulseOpenOrders,
-  ] = await Promise.all([
-    listStaff(db, shop.id),
-    getTripCrewAssignments(db, shop.id, tripId),
-    getTripRequirements(db, shop.id, tripId),
-    listDiveSites(db, shop.id),
-    listTripDives(db, shop.id, tripId),
-    getTripSiteRequirement(db, shop.id, tripId),
-    getTripSeriesSummary(db, shop.id, tripId),
-    listTripScheduleDays(db, shop.id, tripId),
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
-    // Whether this trip's cancellation was a called blow-out — the cascade
-    // record is the surface a weather morning is worked from, so the trip page
-    // must always offer the way back to it (ADR 20260804-blowout-cascade).
-    hasTripBlowout(db, shop.id, tripId),
-    // The pulse's facts, read only while the trip is still ahead. All go
-    // through the readers their destination surfaces already trust — the
-    // roster's own blocked predicate, the prep list's own completeness rule,
-    // and the manifest's own boarded reader — so the counts on this strip can
-    // never disagree with the pages it links to, and its bar means exactly
-    // what Today's does on the morning divers start boarding.
-    pulseNeeded ? listTripReadiness(db, shop.id, tripId) : [],
-    pulseNeeded ? listTripPrepDivers(db, shop.id, tripId) : [],
-    pulseNeeded
-      ? listDepartureBoardedByTrip(db, shop.id, [tripId])
-      : new Map<string, Set<string>>(),
-    // …and the third question a staffer asks of an upcoming boat, after "can
-    // everyone board" and "can the packer pack": is anyone still owing money
-    // for it. `countOpenTripOrders` asks the Orders index's own question
-    // (`shopOrderWhere`, src/db/orders.ts) so this number and the filtered
-    // index the fact opens can never disagree.
-    pulseNeeded ? countOpenTripOrders(db, shop.id, tripId) : 0,
-  ]);
-  // Only ever non-empty right after staff narrowed this run's cadence, and only
-  // for someone who can act on it — a second query rather than a field on the
-  // summary, because it is the one thing here that costs a join and is empty
-  // almost always.
-  const offCadence =
-    canConfigure && series ? await listOffCadenceSeriesTrips(db, shop.id, series.id) : [];
-  // Where this departure goes, composed from the dives already loaded above —
-  // no second query, and the same answer the public schedule card gives.
-  const diveSites = summarizeTripDiveSites(
-    tripDiveList.map(({ dive, diveSite }) => ({
-      diveNumber: dive.diveNumber,
-      site: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
-    })),
-  );
-  const startWall = utcToWallTime(trip.startsAt, shop.timezone);
-  // Day one's window, not the trip's whole span: a multi-day departure ends on
-  // its *last* day, and the details editor's Departs/Returns boxes describe
-  // one day that the day count then repeats.
-  const firstDay = scheduleDays[0];
-  const endWall = utcToWallTime(firstDay?.endsAt ?? trip.endsAt, shop.timezone);
-  // How the boat stands, in the pulse's terms: who still can't board (the
-  // roster chips' own rule, src/lib/roster-filters.ts) and whose rental fit
-  // the packer can't pack from yet (the prep list's own rule, src/lib/rentals.ts).
-  const pulseBlocked = pulseReadiness.filter((row) => rosterRowIsBlocked(row.readiness)).length;
-  const pulsePrepGaps = pulsePrepDivers.filter(
-    (diver) => rentalFitCompleteness(diver.fit, shop.rentalItems).state !== "complete",
-  ).length;
-  const pulseBoarded = pulseBoardedByTrip.get(tripId)?.size ?? 0;
-  const crewIds = crewAssignments.map((entry) => entry.personId);
-  const tripRoleByPerson = new Map(
-    crewAssignments.map((entry) => [entry.personId, entry.tripRole] as const),
-  );
-  const assignedCrew = staff.filter((entry) => crewIds.includes(entry.person.id));
-  // Staff can freely change crew after divers are already booked (H-14 lets
-  // any staff member do this — it's day-of operating work). `courseCrewGap`
-  // (src/lib/course-ratios.ts) is the one computation of "does this course
-  // session have enough crew", also consumed by the staffing coverage list
-  // and the Today queue (docs/product/archive/ux-personas-20260730-findings.md,
-  // Lens 17 task 151) — over_ratio is the visible nudge to fix a ratio-gated
-  // session before sailing, never a retroactive block on the bookings already
-  // taken.
-  //
-  // Who counts as an instructor or an in-water certified assistant is
-  // `countInWaterCrew` (src/lib/crew-roles.ts) — one definition shared with the
-  // booking gate, the staffing window, and Today, so a divemaster rostered as
-  // this trip's captain stops buying two students' worth of capacity here too
-  // (DOM-M3).
-  const inWaterCrew = countInWaterCrew(
-    assignedCrew.map((entry) => ({
-      tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
-      shopRoles: entry.roles,
-    })),
-  );
-  const crewGap = courseCrewGap({
-    course: trip.course,
-    ...inWaterCrew,
-    booked: trip.booked,
-  });
-  // The shop's own target, measured off the same crew count and reported
-  // separately from the two agency gates above — it applies to every
-  // departure, course or fun dive, and it refuses nothing
-  // (src/lib/divemaster-ratio.ts). A course session short of both says both
-  // things: the agency cap is why a seat is refused, this is what the shop
-  // wanted its own boat to look like.
-  const ratioGap = divemasterRatioGap({
-    divers: trip.booked,
-    divemasterCount: inWaterDivemasterCount(inWaterCrew),
-    diversPerDivemaster: shop.diversPerDivemaster,
-  });
+    offCadence,
+    diveSites,
+    startWall,
+    endWall,
+    pulse,
+    crew,
+  } = overview;
+  const { crewIds, tripRoleByPerson, crewGap, ratioGap, onShiftIds } = crew;
   const underTargetNote =
     ratioGap.code === "none"
       ? null
@@ -286,13 +152,7 @@ export default async function ManageTripPage({
             perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
           })
         : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
-  // The other half of the shift ↔ crew cross-link (Lens 17 task 165): whether
-  // each assigned crew member actually has a working shift covering this
-  // sailing, read straight from CrewSection instead of a separate trip to
-  // the staffing page. `null` — the shop has never scheduled a shift — means
-  // the question doesn't apply, and CrewSection renders no coverage state.
-  const shiftCoverage = await crewShiftCoverage(db, shop.id, trip, crewIds);
-  const onShiftIds = shiftCoverage === null ? null : [...shiftCoverage];
+
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
   // staffer's role means we never rendered — falls through to the banner.
@@ -319,14 +179,14 @@ export default async function ManageTripPage({
         open: spotsRemaining(trip),
       });
   const pulseCaption =
-    pulseBoarded > 0
-      ? `${t("trips.pulse.aboard", { count: pulseBoarded })} · ${pulseSeats}`
+    pulse.boarded > 0
+      ? `${t("trips.pulse.aboard", { count: pulse.boarded })} · ${pulseSeats}`
       : pulseSeats;
   const pulseFacts: TripPulseFact[] = [
-    ...(pulseBlocked > 0
+    ...(pulse.blocked > 0
       ? [
           {
-            text: t("trips.pulse.blocked", { count: pulseBlocked }),
+            text: t("trips.pulse.blocked", { count: pulse.blocked }),
             href: `${shopPath(shopSlug, "trips", tripId, "guests")}?rf=blocked#roster`,
             tone: "danger" as const,
           },
@@ -354,10 +214,10 @@ export default async function ManageTripPage({
           },
         ]
       : []),
-    ...(pulsePrepGaps > 0
+    ...(pulse.prepGaps > 0
       ? [
           {
-            text: t("trips.pulse.prepGaps", { count: pulsePrepGaps }),
+            text: t("trips.pulse.prepGaps", { count: pulse.prepGaps }),
             href: shopPath(shopSlug, "trips", tripId, "prep"),
           },
         ]
@@ -368,10 +228,10 @@ export default async function ManageTripPage({
     // count is unwindowed: a seat sold months ahead was invoiced months ago,
     // and the index's default 90-day window would open on fewer orders than
     // the fact just promised.
-    ...(pulseOpenOrders > 0
+    ...(pulse.openOrders > 0
       ? [
           {
-            text: t("trips.pulse.awaitingPayment", { count: pulseOpenOrders }),
+            text: t("trips.pulse.awaitingPayment", { count: pulse.openOrders }),
             href: `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`,
           },
         ]
@@ -540,8 +400,8 @@ export default async function ManageTripPage({
       {pulseNeeded ? (
         <TripPulse
           booked={trip.booked}
-          boarded={pulseBoarded}
-          blocked={pulseBlocked}
+          boarded={pulse.boarded}
+          blocked={pulse.blocked}
           capacity={trip.capacity}
           caption={pulseCaption}
           // The success ink is this page's one earned moment (principle 3),
@@ -550,7 +410,7 @@ export default async function ManageTripPage({
           // contradicting itself. The words say "Full boat" either way; the
           // celebration waits until the boat is actually clear.
           captionTone={
-            isFull(trip) && pulseBlocked === 0 && crewGap.code === "none" ? "success" : undefined
+            isFull(trip) && pulse.blocked === 0 && crewGap.code === "none" ? "success" : undefined
           }
           facts={pulseFacts}
         />
