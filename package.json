@@ -51,6 +51,7 @@
     "check:copy": "node scripts/check-copy.mjs",
     "check:domain-strings": "node scripts/check-domain-strings.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
+    "check:migration-graph": "node scripts/check-migration-graph.mjs",
     "check:open-graph": "node scripts/check-open-graph.mjs",
     "env:manual": "node scripts/env-manual.mjs",
     "check:env": "node scripts/check-env.mjs",
@@ -60,6 +61,7 @@
     "perf:budget": "node scripts/perf-budget.mjs",
     "task:context": "node scripts/task-context.mjs",
     "db:generate": "drizzle-kit generate",
+    "db:merge": "node scripts/merge-migration-heads.mjs",
     "db:migrate": "dotenv -c -- drizzle-kit migrate --config drizzle.config.prod.ts",
     "db:reset": "rm -rf .pglite && echo 'Dev database cleared; next `pnpm dev` re-migrates and re-seeds.'",
     "build:sw": "node scripts/build-service-worker.mjs"
