@@ -5,8 +5,9 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { getCurrentWaiverTemplate } from "@/db/waivers";
+import { countSignedWaiversOnCurrentVersion, getCurrentWaiverTemplate } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
@@ -33,10 +34,10 @@ export default async function WaiverTemplatesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; count?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, count } = await searchParams;
   // The waiver is the shop's legal instrument; editing it (and the medical
   // jurisdiction it presents) is owner/manager work (H-14, ADR
   // 20260724-role-authorization). Other roles have no use for it, so the
@@ -56,7 +57,13 @@ export default async function WaiverTemplatesPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const current = await getCurrentWaiverTemplate(db, shop.id);
+  // What publishing a new version would cost, in signatures. Read on every
+  // render so the confirm below can say it *before* the tap — the count in the
+  // notice afterwards is the same number, and arrives too late to change a
+  // mind (issue #720).
+  const atRisk = await countSignedWaiversOnCurrentVersion(db, shop.id);
 
+  const resigning = notice === "waiver-resigning" ? Number(count) : Number.NaN;
   const banner =
     notice === "saved"
       ? current
@@ -64,8 +71,23 @@ export default async function WaiverTemplatesPage({
         : t("waiversStaff.banner.savedFirst")
       : notice === "invalid"
         ? t("waiversStaff.banner.invalid")
-        : undefined;
-  const bannerTone: NoticeTone = notice === "invalid" ? "danger" : "success";
+        : notice === "waiver-unchanged"
+          ? t("waiversStaff.banner.unchanged")
+          : Number.isFinite(resigning) && resigning > 0
+            ? t("waiversStaff.banner.resigning", { count: resigning })
+            : undefined;
+  // Warning, not success, for the same reason `requirements-blocking` is: the
+  // save worked and there is nothing to undo, but the shop now owes those
+  // divers a link. "Unchanged" is neutral — nothing happened, which is the
+  // whole message.
+  const bannerTone: NoticeTone =
+    notice === "invalid"
+      ? "danger"
+      : notice === "waiver-resigning"
+        ? "warning"
+        : notice === "waiver-unchanged"
+          ? "neutral"
+          : "success";
 
   const editForm = (
     <form action={saveWaiverAction} className="flex flex-col gap-5">
@@ -83,12 +105,28 @@ export default async function WaiverTemplatesPage({
         </Field>
       </FieldGrid>
       <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton
-          pendingLabel={t("waiversStaff.pendingLabel")}
-          className={buttonClass({ size: "lg" })}
-        >
-          {current ? t("waiversStaff.saveNewVersion") : t("waiversStaff.saveWaiver")}
-        </SubmitButton>
+        {/* Two steps only when there is something to lose. A first release, or
+            one nobody has signed against yet, costs nothing to publish and gets
+            no ceremony; once signatures stand on the current version, the tap
+            invalidates all of them at once and the number goes in front of the
+            staffer rather than in the notice afterwards. */}
+        {atRisk > 0 ? (
+          <InlineConfirm
+            triggerLabel={t("waiversStaff.saveNewVersion")}
+            triggerClassName={buttonClass({ size: "lg" })}
+            message={t("waiversStaff.confirm.message", { count: atRisk })}
+            confirmLabel={t("waiversStaff.confirm.publish")}
+            cancelLabel={t("waiversStaff.confirm.cancel")}
+            pendingLabel={t("waiversStaff.pendingLabel")}
+          />
+        ) : (
+          <SubmitButton
+            pendingLabel={t("waiversStaff.pendingLabel")}
+            className={buttonClass({ size: "lg" })}
+          >
+            {current ? t("waiversStaff.saveNewVersion") : t("waiversStaff.saveWaiver")}
+          </SubmitButton>
+        )}
         {/* Beside the button, not under the `<h1>`: the release text is a
             fourteen-row textarea, so the top of this page is a screen and a
             half away from the control that was pressed. */}
@@ -99,7 +137,7 @@ export default async function WaiverTemplatesPage({
 
   return (
     <>
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "count"]} />
       <ShopPageHeader
         eyebrow={t("waiversStaff.eyebrow")}
         title={t("waiversStaff.title")}

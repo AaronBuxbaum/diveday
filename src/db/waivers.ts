@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
@@ -8,10 +8,12 @@ import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/si
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
   createWaiverToken,
+  DEFAULT_WAIVER_TITLE,
   hashWaiverToken,
   isCompletedWaiverCurrent,
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,
+  WAIVER_SIGNATURE_VALIDITY_MS,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -34,7 +36,15 @@ export type WaiverDeliveryChannel = (typeof waiverDeliveryChannel.enumValues)[nu
 
 export type SaveWaiverTemplateInput = {
   shopId: string;
-  title: string;
+  /**
+   * Omitted by the editor, which is the only surface that saves one. The title
+   * is immutable in the UI — there is no field for it — so a save cannot mean
+   * "rename", and the current version's title carries forward. Passing the
+   * platform default instead renamed a shop's own release ("Blue Mantis Diving
+   * Release" → "Diving Release & Liability Waiver") on the first edit, silently,
+   * for as long as the editor has existed.
+   */
+  title?: string;
   body: string;
 };
 
@@ -214,12 +224,39 @@ export async function getSignedWaiverRecordForShop(
   return row ? toSignedWaiverEntry(row) : null;
 }
 
+export type SaveWaiverTemplateResult = {
+  template: typeof waiverTemplates.$inferSelect;
+  /**
+   * False when the submitted text was character-for-character the current
+   * version and nothing was written. Callers report it differently — "saved"
+   * against an unchanged release is a lie with consequences (issue #720).
+   */
+  versioned: boolean;
+};
+
 /**
  * Saves an edit as the next version. Versions increment per shop — history reads
  * v1 → v2 → v3 — and the most recent version is always what new links snapshot.
  * The previous version stays intact so a record already signed against it is never rewritten.
+ *
+ * **An unchanged body is not a new version.** Publishing one is not a quiet
+ * write: `isCompletedWaiverCurrent` reads a signature against an older version
+ * as no longer current, so a fresh version invalidates every signature the shop
+ * holds at once — every booked diver on every forward departure flips to
+ * blocked, and the sign-once carry-across that covers a shop's regulars is
+ * neutralised in the same instant. A staffer who opens the editor to *read* the
+ * release and presses Save on the way out had done all of that, and been told
+ * "Saved" (issue #720). So an identical body saves nothing and says so.
+ *
+ * The comparison is exact, on the trimmed text, and deliberately dumb. Whether
+ * a *real* edit is material enough to require re-signing is a legal question
+ * (H-01/H-03), and DiveDay must never infer materiality from a diff — this only
+ * recognises the case where there is no diff at all.
  */
-export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInput) {
+export async function saveWaiverTemplate(
+  db: AppDb,
+  input: SaveWaiverTemplateInput,
+): Promise<SaveWaiverTemplateResult> {
   return db.transaction(async (tx) => {
     // Locks the shop row before computing the next version — under READ
     // COMMITTED, two concurrent saves could otherwise both read the same max
@@ -232,23 +269,86 @@ export async function saveWaiverTemplate(db: AppDb, input: SaveWaiverTemplateInp
     // this one is provable (see `src/db/bookings.postgres.test.ts` for the
     // pattern — this particular lock does not yet have its own such test).
     await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
-    const existing = await tx
-      .select({ version: waiverTemplates.version })
+    // The whole current row, not just the version numbers: the body is needed
+    // for the comparison below, and the highest version is the current one.
+    const [current] = await tx
+      .select()
       .from(waiverTemplates)
-      .where(eq(waiverTemplates.shopId, input.shopId));
-    const nextVersion = Math.max(0, ...existing.map((row) => row.version)) + 1;
+      .where(eq(waiverTemplates.shopId, input.shopId))
+      .orderBy(desc(waiverTemplates.version))
+      .limit(1);
+    const title = input.title?.trim() || current?.title || DEFAULT_WAIVER_TITLE;
+    // Newlines normalised, not just trimmed. A browser submits a `<textarea>`
+    // with CRLF line breaks whatever it was rendered with (the HTML form
+    // payload spec), so a release stored with LF comes back with a `\r` on
+    // every line and compares unequal to itself — the no-op check below would
+    // never once fire in a real browser while passing every unit test, and the
+    // stored text would gain a `\r` per line on each save. Normalising on the
+    // way in keeps one spelling in the column.
+    const body = input.body.replace(/\r\n?/g, "\n").trim();
+    if (current && current.title === title && current.body === body) {
+      return { template: current, versioned: false };
+    }
+    const nextVersion = (current?.version ?? 0) + 1;
     const [template] = await tx
       .insert(waiverTemplates)
-      .values({
-        shopId: input.shopId,
-        title: input.title.trim(),
-        body: input.body.trim(),
-        version: nextVersion,
-      })
+      .values({ shopId: input.shopId, title, body, version: nextVersion })
       .returning();
     if (!template) throw new Error("saveWaiverTemplate: insert returned no row");
-    return template;
+    return { template, versioned: true };
   });
+}
+
+/**
+ * How many signed releases publishing a new version would put back in the
+ * queue — the sentence a staffer needs *before* they tap Save, and the count
+ * reported after.
+ *
+ * Mirrors the conditions in `isCompletedWaiverCurrent` (`src/lib/waivers.ts`)
+ * that a version bump is what breaks, and only those:
+ *
+ * - **`completed`, not superseded** — a record parked in medical review or
+ *   already replaced is not standing evidence, so a bump costs it nothing.
+ * - **Not `imported`** — that record is exempt from the version check
+ *   altogether (ADR 20260724-import-waiver-acceptance), so it survives a bump.
+ * - **On the current version** — one already against an older version is
+ *   already not current.
+ * - **Still inside the validity window** — a signature that has aged out was
+ *   not going to clear anyone tomorrow either. Counting it would overstate the
+ *   damage, and a number a shop can disprove is a number they stop reading.
+ *
+ * The `now` parameter is the clock rule (`src/lib/clock.ts`), so the e2e fleet's
+ * frozen instant reaches this count like every other read.
+ */
+export async function countSignedWaiversOnCurrentVersion(
+  db: DbExecutor,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<number> {
+  const [current] = await db
+    .select({ version: waiverTemplates.version })
+    .from(waiverTemplates)
+    .where(eq(waiverTemplates.shopId, shopId))
+    .orderBy(desc(waiverTemplates.version))
+    .limit(1);
+  if (!current) return 0;
+  const signedAfter = new Date(now.getTime() - WAIVER_SIGNATURE_VALIDITY_MS);
+  const [row] = await db
+    .select({ count: count() })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.status, "completed"),
+        isNull(waiverRecords.supersededAt),
+        ne(waiverRecords.signatureMethod, "imported"),
+        eq(waiverRecords.templateVersion, current.version),
+        // `signedAt ?? completedAt`, the same fallback `isCompletedWaiverCurrent`
+        // applies, resolved in SQL so this stays one counting query.
+        gt(sql`coalesce(${waiverRecords.signedAt}, ${waiverRecords.completedAt})`, signedAfter),
+      ),
+    );
+  return row?.count ?? 0;
 }
 
 export type IssueWaiverOutcome =

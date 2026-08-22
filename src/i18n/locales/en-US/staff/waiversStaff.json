@@ -5,7 +5,14 @@
   "banner": {
     "savedNew": "Saved as a new version.",
     "savedFirst": "Your waiver is saved.",
-    "invalid": "That didn't save. The release needs to be at least a few sentences long."
+    "invalid": "That didn't save. The release needs to be at least a few sentences long.",
+    "unchanged": "No change — the release is exactly as it was, so nothing was published and no signature was affected.",
+    "resigning": "{count, plural, one {New version published. # signed release no longer counts — that diver signs again before boarding.} other {New version published. # signed releases no longer count — those divers sign again before boarding.}}"
+  },
+  "confirm": {
+    "message": "{count, plural, one {Publishing this replaces the release that # diver has signed. They sign again before boarding.} other {Publishing this replaces the release that # divers have signed. They all sign again before boarding.}}",
+    "publish": "Publish new version",
+    "cancel": "Never mind"
   },
   "fieldLabel": "Release text",
   "placeholder": "Write the release the diver will read and sign.",

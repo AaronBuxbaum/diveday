@@ -226,7 +226,7 @@ describe("resetDemoSchedule", () => {
       title: before?.title ?? "",
       body: "Leaked release text from a previous spec.",
     });
-    expect(edited.version).toBe(seededHistory.length + 1);
+    expect(edited.template.version).toBe(seededHistory.length + 1);
 
     await resetDemoSchedule(db, shop.id);
 

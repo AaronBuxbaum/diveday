@@ -5,7 +5,14 @@
   "banner": {
     "savedNew": "Guardado como nueva versión.",
     "savedFirst": "Tu exención está guardada.",
-    "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión."
+    "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión.",
+    "unchanged": "Sin cambios: la exención está tal cual estaba, así que no se publicó nada ni se vio afectada ninguna firma.",
+    "resigning": "{count, plural, one {Nueva versión publicada. # exención firmada deja de contar: ese buceador vuelve a firmar antes de embarcar.} other {Nueva versión publicada. # exenciones firmadas dejan de contar: esos buceadores vuelven a firmar antes de embarcar.}}"
+  },
+  "confirm": {
+    "message": "{count, plural, one {Publicar esto sustituye la exención que ha firmado # buceador. Vuelve a firmar antes de embarcar.} other {Publicar esto sustituye la exención que han firmado # buceadores. Todos vuelven a firmar antes de embarcar.}}",
+    "publish": "Publicar nueva versión",
+    "cancel": "Déjalo"
   },
   "fieldLabel": "Texto de la exención",
   "placeholder": "Escribe la exención que leerá y firmará el buceador.",
