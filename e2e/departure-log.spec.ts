@@ -166,7 +166,18 @@ test.describe("the log is the owner's to produce", () => {
     // deep link, or a role that changed under them. It lands back on close-out
     // saying why, never silently.
     await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/log`);
-    await page.waitForURL(/\/close-out\?notice=log-not-authorized$/);
+    // Matched without the `?notice=`, deliberately. The refusal redirects with
+    // one, but `FlashParams` strips it in a `useEffect` the moment the page
+    // hydrates — that is the whole point of a flash param. `page.goto` resolves
+    // on `load`, so whether this sees the URL before or after that strip is a
+    // race with hydration, and on a CI runner it loses: the log records
+    // "navigated to /shop/blue-mantis/close-out" and then waits 45s for a query
+    // string the app has already, correctly, erased.
+    //
+    // What is durable is the destination and the banner. The line below is the
+    // assertion that the notice arrived at all, and it reads what a staffer
+    // reads rather than what the address bar held for one frame.
+    await page.waitForURL(/\/close-out(\?|$)/);
     await expect(page.getByText(/[Oo]nly an owner can generate/)).toBeVisible();
     // Not one fact of the document travels with the refusal.
     await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
