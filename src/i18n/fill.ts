@@ -17,9 +17,17 @@
  */
 
 import { cachedPluralRules } from "@/lib/intl-cache";
-export function fill(template: string, values: Record<string, string | number>): string {
+export function fill(
+  template: string,
+  values: Record<string, string | number | undefined>,
+): string {
+  // A key that is *present but undefined* is the same as absent, not
+  // `String(undefined)`. Callers pass all-optional parameter bags straight in
+  // (`ImportIssue.params`, whose fields differ per issue code), so a template
+  // placeholder that this particular row has no value for must survive as
+  // itself rather than rendering the word "undefined" to a shop.
   return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
+    values[key] === undefined ? match : String(values[key]),
   );
 }
 

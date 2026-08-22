@@ -10,12 +10,14 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { fill, pluralForm } from "@/i18n/fill";
 import {
   type ImportField,
   type ImportIssueCode,
   type PreparedImport,
   prepareContactImport,
 } from "@/lib/import";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ImportActionErrorCode,
   type ImportActionState,
@@ -39,9 +41,12 @@ type ImportWizardCopy = {
   fieldLabels: Record<ImportField, string>;
   ignoredMedicalColumns: string;
   unmappedColumns: string;
-  waiverRowsNotice: string;
-  visitRowsNotice: string;
-  paymentHistoryRowsNotice: string;
+  waiverRowsNoticeOne: string;
+  waiverRowsNoticeOther: string;
+  visitRowsNoticeOne: string;
+  visitRowsNoticeOther: string;
+  paymentHistoryRowsNoticeOne: string;
+  paymentHistoryRowsNoticeOther: string;
   stats: {
     diversInFile: string;
     extraCardRows: string;
@@ -74,12 +79,19 @@ type ImportWizardCopy = {
   /** Phone-only: the preview's six columns scroll sideways, so say so. */
   previewSwipeHint: string;
   hiddenRowsNotice: string;
-  submit: string;
+  submitOne: string;
+  submitOther: string;
   submitting: string;
   /** Every `ImportIssueCode` `src/lib/import.ts` can raise, resolved to its raw ICU
    * template — `fill()` interpolates each issue's `params` once the row is known
    * (only client-side, since the CSV preview never touches the server). */
-  issues: Record<ImportIssueCode, string>;
+  /**
+   * One template per issue code, or a `{ one, other }` pair where the sentence
+   * counts something. It cannot be a single ICU string: staff copy crosses to
+   * the client unformatted (`t.raw`) and is resolved here by `fill()`, a plain
+   * `{name}` replace that would print an ICU plural's source verbatim.
+   */
+  issues: Record<ImportIssueCode, string | { one: string; other: string }>;
   /**
    * Every `ImportActionErrorCode` — both the client-computed `prepared.fatal`
    * (before submit) and the server action's `state` (after submit) resolve
@@ -90,52 +102,48 @@ type ImportWizardCopy = {
   result: {
     summary: string;
     cardsLine: string;
+    cardsCertificationsOne: string;
+    cardsCertificationsOther: string;
+    cardsSpecialtyOne: string;
+    cardsSpecialtyOther: string;
+    cardsNitroxOne: string;
+    cardsNitroxOther: string;
     rowsMergedNote: string;
     cardsSkippedNote: string;
     rowsSkippedNote: string;
     cardsHeldByAnother: string;
     specialtyGateNote: string;
-    waiversLine: string;
+    waiversLineOne: string;
+    waiversLineOther: string;
     waiversSkippedExistingNote: string;
     waiversSkippedNoTemplateNote: string;
     waiverDocumentsFailedNote: string;
-    visitsLine: string;
+    visitsLineOne: string;
+    visitsLineOther: string;
     visitsSkippedNote: string;
-    paymentHistoryLine: string;
+    paymentHistoryLineOne: string;
+    paymentHistoryLineOther: string;
     paymentHistorySkippedNote: string;
     receiptDocumentsFailedNote: string;
-    notesLine: string;
+    notesLineOne: string;
+    notesLineOther: string;
     seeRoster: string;
   };
 };
 
 /**
- * Minimal ICU-subset formatter for copy that arrives as plain strings — a
- * translator function may never cross the Server→Client boundary (see
- * AGENTS.md). Supports "{name}" substitution and
- * "{name, plural, one {…} other {…}}" with "#" standing for the plural value,
- * matching the ICU syntax `staffTranslator` already resolves server-side.
+ * One issue's template, choosing the plural form where the sentence counts
+ * something.
+ *
+ * Most issue codes are one fixed sentence; two of them ("N specialty
+ * certifications imported…") count. Rather than give every code a `{ one,
+ * other }` it does not need, the map holds whichever shape the message is and
+ * this picks — through `pluralForm`, which asks `Intl.PluralRules` rather than
+ * testing `count === 1`, so a locale with more plural categories than en/es
+ * does not silently take the wrong branch.
  */
-function fill(template: string, values: Record<string, string | number | undefined>): string {
-  return template.replace(
-    /\{(\w+)(?:,\s*plural,\s*((?:\w+\s*\{(?:[^{}]|\{[^{}]*\})*\}\s*)+))?\}/g,
-    (match, name: string, pluralBranches: string | undefined) => {
-      if (pluralBranches === undefined) {
-        const value = values[name];
-        return value !== undefined ? String(value) : match;
-      }
-      const count = Number(values[name]);
-      const branches: Record<string, string> = {};
-      const branchRe = /(\w+)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
-      let branchMatch: RegExpExecArray | null = branchRe.exec(pluralBranches);
-      while (branchMatch) {
-        branches[branchMatch[1]] = branchMatch[2];
-        branchMatch = branchRe.exec(pluralBranches);
-      }
-      const branch = (count === 1 ? branches.one : undefined) ?? branches.other ?? "";
-      return branch.replace(/#/g, String(count));
-    },
-  );
+function issueTemplate(template: string | { one: string; other: string }, count?: number): string {
+  return typeof template === "string" ? template : pluralForm(count ?? 0, template);
 }
 
 const PREVIEW_LIMIT = 60;
@@ -149,11 +157,18 @@ export function ImportWizard({
   diversHref,
   intro,
   copy,
+  locale,
 }: {
   diversHref: string;
   /** Rendered on the server via `t.rich` for the embedded `contacts.csv` mono span. */
   intro: ReactNode;
   copy: ImportWizardCopy;
+  /**
+   * The reader's negotiated locale, for the one list this component joins
+   * itself. Passed down rather than left to the runtime default, which in a
+   * browser is the *device's* language and not the one the page is written in.
+   */
+  locale: string;
 }) {
   const [state, formAction] = useActionState<ImportActionState, FormData>(importContactsAction, {
     status: "idle",
@@ -250,19 +265,35 @@ export function ImportWizard({
           ) : null}
           {prepared.totals.withWaiver > 0 ? (
             <p className="mt-3 text-sm text-warning">
-              {fill(copy.waiverRowsNotice, { count: prepared.totals.withWaiver })}
+              {fill(
+                pluralForm(prepared.totals.withWaiver, {
+                  one: copy.waiverRowsNoticeOne,
+                  other: copy.waiverRowsNoticeOther,
+                }),
+                { count: prepared.totals.withWaiver },
+              )}
             </p>
           ) : null}
           {prepared.totals.withVisit > 0 ? (
             <p className="mt-3 text-sm text-muted">
-              {fill(copy.visitRowsNotice, { count: prepared.totals.withVisit })}
+              {fill(
+                pluralForm(prepared.totals.withVisit, {
+                  one: copy.visitRowsNoticeOne,
+                  other: copy.visitRowsNoticeOther,
+                }),
+                { count: prepared.totals.withVisit },
+              )}
             </p>
           ) : null}
           {prepared.totals.withPaymentHistory > 0 ? (
             <p className="mt-3 text-sm text-warning">
-              {fill(copy.paymentHistoryRowsNotice, {
-                count: prepared.totals.withPaymentHistory,
-              })}
+              {fill(
+                pluralForm(prepared.totals.withPaymentHistory, {
+                  one: copy.paymentHistoryRowsNoticeOne,
+                  other: copy.paymentHistoryRowsNoticeOther,
+                }),
+                { count: prepared.totals.withPaymentHistory },
+              )}
             </p>
           ) : null}
           {prepared.unmappedColumns.length > 0 ? (
@@ -412,7 +443,10 @@ export function ImportWizard({
                                 key={`${issue.code}-${index}`}
                                 className={`text-xs ${issueTone[issue.level]}`}
                               >
-                                {fill(copy.issues[issue.code], issue.params ?? {})}
+                                {fill(
+                                  issueTemplate(copy.issues[issue.code], issue.params?.count),
+                                  issue.params ?? {},
+                                )}
                               </li>
                             ))}
                           </ul>
@@ -446,7 +480,13 @@ export function ImportWizard({
                 disabled={prepared.totals.importable === 0}
                 className={buttonClass({ size: "lg" })}
               >
-                {fill(copy.submit, { count: prepared.totals.importable })}
+                {fill(
+                  pluralForm(prepared.totals.importable, {
+                    one: copy.submitOne,
+                    other: copy.submitOther,
+                  }),
+                  { count: prepared.totals.importable },
+                )}
               </SubmitButton>
               <FormStatus tone="danger">
                 {state.status === "error"
@@ -469,9 +509,29 @@ export function ImportWizard({
             </p>
             <p className="mt-1 text-sm">
               {fill(copy.result.cardsLine, {
-                cardsAdded: state.summary.cardsAdded,
-                specialtyAdded: state.summary.specialtyAdded,
-                nitroxAdded: state.summary.nitroxAdded,
+                cards: cachedListFormat(locale, { style: "long", type: "conjunction" }).format([
+                  fill(
+                    pluralForm(state.summary.cardsAdded, {
+                      one: copy.result.cardsCertificationsOne,
+                      other: copy.result.cardsCertificationsOther,
+                    }),
+                    { count: state.summary.cardsAdded },
+                  ),
+                  fill(
+                    pluralForm(state.summary.specialtyAdded, {
+                      one: copy.result.cardsSpecialtyOne,
+                      other: copy.result.cardsSpecialtyOther,
+                    }),
+                    { count: state.summary.specialtyAdded },
+                  ),
+                  fill(
+                    pluralForm(state.summary.nitroxAdded, {
+                      one: copy.result.cardsNitroxOne,
+                      other: copy.result.cardsNitroxOther,
+                    }),
+                    { count: state.summary.nitroxAdded },
+                  ),
+                ]),
               })}
               {state.summary.rowsMerged > 0
                 ? fill(copy.result.rowsMergedNote, { count: state.summary.rowsMerged })
@@ -508,7 +568,13 @@ export function ImportWizard({
               state.summary.waiversSkippedNoTemplate >
             0 ? (
               <p className="mt-1 text-sm">
-                {fill(copy.result.waiversLine, { count: state.summary.waiversAdded })}
+                {fill(
+                  pluralForm(state.summary.waiversAdded, {
+                    one: copy.result.waiversLineOne,
+                    other: copy.result.waiversLineOther,
+                  }),
+                  { count: state.summary.waiversAdded },
+                )}
                 {state.summary.waiversSkippedExisting > 0
                   ? fill(copy.result.waiversSkippedExistingNote, {
                       count: state.summary.waiversSkippedExisting,
@@ -528,7 +594,13 @@ export function ImportWizard({
             ) : null}
             {state.summary.visitsAdded + state.summary.visitsSkippedExisting > 0 ? (
               <p className="mt-1 text-sm">
-                {fill(copy.result.visitsLine, { count: state.summary.visitsAdded })}
+                {fill(
+                  pluralForm(state.summary.visitsAdded, {
+                    one: copy.result.visitsLineOne,
+                    other: copy.result.visitsLineOther,
+                  }),
+                  { count: state.summary.visitsAdded },
+                )}
                 {state.summary.visitsSkippedExisting > 0
                   ? fill(copy.result.visitsSkippedNote, {
                       count: state.summary.visitsSkippedExisting,
@@ -538,9 +610,13 @@ export function ImportWizard({
             ) : null}
             {state.summary.paymentHistoryAdded + state.summary.paymentHistorySkippedExisting > 0 ? (
               <p className="mt-1 text-sm">
-                {fill(copy.result.paymentHistoryLine, {
-                  count: state.summary.paymentHistoryAdded,
-                })}
+                {fill(
+                  pluralForm(state.summary.paymentHistoryAdded, {
+                    one: copy.result.paymentHistoryLineOne,
+                    other: copy.result.paymentHistoryLineOther,
+                  }),
+                  { count: state.summary.paymentHistoryAdded },
+                )}
                 {state.summary.paymentHistorySkippedExisting > 0
                   ? fill(copy.result.paymentHistorySkippedNote, {
                       count: state.summary.paymentHistorySkippedExisting,
@@ -555,7 +631,13 @@ export function ImportWizard({
             ) : null}
             {state.summary.notesAdded > 0 ? (
               <p className="mt-1 text-sm">
-                {fill(copy.result.notesLine, { count: state.summary.notesAdded })}
+                {fill(
+                  pluralForm(state.summary.notesAdded, {
+                    one: copy.result.notesLineOne,
+                    other: copy.result.notesLineOther,
+                  }),
+                  { count: state.summary.notesAdded },
+                )}
               </p>
             ) : null}
             <Link

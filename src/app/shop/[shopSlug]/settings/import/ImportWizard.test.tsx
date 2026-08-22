@@ -87,9 +87,12 @@ const COPY = {
   >,
   ignoredMedicalColumns: "Ignored medical columns: {columns}",
   unmappedColumns: "Unmapped columns: {columns}",
-  waiverRowsNotice: "{count} rows carry a waiver",
-  visitRowsNotice: "{count} rows carry a past visit",
-  paymentHistoryRowsNotice: "{count} rows carry payment history",
+  waiverRowsNoticeOne: "{count} row carries a waiver",
+  waiverRowsNoticeOther: "{count} rows carry a waiver",
+  visitRowsNoticeOne: "{count} row carries a past visit",
+  visitRowsNoticeOther: "{count} rows carry a past visit",
+  paymentHistoryRowsNoticeOne: "{count} row carries payment history",
+  paymentHistoryRowsNoticeOther: "{count} rows carry payment history",
   stats: {
     diversInFile: "Divers in file",
     extraCardRows: "Extra card rows",
@@ -121,7 +124,8 @@ const COPY = {
   },
   previewSwipeHint: "Swipe the table to see every column",
   hiddenRowsNotice: "Showing {limit} of {total} rows",
-  submit: "Import {count} divers",
+  submitOne: "Import {count} diver",
+  submitOther: "Import {count} divers",
   submitting: "Importing…",
   issues: Object.fromEntries(ISSUE_CODES.map((code) => [code, code])) as Record<
     ImportIssueCode,
@@ -133,22 +137,32 @@ const COPY = {
   >,
   result: {
     summary: "Added {added}, updated {updated}",
-    cardsLine: "Cards added: {cardsAdded}",
+    cardsLine: "Cards added: {cards}",
+    cardsCertificationsOne: "{count} certification",
+    cardsCertificationsOther: "{count} certifications",
+    cardsSpecialtyOne: "{count} specialty",
+    cardsSpecialtyOther: "{count} specialties",
+    cardsNitroxOne: "{count} nitrox",
+    cardsNitroxOther: "{count} nitrox",
     rowsMergedNote: " ({count} merged)",
     cardsSkippedNote: " ({count} skipped)",
     rowsSkippedNote: " ({count} rows skipped)",
     cardsHeldByAnother: "{count} cards already held by another diver",
     specialtyGateNote: "Specialty cards need review",
-    waiversLine: "Waivers added: {count}",
+    waiversLineOne: "Waiver added: {count}",
+    waiversLineOther: "Waivers added: {count}",
     waiversSkippedExistingNote: " ({count} already on file)",
     waiversSkippedNoTemplateNote: " ({count} no template)",
     waiverDocumentsFailedNote: " ({count} documents failed)",
-    visitsLine: "Visits added: {count}",
+    visitsLineOne: "Visit added: {count}",
+    visitsLineOther: "Visits added: {count}",
     visitsSkippedNote: " ({count} already on file)",
-    paymentHistoryLine: "Payment history added: {count}",
+    paymentHistoryLineOne: "Payment history added: {count}",
+    paymentHistoryLineOther: "Payment history added: {count}",
     paymentHistorySkippedNote: " ({count} already on file)",
     receiptDocumentsFailedNote: " ({count} receipt documents failed)",
-    notesLine: "Notes added: {count}",
+    notesLineOne: "Note added: {count}",
+    notesLineOther: "Notes added: {count}",
     seeRoster: "See roster",
   },
 };
@@ -167,6 +181,7 @@ describe("ImportWizard reset on revisit", () => {
         diversHref="/shop/blue-mantis/divers"
         intro="Upload contacts.csv"
         copy={COPY}
+        locale="en-US"
       />,
     );
 
@@ -189,6 +204,7 @@ describe("ImportWizard reset on revisit", () => {
         diversHref="/shop/blue-mantis/divers"
         intro="Upload contacts.csv"
         copy={COPY}
+        locale="en-US"
       />,
     );
 

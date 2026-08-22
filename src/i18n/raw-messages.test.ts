@@ -26,32 +26,6 @@ import { STAFF_MESSAGES } from "./staff-messages";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/**
- * The eleven the gate found already in the tree when it was written, all in
- * the CSV import wizard, all tracked in issue #649. A shop moving its data
- * over reads ICU source on the preview step, on the submit button, and through
- * the whole done-step summary. They are not fixed here because two of them
- * need a shape decision rather than a mechanical split, and the import surface
- * is security-sensitive enough to deserve its own review.
- *
- * A ratchet, not an exemption: the list may only shrink, and every entry has
- * to still resolve to a real message, so it cannot quietly rot into a list of
- * keys nobody has.
- */
-const ALLOWLIST = [
-  "settings.import.issues.specialtyImportedVerified",
-  "settings.import.issues.specialtyImportedPending",
-  "settings.import.wizard.waiverRowsNotice",
-  "settings.import.wizard.visitRowsNotice",
-  "settings.import.wizard.paymentHistoryRowsNotice",
-  "settings.import.wizard.submit",
-  "settings.import.wizard.result.cardsLine",
-  "settings.import.wizard.result.waiversLine",
-  "settings.import.wizard.result.visitsLine",
-  "settings.import.wizard.result.paymentHistoryLine",
-  "settings.import.wizard.result.notesLine",
-];
-
 /** Every leaf as `dotted.path` → message. */
 function flatten(node: Record<string, unknown>, prefix = ""): Record<string, string> {
   const out: Record<string, string> = {};
@@ -179,7 +153,6 @@ describe("messages fetched with .raw()", () => {
         for (const [which, bundle] of Object.entries(bundles)) {
           const message = bundle[key];
           if (message === undefined || !ICU_ARGUMENT_TYPE.test(message)) continue;
-          if (ALLOWLIST.includes(key)) continue;
           leaked.push(`${locale} ${which}.${key} (read raw by ${files.join(", ")}): ${message}`);
         }
       }
@@ -201,14 +174,5 @@ describe("messages fetched with .raw()", () => {
       }
     }
     expect(unfed).toEqual([]);
-  });
-
-  it("keeps every allowlisted key real, and does not grow the list", () => {
-    const staff = flatten(STAFF_MESSAGES["en-US"]);
-    const stale = ALLOWLIST.filter(
-      (key) => !sites.has(key) || !ICU_ARGUMENT_TYPE.test(staff[key] ?? ""),
-    );
-    expect(stale).toEqual([]);
-    expect(ALLOWLIST.length).toBeLessThanOrEqual(11);
   });
 });
