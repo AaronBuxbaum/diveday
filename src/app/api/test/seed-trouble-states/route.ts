@@ -287,7 +287,15 @@ export async function POST(request: Request) {
       );
   }
 
-  await boardADiverThenBlockThem(db, shop.id, now);
+  // **Opt-in, unlike every other state here.** The rest write self-contained
+  // back-office rows — a stuck deletion, an owed erasure — that only the panel
+  // they belong to reads. This one changes a diver's **readiness**, which the
+  // nav badges, the close-out and every blocked count read too, so seeding it
+  // unconditionally moved nine unrelated captures. A capture that wants it asks
+  // for it.
+  if (new URL(request.url).searchParams.get("blockedAboard") === "1") {
+    await boardADiverThenBlockThem(db, shop.id, now);
+  }
 
   return NextResponse.json({ ok: true });
 }

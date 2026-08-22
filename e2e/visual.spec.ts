@@ -1974,7 +1974,7 @@ for (const scheme of ["light", "dark"] as const) {
         // different checkpoint than this card reads. In production the state
         // arises the other way round: a diver boards while clear and *then*
         // becomes blocked, because readiness is evaluated live.
-        await request.post("/api/test/seed-trouble-states");
+        await request.post("/api/test/seed-trouble-states?blockedAboard=1");
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess: this sentence is
         // what the capture exists for.
