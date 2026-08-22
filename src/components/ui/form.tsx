@@ -1,4 +1,5 @@
 import {
+  Children,
   type ComponentPropsWithoutRef,
   cloneElement,
   type ElementType,
@@ -337,7 +338,14 @@ export function FormStatus({
   className?: string;
   children?: ReactNode;
 }) {
-  if (!children) return null;
+  // **`Children.toArray`, not `!children`.** The falsy check held only while
+  // every caller passed exactly one expression: `{undefined}` is falsy, but
+  // `{undefined}{null}` is an *array*, which is truthy — so a caller that
+  // appended a conditional second child rendered a bare ✅ with no message
+  // beside it, on a page at rest, and nothing failed. `Children.toArray` drops
+  // null, undefined and booleans, which is precisely the question being asked
+  // (found on the waiver editor, issue #790).
+  if (Children.toArray(children).length === 0) return null;
   const glyph = toneGlyph(tone);
   return (
     <p
