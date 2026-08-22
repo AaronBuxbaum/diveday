@@ -777,12 +777,23 @@ async function createBookingRecord(
   // Nothing happens for a shop with no packages, or a diver with no covering
   // dive left: `consumeEntitlementForBooking` returns null and the booking pays
   // the ordinary way.
-  const spent = await consumeEntitlementForBooking(tx, {
-    shopId: req.shopId,
-    personId: person.id,
-    bookingId: created.id,
-    trip: { courseId: trip.courseId },
-  });
+  //
+  // **Never under an unconfirmed identity.** `persistDeclaration` below already
+  // refuses to write a certification claim when `identityUnconfirmed` is set,
+  // on the H-13 grounds that a statement made under a name disagreeing with the
+  // matched row is not provably about that person. Spending that person's
+  // prepaid property is the same act with a worse failure: anyone who knows a
+  // regular's email could book seats in their name on the public form and drain
+  // their package, and the victim's only notice would be a balance nothing
+  // renders (`dive-domain-expert`, issue #706).
+  const spent = identityUnconfirmed
+    ? null
+    : await consumeEntitlementForBooking(tx, {
+        shopId: req.shopId,
+        personId: person.id,
+        bookingId: created.id,
+        trip: { courseId: trip.courseId },
+      });
   if (spent) {
     await setBookingPayment(tx, {
       shopId: req.shopId,
