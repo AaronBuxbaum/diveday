@@ -20,6 +20,37 @@ const PAYMENT_CLEARED: ReadonlySet<PaymentStatus> = new Set<PaymentStatus>([
 ]);
 
 /**
+ * **A payment gate on a departure with no price is a gate nobody can clear.**
+ *
+ * `checkoutCharge` (`src/lib/deposits.ts`) returns null for an unpriced trip,
+ * so `startBookingCheckout` refuses with `unpriced`, so the public booking
+ * action sends the diver to the ordinary booked landing without asking for
+ * money — and their booking stays `unpaid`, which raises `payment_due` below,
+ * permanently, for them and for every diver who books afterwards. There is no
+ * way out from the diver's side and only one from the shop's: marking each
+ * person paid or waived by hand, on a departure that never asked for money.
+ *
+ * The demo shop was publicly selling one (issue #692). Both forms that can
+ * produce the combination refuse it now: the requirements form (ticking the
+ * gate onto an unpriced departure) and the details form (clearing the price
+ * from a gated one).
+ *
+ * Deliberately **not** solved by letting an unpriced trip clear the gate.
+ * `PAYMENT_CLEARED` includes `waived` because `waived` means a human decided;
+ * deriving that from "the shop forgot a price" turns a data error into a silent
+ * boarding clearance on a safety surface.
+ */
+export function paymentGateIsUnclearable(
+  requiresPayment: boolean,
+  priceCents: number | null,
+): boolean {
+  // `<= 0` as well as null: `checkoutCharge` refuses a zero price by the same
+  // test, so a departure priced at nothing gates exactly as hard as an unpriced
+  // one.
+  return requiresPayment && (priceCents === null || priceCents <= 0);
+}
+
+/**
  * The five-rung certification ladder. Labels for these — and for
  * `DiveSpecialty` below — live in the message bundles
  * (`src/i18n/readiness-labels.ts` maps each code to a translation key), never

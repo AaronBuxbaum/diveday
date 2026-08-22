@@ -20,7 +20,7 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
+import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -66,7 +66,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
-import { REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
+import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
 import {
   isValidWeekdaySet,
   MAX_INTERVAL_WEEKS,
@@ -365,6 +365,11 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
   const nextBoatId = diveMode && diveMode !== "boat" ? null : (boatId ?? tripNow?.boatId ?? null);
   const nextBoat = nextBoatId ? await getBoatById(dbi, s.user.shopId, nextBoatId) : null;
+  // Read for one rule only: clearing the price off a departure that demands
+  // payment leaves a gate nobody can clear (issue #692). This form has no
+  // payment toggle, so the stored row is the only place to learn it — the same
+  // reason the hull above is read rather than trusted from the submit.
+  const gate = await getTripRequirements(dbi, s.user.shopId, tripId);
   // One pipeline, shared with the board's add panel (`src/lib/trip-details.ts`).
   // Editing a departure now applies the same rules creating one does — an
   // impossible calendar day is refused, and a free-cancellation window with no
@@ -388,11 +393,15 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       boatCapacity: nextBoat?.capacity ?? null,
       diveMode,
       boatId,
+      requiresPayment: gate?.requiresPayment ?? false,
     },
     shopNow,
   );
   if (!details.ok) {
     if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
+    if (details.reason === "price_required_by_gate") {
+      redirect(noticeUrl(back, "price-required-by-gate", { form: "details" }));
+    }
     if (details.reason === "capacity_above_boat") {
       redirect(
         noticeUrl(back, "capacity-above-boat", {
@@ -1276,6 +1285,14 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
   if (!specialties.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
+  // A payment gate on an unpriced departure blocks every diver who books it,
+  // forever, and nothing ever asks them for money — so this one combination is
+  // refused rather than saved and explained afterwards (issue #692).
+  if (
+    paymentGateIsUnclearable(formData.get("requiresPayment") === "on", trip?.priceCents ?? null)
+  ) {
+    redirect(noticeUrl(back, "requirements-need-price", { form: "requirements" }));
+  }
   // Who was already blocked, read *before* the write — see the count below.
   const blockedBefore = new Set(
     (await listTripReadiness(db, s.user.shopId, tripId))

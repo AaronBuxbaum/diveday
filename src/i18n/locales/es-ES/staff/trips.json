@@ -71,7 +71,9 @@
     "plannedDivesBelowHistory": "No se puede bajar el número de inmersiones por debajo de una para la que el personal ya registró un pase de lista — ese historial tiene que seguir siendo accesible.",
     "plannedDivesBelowHistoryCount": "No se puede bajar el número de inmersiones por debajo de {count} — el personal ya registró un pase de lista tras la inmersión {count} de esta salida, y ese historial tiene que seguir siendo accesible.",
     "undo": "Deshacer",
-    "undoing": "Deshaciendo…"
+    "undoing": "Deshaciendo…",
+    "priceRequiredByGate": "Esta salida exige pago, así que necesita un precio. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas.",
+    "requirementsNeedPrice": "Añade un precio antes de exigir el pago. Sin él no se le pide dinero a nadie y todas las reservas quedan bloqueadas."
   },
   "pulse": {
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",

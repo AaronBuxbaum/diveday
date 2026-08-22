@@ -161,6 +161,11 @@ function requirementsForm(
   return formData;
 }
 
+/** Strip a departure's price, to reach the unpriced-and-payment-gated state. */
+async function clearPrice(db: AppDb, tripId: string) {
+  await db.update(trips).set({ priceCents: null }).where(eq(trips.id, tripId));
+}
+
 /** The count a `requirements-blocking` redirect reports, or 0 for the plain notice. */
 function blockedCountFrom(to: string): number {
   return Number(new URL(to, "https://dive.day").searchParams.get("count") ?? 0);
@@ -289,6 +294,45 @@ describe("setting what a trip admits", () => {
 
     expect(blockedCountFrom(to)).toBeGreaterThan(0);
     expect((await requirementsOf(db, tripId))?.requiresWaiver).toBe(true);
+  });
+
+  /**
+   * **The other half of issue #692.** A payment gate on a departure with no
+   * price asks nobody for money and blocks every diver who books it, forever —
+   * `checkoutCharge` returns null, the booking action never reaches Stripe, and
+   * `payment_due` stands with no route out from the diver's side. Refused
+   * rather than saved and explained afterwards: there is no case where the
+   * combination means anything.
+   */
+  it("refuses a payment gate on a departure with no price, and stores nothing", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(shop, owner);
+    await clearPrice(db, tripId);
+    const before = await requirementsOf(db, tripId);
+
+    const to = await redirectedTo(() =>
+      saveRequirementsAction(shop.slug, tripId, requirementsForm("", { requiresPayment: true })),
+    );
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/trips/${tripId}?notice=requirements-need-price&form=requirements`,
+    );
+    // Refused means refused: the rest of the form is not quietly saved either.
+    expect(await requirementsOf(db, tripId)).toEqual(before);
+  });
+
+  it("still saves the other gates on an unpriced departure", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(shop, owner);
+    await clearPrice(db, tripId);
+
+    // The rule is about the *combination*. An unpriced charter that demands a
+    // waiver and a card is ordinary, and must stay saveable.
+    await redirectedTo(() => saveRequirementsAction(shop.slug, tripId, requirementsForm("rescue")));
+
+    const saved = await requirementsOf(db, tripId);
+    expect(saved?.minimumCertificationLevel).toBe("rescue");
+    expect(saved?.requiresPayment).toBe(false);
   });
 
   /**

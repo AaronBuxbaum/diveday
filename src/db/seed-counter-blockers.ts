@@ -83,6 +83,19 @@ export async function seedCounterBlockers(
       endsAt,
       capacity: 8,
       plannedDives: 2,
+      // **Priced, because it is publicly for sale.** This departure is on
+      // `/s/blue-mantis` between two priced charters — `is_private` defaults to
+      // false — and its own description says "paid at booking". With no price
+      // it asked nobody for money and blocked every diver who booked it,
+      // forever (issue #692). $195: a shade above the seeded $180 wreck trip,
+      // for the deep penetration and the enriched air.
+      //
+      // The fixture is unaffected. What it needs is an *unpaid* booking, which
+      // is what it still seeds; the missing price was never the point, and a
+      // priced trip with an unpaid booking raises exactly the same fifth
+      // blocker. `paymentGateIsUnclearable` now refuses the combination on both
+      // forms, so this cannot come back through the UI either.
+      priceCents: 19500,
     })
     .returning();
   if (!trip) throw new Error("seed: counter-blocked trip insert returned no row");

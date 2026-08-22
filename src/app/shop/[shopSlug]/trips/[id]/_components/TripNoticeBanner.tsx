@@ -220,6 +220,20 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.capacityAboveBoat",
     countKey: "trips.notices.capacityAboveBoatCount",
   },
+  // Both doors onto the same trap: a departure that demands payment and has no
+  // price asks nobody for money and blocks every diver who books it, forever
+  // (issue #692). Danger, not warning — the save was refused, so the staffer
+  // has something to do before anything is stored.
+  "price-required-by-gate": {
+    form: "details",
+    tone: "danger",
+    key: "trips.notices.priceRequiredByGate",
+  },
+  "requirements-need-price": {
+    form: "requirements",
+    tone: "danger",
+    key: "trips.notices.requirementsNeedPrice",
+  },
   "last-minute-sent": {
     form: "last-minute-deal",
     tone: "success",

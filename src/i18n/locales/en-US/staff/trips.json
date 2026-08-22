@@ -71,7 +71,9 @@
     "plannedDivesBelowHistory": "Can't drop the dive count below one staff already recorded a roll call against — that history has to stay reachable.",
     "plannedDivesBelowHistoryCount": "Can't drop the dive count below {count} — staff already recorded a roll call after dive {count} on this trip, and that history has to stay reachable.",
     "undo": "Undo",
-    "undoing": "Undoing…"
+    "undoing": "Undoing…",
+    "priceRequiredByGate": "This departure requires payment, so it needs a price. Without one nothing asks a diver for money and every booking stays blocked.",
+    "requirementsNeedPrice": "Add a price before requiring payment. Without one nothing asks a diver for money and every booking stays blocked."
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
