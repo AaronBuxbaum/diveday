@@ -13,6 +13,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getTripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
+import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -22,6 +23,7 @@ import {
   type PrepPiece,
   UNSIZED_ITEM_KINDS,
 } from "@/lib/dive-prep";
+import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { rankUnitsForSize } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
@@ -146,6 +148,28 @@ export default async function TripPrepPage({
   // links carry no other state — a `?notice=` is spent by the time anyone taps
   // one (`FlashParams` strips it), and there is nothing else in the query.
   const prepPath = shopPath(shopSlug, "trips", tripId, "prep");
+  /**
+   * Years dry, beside the name, on exactly the terms the roster states it
+   * (`RosterSection.tsx`) — only the two notable bands, warning tone, words
+   * from `diveRecencyText`. This is the reader the answer is most use to: a
+   * divemaster packing a diver's kit is deciding what to bring and who to pair
+   * them with, and "last dived over five years ago" changes both.
+   *
+   * Informs, never gates (ADR 20260821-currency-is-what-catches-people) —
+   * nothing here filters, sorts, or refuses. `diveRecencyText` returns null for
+   * a diver who was never asked, so silence renders nothing rather than a "not
+   * said" line on every seat booked before the question existed.
+   */
+  const diveRecencyLine = (band: (typeof checklist.diverLines)[number]["lastDivedBand"]) => {
+    if (!diveRecencyIsNotable(band)) return null;
+    return (
+      <span className="mt-0.5 flex items-center gap-1 text-sm font-normal text-warning-strong">
+        <span aria-hidden="true">▲</span>
+        {diveRecencyText(t, band)}
+      </span>
+    );
+  };
+
   /**
    * A diver's kit as one cell: each piece with the size to pull it in, or the
    * one word that says why there is nothing to pull. Own kit and never-asked
@@ -514,14 +538,17 @@ export default async function TripPrepPage({
                   {checklist.diverLines.map((line) => (
                     <li key={line.bookingId} className={sectionCardClass()}>
                       <div className="flex items-start justify-between gap-3">
-                        <p className="font-semibold">
-                          <Link
-                            href={`/shop/${shopSlug}/divers/${line.personId}`}
-                            className="hover:text-primary hover:underline"
-                          >
-                            {line.fullName}
-                          </Link>
-                        </p>
+                        <div className="min-w-0">
+                          <p className="font-semibold">
+                            <Link
+                              href={`/shop/${shopSlug}/divers/${line.personId}`}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {line.fullName}
+                            </Link>
+                          </p>
+                          {diveRecencyLine(line.lastDivedBand)}
+                        </div>
                         <p className="shrink-0 text-2xl font-semibold tabular-nums">
                           <span className="sr-only">{t("trips.prep.qtyColumn")} </span>
                           {line.items.length}
@@ -550,6 +577,7 @@ export default async function TripPrepPage({
                           >
                             {line.fullName}
                           </Link>
+                          {diveRecencyLine(line.lastDivedBand)}
                         </Td>
                         <Td>{kitCell(line)}</Td>
                         <Td numeric>{line.items.length}</Td>

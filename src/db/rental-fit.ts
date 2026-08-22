@@ -259,6 +259,7 @@ export async function listTripPrepDivers(
     fit: row.fit,
     wantsNitrox: row.booking.wantsNitrox,
     hasVerifiedNitroxCard: certified.has(row.person.id),
+    lastDivedBand: row.booking.lastDivedBand,
   }));
 }
 

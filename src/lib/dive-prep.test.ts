@@ -30,6 +30,7 @@ function diver(
     fit: fullFit,
     wantsNitrox: false,
     hasVerifiedNitroxCard: false,
+    lastDivedBand: null,
     ...overrides,
   };
 }
