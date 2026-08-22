@@ -288,6 +288,7 @@ export default async function CheckInPage({
             <span className="mt-2 inline-flex">
               <ConnectivityStatus
                 offlineLabel={t("checkIn.offlineLabel")}
+                onlyWhenOffline
                 copy={{
                   online: t("shared.connectivity.online"),
                   onlineTitle: t("shared.connectivity.onlineTitle"),

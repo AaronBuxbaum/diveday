@@ -10,11 +10,24 @@ export type ConnectivityStatusCopy = {
 
 export function ConnectivityStatus({
   offlineLabel,
+  onlyWhenOffline = false,
   copy,
 }: {
   /** What "offline" means on this surface (the manifest has a device copy; a
    * live-only surface like boarding warns its board may be stale instead). */
   offlineLabel: string;
+  /**
+   * Render nothing at all while the connection is up.
+   *
+   * **For a surface where connectivity is not the subject.** On the offline
+   * manifest it is — the card around this pill is *about* the device copy, and
+   * "Online" there answers the question the card raises. On a live-only board
+   * like Today or the counter queue, a permanently green "Online" badge under
+   * the page title says nothing a reader could get wrong without it, on the two
+   * screens a shop looks at most; what earns its room is the warning. The
+   * absence of a badge reads as "fine", which is exactly what it means.
+   */
+  onlyWhenOffline?: boolean;
   copy: ConnectivityStatusCopy;
 }) {
   // Start "online" so the server render and the first client render agree — a
@@ -34,6 +47,7 @@ export function ConnectivityStatus({
     };
   }, []);
 
+  if (online && onlyWhenOffline) return null;
   return (
     <span
       role="status"

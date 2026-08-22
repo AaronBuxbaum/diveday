@@ -422,6 +422,7 @@ async function TodayBody({
             <span className="mt-2 inline-flex">
               <ConnectivityStatus
                 offlineLabel={t("shopHome.offlineLabel")}
+                onlyWhenOffline
                 copy={{
                   online: t("shared.connectivity.online"),
                   onlineTitle: t("shared.connectivity.onlineTitle"),
