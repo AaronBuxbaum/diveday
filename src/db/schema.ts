@@ -232,6 +232,18 @@ export const shops = pgTable(
     boatRideMinutes: integer("boat_ride_minutes").notNull().default(20),
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
+    /**
+     * The hours, shop-local, during which automated messages may reach a diver
+     * — see `src/lib/send-window.ts`. `end` is exclusive, so 20 means "up to
+     * 19:59". A fixed 14:00 UTC reminder batch reached Singapore at 22:00,
+     * Sydney at midnight and Fiji at 03:00 (issue #697), and a recap four hours
+     * after a night dive lands at 3 AM in every zone on earth.
+     *
+     * Defaults chosen to be defensible unattended, not to be right for every
+     * shop; a dawn-boat operation lowers the floor.
+     */
+    sendWindowStartHour: integer("send_window_start_hour").notNull().default(8),
+    sendWindowEndHour: integer("send_window_end_hour").notNull().default(20),
     isDemo: boolean("is_demo").notNull().default(false),
     /**
      * When this shop asked to be left out of search engines. Null — the

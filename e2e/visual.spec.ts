@@ -2943,6 +2943,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-emergency", scheme);
       });
 
+      /**
+       * When the shop's automated messages may reach a diver. Its own capture
+       * for the same reason as the two rows above — closed in
+       * `settings-payments` — and because it is the only screen standing
+       * between a shop in Fiji and a 3 AM text (issue #697).
+       */
+      test(`the message-hours card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "When we message divers" }).waitFor();
+        await openSettingsRow(page, "When we message divers");
+        await page.getByRole("button", { name: "Save message hours" }).waitFor();
+        await capture(page, "settings-send-window", scheme);
+      });
+
       // Where a shop connects its own WhatsApp Business number (ADR
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what

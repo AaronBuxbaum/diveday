@@ -27,6 +27,7 @@ import {
   setShopRentalPricing,
   setShopReviewUrl,
   setShopSearchListing,
+  setShopSendWindow,
   setShopTemperatureUnit,
   setShopTimezone,
 } from "@/db/shops";
@@ -66,6 +67,7 @@ import {
   shopOffersNitrox,
   toRentableKinds,
 } from "@/lib/rentals";
+import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -299,6 +301,32 @@ export async function saveEmergencyReferenceAction(formData: FormData) {
   });
   await setShopEmergencyReference(await getDb(), session.user.shopId, reference);
   revalidateAndRedirect(settings, noticeUrl(settings, "emergency-saved", { saved: "emergency" }));
+}
+
+/**
+ * The hours the shop's automated messages may reach a diver.
+ *
+ * A fixed 14:00 UTC reminder batch is 10am in Florida and 03:00 in Fiji, and a
+ * recap four hours after a night dive lands at 3 AM anywhere (issue #697). The
+ * default is 08:00–20:00; a dawn-boat operation legitimately lowers the floor,
+ * which is why this is a setting and not a constant.
+ */
+export async function saveSendWindowAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const window = parseSendWindow({
+    startHour: formData.get("sendWindowStartHour"),
+    endHour: formData.get("sendWindowEndHour"),
+  });
+  if (!window) {
+    redirect(noticeUrl(settings, "send-window-invalid", { saved: "sendWindow" }));
+  }
+  await setShopSendWindow(await getDb(), session.user.shopId, window);
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "send-window-saved", { saved: "sendWindow" }),
+  );
 }
 
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */

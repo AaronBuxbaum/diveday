@@ -47,7 +47,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatHourOfDay, formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
@@ -80,6 +80,7 @@ import {
   saveRentalPricingAction,
   saveReviewUrlAction,
   saveSearchListingAction,
+  saveSendWindowAction,
   saveTimezoneAction,
   saveUnitsAction,
   updateBoatAction,
@@ -104,6 +105,8 @@ function noticeMessages(
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    "send-window-saved": { tone: "success", text: t("settings.main.notice.sendWindowSaved") },
+    "send-window-invalid": { tone: "danger", text: t("settings.main.notice.sendWindowInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
@@ -368,6 +371,7 @@ const SECTION_IDS = [
   "searchListing",
   "packing",
   "dockCall",
+  "sendWindow",
   "units",
   "divingOptions",
   "emergency",
@@ -523,6 +527,10 @@ export default async function SettingsPage({
       ? t("settings.main.packing.value", { count: shop.packingList.length })
       : notSet;
   const dockCallValue = t("settings.main.dockCall.value", { count: shop.dockCallMinutes });
+  const sendWindowValue = t("settings.main.sendWindow.value", {
+    start: formatHourOfDay(shop.sendWindowStartHour, locale),
+    end: formatHourOfDay(shop.sendWindowEndHour, locale),
+  });
   const unitsValue = [
     t(shop.depthUnit === "feet" ? "settings.main.units.feet" : "settings.main.units.meters"),
     t(
@@ -976,6 +984,58 @@ export default async function SettingsPage({
               three are genuinely independent — a Caribbean operator serving
               American divers publishes feet and Celsius — so they are three
               fields, not one. */}
+            {/* **When the shop's own messages may reach a diver.** Beside the
+              dock-day rhythm because both are about the shape of a shop's day,
+              and directly after it because a shop reading "we brief at 7:15"
+              is already thinking in its own clock. */}
+            <SettingsRow
+              heading={t("settings.main.sendWindow.heading")}
+              value={sendWindowValue}
+              description={t("settings.main.sendWindow.description")}
+              open={activeSection === "sendWindow"}
+            >
+              <SectionNotice banner={banner} section="sendWindow" active={activeSection} />
+              <FieldGrid
+                as="form"
+                action={saveSendWindowAction}
+                columns={2}
+                className="mt-4 gap-x-5 gap-y-5"
+              >
+                <Field label={t("settings.main.sendWindow.startLabel")}>
+                  <input
+                    name="sendWindowStartHour"
+                    type="number"
+                    inputMode="numeric"
+                    required
+                    min={0}
+                    max={23}
+                    defaultValue={shop.sendWindowStartHour}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+                <Field label={t("settings.main.sendWindow.endLabel")}>
+                  <input
+                    name="sendWindowEndHour"
+                    type="number"
+                    inputMode="numeric"
+                    required
+                    min={1}
+                    max={24}
+                    defaultValue={shop.sendWindowEndHour}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.sendWindow.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.sendWindow.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
             <SettingsRow
               heading={t("settings.main.units.heading")}
               value={unitsValue}

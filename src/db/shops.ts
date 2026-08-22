@@ -5,6 +5,7 @@ import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
+import type { SendWindow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
 import { shops, trips } from "./schema";
@@ -116,6 +117,20 @@ export async function setShopEmergencyReference(
 
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * The hours during which the shop's automated messages may reach a diver —
+ * shop-local, and the only thing standing between a Fiji shop and a 3 AM text
+ * (`src/lib/send-window.ts`, issue #697).
+ */
+export async function setShopSendWindow(db: AppDb, shopId: string, window: SendWindow) {
+  const [shop] = await db
+    .update(shops)
+    .set({ sendWindowStartHour: window.startHour, sendWindowEndHour: window.endHour })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

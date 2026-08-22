@@ -8,7 +8,6 @@ vi.mock("@/db/checkout-recovery", () => ({ sendDueCheckoutRecoveries: vi.fn() })
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
 vi.mock("@/db/processor-erasure", () => ({ retryPendingProcessorErasures: vi.fn() }));
-vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
 vi.mock("@/db/seed", () => ({ reapExpiredDemoShops: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
@@ -20,7 +19,6 @@ const { sendDueCheckoutRecoveries } = await import("@/db/checkout-recovery");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
 const { retryPendingProcessorErasures } = await import("@/db/processor-erasure");
-const { sendDueReminders } = await import("@/db/reminders");
 const { reapExpiredDemoShops } = await import("@/db/seed");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
@@ -51,9 +49,6 @@ beforeEach(() => {
   vi.mocked(drainNotificationRetries)
     .mockReset()
     .mockResolvedValue({ scanned: 1, sent: 1, queued: 0, failed: 0 });
-  vi.mocked(sendDueReminders)
-    .mockReset()
-    .mockResolvedValue({ scanned: 2, sent: 2, skipped: 0, failed: 0 });
   vi.mocked(sendDueCheckoutRecoveries).mockReset().mockResolvedValue({
     scanned: 4,
     sent: 4,
@@ -126,8 +121,6 @@ describe("GET /api/cron/reminders — structured logging", () => {
         scansFailed: 0,
         notificationRetriesScanned: 1,
         notificationRetriesSent: 1,
-        remindersScanned: 2,
-        remindersSent: 2,
         checkoutRecoveriesScanned: 4,
         checkoutRecoveriesSent: 4,
         mediaDeletionsAttempted: 5,
@@ -157,7 +150,6 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response).toBeDefined();
-    expect(sendDueReminders).toHaveBeenCalledTimes(1);
     expect(sendDueCheckoutRecoveries).toHaveBeenCalledTimes(1);
     expect(retryPendingMediaDeletions).toHaveBeenCalledTimes(1);
     expect(reapExpiredDemoShops).toHaveBeenCalledTimes(1);
@@ -174,7 +166,6 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
         event: "cron_reminders.scan_complete",
         scansFailed: 1,
         failedScans: "checkoutRecoveries",
-        remindersSent: 2,
         demoShopsDeleted: 6,
       }),
     );
@@ -192,9 +183,9 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
 
     expect(response.status).toBe(500);
     expect(body.mediaDeletions).toEqual({ status: "error" });
-    expect(body.reminders).toEqual({
+    expect(body.notificationRetries).toEqual({
       status: "ok",
-      result: { scanned: 2, sent: 2, skipped: 0, failed: 0 },
+      result: { scanned: 1, sent: 1, queued: 0, failed: 0 },
     });
   });
 
@@ -207,12 +198,12 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
 
   it("reports each failed scan to Sentry tagged with its name", async () => {
     const failure = new Error("boom");
-    vi.mocked(sendDueReminders).mockRejectedValue(failure);
+    vi.mocked(drainNotificationRetries).mockRejectedValue(failure);
 
     await GET(cronRequest(`Bearer ${secret}`));
 
     expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { cron_scan: "reminders" },
+      tags: { cron_scan: "notificationRetries" },
     });
   });
 
@@ -233,7 +224,7 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
   });
 
   it("logs a failed scan on console.error, leaving the single summary line intact", async () => {
-    vi.mocked(sendDueReminders).mockRejectedValue(new Error("boom"));
+    vi.mocked(drainNotificationRetries).mockRejectedValue(new Error("boom"));
 
     await GET(cronRequest(`Bearer ${secret}`));
 
@@ -243,7 +234,7 @@ describe("GET /api/cron/reminders — per-scan isolation", () => {
       expect.objectContaining({
         event: "cron_reminders.scan_failed",
         level: "error",
-        scan: "reminders",
+        scan: "notificationRetries",
       }),
     );
   });

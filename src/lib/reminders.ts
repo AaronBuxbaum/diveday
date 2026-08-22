@@ -24,6 +24,27 @@ export const TRIP_REMINDER_CADENCES: readonly ReminderCadence[] = [
   { kind: "trip_reminder_24h", hoursBefore: 24 },
 ];
 
+/**
+ * **Hourly, its own pass.** A once-a-day UTC batch cannot serve more than one
+ * longitude: 14:00 UTC is 10am in Florida, 22:00 in Singapore, midnight in
+ * Sydney and 03:00 in Fiji, and every shop in the picker's Asia-Pacific group
+ * was texting divers in the middle of the night (issue #697). The shop's own
+ * send window decides *whether* a pass may send (`src/lib/send-window.ts`);
+ * this cadence is what gives every longitude a pass inside its window to be
+ * decided in.
+ *
+ * Separated from the daily `/api/cron/reminders` tick rather than making that
+ * hourly, and for the reason `recap-schedule.ts` gives for its own exception:
+ * the daily tick's other five scans are durable-retry drains whose backoff
+ * bounds derive from `DAILY_TICK_CRONTAB` (`src/lib/cron-schedule.ts`, OPS-6),
+ * so changing its cadence would silently move a retry window this ticket has
+ * no business touching.
+ *
+ * `:10` rather than `:00` so it does not land on the same minute as the recap
+ * pass, with the minimum-seats sweep already at `:20`.
+ */
+export const TRIP_REMINDER_CRON_CRONTAB = "10 * * * *";
+
 /** The widest lead time any cadence needs — how far ahead a scan must look. */
 export const MAX_REMINDER_LEAD_HOURS = TRIP_REMINDER_CADENCES.reduce(
   (max, c) => Math.max(max, c.hoursBefore),

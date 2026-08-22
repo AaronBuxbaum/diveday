@@ -29,7 +29,9 @@
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
       "timezoneSaved": "Timezone saved.",
       "timezoneInvalid": "That isn’t a timezone we recognize — pick one from the list.",
-      "emergencySaved": "Emergency reference saved."
+      "emergencySaved": "Emergency reference saved.",
+      "sendWindowSaved": "Message hours saved.",
+      "sendWindowInvalid": "That didn't save. The first hour has to come before the last, on a 24-hour clock."
     },
     "timezone": {
       "heading": "Timezone",
@@ -156,6 +158,15 @@
       "atDeparture": "On time",
       "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn't describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn't describe a dive at any of them:}}",
       "siteOverride": "{name} · {count} min"
+    },
+    "sendWindow": {
+      "heading": "When we message divers",
+      "value": "{start} – {end}",
+      "description": "Reminders and recaps wait for these hours in your timezone. A cancellation always goes out straight away.",
+      "startLabel": "Not before (0–23)",
+      "endLabel": "Not after (1–24)",
+      "submit": "Save message hours",
+      "submitting": "Saving…"
     },
     "units": {
       "heading": "Units",

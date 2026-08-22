@@ -5,7 +5,6 @@ import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
 import { retryPendingProcessorErasures } from "@/db/processor-erasure";
-import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
 import { DAY_MS } from "@/lib/clock";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
@@ -171,7 +170,13 @@ export async function GET(request: Request) {
     const notificationRetries = await runScan("notificationRetries", () =>
       drainNotificationRetries(db),
     );
-    const reminders = await runScan("reminders", () => sendDueReminders(db));
+    // **Pre-trip reminders no longer run here.** They moved to their own hourly
+    // pass, `/api/cron/trip-reminders`: a fixed daily UTC hour is 10am in
+    // Florida and 03:00 in Fiji, so a shop in the picker's Asia-Pacific group
+    // texted its divers in the middle of the night, every day (issue #697). The
+    // five scans left are durable-retry drains whose backoff bounds derive from
+    // this tick's cadence (`src/lib/cron-schedule.ts`, OPS-6), which is exactly
+    // why the cadence here did not change.
     const checkoutRecoveries = await runScan("checkoutRecoveries", () =>
       sendDueCheckoutRecoveries(db),
     );
@@ -193,7 +198,6 @@ export async function GET(request: Request) {
 
     const scans = {
       notificationRetries,
-      reminders,
       checkoutRecoveries,
       mediaDeletions,
       processorErasures,
@@ -204,7 +208,6 @@ export async function GET(request: Request) {
       .map(([name]) => name);
 
     const notificationRetriesCounts = resultOf(notificationRetries);
-    const remindersCounts = resultOf(reminders);
     const checkoutRecoveriesCounts = resultOf(checkoutRecoveries);
     const mediaDeletionsCounts = resultOf(mediaDeletions);
     const processorErasuresCounts = resultOf(processorErasures);
@@ -221,9 +224,6 @@ export async function GET(request: Request) {
       notificationRetriesScanned: notificationRetriesCounts?.scanned,
       notificationRetriesSent: notificationRetriesCounts?.sent,
       notificationRetriesFailed: notificationRetriesCounts?.failed,
-      remindersScanned: remindersCounts?.scanned,
-      remindersSent: remindersCounts?.sent,
-      remindersFailed: remindersCounts?.failed,
       checkoutRecoveriesScanned: checkoutRecoveriesCounts?.scanned,
       checkoutRecoveriesSent: checkoutRecoveriesCounts?.sent,
       mediaDeletionsAttempted: mediaDeletionsCounts?.attempted,
