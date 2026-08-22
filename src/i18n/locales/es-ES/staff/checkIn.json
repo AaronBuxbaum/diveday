@@ -25,7 +25,7 @@
   "departureProgress": "{checkedIn} de {total} registrados",
   "walkInAction": "Añadir un walk-in",
   "otherDiversHeading": "Buceadores conocidos",
-  "otherDiversDescription": "Personas del registro de la tienda que no están reservadas en las salidas de hoy",
+  "otherDiversDescription": "Personas del registro del centro que no están reservadas en las salidas de hoy",
   "addToDepartureFor": "Añadir a {departure}",
   "addingToDeparture": "Añadiendo…",
   "addWalkInAction": "Añadir a “{query}” sin reserva",

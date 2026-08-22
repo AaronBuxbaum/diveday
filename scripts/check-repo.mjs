@@ -47,6 +47,7 @@ const checks = [
   ["notice-codes", "check-notice-codes.mjs"],
   ["scroll-preservation", "check-scroll-preservation.mjs"],
   ["soft-delete", "check-soft-delete.mjs"],
+  ["shop-word", "check-shop-word.mjs"],
   ["live-trips", "check-live-trips.mjs"],
   ["redirect-in-try", "check-redirect-in-try.mjs"],
   ["text", "check-source-text.mjs"],

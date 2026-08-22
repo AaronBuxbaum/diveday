@@ -32,7 +32,7 @@
       "levelUnsaid": "Prefiero no decirlo",
       "levelNone": "Todavía no tengo certificación",
       "levelInfoLabel": "Por qué preguntamos por la certificación",
-      "levelDescription": "Ayuda a la tienda a proponerte salidas que puedas bucear. Lo confirmarán con tu certificación antes de que entres al agua.",
+      "levelDescription": "Ayuda al centro a proponerte salidas que puedas bucear. Lo confirmarán con tu certificación antes de que entres al agua.",
       "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
     },
     "units": {
@@ -2743,7 +2743,7 @@
       "dataExit": {
         "eyebrow": "Tus registros",
         "title": "Una exportación completa cuando la necesites.",
-        "body": "Cada buceador, reserva, exención firmada e historial de pagos, en CSV documentado — y cada foto que guardó la tienda, como archivos reales en lugar de enlaces. Un ZIP que descarga el propietario desde Ajustes, cualquier día, incluido el primero de la prueba.",
+        "body": "Cada buceador, reserva, exención firmada e historial de pagos, en CSV documentado — y cada foto que guardó el centro, como archivos reales en lugar de enlaces. Un ZIP que descarga el propietario desde Ajustes, cualquier día, incluido el primero de la prueba.",
         "securityNote": "Las cuentas de acceso y las credenciales push de cada dispositivo siguen protegidas porque están ligadas a esta aplicación y a un teléfono concreto.",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
       },
@@ -2955,8 +2955,8 @@
       "waiverExpired": "El enlace de tu exención caducó — consigue uno nuevo, solo lleva unos dos minutos",
       "certificationMissing": "Envía a tu centro los datos de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con el centro",
-      "certificationSelfDeclared": "Trae tu certificación para que la tienda pueda verla",
-      "nitroxSelfDeclared": "Trae tu certificación de nitrox para que la tienda pueda verla",
+      "certificationSelfDeclared": "Trae tu certificación para que el centro pueda verla",
+      "nitroxSelfDeclared": "Trae tu certificación de nitrox para que el centro pueda verla",
       "specialtyMissing": "Envía a tu centro los datos de tu certificación de especialidad",
       "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",
       "paymentDue": "Salda tu saldo pendiente"
