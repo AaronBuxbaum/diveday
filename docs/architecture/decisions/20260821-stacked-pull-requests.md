@@ -1,4 +1,4 @@
-# 20260821-stacked-pull-requests — Use GitHub stacked pull requests for dependent chains, registered by a human
+# 20260821-stacked-pull-requests — Use GitHub stacked pull requests for dependent chains
 
 - **Status:** Accepted
 - **Date:** 2026-08-21
@@ -47,6 +47,18 @@ of them could have made it a bad fit and one nearly does:
   through the GitHub MCP server, whose tool surface has `create_branch` and `create_pull_request`
   but no stack endpoints.
 
+  **Amended 2026-08-22 — this is no longer true, and the Decision below is written to the corrected
+  fact (issue #645).** `gh` *is* pre-installed in cloud sessions, and it authenticates without a
+  `gh auth login`: the GitHub proxy substitutes real credentials on outbound requests, leaving
+  `GH_TOKEN` reading as the placeholder `proxy-injected` inside the VM. The proxy's documented REST
+  path, `gh api repos/{owner}/{repo}/...`, reaches the stacks endpoints against the attached
+  repository. Verified against this repository rather than assumed: a `GET .../stacks` lists the two
+  stacks already registered here, and a deliberately empty `POST .../stacks` is refused with a
+  **422** naming the 2-item minimum — the write path is reachable and authorized, and it declined
+  only the payload. What stays out of reach is the `github/gh-stack` **extension**: installing one
+  pulls a release asset from an unattached repository, which the proxy scopes out with a 403. The
+  extension is not needed, because it wraps these same endpoints.
+
 ## Decision
 
 Stacked pull requests are the tool for a **dependent chain**, and one pull request per independent
@@ -56,17 +68,18 @@ slice remains the default for everything else. Three parts:
    branch cut from the one below, each pull request opened with `base` set to that branch, each body
    naming its position and the branch beneath it. This needs nothing that is not already available,
    and it is byte-for-byte the branch shape a stack requires.
-2. **A human registers the stack**, from a workstation with `gh` (`gh extension install
-   github/gh-stack`, then `gh stack link <pr> <pr> <pr>`) or with one REST call, `POST
-   /repos/{owner}/{repo}/stacks` carrying the ordered pull request numbers bottom to top. Registering
-   is what buys the cascading rebase, the bottom-up atomic merge, and the stack view; it can happen
-   at any point, including after review has started. When nobody registers it, the chain is still a
-   working chain — it just rebases and retargets by hand.
+2. **The session that built the chain registers it**, with one REST call — `POST
+   /repos/{owner}/{repo}/stacks` carrying the ordered pull request numbers bottom to top, reached as
+   `gh api --method POST`. Registering is what buys the cascading rebase, the bottom-up atomic merge,
+   and the stack view; it can happen at any point, including after review has started. When nobody
+   registers it, the chain is still a working chain — it just rebases and retargets by hand. The
+   `github/gh-stack` extension is a convenience wrapper over the same endpoints and is fine on a
+   workstation; it is not the supported path in a cloud session, where the install itself is
+   expected to 403.
 3. **Layers merge bottom-up**, and a layer that moves pixels is triaged on its own baseline. Because
    the visual behaviour above is unmeasured, the first stack through this repository is deliberately
    one that does *not* change a rendered surface, and what its `visual-report` job resolves is
-   recorded (issue #644) before a pixel-moving stack is opened. That a session cannot register the
-   stack itself is issue #645, waiting on a door outside this repository.
+   recorded (issue #644) before a pixel-moving stack is opened.
 
 `.claude/skills/stacked-prs/SKILL.md` holds the procedure; this record holds the reasoning.
 

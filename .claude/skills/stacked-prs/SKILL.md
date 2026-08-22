@@ -23,12 +23,11 @@ pull requests, and AGENTS.md's *Parallel work* rules already cover them. The cos
 layer pays lint, typecheck, four unit shards, a build and eight Playwright/visual shards, and pays
 again after every cascading rebase.
 
-## What a session can do today
+## Building the chain
 
-`gh` is not installed in the remote execution environment and direct `api.github.com` calls are
-refused by the agent proxy; the GitHub MCP tool surface has no stack endpoints. So a session builds
-the **shape** and a human registers it. The shape is the whole substance — registering only adds the
-cascading rebase and the group merge.
+A session does both halves itself: it builds the **shape** — the chained branches and pull requests —
+and then registers that shape as a stack. The shape is the whole substance; registering adds the
+cascading rebase and the group merge on top of it.
 
 ```sh
 # layer 1, cut from main
@@ -56,24 +55,31 @@ Then say in the closing message that the chain is ready to register, listing the
 top. Do not leave that in a comment on one of the pull requests only — see AGENTS.md's rule about
 queues that live in a message.
 
-## Registering and driving the stack (human, or any session with `gh`)
+## Registering and driving the stack
+
+Register with `gh api`, which needs no extension and works wherever `gh` does — including cloud
+sessions, where `gh` is pre-installed and the GitHub proxy substitutes credentials on outbound
+requests, so there is no `gh auth login` step:
 
 ```sh
-gh extension install github/gh-stack        # needs gh >= 2.90
-gh stack link 641 642 643                   # register existing chained-base PRs, bottom to top
-gh stack view                               # branches, order, PR links
-gh stack sync                               # fetch, cascading rebase, push, sync PR state
-gh stack merge --squash                     # merges bottom-up, atomically
+# register existing chained-base PRs, bottom to top
+gh api --method POST repos/{owner}/{repo}/stacks -f 'pull_requests[]=641' \
+  -f 'pull_requests[]=642' -f 'pull_requests[]=643'
+
+gh api repos/{owner}/{repo}/stacks                    # list stacks and their layers
+gh api --method POST repos/{owner}/{repo}/stacks/{n}/add     # extend
+gh api --method POST repos/{owner}/{repo}/stacks/{n}/unstack # dissolve
 ```
 
-Equivalent without the extension: `POST /repos/{owner}/{repo}/stacks` with
-`{"pull_requests": [641, 642, 643]}` (ordered bottom to top, 2–100 entries),
-`POST /repos/{owner}/{repo}/stacks/{n}/add` to extend, `POST .../unstack` to dissolve. GraphQL is
-read-only (`stack`, `stackEntry` on `PullRequest`). Programmatic merges must use the asynchronous
-merge endpoint. A `404` from these means the preview is not enabled for the repository.
+`pull_requests` is ordered bottom to top and takes 2–100 entries. GraphQL is read-only (`stack`,
+`stackEntry` on `PullRequest`) — and in a cloud session the proxy serves only a pinned set of
+GraphQL operations, so reach for the REST forms above rather than GraphQL. Programmatic merges must
+use the asynchronous merge endpoint. A `404` means the preview is not enabled for the repository.
 
-Starting a stack from scratch with the extension instead of by hand: `gh stack init`, then
-`gh stack add -m "<message>"` per layer, then `gh stack submit --open`.
+The `github/gh-stack` extension wraps the same REST endpoints (`gh stack link`, `view`, `sync`,
+`merge`) and is convenient on a workstation. Do **not** rely on it in a cloud session: installing an
+extension pulls a release asset from another repository, and the GitHub proxy scopes release-asset
+requests to repositories attached to the session, so the install is expected to 403.
 
 ## What our pipeline does with it
 

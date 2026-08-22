@@ -174,12 +174,10 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   Where step 2 cannot compile or be read without step 1 (`src/db/schema.ts` + migration → the
   `src/db` reader → the surface), cut each branch from the one below and open each PR with its
   `base` set to that branch, bottom one first, every body naming its position and the branch beneath
-  it. A human then registers the chain as a GitHub stack (`gh stack link <prs>`) for the cascading
-  rebase and the bottom-up atomic merge — `gh` is absent from the remote execution environment and
-  the GitHub MCP surface has no stack endpoints, so a session builds the shape and says which
-  numbers to link. This is for genuinely dependent work only: every layer pays the full CI gate, and
-  pays it again above every rebase. See the **stacked-prs** skill and ADR
-  20260821-stacked-pull-requests.
+  it. Then register the chain yourself — `gh api --method POST repos/{owner}/{repo}/stacks` with the
+  numbers bottom to top — which is what buys the cascading rebase and the bottom-up atomic merge.
+  This is for genuinely dependent work only: every layer pays the full CI gate, and pays it again
+  above every rebase. See the **stacked-prs** skill and ADR 20260821-stacked-pull-requests.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same
   spec or test name. Two sessions independently patching the same broken test race each other and
   produce conflicting fixes. If one is already in flight, coordinate in that PR's thread instead
