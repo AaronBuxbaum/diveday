@@ -38,6 +38,20 @@ taking ten shops from one town. Reef-and-wreck day-boat country (the Southeast c
 spring/cavern country on the Gulf side and the north-central springs, and the Panhandle each run a
 different kind of day. One shop per region is enough to notice if the product only fits one of them.
 
+**Know this before you dial a springs shop.** DiveDay cannot express the gate a guided cavern tour
+actually runs, and that is a deliberate decision rather than a gap waiting to be filled (ADR
+20260718-specialty-site-cert-requirements, amended 2026-08-22). A cavern operation's safety comes
+from a cavern-rated professional in the water at a tight ratio, three lights per diver and a
+continuous guideline — none of which is a card the customer holds, and the customer usually holds
+none, because the whole product is a guided tour sold to Open Water divers. DiveDay has no way to
+say "this departure needs an assigned person holding X" or to bind a hard per-departure ratio.
+
+So a springs shop gets the board, the manifests, the waivers and the roll call, and puts its tour's
+demands in the site's `difficulty_level` and its briefing prose while the pro in the water makes the
+call — which is what happens at every springs operation in Florida regardless of what software they
+run. Say that plainly if it comes up. Pitching them a cert-gating story is the one way to lose the
+call on a true objection.
+
 ## Qualification criteria — what earns a call
 
 Score each candidate before dialling. A shop worth an hour has most of these:
