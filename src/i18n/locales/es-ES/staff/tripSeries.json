@@ -16,7 +16,7 @@
     "stopRepeating": "Dejar de repetir",
     "stopRepeatingDescription": "Mantiene todas las fechas que ya están en el calendario y deja de añadir nuevas. Puedes volver a activarla desde aquí.",
     "startRepeating": "Volver a repetir",
-    "startRepeatingDescription": "Devuelve al calendario los próximos {days} días de esta salida, y los mantiene ahí.",
+    "startRepeatingDescription": "Devuelve al calendario {days, plural, one {el próximo # día} other {los próximos # días}} de esta salida, y los mantiene ahí.",
     "editCadence": "Cambiar los días en que sale",
     "editCadenceDescription": "Añadir un día lo pone en el calendario al momento. Quitar uno no toca las fechas ya programadas — te las mostramos, con quién tiene reserva, y te preguntamos.",
     "saveCadence": "Guardar los días",

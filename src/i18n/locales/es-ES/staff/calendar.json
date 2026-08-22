@@ -50,5 +50,5 @@
   "notice": {
     "denied": "No tienes acceso a ese ámbito de calendario."
   },
-  "coverage": "Incluye salidas desde hace {past} días hasta dentro de {future} días."
+  "coverage": "Incluye salidas desde hace {past, plural, one {# día} other {# días}} hasta dentro de {future, plural, one {# día} other {# días}}."
 }

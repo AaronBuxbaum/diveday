@@ -561,8 +561,10 @@ export default async function EditCoursePage({
                   whatHappens: t.raw("courses.dayByDay.whatHappens"),
                   whatHappensHint: t("courses.edit.oneItemPerLine"),
                   itemsPlaceholder: t("courses.dayByDay.itemsPlaceholder"),
-                  itemsOverMax: t.raw("courses.dayByDay.itemsOverMax"),
-                  daysMax: t.raw("courses.dayByDay.daysMax"),
+                  itemsOverMaxOne: t.raw("courses.dayByDay.itemsOverMaxOne"),
+                  itemsOverMaxOther: t.raw("courses.dayByDay.itemsOverMaxOther"),
+                  daysMaxOne: t.raw("courses.dayByDay.daysMaxOne"),
+                  daysMaxOther: t.raw("courses.dayByDay.daysMaxOther"),
                   addDay: t("courses.dayByDay.addDay"),
                 }}
               />

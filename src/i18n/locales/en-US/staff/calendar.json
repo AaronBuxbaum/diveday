@@ -50,5 +50,5 @@
   "notice": {
     "denied": "You do not have access to that calendar scope."
   },
-  "coverage": "Covers departures from {past} days ago through {future} days ahead."
+  "coverage": "Covers departures from {past, plural, one {# day} other {# days}} ago through {future, plural, one {# day} other {# days}} ahead."
 }

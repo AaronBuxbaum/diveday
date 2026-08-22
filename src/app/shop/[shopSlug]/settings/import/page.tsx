@@ -171,7 +171,8 @@ function importWizardCopy(t: StaffTranslator) {
       emptyValue: t("settings.import.wizard.table.emptyValue"),
     },
     previewSwipeHint: t("settings.import.wizard.previewSwipeHint"),
-    hiddenRowsNotice: t.raw("settings.import.wizard.hiddenRowsNotice"),
+    hiddenRowsNoticeOne: t.raw("settings.import.wizard.hiddenRowsNoticeOne"),
+    hiddenRowsNoticeOther: t.raw("settings.import.wizard.hiddenRowsNoticeOther"),
     submitOne: t.raw("settings.import.wizard.submitOne"),
     submitOther: t.raw("settings.import.wizard.submitOther"),
     submitting: t("settings.import.wizard.submitting"),
@@ -179,7 +180,12 @@ function importWizardCopy(t: StaffTranslator) {
     errors,
     result: {
       summary: t.raw("settings.import.wizard.result.summary"),
-      cardsLine: t.raw("settings.import.wizard.result.cardsLine"),
+      summaryAddedOne: t.raw("settings.import.wizard.result.summaryAddedOne"),
+      summaryAddedOther: t.raw("settings.import.wizard.result.summaryAddedOther"),
+      summaryUpdatedOne: t.raw("settings.import.wizard.result.summaryUpdatedOne"),
+      summaryUpdatedOther: t.raw("settings.import.wizard.result.summaryUpdatedOther"),
+      cardsLineOne: t.raw("settings.import.wizard.result.cardsLineOne"),
+      cardsLineOther: t.raw("settings.import.wizard.result.cardsLineOther"),
       cardsCertificationsOne: t.raw("settings.import.wizard.result.cardsCertificationsOne"),
       cardsCertificationsOther: t.raw("settings.import.wizard.result.cardsCertificationsOther"),
       cardsSpecialtyOne: t.raw("settings.import.wizard.result.cardsSpecialtyOne"),
@@ -194,8 +200,11 @@ function importWizardCopy(t: StaffTranslator) {
       waiversLineOne: t.raw("settings.import.wizard.result.waiversLineOne"),
       waiversLineOther: t.raw("settings.import.wizard.result.waiversLineOther"),
       waiversSkippedExistingNote: t.raw("settings.import.wizard.result.waiversSkippedExistingNote"),
-      waiversSkippedNoTemplateNote: t.raw(
-        "settings.import.wizard.result.waiversSkippedNoTemplateNote",
+      waiversSkippedNoTemplateNoteOne: t.raw(
+        "settings.import.wizard.result.waiversSkippedNoTemplateNoteOne",
+      ),
+      waiversSkippedNoTemplateNoteOther: t.raw(
+        "settings.import.wizard.result.waiversSkippedNoTemplateNoteOther",
       ),
       waiverDocumentsFailedNote: t.raw("settings.import.wizard.result.waiverDocumentsFailedNote"),
       visitsLineOne: t.raw("settings.import.wizard.result.visitsLineOne"),

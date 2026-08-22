@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { fill } from "@/i18n/fill";
+import { fill, pluralForm } from "@/i18n/fill";
 import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 
 type DiveOption = { id: string; name: string };
@@ -17,7 +17,8 @@ export type TripDiveFieldsCopy = {
   heading: string;
   description: string;
   twoTankTrip: string;
-  diveCountTrip: string;
+  diveCountTripOne: string;
+  diveCountTripOther: string;
   numberOfDivesLabel: string;
   diveOptionOne: string;
   diveOptionOther: string;
@@ -76,7 +77,16 @@ export function TripDiveFields({
           <h2 className="font-semibold">{copy.heading}</h2>
           <p className="mt-1 max-w-xl text-sm text-muted">
             {fill(copy.description, {
-              tripShape: count === 2 ? copy.twoTankTrip : fill(copy.diveCountTrip, { count }),
+              tripShape:
+                count === 2
+                  ? copy.twoTankTrip
+                  : fill(
+                      pluralForm(count, {
+                        one: copy.diveCountTripOne,
+                        other: copy.diveCountTripOther,
+                      }),
+                      { count },
+                    ),
             })}
           </p>
         </div>

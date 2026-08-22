@@ -133,8 +133,10 @@
     "timeNotePlaceholder": "about 3 hours",
     "whatHappens": "Day {number} — what happens",
     "itemsPlaceholder": "Classroom: knowledge review 1–2\nPool: confined water skills\nGear wash and debrief",
-    "itemsOverMax": "Up to {max} items a day — take a line out before saving.",
-    "daysMax": "{max} days max",
+    "itemsOverMaxOne": "Up to {max} item a day — take a line out before saving.",
+    "itemsOverMaxOther": "Up to {max} items a day — take a line out before saving.",
+    "daysMaxOne": "{max} day max",
+    "daysMaxOther": "{max} days max",
     "addDay": "Add day"
   }
 }

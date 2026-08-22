@@ -80,9 +80,22 @@ describe("the import wizard's client-composed copy", () => {
             { count },
           ),
         );
-        const rendered = fill(importMessage(locale, "wizard.result.cardsLine"), {
-          cards: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(fragments),
-        });
+        // The sentence around the list agrees with the **total** across the
+        // three fragments, not with any one of them: `{cards}` holds a
+        // formatted list, so the number a Spanish reader hears is how many
+        // cards arrived altogether (issue #778).
+        const total = count * CARD_FRAGMENTS.length;
+        const rendered = fill(
+          pluralForm(total, {
+            one: importMessage(locale, "wizard.result.cardsLineOne"),
+            other: importMessage(locale, "wizard.result.cardsLineOther"),
+          }),
+          {
+            cards: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+              fragments,
+            ),
+          },
+        );
         expect(rendered, `${locale} cardsLine at ${count}`).not.toContain("{");
         // The list really was joined, not silently collapsed to one fragment.
         for (const fragment of fragments) {

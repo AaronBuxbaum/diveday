@@ -96,7 +96,7 @@
       "diverLabel": "Buceador",
       "diverPlaceholder": "Buscar por nombre",
       "rangeLabel": "Rango de fechas",
-      "rangeRecent": "Últimos {days} días",
+      "rangeRecent": "{days, plural, one {Último # día} other {Últimos # días}}",
       "rangeAll": "Todos los pedidos",
       "rangeCustom": "Fechas personalizadas",
       "fromLabel": "Desde",

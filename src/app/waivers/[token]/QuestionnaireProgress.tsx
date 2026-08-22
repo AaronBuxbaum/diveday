@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fill } from "@/i18n/fill";
+import { fill, pluralForm } from "@/i18n/fill";
 
 /**
  * A sticky "N of M answered" bar over the medical questionnaire — a dock, on
@@ -42,12 +42,14 @@ import { fill } from "@/i18n/fill";
  */
 export function QuestionnaireProgress({
   total,
-  labelTemplate,
+  labelTemplateOne,
+  labelTemplateOther,
   children,
 }: {
   /** Total number of questions in the presented questionnaire. */
   total: number;
-  labelTemplate: string;
+  labelTemplateOne: string;
+  labelTemplateOther: string;
   children: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -120,7 +122,10 @@ export function QuestionnaireProgress({
             polite region a diver revisiting an already-answered question
             doesn't re-trigger a screen-reader interruption for. */}
         <p role="status" className="text-sm font-medium text-muted">
-          {fill(labelTemplate, { answered: answered.size, total: questionTotal })}
+          {fill(pluralForm(questionTotal, { one: labelTemplateOne, other: labelTemplateOther }), {
+            answered: answered.size,
+            total: questionTotal,
+          })}
         </p>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
           <div

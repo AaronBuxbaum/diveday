@@ -12,7 +12,8 @@ afterEach(() => {
 const COPY: DepartureBoardCopy = {
   crewingBadge: "You’re crewing",
   courseSession: "Course session · {title}",
-  bookedOfCapacity: "{booked} of {capacity} booked",
+  bookedOfCapacityOne: "{booked} of {capacity} booked",
+  bookedOfCapacityOther: "{booked} of {capacity} booked",
   boarding: "Board divers",
   openGuests: "Open guests",
   assignCrewMemberAria: "Assign crew member to {title}",
@@ -23,8 +24,15 @@ const COPY: DepartureBoardCopy = {
   noCrewAssigned: "No crew assigned yet.",
   crewLine: "Crew · {names}",
   editCrew: "Edit",
-  boardingSummary:
-    "{boarded} aboard · {ready} clear to board · {blocked} blocked · {open} seats open",
+  boardingSummary: "{aboard} · {ready} · {blocked} · {open}",
+  boardingAboardOne: "{count} aboard",
+  boardingAboardOther: "{count} aboard",
+  boardingReadyOne: "{count} clear to board",
+  boardingReadyOther: "{count} clear to board",
+  boardingBlockedOne: "{count} blocked",
+  boardingBlockedOther: "{count} blocked",
+  boardingOpenOne: "{count} seat open",
+  boardingOpenOther: "{count} seats open",
   blockedWarningNamed: "{name} cannot board yet — the fix is in the list below.",
   blockedWarningOne: "{count} diver cannot board yet — they are in the list below.",
   blockedWarningOther: "{count} divers cannot board yet — they are in the list below.",
@@ -89,6 +97,43 @@ function renderBoard(
     />,
   );
 }
+
+/**
+ * **The count line inflects every one of its four counts.**
+ *
+ * It used to be one template with four hard-coded plural nouns, so a boat with
+ * one diver in each state rendered "1 seats open" in English and, in Spanish,
+ * "1 listos para embarcar · 1 bloqueados · 1 plazas libres" — three errors on
+ * one line, because Spanish inflects the adjective too (issue #778). No test
+ * had ever rendered this card at a count of one, and the seeded demo shop
+ * never produces one, so nothing failed and no screenshot showed it.
+ */
+describe("DepartureBoard boarding counts", () => {
+  it("uses the singular for a count of one and the plural otherwise", () => {
+    const { unmount } = renderBoard([
+      departure({ boarded: 1, ready: 1, blocked: 1, booked: 9, capacity: 10 }),
+    ]);
+    // One free seat: 10 capacity − 9 booked. The English pairs only differ on
+    // this one, which is the point — the other three exist so Spanish can.
+    expect(
+      screen.getByText("1 aboard · 1 clear to board · 1 blocked · 1 seat open"),
+    ).toBeInTheDocument();
+    unmount();
+
+    renderBoard([departure({ boarded: 2, ready: 2, blocked: 2, booked: 6, capacity: 10 })]);
+    expect(
+      screen.getByText("2 aboard · 2 clear to board · 2 blocked · 4 seats open"),
+    ).toBeInTheDocument();
+  });
+
+  it("says zero seats open on a full boat, not one", () => {
+    // `other` is the form for 0 in both locales — the boundary the old
+    // hard-coded plural got right by accident and a `count === 1` check would
+    // also get right, but which `pluralForm` gets right by asking Intl.
+    renderBoard([departure({ boarded: 0, ready: 10, blocked: 0, booked: 10, capacity: 10 })]);
+    expect(screen.getByText(/0 seats open$/)).toBeInTheDocument();
+  });
+});
 
 describe("DepartureBoard readiness caption (one bar, one caption, one count line)", () => {
   it("names a lone blocked diver outright — the answer, not a door to the list", () => {

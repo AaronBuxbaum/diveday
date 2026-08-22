@@ -49,9 +49,9 @@
     "fill": "Ocupación",
     "waivers": "Exenciones"
   },
-  "seatsMobile": "{booked}/{capacity} plazas",
-  "fillLabel": "{booked} de {capacity} plazas reservadas",
-  "waiversRowLabel": "{complete} de {total} hojas de exención firmadas",
+  "seatsMobile": "{booked}/{capacity, plural, one {# plaza} other {# plazas}}",
+  "fillLabel": "{booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}",
+  "waiversRowLabel": "{complete} de {total, plural, one {# hoja de exención firmada} other {# hojas de exención firmadas}}",
   "pagination": {
     "total": "{count, plural, one {# salida} other {# salidas}}"
   }

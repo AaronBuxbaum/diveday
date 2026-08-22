@@ -38,7 +38,7 @@
     "dueBackDetail": "Windows ending today",
     "dueBackOverdueDetail": "{count, plural, one {# already overdue} other {# already overdue}}",
     "serviceDue": "Service due",
-    "serviceDueDetail": "Clocks running out within {days} days"
+    "serviceDueDetail": "Clocks running out within {days, plural, one {# day} other {# days}}"
   },
   "returns": {
     "title": "Due back",
@@ -148,7 +148,7 @@
       "nextDueHint": "When this clock runs out. Annual service and inspections usually a year out; hydro five.",
       "nextDueDives": "Or after this many dives",
       "nextDueDivesHint": "Manufacturers publish both — 24 months or 100 dives. Needs a next-due date too.",
-      "diveClock": "at least {since} of {due} dives",
+      "diveClock": "at least {since} of {due, plural, one {# dive} other {# dives}}",
       "note": "Note",
       "notePlaceholder": "New HP seat, bench-tested",
       "returnToService": "Put it back in service",
