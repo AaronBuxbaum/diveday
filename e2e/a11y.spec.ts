@@ -125,11 +125,12 @@ signedInAsOwner();
  *   departures would refuse this booking outright. A Discover Scuba session
  *   states no minimum at all (`minimumCertificationLevel: null`) — an intro
  *   class is the one boat an uncertified diver belongs on.
- * - **No dive site**, which rules out every priced reef and wreck charter: a
- *   site brings the Google Maps iframe and the externally hosted site photos
- *   that keep the seeded reef briefing out of this file ("Absent, and why",
- *   below). The one priced charter with no site is the night dive, and that is
- *   the one gated on a specialty.
+ * - **No dive site**, which rules out every priced reef and wreck charter. Not
+ *   because a site cannot be scanned — the reef briefing has its own test
+ *   below — but because this scan *books a seat*, and the seeded reef
+ *   charter's price and free-seat count are load-bearing for other specs'
+ *   "N spots left" text. The one priced charter with no site is the night
+ *   dive, and that is the one gated on a specialty.
  *
  * Its single day also keeps the page to one meeting window rather than the
  * multi-day schedule the other uncertified-friendly course sessions render.
@@ -824,22 +825,6 @@ test.describe("automated accessibility scans of the staff overlays", () => {
  * `signedInAsOwner()`: these are the pages a visitor with no session sees, and
  * several of them (the landing page, `/sign-in`) render differently for a
  * signed-in staff member or bounce them elsewhere entirely.
- *
- * ## Absent, and why
- *
- * The seeded reef trip's public briefing (`/s/blue-mantis/trips/<id>`) is not
- * here — the one diver surface nothing in this file scans. It embeds a Google
- * Maps terrain iframe (which the context fixture in e2e/fixtures.ts aborts) and
- * externally hosted site photos proxied through `/_next/image` (which the
- * sealed e2e fleet can never fetch). The reason written here used to be that
- * the document therefore never reached the `networkidle` state the scan waited
- * for; that wait is gone (see `expectNoA11yViolations`), so the reason is gone
- * with it, and a probe against a warm e2e server scanned the page clean in
- * 1.5s. Bringing it in is its own change, filed as
- * FU-20260821-scan-the-reef-briefing-now-that-networkidle-is-gone. Until then a
- * public trip *booking* page is covered by "the trip booking page and its
- * confirmation" above, on the one seeded departure that carries a price and no
- * dive site — so no map and no photos.
  */
 test.describe("automated accessibility scans of the signed-out surfaces", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -867,15 +852,55 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
 
     await scanStaticRoutes(page, [
       { path: "/s/blue-mantis/courses", heading: "Courses" },
-      // One course page in full, not just the catalog index. It is the longest
-      // diver-facing document in the product — hero photo, gallery, FAQ
+      // One course page in full, not just the catalog index. It is the second
+      // longest diver-facing document in the product — hero photo, gallery, FAQ
       // disclosures, a session list and an inquiry form — and it is where an
       // uncertified visitor decides to buy a course, which is the highest-value
-      // conversion on the diver side. Unlike the seeded reef trip's booking
-      // page (absent above, and why), its photos are bundled assets this
-      // worker's own server serves, so the document reaches `networkidle`.
+      // conversion on the diver side. The longest is the reef briefing, scanned
+      // in its own test below.
       { path: "/s/blue-mantis/courses/discover-scuba-diving", heading: /Discover Scuba Diving/ },
     ]);
+  });
+
+  /**
+   * The richest document a diver ever sees, and until now the one surface in
+   * this file nothing scanned: a dive plan, a site briefing, a field guide of
+   * marine life, an embedded map and a booking form, on one page.
+   *
+   * It was left out because the scan used to wait for `networkidle`, which this
+   * page never reaches — `e2e/fixtures.ts` aborts its Google Maps iframe, and
+   * its dive-site photos are externally hosted and proxied through
+   * `/_next/image`, which the sealed e2e fleet cannot fetch. That wait was
+   * removed from `expectNoA11yViolations` in PR #585 and every caller now gates
+   * on the surface's own heading, so the reason went with it (issue #619).
+   *
+   * Neither of those two blocks axe, and neither may be answered by putting the
+   * wait back (`pnpm check:e2e-hygiene` refuses it) or by narrowing the scan.
+   * A violation here is a real defect to fix in `src/app`.
+   *
+   * Its own test rather than a leg of the booking scan: the cost is one
+   * navigation, not shared setup, and the booking scan books a seat — which
+   * this page's departure cannot spare, since its free-seat count is what other
+   * specs read as "N spots left".
+   */
+  test("the reef briefing has no automated a11y violations", async ({ page }) => {
+    // Two page loads and one scan; the scan itself measured ~1.5s against a
+    // warm server, and the budget is for the navigations around it.
+    test.setTimeout(45_000);
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
+    // Reached the way a diver reaches it. The row's accessible name carries the
+    // seat count — "<title> · N spots left" — so this matches a fragment of the
+    // title rather than the whole name, which would go stale the moment a seat
+    // sells.
+    await page
+      .getByRole("link", { name: /Benwood & Elbow/ })
+      .first()
+      .click();
+    // The page's own heading, never a skeleton: this route streams its body
+    // behind a static shell like every other (ADR 20260804-instant-navigation).
+    await expect(page.getByRole("heading", { level: 1, name: /Benwood & Elbow/ })).toBeVisible();
+    await expectNoA11yViolations(page);
   });
 });
 
