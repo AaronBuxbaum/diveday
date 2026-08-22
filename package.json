@@ -73,7 +73,7 @@
     "@sentry/nextjs": "^10.70.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "aws-rum-web": "^3.2.0",
+    "aws-rum-web": "^3.2.1",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "rc",
     "fflate": "^0.8.3",
