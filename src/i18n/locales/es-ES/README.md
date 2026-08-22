@@ -63,7 +63,11 @@ says **venta minorista**, and that distinction is the point of dropping the word
 | POS / point of sale | POS / punto de venta *(never "TPV", which is peninsular)* |
 
 `trastienda` (a shop's back office, as opposed to the counter) is a different word and stays — do
-not let a find-and-replace on "tienda" eat it.
+not let a find-and-replace on "tienda" eat it. `scripts/check-shop-word.mjs` (in `pnpm check:repo`) now
+refuses `tienda` in any value here, anchored on a word boundary so `trastienda` — and `entiendas`,
+in the waiver's own English-only notice — still pass. It was added on 2026-08-21 after six strings
+turned up still carrying the word this section had already removed, one of them the sentence
+explaining the certification question on all three public forms.
 
 ## Register: Latin-American-readable, warm, tú
 
