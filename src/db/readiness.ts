@@ -860,7 +860,12 @@ export async function listTripsReadiness(
           )`,
           )
           .where(
-            and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)),
+            and(
+              inArray(trips.id, tripIds),
+              eq(trips.shopId, shopId),
+              eq(diveSites.shopId, shopId),
+              liveTrip(),
+            ),
           ),
       () => listTripsWaiverStatuses(db, shopId, tripIds),
       () => getCurrentWaiverTemplate(db, shopId),
