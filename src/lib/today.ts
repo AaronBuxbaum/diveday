@@ -702,14 +702,30 @@ export type DaySummary =
   | { code: "blocked"; departures: number; blockedToday: number }
   | { code: "clear"; departures: number }
   | { code: "urgent"; departures: number; urgent: number }
-  | { code: "ahead"; departures: number; jobs: number };
+  | { code: "ahead"; departures: number; jobs: number }
+  /**
+   * A shop that has never had a departure — not a quiet Tuesday. It renders no
+   * sentence at all, which is why it carries no counts: "No boats out today"
+   * is right for a shop with a board and wrong for a shop without one, and
+   * anything else here would restate the setup checklist directly beneath it
+   * (issue #711).
+   */
+  | { code: "first_run" };
 
 export function summarizeDay(
   actions: readonly TodayAction[],
   departures: number,
   blockedToday = 0,
+  /**
+   * Whether the shop is still in first-run — the same signal that decides
+   * whether the setup checklist renders, never a second one derived here.
+   */
+  firstRun = false,
 ): DaySummary {
   if (blockedToday > 0) return { code: "blocked", departures, blockedToday };
+  // Checked after `blocked` on purpose: a first-run shop has no divers to
+  // block, so if one somehow does, that is the more urgent truth.
+  if (firstRun && actions.length === 0 && departures === 0) return { code: "first_run" };
   if (actions.length === 0) return { code: "clear", departures };
   const urgent = actions.filter(
     (action) => action.urgency === "imminent" || action.urgency === "now",

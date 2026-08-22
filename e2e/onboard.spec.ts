@@ -37,6 +37,17 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   // trip"), the card sits out entirely.
   await expect(page.getByRole("heading", { name: "No boats out today" })).toHaveCount(0);
 
+  // ...and neither does the queue's own empty state, which is written for the
+  // shop that cleared its last blocker: "Every diver booked in the next week
+  // has their waiver, certifications, and payment in order. Enjoy the surface
+  // interval." This shop has no divers, and read that directly beneath the
+  // step telling it to schedule its first trip (issue #711). The header
+  // sentence went with it — "No boats out today" is a quiet Tuesday, not a
+  // shop with no board.
+  await expect(page.getByRole("heading", { name: "Nothing is waiting on you" })).toHaveCount(0);
+  await expect(page.getByText(/surface interval/i)).toHaveCount(0);
+  await expect(page.getByText(/No boats out today/)).toHaveCount(0);
+
   // Complete the contact-details step for real, through the actual settings
   // form — not a flag the checklist sets itself — then confirm it reflects.
   // The checklist deep-links to the contact row's fragment, which opens the
