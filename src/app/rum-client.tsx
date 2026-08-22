@@ -93,15 +93,18 @@ export function CloudWatchRum() {
           allowCookies: false,
           enableXRay: false,
           disableAutoPageView: true,
-          // aws-rum-web@3.2.0 pre-populates its data-plane endpoint with
-          // "us-west-2" before deciding whether to substitute the region
-          // argument above, so that substitution never runs outside
-          // us-west-2 (aws-observability/aws-rum-web#881): requests get
-          // signed for `config.region` but posted to the us-west-2
-          // endpoint, which the dataplane refuses with "Credential should
-          // be scoped to a valid region." Naming the endpoint explicitly
-          // sidesteps the broken default.
-          endpoint: `https://dataplane.rum.${config.region}.amazonaws.com`,
+          // No `endpoint` here, deliberately: the region argument above is
+          // what picks the data plane. aws-rum-web@3.2.0 passed its whole
+          // default config down as the caller's own, and that default carries
+          // a hardcoded `us-west-2` endpoint — so the library's
+          // "substitute the region unless the caller named an endpoint" branch
+          // saw an endpoint it had supplied itself and never ran
+          // (aws-observability/aws-rum-web#881). Every request outside
+          // us-west-2 was signed for its real region and posted to us-west-2,
+          // and the data plane refused it: "Credential should be scoped to a
+          // valid region." 3.2.1 merges only `signing` and `telemetries`, so
+          // the branch fires and this line is no longer needed;
+          // `rum-client.test.tsx` pins that the endpoint follows the region.
         });
         // The effect below already ran, against a client that did not exist
         // yet, so the entry page view is recorded here or not at all.
