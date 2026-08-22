@@ -844,8 +844,12 @@ new domain concept, define it here in the same PR.
   held against the version it was signed on, so a new version leaves every booked diver on every
   forward departure blocked until they sign again. That is why re-saving *identical* text publishes
   nothing at all — trimmed, newline-normalised and Unicode-normalised, so a paste from Word that
-  differs only in Unicode form is not an edit — and why the editor says how many signed releases a
-  real edit is about to put back in the queue before the tap. Whether a shop may declare an edit
+  differs only in Unicode form is not an edit — and why the editor says, before the tap, how many
+  **divers** a real edit is about to put back in the queue and how many of those board inside the
+  **operational horizon**. Divers rather than signed records, because one diver can hold several
+  standing records and it is people who have to sign again; the second number because a shop that
+  must publish a legally revised release will publish it either way, so the question it actually
+  faces is which boat this lands on (issue #790). Whether a shop may declare an edit
   *non-material* and keep those signatures is an open legal question (H-01/H-03), not a gap.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -7,10 +8,11 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
-import { countSignedWaiversOnCurrentVersion, getCurrentWaiverTemplate } from "@/db/waivers";
+import { getCurrentWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
+import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
 import type { NoticeTone } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
@@ -61,7 +63,7 @@ export default async function WaiverTemplatesPage({
   // render so the confirm below can say it *before* the tap — the count in the
   // notice afterwards is the same number, and arrives too late to change a
   // mind (issue #720).
-  const atRisk = await countSignedWaiversOnCurrentVersion(db, shop.id);
+  const atRisk = await standingWaiverExposure(db, shop.id);
 
   const resigning = notice === "waiver-resigning" ? Number(count) : Number.NaN;
   const banner =
@@ -110,11 +112,28 @@ export default async function WaiverTemplatesPage({
             no ceremony; once signatures stand on the current version, the tap
             invalidates all of them at once and the number goes in front of the
             staffer rather than in the notice afterwards. */}
-        {atRisk > 0 ? (
+        {atRisk.divers > 0 ? (
           <InlineConfirm
             triggerLabel={t("waiversStaff.saveNewVersion")}
             triggerClassName={buttonClass({ size: "lg" })}
-            message={t("waiversStaff.confirm.message", { count: atRisk })}
+            // Two sentences, because they answer different questions. The
+            // lifetime number says what publishing costs; the operational one
+            // says which boat it lands on — and a shop that must publish a
+            // legally revised release will publish it either way, so the
+            // second is the one that changes what they do next (issue #790).
+            message={[
+              t("waiversStaff.confirm.message", { count: atRisk.divers }),
+              atRisk.boardingSoon > 0
+                ? t("waiversStaff.confirm.boardingSoon", {
+                    count: atRisk.boardingSoon,
+                    // From the constant the query itself uses, so the sentence
+                    // cannot drift from the window it describes.
+                    days: OPERATIONAL_HORIZON_DAYS,
+                  })
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" ")}
             confirmLabel={t("waiversStaff.confirm.publish")}
             cancelLabel={t("waiversStaff.confirm.cancel")}
             pendingLabel={t("waiversStaff.pendingLabel")}
@@ -130,7 +149,23 @@ export default async function WaiverTemplatesPage({
         {/* Beside the button, not under the `<h1>`: the release text is a
             fourteen-row textarea, so the top of this page is a screen and a
             half away from the control that was pressed. */}
-        <FormStatus tone={bannerTone}>{banner}</FormStatus>
+        <FormStatus tone={bannerTone}>
+          {banner}
+          {/* The shop now owes those divers a link, and the batch send that
+              issues one per departure already exists on the by-departure view.
+              A door, rather than leaving them to hunt for it (issue #790). */}
+          {notice === "waiver-resigning" && Number.isFinite(resigning) && resigning > 0 ? (
+            <>
+              {" "}
+              <Link
+                href={`/shop/${shopSlug}?view=departures`}
+                className="font-medium text-primary hover:underline"
+              >
+                {t("waiversStaff.banner.resigningSendLink")}
+              </Link>
+            </>
+          ) : null}
+        </FormStatus>
       </div>
     </form>
   );

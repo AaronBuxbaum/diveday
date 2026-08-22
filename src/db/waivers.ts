@@ -1,7 +1,23 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
+import { operationalWindow } from "@/lib/operational-window";
 import { personNamesMatch } from "@/lib/person-name";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
@@ -30,6 +46,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /** The three ways a shop hands a link over — the schema enum, named for callers. */
 export type WaiverDeliveryChannel = (typeof waiverDeliveryChannel.enumValues)[number];
@@ -318,9 +335,39 @@ export async function saveWaiverTemplate(
 }
 
 /**
- * How many signed releases publishing a new version would put back in the
- * queue — the sentence a staffer needs *before* they tap Save, and the count
- * reported after.
+ * Who publishing a new version would put back in the queue, and how many of
+ * them board soon — the sentence a staffer needs *before* they tap Save, and
+ * the count reported after.
+ *
+ * **Divers, not records.** This counted `waiver_records` rows and both strings
+ * called them divers, which is not the same number: one diver can hold several
+ * standing records on the current version, because `issueWaiverRequest`'s
+ * `alreadyStanding` check for a booking subject only inspects records on *that
+ * booking*, so a staff "Send waiver" on a second seat mints a second link for
+ * someone who already signed. It also counted records belonging to people the
+ * shop has deleted or erased — `anonymizeDiver` leaves the completed record
+ * standing — i.e. people who will never sign anything again. Counting distinct
+ * live `people` makes the noun true (issue #790).
+ *
+ * **And the operational half, which is the half that changes a decision.** A
+ * three-season shop read "the release that 812 divers have signed": accurate,
+ * alarming, and useless. A shop that must publish a legally revised release
+ * will publish it regardless; what they need is which boat it lands on this
+ * afternoon. `boardingSoon` is those divers with an active booking inside the
+ * same `operationalWindow` the readiness side already uses, so the two halves
+ * of the app answer "soon" the same way — and so every diver the sentence
+ * counts is one the notice's "Send them by departure" link can reach.
+ *
+ * **Bookings only, so crew are outside it.** A divemaster who signed the shop's
+ * release person-scoped is counted in `divers` and can never appear in
+ * `boardingSoon`, because crew reach a departure through `trip_crew` rather
+ * than `bookings`. Left deliberate rather than joined in passing: whether a
+ * shop's release covers its own staff at all is a question for the shop, and
+ * answering it by which table happened to be joined would be the wrong way to
+ * decide it (`dive-domain-expert`, on issue #790; filed for triage). Walk-ups
+ * and wait-list divers are outside it for the same structural reason and need
+ * no decision — they have no booking yet, and counter check-in evaluates
+ * readiness live.
  *
  * Mirrors the conditions in `isCompletedWaiverCurrent` (`src/lib/waivers.ts`)
  * that a version bump is what breaks, and only those:
@@ -338,11 +385,18 @@ export async function saveWaiverTemplate(
  * The `now` parameter is the clock rule (`src/lib/clock.ts`), so the e2e fleet's
  * frozen instant reaches this count like every other read.
  */
-export async function countSignedWaiversOnCurrentVersion(
+export type StandingWaiverExposure = {
+  /** Distinct live divers whose current signature a version bump would void. */
+  divers: number;
+  /** How many of those divers board inside the operational window. */
+  boardingSoon: number;
+};
+
+export async function standingWaiverExposure(
   db: DbExecutor,
   shopId: string,
   now: Date = nowDate(),
-): Promise<number> {
+): Promise<StandingWaiverExposure> {
   const [current] = await db
     .select({ version: waiverTemplates.version })
     .from(waiverTemplates)
@@ -352,11 +406,63 @@ export async function countSignedWaiversOnCurrentVersion(
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
     .orderBy(desc(waiverTemplates.version))
     .limit(1);
-  if (!current) return 0;
+  if (!current) return { divers: 0, boardingSoon: 0 };
   const signedAfter = new Date(now.getTime() - WAIVER_SIGNATURE_VALIDITY_MS);
+  const window = operationalWindow(now);
   const [row] = await db
-    .select({ count: count() })
+    .select({
+      // `count(distinct person_id)`, so a diver holding two standing records is
+      // one diver. Drizzle's `countDistinct` over the joined column.
+      divers: countDistinct(waiverRecords.personId),
+      // The same set, narrowed to those with an active booking on a live
+      // departure inside the horizon. `filter (where …)` rather than a second
+      // query: one scan, and the two numbers cannot disagree about which
+      // records they counted.
+      // Keyed on `trips.id`, not `bookings.id`: the booking join matches any
+      // non-cancelled seat the diver holds, on any departure ever, so filtering
+      // on it counted every booked diver and the second sentence read "127 of
+      // them board in the next 7 days" beside "127 divers have signed". It is
+      // the *trip* join that carries the window.
+      boardingSoon: sql<number>`count(distinct ${waiverRecords.personId}) filter (where ${trips.id} is not null)::int`,
+    })
     .from(waiverRecords)
+    // **Erased, not deleted.** An erased person genuinely will never sign
+    // anything again, so their standing record is not exposure — and
+    // `anonymizeDiver` stamps `deleted_at` too, so this one predicate covers
+    // them.
+    //
+    // A *deleted* diver is a different matter and must stay counted:
+    // `deleteDiver` says in as many words that it is "removal from the active
+    // lists, not erasure", and leaves the bookings live. `getTripRoster` and
+    // `listTripsWaiverStatuses` both honour that — so a soft-deleted diver
+    // holding a live seat is on the manifest, is in the readiness queue, and
+    // does owe a fresh signature. Dropping them here would make this number
+    // *smaller than the boat*, which is the one direction it must never err
+    // (`dive-domain-expert`, on issue #790). A shop merging a duplicate diver
+    // mid-season is the ordinary way that happens.
+    .innerJoin(people, and(eq(people.id, waiverRecords.personId), isNull(people.anonymizedAt)))
+    .leftJoin(
+      bookings,
+      and(eq(bookings.personId, waiverRecords.personId), ne(bookings.status, "cancelled")),
+    )
+    .leftJoin(
+      trips,
+      and(
+        eq(trips.id, bookings.tripId),
+        // Re-proved here rather than rested on the person being shop-scoped
+        // (CR-007), the way every other reader in `src/db` does it.
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        // `liveTrip()` is only `deleted_at is null`. A blow-out sets
+        // `status = 'cancelled'` and leaves the bookings alone until staff
+        // work the cascade per seat, so without this a called-off Saturday
+        // still counts a boatload of divers as boarding — the same filter
+        // `src/db/today.ts` carries, and for the same reason.
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, window.from),
+        lte(trips.startsAt, window.to),
+      ),
+    )
     .where(
       and(
         eq(waiverRecords.shopId, shopId),
@@ -374,7 +480,7 @@ export async function countSignedWaiversOnCurrentVersion(
         gt(sql`coalesce(${waiverRecords.signedAt}, ${waiverRecords.completedAt})`, signedAfter),
       ),
     );
-  return row?.count ?? 0;
+  return { divers: row?.divers ?? 0, boardingSoon: row?.boardingSoon ?? 0 };
 }
 
 export type IssueWaiverOutcome =
