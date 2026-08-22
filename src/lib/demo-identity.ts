@@ -208,6 +208,32 @@ export type DemoShopIdentity = {
  * `createDemoShop`). Every staff email derives from the slug, so a retry must
  * take a whole fresh identity — never the old name with a patched slug.
  */
+/**
+ * The identity a caller asks for by name, instead of one drawn at random.
+ *
+ * **For a visual capture, and nothing else.** `generateDemoShopIdentity` picks
+ * its words at random by design — that is what makes the live demo feel like a
+ * real shop rather than "Demo Shop 4" — and a screenshot of a minted shop is
+ * therefore different on every run: the name sits in the staff header and the
+ * slug-derived owner email sits in the dev banner above it. The first capture
+ * to use a private shop (`manifest-emergency-empty`) reported as changed on the
+ * very next pull request for that reason alone, which is how a baseline becomes
+ * noise a reviewer waves through.
+ *
+ * Pinning solves it at the fixture rather than by masking the pixels, which the
+ * repo refuses on principle: a masked capture cannot catch what it covers.
+ *
+ * The name is derived from the slug rather than taken separately, so the two
+ * can never disagree — which is the invariant the random path also keeps.
+ */
+export function pinnedDemoShopIdentity(slug: string): DemoShopIdentity {
+  return {
+    name: slug.split("-").map(capitalize).join(" "),
+    slug,
+    emailFor: (localPart) => `${localPart}@${slug}.${DEMO_EMAIL_DOMAIN}`,
+  };
+}
+
 export function generateDemoShopIdentity(): DemoShopIdentity {
   const adjective = pick(ADJECTIVES);
   // "Reef Reef Divers" is a name no shop would put on a boat. Re-pick rather
