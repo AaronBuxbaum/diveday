@@ -29,6 +29,13 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
   // (Badge.tsx toneGlyph), so the element's own text is "❌Blocked".
   await expect(card.getByText("❌Blocked")).toBeVisible();
+  // **The reasons are one tap away, not gone.** This screen calls itself
+  // Counter mode — it faces a queue — so "Payment is outstanding for this trip"
+  // no longer sits open for whoever is next in line to read (issue #716). The
+  // badge above stays loud, the summary says how many reasons there are, and
+  // the staffer gets all of them on one tap.
+  await expect(card.getByText("Waiver has not been sent.")).toBeHidden();
+  await card.getByText(/Why: \d+ reasons?/).click();
   await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 
@@ -251,4 +258,38 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
   await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
   await expect(page.getByText("Paper waiver recorded")).toHaveCount(0);
+});
+
+/**
+ * **The counter faces a queue.** `/shop/[shopSlug]/check-in` calls itself
+ * Counter mode — the screen on the front desk that divers line up at — and it
+ * printed every diver's personal email under their name. On the seeded shop
+ * that is 26 addresses on a screen angled at a lobby, so whoever is second in
+ * the queue can read the address of whoever is first (issue #716).
+ *
+ * The email is a *disambiguator*: it earns its place only where two visible
+ * divers share a name, which is what the code that added it always said it was
+ * for.
+ */
+test("the counter shows a diver's email only when another diver shares their name", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in");
+  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
+
+  // No two seeded divers share a name, so the whole queue renders without a
+  // single address. Asserted on the queue region rather than the page: the
+  // search box's own placeholder still names email, which is a staffer typing.
+  const queue = page.getByRole("region", { name: "Check-in queue" });
+  await expect(queue.getByText(/@example\.com/)).toHaveCount(0);
+
+  // Searching by email still finds the diver — that path is a staffer typing,
+  // never a display, and it must not have been narrowed with the display.
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill("priya.sharma@example.com");
+  await search.press("Enter");
+  await expect(
+    page.locator("article").filter({ hasText: "Priya Sharma" }).filter({ visible: true }),
+  ).toHaveCount(1);
 });

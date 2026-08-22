@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BlockerFix } from "@/lib/blockers";
@@ -68,6 +69,8 @@ type BlockedDiverRowProps = {
       /** Extra lines under the reasons — the "also blocked on" annotation. */
       meta?: ReactNode;
       extra?: never;
+      /** The dense row list has no lobby reading over it; see the `below` half. */
+      collapseReasons?: never;
     }
   | {
       /** Fix under the reasons — a card whose header the host drew itself. */
@@ -76,6 +79,21 @@ type BlockedDiverRowProps = {
       meta?: never;
       /** Anything after the fix — the counter's paper-waiver fallback. */
       extra?: ReactNode;
+      /**
+       * Put the reasons behind a native disclosure instead of leaving them
+       * open. **Only the counter passes this**, and only because of who is
+       * standing there: `/shop/[shopSlug]/check-in` calls itself Counter mode —
+       * the screen on the front desk that divers queue at — so a diver's
+       * outstanding payment and missing certifications were legible to whoever
+       * was next in line (issue #716).
+       *
+       * This is **not** the truncation the docblock above argues against.
+       * Nothing is dropped and no count is summarised away: every reason is
+       * still here, the summary says how many there are, and one tap opens all
+       * of them. What changed is that the shoulder behind the staffer has to
+       * wait for that tap.
+       */
+      collapseReasons?: { summary: string };
     }
 );
 
@@ -89,6 +107,7 @@ export function BlockedDiverRow({
   meta,
   extra,
   layout,
+  collapseReasons,
   t,
 }: BlockedDiverRowProps) {
   const reasons = (
@@ -171,7 +190,22 @@ export function BlockedDiverRow({
   return (
     <>
       {identity}
-      {reasons}
+      {collapseReasons ? (
+        // Native `<details>`: keyboard and screen-reader behaviour for free, the
+        // same disclosure grammar the crew line on the departure card uses. The
+        // summary carries the count, so a staffer knows there are four reasons
+        // before deciding to open them — and the danger-toned `Blocked` badge
+        // the host drew above this is untouched and still loud.
+        <details className="group/reasons mt-3">
+          <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-danger-strong transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+            <DisclosureCaret className="group-open/reasons:rotate-90" />
+            {collapseReasons.summary}
+          </summary>
+          {reasons}
+        </details>
+      ) : (
+        reasons
+      )}
       {action ? <div className="mt-3">{action}</div> : null}
       {extra}
     </>
