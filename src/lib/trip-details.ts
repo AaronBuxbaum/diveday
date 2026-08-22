@@ -1,5 +1,6 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
+import { paymentGateIsUnclearable } from "./readiness";
 import { tripMeetingDays } from "./trip-days";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
@@ -46,6 +47,12 @@ export type TripDetailsFields = {
   endTime: string;
   dayCount: number;
   priceDollars?: number;
+  /**
+   * Whether the departure's requirement row demands payment. Absent on the
+   * create form, which has no requirements section — a trip being created has
+   * no gate yet, so the refusal below cannot fire there.
+   */
+  requiresPayment?: boolean;
   depositDollars?: number;
   cancellationWindowHours?: number;
   minimumBookings?: number;
@@ -85,7 +92,11 @@ export type TripDetailsShop = {
  * callers say something specific about it — the board also counts it as an
  * analytics outcome — while everything else lands as one "that didn't parse".
  */
-export type TripDetailsRefusal = "invalid" | "end_before_start" | "capacity_above_boat";
+export type TripDetailsRefusal =
+  | "invalid"
+  | "end_before_start"
+  | "capacity_above_boat"
+  | "price_required_by_gate";
 
 export type TripDetailsPatch = {
   startsAt: Date;
@@ -106,7 +117,10 @@ export type TripDetailsResult =
   | { ok: false; reason: "invalid" | "end_before_start" }
   // Carries the hull's number so the notice can say "Reef Runner holds 6"
   // rather than a bare "that didn't work".
-  | { ok: false; reason: "capacity_above_boat"; boatCapacity: number };
+  | { ok: false; reason: "capacity_above_boat"; boatCapacity: number }
+  // Clearing the price off a departure that demands payment. See
+  // `paymentGateIsUnclearable` — the gate would then be one nobody can clear.
+  | { ok: false; reason: "price_required_by_gate" };
 
 export function tripDetailsPatch(
   fields: TripDetailsFields,
@@ -179,6 +193,14 @@ export function tripDetailsPatch(
     (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
   ) {
     return invalid;
+  }
+
+  // **The other door onto the same trap.** The requirements form refuses to put
+  // a payment gate on an unpriced departure; this refuses to take the price off
+  // a gated one. Both produce a departure that asks nobody for money and blocks
+  // every diver who books it, forever (issue #692).
+  if (paymentGateIsUnclearable(fields.requiresPayment ?? false, priceCents)) {
+    return { ok: false, reason: "price_required_by_gate" };
   }
 
   const minimumBookings = fields.minimumBookings ?? null;

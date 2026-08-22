@@ -237,3 +237,51 @@ describe("capacity against the assigned hull", () => {
     expect(refusal({ endTime: "06:00", capacity: 24, boatCapacity: 6 })).toBe("end_before_start");
   });
 });
+
+/**
+ * **A payment gate on a departure with no price is a gate nobody can clear.**
+ *
+ * `checkoutCharge` returns null for an unpriced trip, so the booking action
+ * never asks for money, so the booking stays `unpaid`, so `payment_due` stands
+ * forever — for that diver and for every diver who books afterwards. There is
+ * no route out from the diver's side, and only one from the shop's: marking
+ * each person paid by hand, on a departure that never asked anyone for money.
+ *
+ * The demo shop was publicly selling one (issue #692). This is the details
+ * form's half of the trap — clearing the price off a gated departure; the
+ * requirements form refuses the other direction.
+ */
+describe("a price against a payment gate", () => {
+  it("refuses clearing the price off a departure that demands payment", () => {
+    const result = tripDetailsPatch(
+      { ...base, priceDollars: undefined, requiresPayment: true },
+      shop,
+    );
+    if (result.ok) throw new Error("expected a refusal");
+    expect(result.reason).toBe("price_required_by_gate");
+  });
+
+  it("refuses a price of zero just as hard", () => {
+    // `checkoutCharge` refuses `<= 0` by the same test it refuses null, so a
+    // departure priced at nothing gates exactly as hard as an unpriced one.
+    const result = tripDetailsPatch({ ...base, priceDollars: 0, requiresPayment: true }, shop);
+    if (result.ok) throw new Error("expected a refusal");
+    expect(result.reason).toBe("price_required_by_gate");
+  });
+
+  it("accepts a priced departure that demands payment", () => {
+    expect(ok({ priceDollars: 195, requiresPayment: true }).priceCents).toBe(19500);
+  });
+
+  it("leaves an unpriced departure alone when nothing demands payment", () => {
+    // A free or pay-at-the-counter charter is legitimate — this rule is about
+    // the *combination*, never about requiring a price.
+    expect(ok({ priceDollars: undefined, requiresPayment: false }).priceCents).toBeNull();
+  });
+
+  it("does not fire on the create form, which carries no gate", () => {
+    // `requiresPayment` is absent there: a trip being created has no
+    // requirement row yet, so the combination cannot exist.
+    expect(ok({ priceDollars: undefined }).priceCents).toBeNull();
+  });
+});
