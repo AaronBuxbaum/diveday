@@ -31,7 +31,10 @@
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
       "sendWindowSaved": "Horario de mensajes guardado.",
-      "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas."
+      "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas.",
+      "packageSaved": "Paquete añadido.",
+      "packageDeleted": "Paquete eliminado.",
+      "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
     },
     "timezone": {
       "heading": "Zona horaria",
@@ -337,6 +340,24 @@
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",
       "saving": "Guardando…"
+    },
+    "divePackages": {
+      "heading": "Paquetes de inmersiones",
+      "value": "{count, plural, =0 {Sin paquetes} one {# paquete} other {# paquetes}}",
+      "description": "Inmersiones prepagadas que un buceador compra una vez y usa en varias salidas.",
+      "summary": "{dives} inmersiones · {price} · {scope}",
+      "scopeAll": "Cualquier salida",
+      "scopeFunDives": "Solo inmersiones recreativas",
+      "nameLabel": "Cómo lo llamas",
+      "diveCountLabel": "Inmersiones incluidas",
+      "priceLabel": "Precio",
+      "validityLabel": "Válido durante (días)",
+      "validityDescription": "Déjalo en blanco y no caduca.",
+      "scopeLabel": "Cubre",
+      "submit": "Añadir paquete",
+      "submitting": "Añadiendo…",
+      "delete": "Eliminar",
+      "deleting": "Eliminando…"
     }
   },
   "team": {

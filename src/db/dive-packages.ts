@@ -8,6 +8,7 @@ import {
   spendableCount,
 } from "@/lib/dive-packages";
 import type { AppDb, DbExecutor } from "./client";
+import { createOrder } from "./orders";
 import { divePackageEntitlements, divePackages } from "./schema";
 
 /**
@@ -217,4 +218,84 @@ export async function releaseEntitlementForBooking(
     )
     .returning();
   return released ?? null;
+}
+
+/**
+ * **Sell one package to one diver**: one order through the existing Stripe
+ * path, then N entitlement rows against it.
+ *
+ * Deliberately `createOrder` rather than a second billing path. That function
+ * re-reads `person_roles` to authorize the actor, refuses a shop with no
+ * connected account, and stamps the shop's own currency — none of which a
+ * package sale gets to skip because it is a new product. It also means a
+ * package appears in the owner report, the export and the diver's own record
+ * with no special case, which is the "single money story" this feature exists
+ * to protect.
+ *
+ * The entitlements are granted **after** the order is real. If Stripe refuses,
+ * the diver holds nothing — which is the correct failure: prepaid dives nobody
+ * paid for are a seat the shop gave away.
+ */
+export async function sellDivePackage(
+  db: AppDb,
+  input: {
+    shopId: string;
+    packageId: string;
+    personId: string;
+    soldByPersonId: string;
+    /** The invoice line's wording, composed by the caller from its bundle. */
+    description: string;
+    now?: Date;
+  },
+): Promise<
+  | { ok: true; orderId: string; dives: number }
+  | {
+      ok: false;
+      reason:
+        | "package_not_found"
+        | "not_authorized"
+        | "not_connected"
+        | "invalid"
+        | "stripe_failed";
+    }
+> {
+  const [pkg] = await db
+    .select()
+    .from(divePackages)
+    .where(
+      and(
+        eq(divePackages.id, input.packageId),
+        eq(divePackages.shopId, input.shopId),
+        isNull(divePackages.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!pkg) return { ok: false, reason: "package_not_found" };
+
+  const order = await createOrder(db, {
+    shopId: input.shopId,
+    personId: input.personId,
+    createdByPersonId: input.soldByPersonId,
+    description: input.description,
+    lineItems: [
+      {
+        kind: "dive_package",
+        description: input.description,
+        quantity: 1,
+        unitAmountCents: pkg.priceCents,
+      },
+    ],
+  });
+  if (!order.ok) return { ok: false, reason: order.reason };
+
+  await grantPackageEntitlements(db, {
+    shopId: input.shopId,
+    packageId: pkg.id,
+    personId: input.personId,
+    orderId: order.order.id,
+    diveCount: pkg.diveCount,
+    validityDays: pkg.validityDays,
+    purchasedAt: input.now,
+  });
+  return { ok: true, orderId: order.order.id, dives: pkg.diveCount };
 }
