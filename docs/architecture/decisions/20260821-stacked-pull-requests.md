@@ -153,7 +153,31 @@ CI captures the pull request **merged with `main`**. PR #668 reported 60 changed
 key-resolution rule doing exactly what it says, and it is a good argument for rebasing a stack's
 layers before reading their visual reports at all.
 
-Not done, and deliberately: no `matchingThreshold` in `regconfig.json`, and no re-anchoring the
-capture to `main` — that would report every lower layer's own changes on every layer above it. If
-this is to be lifted, the fix belongs in key resolution or in ordering the layers' visual jobs, not
-in loosening what counts as a match.
+**There is a supported lever, and it is worth writing down rather than rediscovering.** reg-suit's
+key generator is a plugin slot, and `reg-keygen-git-hash-plugin` is only the default: it accepts no
+options at all (its `init()` stores the config and reads nothing from `regconfig.json`), so nothing
+about the inference above is tunable. The alternative reg-suit ships is
+[`reg-simple-keygen-plugin`](https://github.com/reg-viz/reg-suit/blob/master/packages/reg-simple-keygen-plugin/README.md),
+which takes `expectedKey` and `actualKey` directly, with environment-variable substitution:
+
+```json
+"reg-simple-keygen-plugin": { "expectedKey": "${EXPECTED_KEY}", "actualKey": "${ACTUAL_KEY}" }
+```
+
+This repository is already in the business of steering that inference — `visual-report` checks out
+`pull_request.head.sha`, re-attaches a branch name with `git checkout -B` because the git-hash
+plugin throws on a detached HEAD, and invents a `reg-suit-baseline-parent` branch on main pushes.
+Naming the key outright is a smaller trick than those, not a bigger one.
+
+What it would fix: the detached-HEAD fragility, and the stale-parent surprise below — CI could pass
+a deliberately chosen commit instead of whatever the graph walk lands on.
+
+What it would **not** fix, and this is the part that keeps the restriction: an explicit key does not
+conjure a snapshot. Layer 2's baseline still has to have been *published*, and the only run that
+publishes layer 1's head is layer 1's own. So the rebase problem is an **ordering** problem — layer
+2's visual job must not run until layer 1's has uploaded — and it stays one whichever plugin names
+the key. That is the shape any future fix takes: `reg-simple-keygen-plugin` plus a gate on the layer
+below, not a cleverer walk of the graph.
+
+Still not done, deliberately: no `matchingThreshold` in `regconfig.json`, and no re-anchoring the
+capture to `main` — that would report every lower layer's own changes on every layer above it.

@@ -101,7 +101,11 @@ requests to repositories attached to the session, so the install is expected to 
   and read the sticky `diveday:visual-summary` comment on **every** layer before triaging pixels: if
   nothing resolved, nothing was compared and that layer's counts mean nothing (see the
   **visual-triage** skill). Full measurement in ADR
-  [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md).
+  [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
+  including the lever if this is ever lifted: reg-suit's key generator is a plugin slot, and
+  `reg-simple-keygen-plugin` takes `expectedKey`/`actualKey` outright. It is not enough on its own —
+  an explicit key cannot conjure a snapshot layer 1 has not published yet — so the fix is that
+  plugin *plus* gating layer 2's visual job on layer 1's.
 - **Rebase a layer before you read its visual report.** A branch whose parent has fallen behind
   `main` compares against that *parent*, while CI captures the pull request *merged with `main`* —
   so every commit merged in between shows up as your diff. That is not a stack-specific bug, but a
