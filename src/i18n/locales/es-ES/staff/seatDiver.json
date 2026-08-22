@@ -18,5 +18,5 @@
   "addDiverAction": "Añadir buceador",
   "addDiverPrompt": "¿No aparece?",
   "addNewDiverAction": "Añadir buceador",
-  "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados"
+  "tripSummary": "{title} · {date} · {time} · {booked}/{capacity, plural, one {# reservado} other {# reservados}}"
 }

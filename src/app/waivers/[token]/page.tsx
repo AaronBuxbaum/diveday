@@ -675,7 +675,8 @@ export default async function WaiverPage({
             total={
               questionnaire.questions.filter((question) => question.section === "primary").length
             }
-            labelTemplate={t.raw("waiver.questionsAnswered")}
+            labelTemplateOne={t.raw("waiver.questionsAnsweredOne")}
+            labelTemplateOther={t.raw("waiver.questionsAnsweredOther")}
           >
             <StepHeading number={1}>{questionnaire.title}</StepHeading>
             {/* The published form's directions paragraph used to sit here. It

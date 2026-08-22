@@ -57,7 +57,7 @@
     "postDiveReports": {
       "label": "Informes posteriores a la inmersión",
       "description": "Envía a cada buceador el resumen de una salida completada.",
-      "progress": "{completed} de {total} enviados.",
+      "progress": "{completed} de {total, plural, one {# enviado} other {# enviados}}.",
       "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
       "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}",
       "retry": "Reintentar informes fallidos",

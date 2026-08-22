@@ -15,7 +15,8 @@ import { formatTime, formatTimeRange } from "@/lib/format";
 export type DepartureBoardCopy = {
   crewingBadge: string;
   courseSession: string;
-  bookedOfCapacity: string;
+  bookedOfCapacityOne: string;
+  bookedOfCapacityOther: string;
   boarding: string;
   openGuests: string;
   assignCrewMemberAria: string;
@@ -27,6 +28,14 @@ export type DepartureBoardCopy = {
   crewLine: string;
   editCrew: string;
   boardingSummary: string;
+  boardingAboardOne: string;
+  boardingAboardOther: string;
+  boardingReadyOne: string;
+  boardingReadyOther: string;
+  boardingBlockedOne: string;
+  boardingBlockedOther: string;
+  boardingOpenOne: string;
+  boardingOpenOther: string;
   blockedWarningNamed: string;
   blockedWarningOne: string;
   blockedWarningOther: string;
@@ -38,6 +47,11 @@ export type DepartureBoardCopy = {
   clearToBoard: string;
   sailingToday: string;
 };
+
+/** One count of the boarding summary, inflected for its own number. */
+function boardingFragment(count: number, one: string, other: string, locale: string): string {
+  return fill(pluralForm(count, { one, other }, locale), { count });
+}
 
 function DepartureCard({
   departure,
@@ -138,7 +152,13 @@ function DepartureCard({
           <p className="text-sm text-muted">
             {formatTimeRange(departure.startsAt, departure.endsAt, locale, timeZone)} ·{" "}
             <span className="tabular-nums">
-              {fill(copy.bookedOfCapacity, { booked, capacity })}
+              {fill(
+                pluralForm(capacity, {
+                  one: copy.bookedOfCapacityOne,
+                  other: copy.bookedOfCapacityOther,
+                }),
+                { booked, capacity },
+              )}
             </span>
           </p>
         </div>
@@ -168,11 +188,45 @@ function DepartureCard({
         <BoardingBar boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
         {booked > 0 ? (
           <p className="mt-2 text-sm text-muted tabular-nums">
+            {/* **Four counts, four plurals, one sentence.** This line used to
+                be one template with four hard-coded plural nouns, so a boat
+                with a single diver aboard rendered "1 listos para embarcar · 1
+                bloqueados · 1 plazas libres" — three errors at once, because
+                Spanish inflects the adjective as well as the noun, and "1 seats
+                open" in English (issue #778).
+
+                A pair per count resolved through `pluralForm`, the same shape
+                `blockedWarningOne`/`Other` two blocks below already uses:
+                `fill` is a plain `{key}` replacer with no ICU parser, and this
+                copy crosses to a Client Component as a raw template, so a
+                single ICU message is not available at this call site. The
+                template that survives holds only the separator and the order,
+                which are the locale's to own and not this file's. */}
             {fill(copy.boardingSummary, {
-              boarded,
-              ready,
-              blocked,
-              open: Math.max(0, capacity - booked),
+              aboard: boardingFragment(
+                boarded,
+                copy.boardingAboardOne,
+                copy.boardingAboardOther,
+                locale,
+              ),
+              ready: boardingFragment(
+                ready,
+                copy.boardingReadyOne,
+                copy.boardingReadyOther,
+                locale,
+              ),
+              blocked: boardingFragment(
+                blocked,
+                copy.boardingBlockedOne,
+                copy.boardingBlockedOther,
+                locale,
+              ),
+              open: boardingFragment(
+                Math.max(0, capacity - booked),
+                copy.boardingOpenOne,
+                copy.boardingOpenOther,
+                locale,
+              ),
             })}
           </p>
         ) : null}

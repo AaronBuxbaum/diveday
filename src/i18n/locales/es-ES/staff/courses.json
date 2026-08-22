@@ -31,7 +31,7 @@
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5 MB.",
-    "errorTooManyPhotos": "Añade hasta {max} fotos nuevas de galería por guardado. Guarda este lote y añade más después.",
+    "errorTooManyPhotos": "Añade hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y añade más después.",
     "errorDepthPlaceholder": "Una de tus marcas de profundidad está mal escrita, así que no se guardó nada. Escríbela exactamente como '{depth18}': las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'. Si prefieres escribir la profundidad con tus propias palabras, borra la marca.",
     "pitchLegend": "La propuesta",
     "subheadLabel": "Subtítulo",
@@ -51,7 +51,7 @@
     "heroPhotoHint": "(la ancha de arriba)",
     "removeCurrentPhoto": "Eliminar foto actual",
     "galleryPhotosLabel": "Fotos de galería",
-    "galleryPhotosHint": "(hasta ocho en total, {max} nuevas por guardado)",
+    "galleryPhotosHint": "(hasta ocho en total, {max, plural, one {# nueva} other {# nuevas}} por guardado)",
     "removeLabel": "Eliminar",
     "photoCaptionLabel": "Descripción",
     "photoCaptionHint": "(opcional — la leen los lectores de pantalla)",
@@ -133,8 +133,10 @@
     "timeNotePlaceholder": "unas 3 horas",
     "whatHappens": "Día {number} — qué sucede",
     "itemsPlaceholder": "Aula: repaso de conocimientos 1–2\nPiscina: habilidades en aguas confinadas\nLavado del equipo y puesta en común",
-    "itemsOverMax": "Máximo {max} elementos por día — quita una línea antes de guardar.",
-    "daysMax": "Máximo {max} días",
+    "itemsOverMaxOne": "Máximo {max} elemento por día — quita una línea antes de guardar.",
+    "itemsOverMaxOther": "Máximo {max} elementos por día — quita una línea antes de guardar.",
+    "daysMaxOne": "Máximo {max} día",
+    "daysMaxOther": "Máximo {max} días",
     "addDay": "Añadir día"
   }
 }

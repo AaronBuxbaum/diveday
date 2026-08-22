@@ -218,11 +218,17 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
  */
 export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
+  // **Numbers, not pre-grouped strings.** `fallback.export.rowCount` is an ICU
+  // plural now (issue #778), and ICU formats `#` with the locale's own number
+  // format — so `1204` renders as "1,204" here and "1204" for a reader in
+  // Spanish, which the hard-coded English grouping never did. Passing the
+  // string instead renders **NaN**, because a comma is not a number: that is
+  // what the pricing page's visual capture caught.
   const files = [
     // i18n-exempt: the bundle's own file names, shown verbatim as they arrive
-    { file: "contacts.csv", note: t("fallback.export.contactsNote"), rows: "128" },
-    { file: "waiver_records.csv", note: t("fallback.export.waiversNote"), rows: "412" },
-    { file: "bookings.csv", note: t("fallback.export.bookingsNote"), rows: "1,204" },
+    { file: "contacts.csv", note: t("fallback.export.contactsNote"), rows: 128 },
+    { file: "waiver_records.csv", note: t("fallback.export.waiversNote"), rows: 412 },
+    { file: "bookings.csv", note: t("fallback.export.bookingsNote"), rows: 1204 },
   ];
   return (
     <div className="bg-background">

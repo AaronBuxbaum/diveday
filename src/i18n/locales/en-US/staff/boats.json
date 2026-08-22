@@ -47,10 +47,11 @@
   "modePool": "Pool session",
   "boatSelectLabel": "Assigned boat",
   "unassignedBoat": "Any / unassigned boat",
-  "requestBoatSuggestion": "Suggested boat: {boatName} ({capacity} seats)",
+  "requestBoatSuggestion": "Suggested boat: {boatName} ({capacity, plural, one {# seat} other {# seats}})",
   "requestBoatExceeded": "Party size exceeds largest boat capacity.",
   "requestCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} — your {ratio}:1 target.",
-  "requestPlanBoatRecommendation": "Suggested boat: {boatName} ({capacity} seats)",
+  "requestPlanBoatRecommendationOne": "Suggested boat: {boatName} ({capacity} seat)",
+  "requestPlanBoatRecommendationOther": "Suggested boat: {boatName} ({capacity} seats)",
   "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
   "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster — your {ratio}:1 target.",
   "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters — your {ratio}:1 target."

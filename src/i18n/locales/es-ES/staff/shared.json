@@ -1,6 +1,6 @@
 {
   "operationalWindow": {
-    "arrivalsLens": "El modo mostrador muestra las llegadas de las últimas {lookback} horas hasta las próximas {ahead}."
+    "arrivalsLens": "El modo mostrador muestra las llegadas de {lookback, plural, one {la última # hora} other {las últimas # horas}} hasta las próximas {ahead}."
   },
   "skipToContent": "Saltar al contenido principal",
   "publicPreview": {
@@ -211,14 +211,23 @@
     "departureBoard": {
       "crewingBadge": "Formas parte de la tripulación",
       "courseSession": "Sesión de curso · {title}",
-      "bookedOfCapacity": "{booked} de {capacity} reservados",
+      "bookedOfCapacityOne": "{booked} de {capacity} reservado",
+      "bookedOfCapacityOther": "{booked} de {capacity} reservados",
       "boarding": "Embarcar buceadores",
       "openGuests": "Ver invitados",
       "assignCrewMemberAria": "Asignar tripulante a {title}",
       "assignCrewOption": "Asignar tripulante…",
       "assignCrewLabel": "Asignar tripulante",
       "assignFailed": "No se ha guardado — verifica tu conexión o inténtalo de nuevo.",
-      "boardingSummary": "{boarded} a bordo · {ready} listos para embarcar · {blocked} bloqueados · {open} plazas libres",
+      "boardingSummary": "{aboard} · {ready} · {blocked} · {open}",
+      "boardingAboardOne": "{count} a bordo",
+      "boardingAboardOther": "{count} a bordo",
+      "boardingReadyOne": "{count} listo para embarcar",
+      "boardingReadyOther": "{count} listos para embarcar",
+      "boardingBlockedOne": "{count} bloqueado",
+      "boardingBlockedOther": "{count} bloqueados",
+      "boardingOpenOne": "{count} plaza libre",
+      "boardingOpenOther": "{count} plazas libres",
       "blockedWarningNamed": "{name} todavía no puede embarcar — la solución está en la lista de abajo.",
       "unassignAria": "Quitar a {name}",
       "noCrewAssigned": "Todavía no hay tripulación asignada.",
@@ -269,8 +278,8 @@
     "yourSessions": {
       "heading": "Tus sesiones",
       "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
-      "readyCount": "{count} listos",
-      "blockedCount": "{count} bloqueados",
+      "readyCount": "{count, plural, one {# listo} other {# listos}}",
+      "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
       "openRoster": "Ver lista"
     },
     "urgency": {
@@ -380,8 +389,8 @@
       "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler, así que la lista de preparación está incompleta.",
       "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin certificación verificada — esos tanques están planeados con aire.",
       "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
-      "overRatio": "{booked} reservados, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
-      "overRatioIntro": "{booked} reservados en esta sesión de iniciación, la tripulación cubre {capacity}: {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor añade plazas.",
+      "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
+      "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, la tripulación cubre {capacity}: {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor añade plazas.",
       "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "missingContactNamed": "No tiene contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
@@ -464,7 +473,8 @@
     "heading": "Plan de inmersiones",
     "description": "Dejar una inmersión en blanco no pasa nada — los buceadores igualmente verán un plan claro de {tripShape}.",
     "twoTankTrip": "dos tanques",
-    "diveCountTrip": "{count} inmersiones",
+    "diveCountTripOne": "{count} inmersión",
+    "diveCountTripOther": "{count} inmersiones",
     "numberOfDivesLabel": "Número de inmersiones",
     "diveOptionOne": "{count} inmersión",
     "diveOptionOther": "{count} inmersiones",
@@ -535,7 +545,7 @@
       "rollCallCompleteHeading": "Pase de lista completo 🎉",
       "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
       "allAboard": "Todos tienen un resultado — todos a bordo.",
-      "someNotBoarded": "Todos tienen un resultado — {count} marcados como no embarcados. Confirma que están localizados antes de continuar.",
+      "someNotBoarded": "Todos tienen un resultado — {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
       "crewHeading": "Tripulación a bordo",
       "crewAllAccountedFor": "{assigned, plural, one {# tripulante, contabilizado.} other {Los # tripulantes, contabilizados.}}",
       "crewNoneAssigned": "No hay tripulación asignada a esta salida, así que no hay a quién pasar lista. La tripulación se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",

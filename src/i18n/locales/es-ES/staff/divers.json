@@ -88,8 +88,8 @@
   "page": {
     "eyebrow": "Recepción",
     "title": "Buceadores",
-    "matchingCount": "{count} coincidencias",
-    "onFileCount": "{count} registrados",
+    "matchingCount": "{count, plural, one {# coincidencia} other {# coincidencias}}",
+    "onFileCount": "{count, plural, one {# registrado} other {# registrados}}",
     "noticeDuplicate": "Ya hay un buceador con ese correo en este centro.",
     "noticeDeleted": "Buceador eliminado.",
     "noticeRestored": "Buceador restaurado.",
