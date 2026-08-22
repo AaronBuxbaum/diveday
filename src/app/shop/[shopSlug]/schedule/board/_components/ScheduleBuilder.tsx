@@ -145,7 +145,8 @@ export type BuilderCopy = {
   cancel: string;
   noSiteSetYet: string;
   courseLabel: string;
-  dayCountLabel: string;
+  dayCountLabelOne: string;
+  dayCountLabelOther: string;
   crewLabel: string;
   crewNobodyYet: string;
   noPriceSet: string;
@@ -238,10 +239,16 @@ export type BuilderCopy = {
   requestPlanHeading?: string;
   requestPlanDescription?: string;
   requestPlanRecommendation?: string;
-  requestPlanDivers?: string;
+  requestPlanRecommendationDiversOne?: string;
+  requestPlanRecommendationDiversOther?: string;
+  requestPlanRecommendationCapacityOne?: string;
+  requestPlanRecommendationCapacityOther?: string;
+  requestPlanDiversOne?: string;
+  requestPlanDiversOther?: string;
   requestPlanPersonOne?: string;
   requestPlanPersonOther?: string;
-  requestPlanBoatRecommendation?: string;
+  requestPlanBoatRecommendationOne?: string;
+  requestPlanBoatRecommendationOther?: string;
   requestPlanBoatExceeded?: string;
   requestPlanCrewSuggestionOne?: string;
   requestPlanCrewSuggestionOther?: string;
@@ -437,17 +444,40 @@ function AddPanel({
           </legend>
           <p className="text-sm text-muted">{copy.requestPlanDescription ?? ""}</p>
           <p className="mt-2 text-sm font-medium">
+            {/* Two independent counts in one line, so two pairs and a template
+                that holds only their order — a single `{n} divers … {n} seats`
+                string cannot inflect both, and at one of each it read "About 1
+                divers are represented. Suggested starting capacity: 1 seats."
+                (issue #778). */}
             {fill(copy.requestPlanRecommendation ?? "", {
-              capacity: requestPlan.suggestedCapacity,
-              divers: requestPlan.estimatedDivers,
+              diversPart: fill(
+                pluralForm(requestPlan.estimatedDivers, {
+                  one: copy.requestPlanRecommendationDiversOne ?? "",
+                  other: copy.requestPlanRecommendationDiversOther ?? "",
+                }),
+                { divers: requestPlan.estimatedDivers },
+              ),
+              capacityPart: fill(
+                pluralForm(requestPlan.suggestedCapacity, {
+                  one: copy.requestPlanRecommendationCapacityOne ?? "",
+                  other: copy.requestPlanRecommendationCapacityOther ?? "",
+                }),
+                { capacity: requestPlan.suggestedCapacity },
+              ),
             })}
           </p>
           {requestPlan.suggestedBoatName ? (
             <p className="mt-1 text-sm text-muted font-medium">
-              {fill(copy.requestPlanBoatRecommendation ?? "", {
-                boatName: requestPlan.suggestedBoatName,
-                capacity: requestPlan.suggestedCapacity,
-              })}
+              {fill(
+                pluralForm(requestPlan.suggestedCapacity, {
+                  one: copy.requestPlanBoatRecommendationOne ?? "",
+                  other: copy.requestPlanBoatRecommendationOther ?? "",
+                }),
+                {
+                  boatName: requestPlan.suggestedBoatName,
+                  capacity: requestPlan.suggestedCapacity,
+                },
+              )}
             </p>
           ) : null}
           {requestPlan.exceedsKnownBoats ? (
@@ -1378,7 +1408,13 @@ export function ScheduleBuilder({
                                 : null,
                               trip.diveSiteName,
                               trip.dayCount > 1
-                                ? fill(copy.dayCountLabel, { count: trip.dayCount })
+                                ? fill(
+                                    pluralForm(trip.dayCount, {
+                                      one: copy.dayCountLabelOne,
+                                      other: copy.dayCountLabelOther,
+                                    }),
+                                    { count: trip.dayCount },
+                                  )
                                 : null,
                             ]
                               .filter(Boolean)

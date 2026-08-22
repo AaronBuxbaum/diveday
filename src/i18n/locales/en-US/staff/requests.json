@@ -7,7 +7,7 @@
   "groupCount": "{count, plural, one {# group could make this day} other {# groups could make this day}}",
   "groupPeopleCount": "{groups, plural, one {# group could make this day} other {# groups could make this day}} · {divers, plural, one {# diver} other {# divers}}",
   "recommendationHeading": "Planning suggestion",
-  "recommendationDetail": "About {divers} divers across {requests} requests. Start with {capacity} seats.",
+  "recommendationDetail": "About {divers, plural, one {# diver} other {# divers}} across {requests, plural, one {# request} other {# requests}}. Start with {capacity, plural, one {# seat} other {# seats}}.",
   "addDeparture": "Put a departure on this day",
   "flexible": "Flexible",
   "flexibleAround": "Asked for {date}, and can move a few days",

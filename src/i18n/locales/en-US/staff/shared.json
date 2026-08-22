@@ -1,6 +1,6 @@
 {
   "operationalWindow": {
-    "arrivalsLens": "Counter mode shows arrivals from the last {lookback} hours through the next {ahead}."
+    "arrivalsLens": "Counter mode shows arrivals from the last {lookback, plural, one {# hour} other {# hours}} through the next {ahead}."
   },
   "skipToContent": "Skip to main content",
   "publicPreview": {
@@ -211,14 +211,23 @@
     "departureBoard": {
       "crewingBadge": "You’re crewing",
       "courseSession": "Course session · {title}",
-      "bookedOfCapacity": "{booked} of {capacity} booked",
+      "bookedOfCapacityOne": "{booked} of {capacity} booked",
+      "bookedOfCapacityOther": "{booked} of {capacity} booked",
       "boarding": "Board divers",
       "openGuests": "Open guests",
       "assignCrewMemberAria": "Assign crew member to {title}",
       "assignCrewOption": "Assign crew…",
       "assignCrewLabel": "Assign crew",
       "assignFailed": "That didn’t save — recheck your connection or try again.",
-      "boardingSummary": "{boarded} aboard · {ready} clear to board · {blocked} blocked · {open} seats open",
+      "boardingSummary": "{aboard} · {ready} · {blocked} · {open}",
+      "boardingAboardOne": "{count} aboard",
+      "boardingAboardOther": "{count} aboard",
+      "boardingReadyOne": "{count} clear to board",
+      "boardingReadyOther": "{count} clear to board",
+      "boardingBlockedOne": "{count} blocked",
+      "boardingBlockedOther": "{count} blocked",
+      "boardingOpenOne": "{count} seat open",
+      "boardingOpenOther": "{count} seats open",
       "blockedWarningNamed": "{name} cannot board yet — the fix is in the list below.",
       "unassignAria": "Unassign {name}",
       "noCrewAssigned": "No crew assigned yet.",
@@ -464,7 +473,8 @@
     "heading": "Dive plan",
     "description": "Leaving a dive blank is okay — divers will still see a clear {tripShape} plan.",
     "twoTankTrip": "two-tank trip",
-    "diveCountTrip": "{count}-dive trip",
+    "diveCountTripOne": "{count}-dive trip",
+    "diveCountTripOther": "{count}-dive trip",
     "numberOfDivesLabel": "Number of dives",
     "diveOptionOne": "{count} dive",
     "diveOptionOther": "{count} dives",

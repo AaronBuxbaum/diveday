@@ -92,7 +92,7 @@
       "status": {
         "empty": "Click where the dive starts.",
         "one": "One waypoint down — click where it goes next.",
-        "some": "{count} waypoints.",
+        "some": "{count, plural, one {# waypoint} other {# waypoints}}.",
         "full": "That's the most waypoints a route can carry ({count}). Undo to change one."
       }
     },

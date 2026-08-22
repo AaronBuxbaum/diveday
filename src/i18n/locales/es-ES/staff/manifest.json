@@ -16,7 +16,7 @@
   "checkpointNavAriaLabel": "Punto de control del pase de lista",
   "activeCheckpoint": "Punto de control activo",
   "rollCallComplete": "Pase de lista completo 🎉",
-  "recordedOfTotal": "{recorded} de {total} buceadores registrados",
+  "recordedOfTotal": "{recorded} de {total, plural, one {# buceador registrado} other {# buceadores registrados}}",
   "progressAriaLabel": "Progreso del pase de lista",
   "allAccountedFor": "Todos contabilizados — buceadores y tripulación. Listo para el siguiente control.",
   "notBackAboardOpen": "{count, plural, one {# buceador no ha regresado a bordo.} other {# buceadores no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",

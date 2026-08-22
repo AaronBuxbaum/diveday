@@ -96,7 +96,7 @@
       "diverLabel": "Diver",
       "diverPlaceholder": "Search by name",
       "rangeLabel": "Date range",
-      "rangeRecent": "Last {days} days",
+      "rangeRecent": "Last {days, plural, one {# day} other {# days}}",
       "rangeAll": "All orders",
       "rangeCustom": "Custom dates",
       "fromLabel": "From",

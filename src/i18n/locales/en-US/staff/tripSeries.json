@@ -16,7 +16,7 @@
     "stopRepeating": "Stop repeating",
     "stopRepeatingDescription": "Keeps every date already on the board and stops adding new ones. You can start it up again from here.",
     "startRepeating": "Start repeating again",
-    "startRepeatingDescription": "Puts the next {days} days of this trip back on the board, and keeps them there.",
+    "startRepeatingDescription": "Puts the next {days, plural, one {# day} other {# days}} of this trip back on the board, and keeps them there.",
     "editCadence": "Change the days it runs",
     "editCadenceDescription": "Adding a day puts it on the board straight away. Removing one leaves the dates already scheduled alone — you'll be shown them, with who's booked, and asked.",
     "saveCadence": "Save the days",

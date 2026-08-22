@@ -92,7 +92,7 @@
       "status": {
         "empty": "Toca donde empieza la inmersión.",
         "one": "Un punto marcado: toca dónde sigue.",
-        "some": "{count} puntos.",
+        "some": "{count, plural, one {# punto} other {# puntos}}.",
         "full": "Es el máximo de puntos que admite una ruta ({count}). Deshaz para cambiar alguno."
       }
     },

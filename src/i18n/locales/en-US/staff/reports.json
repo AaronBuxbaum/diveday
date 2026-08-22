@@ -49,9 +49,9 @@
     "fill": "Fill",
     "waivers": "Waivers"
   },
-  "seatsMobile": "{booked}/{capacity} seats",
-  "fillLabel": "{booked} of {capacity} seats booked",
-  "waiversRowLabel": "{complete} of {total} waivers signed",
+  "seatsMobile": "{booked}/{capacity, plural, one {# seat} other {# seats}}",
+  "fillLabel": "{booked} of {capacity, plural, one {# seat} other {# seats}} booked",
+  "waiversRowLabel": "{complete} of {total, plural, one {# waiver} other {# waivers}} signed",
   "pagination": {
     "total": "{count, plural, one {# trip} other {# trips}}"
   }

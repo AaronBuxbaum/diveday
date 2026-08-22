@@ -22,7 +22,7 @@
   "checkedInCheck": "Registrado ☑️",
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
-  "departureProgress": "{checkedIn} de {total} registrados",
+  "departureProgress": "{checkedIn} de {total, plural, one {# registrado} other {# registrados}}",
   "walkInAction": "Añadir un walk-in",
   "otherDiversHeading": "Buceadores conocidos",
   "otherDiversDescription": "Personas del registro del centro que no están reservadas en las salidas de hoy",

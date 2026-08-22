@@ -77,7 +77,7 @@
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
-    "seatsFull": "Full boat — all {capacity} seats booked",
+    "seatsFull": "Full boat — {capacity, plural, one {the # seat is booked} other {all # seats booked}}",
     "aboard": "{count} aboard",
     "blocked": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}",
     "needsInstructor": "This course session has no instructor yet",
@@ -471,7 +471,7 @@
     "flaggedAgo": "(flagged {when})",
     "today": "today",
     "yesterday": "yesterday",
-    "daysAgo": "{count} days ago",
+    "daysAgo": "{count, plural, one {# day} other {# days}} ago",
     "rentalKitHeading": "Rental kit",
     "groupLabel": "Group by",
     "groupByItem": "By item",

@@ -7,7 +7,7 @@
   "groupCount": "{count, plural, one {# grupo podría hacer este día} other {# grupos podrían hacer este día}}",
   "groupPeopleCount": "{groups, plural, one {# grupo} other {# grupos}} · {divers, plural, one {# buceador podría hacer este día} other {# buceadores podrían hacer este día}}",
   "recommendationHeading": "Sugerencia para planificar",
-  "recommendationDetail": "Aproximadamente {divers} buceadores en {requests} peticiones. Empieza con {capacity} plazas.",
+  "recommendationDetail": "Aproximadamente {divers, plural, one {# buceador} other {# buceadores}} en {requests, plural, one {# petición} other {# peticiones}}. Empieza con {capacity, plural, one {# plaza} other {# plazas}}.",
   "addDeparture": "Programa una salida este día",
   "flexible": "Flexible",
   "flexibleAround": "Pidió el {date} y puede moverse unos días",

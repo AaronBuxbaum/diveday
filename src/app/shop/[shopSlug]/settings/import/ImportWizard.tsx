@@ -78,7 +78,8 @@ type ImportWizardCopy = {
   };
   /** Phone-only: the preview's six columns scroll sideways, so say so. */
   previewSwipeHint: string;
-  hiddenRowsNotice: string;
+  hiddenRowsNoticeOne: string;
+  hiddenRowsNoticeOther: string;
   submitOne: string;
   submitOther: string;
   submitting: string;
@@ -101,7 +102,12 @@ type ImportWizardCopy = {
   errors: Record<ImportActionErrorCode, string>;
   result: {
     summary: string;
-    cardsLine: string;
+    summaryAddedOne: string;
+    summaryAddedOther: string;
+    summaryUpdatedOne: string;
+    summaryUpdatedOther: string;
+    cardsLineOne: string;
+    cardsLineOther: string;
     cardsCertificationsOne: string;
     cardsCertificationsOther: string;
     cardsSpecialtyOne: string;
@@ -116,7 +122,8 @@ type ImportWizardCopy = {
     waiversLineOne: string;
     waiversLineOther: string;
     waiversSkippedExistingNote: string;
-    waiversSkippedNoTemplateNote: string;
+    waiversSkippedNoTemplateNoteOne: string;
+    waiversSkippedNoTemplateNoteOther: string;
     waiverDocumentsFailedNote: string;
     visitsLineOne: string;
     visitsLineOther: string;
@@ -460,10 +467,13 @@ export function ImportWizard({
           </Table>
           {hiddenRows > 0 ? (
             <p className="mt-2 text-xs text-muted">
-              {fill(copy.hiddenRowsNotice, {
-                limit: PREVIEW_LIMIT,
-                total: prepared.rows.length,
-              })}
+              {fill(
+                pluralForm(PREVIEW_LIMIT, {
+                  one: copy.hiddenRowsNoticeOne,
+                  other: copy.hiddenRowsNoticeOther,
+                }),
+                { limit: PREVIEW_LIMIT, total: prepared.rows.length },
+              )}
             </p>
           ) : null}
 
@@ -502,37 +512,65 @@ export function ImportWizard({
         <div className="mt-6">
           <ShopNotice tone="success">
             <p className="font-medium">
+              {/* Two counts, so two pairs and a template holding only their
+                  order — see the same shape on the departure board's boarding
+                  line (issue #778). */}
               {fill(copy.result.summary, {
-                added: state.summary.peopleCreated,
-                updated: state.summary.peopleUpdated,
+                addedPart: fill(
+                  pluralForm(state.summary.peopleCreated, {
+                    one: copy.result.summaryAddedOne,
+                    other: copy.result.summaryAddedOther,
+                  }),
+                  { added: state.summary.peopleCreated },
+                ),
+                updatedPart: fill(
+                  pluralForm(state.summary.peopleUpdated, {
+                    one: copy.result.summaryUpdatedOne,
+                    other: copy.result.summaryUpdatedOther,
+                  }),
+                  { updated: state.summary.peopleUpdated },
+                ),
               })}
             </p>
             <p className="mt-1 text-sm">
-              {fill(copy.result.cardsLine, {
-                cards: cachedListFormat(locale, { style: "long", type: "conjunction" }).format([
-                  fill(
-                    pluralForm(state.summary.cardsAdded, {
-                      one: copy.result.cardsCertificationsOne,
-                      other: copy.result.cardsCertificationsOther,
-                    }),
-                    { count: state.summary.cardsAdded },
-                  ),
-                  fill(
-                    pluralForm(state.summary.specialtyAdded, {
-                      one: copy.result.cardsSpecialtyOne,
-                      other: copy.result.cardsSpecialtyOther,
-                    }),
-                    { count: state.summary.specialtyAdded },
-                  ),
-                  fill(
-                    pluralForm(state.summary.nitroxAdded, {
-                      one: copy.result.cardsNitroxOne,
-                      other: copy.result.cardsNitroxOther,
-                    }),
-                    { count: state.summary.nitroxAdded },
-                  ),
-                ]),
-              })}
+              {/* `{cards}` is a *formatted list* ("3 certifications and 1
+                  nitrox"), not a count — so the sentence around it agrees with
+                  the total across the three, which is the number a Spanish
+                  reader hears. At a total of one the list is a single singular
+                  phrase and the sentence has to be singular with it. */}
+              {fill(
+                pluralForm(
+                  state.summary.cardsAdded +
+                    state.summary.specialtyAdded +
+                    state.summary.nitroxAdded,
+                  { one: copy.result.cardsLineOne, other: copy.result.cardsLineOther },
+                ),
+                {
+                  cards: cachedListFormat(locale, { style: "long", type: "conjunction" }).format([
+                    fill(
+                      pluralForm(state.summary.cardsAdded, {
+                        one: copy.result.cardsCertificationsOne,
+                        other: copy.result.cardsCertificationsOther,
+                      }),
+                      { count: state.summary.cardsAdded },
+                    ),
+                    fill(
+                      pluralForm(state.summary.specialtyAdded, {
+                        one: copy.result.cardsSpecialtyOne,
+                        other: copy.result.cardsSpecialtyOther,
+                      }),
+                      { count: state.summary.specialtyAdded },
+                    ),
+                    fill(
+                      pluralForm(state.summary.nitroxAdded, {
+                        one: copy.result.cardsNitroxOne,
+                        other: copy.result.cardsNitroxOther,
+                      }),
+                      { count: state.summary.nitroxAdded },
+                    ),
+                  ]),
+                },
+              )}
               {state.summary.rowsMerged > 0
                 ? fill(copy.result.rowsMergedNote, { count: state.summary.rowsMerged })
                 : ""}
@@ -581,9 +619,13 @@ export function ImportWizard({
                     })
                   : ""}
                 {state.summary.waiversSkippedNoTemplate > 0
-                  ? fill(copy.result.waiversSkippedNoTemplateNote, {
-                      count: state.summary.waiversSkippedNoTemplate,
-                    })
+                  ? fill(
+                      pluralForm(state.summary.waiversSkippedNoTemplate, {
+                        one: copy.result.waiversSkippedNoTemplateNoteOne,
+                        other: copy.result.waiversSkippedNoTemplateNoteOther,
+                      }),
+                      { count: state.summary.waiversSkippedNoTemplate },
+                    )
                   : ""}
                 {state.summary.waiverDocumentsFailed > 0
                   ? fill(copy.result.waiverDocumentsFailedNote, {

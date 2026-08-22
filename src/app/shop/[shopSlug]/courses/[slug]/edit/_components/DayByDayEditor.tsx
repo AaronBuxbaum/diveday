@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { fill } from "@/i18n/fill";
+import { fill, pluralForm } from "@/i18n/fill";
 import { type CourseScheduleDay, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/courses";
 
 /**
@@ -29,8 +29,10 @@ export interface DayByDayEditorCopy {
   /** "One item per line." — the same line the Included/Not included boxes carry. */
   whatHappensHint: string;
   itemsPlaceholder: string;
-  itemsOverMax: string;
-  daysMax: string;
+  itemsOverMaxOne: string;
+  itemsOverMaxOther: string;
+  daysMaxOne: string;
+  daysMaxOther: string;
   addDay: string;
 }
 
@@ -168,7 +170,13 @@ export function DayByDayEditor({
                 description={copy.whatHappensHint}
                 error={
                   countItems(day.items) > MAX_SCHEDULE_DAY_ITEMS
-                    ? fill(copy.itemsOverMax, { max: MAX_SCHEDULE_DAY_ITEMS })
+                    ? fill(
+                        pluralForm(MAX_SCHEDULE_DAY_ITEMS, {
+                          one: copy.itemsOverMaxOne,
+                          other: copy.itemsOverMaxOther,
+                        }),
+                        { max: MAX_SCHEDULE_DAY_ITEMS },
+                      )
                     : undefined
                 }
               >
@@ -192,7 +200,10 @@ export function DayByDayEditor({
         className={buttonClass({ variant: "secondary", className: "self-start" })}
       >
         {days.length >= MAX_SCHEDULE_DAYS
-          ? fill(copy.daysMax, { max: MAX_SCHEDULE_DAYS })
+          ? fill(
+              pluralForm(MAX_SCHEDULE_DAYS, { one: copy.daysMaxOne, other: copy.daysMaxOther }),
+              { max: MAX_SCHEDULE_DAYS },
+            )
           : copy.addDay}
       </button>
     </div>
