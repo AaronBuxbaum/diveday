@@ -12,6 +12,10 @@ export type FirstRunChecklistCopy = {
   contactBody: string;
   contactAction: string;
   contactDone: string;
+  unitsTitle: string;
+  unitsBody: string;
+  unitsAction: string;
+  unitsDone: string;
   siteTitle: string;
   siteBody: string;
   siteAction: string;
@@ -114,6 +118,7 @@ export function FirstRunChecklist({
   scheduleUrl,
   contactDone,
   diveSiteCount,
+  unitsDone,
   stripeDone,
   copy,
 }: {
@@ -121,6 +126,8 @@ export function FirstRunChecklist({
   scheduleUrl: string;
   contactDone: boolean;
   diveSiteCount: number;
+  /** The shop has saved its units at least once — see the step below. */
+  unitsDone: boolean;
   stripeDone: boolean;
   copy: FirstRunChecklistCopy;
 }) {
@@ -150,6 +157,24 @@ export function FirstRunChecklist({
               className={buttonClass({ size: "sm" })}
             >
               {copy.contactAction}
+            </Link>
+          }
+        />
+        {/* **The two settings the shop never chose.** Onboarding derives both
+            from the timezone it picked (`src/lib/curated-defaults.ts`), and
+            both are expensive to get wrong: `price_cents` counts the *current*
+            currency's minor unit, and a depth typed under the wrong unit was
+            converted on the way in. So the shop is asked to look, once, before
+            it has priced anything (issue #712). */}
+        <ChecklistStep
+          title={copy.unitsTitle}
+          body={copy.unitsBody}
+          done={unitsDone}
+          doneLabel={copy.unitsDone}
+          doneBadge={copy.doneBadge}
+          action={
+            <Link href={`/shop/${shopSlug}/settings#units`} className={buttonClass({ size: "sm" })}>
+              {copy.unitsAction}
             </Link>
           }
         />

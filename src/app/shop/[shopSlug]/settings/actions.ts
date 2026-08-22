@@ -15,6 +15,7 @@ import { retryMediaDeletion } from "@/db/media-deletions";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
 import {
   getShopById,
+  markShopUnitsConfirmed,
   setShopAddress,
   setShopContact,
   setShopCurrency,
@@ -251,6 +252,10 @@ export async function saveUnitsAction(formData: FormData) {
   if (currency !== null) {
     await setShopCurrency(db, session.user.shopId, currency);
   }
+  // Saving this form *is* the confirmation the setup checklist asks for, even
+  // when nothing changed — the step is "look at these", and a shop that opened
+  // the row and agreed with the derived values has looked (issue #712).
+  await markShopUnitsConfirmed(db, session.user.shopId);
   revalidateAndRedirect(settings, noticeUrl(settings, "units-saved", { saved: "units" }));
 }
 

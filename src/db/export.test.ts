@@ -231,7 +231,17 @@ const EXCLUDED_TABLES = [
  */
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
-  shops: ["jurisdiction", "is_demo", "latitude", "longitude"], // DiveDay-side config, not shop records
+  shops: [
+    "jurisdiction",
+    "is_demo",
+    "latitude",
+    "longitude",
+    // Setup-checklist progress, not a shop record: it says whether anyone has
+    // looked at the currency and depth unit onboarding derived from the
+    // timezone (issue #712). A shop restoring from a backup *should* be asked
+    // again, so carrying this over would be the wrong answer, not a loss.
+    "units_confirmed_at",
+  ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   staff_shifts: ["shop_id"],
   review_moderation_events: ["shop_id"],

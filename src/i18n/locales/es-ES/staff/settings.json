@@ -182,7 +182,8 @@
       "currencyDetail": "No convierte nada: una salida de 130 sigue en 130, ahora en la nueva moneda. Los pedidos ya liquidados conservan la moneda en que se cobraron.",
       "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta en {accountCurrency} y rechazará un pago que no pueda liquidar. Elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}.",
       "submit": "Guardar unidades",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "currencyRepricingWarning": "Cambiar esto no convierte tus precios. Una salida de 95 $ pasa a ser 95 de la nueva moneda, y los pedidos ya realizados conservan la moneda en la que se cobraron."
     },
     "paymentsGate": {
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."

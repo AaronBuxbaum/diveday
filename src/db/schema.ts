@@ -244,6 +244,18 @@ export const shops = pgTable(
      */
     sendWindowStartHour: integer("send_window_start_hour").notNull().default(8),
     sendWindowEndHour: integer("send_window_end_hour").notNull().default(20),
+    /**
+     * When the shop last saved its units — the signal behind the setup
+     * checklist's "check your currency and depth unit" step. Onboarding now
+     * *derives* both from the timezone (`src/lib/curated-defaults.ts`), and a
+     * derived default nobody looked at is the same failure with extra steps:
+     * `price_cents` counts the current currency's minor unit, and a depth typed
+     * under the wrong unit was converted on the way in (issue #712).
+     *
+     * A timestamp rather than a boolean, so "confirmed, then the shop changed
+     * its mind about the zone" is answerable later without another column.
+     */
+    unitsConfirmedAt: timestamp("units_confirmed_at", { withTimezone: true }),
     isDemo: boolean("is_demo").notNull().default(false),
     /**
      * When this shop asked to be left out of search engines. Null — the

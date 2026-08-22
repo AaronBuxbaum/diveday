@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "units_confirmed_at" timestamp with time zone;

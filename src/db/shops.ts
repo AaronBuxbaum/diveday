@@ -1,4 +1,4 @@
-import { and, eq, exists, isNull } from "drizzle-orm";
+import { and, eq, exists, gt, isNotNull, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
@@ -8,7 +8,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import type { SendWindow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
-import { shops, trips } from "./schema";
+import { orders, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 export async function getShopBySlug(db: AppDb, slug: string) {
@@ -110,6 +110,62 @@ export async function setShopEmergencyReference(
   const [shop] = await db
     .update(shops)
     .set({ emergencyReference })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether the shop has money on its books yet — a priced departure or a single
+ * order.
+ *
+ * The one question the currency select needs answering before a shop changes
+ * it. `price_cents` is an integer count of the **current** currency's minor
+ * unit and nothing converts on a switch, so a shop moving `usd → mxn` after
+ * pricing a $95 trip is left with a ninety-five *peso* trip (ADR
+ * 20260731-shop-currency). Before any of that exists the change is free, and
+ * saying so to a shop on its first afternoon would be noise (issue #712).
+ *
+ * Deliberately not a count: "how much money" is not the question, and a shop
+ * with one priced trip is in exactly the same position as one with a thousand.
+ */
+export async function shopHasPricedRecords(db: AppDb, shopId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(
+      and(
+        eq(shops.id, shopId),
+        or(
+          exists(
+            db
+              .select({ one: trips.id })
+              .from(trips)
+              .where(and(eq(trips.shopId, shopId), gt(trips.priceCents, 0), liveTrip())),
+          ),
+          exists(
+            db
+              .select({ one: orders.id })
+              .from(orders)
+              .where(and(eq(orders.shopId, shopId), isNotNull(orders.id))),
+          ),
+        ),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/**
+ * Stamp that the shop has looked at its units — what completes the setup
+ * checklist's currency-and-depth step. Onboarding derives both from the
+ * timezone, and a derived default nobody confirmed is the same failure with
+ * extra steps (issue #712).
+ */
+export async function markShopUnitsConfirmed(db: AppDb, shopId: string, now = nowDate()) {
+  const [shop] = await db
+    .update(shops)
+    .set({ unitsConfirmedAt: now })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

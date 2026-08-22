@@ -182,7 +182,8 @@
       "currencyDetail": "It converts nothing: a 130 trip stays 130, now meaning 130 of the new currency. Settled orders keep the currency they were charged in.",
       "currencyMismatch": "You charge in {shopCurrency}, but Stripe settles this account in {accountCurrency} and will refuse a payment it can't settle. Pick {accountCurrency} here, or connect an account that settles in {shopCurrency}.",
       "submit": "Save units",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "currencyRepricingWarning": "Changing this does not convert your prices. A $95 trip becomes 95 of the new currency, and orders already placed keep the currency they were charged in."
     },
     "paymentsGate": {
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
