@@ -19,6 +19,8 @@
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
   "checkingIn": "Checking in…",
+  "sendFailed": "That didn’t send — tap the row again.",
+  "offlineLabel": "Offline — this board may be out of date",
   "checkedInCheck": "Checked in ☑️",
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",

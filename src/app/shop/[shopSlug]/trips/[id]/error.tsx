@@ -21,7 +21,10 @@ export default function TripError({ reset }: { error: Error; reset: () => void }
   return (
     <ErrorPage
       title="That didn’t go through"
-      body="Something went wrong loading this screen. Your last change may not have saved — tap to try again."
+      // "loading" was wrong here for the same reason it was on the shop
+      // boundary: a tap that throws on marina Wi-Fi did not fail to *load*
+      // anything (issue #819). The two say the same words on purpose.
+      body="This screen ran into a problem. Your last change may not have saved — tap to try again."
       resetLabel="Try again"
       onReset={reset}
       size="boat"

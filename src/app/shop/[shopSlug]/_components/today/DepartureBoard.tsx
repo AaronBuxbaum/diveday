@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BoardingBar } from "@/components/BoardingBar";
 import { Badge } from "@/components/ui/badge";
@@ -131,7 +132,16 @@ function DepartureCard({
       } else {
         setAssignError(true);
       }
-    } catch {
+    } catch (error) {
+      // **The refusal is not a failure.** `updateTripCrewAction` opens with
+      // `requireShopSurface`, whose contract is that *every* refusal throws — a
+      // cross-shop slug is `notFound()`, a failed permission gate is
+      // `redirect()` — and those sentinels reach this catch on the client too.
+      // Swallowing one turned a refusal into "That didn't save", so the
+      // navigation happened *and* the row claimed a transport error. Measured
+      // on the check-in queue's twin of this catch (issue #819); this is the
+      // same shape `scripts/check-redirect-in-try.mjs` refuses on the server.
+      unstable_rethrow(error);
       setAssignError(true);
     }
   };
@@ -149,7 +159,9 @@ function DepartureCard({
       } else {
         setAssignError(true);
       }
-    } catch {
+    } catch (error) {
+      // The refusal is not a failure — see the catch above.
+      unstable_rethrow(error);
       setAssignError(true);
     }
   };

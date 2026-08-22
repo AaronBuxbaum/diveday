@@ -293,3 +293,65 @@ test("the counter shows a diver's email only when another diver shares their nam
     page.locator("article").filter({ hasText: "Priya Sharma" }).filter({ visible: true }),
   ).toHaveCount(1);
 });
+
+/**
+ * **A dropped signal must not take the queue with it.**
+ *
+ * Offline, one tap on "Check in" used to be replaced by the whole segment's
+ * error boundary: the 26-diver queue, the four departure groups, the scroll
+ * position and anything typed into the scan field, all gone — in front of a
+ * diver standing at the desk (issue #819). DiveDay's headline capability is
+ * that the head count works with no signal, and it does, on the *boat*; the
+ * counter is one nav tab away and a marina's wifi is exactly as bad at the desk.
+ *
+ * This is the one case in the suite that needs a deliberate `setOffline`, which
+ * is why it never turned up by accident: on any working connection the failed
+ * mutation and the failed render are the same event.
+ */
+test("a dropped signal at the counter fails on the row, not on the page", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in");
+  const queue = page.getByRole("region", { name: "Check-in queue" });
+  await expect(queue).toBeVisible();
+  const before = await queue.getByRole("button", { name: /^Check in / }).count();
+  expect(before).toBeGreaterThan(0);
+
+  // What the staffer typed, which the boundary used to discard along with
+  // everything else.
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  // A name that is still *checkable* once the filter lands, so the row this
+  // taps exists — and waited for by the filtered queue's own render, never a
+  // timer: typing here navigates, and going offline mid-navigation leaves no
+  // rows to tap at all. That race made this test fail about one run in three
+  // before it was pinned this way.
+  await search.fill("Lena");
+  const row = queue.getByRole("button", { name: "Check in Lena Fischer" });
+  await expect(row).toBeVisible();
+  await expect(queue.getByRole("button", { name: /^Check in / })).toHaveCount(1);
+
+  await context.setOffline(true);
+  await row.click();
+
+  // The row says the tap did not send — and never that the check-in did or did
+  // not happen, which the client cannot know.
+  await expect(page.getByRole("alert").filter({ hasText: "That didn’t send" })).toBeVisible();
+
+  // And the page is still the page: the queue, the row, and what was typed.
+  // `before` is the unfiltered count, asserted above one so a queue that
+  // silently emptied could not have passed the earlier assertion either.
+  expect(before).toBeGreaterThan(1);
+  await expect(queue).toBeVisible();
+  await expect(row).toBeVisible();
+  await expect(search).toHaveValue("Lena");
+  await expect(page.getByText("This screen ran into a problem")).toHaveCount(0);
+
+  // The connection is stated before the next tap, not only after it.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Offline — this board may be out of date" }),
+  ).toBeVisible();
+
+  await context.setOffline(false);
+});
