@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { cancelBooking, createBookingParty } from "./bookings";
 import {
   consumeEntitlementForBooking,
   countSpendableDives,
@@ -13,8 +14,9 @@ import {
   releaseEntitlementForBooking,
   shopSellsPackages,
 } from "./dive-packages";
-import { bookings, divePackageEntitlements, orders, people } from "./schema";
+import { bookingPayments, bookings, divePackageEntitlements, orders, people } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 async function packageContext() {
   const { db, shop } = await seededShopContext();
@@ -224,5 +226,146 @@ describe("selling and spending a package", () => {
     expect(await countSpendableDives(db, shop.id, person.id, purchasedAt)).toBe(3);
     const afterLapse = new Date(purchasedAt.getTime() + 8 * 24 * 60 * 60 * 1000);
     expect(await countSpendableDives(db, shop.id, person.id, afterLapse)).toBe(0);
+  });
+});
+
+/**
+ * **The whole point, end to end**: a diver with a prepaid dive books a covered
+ * departure, the seat settles as paid through the gate every other path
+ * converges on, and cancelling hands the dive back.
+ *
+ * There is deliberately no second path to "paid" — `PAYMENT_CLEARED` is what
+ * readiness, the manifest and the check-in counter all consult, and a fourth
+ * spelling of that fact is how three surfaces come to disagree
+ * (ADR 20260822-a-package-is-entitlements-not-money).
+ */
+describe("booking a departure with a package", () => {
+  async function diverHoldingDives(scope: "all" | "fun_dives" = "all") {
+    const { db, shop } = await seededShopContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed has no staff");
+    const pkg = await createDivePackage(db, {
+      shopId: shop.id,
+      name: "Ten dives",
+      diveCount: 10,
+      priceCents: 90_000,
+      scope,
+      validityDays: null,
+    });
+    if (!pkg) throw new Error("package insert returned no row");
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const trip = trips.find((row) => row.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!trip) throw new Error("demo reef trip missing");
+    return { db, shop, staff, pkg, trip };
+  }
+
+  async function grantTo(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    personId: string,
+    packageId: string,
+  ) {
+    await upsertShopStripeAccount(db, shopId, "acct_test");
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId,
+        personId,
+        createdByPersonId: personId,
+        description: "Ten-dive package",
+        totalCents: 90_000,
+        currency: "usd",
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_test",
+        stripeInvoiceId: "in_test",
+      })
+      .returning();
+    if (!order) throw new Error("order insert returned no row");
+    await grantPackageEntitlements(db, {
+      shopId,
+      packageId,
+      personId,
+      orderId: order.id,
+      diveCount: 10,
+      validityDays: null,
+    });
+  }
+
+  it("settles the seat as paid and spends exactly one dive", async () => {
+    const { db, shop, pkg, trip } = await diverHoldingDives();
+    // Book once to mint the person, then give them the package, then book the
+    // second seat — the one the package pays for.
+    const first = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Pia Packages",
+        email: "pia-packages@example.com",
+      },
+    ]);
+    if (!first.ok) throw new Error(`booking failed: ${first.reason}`);
+    const personId = first.bookings[0].personId;
+    await grantTo(db, shop.id, personId, pkg.id);
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+
+    // A *different* departure: the first booking exists to mint the person, and
+    // re-booking the same trip updates that row rather than creating a seat.
+    // From *now*, not the epoch: the epoch form returns departures that have
+    // already sailed, and booking one is refused as unavailable.
+    const second = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (row) => row.id !== trip.id && row.courseId === null && row.capacity > row.booked,
+    );
+    if (!second) throw new Error("seed has no second open fun-dive departure");
+    const covered = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: second.id,
+        fullName: "Pia Packages",
+        email: "pia-packages@example.com",
+      },
+    ]);
+    if (!covered.ok) throw new Error(`booking failed: ${covered.reason}`);
+    const bookingId = covered.bookings[0].bookingId;
+
+    // Through the one gate, not a status written beside it.
+    const [payment] = await db
+      .select({ status: bookingPayments.status, provider: bookingPayments.provider })
+      .from(bookingPayments)
+      .where(eq(bookingPayments.bookingId, bookingId));
+    expect(payment?.status).toBe("paid");
+    expect(payment?.provider).toBe("dive_package");
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(9);
+
+    // ...and cancelling hands it back.
+    await cancelBooking(db, shop.id, bookingId);
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+  });
+
+  it("changes nothing for a shop that sells no packages", async () => {
+    // Opt-in by presence: the whole feature is invisible until a shop defines
+    // its first package, and a booking must pay the ordinary way.
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const trip = trips.find((row) => row.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!trip) throw new Error("demo reef trip missing");
+
+    const booked = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Nora Nopackage",
+        email: "nora-nopackage@example.com",
+      },
+    ]);
+    if (!booked.ok) throw new Error(`booking failed: ${booked.reason}`);
+
+    const payments = await db
+      .select({ status: bookingPayments.status })
+      .from(bookingPayments)
+      .where(eq(bookingPayments.bookingId, booked.bookings[0].bookingId));
+    expect(payments).toHaveLength(0);
   });
 });

@@ -16,8 +16,10 @@ import {
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
+import { consumeEntitlementForBooking, releaseEntitlementForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
@@ -33,6 +35,7 @@ import {
   trips,
 } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
+import { getShopCurrency } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -756,6 +759,41 @@ async function createBookingRecord(
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
   pending.push({ req, personId: person.id, identityUnconfirmed });
+
+  // **A prepaid dive, spent on this seat** (ADR
+  // 20260822-a-package-is-entitlements-not-money).
+  //
+  // Inside this transaction on purpose: the claim has to be serialised with the
+  // seat itself, or two concurrent bookings read the same unused dive and both
+  // take it. `consumeEntitlementForBooking` takes the executor it is given for
+  // exactly that reason, and the partial unique index on `booking_id` is the
+  // backstop however a race resolves.
+  //
+  // Settled through `setBookingPayment` like every other paid seat — there is
+  // deliberately **no second path to "paid"**, because `PAYMENT_CLEARED` is
+  // what readiness, the manifest and the counter all consult, and a fourth
+  // spelling of that fact is how three surfaces come to disagree.
+  //
+  // Nothing happens for a shop with no packages, or a diver with no covering
+  // dive left: `consumeEntitlementForBooking` returns null and the booking pays
+  // the ordinary way.
+  const spent = await consumeEntitlementForBooking(tx, {
+    shopId: req.shopId,
+    personId: person.id,
+    bookingId: created.id,
+    trip: { courseId: trip.courseId },
+  });
+  if (spent) {
+    await setBookingPayment(tx, {
+      shopId: req.shopId,
+      bookingId: created.id,
+      status: "paid",
+      currency: await getShopCurrency(tx, req.shopId),
+      provider: "dive_package",
+      providerRef: spent.id,
+    });
+  }
+
   return {
     ok: true,
     bookingId: created.id,
@@ -1051,6 +1089,12 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
     // (ADR 20260815-minimal-gear-register). Checked-out units stay — they are
     // physically with someone, and the register's overdue chase brings those home.
     await releaseUnclaimedGearReservations(tx, { shopId, bookingId });
+    // And the prepaid dive this seat spent, if it spent one. Undoing a link,
+    // never crediting an amount, so it cannot round, drift, or give back more
+    // than it took (ADR 20260822-a-package-is-entitlements-not-money). Inside
+    // this transaction for the same reason the revoke above is: a diver whose
+    // booking cancelled but whose dive stayed spent has silently lost it.
+    await releaseEntitlementForBooking(tx, shopId, bookingId);
     return booking;
   });
 }
