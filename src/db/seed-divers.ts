@@ -8,6 +8,7 @@ import {
 } from "./schema";
 import { customerDefs } from "./seed-cast";
 import { birthDateTurning, dateAt, nextCreatedAt } from "./seed-clock";
+import { reviewedBy } from "./seed-review";
 
 /**
  * The shop's divers and the evidence on file for them.
@@ -26,6 +27,8 @@ import { birthDateTurning, dateAt, nextCreatedAt } from "./seed-clock";
 export async function seedDivers(
   db: DbExecutor,
   shopId: string,
+  /** The staffer every verified card here was checked by — see `reviewedBy`. */
+  reviewerId: string,
 ): Promise<(typeof people.$inferSelect)[]> {
   const customers = await db
     .insert(people)
@@ -63,6 +66,7 @@ export async function seedDivers(
       level: i === 1 ? ("advanced_open_water" as const) : ("open_water" as const),
       identifier: `DEMO-${String(i + 1).padStart(4, "0")}`,
       status: "verified" as const,
+      ...reviewedBy(reviewerId),
     })),
   );
 
@@ -189,7 +193,12 @@ export async function seedDivers(
         level: cert.level,
         identifier: `DEMO-${String(cert.index + 1).padStart(4, "0")}`,
         status: cert.status,
-        // An imported card keeps reviewedAt null so the confirm nudge shows.
+        // An imported card keeps reviewedAt null so the confirm nudge shows,
+        // and a pending one has had no review to record — so the stamp goes on
+        // neither (`reviewedBy`).
+        ...(cert.status === "verified" && !cert.importedFromLabel
+          ? reviewedBy(reviewerId)
+          : undefined),
         importedAt: cert.importedFromLabel ? nextCreatedAt() : null,
         importedFromLabel: cert.importedFromLabel ?? null,
       };
@@ -209,6 +218,7 @@ export async function seedDivers(
         specialty: "deep" as const,
         identifier: "DEMO-SPEC-DEEP-2",
         status: "verified" as const,
+        ...reviewedBy(reviewerId),
         createdAt: nextCreatedAt(),
       },
       {
@@ -218,6 +228,7 @@ export async function seedDivers(
         specialty: "wreck" as const,
         identifier: "DEMO-SPEC-WRECK-2",
         status: "verified" as const,
+        ...reviewedBy(reviewerId),
         createdAt: nextCreatedAt(),
       },
       {
@@ -227,6 +238,7 @@ export async function seedDivers(
         specialty: "night" as const,
         identifier: "DEMO-SPEC-NIGHT-2",
         status: "verified" as const,
+        ...reviewedBy(reviewerId),
         createdAt: nextCreatedAt(),
       },
       {
@@ -273,6 +285,7 @@ export async function seedDivers(
         specialty: plan.specialty,
         identifier: `DEMO-SPEC-${plan.specialty.toUpperCase()}-${plan.index + 1}`,
         status: plan.status,
+        ...(plan.status === "verified" ? reviewedBy(reviewerId) : undefined),
         createdAt: nextCreatedAt(),
       };
     })

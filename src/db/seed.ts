@@ -566,7 +566,7 @@ export async function seedDemoSchedule(
   // the shop teaches, where it dives, what is on the board, and who is booked
   // on it. Each step reads rows the ones before it inserted — see the module
   // map at the top of this file before moving anything between them.
-  const customers = await seedDivers(db, shopId);
+  const customers = await seedDivers(db, shopId, instructor.id);
   const { courseRows, discoverCourse, openWaterCourse, courseIdByTitle } = await seedCatalog(
     db,
     shopId,
@@ -609,7 +609,7 @@ export async function seedDemoSchedule(
 
   await seedPromos(db, shopId, promoRedemptionBooking);
 
-  await seedNitrox(db, shopId, customers, wreck, bookingRows);
+  await seedNitrox(db, shopId, customers, wreck, bookingRows, instructor.id);
   await seedRentalFit(db, shopId, customers);
   // The rental fleet on the wall, after the bookings so a few units can be
   // reserved against the upcoming wreck trip (ADR 20260815-minimal-gear-register).
@@ -756,7 +756,7 @@ export async function seedDemoSchedule(
   // the demo and staff training a real fail-closed waiver path without storing
   // any health answers. It remains unresolved every time the demo resets; the
   // policy/legal decision behind production medical handling is still H-01–H-03.
-  await seedMedicalReview(db, shopId, waiverTemplate, tripRows);
+  await seedMedicalReview(db, shopId, waiverTemplate, tripRows, instructor.id);
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated

@@ -18,6 +18,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, nextCreatedAt } from "./seed-clock";
+import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 /**
@@ -124,6 +125,7 @@ export async function seedHistory(
       level: i % 3 === 0 ? ("advanced_open_water" as const) : ("open_water" as const),
       identifier: `HIST-${String(i + 1).padStart(4, "0")}`,
       status: "verified" as const,
+      ...reviewedBy(createdByPersonId),
     })),
   );
 
