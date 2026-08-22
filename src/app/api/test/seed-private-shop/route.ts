@@ -46,8 +46,19 @@ export async function POST(request: Request) {
   const db = await getDb();
   // One transaction, like `enterDemoAction`: the cap eviction and the mint
   // commit together, and a half-seeded shop never becomes a test's fixture.
+  // **`?slug=` pins the identity**, for a visual capture and nothing else.
+  // `generateDemoShopIdentity` picks its words at random, and both the name and
+  // the slug-derived owner email render in the staff chrome — so a screenshot of
+  // a minted shop differs on every run unless the test names its own fixture
+  // (`pinnedDemoShopIdentity`). Held to the same shape a slug has to have
+  // anyway; anything else is refused rather than sanitised, since a caller
+  // passing a bad slug wants to know.
+  const requested = new URL(request.url).searchParams.get("slug");
+  if (requested !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requested)) {
+    return NextResponse.json({ error: "bad_slug" }, { status: 400 });
+  }
   const { slug, ownerEmail } = await db.transaction(async (tx) =>
-    createDemoShop(tx, { history: false }),
+    createDemoShop(tx, { history: false, slug: requested ?? undefined }),
   );
   return NextResponse.json({ slug, ownerEmail, password: DEMO_BYPASS_PASSWORD });
 }

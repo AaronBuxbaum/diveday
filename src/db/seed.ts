@@ -2,7 +2,7 @@ import { hash } from "bcryptjs";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { generateDemoShopIdentity } from "@/lib/demo-identity";
+import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -399,10 +399,13 @@ const DEMO_IDENTITY_ATTEMPTS = 5;
  * identity on a name collision — never patching the slug alone, since every
  * staff email is derived from it and would otherwise disagree with the shop.
  */
-async function insertDemoShop(db: DbExecutor) {
+async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
   let lastError: unknown;
   for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
-    const identity = generateDemoShopIdentity();
+    // A pinned identity has nothing to retry *to* — it is the caller's own
+    // name, and colliding with it means the previous test's shop is still
+    // there, which is a fixture bug to surface rather than rename around.
+    const identity = pinnedSlug ? pinnedDemoShopIdentity(pinnedSlug) : generateDemoShopIdentity();
     try {
       const [shop] = await db
         .insert(shops)
@@ -455,7 +458,7 @@ async function insertDemoShop(db: DbExecutor) {
 
 export async function createDemoShop(
   db: DbExecutor,
-  opts: { history?: boolean } = {},
+  opts: { history?: boolean; slug?: string } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -464,7 +467,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const { shop, identity } = await insertDemoShop(db);
+  const { shop, identity } = await insertDemoShop(db, opts.slug);
 
   await db.insert(boats).values([
     { shopId: shop.id, name: "Mantis I", capacity: 12 },
