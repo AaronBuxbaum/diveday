@@ -90,6 +90,18 @@ const detailsSchema = z.object({
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
   plannedDives: z.coerce.number().int().min(1).max(4),
+  // **The departure's own three**, editable since 2026-08-22 (issue #681).
+  // They were writable only at creation, which made the commonest real edit —
+  // "the boat that was going to run this is in for service" — impossible, with
+  // no delete-and-recreate available because `deleteTrip` refuses a departure
+  // carrying bookings.
+  //
+  // `courseId` is deliberately **not** here and should stay out: a departure's
+  // curriculum is what its divers bought, and swapping it under them would
+  // change what they turn up for. That is a decision, not the same oversight.
+  diveMode: z.enum(["boat", "shore", "pool"]).optional(),
+  boatId: z.preprocess((value) => (value === "" ? undefined : value), z.uuid().optional()),
+  isPrivate: z.preprocess((value) => value === "on", z.boolean()),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -244,6 +256,7 @@ const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reas
   invalid: "invalid",
   not_found: "invalid",
   capacity_below_booked: "capacity-below-booked",
+  boat_not_found: "boat-not-found",
   planned_dives_below_history: "planned-dives-below-history",
 };
 
@@ -319,19 +332,24 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     cancellationWindowHours,
     minimumBookings,
     minimumDecisionHours,
+    diveMode,
+    boatId,
+    isPrivate,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
   if (!shopNow) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  // **The hull this departure already sails on.** This form has no boat field,
-  // so a staffer can raise capacity with the vessel entirely off screen — which
-  // is exactly why the check has to read the stored `boat_id` rather than trust
-  // a submitted one. A departure with no boat, or a shore or pool dive, yields
-  // no capacity and is not checked.
+  // **The hull this departure will sail on after the edit** — the one just
+  // submitted, or the one already stored when the form did not carry the
+  // field. Checking the destination rather than the origin is what makes a
+  // swap to a smaller boat land on the right number, and switching away from
+  // `boat` drops the hull the same way `tripDetailsPatch` does.
+  //
+  // A departure with no boat, or a shore or pool dive, yields no capacity and
+  // is not checked.
   const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
-  const assignedBoat = tripNow?.boatId
-    ? await getBoatById(dbi, s.user.shopId, tripNow.boatId)
-    : null;
+  const nextBoatId = diveMode && diveMode !== "boat" ? null : (boatId ?? tripNow?.boatId ?? null);
+  const nextBoat = nextBoatId ? await getBoatById(dbi, s.user.shopId, nextBoatId) : null;
   // One pipeline, shared with the board's add panel (`src/lib/trip-details.ts`).
   // Editing a departure now applies the same rules creating one does — an
   // impossible calendar day is refused, and a free-cancellation window with no
@@ -349,7 +367,12 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       minimumBookings,
       minimumDecisionHours,
       capacity,
-      boatCapacity: assignedBoat?.capacity ?? null,
+      // The hull the edit is *moving to*, so a swap to a smaller boat is caught
+      // against the boat it will actually sail on rather than the one it is
+      // leaving.
+      boatCapacity: nextBoat?.capacity ?? null,
+      diveMode,
+      boatId,
     },
     shopNow,
   );
@@ -376,6 +399,9 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     scheduleDays: details.patch.scheduleDays,
     capacity,
     plannedDives,
+    diveMode: details.patch.diveMode,
+    boatId: details.patch.boatId,
+    isPrivate,
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,

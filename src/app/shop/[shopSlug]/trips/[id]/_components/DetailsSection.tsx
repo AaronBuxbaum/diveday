@@ -30,6 +30,10 @@ export function DetailsSection({
   locale,
   currency,
   warnNoPrice = true,
+  boats,
+  hasBoatDiving,
+  hasShoreDiving,
+  hasPoolDiving,
 }: {
   action: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Save button rather than at the top of the page. */
@@ -41,6 +45,11 @@ export function DetailsSection({
   endWall: WallTime;
   /** How many consecutive days this departure meets on — its `trip_schedule_days` count. */
   dayCount: number;
+  /** The shop's live fleet, for the hull select. Empty means no boat rows yet. */
+  boats: { id: string; name: string }[];
+  hasBoatDiving: boolean;
+  hasShoreDiving: boolean;
+  hasPoolDiving: boolean;
   locale: string;
   /** The shop's currency — what the numbers in these price boxes mean. */
   currency: string;
@@ -55,6 +64,17 @@ export function DetailsSection({
   // symbol-only placeholder for a zero-decimal currency, where "$0.00" was
   // wrong twice over.
   const digits = currencyFractionDigits(currency);
+  // Only the modes this shop actually runs, same rule the add panel applies —
+  // a departure must not be switchable to a kind of diving the shop has said it
+  // does not do. One option is no choice, so the select does not render.
+  const MODE_KEYS = {
+    boat: "boats.modeBoat",
+    shore: "boats.modeShore",
+    pool: "boats.modePool",
+  } as const;
+  const modeOptions = (["boat", "shore", "pool"] as const).filter((mode) =>
+    mode === "boat" ? hasBoatDiving : mode === "shore" ? hasShoreDiving : hasPoolDiving,
+  );
   const priceStep = digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`;
   const pricePlaceholder = formatMoneyCents(0, currency, locale);
   // The page header already carries date, times, capacity, and sites; this
@@ -231,6 +251,57 @@ export function DetailsSection({
                 }
                 className={`${controlClass} tabular-nums`}
               />
+            </Field>
+          </FieldGrid>
+          {/* **The departure's own three**, editable since issue #681. They
+              used to be settable only when the departure was created, so the
+              commonest real edit — the boat that was going to run this is in
+              for service — meant delete and recreate, which `deleteTrip`
+              refuses once anyone has booked.
+
+              Course is deliberately absent: a departure's curriculum is what
+              its divers bought. */}
+          <FieldGrid columns={3} className="gap-x-5 gap-y-5">
+            {modeOptions.length > 1 ? (
+              // The same words the board's add panel uses, from the same keys:
+              // the two forms describe one departure and must not call its
+              // modes different things.
+              <Field label={t("boats.diveModeLabel")}>
+                <select
+                  name="diveMode"
+                  defaultValue={trip.diveMode ?? "boat"}
+                  className={controlClass}
+                >
+                  {modeOptions.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {t(MODE_KEYS[mode])}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            {hasBoatDiving && boats.length > 0 ? (
+              <Field label={t("boats.boatSelectLabel")} hint={t("trips.details.optionalHint")}>
+                <select name="boatId" defaultValue={trip.boatId ?? ""} className={controlClass}>
+                  <option value="">{t("boats.unassignedBoat")}</option>
+                  {boats.map((boat) => (
+                    <option key={boat.id} value={boat.id}>
+                      {boat.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            <Field label={t("schedule.builder.isPrivateLabel")}>
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="isPrivate"
+                  defaultChecked={trip.isPrivate}
+                  className="size-4"
+                />
+                {t("schedule.builder.isPrivateHint")}
+              </label>
             </Field>
           </FieldGrid>
           {/* A sunken inset, not a second card: this group sits *inside* the

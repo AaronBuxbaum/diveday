@@ -210,6 +210,10 @@ const NOTICE_KEYS: Record<
   },
   // This form has no boat field, so the refusal has to name the hull's number —
   // otherwise a staffer is told they are over a limit they cannot see.
+  // A hull that is not this shop's live one. Reached only by a hand-built
+  // submission or a boat deleted in another tab, so it reads as a plain
+  // refusal rather than explaining a fleet the reader can see.
+  "boat-not-found": { form: "details", tone: "danger", key: "trips.notices.boatNotFound" },
   "capacity-above-boat": {
     form: "details",
     tone: "danger",

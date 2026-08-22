@@ -5,6 +5,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
+import { listBoats } from "@/db/boats";
 import { getTripOverview } from "@/db/trips-overview";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -101,6 +102,10 @@ export default async function ManageTripPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const overview = await getTripOverview(db, shop, tripId, session.user.personId);
+  // The fleet, for the Details form's hull select. Live hulls only: this is a
+  // picker for what the departure will sail on, not a record of what it did
+  // (`listBoatsForHistory` is the other one).
+  const shopBoats = shop.hasBoatDiving ? await listBoats(db, shop.id) : [];
   if (!overview) notFound();
   const {
     trip,
@@ -501,6 +506,10 @@ export default async function ManageTripPage({
             locale={locale}
             currency={toShopCurrency(shop.currency)}
             warnNoPrice={!cancelled}
+            boats={shopBoats.map((boat) => ({ id: boat.id, name: boat.name }))}
+            hasBoatDiving={shop.hasBoatDiving}
+            hasShoreDiving={shop.hasShoreDiving}
+            hasPoolDiving={shop.hasPoolDiving}
           />
         ) : null}
 

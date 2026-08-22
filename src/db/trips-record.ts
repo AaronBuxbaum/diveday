@@ -1,11 +1,13 @@
-import { and, asc, count, eq, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
+import type { TripDiveMode } from "@/lib/trip-details";
 import type { AppDb, DbExecutor } from "./client";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import type { Trip } from "./schema";
 import {
+  boats,
   bookings,
   courses,
   diveSites,
@@ -150,12 +152,27 @@ export type TripPatch = {
    * double-booking check, and the trip page's meeting-day list all read.
    */
   scheduleDays?: TripScheduleDayInput[];
+  /**
+   * The hull, the mode and whether the departure is on public sale — all three
+   * `undefined` when the caller is not changing them, so a form that does not
+   * carry a field cannot write a default over the shop's own answer.
+   *
+   * They were writable only at creation until 2026-08-22, which made the
+   * commonest real edit — "the boat that was going to run this is in for
+   * service, move it to the other hull" — impossible, with no
+   * delete-and-recreate available because `deleteTrip` refuses a departure
+   * carrying bookings (issue #681).
+   */
+  diveMode?: TripDiveMode;
+  boatId?: string | null;
+  isPrivate?: boolean;
 };
 
 export type UpdateTripOutcome =
   | { ok: true; trip: Trip }
   | { ok: false; reason: "invalid" | "not_found" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
+  | { ok: false; reason: "boat_not_found" }
   | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } };
 
 /**
@@ -217,6 +234,19 @@ export async function updateTrip(
     if (!(await validateDiveSites(tx, shopId, sitesToValidate))) {
       return { ok: false, reason: "invalid" };
     }
+    // The same tenant rule creating a departure applies: a hull named on an
+    // edit has to be this shop's own live one, or this form becomes the
+    // cross-tenant door `createTrip` closes (issue #679, PR #709). Written
+    // here rather than imported because that PR is still open; once it lands
+    // this is `validateBoat(tx, shopId, patch.boatId)` and the query goes.
+    if (patch.boatId !== undefined && patch.boatId !== null) {
+      const [hull] = await tx
+        .select({ id: boats.id })
+        .from(boats)
+        .where(and(eq(boats.shopId, shopId), eq(boats.id, patch.boatId), isNull(boats.deletedAt)))
+        .limit(1);
+      if (!hull) return { ok: false, reason: "boat_not_found" };
+    }
     const [trip] = await tx
       .update(trips)
       .set({
@@ -231,6 +261,11 @@ export async function updateTrip(
         minimumBookings: patch.minimumBookings ?? null,
         minimumDecisionHours: patch.minimumBookings ? (patch.minimumDecisionHours ?? null) : null,
         plannedDives,
+        // Each omitted rather than defaulted: a caller that did not send the
+        // field is not asking for a change.
+        ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
+        ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
+        ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
