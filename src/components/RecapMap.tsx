@@ -169,7 +169,17 @@ export function RecapMap({
           const xy = getXY(site.forecastLatitude, site.forecastLongitude);
           return (
             <g key={site.name} transform={`translate(${xy.x}, ${xy.y})`}>
-              <circle r="14" fill="var(--primary)" opacity="0.2" className="animate-pulse" />
+              {/* `data-live-pulse`: this pulses for as long as the map is on screen, so
+                  it is not a skeleton. Screenshot tooling waits for the last
+                  `animate-pulse` to leave `<main>` before it shoots, and without
+                  this marker that wait could never be satisfied here. */}
+              <circle
+                r="14"
+                fill="var(--primary)"
+                opacity="0.2"
+                className="animate-pulse"
+                data-live-pulse=""
+              />
               <circle r="6" fill="var(--primary)" stroke="var(--surface)" strokeWidth="2" />
               <text
                 y="-11"

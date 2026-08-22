@@ -206,6 +206,9 @@ export function RollCallNote({
             colour is never the message here, only a faster read of the words
             beside it. */}
         <span
+          // Live save state, not a loading skeleton — see RecapMap for why the
+          // marker matters to screenshot tooling.
+          data-live-pulse=""
           className={`size-2 shrink-0 rounded-full transition-colors duration-300 ${
             status === "saving"
               ? "animate-pulse bg-warning"

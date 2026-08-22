@@ -755,6 +755,20 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // `capturePrint` needs none of this — `emulateMedia({ media: "print" })`
   // already drops hover styling.
   await page.mouse.move(0, 0);
+  // Never shoot the shell standing in for the page. Every route is
+  // `instant = true`, so its own `<h1>` is prerendered and a heading wait can
+  // be satisfied while `loading.tsx`'s skeleton still stands where the body
+  // will be — the trap #641 found on `dive-sites-library`, and the one
+  // `scripts/screenshot.mjs` fell into wholesale (#643). Waiting for the last
+  // `animate-pulse` to leave `<main>` is one rule that covers every capture,
+  // including whichever is added next, without a per-capture selector.
+  await page.waitForFunction(
+    () => !document.querySelector("main .animate-pulse:not([data-live-pulse])"),
+    undefined,
+    {
+      timeout: 15_000,
+    },
+  );
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await paintWholeDocument(page);
