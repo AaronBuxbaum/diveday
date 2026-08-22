@@ -1,7 +1,15 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import type { Course } from "./schema";
-import { courses, diveSites, tripDives, tripRequirements, tripScheduleDays, trips } from "./schema";
+import {
+  boats,
+  courses,
+  diveSites,
+  tripDives,
+  tripRequirements,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 
 /**
  * Materializing a departure.
@@ -128,6 +136,41 @@ export async function replaceTripDives(
 }
 
 /** Resolve and validate an optional course reference inside a transaction. */
+/**
+ * **Is this hull actually this shop's?**
+ *
+ * The sibling of `validateDiveSites` above, and it did not exist:
+ * `trips.boat_id` was written straight through to the insert unread, while the
+ * course and every dive site beside it were checked. The column's foreign key
+ * is `references(() => boats.id)` — global, with no shop in it — and the board
+ * parses the field as a bare `z.uuid()`, so submitting another shop's boat id
+ * was one devtools edit on a `<select>`.
+ *
+ * Everything that follows is cross-tenant: the other shop's vessel **name**
+ * renders on this board's card and anywhere the departure names its boat, the
+ * row travels in this shop's export bundle, and the other shop deleting that
+ * hull reaches into this one's departure. `duplicateTrip` then copies the id
+ * forward on every copy.
+ *
+ * Scoped to the shop and nothing else. Refusing a *deleted* hull belongs here
+ * too — assigning one is a new departure naming a boat the shop has retired,
+ * not history — but `boats` has no `deleted_at` on this branch; it arrives with
+ * the soft-delete change (issue #680), and the clause goes in with it.
+ */
+export async function validateBoat(
+  db: DbExecutor,
+  shopId: string,
+  boatId: string | null | undefined,
+) {
+  if (!boatId) return true;
+  const [boat] = await db
+    .select({ id: boats.id })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+    .limit(1);
+  return Boolean(boat);
+}
+
 export async function resolveCourse(
   tx: AppTransaction,
   shopId: string,
@@ -240,6 +283,7 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
     );
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
+    if (!(await validateBoat(tx, input.shopId, input.boatId))) return null;
     const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
     if (!ok) return null;
     return insertTripInstance(tx, {

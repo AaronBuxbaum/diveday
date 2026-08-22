@@ -15,7 +15,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
-import { insertTripInstance, resolveCourse } from "./trips-create";
+import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
 import { recordSeriesSkip } from "./trips-series";
 
@@ -331,7 +331,11 @@ export async function duplicateTrip(
       cancellationWindowHours: source.cancellationWindowHours,
       isPrivate: source.isPrivate,
       diveMode: source.diveMode,
-      boatId: source.boatId,
+      // Re-checked rather than trusted, even though it is being copied from a
+      // row this shop already owns: a bad id written before `validateBoat`
+      // existed would otherwise propagate on every copy, which is how one
+      // cross-tenant row becomes a season of them.
+      boatId: (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null,
       drafts: dives.map((dive) => ({
         diveNumber: dive.diveNumber,
         title: dive.title,
