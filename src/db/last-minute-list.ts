@@ -81,6 +81,8 @@ export async function joinLastMinuteList(
         shopId: input.shopId,
         personId: person.id,
         level: input.declaration?.level,
+        agency: input.declaration?.agency,
+        identifier: input.declaration?.identifier,
         noCertification: input.declaration?.noCertification,
         nitrox: input.declaration?.nitrox,
       });

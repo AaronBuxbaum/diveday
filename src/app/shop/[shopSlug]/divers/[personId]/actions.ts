@@ -67,13 +67,6 @@ const agencySchema = z.enum(certificationAgency.enumValues);
 // reads to the staffer as "you did not fill the form in".
 const levelSchema = z.enum(certificationLevel.enumValues);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
-// Regex shape alone would accept a normalized impossible date like
-// "2026-02-31" (CR-009); isValidCalendarDate rejects those explicitly.
-const dateSchema = z.union([
-  z.literal(""),
-  z.string().refine(isValidCalendarDate, "not a real calendar date"),
-]);
-
 const personSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts); blank-able
   // email is this form's own call — clearing a wrong address to "" is valid.
@@ -113,13 +106,11 @@ const certificationSchema = z.object({
   agency: agencySchema,
   level: levelSchema,
   identifier: cardNumberSchema,
-  expiresOn: dateSchema,
 });
 const specialtyCertificationSchema = z.object({
   agency: agencySchema,
   specialty: specialtySchema,
   identifier: cardNumberSchema,
-  expiresOn: dateSchema,
 });
 /**
  * The card a staffer says they are holding, when the row they are verifying is
@@ -162,11 +153,6 @@ const profileSchema = z.object({
   finSize: z.string().trim().max(40),
   weightPreference: z.string().trim().max(120),
 });
-
-/** The column is date-only (CR-009); the validated "YYYY-MM-DD" input needs no conversion. */
-function dateFromInput(value: string) {
-  return value || undefined;
-}
 
 /**
  * Where on the record a form's outcome should put the reader.
@@ -444,7 +430,6 @@ export async function addCertificationAction(
     agency: parsed.data.agency,
     level: parsed.data.level,
     identifier: parsed.data.identifier,
-    expiresAt: dateFromInput(parsed.data.expiresOn),
   });
   const notice = saved ? "captured" : "invalid";
   revalidateAndRedirect(base, backTo(base, notice, "cards"));
@@ -470,7 +455,6 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
           agency: parsed.data.agency,
           specialty: parsed.data.specialty,
           identifier: parsed.data.identifier,
-          expiresAt: dateFromInput(parsed.data.expiresOn),
         });
   const notice = saved ? "captured" : "invalid";
   revalidateAndRedirect(base, backTo(base, notice, "specialty-cards"));

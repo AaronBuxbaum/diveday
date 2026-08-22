@@ -87,7 +87,6 @@ function verifiedCard(overrides: Partial<Certification> = {}): Certification {
     identifier: "AB-1234",
     status: "verified",
     reviewedAt: new Date("2026-07-20T09:00:00.000Z"),
-    expiresAt: null,
     importedAt: null,
     ...overrides,
   } as Certification;
@@ -172,7 +171,6 @@ describe("buildIncidentExport", () => {
         status: "verified",
         reviewedAt: "2026-07-20T09:00:00.000Z",
         reviewedByName: null,
-        expiresAt: null,
         imported: false,
         // A card the shop captured. `false` is the assertion, not noise: an
         // unmarked card on an incident document has to mean somebody here

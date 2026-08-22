@@ -234,7 +234,14 @@ export function TripFullSection({
         {/* The same optional question the shop-wide deal list asks, in the same
             words, so a staffer working either list is reading one claim rather
             than two (FU-20260813). It describes the person joining — the lead
-            of the party — and never gates the join. */}
+            of the party — and never gates the join.
+
+            This list also asks for the agency and number (`DiveDeclarationFields`
+            carries both); the shop-wide deal list asks the level alone. That is
+            deliberate rather than drift: a wait list is for a *departure*, so
+            there is something for a staffer to pre-check the number against
+            before that date. A broad interest signal has no date to check it
+            for. */}
         <DiveDeclarationFields showNitrox={false} />
         <div>
           <SubmitButton

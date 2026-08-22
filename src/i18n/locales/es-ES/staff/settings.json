@@ -442,7 +442,7 @@
       },
       "certificationCard": {
         "what": "Registro de certificación",
-        "detail": "Se importa verificada y marcada como importada, fecha de repaso incluida — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
+        "detail": "Se importa verificada y marcada como importada — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
       },
       "specialtyCards": {
         "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
@@ -505,7 +505,6 @@
         "certification_level": "Nivel de certificación",
         "certification_number": "Número de certificación",
         "certification_status": "Estado de la certificación",
-        "certification_expires_at": "Renovación pendiente",
         "specialty": "Especialidad",
         "specialty_certification_number": "Número de especialidad",
         "nitrox_certified": "Nitrox",
@@ -596,8 +595,6 @@
     },
     "issues": {
       "emailInvalid": "El correo “{email}” no parece válido — importado sin correo.",
-      "expiryUnreadable": "La fecha de reciclaje “{value}” no se puede leer como fecha: se importa para revisión del personal, no como verificada, para que nadie embarque con una fecha adivinada.",
-      "expiryAssumedMonthFirst": "La fecha de vencimiento “{value}” se leyó como {parsed} (mes primero). Revísala si tu archivo escribe el día primero.",
       "cardMarkedUnverified": "Tu archivo marca esta certificación como “{status}” — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
       "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
       "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de certificación en la fila — no se importó. Una certificación sin número no se puede verificar.",

@@ -1,6 +1,5 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
@@ -250,10 +249,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
             isNull(certifications.deletedAt),
           ),
         );
-      const todayLocal = calendarDateInTimezone(now, shop.timezone);
-      if (
-        !hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel, todayLocal)
-      ) {
+      if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
         return { ok: false, reason: "course_prerequisite" };
       }
     }

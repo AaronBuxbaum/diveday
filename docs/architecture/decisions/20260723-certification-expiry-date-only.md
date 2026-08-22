@@ -1,6 +1,6 @@
 # 20260723-certification-expiry-date-only — Certification expiry is a shop-local calendar date
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260821-a-card-does-not-expire](20260821-a-card-does-not-expire.md)
 - **Date:** 2026-07-23
 
 ## Context

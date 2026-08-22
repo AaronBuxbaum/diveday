@@ -17,8 +17,8 @@ import { type BadgeTone, badgeToneGlyph } from "@/components/ui/badge";
  * existing status vocabulary (`Badge`'s tone glyphs, shared here rather than
  * copied), never colour alone, with the word carried for screen readers and on
  * hover. Nothing is lost by dropping the visible word: a pending card is the
- * only one that renders "Mark certified", and an expired one already says
- * "Refresher overdue <date>" on the line below.
+ * only one that renders "Mark certified", so the control beside it already says
+ * which state the row is in.
  */
 export function CardStatusMark({ tone, label }: { tone: BadgeTone; label: string }) {
   const glyph = badgeToneGlyph(tone);

@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { calculateReadiness, isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
 import { seededShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
@@ -78,6 +78,188 @@ describe("recordSelfDeclaredCards", () => {
     expect(nitrox?.status).toBe("pending");
     expect(nitrox?.identifier).toBeNull();
     expect(nitrox?.selfDeclaredAt).not.toBeNull();
+  });
+
+  /**
+   * **The card fields, and the three ways they must not hurt anybody**
+   * (issue #630).
+   *
+   * They are evidence for a staffer to pre-check before the dive date, and
+   * nothing else: the row stays `pending` and stamped, `decideTripAdmission`
+   * still decides on the rung, and `reviewCertification` still refuses the
+   * one-tap promote until somebody types what is on the card in their hand.
+   */
+  describe("the agency and card number a diver typed beside their level", () => {
+    it("writes both onto the row the level lands on, still as a claim", async () => {
+      const { db, shop, person } = await joiner();
+
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "padi",
+        identifier: "PA-118824",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(card?.agency).toBe("padi");
+      expect(card?.declaredIdentifier).toBe("PA-118824");
+      // **Never `identifier`.** That column is what the shop holds and it is a
+      // key; the two must stay tellable apart on every surface that reads them.
+      expect(card?.identifier).toBeNull();
+      // Everything that makes it a claim is untouched by the extra evidence.
+      expect(card?.status).toBe("pending");
+      expect(card?.selfDeclaredAt).not.toBeNull();
+      expect(isUnsightedSelfDeclaration(card ?? { status: "pending" })).toBe(true);
+    });
+
+    it("keeps a number without an agency, filed under the enum's honest 'unstated'", async () => {
+      const { db, shop, person } = await joiner();
+
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+        identifier: "OW-4242",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(card?.declaredIdentifier).toBe("OW-4242");
+      // Never an invented agency — that is the laundering the stamp exists
+      // against — and `other` is what the column already stores for "not said".
+      expect(card?.agency).toBe("other");
+    });
+
+    it("updates the diver's own earlier claim in place, number and all", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "open_water",
+      });
+
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "ssi",
+        identifier: "SSI-77",
+      });
+
+      const cards = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(cards).toHaveLength(1);
+      expect(cards[0]?.level).toBe("rescue");
+      expect(cards[0]?.declaredIdentifier).toBe("SSI-77");
+    });
+
+    /**
+     * **The number a diver types can never collide with a card the shop holds**,
+     * because it is not in the unique index and never was
+     * (`security-reviewer`, issue #630).
+     *
+     * Writing it into `identifier` would have made this exact submission raise
+     * 23505 inside the booking transaction — failing the sale, and answering
+     * "is this number on file at this shop?" for anybody who typed one and
+     * watched. Dropping the number on a collision only moved the tell: an
+     * unsighted claim carrying a number reads as `certification_pending` and one
+     * without reads as `certification_self_declared`, so the difference renders
+     * in words on the prober's own readiness page.
+     */
+    it("records a number another diver's real card already holds, touching neither", async () => {
+      const { db, shop, person } = await joiner();
+      const { person: other } = await findOrCreatePerson(db, {
+        shopId: shop.id,
+        fullName: "Marina Sol",
+        email: "marina@example.com",
+      });
+      await createCertification(db, {
+        shopId: shop.id,
+        personId: other.id,
+        agency: "padi",
+        level: "rescue",
+        identifier: "PA-999",
+      });
+
+      const outcome = await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "padi",
+        // Same number, same agency, differing only by case — which is what the
+        // index treats as one physical card.
+        identifier: "pa-999",
+      });
+
+      expect(outcome.level).toBe("recorded");
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      expect(card?.declaredIdentifier).toBe("pa-999");
+      expect(card?.identifier).toBeNull();
+      // The other diver's card is untouched: not re-levelled, not re-numbered,
+      // not stamped. That is the whole point of the separate column.
+      const [theirs] = (await liveCards(db, shop.id)).filter((row) => row.personId === other.id);
+      expect(theirs?.identifier).toBe("PA-999");
+      expect(theirs?.level).toBe("rescue");
+      expect(theirs?.selfDeclaredAt).toBeNull();
+    });
+
+    /**
+     * The half of the collision fix that a reader would otherwise have to infer.
+     * A claim carrying a number must read *exactly* like one that carries none —
+     * `certification_self_declared`, which is what keeps `/ready`'s card-entry
+     * form on screen. Anything else lets a stranger who types a number into a
+     * diver's booking take away that diver's only way to send their real card.
+     */
+    it("still reads as the diver's own word, so their card-entry form survives", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "rescue",
+        agency: "padi",
+        identifier: "PA-4242",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      if (!card) throw new Error("no card written");
+      const blockers = calculateReadiness({
+        requirement: {
+          requiresWaiver: false,
+          minimumCertificationLevel: "rescue",
+          requiredSpecialties: [],
+        } as unknown as Parameters<typeof calculateReadiness>[0]["requirement"],
+        waiver: null,
+        certifications: [card],
+      }).blockers;
+      expect(blockers).toContainEqual(
+        expect.objectContaining({ code: "certification_self_declared" }),
+      );
+      expect(blockers).not.toContainEqual(
+        expect.objectContaining({ code: "certification_pending" }),
+      );
+    });
+
+    it("never lets a declared number promote the row on its own", async () => {
+      const { db, shop, person } = await joiner();
+      await recordSelfDeclaredCards(db, {
+        shopId: shop.id,
+        personId: person.id,
+        level: "instructor",
+        agency: "padi",
+        identifier: "PA-1234",
+      });
+
+      const [card] = (await liveCards(db, shop.id)).filter((row) => row.personId === person.id);
+      if (!card) throw new Error("no card written");
+      // The one-tap promote still demands a sighting, exactly as it does for a
+      // claim carrying no number at all: a stranger's typing is not evidence
+      // however complete it looks.
+      const promoted = await reviewCertification(db, {
+        shopId: shop.id,
+        certificationId: card.id,
+        status: "verified",
+      });
+      expect(promoted).toEqual({ ok: false, reason: "card_sighting_required" });
+    });
   });
 
   it("records nothing when the joiner skipped both questions", async () => {

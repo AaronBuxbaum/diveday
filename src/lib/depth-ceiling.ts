@@ -100,13 +100,10 @@ export type DepthLimit = {
 export function diverDepthLimit(
   certifications: readonly Certification[],
   specialtyCertifications: readonly SpecialtyCertification[],
-  todayLocal: CalendarDate,
   dateOfBirth?: CalendarDate | null,
   onDate?: CalendarDate | null,
 ): DepthLimit {
-  const verified = certifications.filter((certification) =>
-    validVerifiedCertification(certification, todayLocal),
-  );
+  const verified = certifications.filter(validVerifiedCertification);
   const level =
     verified.length === 0
       ? null
@@ -145,14 +142,12 @@ export function diverDepthLimit(
   // A Deep specialty is exactly the training that lifts an Open Water diver past
   // 18 m, so it raises the ceiling to the recreational limit — but it can only
   // ever raise, never lower an already-deeper level. Held to the *same*
-  // predicate as the specialty readiness gate (src/lib/readiness.ts): a card the
-  // shop has marked stale must not silently keep buying depth here that it no
-  // longer buys there.
+  // predicate as the specialty readiness gate (src/lib/readiness.ts), which is
+  // why the imported-but-unconfirmed card is excluded here too.
   const hasDeep = specialtyCertifications.some(
     (card) =>
       card.specialty === "deep" &&
       card.status === "verified" &&
-      (!card.expiresAt || card.expiresAt >= todayLocal) &&
       (!card.importedAt || card.reviewedAt),
   );
   const levelLimit = LEVEL_DEPTH_LIMIT[level];

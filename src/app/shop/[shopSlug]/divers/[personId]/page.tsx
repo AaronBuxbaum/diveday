@@ -235,7 +235,6 @@ export default async function DiverDetailPage({
           diver={diver}
           shopSlug={shopSlug}
           personId={personId}
-          shop={shop}
           locale={locale}
           status={noticeForForm(diverNotice, "specialty-cards")}
         />

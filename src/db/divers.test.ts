@@ -2238,7 +2238,6 @@ describe("listDiverSummaries certification level", () => {
     cards: {
       level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
       status?: "pending" | "verified";
-      expiresAt?: string | null;
     }[],
   ) {
     const diver = await createDiver(db, { shopId, fullName });
@@ -2251,7 +2250,6 @@ describe("listDiverSummaries certification level", () => {
         level: card.level,
         identifier: `${fullName}-${index}`,
         status: card.status ?? "verified",
-        expiresAt: card.expiresAt ?? null,
       });
     }
     return diver;
@@ -2265,7 +2263,7 @@ describe("listDiverSummaries certification level", () => {
     return row;
   }
 
-  it("names the highest verified, unexpired card — and nothing when there is none", async () => {
+  it("names the highest verified card — and nothing when there is none", async () => {
     const { db, shop } = await seededShopContext();
 
     await diverWithCards(db, shop.id, "Level Nobody", []);
@@ -2279,20 +2277,20 @@ describe("listDiverSummaries certification level", () => {
     expect((await summaryFor(db, shop.id, "Level Ladder")).certificationLevel).toBe("rescue");
   });
 
-  it("refuses to speak for an expired card, however high it sits on the ladder", async () => {
+  it("refuses to speak for a pending card, however high it sits on the ladder", async () => {
     const { db, shop } = await seededShopContext();
 
-    // Only expired cards: a lapsed Divemaster is not a Divemaster today, and
-    // the roster says nothing rather than overstating what is on file.
-    await diverWithCards(db, shop.id, "Level Lapsed", [
-      { level: "divemaster", expiresAt: "2020-01-01" },
+    // Only unsighted cards: a claimed Divemaster is not a Divemaster on this
+    // roster, and it says nothing rather than overstating what is on file.
+    await diverWithCards(db, shop.id, "Level Claimed", [
+      { level: "divemaster", status: "pending" },
     ]);
-    expect((await summaryFor(db, shop.id, "Level Lapsed")).certificationLevel).toBeNull();
+    expect((await summaryFor(db, shop.id, "Level Claimed")).certificationLevel).toBeNull();
 
-    // The case the product decision turns on: an expired higher card never
-    // outranks a valid lower one.
+    // The case the product decision turns on: an unverified higher card never
+    // outranks a verified lower one.
     await diverWithCards(db, shop.id, "Level Mixed", [
-      { level: "rescue", expiresAt: "2020-01-01" },
+      { level: "rescue", status: "pending" },
       { level: "open_water" },
     ]);
     expect((await summaryFor(db, shop.id, "Level Mixed")).certificationLevel).toBe("open_water");

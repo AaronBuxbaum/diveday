@@ -320,7 +320,6 @@ function Notice({ title, text, glyph = "⏳" }: { title: string; text: string; g
 const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
   "certification_missing",
   "certification_self_declared",
-  "certification_expired",
   "certification_insufficient",
 ]);
 
@@ -339,10 +338,7 @@ const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
  * guard in `reviewSpecialtyCertification`, and the `isRealCard` fix in
  * `holdsRealCardOutsideLevels` are what this form rests on.
  */
-const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>([
-  "specialty_missing",
-  "specialty_expired",
-]);
+const SPECIALTY_ENTRY_CODES = new Set<ReadinessBlockerCode>(["specialty_missing"]);
 
 /**
  * A nitrox card, likewise. `nitrox_self_declared` is here because a claim is
@@ -358,8 +354,8 @@ const NITROX_ENTRY_CODES = new Set<ReadinessBlockerCode>([
  * One collapsed disclosure, the shell every card-entry form on this page wears.
  *
  * Collapsed, because the row above has already said what is outstanding and a
- * diver short three cards was being handed three stacked forms — twelve fields
- * of agency/level/number/expiry between them, all open at once, on a phone.
+ * diver short three cards was being handed three stacked forms — nine fields of
+ * agency/level/number between them, all open at once, on a phone.
  * Shut, the same three read as a list of three things to do, and each one is a
  * tap. `<details>` carries the open state to a screen reader itself, which is
  * why the caret is decorative (`DisclosureCaret`).
@@ -505,9 +501,6 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
               className={controlClass}
             />
           </Field>
-          <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
-            <input name="expiresAt" type="date" className={controlClass} />
-          </Field>
         </FieldGrid>
         <div>
           <SubmitButton
@@ -573,9 +566,6 @@ function SpecialtyEntry({
               spellCheck={false}
               className={controlClass}
             />
-          </Field>
-          <Field label={t("ready.certExpiry")} hint={t("ready.certExpiryHint")}>
-            <input name="expiresAt" type="date" className={controlClass} />
           </Field>
         </FieldGrid>
         <div>

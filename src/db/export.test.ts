@@ -580,7 +580,7 @@ describe("full-shop export dataset", () => {
     }
   });
 
-  it("never lets an expired card outrank a current one in contacts.csv", async () => {
+  it("never lets a pending card outrank a verified one in contacts.csv", async () => {
     const { db, shop } = await seededShopContext();
     const now = new Date("2026-07-23T12:00:00.000Z");
 
@@ -594,9 +594,8 @@ describe("full-shop export dataset", () => {
         personId: diver.id,
         agency: "padi",
         level: "rescue",
-        identifier: "EXPIRED-RESCUE-1",
-        status: "verified",
-        expiresAt: "2025-01-01",
+        identifier: "PENDING-RESCUE-1",
+        status: "pending",
       },
       {
         shopId: shop.id,
@@ -605,21 +604,19 @@ describe("full-shop export dataset", () => {
         level: "open_water",
         identifier: "CURRENT-OW-1",
         status: "verified",
-        expiresAt: null,
       },
     ]);
-    const [onlyExpired] = await db
+    const [onlyPending] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Only Expired Erin", email: "erin@example.com" })
       .returning();
     await db.insert(certifications).values({
       shopId: shop.id,
-      personId: onlyExpired.id,
+      personId: onlyPending.id,
       agency: "ssi",
       level: "advanced_open_water",
-      identifier: "EXPIRED-AOW-1",
-      status: "verified",
-      expiresAt: "2024-06-01",
+      identifier: "PENDING-AOW-1",
+      status: "pending",
     });
 
     const input = await loadShopExportBundleInput(db, shop.id, now);
@@ -628,22 +625,21 @@ describe("full-shop export dataset", () => {
     const cell = (row: (typeof contacts.rows)[number], header: string) =>
       row[contacts.header.indexOf(header)];
 
-    // A current lower card beats an expired higher one — an expired card is
-    // history, not evidence, and must not migrate as a live claim.
+    // A verified lower card beats an unsighted higher one — the file hands the
+    // next system the strongest *honest* claim, never the biggest one.
     const lee = contacts.rows.find((row) => cell(row, "full_name") === "Lapsed Card Lee");
     expect(lee).toBeDefined();
     if (!lee) return;
     expect(cell(lee, "certification_number")).toBe("CURRENT-OW-1");
     expect(cell(lee, "certification_level")).toBe("open_water");
-    expect(cell(lee, "certification_expires_at")).toBeNull();
 
-    // A diver with nothing current still exports their history — with the
-    // expiry visible so the destination can enforce it.
+    // A diver with nothing verified still exports what is on file, with the
+    // status visible so the destination can weigh it.
     const erin = contacts.rows.find((row) => cell(row, "full_name") === "Only Expired Erin");
     expect(erin).toBeDefined();
     if (!erin) return;
-    expect(cell(erin, "certification_number")).toBe("EXPIRED-AOW-1");
-    expect(cell(erin, "certification_expires_at")).toBe("2024-06-01");
+    expect(cell(erin, "certification_number")).toBe("PENDING-AOW-1");
+    expect(cell(erin, "certification_status")).toBe("pending");
   });
 
   /**

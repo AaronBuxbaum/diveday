@@ -57,7 +57,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
-import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import { BLOCKER_CATEGORY, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
 import {
   isValidWeekdaySet,
   MAX_INTERVAL_WEEKS,
@@ -143,9 +143,13 @@ const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
+  // The requirable set, not the ladder: Divemaster and Instructor are working
+  // ratings and a departure may not demand one of a paying diver (issue #630).
+  // Read off `REQUIRABLE_CERTIFICATION_LEVELS` rather than respelled, so the
+  // picker and the parse can never disagree about what a shop may ask for.
   minimumCertificationLevel: z.preprocess(
     (value) => (value === "" ? null : value),
-    z.enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"]).nullable(),
+    z.enum(REQUIRABLE_CERTIFICATION_LEVELS).nullable(),
   ),
 });
 

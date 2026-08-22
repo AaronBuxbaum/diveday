@@ -635,7 +635,6 @@ async function writeEvidence(
           agency: row.cert.agency,
           level: row.cert.level,
           identifier: row.cert.identifier,
-          expiresAt: row.cert.expiresAt,
           status: row.cert.status,
           // Flagged imported either way: provenance is a fact about where the
           // card came from, independent of whether we trusted it on arrival.
@@ -672,7 +671,6 @@ async function writeEvidence(
         agency: card.agency,
         specialty: card.specialty,
         identifier: card.identifier,
-        expiresAt: card.expiresAt,
         status: card.status,
         importedAt: now,
         importedFromLabel: card.sourceLabel,

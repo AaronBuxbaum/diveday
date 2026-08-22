@@ -14,6 +14,21 @@
     "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
     "certification": {
       "level": "Nivel de certificación",
+      "agency": "Agencia de certificación",
+      "agencyUnsaid": "No lo sé",
+      "agencies": {
+        "padi": "PADI",
+        "ssi": "SSI",
+        "naui": "NAUI",
+        "sdi": "SDI",
+        "tdi": "TDI",
+        "cmas": "CMAS",
+        "raid": "RAID",
+        "gue": "GUE",
+        "bsac": "BSAC",
+        "other": "Otra agencia"
+      },
+      "cardNumber": "Número de certificación",
       "levelUnsaid": "Prefiero no decirlo",
       "levelNone": "Todavía no tengo certificación",
       "levelInfoLabel": "Por qué preguntamos por la certificación",
@@ -554,11 +569,9 @@
       "certificationMissing": "Comparte tus datos de certificación con el centro — añádelos abajo o ponte en contacto — para que puedan registrarlos en tu ficha.",
       "certificationPending": "Tus datos de certificación están con el centro para verificarlos.",
       "certificationSelfDeclared": "Le dijiste al centro tu nivel de certificación, pero aún no está verificado en tu ficha. Añade los datos de certificación abajo para que queden archivados antes de la salida.",
-      "certificationExpired": "Tu certificación registrada ha superado la fecha de actualización que fijó tu centro — consulta con ellos sobre una actualización antes de bucear.",
       "certificationInsufficient": "Esta salida requiere un nivel de certificación superior. Tu centro puede hablar contigo sobre las opciones.",
       "specialtyMissing": "Esta inmersión necesita una certificación de especialidad — comparte sus datos con el centro o ponte en contacto para que puedan añadirla.",
       "specialtyPending": "Tu certificación de especialidad está con el centro para verificación.",
-      "specialtyExpired": "Tu certificación de especialidad registrada ha superado la fecha de actualización que fijó tu centro — consulta con ellos antes de bucear.",
       "specialtyImportUnconfirmed": "Tu certificación de especialidad llegó del sistema anterior de tu centro y está pendiente de que la confirmen.",
       "nitroxMissing": "Esta inmersión usa nitrox — comparte los datos de tu certificación de nitrox con el centro o ponte en contacto para que puedan añadirlos y verificarlos.",
       "nitroxPending": "Tu certificación de nitrox está con el centro para verificación.",
@@ -582,26 +595,12 @@
     "certAgency": "Agencia de formación",
     "certLevel": "Nivel",
     "certNumber": "Número de certificación",
-    "certExpiry": "Caduca",
-    "certExpiryHint": "Solo si tu registro de certificación muestra una fecha.",
     "certChoose": "Elige una opción",
     "certSubmit": "Añadir mi certificación",
     "certSubmitting": "Añadiendo…",
     "certSaved": "Certificación añadida. Tu centro la verificará con el registro de certificación u otra evidencia.",
     "certKnown": "Ese número de certificación ya está registrado aquí: no hace falta nada más.",
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
-    "certAgencies": {
-      "padi": "PADI",
-      "ssi": "SSI",
-      "naui": "NAUI",
-      "sdi": "SDI",
-      "tdi": "TDI",
-      "cmas": "CMAS",
-      "raid": "RAID",
-      "gue": "GUE",
-      "bsac": "BSAC",
-      "other": "Otra agencia"
-    },
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
     "gearBody": "Dile a la tripulación qué te gustaría alquilar y más o menos qué talla.",
@@ -1893,10 +1892,6 @@
           "column": "Certificación",
           "detail": "Agencia, nivel y número de certificación. El número de certificación es lo que permite trasladar el registro."
         },
-        "refresherDue": {
-          "column": "Repaso pendiente",
-          "detail": "Escrito como tu hoja escriba las fechas (05/04/2030, 4-may-2030, 2030-05-04). Una fecha pasada aterriza como una certificación vencida — ese es el punto. Una ilegible pasa a revisión del personal."
-        },
         "specialty": {
           "column": "Especialidad",
           "detail": "Profundidad, naufragios, nocturna o traje seco. Una celda puede nombrar varias (“Profundidad, Naufragios”) y cada una se convierte en su propia certificación bajo el número de agencia del buceador."
@@ -2302,7 +2297,7 @@
           },
           "certificationCard": {
             "what": "Registro de certificación",
-            "detail": "Se importa verificada y marcada como importada, fecha de repaso incluida — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
+            "detail": "Se importa verificada y marcada como importada — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
           },
           "specialtyCards": {
             "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
@@ -2959,12 +2954,10 @@
       "waiverPending": "Firma tu waiver",
       "waiverExpired": "El enlace de tu exención caducó — consigue uno nuevo, solo lleva unos dos minutos",
       "certificationMissing": "Envía a tu centro los datos de tu certificación",
-      "certificationExpired": "Consulta con tu centro la fecha de renovación de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con el centro",
       "certificationSelfDeclared": "Trae tu certificación para que la tienda pueda verla",
       "nitroxSelfDeclared": "Trae tu certificación de nitrox para que la tienda pueda verla",
       "specialtyMissing": "Envía a tu centro los datos de tu certificación de especialidad",
-      "specialtyExpired": "Actualiza tu certificación de especialidad con el centro",
       "nitroxMissing": "Envía a tu centro los datos de tu certificación de nitrox",
       "paymentDue": "Salda tu saldo pendiente"
     },

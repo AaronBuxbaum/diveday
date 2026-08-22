@@ -112,11 +112,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // so there is nothing on the shop's end to wait for — the card-entry form on
   // this very page is the whole fix, and it is offered for this code.
   certification_self_declared: "action",
-  certification_expired: "action",
   certification_insufficient: "action",
   specialty_missing: "action",
   specialty_pending: "waiting",
-  specialty_expired: "action",
   // "waiting", not "action": the card is on file and came across in the shop's
   // migration — there is nothing for the diver to send, only a staff confirm.
   specialty_import_unconfirmed: "waiting",
@@ -266,7 +264,6 @@ export const REMINDER_ACTION_CODES = [
   "waiver_pending",
   "waiver_expired",
   "certification_missing",
-  "certification_expired",
   "certification_insufficient",
   // The two a diver now reaches the week before a dive with, since a stated
   // card buys the seat and the sighting is still owed (ADR
@@ -278,7 +275,6 @@ export const REMINDER_ACTION_CODES = [
   "certification_self_declared",
   "nitrox_self_declared",
   "specialty_missing",
-  "specialty_expired",
   "nitrox_missing",
   "payment_due",
 ] as const;

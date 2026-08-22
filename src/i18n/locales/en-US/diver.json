@@ -14,6 +14,21 @@
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
     "certification": {
       "level": "Certification level",
+      "agency": "Certification agency",
+      "agencyUnsaid": "Not sure",
+      "agencies": {
+        "padi": "PADI",
+        "ssi": "SSI",
+        "naui": "NAUI",
+        "sdi": "SDI",
+        "tdi": "TDI",
+        "cmas": "CMAS",
+        "raid": "RAID",
+        "gue": "GUE",
+        "bsac": "BSAC",
+        "other": "Another agency"
+      },
+      "cardNumber": "Certification number",
       "levelUnsaid": "Rather not say",
       "levelNone": "I'm not certified yet",
       "levelInfoLabel": "Why we ask about certification",
@@ -554,11 +569,9 @@
       "certificationMissing": "Add your certification details to your record.",
       "certificationPending": "Your certification details are being verified.",
       "certificationSelfDeclared": "Your certification level has not been verified yet.",
-      "certificationExpired": "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
       "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
       "specialtyMissing": "This dive needs a specialty certification — share its details with the shop or get in touch so they can add it.",
       "specialtyPending": "Your specialty certification is with the shop for verification.",
-      "specialtyExpired": "Your specialty certification on file is past the refresher date your shop set — check with them about it before you dive.",
       "specialtyImportUnconfirmed": "Your specialty certification came across from your shop’s old system and is with them to confirm.",
       "nitroxMissing": "This dive uses Nitrox — verified Nitrox certification is required.",
       "nitroxPending": "Your nitrox certification is with the shop for verification.",
@@ -582,26 +595,12 @@
     "certAgency": "Training agency",
     "certLevel": "Level",
     "certNumber": "Certification number",
-    "certExpiry": "Expires",
-    "certExpiryHint": "Only if your certification record shows one.",
     "certChoose": "Choose one",
     "certSubmit": "Add my certification",
     "certSubmitting": "Adding…",
     "certSaved": "Certification added. Your shop will verify it against the certification record or other evidence.",
     "certKnown": "That certification number is already on file here — nothing more to do.",
     "certInvalid": "Check the agency, level, and certification number, then try again.",
-    "certAgencies": {
-      "padi": "PADI",
-      "ssi": "SSI",
-      "naui": "NAUI",
-      "sdi": "SDI",
-      "tdi": "TDI",
-      "cmas": "CMAS",
-      "raid": "RAID",
-      "gue": "GUE",
-      "bsac": "BSAC",
-      "other": "Another agency"
-    },
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep — bookmark it, and it stays up to date until you sail.",
     "gearBody": "Tell the crew what you'd like to rent, and roughly what size.",
@@ -1893,10 +1892,6 @@
           "column": "Certification",
           "detail": "Agency, level, and certification number. The certification number is what lets a record come across at all."
         },
-        "refresherDue": {
-          "column": "Refresher due",
-          "detail": "Written however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A past date lands as a certification that's due — that's the point. An unreadable one goes to staff review."
-        },
         "specialty": {
           "column": "Specialty",
           "detail": "Deep, wreck, night, or drysuit. One cell can name several (“Deep, Wreck”) and each becomes its own certification under the diver's agency number."
@@ -2302,7 +2297,7 @@
           },
           "certificationCard": {
             "what": "Certification record",
-            "detail": "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry."
+            "detail": "Imported verified and flagged imported — staff give it a one-tap confirm; unrecognized levels need manual entry."
           },
           "specialtyCards": {
             "what": "Specialty certifications (deep, wreck, night, drysuit)",
@@ -2959,12 +2954,10 @@
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired — grab a fresh one, it only takes about two minutes",
       "certificationMissing": "Send your shop your certification details",
-      "certificationExpired": "Check on your shop's refresher date for your certification",
       "certificationInsufficient": "Check your certification level with the shop",
       "certificationSelfDeclared": "Bring your certification card so the shop can check it",
       "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
       "specialtyMissing": "Send your shop your specialty certification details",
-      "specialtyExpired": "Update your specialty certification with the shop",
       "nitroxMissing": "Send your shop your nitrox certification details",
       "paymentDue": "Settle your balance"
     },

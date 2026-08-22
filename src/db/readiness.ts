@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
-import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
@@ -185,8 +185,6 @@ export type NewCertification = {
   agency: CertificationAgency;
   level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
   identifier: string;
-  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
-  expiresAt?: CalendarDate;
   /**
    * **The diver typed this about themselves.** Set only by the diver-facing
    * entry form on `/ready/[token]`; a staff capture leaves it unset, because a
@@ -446,8 +444,6 @@ export type NewSpecialtyCertification = {
   agency: CertificationAgency;
   specialty: DiveSpecialty;
   identifier: string;
-  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
-  expiresAt?: CalendarDate;
   /**
    * The diver typed this about themselves — see the column's own note in
    * `src/db/schema.ts`. Set only by the entry form on `/ready/[token]`; a staff
@@ -711,17 +707,10 @@ export async function listTripReadiness(
   const tripDate = tripRow[0]?.startsAt
     ? calendarDateInTimezone(tripRow[0].startsAt, timezone)
     : null;
-  // Card validity is asked about *today* (is this card expired right now?),
-  // which is a different question from the trip date the junior band is
-  // measured on — a card expiring next week is valid today and invalid on a
-  // trip a fortnight out.
-  const todayLocal = calendarDateInTimezone(now, timezone);
-
   return rows.map((row) => {
     const depthLimit = diverDepthLimit(
       row.certifications,
       row.specialtyCertifications,
-      todayLocal,
       row.person.dateOfBirth,
       tripDate,
     );
@@ -1014,7 +1003,6 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         now,
-        timezone,
       }),
     };
   });
