@@ -1,6 +1,8 @@
 {
   "common": {
     "backToSchedule": "Volver al calendario",
+    "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
+    "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
     "perDiver": "por buceador",
     "optional": "(opcional)",
     "varies": "Variable",
@@ -685,8 +687,6 @@
     "signatureNote": "Tu nombre escrito, tu conformidad y la hora de finalización se guardan con esta versión exacta de la exención.",
     "saveForLater": "Guardar y terminar después",
     "signButton": "Firmar exención",
-    "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
-    "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
     "englishOnlyNotice": "Esta exención y el cuestionario médico solo están disponibles en inglés por ahora. Si no te sientes cómodo leyendo textos legales o médicos en inglés, ven con alguien que pueda ayudarte a leerlo, o consulta antes con el centro: no firmes nada que no entiendas."
   },
   "checkoutLine": {

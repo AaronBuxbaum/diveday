@@ -4,9 +4,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
-import { EntryDone } from "@/components/account/EntryShell";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
@@ -244,7 +244,7 @@ export default async function WaiverPage({
     // without weakening the token model's own guarantee that a bearer token
     // reveals only its own record.
     return (
-      <Unavailable
+      <ExpiredLinkCard
         title={anonT("waiver.unavailableHeading")}
         text={anonT("waiver.unavailableBody")}
       />
@@ -257,7 +257,7 @@ export default async function WaiverPage({
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) {
     return (
-      <Unavailable
+      <ExpiredLinkCard
         title={anonT("waiver.unavailableHeading")}
         text={anonT("waiver.unavailableBody")}
       />
@@ -857,7 +857,7 @@ export default async function WaiverPage({
       </form>
       <p className="mt-8 text-center text-sm text-muted">
         {shop.contactEmail || shop.contactPhone
-          ? t.rich("waiver.needHelpContact", {
+          ? t.rich("common.needHelpContact", {
               shop: shopName,
               link: (chunks) => (
                 <a
@@ -872,7 +872,7 @@ export default async function WaiverPage({
                 </a>
               ),
             })
-          : t("waiver.needHelpPlain", { shop: shopName })}
+          : t("common.needHelpPlain", { shop: shopName })}
       </p>
     </main>
   );
@@ -932,7 +932,7 @@ function ExpiredLink({
   // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
   const notice = noticeFromParam(sent, RESCUE_NOTICES);
   return (
-    <Unavailable
+    <ExpiredLinkCard
       title={t("waiver.expiredHeading")}
       text={t("waiver.expiredBody")}
       shop={shop}
@@ -956,78 +956,6 @@ function ExpiredLink({
           </SubmitButton>
         </form>
       )}
-    </Unavailable>
-  );
-}
-
-/**
- * The dead-link outcome (unavailable or expired). `shop`/`t` are only present
- * when the token resolved to a real record (task 45) — an "unavailable"
- * token that matched nothing at all has no shop to attribute it to, so that
- * branch still renders without contact links, by design. `children` is where
- * a card that can offer a way forward puts it, above the contact fallback.
- *
- * `EntryDone` is the app's one warm terminal pattern
- * (docs/design/principles.md #4), already worn by the peer bearer-token dead
- * link at `claim/[token]`; this page used to spell a `rounded-lg` card of its
- * own, one of three different boxes three token pages had grown for the same
- * kind of message. `⏳` is the app-wide "this link has run out" mark, and it
- * is decorative — the heading carries the meaning.
- *
- * Everything below the text goes through `EntryDone`'s single action slot, in
- * one gapped column rather than each piece carrying its own top margin: the
- * resend form and the notice above it both come and go by branch, and
- * per-item margins are how a stack ends up spaced differently depending on
- * which of its pieces happen to be there.
- */
-function Unavailable({
-  title,
-  text,
-  shop,
-  t,
-  children,
-}: {
-  title: string;
-  text: string;
-  shop?: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
-  t?: DiverTranslator;
-  children?: React.ReactNode;
-}) {
-  const contact =
-    shop && t ? (
-      <p className="text-muted">
-        {shop.contactEmail || shop.contactPhone
-          ? t.rich("waiver.needHelpContact", {
-              shop: shop.name,
-              link: (chunks) => (
-                <a
-                  href={
-                    shop.contactEmail
-                      ? `mailto:${shop.contactEmail}`
-                      : telHref(shop.contactPhone ?? "")
-                  }
-                  className="font-medium text-primary hover:underline"
-                >
-                  {chunks}
-                </a>
-              ),
-            })
-          : t("waiver.needHelpPlain", { shop: shop.name })}
-      </p>
-    ) : null;
-  return (
-    <EntryDone
-      glyph="⏳"
-      title={title}
-      text={text}
-      action={
-        children || contact ? (
-          <div className="flex flex-col items-center gap-4">
-            {children}
-            {contact}
-          </div>
-        ) : undefined
-      }
-    />
+    </ExpiredLinkCard>
   );
 }

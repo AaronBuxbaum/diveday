@@ -63,6 +63,11 @@ export default async function VerifyAccountPage({
   }
 
   const check = await checkAccountToken(db, { token, purpose: "email_verification" });
+  // **Terse on purpose, and decided rather than inherited** (issue #801).
+  //
+  // Same as /reset-password: an account token belongs to a person, not a shop,
+  // so there is nobody to name — and a fresh verification email is one tap from
+  // signing in.
   if (!check) {
     // Task 45: this used to be a dead end with nothing else to click — a
     // sibling of the same no-link problem the waiver token pages had. There

@@ -9,6 +9,7 @@ import {
   MAX_LIVE_CAPABILITIES_PER_PURPOSE,
   resolveRevokedBookingCapability,
   revokeBookingCapabilities,
+  staleBookingCapabilityForToken,
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
@@ -508,6 +509,108 @@ describe("resolveRevokedBookingCapability (self-cancel confirmation, docs ADR 20
     await cancelBooking(db, shop.id, bookingId);
     expect(
       await resolveRevokedBookingCapability(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+      }),
+    ).toBeNull();
+  });
+});
+
+/**
+ * **Which shop a dead link belonged to, and nothing else** (issue #801).
+ *
+ * `/ready` is the link in the 24-hour trip reminder, so a diver reaching an
+ * expired one is the ordinary case — and "ask your dive shop for a fresh link"
+ * without naming the shop is a dead end. This is what lets the page name it.
+ *
+ * The pairing with `resolveRevokedBookingCapability` above is the point: that
+ * one relaxes revocation and **keeps** expiry, because it feeds a booking read.
+ * This one relaxes both, because it feeds a shop name and cannot feed anything
+ * else — its return type says so.
+ */
+describe("staleBookingCapabilityForToken (naming the shop on a dead link)", () => {
+  it("resolves a token that has been revoked", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    await cancelBooking(db, shop.id, bookingId);
+    expect(
+      await staleBookingCapabilityForToken(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+      }),
+    ).toEqual({ shopId: shop.id });
+  });
+
+  it("resolves a token past its natural expiry, which is the whole difference", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const now = nowDate();
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      now,
+    });
+    const past = new Date(now.getTime() + CAPABILITY_MAX_TTL_MS + 1);
+    // The strict resolver refuses this one — see the case above.
+    expect(
+      await resolveRevokedBookingCapability(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+        now: past,
+      }),
+    ).toBeNull();
+    expect(
+      await staleBookingCapabilityForToken(db, {
+        token: issued?.token ?? "",
+        purpose: "readiness",
+      }),
+    ).toEqual({ shopId: shop.id });
+  });
+
+  it("hands back a shop and nothing else, so it cannot key a booking read", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+    });
+    const resolved = await staleBookingCapabilityForToken(db, {
+      token: issued?.token ?? "",
+      purpose: "readiness",
+    });
+    // Asserted as an exact shape: a `bookingId` creeping back in would sit one
+    // line from a resolver whose `bookingId` *is* used to read a booking, and
+    // this token may be years dead (`security-reviewer`, on issue #801).
+    expect(Object.keys(resolved ?? {})).toEqual(["shopId"]);
+  });
+
+  it("rejects an unknown token — relaxing when it was valid is not relaxing whether it was ours", async () => {
+    const { db } = await seededContext();
+    expect(
+      await staleBookingCapabilityForToken(db, {
+        token: "not-a-real-token",
+        purpose: "readiness",
+      }),
+    ).toBeNull();
+  });
+
+  it("still enforces purpose scoping", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const issued = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "confirm",
+    });
+    expect(
+      await staleBookingCapabilityForToken(db, {
         token: issued?.token ?? "",
         purpose: "readiness",
       }),

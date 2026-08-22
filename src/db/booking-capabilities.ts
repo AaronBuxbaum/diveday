@@ -229,6 +229,52 @@ export async function resolveRevokedBookingCapability(
 }
 
 /**
+ * **Which shop a dead link belonged to, and nothing else.**
+ *
+ * Expiry *and* revocation relaxed — so unlike `resolveRevokedBookingCapability`
+ * above, an aged-out token resolves here too. That is the whole point: `/ready`
+ * is the link in the 24-hour trip reminder, and every ordinary way of reaching
+ * an expired one (a bookmark from last season, a forwarded email, a reminder
+ * for a trip that moved) ended on four words telling the diver to ask a shop
+ * the page would not name (issue #801).
+ *
+ * **What it may be used for is the narrow part.** It authorizes nothing and
+ * reads nothing: the caller takes the `shopId` to name the shop and print the
+ * contact details that shop already publishes, and stops. It must never gate a
+ * read of the booking, the diver, or the trip — the token has expired, and an
+ * expired token is not a key.
+ *
+ * The guessing-resistance bar is unchanged: the hash must genuinely match a
+ * capability row that was issued for this purpose. What is relaxed is only
+ * *when* it was valid, never *whether* it was ours. The waiver page reached the
+ * same conclusion first (`staleWaiverRecordForToken`) and its comments carry
+ * the reasoning for the model as a whole: a bearer token reveals only its own
+ * record, and a record's shop is part of that record.
+ */
+export async function staleBookingCapabilityForToken(
+  db: DbExecutor,
+  input: { token: string; purpose: CapabilityPurpose },
+): Promise<{ shopId: string } | null> {
+  const tokenHash = hashCapabilityToken(input.token);
+  const [row] = await db
+    // **`shopId` and nothing else, deliberately.** A `bookingId` here would sit
+    // one line from `resolveRevokedBookingCapability`'s, which callers *do* use
+    // to key booking reads — and this token is expired, so the same shape would
+    // be an invitation to read a booking through one. The type is the guard
+    // (`security-reviewer`, on issue #801).
+    .select({ shopId: bookingCapabilities.shopId })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.tokenHash, tokenHash),
+        eq(bookingCapabilities.purpose, input.purpose),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * Explicit revocation: invalidates every outstanding, unexpired capability
  * for a booking (optionally scoped to one purpose) immediately, ahead of
  * their natural expiry. Used on cancellation; also the seam a future

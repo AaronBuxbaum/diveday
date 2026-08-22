@@ -6,6 +6,7 @@ import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalF
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RememberBooker } from "@/components/RememberBooker";
@@ -21,6 +22,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import {
   resolveRevokedBookingCapability,
+  staleBookingCapabilityForToken,
   verifyBookingCapability,
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
@@ -31,7 +33,7 @@ import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
-import { getShopBySlug } from "@/db/shops";
+import { getShopById, getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -969,6 +971,37 @@ export default async function DiverReadinessPage({
         }
       }
     }
+    // **Name the shop where the token still tells us which one it is.**
+    //
+    // `/ready` is the link in the 24-hour trip reminder, so every ordinary way
+    // of reaching a dead one — a bookmark from last season, a forwarded email,
+    // a reminder for a trip that moved — landed here, on four words telling a
+    // diver holding a phone to ask a shop this page would not name (issue
+    // #801). The waiver page solved this first and its comments say why the
+    // expired branch used to "bail out before the shop (and so its contact
+    // info) was ever loaded".
+    //
+    // `staleBookingCapabilityForToken` relaxes expiry and revocation and
+    // nothing else: the hash must still match a capability genuinely issued
+    // for this purpose. It is used for the shop's *name and published contact
+    // details* and for nothing else — no booking, no diver, no trip is read
+    // through an expired token, because an expired token is not a key.
+    const stale = await staleBookingCapabilityForToken(db, { token, purpose: "readiness" });
+    const staleShop = stale ? await getShopById(db, stale.shopId) : null;
+    if (staleShop) {
+      const staleT = diverTranslator(await requestLocale(staleShop.defaultLocale));
+      return (
+        <ExpiredLinkCard
+          title={staleT("ready.unavailableHeading")}
+          text={staleT("ready.unavailableBody")}
+          shop={staleShop}
+          t={staleT}
+        />
+      );
+    }
+    // Nothing resolved at all (garbage, or a token that was never ours). There
+    // is no shop to attribute it to without weakening the guarantee the model
+    // rests on — a bearer token reveals only its own record.
     return (
       <Notice title={anonT("ready.unavailableHeading")} text={anonT("ready.unavailableBody")} />
     );

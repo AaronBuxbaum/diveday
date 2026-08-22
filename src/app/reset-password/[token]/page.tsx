@@ -48,6 +48,12 @@ export default async function ResetPasswordPage({
 
   const db = await getDb();
   const check = await checkAccountToken(db, { token, purpose: "password_reset" });
+  // **Terse on purpose, and decided rather than inherited** (issue #801).
+  //
+  // An account token belongs to a person, not to a shop — there is no shop to
+  // name here even in principle, and the way forward is asking for a fresh
+  // email, which the sign-in page offers. Unlike a booking's readiness link,
+  // nothing about this dead end leaves the diver wondering who to contact.
   if (!check) {
     return (
       <EntryDone
