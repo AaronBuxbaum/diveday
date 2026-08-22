@@ -77,13 +77,21 @@ function importWizardCopy(t: StaffTranslator) {
     internal_notes: t("settings.import.wizard.fieldLabels.internal_notes"),
   };
 
-  const issues: Record<ImportIssueCode, string> = {
+  // A pair where the sentence counts something, one template where it does
+  // not — see `ImportWizardCopy["issues"]`.
+  const issues: Record<ImportIssueCode, string | { one: string; other: string }> = {
     email_invalid: t.raw("settings.import.issues.emailInvalid"),
     card_marked_unverified: t.raw("settings.import.issues.cardMarkedUnverified"),
     specialty_not_gated: t.raw("settings.import.issues.specialtyNotGated"),
     specialty_no_card_number: t.raw("settings.import.issues.specialtyNoCardNumber"),
-    specialty_imported_verified: t.raw("settings.import.issues.specialtyImportedVerified"),
-    specialty_imported_pending: t.raw("settings.import.issues.specialtyImportedPending"),
+    specialty_imported_verified: {
+      one: t.raw("settings.import.issues.specialtyImportedVerifiedOne"),
+      other: t.raw("settings.import.issues.specialtyImportedVerifiedOther"),
+    },
+    specialty_imported_pending: {
+      one: t.raw("settings.import.issues.specialtyImportedPendingOne"),
+      other: t.raw("settings.import.issues.specialtyImportedPendingOther"),
+    },
     agency_unrecognized: t("settings.import.issues.agencyUnrecognized"),
     level_names_specialty: t.raw("settings.import.issues.levelNamesSpecialty"),
     level_is_technical: t.raw("settings.import.issues.levelIsTechnical"),
@@ -127,9 +135,12 @@ function importWizardCopy(t: StaffTranslator) {
     fieldLabels,
     ignoredMedicalColumns: t.raw("settings.import.wizard.ignoredMedicalColumns"),
     unmappedColumns: t.raw("settings.import.wizard.unmappedColumns"),
-    waiverRowsNotice: t.raw("settings.import.wizard.waiverRowsNotice"),
-    visitRowsNotice: t.raw("settings.import.wizard.visitRowsNotice"),
-    paymentHistoryRowsNotice: t.raw("settings.import.wizard.paymentHistoryRowsNotice"),
+    waiverRowsNoticeOne: t.raw("settings.import.wizard.waiverRowsNoticeOne"),
+    waiverRowsNoticeOther: t.raw("settings.import.wizard.waiverRowsNoticeOther"),
+    visitRowsNoticeOne: t.raw("settings.import.wizard.visitRowsNoticeOne"),
+    visitRowsNoticeOther: t.raw("settings.import.wizard.visitRowsNoticeOther"),
+    paymentHistoryRowsNoticeOne: t.raw("settings.import.wizard.paymentHistoryRowsNoticeOne"),
+    paymentHistoryRowsNoticeOther: t.raw("settings.import.wizard.paymentHistoryRowsNoticeOther"),
     stats: {
       diversInFile: t("settings.import.wizard.stats.diversInFile"),
       extraCardRows: t("settings.import.wizard.stats.extraCardRows"),
@@ -161,30 +172,41 @@ function importWizardCopy(t: StaffTranslator) {
     },
     previewSwipeHint: t("settings.import.wizard.previewSwipeHint"),
     hiddenRowsNotice: t.raw("settings.import.wizard.hiddenRowsNotice"),
-    submit: t.raw("settings.import.wizard.submit"),
+    submitOne: t.raw("settings.import.wizard.submitOne"),
+    submitOther: t.raw("settings.import.wizard.submitOther"),
     submitting: t("settings.import.wizard.submitting"),
     issues,
     errors,
     result: {
       summary: t.raw("settings.import.wizard.result.summary"),
       cardsLine: t.raw("settings.import.wizard.result.cardsLine"),
+      cardsCertificationsOne: t.raw("settings.import.wizard.result.cardsCertificationsOne"),
+      cardsCertificationsOther: t.raw("settings.import.wizard.result.cardsCertificationsOther"),
+      cardsSpecialtyOne: t.raw("settings.import.wizard.result.cardsSpecialtyOne"),
+      cardsSpecialtyOther: t.raw("settings.import.wizard.result.cardsSpecialtyOther"),
+      cardsNitroxOne: t.raw("settings.import.wizard.result.cardsNitroxOne"),
+      cardsNitroxOther: t.raw("settings.import.wizard.result.cardsNitroxOther"),
       rowsMergedNote: t.raw("settings.import.wizard.result.rowsMergedNote"),
       cardsSkippedNote: t.raw("settings.import.wizard.result.cardsSkippedNote"),
       rowsSkippedNote: t.raw("settings.import.wizard.result.rowsSkippedNote"),
       cardsHeldByAnother: t.raw("settings.import.wizard.result.cardsHeldByAnother"),
       specialtyGateNote: t("settings.import.wizard.result.specialtyGateNote"),
-      waiversLine: t.raw("settings.import.wizard.result.waiversLine"),
+      waiversLineOne: t.raw("settings.import.wizard.result.waiversLineOne"),
+      waiversLineOther: t.raw("settings.import.wizard.result.waiversLineOther"),
       waiversSkippedExistingNote: t.raw("settings.import.wizard.result.waiversSkippedExistingNote"),
       waiversSkippedNoTemplateNote: t.raw(
         "settings.import.wizard.result.waiversSkippedNoTemplateNote",
       ),
       waiverDocumentsFailedNote: t.raw("settings.import.wizard.result.waiverDocumentsFailedNote"),
-      visitsLine: t.raw("settings.import.wizard.result.visitsLine"),
+      visitsLineOne: t.raw("settings.import.wizard.result.visitsLineOne"),
+      visitsLineOther: t.raw("settings.import.wizard.result.visitsLineOther"),
       visitsSkippedNote: t.raw("settings.import.wizard.result.visitsSkippedNote"),
-      paymentHistoryLine: t.raw("settings.import.wizard.result.paymentHistoryLine"),
+      paymentHistoryLineOne: t.raw("settings.import.wizard.result.paymentHistoryLineOne"),
+      paymentHistoryLineOther: t.raw("settings.import.wizard.result.paymentHistoryLineOther"),
       paymentHistorySkippedNote: t.raw("settings.import.wizard.result.paymentHistorySkippedNote"),
       receiptDocumentsFailedNote: t.raw("settings.import.wizard.result.receiptDocumentsFailedNote"),
-      notesLine: t.raw("settings.import.wizard.result.notesLine"),
+      notesLineOne: t.raw("settings.import.wizard.result.notesLineOne"),
+      notesLineOther: t.raw("settings.import.wizard.result.notesLineOther"),
       seeRoster: t("settings.import.wizard.result.seeRoster"),
     },
   };
@@ -304,7 +326,8 @@ export default async function ImportContactsPage({
     allow: canPersonImportShopData,
     refusal: { notice: "import-not-authorized" },
   });
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
   const chips = scopeChip(t);
 
   return (
@@ -369,6 +392,7 @@ export default async function ImportContactsPage({
             mono: (chunks) => <span className="font-mono">{chunks}</span>,
           })}
           copy={importWizardCopy(t)}
+          locale={locale}
         />
       </div>
     </main>
