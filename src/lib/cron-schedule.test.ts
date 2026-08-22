@@ -8,6 +8,7 @@ import {
   nextDailyTickAtOrAfter,
 } from "./cron-schedule";
 import { RECAP_CRON_CRONTAB } from "./recap-schedule";
+import { TRIP_REMINDER_CRON_CRONTAB } from "./reminders";
 
 /**
  * vercel.json is the deployed schedule. Everything else in the repo that names
@@ -32,6 +33,11 @@ describe("the daily tick", () => {
     expect(recaps?.schedule).toBe(RECAP_CRON_CRONTAB);
   });
 
+  it("matches the deployed hourly schedule for /api/cron/trip-reminders", () => {
+    const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/trip-reminders");
+    expect(reminders?.schedule).toBe(TRIP_REMINDER_CRON_CRONTAB);
+  });
+
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {
     // What `src/db/notifications.ts` actually depends on is not that the
     // reminders tick is the *only* daily cron — a second daily entry is fine,
@@ -54,7 +60,21 @@ describe("the daily tick", () => {
     // an hour after that) and calls only `sendDueRecaps`, whose query holds
     // that floor. Adding a route here is still a product and operations change,
     // not a scheduling convenience.
-    const SUB_DAILY_ALLOWED = new Set(["/api/cron/minimum-seats", "/api/cron/recaps"]);
+    // `/api/cron/trip-reminders` is the third, and the case for it is the same
+    // shape as the recap pass's. It owns one user-visible promise — a reminder
+    // reaches a diver inside their shop's own daytime — and a fixed daily UTC
+    // hour cannot keep it: 14:00 UTC is 10am in Florida and 03:00 in Fiji, so
+    // every shop in the picker's Asia-Pacific group was texting divers in the
+    // middle of the night (issue #697). It calls only `sendDueReminders`, which
+    // sends fresh messages; it does **not** drain the notification send queue,
+    // so the daily floor on retry latency that this test protects is untouched.
+    // That is also why the reminder scan *moved* rather than the daily tick
+    // becoming hourly.
+    const SUB_DAILY_ALLOWED = new Set([
+      "/api/cron/minimum-seats",
+      "/api/cron/recaps",
+      "/api/cron/trip-reminders",
+    ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");
       return minute.includes("/") || minute === "*" || hour.includes("/") || hour === "*";

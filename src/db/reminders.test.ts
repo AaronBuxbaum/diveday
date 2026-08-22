@@ -37,6 +37,15 @@ async function reminderContext() {
     .select()
     .from(people)
     .where(eq(people.email, "reminders-pat@example.com"));
+  // **This shop sends around the clock**, so the cases below are about the
+  // cadence buckets and nothing else. A reminder is also held outside the
+  // shop's own civil hours (`src/lib/send-window.ts`, issue #697), which has
+  // its own cases at the bottom of this file; mixing the two would test the
+  // bucket arithmetic and the clock at the same time and prove neither.
+  await db
+    .update(shops)
+    .set({ sendWindowStartHour: 0, sendWindowEndHour: 24 })
+    .where(eq(shops.id, shop.id));
   // 100h out lands in the 7-day bucket (T-168h .. T-24h).
   const inWeekBucket = new Date(reef.startsAt.getTime() - 100 * 60 * 60 * 1000);
   return { db, shop, reef, bookingId, personId: person.id, inWeekBucket };
@@ -397,5 +406,78 @@ describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-loc
       appOrigin: null,
     });
     expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "es-ES" });
+  });
+});
+
+/**
+ * **A fixed 14:00 UTC batch cannot serve more than one longitude.**
+ *
+ * It is 10am in Florida, 22:00 in Singapore, midnight in Sydney and 03:00 in
+ * Fiji — so a shop in the picker's own Asia-Pacific group texted every diver
+ * sailing tomorrow in the middle of the night, every day (issue #697).
+ *
+ * Held, not dropped, and safely so: a cadence bucket is hours wide — the
+ * 24-hour reminder is due from T-24h right up to departure — and any 24-hour
+ * span contains a whole daytime window, so skipping the quiet passes cannot
+ * close the bucket.
+ */
+describe("reminders against the shop's civil hours", () => {
+  async function quietHoursContext() {
+    const ctx = await reminderContext();
+    await ctx.db
+      .update(shops)
+      .set({ sendWindowStartHour: 8, sendWindowEndHour: 20 })
+      .where(eq(shops.id, ctx.shop.id));
+    return ctx;
+  }
+
+  /** The same instant in the run-up, moved to a given shop-local hour. */
+  function atLocalHour(reference: Date, hour: number) {
+    const local = new Date(reference);
+    // The seeded shop is America/New_York; in July that is UTC-4.
+    local.setUTCHours(hour + 4, 0, 0, 0);
+    return local;
+  }
+
+  it("holds a reminder that comes due at two in the morning", async () => {
+    const { db, bookingId, inWeekBucket } = await quietHoursContext();
+
+    const summary = await sendDueReminders(db, {
+      now: atLocalHour(inWeekBucket, 2),
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: "https://dive.day",
+    });
+
+    expect(summary.held).toBeGreaterThan(0);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("sends it that morning instead, exactly once", async () => {
+    const { db, bookingId, inWeekBucket } = await quietHoursContext();
+    const email = fakeEmail();
+    const send = (now: Date) =>
+      sendDueReminders(db, {
+        now,
+        emailProvider: email.provider,
+        smsProvider: fakeSms().provider,
+        whatsAppProviders: new Map(),
+        appOrigin: "https://dive.day",
+      });
+
+    // Three quiet passes, then the first one after the window opens. The
+    // hourly cadence is what makes this the real sequence rather than a
+    // contrivance.
+    await send(atLocalHour(inWeekBucket, 2));
+    await send(atLocalHour(inWeekBucket, 3));
+    await send(atLocalHour(inWeekBucket, 7));
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+
+    const morning = await send(atLocalHour(inWeekBucket, 9));
+
+    expect(morning.held).toBe(0);
+    // One row, not four: the held passes must not have queued anything.
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
   });
 });

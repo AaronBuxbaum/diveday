@@ -24,7 +24,7 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";
-import { bookings, notificationDeliveries, people, recapPhotos } from "./schema";
+import { bookings, notificationDeliveries, people, recapPhotos, shops } from "./schema";
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
@@ -48,6 +48,16 @@ async function recapContext() {
   ]);
   if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
   const bookingId = party.bookings[0].bookingId;
+  // **This shop sends around the clock**, so the cases below are about the
+  // four-hour pause and nothing else. A recap is also held outside the shop's
+  // own civil hours (`src/lib/send-window.ts`, issue #697) — the reef boat ties
+  // up at 6 PM, so its recap comes due at 11 PM and a default shop would hold
+  // it until morning. That rule has its own cases at the bottom of this file;
+  // mixing it into every delay assertion would test two things at once.
+  await db
+    .update(shops)
+    .set({ sendWindowStartHour: 0, sendWindowEndHour: 24 })
+    .where(eq(shops.id, shop.id));
   // Five hours after the reef trip ends clears the mandatory four-hour pause.
   const afterTrip = new Date(reef.endsAt.getTime() + 5 * 60 * 60 * 1000);
   return { db, shop, reef, bookingId, afterTrip };
@@ -769,5 +779,74 @@ describe("sendDueRecaps", () => {
     expect(sms.sent.filter((m) => m.to === "+13055557777")).toHaveLength(0);
     const rows = await rowsFor(db, bookingId);
     expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "wamid.recap" });
+  });
+});
+
+/**
+ * **A recap four hours after a night dive lands at 3 AM, in every zone.**
+ *
+ * The demo shop's own board carries a 7:30–11:00 PM night dive, so this is not
+ * an edge case some market avoids — it is any shop that dives after dark. And
+ * the daily reminder batch was worse: a fixed 14:00 UTC pass reached Singapore
+ * at 22:00, Sydney at midnight, and Fiji at 03:00, every day (issue #697).
+ *
+ * Held, never dropped. A recap is due from `endsAt + 4h` onwards with no upper
+ * bound, so the condition stays true until the hourly pass next runs inside the
+ * shop's own hours.
+ */
+describe("recaps against the shop's civil hours", () => {
+  /** The reef boat ties up at 6 PM local, so its recap comes due at 11 PM. */
+  async function nightContext() {
+    const ctx = await recapContext();
+    await ctx.db
+      .update(shops)
+      .set({ sendWindowStartHour: 8, sendWindowEndHour: 20 })
+      .where(eq(shops.id, ctx.shop.id));
+    return ctx;
+  }
+
+  it("holds a recap that comes due in the middle of the night", async () => {
+    const { db, bookingId, afterTrip } = await nightContext();
+
+    const summary = await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: "https://dive.day",
+    });
+
+    expect(summary.sent).toBe(0);
+    // Held, not skipped: the two mean opposite things to whoever reads the log.
+    expect(summary.held).toBeGreaterThan(0);
+    // And nothing was recorded, so the diver has not silently lost their recap.
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("sends the same recap once the window opens, without a second cadence firing", async () => {
+    const { db, bookingId, afterTrip } = await nightContext();
+    const email = fakeEmail();
+
+    // The overnight pass holds it...
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: "https://dive.day",
+    });
+    // ...and the pass after breakfast sends it. Nine hours on from 11 PM local.
+    const morning = new Date(afterTrip.getTime() + 9 * 60 * 60 * 1000);
+    const summary = await sendDueRecaps(db, {
+      now: morning,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: "https://dive.day",
+    });
+
+    // Counted on the booking, not on the run: the morning pass sweeps every
+    // shop, and by then the rest of the seeded board is due too.
+    expect(summary.sent).toBeGreaterThan(0);
+    expect(summary.held).toBe(0);
+    // Exactly one delivery row: holding must not have queued a second copy.
+    expect(await rowsFor(db, bookingId)).toHaveLength(1);
   });
 });

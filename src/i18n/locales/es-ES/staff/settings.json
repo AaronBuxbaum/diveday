@@ -29,7 +29,9 @@
       "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
       "timezoneSaved": "Zona horaria guardada.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
-      "emergencySaved": "Referencia de emergencia guardada."
+      "emergencySaved": "Referencia de emergencia guardada.",
+      "sendWindowSaved": "Horario de mensajes guardado.",
+      "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas."
     },
     "timezone": {
       "heading": "Zona horaria",
@@ -156,6 +158,15 @@
       "atDeparture": "A la hora",
       "siteOverrides": "{count, plural, one {# punto de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# puntos de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
       "siteOverride": "{name} · {count} min"
+    },
+    "sendWindow": {
+      "heading": "Cuándo escribimos a los buceadores",
+      "value": "{start} – {end}",
+      "description": "Los recordatorios y los resúmenes esperan a estas horas en tu zona horaria. Una cancelación sale siempre al momento.",
+      "startLabel": "No antes de (0–23)",
+      "endLabel": "No después de (1–24)",
+      "submit": "Guardar horario",
+      "submitting": "Guardando…"
     },
     "units": {
       "heading": "Unidades",

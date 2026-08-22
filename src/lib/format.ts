@@ -104,6 +104,20 @@ export function formatTime(date: Date, locale = "en-US", timeZone: string): stri
  * Falls back to the id when a runtime has no long name for the zone — a raw id
  * is worse than a name, and far better than an empty label.
  */
+/**
+ * A bare hour of the day — "8:00 AM" — for a setting that names an hour rather
+ * than an instant, like a shop's send window (`src/lib/send-window.ts`).
+ *
+ * `timeZone: "UTC"` deliberately, and it is not the shop's zone going missing:
+ * a wall-clock hour has no instant in it, so there is nothing to convert. The
+ * shop's own zone is what the hour is *read in*, which the label beside the
+ * field says in words. `24` renders as midnight, which is what an exclusive end
+ * of 24 means.
+ */
+export function formatHourOfDay(hour: number, locale = "en-US"): string {
+  return formatTime(new Date(Date.UTC(2000, 0, 1, hour)), locale, "UTC");
+}
+
 export function formatTimeZoneName(locale = "en-US", timeZone: string, now = nowDate()): string {
   const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     timeZone,

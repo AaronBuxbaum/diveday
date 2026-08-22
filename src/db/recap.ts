@@ -19,6 +19,7 @@ import {
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
+import { maySendNow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -608,6 +609,13 @@ export type RecapRunSummary = {
   sent: number;
   /** Bookings whose recap was already delivered. */
   skipped: number;
+  /**
+   * Recaps that were due and were held for the shop's civil hours
+   * (`src/lib/send-window.ts`) — a four-hour delay after a night dive lands at
+   * 3 AM. Counted apart from `skipped`: that one means "nothing to send", this
+   * one means "something, waiting for morning".
+   */
+  held: number;
   /** Recaps whose tracked channel failed or was not configured. */
   failed: number;
   /** Divers who self-served out of courtesy email (`people.courtesyEmailOptOutAt`). */
@@ -764,6 +772,7 @@ async function sendRecaps(
     scanned: rows.length,
     sent: 0,
     skipped: 0,
+    held: 0,
     failed: 0,
     optedOut: 0,
   };
@@ -826,6 +835,21 @@ async function sendRecaps(
   for (const { booking, person, trip, shop } of rows) {
     if (alreadySent.has(booking.id)) {
       summary.skipped += 1;
+      continue;
+    }
+    // **A recap four hours after a night dive lands at 3 AM, in every zone.**
+    // The demo shop's own board carries a 7:30–11:00 PM night dive, so this is
+    // not an edge case a market avoids — it is any shop that dives after dark
+    // (issue #697). Held rather than dropped, and safely so: a recap is due
+    // from `endsAt + 4h` onwards with no upper bound, so the condition simply
+    // stays true until this hourly pass next runs inside the shop's own hours.
+    if (
+      !maySendNow("trip_recap", now, shop.timezone, {
+        startHour: shop.sendWindowStartHour,
+        endHour: shop.sendWindowEndHour,
+      })
+    ) {
+      summary.held += 1;
       continue;
     }
 

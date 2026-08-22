@@ -678,6 +678,12 @@ export async function loadShopExportBundleInput(
             // the backup: a shop restoring from one must come back with the
             // chamber's number on its manifests, not an empty card.
             "emergency_reference",
+            // The hours its automated messages may reach a diver
+            // (`src/lib/send-window.ts`). Exported because restoring from a
+            // backup must not silently put a shop back on the default and start
+            // texting at hours it had deliberately ruled out.
+            "send_window_start_hour",
+            "send_window_end_hour",
             // Whether the shop asked to stay out of search engines
             // (ADR 20260813-search-listing-is-a-choice). Exported because the
             // bundle is also the *backup*: a shop that opted out and later
@@ -717,6 +723,8 @@ export async function loadShopExportBundleInput(
               JSON.stringify(shop.rentalItems),
               JSON.stringify(shop.rentalPricing),
               JSON.stringify(shop.emergencyReference),
+              shop.sendWindowStartHour,
+              shop.sendWindowEndHour,
               shop.searchListingOptOutAt,
               shop.createdAt,
             ],

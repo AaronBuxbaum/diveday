@@ -29,6 +29,7 @@ import {
   type ReminderKind,
   TRIP_REMINDER_CADENCES,
 } from "@/lib/reminders";
+import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
@@ -73,6 +74,13 @@ export type ReminderRunSummary = {
   sent: number;
   /** Bookings with no cadence due this run. */
   skipped: number;
+  /**
+   * Reminders that *were* due and were not sent, because the shop's civil hours
+   * say so (`src/lib/send-window.ts`). Counted apart from `skipped` because the
+   * two mean opposite things to whoever reads the log line: `skipped` is "there
+   * was nothing to send", `held` is "there was, and it is waiting for morning".
+   */
+  held: number;
   /** Reminders whose tracked channel failed or was not configured. */
   failed: number;
 };
@@ -192,7 +200,13 @@ export async function sendDueReminders(
       ),
     );
 
-  const summary: ReminderRunSummary = { scanned: rows.length, sent: 0, skipped: 0, failed: 0 };
+  const summary: ReminderRunSummary = {
+    scanned: rows.length,
+    sent: 0,
+    skipped: 0,
+    held: 0,
+    failed: 0,
+  };
   if (rows.length === 0) return summary;
 
   // Resolved once for every shop in this scan rather than per booking — the
@@ -260,6 +274,21 @@ export async function sendDueReminders(
     });
     if (!cadence) {
       summary.skipped += 1;
+      continue;
+    }
+    // **Due is not the same as sendable.** A fixed 14:00 UTC batch reached
+    // Singapore at 22:00, Sydney at midnight and Fiji at 03:00 — every day, to
+    // every diver sailing tomorrow (issue #697). Held, not dropped: this pass
+    // runs hourly and a cadence bucket is hours wide (the 24-hour reminder is
+    // due from T-24h right up to departure, and any 24-hour span contains a
+    // whole daytime window), so skipping the quiet passes cannot close it.
+    if (
+      !maySendNow(cadence.kind, now, row.shop.timezone, {
+        startHour: row.shop.sendWindowStartHour,
+        endHour: row.shop.sendWindowEndHour,
+      })
+    ) {
+      summary.held += 1;
       continue;
     }
     dueRows.push({ row, cadence });
