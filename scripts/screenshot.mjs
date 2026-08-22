@@ -107,6 +107,71 @@ const browser = await launch();
 fs.mkdirSync(out, { recursive: true });
 const written = [];
 
+/** How long a route gets to stream its body in before we call it stuck. */
+const SKELETON_TIMEOUT_MS = 20_000;
+
+/**
+ * A skeleton still standing where the page's body belongs.
+ *
+ * `animate-pulse` is the skeleton idiom across all 61 `loading.tsx` files (55
+ * inline, the six account-lifecycle ones through `EntryShellSkeleton`) and the
+ * four inline `<Suspense>` fallbacks in `page.tsx` files. It is *not* only a
+ * skeleton, though, and that is the trap: `RecapMap`'s marker and
+ * `RollCallNote`'s save-status dot pulse for as long as they are on screen, so
+ * a bare `.animate-pulse` wait can never be satisfied on those pages. Both
+ * carry `data-live-pulse`, and this excludes them.
+ */
+const SKELETON_SELECTOR = "main .animate-pulse:not([data-live-pulse])";
+
+/**
+ * Wait until the page itself is on screen, not the shell standing in for it.
+ *
+ * `waitUntil: "load"` and a document title are both satisfied by the **static
+ * shell**: every route carries `export const instant = true` and a body-shaped
+ * `loading.tsx` (ADR 20260804-instant-navigation), so the shell paints, the
+ * title is right, and the shutter fires on an `animate-pulse` skeleton. That
+ * is worse than an error, because a skeleton wearing the shop's own chrome
+ * reads as a real page at a glance — a session runs this, sees a plausible
+ * image, and has verified nothing. AGENTS.md points at this script for the
+ * "*look at* UI you changed" rule, so a silent wrong answer here is a hole in
+ * the one verification step that is supposed to catch what tests cannot.
+ *
+ * One rule rather than a per-route selector table: all 61 `loading.tsx` files
+ * resolve to `animate-pulse` — 55 spell it inline and the six account-lifecycle
+ * ones reach it through `EntryShellSkeleton` — so waiting for the last one to
+ * leave `<main>` covers every route, including whichever is added next. A table
+ * would be a second registry to keep in step with 69 routes, and the whole
+ * failure is that a *new* route gets no warning.
+ *
+ * **Loud, never silent.** A skeleton that never clears throws and takes the
+ * process down with it. A missing screenshot is recoverable; a wrong one that
+ * a session then reasons from is not.
+ */
+async function waitPastTheSkeleton(page, target) {
+  try {
+    await page.waitForFunction(() => !document.querySelector(SKELETON_SELECTOR), undefined, {
+      timeout: SKELETON_TIMEOUT_MS,
+    });
+  } catch {
+    throw new Error(
+      `screenshot: ${target} still showed its loading skeleton after ${SKELETON_TIMEOUT_MS / 1000}s, ` +
+        "so nothing was captured. The page never finished streaming — check the dev server's " +
+        "output for the error it is sitting on, rather than re-running for a luckier result.",
+    );
+  }
+  // A route with no skeleton satisfies the wait above instantly, so hold for one
+  // real paint: fonts resolved, then two frames. A barrier the browser answers,
+  // not a guess at how long the page needs.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        document.fonts.ready.then(() =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      }),
+  );
+}
+
 try {
   for (const colorScheme of schemes) {
     for (const width of widths) {
@@ -131,6 +196,7 @@ try {
         // for the document title, the same settled-document signal the a11y
         // spec gates on.
         await page.waitForFunction(() => document.title.length > 0);
+        await waitPastTheSkeleton(page, target);
         // Filesystem-safe name: drop any query/fragment, then collapse every
         // non-alphanumeric run to a dash — `/shop/x/today?view=departures`
         // becomes `shop-x-today` rather than a filename with `?` in it.
