@@ -36,6 +36,7 @@
   "boatDeleted": "Boat deleted.",
   "boatInvalid": "Provide a boat name and capacity.",
   "concurrencyWarning": "{tripCount} concurrent boat trips scheduled, but your shop has {boatCount, plural, =1 {1 boat} other {# boats}}.",
+  "doubleBookedWarning": "{boats} is on two departures at once — one boat cannot be in two places.",
   "diveModeLabel": "Dive mode",
   "modeBoat": "Boat dive",
   "modeShore": "Shore dive",

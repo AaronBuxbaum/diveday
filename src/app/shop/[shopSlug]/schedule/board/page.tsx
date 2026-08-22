@@ -20,7 +20,7 @@ import {
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { maxConcurrentTrips } from "@/lib/boats";
+import { maxConcurrentTrips, overlappingBoatIds } from "@/lib/boats";
 import { nowDate } from "@/lib/clock";
 import {
   formatDayParts,
@@ -29,6 +29,7 @@ import {
   formatTimeRange,
   weekdayNames,
 } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
@@ -503,6 +504,7 @@ export default async function ScheduleBoardPage({
       priceCents: trip.priceCents,
       rollCallOpen,
       diveMode: trip.diveMode ?? "boat",
+      boatId: trip.boatId ?? null,
       boatName: trip.boatId ? (boatMap.get(trip.boatId) ?? null) : null,
     });
   }
@@ -564,8 +566,29 @@ export default async function ScheduleBoardPage({
           t.startsAt instanceof Date &&
           t.endsAt instanceof Date,
       );
+      // **The per-hull question first, because it names the boat.** Counting
+      // simultaneous departures against the fleet size cannot see two of them
+      // on the *same* vessel: two hulls owned, peak of two, nothing said, one
+      // boat in two places. It is also the mistake that takes three departures
+      // to show up in a count, which is to say the one a shop is most likely to
+      // make by accident.
+      const doubled = overlappingBoatIds(boatTrips);
+      if (doubled.length > 0) {
+        const names = doubled
+          .map((boatId) => boatMap.get(boatId))
+          .filter((name): name is string => Boolean(name));
+        // The name is the actionable part — "Reef Runner is on two departures"
+        // tells a shop which card to open; a count does not.
+        if (names.length > 0) {
+          day.boatWarning = st("boats.doubleBookedWarning", {
+            boats: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names),
+          });
+        }
+      }
+      // The fleet-size answer stays: it is the only one available for a
+      // departure with no hull assigned, which is most of them.
       const peakConcurrent = maxConcurrentTrips(boatTrips);
-      if (peakConcurrent > shopBoats.length) {
+      if (!day.boatWarning && peakConcurrent > shopBoats.length) {
         day.boatWarning = st("boats.concurrencyWarning", {
           tripCount: peakConcurrent,
           boatCount: shopBoats.length,
