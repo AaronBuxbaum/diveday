@@ -34,6 +34,7 @@ import {
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
   marineLifeRequests,
+  mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
   notificationDeliveryAttempts,
@@ -880,6 +881,17 @@ export async function resetDemoSchedule(
   // bought on, so it goes before both. The package *definitions* are the shop's
   // price list and survive a schedule reset, exactly like the promo codes above
   // (ADR 20260822-a-package-is-entitlements-not-money).
+  // **A stuck media deletion is not schedule data, and it still has to go.**
+  // The seed creates none, so clearing them restores exactly the seeded state —
+  // and leaving them made the reset non-restoring in the one direction that
+  // shows: `listPendingMediaDeletions` feeds Today an `urgency: "now"` row, so
+  // a test that seeded a stale attempt (`/api/test/seed-trouble-states`) left a
+  // "Recap photo" cleanup card on Today for whichever spec Playwright's
+  // sharding ran next in that worker. That surfaced as three visual captures —
+  // `close-out`, `nav-more-menu`, `nav-more-sheet` — reporting as changed on a
+  // pull request that had touched none of them, with the leaked row visible in
+  // the diff (found while accounting for issue #791's pixels).
+  await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
