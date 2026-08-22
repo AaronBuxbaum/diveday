@@ -37,6 +37,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -553,14 +554,26 @@ async function TodayBody({
           scheduleUrl={publicScheduleUrl}
           contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
           diveSiteCount={firstRunDiveSites?.length ?? 0}
+          unitsDone={Boolean(shop.unitsConfirmedAt)}
           stripeDone={canAcceptPayments(firstRunStripeAccount)}
           copy={{
             heading: t("shopHome.firstRun.heading"),
-            subtitle: t("shopHome.firstRun.subtitle"),
+            subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
             contactTitle: t("shopHome.firstRun.contactTitle"),
             contactBody: t("shopHome.firstRun.contactBody"),
             contactAction: t("shopHome.firstRun.contactAction"),
             contactDone: t("shopHome.firstRun.contactDone"),
+            unitsTitle: t("shopHome.firstRun.unitsTitle"),
+            unitsBody: t("shopHome.firstRun.unitsBody", {
+              currency: shop.currency.toUpperCase(),
+              depth: t(
+                shop.depthUnit === "feet"
+                  ? "shopHome.firstRun.unitsFeet"
+                  : "shopHome.firstRun.unitsMeters",
+              ),
+            }),
+            unitsAction: t("shopHome.firstRun.unitsAction"),
+            unitsDone: t("shopHome.firstRun.unitsDone"),
             siteTitle: t("shopHome.firstRun.siteTitle"),
             siteBody: t("shopHome.firstRun.siteBody"),
             siteAction: t("shopHome.firstRun.siteAction"),

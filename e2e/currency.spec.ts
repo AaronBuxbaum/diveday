@@ -58,6 +58,28 @@ test.describe("shop currency", () => {
   // because a hang fails the 8s expect timeout inside it either way.
   test.setTimeout(60_000);
 
+  /**
+   * **The select keeps its own accessible name.** A warning about what
+   * switching currency does was added beside it (issue #712) and briefly went
+   * *inside* the `<Field>` — whose contract is a single control, so a second
+   * child made it fall back to wrapping everything in the `<label>` and folded
+   * the sentence into the select's accessible name. Every `getByLabel` in this
+   * file timed out; nothing else in the suite noticed.
+   */
+  test("warns what changing the currency will do, without renaming the select", async ({
+    page,
+    privateShop,
+  }) => {
+    await page.goto(`/shop/${privateShop.slug}/settings`);
+    await openSettingsRow(page, "Units");
+
+    // The name is exactly the label, with nothing folded into it.
+    await expect(page.getByLabel("Charge and display in", { exact: true })).toBeVisible();
+    // A seeded shop has priced departures, so the warning is on screen — the
+    // point being that it is beside the control, not part of it.
+    await expect(page.getByText(/does not convert your prices/)).toBeVisible();
+  });
+
   test("money follows the shop's currency instead of assuming dollars", async ({
     page,
     privateShop,

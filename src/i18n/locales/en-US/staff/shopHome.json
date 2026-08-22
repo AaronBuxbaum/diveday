@@ -76,7 +76,7 @@
   },
   "firstRun": {
     "heading": "Get your shop ready",
-    "subtitle": "Five steps and divers can start booking.",
+    "subtitle": "{count, plural, one {# step} other {# steps}} and divers can start booking.",
     "contactTitle": "Add your contact details",
     "contactBody": "Phone and email so divers — and DiveDay — can reach you.",
     "contactAction": "Add contact details",
@@ -97,7 +97,13 @@
     "stripeBody": "Take payment online.",
     "stripeAction": "Connect Stripe",
     "stripeDone": "Stripe connected.",
-    "doneBadge": "Done"
+    "doneBadge": "Done",
+    "unitsTitle": "Check your currency and depth unit",
+    "unitsBody": "We started you on {currency} and {depth} from your timezone. Prices and depths are hard to change later.",
+    "unitsAction": "Check units",
+    "unitsDone": "Units confirmed.",
+    "unitsFeet": "feet",
+    "unitsMeters": "metres"
   },
   "queueView": {
     "label": "How to read the queue",

@@ -28,7 +28,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText("Schedule your first trip")).toBeVisible();
   await expect(page.getByText("Share your public schedule")).toBeVisible();
   await expect(page.getByText("Connect Stripe (optional)")).toBeVisible();
-  // A brand-new shop has completed none of the five steps yet.
+  // A brand-new shop has completed none of the steps yet.
   await expect(page.getByText("Done", { exact: true })).toHaveCount(0);
 
   // Regression: the "No boats out today" card used to render here with its
@@ -196,5 +196,43 @@ test.describe("a shop signing up from the Caribbean", () => {
     // channel still picks its own.
     await timezone.selectOption("America/Cayman");
     await expect(timezone).toHaveValue("America/Cayman");
+  });
+
+  /**
+   * **The timezone had already answered two more questions.** A shop that said
+   * `America/Cancun` was created pricing in dollars, and nothing on the setup
+   * checklist mentioned it — so it could publish its page, take a booking and
+   * run a boat before finding out, by which point the prices it typed are
+   * stored as minor units of the wrong currency (issue #712).
+   */
+  test("is started on pesos, and asked to check before it prices anything", async ({ page }) => {
+    test.setTimeout(60_000);
+    const unique = "cozumel-units";
+    await page.goto("/onboard");
+    await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Cozumel Divers");
+    await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+    await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Rosa Mendez");
+    await page
+      .locator('input[name="ownerEmail"]')
+      .filter({ visible: true })
+      .fill(`${unique}@example.com`);
+    await page
+      .locator('input[name="ownerPassword"]')
+      .filter({ visible: true })
+      .fill("pass-123-abc");
+    await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    await page.waitForURL(new RegExp(`/shop/${unique}$`));
+
+    // The checklist names the guess rather than only inviting a look — a step
+    // saying "check your units" without saying what they are makes a shop
+    // navigate to find out whether it needs to.
+    await expect(page.getByText("Check your currency and depth unit")).toBeVisible();
+    await expect(page.getByText(/MXN and metres/)).toBeVisible();
+
+    // ...and the shop row itself agrees, which is the assertion that the
+    // derivation reached the database rather than only the checklist copy. The
+    // Units row's own closed summary is where a shop reads it back.
+    await page.goto(`/shop/${unique}/settings`);
+    await expect(page.getByText(/Metres \(m\).*MXN/)).toBeVisible();
   });
 });

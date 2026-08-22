@@ -76,7 +76,7 @@
   },
   "firstRun": {
     "heading": "Prepara tu centro",
-    "subtitle": "Cinco pasos y los buceadores podrán empezar a reservar.",
+    "subtitle": "{count, plural, one {# paso} other {# pasos}} y los buceadores podrán reservar.",
     "contactTitle": "Añade tus datos de contacto",
     "contactBody": "Teléfono y correo para que los buceadores — y DiveDay — puedan contactarte.",
     "contactAction": "Añadir datos de contacto",
@@ -97,7 +97,13 @@
     "stripeBody": "Cobra en línea.",
     "stripeAction": "Conectar Stripe",
     "stripeDone": "Stripe conectado.",
-    "doneBadge": "Hecho"
+    "doneBadge": "Hecho",
+    "unitsTitle": "Revisa tu moneda y tu unidad de profundidad",
+    "unitsBody": "Empezamos con {currency} y {depth} según tu zona horaria. Los precios y las profundidades son difíciles de cambiar después.",
+    "unitsAction": "Revisar unidades",
+    "unitsDone": "Unidades confirmadas.",
+    "unitsFeet": "pies",
+    "unitsMeters": "metros"
   },
   "queueView": {
     "label": "Cómo leer la lista",

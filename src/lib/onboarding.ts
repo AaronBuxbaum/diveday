@@ -122,3 +122,20 @@ export const onboardSchema = z.object({
     .min(MIN_PASSWORD_LENGTH, "owner_password_too_short" satisfies OnboardErrorCode)
     .max(MAX_PASSWORD_LENGTH, "owner_password_too_long" satisfies OnboardErrorCode),
 });
+
+/**
+ * How many steps the first-run checklist has
+ * (`src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx`).
+ *
+ * Interpolated into the subtitle rather than spelled in the copy: it read "Five
+ * steps and divers can start booking" while the list grew a sixth (issue #712),
+ * and a hard-coded count in a message bundle is a fact nobody holds to the
+ * component that produces it. `FirstRunChecklist.test.tsx` counts the rendered
+ * steps against this, which is what actually keeps them in step.
+ *
+ * Here rather than beside the component because that component is `"use
+ * client"`: a server component importing a plain value from a client module
+ * gets a client *reference*, and the subtitle rendered "NaN steps" — green in
+ * every test, wrong on the screen.
+ */
+export const FIRST_RUN_STEP_COUNT = 6;

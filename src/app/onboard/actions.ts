@@ -13,6 +13,7 @@ import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { trackEvent } from "@/lib/analytics";
 import { signIn } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
+import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { eventSource } from "@/lib/funnel";
 import { publicAppUrl } from "@/lib/notifications";
@@ -111,6 +112,14 @@ export async function onboardAction(formData: FormData) {
           name: shopName,
           slug: shopSlug,
           timezone,
+          // **The timezone already answered these.** A shop that just said
+          // `America/Cancun` was created pricing in dollars, and a Florida shop
+          // — where every briefing says 60 ft — was as likely to get metres
+          // (issue #712). Derived, not assumed: the setup checklist asks the
+          // shop to confirm both, because a default nobody looked at is the
+          // same failure with extra steps. A zone outside the curated
+          // shortcuts falls back to today's defaults, unchanged.
+          ...shopDefaultsForTimeZone(timezone),
           // A real shop is never seeded and is never a demo. Sample/fake data
           // lives only in a freshly-minted demo shop (createDemoShop), so a shop
           // that later imports its real roster never has seeded rows mixed in.

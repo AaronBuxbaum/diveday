@@ -19,6 +19,7 @@ import { countBoatDepartures, listBoats } from "@/db/boats";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
+import { shopHasPricedRecords } from "@/db/shops";
 import {
   canAcceptPayments,
   getShopStripeAccount,
@@ -428,6 +429,11 @@ export default async function SettingsPage({
     session.user.shopId,
     session.user.personId,
   );
+  // Only asked when the select that needs it will render — the warning below is
+  // about what changing the currency would do, and most staff never see it.
+  const hasPricedRecords = canPayments
+    ? await shopHasPricedRecords(db, session.user.shopId)
+    : false;
   // Asks the same resolvers the Connect flow itself asks, never the raw
   // variables: two of these three are compiled in now (src/lib/configured.ts),
   // so reading `process.env` directly would report "not configured" on a
@@ -1105,6 +1111,27 @@ export default async function SettingsPage({
                       ))}
                     </select>
                   </Field>
+                ) : null}
+                {/* **What changing it will do**, and only once there is
+                    something for it to do it to. `price_cents` counts the
+                    *current* currency's minor unit and nothing converts on a
+                    switch, so a shop that priced a $95 trip and moves to pesos
+                    is left with a ninety-five peso trip (ADR
+                    20260731-shop-currency). Before any money exists the change
+                    is free, and saying this to a shop on its first afternoon
+                    would be noise (issue #712). Informs, never refuses: the
+                    shop that genuinely set the wrong currency needs that select
+                    to work.
+
+                    Outside the `<Field>`, not inside it: `Field`'s contract is
+                    a single control, and a second child makes it fall back to
+                    wrapping everything in the `<label>` — which folded this
+                    sentence into the select's accessible *name* and broke every
+                    `getByLabel("Charge and display in")` in the suite. */}
+                {canPayments && hasPricedRecords ? (
+                  <p className="text-sm text-warning-strong sm:col-span-2">
+                    {t("settings.main.units.currencyRepricingWarning")}
+                  </p>
                 ) : null}
                 <FieldActions>
                   <SubmitButton
