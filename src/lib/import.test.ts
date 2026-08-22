@@ -384,6 +384,36 @@ describe("prepareContactImport — safety rules", () => {
     expect(row.issues.some((i) => i.code === "level_not_gated")).toBe(false);
   });
 
+  /**
+   * **A scooter card is not a technical rating.**
+   *
+   * `TECHNICAL_CERT` used to match `dpv`, so a PADI Diver Propulsion Vehicle
+   * card imported under a warning naming it a *technical* rating — wrong about
+   * the diver's training in exactly the way that list protects Sidemount and
+   * Photography from. The outcome is the same either way (DiveDay gates on
+   * neither, so nothing imports), which makes this credibility rather than
+   * safety: a shop owner reading "technical rating" beside their scooter card
+   * concludes the software does not know diving (`dive-domain-expert`, #689).
+   */
+  it("does not call a scooter card a technical rating, and still refuses a cave one", () => {
+    // The abbreviation, because that is the token the list matched — a card
+    // spelling "Diver Propulsion Vehicle" out never hit it either way, which is
+    // how a first version of this test passed against both behaviours.
+    const scooter =
+      "full_name,certification_level,certification_number\nScooter Sam,PADI DPV Diver,DPV-9";
+    const [dpv] = prepareContactImport(scooter).rows;
+    expect(dpv.issues.some((issue) => issue.code === "level_is_technical")).toBe(false);
+
+    // And the judgement this upheld rather than reversed: cave and cavern are
+    // overhead ratings DiveDay does not model, and they stay refused (ADR
+    // 20260718-specialty-site-cert-requirements, 2026-08-22 amendment).
+    const cave =
+      "full_name,certification_level,certification_number\nCave Carla,NSS-CDS Full Cave,CV-2";
+    const [caveRow] = prepareContactImport(cave).rows;
+    expect(caveRow.issues.some((issue) => issue.code === "level_is_technical")).toBe(true);
+    expect(caveRow.cert).toBeNull();
+  });
+
   it("keeps a real ladder rung out of the specialty path", () => {
     const csv =
       "full_name,certification_level,certification_number\nLadder Only,Advanced Open Water,AOW-1";

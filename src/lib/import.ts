@@ -1191,9 +1191,23 @@ export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[
  * two rungs above Open Water (`dive-domain-expert` review). Anything here is
  * declined and named in the preview, which is the honest outcome: DiveDay does
  * not model these, so a shop that gates on one enters it by hand.
+ *
+ * **`dpv` is deliberately not here.** A Diver Propulsion Vehicle card is an
+ * ordinary recreational specialty, and calling it technical is wrong about the
+ * diver's training in exactly the way this list protects Sidemount and
+ * Photography from — a shop owner who reads "technical rating" beside their
+ * scooter card quietly concludes the software does not know diving. The outcome
+ * is identical either way (nothing imports), so this is credibility rather than
+ * safety, and `dpv` still does its real job in `DISCIPLINE_QUALIFIER` below.
+ * Cave DPV exists, and a cave DPV card's cell nearly always carries "cave" too,
+ * which this list still catches (`dive-domain-expert` review, issue #689).
+ *
+ * `cave` and `cavern` stay, and that judgement is the one that review upheld
+ * rather than reversed — see ADR 20260718-specialty-site-cert-requirements'
+ * 2026-08-22 amendment for why neither becomes a gateable specialty either.
  */
 const TECHNICAL_CERT =
-  /\btrimix\b|\bhelitrox\b|\brebreather\b|\bccr\b|\bscr\b|\bcave\b|\bcavern\b|\bmine\b|decompression|\bdeco\b|\btec\b|\btech\b|technical|extended range|mixed gas|gas blender|hypoxic|normoxic|advanced nitrox|\bsump\b|\bdpv\b/;
+  /\btrimix\b|\bhelitrox\b|\brebreather\b|\bccr\b|\bscr\b|\bcave\b|\bcavern\b|\bmine\b|decompression|\bdeco\b|\btec\b|\btech\b|technical|extended range|mixed gas|gas blender|hypoxic|normoxic|advanced nitrox|\bsump\b/;
 
 /**
  * Words naming a *discipline* rather than a rung. When one is present, "advanced"
