@@ -47,6 +47,31 @@ const allowed = new Set([path.normalize("src/lib/intl-cache.ts")]);
  */
 const guardedConstructor = /\bnew\s+Intl\.(?!Locale\b)([A-Za-z]+)\s*\(/g;
 
+/**
+ * `toLocaleString` / `toLocaleDateString` / `toLocaleTimeString` — the same
+ * cost with none of the syntax.
+ *
+ * Each one constructs an `Intl.DateTimeFormat` (or `NumberFormat`) internally
+ * **on every call**, which is exactly the tax above. Matching only `new Intl.`
+ * left that invisible, and two call sites slipped through on the app's most
+ * visited public page: one built a formatter per rendered dive-plan entry, and
+ * the other — the forecast's "last updated" line — also had to choose its own
+ * field set, chose `Intl`'s default, and so told a diver deciding what to pack
+ * that the forecast was updated at `10:33:06` (issue #799).
+ *
+ * That second failure is the argument for banning the shape rather than
+ * counting the cost: a call site building its own formatter is a call site
+ * picking its own fields, and `src/lib/format.ts` exists so that neither is a
+ * per-surface decision. Both are one-liners there — `formatTime`,
+ * `formatDateTimeTz` — and going through them is how the `timeZone` argument
+ * stays a compile error when it is missing.
+ *
+ * **`toLocaleLowerCase` and `toLocaleUpperCase` are not on the list.** They
+ * take a locale and fold case with it; there is no formatter to compile and
+ * nothing to reuse. The check-in page's duplicate-name matching uses one.
+ */
+const guardedToLocale = /\.(toLocaleString|toLocaleDateString|toLocaleTimeString)\s*\(/g;
+
 const isTestFile = (file) => /\.test\.tsx?$/.test(file);
 
 async function walk(relativeDirectory) {
@@ -78,6 +103,9 @@ for (const root of guardedRoots) {
       for (const match of line.matchAll(guardedConstructor)) {
         violations.push(`${file}:${index + 1}: new Intl.${match[1]}(…)`);
       }
+      for (const match of line.matchAll(guardedToLocale)) {
+        violations.push(`${file}:${index + 1}: .${match[1]}(…)`);
+      }
     });
   }
 }
@@ -87,7 +115,7 @@ if (violations.length > 0) {
     `Intl formatters constructed outside the cache:\n${violations.map((v) => `- ${v}`).join("\n")}`,
   );
   console.error(
-    "Build them through src/lib/intl-cache.ts instead — `cachedFormatter(tag, Intl.X, locale, options)`, or one of the named helpers (`cachedListFormat`, `cachedPluralRules`, `cachedCollator`, `cachedDisplayNames`).",
+    "Build them through src/lib/intl-cache.ts instead — `cachedFormatter(tag, Intl.X, locale, options)`, or one of the named helpers (`cachedListFormat`, `cachedPluralRules`, `cachedCollator`, `cachedDisplayNames`). A `toLocale*` call wants one of src/lib/format.ts's helpers, which are cached and take `timeZone` as a required argument.",
   );
   console.error(
     "Constructing a formatter is ~12x the cost of reusing one, and this app formats on essentially every render. If a call site genuinely needs its own instance, say why in this script's `allowed` set rather than at the call site.",
@@ -95,4 +123,6 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log("intl-cache: every Intl formatter is built through src/lib/intl-cache.ts");
+console.log(
+  "intl-cache: every Intl formatter is built through src/lib/intl-cache.ts, and no date renders through a bare toLocale*",
+);

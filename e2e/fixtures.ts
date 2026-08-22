@@ -110,7 +110,7 @@ export type PrivateShop = {
  * takes a whole shop of its own through `privateShop` below.
  */
 export const test = base.extend<
-  { demoReset: undefined; privateShop: PrivateShop },
+  { demoReset: undefined; privateShop: PrivateShop; privateShopSlug: string | null },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
   // Reset this worker's demo shop to the seeded fixture before every test so
@@ -180,11 +180,31 @@ export const test = base.extend<
   // A file using this must **not** also call `signedInAsOwner()`: that seeds a
   // blue-mantis session into the same context, and the two would race for the
   // cookie.
-  privateShop: async ({ demoReset, request, page }, use) => {
+  /**
+   * Pin the minted shop's identity, for a **visual capture** and nothing else.
+   *
+   * `generateDemoShopIdentity` picks the shop's name and slug at random — which
+   * is right for the live demo and wrong for a screenshot, because the name
+   * sits in the staff header and the slug-derived owner email sits in the dev
+   * banner above it. `manifest-emergency-empty` reported as changed on the very
+   * next pull request for that reason alone. Set it with
+   * `test.use({ privateShopSlug: "…" })` on the describe that captures.
+   *
+   * A behavioural spec should leave this null: a random identity is closer to
+   * what a real mint does, and two specs that pinned the same slug would
+   * collide.
+   */
+  privateShopSlug: [null, { option: true }],
+
+  privateShop: async ({ demoReset, request, page, privateShopSlug }, use) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
-    const response = await request.post("/api/test/seed-private-shop");
+    const response = await request.post(
+      privateShopSlug
+        ? `/api/test/seed-private-shop?slug=${encodeURIComponent(privateShopSlug)}`
+        : "/api/test/seed-private-shop",
+    );
     if (!response.ok()) {
       throw new Error(
         `private shop mint failed: POST /api/test/seed-private-shop returned ` +

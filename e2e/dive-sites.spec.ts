@@ -100,6 +100,18 @@ test.describe("staff", () => {
     await expect(page.getByText("27°C", { exact: true })).toBeVisible();
     await expect(page.getByText("18 m")).toBeVisible();
     await expect(page.getByText("Crew prediction")).toBeVisible();
+    // **To the minute, not the second.** This line used to build its own
+    // timestamp with a bare `toLocaleString`, whose default field set carries
+    // seconds — so the sentence a diver reads to decide what to pack said
+    // "Updated 8/22/2026, 10:33:06 AM EDT" (issue #799). A forecast is accurate
+    // to hours; the timestamp claimed a second.
+    // The clause shares its paragraph with the crew note, so this reads the
+    // whole sentence rather than anchoring on "Updated".
+    const forecastNote = page.getByText(/Forecast supplied by the crew/);
+    await expect(forecastNote).toBeVisible();
+    const noteText = await forecastNote.innerText();
+    expect(noteText).toMatch(/Updated /);
+    expect(noteText).not.toMatch(/\d{1,2}:\d{2}:\d{2}/);
 
     await signInAsOwner(page);
     await page.goto(manageTripUrl);

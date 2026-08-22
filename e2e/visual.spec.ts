@@ -3982,7 +3982,19 @@ test.describe("print", () => {
  */
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode — the unanswered emergency reference`, () => {
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+    // **A pinned identity, or this capture is noise.** The minted shop's name
+    // renders in the staff header and its slug-derived owner email in the dev
+    // banner, and `generateDemoShopIdentity` draws both at random — so without
+    // this the capture reported as changed on the very next pull request,
+    // "Verdant Trench Dive Co" against "Verdant Lagoon Dive Center", with
+    // nothing about the page itself different. Masking those two lines is the
+    // other way out and the repo refuses it: a masked capture cannot catch what
+    // it covers.
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "harbour-lantern-dive-co",
+    });
 
     test(`the manifest prompts for an emergency reference nobody filled in (${scheme})`, async ({
       page,

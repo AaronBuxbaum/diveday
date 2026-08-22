@@ -5,6 +5,7 @@ import {
   DEMO_NAME_COMBINATIONS,
   generateDemoShopIdentity,
   isDemoAccountEmail,
+  pinnedDemoShopIdentity,
 } from "./demo-identity";
 
 describe("generateDemoShopIdentity", () => {
@@ -49,6 +50,51 @@ describe("generateDemoShopIdentity", () => {
     const identity = generateDemoShopIdentity();
     expect(identity.emailFor("dana")).toBe(`dana@${identity.slug}.demo.invalid`);
     expect(identity.emailFor("marcus")).toBe(`marcus@${identity.slug}.demo.invalid`);
+  });
+});
+
+/**
+ * **The identity a visual capture can rely on.**
+ *
+ * `generateDemoShopIdentity` is random by design, and both halves of what it
+ * picks reach the screen: the name in the staff header, the slug in the owner
+ * email the dev banner prints. So the first capture to photograph a minted shop
+ * (`manifest-emergency-empty`) reported as changed on the very next pull
+ * request — "Verdant Trench Dive Co" against "Verdant Lagoon Dive Center" —
+ * with nothing about the page different.
+ */
+describe("pinnedDemoShopIdentity", () => {
+  it("returns the same identity every time, which is the whole point", () => {
+    // Compared by what it *renders*, not by object identity: `emailFor` is a
+    // fresh closure per call and always will be, so a `toEqual` on the whole
+    // object fails for a reason that has nothing to do with the guarantee.
+    const rendered = (slug: string) => {
+      const identity = pinnedDemoShopIdentity(slug);
+      return [identity.name, identity.slug, identity.emailFor("dana")];
+    };
+    expect(rendered("harbour-lantern-dive-co")).toEqual(rendered("harbour-lantern-dive-co"));
+  });
+
+  it("titles the name from the slug, so the two can never disagree", () => {
+    const identity = pinnedDemoShopIdentity("harbour-lantern-dive-co");
+    expect(identity.slug).toBe("harbour-lantern-dive-co");
+    expect(identity.name).toBe("Harbour Lantern Dive Co");
+  });
+
+  it("namespaces staff email on the slug, the same way a random identity does", () => {
+    // A shared domain would let one minted shop's owner sign in as another's,
+    // which is the invariant `emailFor` carries in both paths.
+    expect(pinnedDemoShopIdentity("harbour-lantern-dive-co").emailFor("dana")).toBe(
+      "dana@harbour-lantern-dive-co.demo.invalid",
+    );
+  });
+
+  it("produces the shape a random identity produces", () => {
+    // Not a snapshot of the words — a claim that a pinned identity is
+    // interchangeable with a generated one everywhere it is used.
+    const pinned = pinnedDemoShopIdentity("coral-cove-divers");
+    const generated = generateDemoShopIdentity();
+    expect(Object.keys(pinned).sort()).toEqual(Object.keys(generated).sort());
   });
 });
 
