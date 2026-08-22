@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
+import type { GearItemStatus } from "@/lib/gear";
 import {
   type StaffDestinationGates,
   type StaffDestinationLabels,
@@ -33,7 +34,14 @@ type PaletteItem = {
  */
 type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
 
-const EMPTY: SearchResults = { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
+const EMPTY: SearchResults = {
+  divers: [],
+  trips: [],
+  diveSites: [],
+  courses: [],
+  orders: [],
+  gear: [],
+};
 
 export type CommandPaletteCopy = {
   search: string;
@@ -48,6 +56,9 @@ export type CommandPaletteCopy = {
   groupDiveSites: string;
   groupCourses: string;
   groupOrders: string;
+  groupGear: string;
+  /** Every gear status, worded — the palette has the translator, `src/db` does not. */
+  gearStatuses: Record<GearItemStatus, string>;
   groupGoTo: string;
   /** Heading over the language rows — also what a staffer types to find them. */
   language: string;
@@ -266,6 +277,25 @@ export function CommandPalette({
           key: `course:${course.id}`,
           label: course.title,
           href: `${root}/courses/${course.slug}/edit`,
+        })),
+      });
+    }
+    // **The tag is the point.** `gear_items.label` carries a schema comment
+    // saying it is "how a wet hand finds the row", and it was the one
+    // identifier the palette could not find (issue #719). The status rides
+    // along because finding "BCD #14" and learning it is out for service in the
+    // same glance is the whole value.
+    if (results.gear.length > 0) {
+      out.push({
+        id: "gear",
+        heading: copy.groupGear,
+        items: results.gear.map((unit) => ({
+          key: `gear:${unit.id}`,
+          label: unit.label,
+          detail: unit.detail
+            ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
+            : copy.gearStatuses[unit.status],
+          href: `${root}/gear/${unit.id}`,
         })),
       });
     }

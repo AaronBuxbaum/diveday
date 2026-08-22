@@ -101,7 +101,7 @@ async function makeStaff(
   return person.id;
 }
 
-const EMPTY_RESULTS = { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
+const EMPTY_RESULTS = { divers: [], trips: [], diveSites: [], courses: [], orders: [], gear: [] };
 
 beforeEach(() => {
   vi.mocked(auth).mockReset();

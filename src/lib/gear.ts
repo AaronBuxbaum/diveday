@@ -43,7 +43,15 @@ export type GearItemKind =
  * finished with is deleted (soft, `gear_items.deleted_at`) — there is no
  * third state and no "retired" (ADR 20260820-every-delete-is-soft).
  */
-export type GearItemStatus = "in_service" | "needs_service";
+/**
+ * Every gear status, as a list — for a caller that must render all of them
+ * exhaustively rather than ask one at a time (`gearStatusLabels`). The union
+ * below is derived from it, so adding a status here is a compile error at every
+ * exhaustive map rather than a silently missing word.
+ */
+export const GEAR_ITEM_STATUSES = ["in_service", "needs_service"] as const;
+
+export type GearItemStatus = (typeof GEAR_ITEM_STATUSES)[number];
 
 /**
  * The clocks a unit can run: manufacturer service, a tank's two independent

@@ -36,6 +36,23 @@ export const blankableDiverEmailSchema = z.union([z.literal(""), diverEmailSchem
  * palette and every seat-a-diver surface use the same prefill rule, so a
  * searched phone number does not arrive in the name field.
  */
+/**
+ * The digits of a phone number and nothing else — the one comparable form.
+ *
+ * `people.phone` is free text: the seed holds `"+1 305 555 0142"`, and a
+ * staffer typing what caller ID showed them (`3055550142`) matched nothing,
+ * because search compared the raw strings (issue #719). The normalisation
+ * already existed on the way *in* (`diverSearchPrefill` below strips the same
+ * way to decide whether a query even is a phone number); it did not exist on
+ * the way back out.
+ */
+export function phoneDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+/** A query worth comparing as a phone number at all — see `phoneDigits`. */
+export const MIN_PHONE_SEARCH_DIGITS = 4;
+
 export function diverSearchPrefill(query: string): {
   name?: string;
   email?: string;
@@ -46,7 +63,7 @@ export function diverSearchPrefill(query: string): {
   if (trimmed.includes("@")) {
     return { email: trimmed };
   }
-  const digits = trimmed.replace(/\D/g, "");
+  const digits = phoneDigits(trimmed);
   // Allow the punctuation people commonly paste from contacts, including
   // non-breaking spaces and an extension. Without `\s`, a copied phone from
   // some mobile address books fell through as a diver's name and the Cmd-K

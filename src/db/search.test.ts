@@ -1,7 +1,7 @@
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { courses, diveSites, orders, people, shops, trips } from "./schema";
+import { courses, diveSites, gearItems, orders, people, shops, trips } from "./schema";
 import { searchShop } from "./search";
 
 describe("searchShop", () => {
@@ -13,6 +13,103 @@ describe("searchShop", () => {
 
     const byNameSubstring = await searchShop(db, shop.id, "SHARMA", "America/New_York", "en-US");
     expect(byNameSubstring.divers.map((d) => d.fullName)).toContain("Priya Sharma");
+  });
+
+  /**
+   * **The tag is what a wet hand reaches for.** `gear_items.label` carries a
+   * schema comment saying so in as many words — and it was the one identifier
+   * the shop's own search box could not find, because `searchShop` queried five
+   * tables and gear was not among them (issue #719).
+   */
+  it("finds a gear unit by its tag, its serial and its brand, with the status", async () => {
+    const { db, shop } = await seededShopContext();
+    const [unit] = await db
+      .insert(gearItems)
+      .values({
+        shopId: shop.id,
+        label: "REG-07",
+        kind: "regulator",
+        brandModel: "Scubapro MK25",
+        serialNumber: "SP-99814",
+        status: "needs_service",
+      })
+      .returning();
+    if (!unit) throw new Error("gear insert returned no row");
+
+    const byTag = await searchShop(db, shop.id, "REG-07", "America/New_York", "en-US");
+    expect(byTag.gear.map((g) => g.id)).toContain(unit.id);
+    // The status rides along as a *code* — this module returns codes and the
+    // palette picks the words — because finding the unit and learning it is out
+    // for service in the same glance is the whole value of the row.
+    expect(byTag.gear[0]?.status).toBe("needs_service");
+    expect(byTag.gear[0]?.detail).toBe("SP-99814");
+
+    // The field you reach for when a manufacturer issues a recall.
+    const bySerial = await searchShop(db, shop.id, "99814", "America/New_York", "en-US");
+    expect(bySerial.gear.map((g) => g.id)).toContain(unit.id);
+
+    const byBrand = await searchShop(db, shop.id, "scubapro", "America/New_York", "en-US");
+    expect(byBrand.gear.map((g) => g.id)).toContain(unit.id);
+  });
+
+  it("shows no gear group for a shop that has never used the register", async () => {
+    // Opt-in **by presence** (ADR 20260815-minimal-gear-register): zero rows
+    // means no gear UI anywhere, and an empty heading in the palette would be
+    // the register announcing itself to a shop that never asked for it. A shop
+    // of its own, because the seeded one *does* run a register — asserting this
+    // against blue-mantis would pass only while nothing there matched.
+    const { db } = await seededShopContext();
+    const [fresh] = await db
+      .insert(shops)
+      .values({ name: "No Gear Divers", slug: "no-gear-divers", timezone: "America/New_York" })
+      .returning();
+    if (!fresh) throw new Error("shop insert returned no row");
+
+    const result = await searchShop(db, fresh.id, "reg", "America/New_York", "en-US");
+    expect(result.gear).toEqual([]);
+  });
+
+  it("does not surface a deleted unit", async () => {
+    const { db, shop } = await seededShopContext();
+    await db.insert(gearItems).values({
+      shopId: shop.id,
+      label: "BCD #14",
+      kind: "bcd",
+      deletedAt: new Date("2026-07-01T00:00:00.000Z"),
+    });
+
+    const result = await searchShop(db, shop.id, "BCD #14", "America/New_York", "en-US");
+    expect(result.gear).toEqual([]);
+  });
+
+  /**
+   * **Digits to digits.** `people.phone` is free text — the seed holds
+   * `"+1 305 555 0142"` — so a staffer typing what caller ID showed them
+   * matched nothing at all (issue #719).
+   */
+  it("finds a diver by the bare digits of a formatted phone number", async () => {
+    const { db, shop } = await seededShopContext();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Caller Id", phone: "+1 (305) 555-0199" })
+      .returning();
+    if (!person) throw new Error("person insert returned no row");
+
+    const asTyped = await searchShop(db, shop.id, "3055550199", "America/New_York", "en-US");
+    expect(asTyped.divers.map((d) => d.id)).toContain(person.id);
+
+    // The formatted form still works — the raw `ilike` is the indexed one this
+    // module is built around, and it was kept rather than replaced.
+    const asStored = await searchShop(db, shop.id, "(305) 555-0199", "America/New_York", "en-US");
+    expect(asStored.divers.map((d) => d.id)).toContain(person.id);
+  });
+
+  it("does not treat a short ordinary query as a phone number", async () => {
+    // The digit floor: "pr" must not drag every phone column through a
+    // normalising scan, and a name query must still answer as a name query.
+    const { db, shop } = await seededShopContext();
+    const result = await searchShop(db, shop.id, "priya", "America/New_York", "en-US");
+    expect(result.divers.map((d) => d.fullName)).toContain("Priya Sharma");
   });
 
   it("finds a trip by a substring of its title", async () => {
@@ -62,7 +159,14 @@ describe("searchShop", () => {
   it("returns nothing for a below-minimum-length query", async () => {
     const { db, shop } = await seededShopContext();
     const result = await searchShop(db, shop.id, "p", "America/New_York", "en-US");
-    expect(result).toEqual({ divers: [], trips: [], diveSites: [], courses: [], orders: [] });
+    expect(result).toEqual({
+      divers: [],
+      trips: [],
+      diveSites: [],
+      courses: [],
+      orders: [],
+      gear: [],
+    });
   });
 
   it("finds a dive site by a substring of its name", async () => {
@@ -135,9 +239,17 @@ describe("CR-018 trigram search indexes", () => {
       "courses_title_trgm_idx",
       "dive_sites_location_trgm_idx",
       "dive_sites_name_trgm_idx",
+      // The shop's own gear, by the tag written on the unit (issue #719).
+      "gear_items_brand_model_trgm_idx",
+      "gear_items_label_trgm_idx",
+      "gear_items_serial_trgm_idx",
       "orders_description_trgm_idx",
       "people_email_trgm_idx",
       "people_full_name_trgm_idx",
+      // `people.phone` twice: as stored, and with its punctuation stripped, so
+      // a staffer typing the digits off a caller ID is still an index lookup
+      // rather than a sequential scan.
+      "people_phone_digits_trgm_idx",
       "people_phone_trgm_idx",
       "trips_title_trgm_idx",
     ]);
