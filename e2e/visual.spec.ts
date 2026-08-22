@@ -1771,6 +1771,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
         await capture(page, "today-empty", scheme);
 
+        // **The same nothing, seen the other way.** `BlockerGroups` renders its
+        // own `EmptyState` whenever `trips.length === 0`, and a shop this new
+        // has no departures at all — which is the only way to reach that branch
+        // without emptying a seeded shop's queue. It had no capture of any
+        // width: the `blockers` baseline is shot against blue-mantis, whose
+        // queue always has blocked divers, so PR #595 could delete
+        // `emptyDescription` and reword `truncated` with 30 surfaces changed
+        // and not one of them this one (issue #616).
+        //
+        // Free to take here: the shop, the session and the page are already
+        // built, so this is one navigation rather than another onboarding.
+        await page.goto(`/shop/${unique}?view=departures`);
+        await page.getByRole("heading", { name: "Every boat is boarding-ready" }).waitFor();
+        await capture(page, "today-empty-departures", scheme);
+
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
         await page.goto(`/shop/${unique}/settings`);
@@ -1959,6 +1974,18 @@ for (const scheme of ["light", "dark"] as const) {
       // since Not ready folded into the shop home, so this navigates through
       // the redirect the old URL still serves and keeps the `blockers`
       // capture name.
+      //
+      // **Two of this view's three states are photographed; `truncated` is
+      // deliberately the one that is not** (issue #616). Its empty state is
+      // covered by `today-empty-departures`, which rides the fresh shop the
+      // first-run capture already onboards and costs a navigation. `truncated`
+      // is only true above `OPERATIONAL_MAX_TRIPS` (60,
+      // `src/lib/operational-window.ts`) departures *all* inside the
+      // operational horizon, so covering it means seeding sixty-one boats for
+      // one line of text — a slow fixture, paid on every visual run of both
+      // schemes, to guard a sentence with no layout of its own. If that line
+      // grows a control or a count, seed it then; until it does, the cost is
+      // the wrong way round and this comment is the record of that call.
       test(`the by-departure "Not ready" view renders true to the design (${scheme})`, async ({
         page,
       }) => {
