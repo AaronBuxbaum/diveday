@@ -4129,6 +4129,22 @@ export const rentalFitProfiles = pgTable(
     weightPreference: text("weight_preference"),
     note: text("note"),
     /**
+     * When a **fit** was last stated — by the diver's own gear form or by staff
+     * editing it. Null means this row exists for something other than a fit.
+     *
+     * There is exactly one such something today, and it is why this column
+     * exists: since issue 627 the diver's free-text note ("titanium hip, I run
+     * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
+     * which will create this row for a diver who has never touched the gear
+     * form. Every `rents_*` column above defaults to **true**, so without this
+     * discriminator a diver who only left a note would appear on the boat's
+     * packing list renting a BCD, regulator, wetsuit, mask, fins and weights —
+     * six pieces, no sizes, nobody asked for any of them. `rentalFitLine` and
+     * the prep checklist read a null here as "no fit recorded", exactly as they
+     * already read a missing row.
+     */
+    fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
+    /**
      * The safe fallback when a requested size isn't available (H-06): staff
      * flag the diver for hands-on fitting at check-in instead of silently
      * packing a different size. Set/cleared only by its own action — a size

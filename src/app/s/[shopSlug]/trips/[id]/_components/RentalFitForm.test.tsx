@@ -21,6 +21,7 @@ const emptyFit: DiverRentalFit = {
   rentsDiveComputer: false,
   rentsGopro: false,
   note: null,
+  fitStatedAt: new Date("2026-07-21T13:30:00.000Z"),
 };
 
 const defaultPricing: RentalPricing = {
@@ -92,6 +93,32 @@ describe("RentalFitForm defaults", () => {
 
     expect(screen.getByRole("checkbox", { name: /^BCD/ })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: /^Mask & fins/ })).not.toBeChecked();
+  });
+});
+
+describe("RentalFitForm scope", () => {
+  it("no longer carries the free-text note — it is its own question now (issue 627)", () => {
+    // "Anything else the crew should know?" is a category of its own on
+    // `/ready`, saved on its own (`saveNoteFromReady`), so it is no longer a
+    // trailing field of the gear form. Two boxes for one answer is how a diver
+    // ends up writing it in the one the crew is not reading.
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "wetsuit"]}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+    expect(screen.queryByLabelText(/anything else/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /anything else/i })).not.toBeInTheDocument();
   });
 });
 
@@ -178,17 +205,24 @@ describe("RentalFitForm nitrox card gate", () => {
     expect(screen.queryByLabelText(/nitrox agency/i)).not.toBeInTheDocument();
   });
 
-  it("locks the request until a card is on file, and says where the card goes", () => {
+  it("hides the request entirely until a card is on file (issue 627)", () => {
+    // Was a disabled checkbox under a line pointing at the card disclosure. A
+    // control a diver cannot use is a question they have to work out the answer
+    // to; the section simply is not here until the card that makes it real is.
     renderNitrox({
       wantsNitrox: false,
       nitroxCardVerified: false,
       nitroxCardEntryOffered: true,
     });
-    expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeDisabled();
-    expect(screen.getByText(/add your nitrox card above/i)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /nitrox/i })).not.toBeInTheDocument();
+    // And the sentence that pointed at the disclosure is gone with it.
+    expect(screen.queryByText(/add your nitrox card above/i)).not.toBeInTheDocument();
   });
 
-  it("unlocks the request the moment a card is on file, sighted or not", () => {
+  it("shows the request the moment a card is on file, sighted or not", () => {
+    // A card the shop has not verified yet is enough: the diver has said what
+    // they hold, and the fill gate (`authorizesNitroxFill`) is a separate,
+    // stricter question asked at the tank.
     renderNitrox({
       wantsNitrox: false,
       nitroxCardVerified: false,
@@ -197,9 +231,9 @@ describe("RentalFitForm nitrox card gate", () => {
     expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeEnabled();
   });
 
-  it("never locks a request the diver already has, so saving a note cannot erase it", () => {
-    // A disabled checkbox submits nothing, and `saveFitFromReady` writes that
-    // absence as `wantsNitrox: false` — so locking a live request would delete
+  it("never hides a request the diver already has, so saving cannot erase it", () => {
+    // An absent checkbox submits nothing, and `saveFitFromReady` writes that
+    // absence as `wantsNitrox: false` — so hiding a live request would delete
     // it the next time this form was saved for any other reason. The booking
     // form gates nothing, which is exactly where such a request comes from.
     renderNitrox({
@@ -212,23 +246,20 @@ describe("RentalFitForm nitrox card gate", () => {
     expect(box).toBeChecked();
   });
 
-  it("never points at a card disclosure the page is not showing", () => {
+  it("leaves the request standing on a page offering no card disclosure", () => {
     // A departure gating on nothing renders no certification row, so `/ready`
     // offers no card entry — and a diver can still arrive here carrying a
-    // request made on the booking form, which gates nothing. The pointer copy
-    // names a control ("add your nitrox card above"); rendering it with no such
-    // control on the page is a dead end, and claiming a card is on file would
-    // be worse. Say nothing.
+    // request made on the booking form, which gates nothing. Hiding the box
+    // there would strand that request with nowhere on the page to restate it.
     renderNitrox({ wantsNitrox: true, nitroxCardVerified: false });
     expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeEnabled();
-    expect(screen.queryByText(/add your nitrox card above/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/check your nitrox card/i)).not.toBeInTheDocument();
   });
 
-  it("leaves the box alone on a page offering no card disclosure", () => {
+  it("keeps the box on a page offering no card disclosure", () => {
     // A departure that gates on nothing renders no certification row, so there
-    // is nowhere on the page for a card to go — and a locked box pointing at a
-    // control that is not there would be a dead end.
+    // is nowhere on the page for a card to go — and hiding the box there would
+    // leave a diver who wants nitrox no way to say so at all.
     renderNitrox({ wantsNitrox: false, nitroxCardVerified: false });
     expect(screen.getByRole("checkbox", { name: /nitrox/i })).toBeEnabled();
   });

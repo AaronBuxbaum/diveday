@@ -1514,12 +1514,14 @@ of *doing*. Its entire P0–P1 plan (WP-1…WP-11) and P2 items shipped:
 
 - **One-tap waiver send** from Today and Blockers, with per-trip batch send and no-email fallback
   (shared `src/db/waiver-issue.ts`). No imperative label merely navigates. *(WP-1)*
-- **Transactional `/ready` page** — sign, pay, save rental fit, add emergency contact, `tel:`/`mailto:`
+- **Transactional `/ready` page** — sign, pay, save rental fit, `tel:`/`mailto:`
   contact; honest copy that never claims an email is coming; the ready link rides the confirmation
-  email. *(WP-2)*
+  email. *(WP-2)* The emergency-contact capture this shipped with was removed on 2026-08-21 — the
+  waiver asks for it and nothing else does
+  ([20260821-the-ready-page-asks-once](../architecture/decisions/20260821-the-ready-page-asks-once.md)).
 - **Booking + confirmation above the content** on the public trip page. *(WP-3)*
-- **Emergency contact collected** from the waiver flow and `/ready`; surfaced as a low-severity
-  dock-settleable nudge on boats within 3 days. *(WP-4)*
+- **Emergency contact collected** from the waiver flow — and, until 2026-08-21, from `/ready` as
+  well; surfaced as a low-severity dock-settleable nudge on boats within 3 days. *(WP-4)*
 - **Forgiving booking form** — autocomplete, optional lead phone, email-typo nudge, `useActionState`
   that keeps input on failure; the dead `buddyPreference` column it named for deletion was removed. *(WP-5)*
 - **Instant pending boarding** — the boarding tap shows "Boarding…" immediately and never renders a

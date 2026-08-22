@@ -98,14 +98,16 @@ export function RentalFitForm({
   nitroxCardOnFile?: boolean;
   /**
    * The page is offering a nitrox card disclosure in the certification
-   * checklist above this row. That, and only that, is what locks the request
-   * box below: the pointer copy names a control the diver can actually see, so
-   * it must not render on a page that isn't showing one.
+   * checklist above this row. That, and only that, is what hides the request
+   * box below (issue 627) — so a departure gating on nothing, which renders no
+   * certification row and therefore no card disclosure, keeps its box rather
+   * than leaving a diver who wants enriched air nowhere to say so.
    *
    * **A decision, not a rule to re-derive.** The rule behind it is
    * `nitroxCardWanted` (src/lib/rentals.ts), evaluated once by the page; this
-   * component deliberately keeps no copy of it, so the lock and the offer
-   * cannot drift into disagreeing about whether a card is wanted.
+   * component deliberately keeps no copy of it, so what is hidden here and what
+   * is offered there cannot drift into disagreeing about whether a card is
+   * wanted.
    */
   nitroxCardEntryOffered?: boolean;
   plannedDives: number;
@@ -146,18 +148,21 @@ export function RentalFitForm({
 
   const [nitroxRequested, setNitroxRequested] = useState(wantsNitrox);
   /**
-   * Asking for enriched air now starts with the card, not with this box: the
-   * request is locked until one is on file, and the certification checklist
-   * above is where it goes.
+   * Asking for enriched air starts with the card, not with this box — and until
+   * that card exists there is no box at all (issue 627). This used to render
+   * disabled under a line pointing at the certification checklist above; a
+   * control a diver cannot use is a question they then have to work out the
+   * answer to, so the section simply is not here until the card that makes it
+   * real is.
    *
-   * `!wantsNitrox` is the half that matters. A disabled checkbox submits
+   * `!wantsNitrox` is the half that matters. An absent checkbox submits
    * nothing, and `saveFitFromReady` writes the absence as `wantsNitrox: false`
-   * — so locking a diver who already *has* a live request (they asked on the
-   * booking form, which gates nothing) would erase it the next time they saved
-   * a note. The gate stops a new request going in without a card; it never
-   * traps or quietly drops one already on the trip.
+   * — so hiding this from a diver who already *has* a live request (they asked
+   * on the booking form, which gates nothing) would erase it the next time they
+   * saved for any other reason. The gate stops a new request going in without a
+   * card; it never traps or quietly drops one already on the trip.
    */
-  const nitroxLocked = nitroxCardEntryOffered && !wantsNitrox;
+  const nitroxHidden = nitroxCardEntryOffered && !wantsNitrox;
   // Follow the controls, rather than the saved profile, so the estimate is
   // useful before a diver commits their changes. A shop that doesn't fill
   // nitrox never contributes it to the estimate, whatever a stale request flag says.
@@ -308,25 +313,20 @@ export function RentalFitForm({
           </fieldset>
         ) : null}
 
-        {nitroxOffered ? (
+        {nitroxOffered && !nitroxHidden ? (
           <fieldset>
-            <legend className="flex items-center gap-2 text-sm font-medium">
-              {t("rental.nitroxLegend")}
-              <InfoHint
-                label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
-                detail={t("rental.jargonHints.nitrox")}
-              />
-            </legend>
-            <label
-              className={`mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm ${
-                nitroxLocked ? "text-muted" : ""
-              }`}
-            >
+            {/* No "what is nitrox?" hint here any more: this section is only
+                reachable by a diver who has already filed a nitrox card, and
+                the explanation now sits where a diver first meets the word —
+                the "Add your nitrox card" disclosure in the certification row
+                (issue 627). The booking page, where nitrox genuinely can be a
+                first encounter, keeps its own (BookingGearFields.tsx). */}
+            <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
+            <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
               <input
                 name="nitrox"
                 type="checkbox"
-                checked={nitroxRequested && !nitroxLocked}
-                disabled={nitroxLocked}
+                checked={nitroxRequested}
                 onChange={(event) => setNitroxRequested(event.target.checked)}
                 className="size-4 accent-primary"
               />
@@ -338,21 +338,11 @@ export function RentalFitForm({
                   : t("rental.nitroxReserveNoPrice")}
               </span>
             </label>
-            {/* The one line under the box, and only ever one.
-                `nitroxCardEntryOffered` alone gates the pointer, and it has to
-                be the *only* thing that gates it: the sentence names a control
-                ("add your nitrox card above"), so it may not render on a page
-                that is not showing one. It covers both states that want it,
-                because the prop is only true when no card is on file — the box
-                locked shut, and a request grandfathered in from the booking
-                form sitting ticked with nothing behind it.
-                Everything else answers only when there is something true to
-                say: what the crew will do about a card they have. A request
-                with no card on a page that cannot take one says nothing at all,
-                rather than claiming a card exists or pointing nowhere. */}
-            {nitroxCardEntryOffered ? (
-              <p className="mt-2 text-sm text-muted">{t("rental.nitroxNeedsCard")}</p>
-            ) : nitroxRequested && (nitroxCardVerified || nitroxCardOnFile) ? (
+            {/* Speaks only when there is something true to say: what the crew
+                will do about a card they actually have. A request carried in
+                from the booking form with no card behind it says nothing at
+                all, rather than claiming a card exists. */}
+            {nitroxRequested && (nitroxCardVerified || nitroxCardOnFile) ? (
               <p className="mt-2 text-sm text-muted">
                 {t(nitroxCardVerified ? "rental.nitroxVerifiedNote" : "rental.nitroxCardOnFile")}
               </p>
@@ -425,17 +415,11 @@ export function RentalFitForm({
             ) : null}
           </FieldGrid>
         ) : null}
-        <FieldGrid columns={1}>
-          <Field label={t("rental.anythingElse")} hint={t("common.optional")}>
-            <textarea
-              name="note"
-              rows={2}
-              maxLength={300}
-              defaultValue={rentalFit?.note ?? ""}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
+        {/* "Anything else the crew should know?" was the last field of this
+            form until issue 627; it is its own question on `/ready` now, with
+            its own save. A free-text note is not a rental fit — it outlives the
+            sizes, and burying it under them meant a diver had to open the gear
+            form to say "titanium hip, I run heavy". */}
         <div>
           <SubmitButton
             pendingLabel={t("rental.savingFit")}

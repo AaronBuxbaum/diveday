@@ -239,6 +239,14 @@ export type RentalFitSizes = {
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
+  /**
+   * When a fit was last *stated*. An explicit null means the row exists for
+   * something other than a fit — today, only to carry the diver's free-text
+   * note, which has been saved on its own since issue 627. `undefined` reads as
+   * stated, so a caller building a fit by hand is never silently dropped.
+   * See `rental_fit_profiles.fit_stated_at` in schema.ts.
+   */
+  fitStatedAt?: Date | null;
 };
 
 /**
@@ -283,7 +291,11 @@ export function rentalFitCompleteness(
   fit: RentalFitSizes | null | undefined,
   offeredKinds?: readonly string[],
 ): RentalFitCompleteness {
-  if (!fit) return { state: "not_recorded" };
+  // A row that exists only to hold the diver's note is not an incomplete fit —
+  // it is no fit at all, and reading it as incomplete would nag staff about
+  // five missing sizes for a diver who never asked to rent anything. Every
+  // `rents_*` column defaults to true, so this guard is the whole difference.
+  if (!fit || fit.fitStatedAt === null) return { state: "not_recorded" };
   const offered = offeredKinds ? new Set<string>(toRentableKinds(offeredKinds)) : null;
   const offers = (kind: RentableItemKind) => offered === null || offered.has(kind);
   // One shoe size answers for both boots and fins, whichever column holds it.

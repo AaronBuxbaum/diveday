@@ -59,7 +59,7 @@ import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
-import type { ReadinessBlockerCode } from "@/lib/readiness";
+import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import {
   buildDiverChecklist,
   type ChecklistState,
@@ -74,9 +74,9 @@ import {
   payFromReady,
   saveCertificationFromReady,
   saveDiveRecencyFromReady,
-  saveEmergencyContactFromReady,
   saveFitFromReady,
   saveNitroxCertificationFromReady,
+  saveNoteFromReady,
   saveSpecialtyFromReady,
   signWaiverFromReady,
 } from "./actions";
@@ -89,8 +89,20 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * A row's state as this page *shows* it — the engine's three, plus one this
+ * page adds.
+ *
+ * "optional" is the note row (issue 627). It is a genuine category a diver
+ * answers, but most divers have nothing to say, so a row that read "Your turn"
+ * forever would be the one nag on a page whose whole job is telling someone
+ * what is actually left. It stays out of the progress figure for the same
+ * reason: a bar that can never fill is a bar that lies.
+ */
+type RowState = ChecklistState | "optional";
+
 const STATE_STYLE: Record<
-  ChecklistState,
+  RowState,
   { glyph: string; word: DiverMessageKey; box: string; text: string }
 > = {
   // `-strong` on the success pair: the raw light-palette hue reads 4.39:1 on
@@ -113,6 +125,12 @@ const STATE_STYLE: Record<
     box: "bg-surface-sunken text-muted",
     text: "text-muted",
   },
+  optional: {
+    glyph: "•",
+    word: "ready.stateOptional",
+    box: "bg-surface-sunken text-muted",
+    text: "text-muted",
+  },
 };
 
 function ChecklistRow({
@@ -123,7 +141,7 @@ function ChecklistRow({
   t,
 }: {
   label: string;
-  state: ChecklistState;
+  state: RowState;
   /**
    * Already resolved by the caller — see `checklistDetailText`. Nullable
    * because the last-dived row has nothing to say before it is answered: the
@@ -579,9 +597,14 @@ function SpecialtyEntry({
  * (`src/lib/readiness.ts` raises no `nitrox_expired`).
  *
  * `optional` is the case where the trip demands nothing and the shop simply
- * fills enriched air: the card is what unlocks the gear row's request box, so
- * the offer belongs here with the other cards — pilled, so it never reads as
- * one more thing standing between the diver and the boat.
+ * fills enriched air: the card is what makes the gear row's request box appear
+ * at all, so the offer belongs here with the other cards — pilled, so it never
+ * reads as one more thing standing between the diver and the boat.
+ *
+ * This is also where "what is nitrox?" is answered (issue 627). It used to sit
+ * on the gear row's request legend, which a diver only reaches *after* filing a
+ * card — the explanation arriving one step after the decision it was for. Here
+ * it meets them at the word itself.
  */
 function NitroxEntry({
   token,
@@ -601,6 +624,14 @@ function NitroxEntry({
         action={saveNitroxCertificationFromReady.bind(null, token)}
         className="flex flex-col gap-3"
       >
+        {/* What the word means, said plainly rather than hidden behind a
+            marker. This is the gear row's old `InfoHint` detail, moved to the
+            section that asks for the card (issue 627) — as text, because an
+            `InfoHint` is a `<button>` and `<summary>` is already one, and
+            because this page is read on a phone, where there is no hover to
+            discover. Same string, so the booking page's hint and this cannot
+            drift apart. */}
+        <p className="text-sm text-muted">{t("rental.jargonHints.nitrox")}</p>
         <FieldGrid columns={2}>
           <Field label={t("ready.certAgency")}>
             <select name="agency" required defaultValue="" className={controlClass}>
@@ -722,11 +753,12 @@ const READY_NOTICES: Record<
   string,
   { tone: "success" | "danger" | "neutral"; key: DiverMessageKey }
 > = {
-  "saved-contact": { tone: "success", key: "ready.contactSaved" },
-  "saved-contact-empty": { tone: "neutral", key: "ready.contactIncomplete" },
   "pay-paid": { tone: "success", key: "ready.paymentReceived" },
   "error-waiver": { tone: "danger", key: "ready.waiverUnavailable" },
-  "error-contact": { tone: "danger", key: "ready.contactTooLong" },
+  // The diver's own words to the crew, now its own row and its own save
+  // (issue 627) rather than the last field of the gear form.
+  "saved-note": { tone: "success", key: "ready.noteSaved" },
+  "error-note": { tone: "danger", key: "ready.noteUnavailable" },
   "error-pay": { tone: "danger", key: "ready.paymentUnavailable" },
   "pay-cancelled": { tone: "neutral", key: "ready.paymentCancelled" },
   // Task 49: every throttled action used to redirect with no error param at
@@ -1111,11 +1143,29 @@ export default async function DiverReadinessPage({
   const primaryActionItem =
     items.find((item) => actionButtonKind(item, data.canPay) !== null) ?? null;
   const ready = detail.readiness.status === "ready";
-  const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
+  /**
+   * The rung this departure actually demands — the stricter of what the shop
+   * set on the trip and what the sites it visits impose
+   * (`combineCertRequirements`, the same fold the readiness engine gates on).
+   *
+   * Named on the certification row (issue 627) because "we still need your
+   * certification card" never said *which* card, and a diver holding Open Water
+   * had no way to tell from this page whether the Advanced they don't have was
+   * the thing standing between them and the boat. Null when the departure gates
+   * on specialties or nitrox but no level, which is a real shape.
+   */
+  const requiredLevel = detail.requirement
+    ? combineCertRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
+    : null;
   // A rental fit is on file — the diver has answered the gear question at least
   // once, whatever they answered. "Bringing my own" is a complete answer, so
   // this asks whether the row was filled in, never whether anything was rented.
-  const hasRentalFit = Boolean(data.rentalFit);
+  //
+  // `fitStatedAt`, not the row's existence: since issue 627 the note row below
+  // creates the same `rental_fit_profiles` row without stating a fit, and
+  // reading mere existence here would mark gear done for a diver who has only
+  // left a note (schema.ts, `fit_stated_at`).
+  const hasRentalFit = data.rentalFit?.fitStatedAt != null;
   // Whether to ask for a nitrox card nothing has asked for yet — the rule
   // itself lives in `src/lib/rentals.ts` beside `nitroxAvailableOn`, because
   // the card disclosure below and the rental form's request lock are two
@@ -1142,14 +1192,21 @@ export default async function DiverReadinessPage({
   // a complete answer, "I haven't dived yet" included, so this asks whether the
   // row was filled in and never what was said.
   const hasLastDived = data.lastDivedBand != null;
-  // The emergency-contact, gear and last-dived rows are rendered as their own
-  // `ChecklistRow`s below, outside `items` — count them alongside the
-  // requirement-derived items so the progress bar and its label match what the
-  // diver actually sees in the list.
-  const checklistTotal = items.length + 3;
+  /**
+   * The gear and last-dived rows are rendered as their own `ChecklistRow`s
+   * below, outside `items` — counted alongside the requirement-derived items so
+   * the progress bar and its label match what the diver actually sees.
+   *
+   * The note row is deliberately **not** counted (issue 627). It is optional
+   * and most divers have nothing to say, so counting it would leave the bar
+   * permanently short of full for having answered everything that was asked.
+   * The emergency contact is no longer here at all — the waiver collects it,
+   * through the same `saveBookingEmergencyContact`, and asking twice for one
+   * fact is how a diver ends up correcting the copy the crew is not reading.
+   */
+  const checklistTotal = items.length + 2;
   const checklistDone =
     items.filter((item) => item.state === "done").length +
-    (hasEmergencyContact ? 1 : 0) +
     (hasRentalFit ? 1 : 0) +
     (hasLastDived ? 1 : 0);
   const noticeKey = saved
@@ -1338,7 +1395,16 @@ export default async function DiverReadinessPage({
                 key={item.category}
                 label={checklistCategoryText(t, item.category)}
                 state={item.state}
-                detail={checklistDetailText(t, item)}
+                detail={
+                  // The certification row says which rung, on every state
+                  // including "done" — a diver reading a settled row still
+                  // wants to know what it settled against (issue 627).
+                  item.category === "certification" && requiredLevel
+                    ? `${checklistDetailText(t, item)} ${t("ready.certMinimumLevel", {
+                        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
+                      })}`
+                    : checklistDetailText(t, item)
+                }
                 action={itemAction(
                   item,
                   token,
@@ -1350,59 +1416,33 @@ export default async function DiverReadinessPage({
                 t={t}
               />
             ))}
+            {/* Gear is a pre-trip item like any other, so it is a row rather
+                than a section of its own further down. It is the first of the
+                three rows here that no readiness blocker produced — a rental
+                fit reserves nothing and gates nobody (docs/product/glossary.md)
+                — but "what the crew should have ready for me" is exactly what
+                this list is for, and a heading below the checklist made it look
+                like something else. `RentalFitForm` renders no card and no
+                title of its own for that reason: this row is its heading. */}
             <ChecklistRow
-              label={t("ready.emergencyContact")}
-              state={hasEmergencyContact ? "done" : "action"}
-              detail={
-                hasEmergencyContact
-                  ? t("ready.emergencyOnFile", { name: person.emergencyContactName ?? "" })
-                  : t("ready.emergencyContactBody")
-              }
-              // Already on file (most often captured on the waiver a moment
-              // earlier — both write through the same `saveBookingEmergencyContact`)
-              // reads as a plain "done" row, no form: two differently-labeled
-              // capture forms for the same fact was the duplication this closes
-              // (UX persona Lens 17, task 143). Correcting a wrong entry is staff
-              // work from here on — the roster and diver-record edit form
-              // (task 144) — not a second diver-facing input.
+              label={t("ready.gearAndSetup")}
+              state={hasRentalFit ? "done" : "action"}
+              detail={t(hasRentalFit ? "ready.gearOnFile" : "ready.gearBody")}
               action={
-                hasEmergencyContact ? null : (
-                  <form
-                    action={saveEmergencyContactFromReady.bind(null, token)}
-                    className="flex flex-col gap-3"
-                  >
-                    <FieldGrid columns={2}>
-                      <Field label={t("ready.contactName")}>
-                        <input
-                          name="emergencyContactName"
-                          autoComplete="name"
-                          maxLength={120}
-                          defaultValue={person.emergencyContactName ?? ""}
-                          className={controlClass}
-                        />
-                      </Field>
-                      <Field label={t("ready.contactPhone")}>
-                        <input
-                          name="emergencyContactPhone"
-                          type="tel"
-                          inputMode="tel"
-                          autoComplete="tel"
-                          maxLength={40}
-                          defaultValue={person.emergencyContactPhone ?? ""}
-                          className={controlClass}
-                        />
-                      </Field>
-                    </FieldGrid>
-                    <div>
-                      <SubmitButton
-                        pendingLabel={t("common.saving")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("ready.saveContact")}
-                      </SubmitButton>
-                    </div>
-                  </form>
-                )
+                <RentalFitForm
+                  action={saveFitFromReady.bind(null, token)}
+                  rentalFit={data.rentalFit}
+                  rentalItems={data.shop.rentalItems}
+                  course={data.trip.course}
+                  pricing={data.shop.rentalPricing}
+                  currency={toShopCurrency(data.shop.currency)}
+                  wantsNitrox={data.wantsNitrox}
+                  nitroxCardVerified={data.nitroxCardVerified}
+                  nitroxCardOnFile={data.nitroxCardOnFile}
+                  nitroxCardEntryOffered={nitroxCardEntryOffered}
+                  plannedDives={data.trip.plannedDives}
+                  saved={saved === "fit"}
+                />
               }
               t={t}
             />
@@ -1416,10 +1456,10 @@ export default async function DiverReadinessPage({
                 ago is exactly the person worth asking.
 
                 Gates nothing, so the row never reads "action" in a way that
-                blocks: it is the third non-blocker row, beside the emergency
-                contact and gear. Once answered the select keeps the answer and
-                stays editable — no separate "on file" line, because the control
-                already shows what was said. */}
+                blocks: it sits below gear, with the two other rows this list
+                carries that no blocker produced. Once answered the select keeps
+                the answer and stays editable — no separate "on file" line,
+                because the control already shows what was said. */}
             <ChecklistRow
               label={t("ready.lastDivedHeading")}
               state={hasLastDived ? "done" : "action"}
@@ -1461,33 +1501,46 @@ export default async function DiverReadinessPage({
               }
               t={t}
             />
-            {/* Gear is a pre-trip item like any other, so it is a row rather
-                than a section of its own further down. It is the second row
-                here that is not a readiness blocker — a rental fit reserves
-                nothing and gates nobody (docs/product/glossary.md) — but "what
-                the crew should have ready for me" is exactly what this list is
-                for, and a heading below the checklist made it look like
-                something else. `RentalFitForm` renders no card and no title of
-                its own for that reason: this row is its heading. */}
+            {/* **The diver's own words, and a category of their own.**
+
+                This was the last field of the gear form until issue 627,
+                which meant a diver had to open "what would you like to rent?"
+                to say "titanium hip, I run heavy" — a sentence that has nothing
+                to do with sizes and outlives every one of them. It saves on its
+                own (`saveNoteFromReady` writes the note column and nothing
+                else), so answering it cannot blank sizes set last week, and
+                saving sizes cannot blank it.
+
+                "optional", not "action": most divers have nothing to add, and a
+                row reading "Your turn" forever on a page whose job is naming
+                what is left would be this page's one nag. It is out of the
+                progress figure for the same reason. */}
             <ChecklistRow
-              label={t("ready.gearAndSetup")}
-              state={hasRentalFit ? "done" : "action"}
-              detail={t(hasRentalFit ? "ready.gearOnFile" : "ready.gearBody")}
+              label={t("rental.anythingElse")}
+              state={data.rentalFit?.note ? "done" : "optional"}
+              detail={null}
               action={
-                <RentalFitForm
-                  action={saveFitFromReady.bind(null, token)}
-                  rentalFit={data.rentalFit}
-                  rentalItems={data.shop.rentalItems}
-                  course={data.trip.course}
-                  pricing={data.shop.rentalPricing}
-                  currency={toShopCurrency(data.shop.currency)}
-                  wantsNitrox={data.wantsNitrox}
-                  nitroxCardVerified={data.nitroxCardVerified}
-                  nitroxCardOnFile={data.nitroxCardOnFile}
-                  nitroxCardEntryOffered={nitroxCardEntryOffered}
-                  plannedDives={data.trip.plannedDives}
-                  saved={saved === "fit"}
-                />
+                <form action={saveNoteFromReady.bind(null, token)} className="flex flex-col gap-3">
+                  {/* The row's own heading is this control's label — a visible
+                      `<Field>` label would print the question twice, one line
+                      apart. Same move the last-dived row above makes. */}
+                  <textarea
+                    name="note"
+                    rows={2}
+                    maxLength={300}
+                    aria-label={t("rental.anythingElse")}
+                    defaultValue={data.rentalFit?.note ?? ""}
+                    className={controlClass}
+                  />
+                  <div>
+                    <SubmitButton
+                      pendingLabel={t("common.saving")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("ready.saveNote")}
+                    </SubmitButton>
+                  </div>
+                </form>
               }
               t={t}
             />
@@ -1497,8 +1550,8 @@ export default async function DiverReadinessPage({
         <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
 
         {/* What the day actually is: what to bring, and what each tank dives.
-            Below the checklist — which now carries the gear form as its last
-            row — because this page's job is still "what's left before you
+            Below the checklist — which carries the gear form as one of its rows
+            — because this page's job is still "what's left before you
             sail", and this is what a diver reads once that is settled. It is
             also what they used to have to leave the page to find. */}
         {fullShop && fullTrip ? (

@@ -325,7 +325,15 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   activity_events: ["shop_id"],
   notification_deliveries: ["shop_id"],
   course_inquiries: ["shop_id"],
-  rental_fit_profiles: ["shop_id"],
+  rental_fit_profiles: [
+    "shop_id",
+    // A DiveDay-side discriminator, not a fact about the diver: it separates a
+    // row that states a fit from one holding only their note (schema.ts,
+    // `fit_stated_at`). The import rebuilds it correctly on its own — a row
+    // carrying any size is a stated fit and `src/db/import.ts` stamps it — so
+    // exporting it would carry an internal flag out and re-derive it anyway.
+    "fit_stated_at",
+  ],
   gear_items: ["shop_id"],
   gear_service_events: ["shop_id"],
   gear_reservations: ["shop_id"],

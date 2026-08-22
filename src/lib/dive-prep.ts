@@ -58,7 +58,25 @@ export type RentalFit = {
    */
   needsStaffFitAt?: Date | null;
   needsStaffFitNote?: string | null;
+  /**
+   * When a fit was last *stated*. Null means the row is here for something
+   * other than a fit — today, only to hold the diver's free-text note, saved on
+   * its own since issue 627. Read exactly as a missing row is: nothing to pack
+   * from. Without it, every `rents_*` column's `true` default would put six
+   * pieces nobody asked for on the packing list (schema.ts, `fit_stated_at`).
+   */
+  fitStatedAt?: Date | null;
 };
+
+/**
+ * Whether this row records an actual fit, as opposed to existing only to carry
+ * the diver's note. `undefined` reads as stated so a caller that builds a
+ * `RentalFit` by hand (tests, the offline snapshot) is not silently dropped
+ * from the packing list; only an explicit null means "note only".
+ */
+export function fitIsStated(fit: RentalFit): boolean {
+  return fit.fitStatedAt !== null;
+}
 
 export type PrepDiver = {
   bookingId: string;
@@ -366,7 +384,7 @@ export function buildDivePrepChecklist(input: {
     // Nothing on file is nothing to pack from — the only case that skips the
     // lines below. The roster grouping still gets its row: a name with no
     // answer beside it is the loose end, and leaving it out hides it.
-    if (!diver.fit) {
+    if (!diver.fit || !fitIsStated(diver.fit)) {
       diverLines.push({
         bookingId: diver.bookingId,
         personId: diver.personId,
@@ -476,7 +494,10 @@ export type RentalFitLine =
   | { state: "rents"; items: { kind: RentalItemKind; size: string | null }[] };
 
 export function rentalFitLine(fit: RentalFit | null): RentalFitLine {
-  if (!fit) return { state: "not_recorded" };
+  // A row that exists only to hold the diver's note reads exactly as no row at
+  // all: they have not answered the gear question, so there is nothing to pack
+  // from and nothing to claim they brought.
+  if (!fit || !fitIsStated(fit)) return { state: "not_recorded" };
   // A fourth state on purpose: "needs staff fit" is neither a size to hand over
   // nor a diver nobody asked. It is an open job at the dock, and reading it as
   // either of the others is how a diver ends up kitted from a size the shop

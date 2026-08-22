@@ -4,7 +4,7 @@ import { createTrip, daysFromNow, e2eNow, signOut } from "./helpers";
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
 
-  test("a booked diver's readiness page lets them act, saves an emergency contact, and releases the seat", async ({
+  test("a booked diver's readiness page lets them act, answers its questions, and releases the seat", async ({
     page,
   }) => {
     // Unique title for this spec's own trip; the e2eNow() suffix keeps every
@@ -44,20 +44,25 @@ test.describe("staff-prepared trip", () => {
 
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Emergency contact" })).toBeVisible();
     // Gear is a checklist row like the rest now, not a section under its own
     // heading further down the page.
     await expect(page.getByRole("heading", { name: "Gear and setup" })).toBeVisible();
+    // The emergency contact is the waiver's question, and only the waiver's
+    // (issue 627). Asking twice for one fact is how a diver ends up correcting
+    // the copy the crew is not reading.
+    await expect(page.getByRole("heading", { name: "Emergency contact" })).toHaveCount(0);
 
-    // The emergency contact is transactional now — the diver fills it in place.
-    await page.getByLabel("Contact name").fill("Coral Quinn");
-    await page.getByLabel("Contact phone").fill("+1 305 555 0180");
-    await page.getByRole("button", { name: "Save contact" }).click();
+    // The diver's own words to the crew: its own category, saved on its own, so
+    // it cannot blank the sizes beside it (issue 627).
+    await page.getByLabel("Anything else the crew should know?").fill("Titanium hip, I run heavy.");
+    await page.getByRole("button", { name: "Save note" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Emergency contact saved" }),
+      page.getByRole("status").filter({ hasText: "Saved — the crew will see that" }),
     ).toBeVisible();
-    // The row now reads as on file rather than asking again.
-    await expect(page.getByText(/On file — Coral Quinn/)).toBeVisible();
+    // Read back off the control itself, which is what the diver comes back to.
+    await expect(page.getByLabel("Anything else the crew should know?")).toHaveValue(
+      "Titanium hip, I run heavy.",
+    );
 
     // Where the diver is actually going, and how to reach the people who will
     // be there. This page used to close on a one-line "Questions? Reach out to
@@ -88,7 +93,7 @@ test.describe("staff-prepared trip", () => {
       .selectOption({ label: "More than five years ago" });
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "the crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Thanks — the crew will see that" }),
     ).toBeVisible();
     await expect(page.getByText("More than five years ago")).toBeVisible();
 
