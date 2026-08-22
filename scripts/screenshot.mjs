@@ -23,7 +23,12 @@ import { chromium } from "@playwright/test";
  * - `/shop/**` paths sign in automatically through the seeded dev credentials
  *   (see src/db/dev-credentials.ts); pick a role with --as <owner|instructor|
  *   divemaster|captain>.
- * - PNGs land in screenshots/ (gitignored), named after path, scheme, width.
+ * - PNGs land in screenshots/ (gitignored), named after path, scheme and
+ *   width — plus the role, when it is not the default `owner`, so capturing
+ *   one path as two roles gives you two files to compare rather than one.
+ * - A file left by an *earlier* run is reported as replaced rather than
+ *   silently overwritten. A tool whose job is "look at this" should never
+ *   make a picture disappear without saying so.
  *
  * For review-grade captures of a surface the visual spec already covers,
  * prefer a filtered visual-spec run (see the design-review skill) — that path
@@ -47,7 +52,8 @@ let base = "http://localhost:3000";
 let out = "screenshots";
 let schemes = ["light", "dark"];
 let widths = [390, 1280];
-let role = "owner";
+const DEFAULT_ROLE = "owner";
+let role = DEFAULT_ROLE;
 
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
@@ -65,7 +71,8 @@ for (let index = 0; index < args.length; index += 1) {
 
 if (paths.length === 0 || !DEV_STAFF_LOGINS[role] || widths.some(Number.isNaN)) {
   console.error(
-    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>] [--as owner|instructor|divemaster|captain]",
+    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>] [--as owner|instructor|divemaster|captain]\n" +
+      "Writes <out>/<path>[-<role>]-<scheme>-<width>.png; the role appears only when it is not the default owner.",
   );
   process.exit(1);
 }
@@ -106,6 +113,8 @@ const needsStaffSession = paths.some((p) => p.startsWith("/shop"));
 const browser = await launch();
 fs.mkdirSync(out, { recursive: true });
 const written = [];
+/** Files this run overwrote from an earlier one, reported rather than lost. */
+const replaced = new Set();
 
 /** How long a route gets to stream its body in before we call it stuck. */
 const SKELETON_TIMEOUT_MS = 20_000;
@@ -208,7 +217,17 @@ try {
         // becomes `shop-x-today` rather than a filename with `?` in it.
         const [pathOnly] = target.split(/[?#]/, 1);
         const slug = pathOnly.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "home";
-        const file = path.join(out, `${slug}-${colorScheme}-${width}.png`);
+        // The role is part of the name only when it is not the default, so the
+        // common look keeps today's short filenames and `--as captain` beside
+        // `--as divemaster` gives two files instead of one overwriting the
+        // other — comparing two roles being the only reason `--as` exists.
+        const rolePart = role === DEFAULT_ROLE ? "" : `-${role}`;
+        const file = path.join(out, `${slug}${rolePart}-${colorScheme}-${width}.png`);
+        // Checked before the screenshot writes it, and only for files this run
+        // has not already produced: a path listed twice in one command is the
+        // caller's own repetition, but a file left by an earlier run is a
+        // picture about to vanish, and the caller may still want it.
+        if (!written.includes(file) && fs.existsSync(file)) replaced.add(file);
         await page.screenshot({ path: file, fullPage: true });
         written.push(file);
       }
@@ -220,4 +239,6 @@ try {
   await browser.close();
 }
 
-console.log(written.map((file) => `wrote ${file}`).join("\n"));
+console.log(
+  written.map((file) => `${replaced.has(file) ? "replaced" : "wrote"} ${file}`).join("\n"),
+);
