@@ -256,6 +256,128 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
 };
 
 /**
+ * **What a blocker aboard a boat is asking of the crew.**
+ *
+ * `BLOCKER_CATEGORY` answers "which requirement family", which is the right
+ * question for a checklist and the wrong one at the rail. Once a diver is on
+ * the boat the gate is behind them, and the only question left is what happens
+ * before *this diver* gets in the water — and those answers do not line up
+ * with the families:
+ *
+ * - **`medical`** — a review hold. On the RSTC form a "yes" means a doctor must
+ *   confirm in writing that the diver is fit, and this app tells the diver
+ *   exactly that (`diver.medicalReferral`). It is not the captain's to waive,
+ *   not the instructor's, and a crew that waives it has voided the shop's
+ *   insurance for that dive. Nobody aboard can clear it.
+ * - **`unknown`** — nothing on file that clears them. An unsigned, unsent or
+ *   expired waiver means **no medical declaration at all**, not a filing
+ *   error; `identity_unconfirmed` means the human aboard may not be the human
+ *   whose cards and answers are on file (H-13); `readiness_unavailable` means
+ *   the lookup failed, and this module already says a safety surface must
+ *   never treat that as a pass; `requirements_not_configured` means nobody's
+ *   cards were checked against anything.
+ * - **`certification`** — a qualification this dive asks for that the record
+ *   does not show: a card missing, unverified, self-declared or too shallow, a
+ *   specialty absent, or a diver under the course's minimum age. Sometimes a
+ *   card in a dry bag; sometimes a diver who should be on a shallower profile.
+ * - **`payment`** — money owed. The only one of the four that genuinely does
+ *   not change what happens in the water today.
+ *
+ * The first three all mean *do not put this diver in the water yet*; only the
+ * fourth is office work, and the card said "the fix is in the list below" to
+ * every one of them (issue #791, from a `dive-domain-expert` pass over #742,
+ * and reshaped by a second pass over the first cut of this).
+ *
+ * **No role is named in the words these map to.** DiveDay informs and never
+ * gates, and naming an authority is the one thing that turns an informing line
+ * into an instruction — besides which the captain is responsible for the
+ * vessel, while whether a given diver splashes is the dive leader's call, and
+ * a pool session has neither.
+ *
+ * Precedence is worst-first, because a line has room for one reason: a diver
+ * held on medical review *and* missing a card is a medical hold. That ordering
+ * is right **within one diver** and wrong across a group — see
+ * `groupAboardBlockers`.
+ */
+export type AboardBlockerKind = "medical" | "unknown" | "certification" | "payment";
+
+const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
+  medical_review: "medical",
+
+  waiver_not_sent: "unknown",
+  waiver_pending: "unknown",
+  waiver_expired: "unknown",
+  identity_unconfirmed: "unknown",
+  readiness_unavailable: "unknown",
+  requirements_not_configured: "unknown",
+
+  certification_missing: "certification",
+  certification_pending: "certification",
+  certification_self_declared: "certification",
+  certification_insufficient: "certification",
+  specialty_missing: "certification",
+  specialty_pending: "certification",
+  specialty_import_unconfirmed: "certification",
+  nitrox_missing: "certification",
+  nitrox_pending: "certification",
+  nitrox_self_declared: "certification",
+  // An agency hard stop about the diver, the same shape as a card that does not
+  // reach the site's depth — not the shop-side "setup" it is filed under in
+  // `BLOCKER_CATEGORY`, which is scoped to keeping age off the *public*
+  // confirmation panel.
+  under_minimum_age: "certification",
+
+  payment_due: "payment",
+  payment_refunded: "payment",
+};
+
+/** Worst first, so a group can be ordered and a single diver reduced to one. */
+const ABOARD_KIND_ORDER: readonly AboardBlockerKind[] = [
+  "medical",
+  "unknown",
+  "certification",
+  "payment",
+];
+
+export function aboardBlockerKind(blockers: readonly ReadinessBlocker[]): AboardBlockerKind | null {
+  const kinds = new Set(blockers.map((blocker) => ABOARD_KIND[blocker.code]));
+  return ABOARD_KIND_ORDER.find((kind) => kinds.has(kind)) ?? null;
+}
+
+/**
+ * **One entry per kind present, worst first — never one reason over a whole
+ * count.**
+ *
+ * The first cut of this returned a single kind for the group, and the card
+ * rendered it against the group's total: one medical hold beside four
+ * certification gaps produced "5 divers are aboard — a medical hold", which is
+ * false about four of the five, in the direction that inflates. Run the other
+ * way — one medical hold beside four unsigned waivers — and the four vanish
+ * from the line entirely, so a crew clears the one diver they were told about
+ * and sails with four who have made no medical declaration.
+ *
+ * Worst-first is right *within* a diver and wrong *across* them, because the
+ * count is a census and the reason is not. Almost always this returns one
+ * entry; at worst four, and four true lines beat one false one on a boat.
+ */
+export function groupAboardBlockers<T>(
+  divers: readonly { blockers: readonly ReadinessBlocker[]; value: T }[],
+): { kind: AboardBlockerKind; members: T[] }[] {
+  const byKind = new Map<AboardBlockerKind, T[]>();
+  for (const diver of divers) {
+    const kind = aboardBlockerKind(diver.blockers);
+    if (kind === null) continue;
+    const members = byKind.get(kind);
+    if (members) members.push(diver.value);
+    else byKind.set(kind, [diver.value]);
+  }
+  return ABOARD_KIND_ORDER.flatMap((kind) => {
+    const members = byKind.get(kind);
+    return members ? [{ kind, members }] : [];
+  });
+}
+
+/**
  * The two states a booking can be in, and the only two. Named so every surface
  * that renders one can key off the same type — the words and tone come from
  * `src/i18n/readiness-labels.ts` (`readinessStatusText`/`readinessStatusTone`),

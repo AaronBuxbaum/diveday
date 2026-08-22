@@ -6,11 +6,15 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
+import type { ReadinessBlockerCode } from "./readiness";
 import {
+  aboardBlockerKind,
+  BLOCKER_CATEGORY,
   calculateReadiness,
   certificationRank,
   combineCertRequirements,
   combineSiteRequirements,
+  groupAboardBlockers,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
   REQUIRABLE_CERTIFICATION_LEVELS,
@@ -749,5 +753,132 @@ describe("combineSiteRequirements", () => {
       [...(backward?.requiredSpecialties ?? [])].sort(),
     );
     expect(forward?.requiresNitrox).toBe(backward?.requiresNitrox);
+  });
+});
+
+/**
+ * **What a blocker aboard a boat is asking of the crew.**
+ *
+ * `BLOCKER_CATEGORY` answers "which requirement family", which is right for a
+ * checklist and wrong at the rail: once a diver is on the boat the gate is
+ * behind them and the only question is what happens before *they* get in the
+ * water. The card said "the fix is in the list below" to all of it (#791).
+ */
+describe("aboardBlockerKind", () => {
+  it("calls a medical hold a medical hold, though its family is waiver", () => {
+    // The distinction the whole thing turns on: `BLOCKER_CATEGORY` files
+    // `medical_review` under `waiver` — correctly, that is where the answer was
+    // collected — but a waiver nobody signed and a flagged medical answer are
+    // opposite situations on a boat.
+    expect(BLOCKER_CATEGORY.medical_review).toBe("waiver");
+    expect(aboardBlockerKind([{ code: "medical_review" }])).toBe("medical");
+  });
+
+  /**
+   * **The four that are not paperwork.** The first cut had one bucket for
+   * everything that was neither medical nor certification, called it
+   * "paperwork that is still owed", and swept these in: an unsigned waiver is
+   * **no medical declaration at all**, `identity_unconfirmed` means the human
+   * aboard may not be the human whose cards are on file (H-13),
+   * `readiness_unavailable` is a failed lookup this module refuses to treat as
+   * a pass, and `requirements_not_configured` means nobody's cards were
+   * checked against anything (`dive-domain-expert`, on issue #791).
+   */
+  it.each([
+    "waiver_not_sent",
+    "waiver_pending",
+    "waiver_expired",
+    "identity_unconfirmed",
+    "readiness_unavailable",
+    "requirements_not_configured",
+  ] as const)("reads %s as unknown, not as office work", (code) => {
+    expect(aboardBlockerKind([{ code }])).toBe("unknown");
+  });
+
+  it.each([
+    ["certification_missing", "certification"],
+    ["certification_insufficient", "certification"],
+    ["nitrox_missing", "certification"],
+    ["specialty_pending", "certification"],
+    // An agency hard stop about the diver, not the shop-side "setup" it is
+    // filed under for a reason scoped to the public confirmation panel.
+    ["under_minimum_age", "certification"],
+    ["payment_due", "payment"],
+    ["payment_refunded", "payment"],
+  ] as const)("reads %s as %s", (code, kind) => {
+    expect(aboardBlockerKind([{ code }])).toBe(kind);
+  });
+
+  it("says the worst one, because a line has room for one", () => {
+    // A diver held on medical review *and* missing a card is a medical hold.
+    expect(aboardBlockerKind([{ code: "certification_missing" }, { code: "medical_review" }])).toBe(
+      "medical",
+    );
+    expect(aboardBlockerKind([{ code: "payment_due" }, { code: "certification_missing" }])).toBe(
+      "certification",
+    );
+    expect(aboardBlockerKind([{ code: "payment_due" }, { code: "waiver_pending" }])).toBe(
+      "unknown",
+    );
+  });
+
+  it("is null for a diver with nothing against them", () => {
+    expect(aboardBlockerKind([])).toBeNull();
+  });
+
+  it("classifies every blocker code, so none can fall through to payment", () => {
+    // The map is exhaustive by type, but a code added with the wrong kind would
+    // still compile. This pins that nothing lands in `payment` by accident —
+    // the bucket that means "does not change what happens in the water".
+    const paymentCodes = (Object.keys(BLOCKER_CATEGORY) as ReadinessBlockerCode[]).filter(
+      (code) => aboardBlockerKind([{ code }]) === "payment",
+    );
+    expect(paymentCodes.sort()).toEqual(["payment_due", "payment_refunded"]);
+  });
+});
+
+/**
+ * **One entry per kind, never one reason over a whole count.**
+ *
+ * The first cut returned a single kind for the group, and the card rendered it
+ * against the group's total — "5 divers are aboard — a medical hold" when one
+ * of the five was. Run the other way, four divers with no medical declaration
+ * vanish behind the one the crew was told about.
+ */
+describe("groupAboardBlockers", () => {
+  const diver = (name: string, ...codes: ReadinessBlockerCode[]) => ({
+    blockers: codes.map((code) => ({ code })),
+    value: name,
+  });
+
+  it("splits a mixed boat into one group per kind, worst first", () => {
+    expect(
+      groupAboardBlockers([
+        diver("Cert Gap", "certification_missing"),
+        diver("Owes Money", "payment_due"),
+        diver("Medical Hold", "medical_review"),
+        diver("No Waiver", "waiver_pending"),
+        diver("Cert Gap Two", "nitrox_missing"),
+      ]),
+    ).toEqual([
+      { kind: "medical", members: ["Medical Hold"] },
+      { kind: "unknown", members: ["No Waiver"] },
+      { kind: "certification", members: ["Cert Gap", "Cert Gap Two"] },
+      { kind: "payment", members: ["Owes Money"] },
+    ]);
+  });
+
+  it("keeps roster order inside a group, so a named line names the right diver", () => {
+    expect(
+      groupAboardBlockers([
+        diver("First", "certification_missing"),
+        diver("Second", "certification_pending"),
+      ])[0]?.members,
+    ).toEqual(["First", "Second"]);
+  });
+
+  it("drops a diver with nothing against them rather than inventing a group", () => {
+    expect(groupAboardBlockers([diver("Clear")])).toEqual([]);
+    expect(groupAboardBlockers([])).toEqual([]);
   });
 });

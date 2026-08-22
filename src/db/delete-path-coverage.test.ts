@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
 import * as schema from "./schema";
-import { shops } from "./schema";
+import { mediaDeletionAttempts, shops } from "./schema";
 import { createDemoShop, deleteDemoShopCascade, resetDemoSchedule } from "./seed";
 
 /**
@@ -120,7 +120,6 @@ const RESET_KEEPS: Record<string, string> = {
   dive_packages: "the shop's own price list of packages — settings, not schedule",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
   shop_backup_deliveries: "delivery history for those bundles, seeded alongside the destination",
-  media_deletion_attempts: "internal reconciliation ledger, not schedule data",
   // The one table here that needs no delete at all: both its foreign keys carry
   // `ON DELETE CASCADE`, so Postgres clears it when the booking goes. Naming it
   // in the ordering would be dead code that reads like a safety measure.
@@ -192,5 +191,49 @@ describe("shop-scoped delete-path coverage", () => {
     );
     expect(undecided).toEqual([]);
     expect(Object.keys(CASCADE_KEEPS).filter((name) => deleted.has(name))).toEqual([]);
+  });
+});
+
+/**
+ * **The reset has to restore what Today reads, not only the schedule.**
+ *
+ * `media_deletion_attempts` used to be a deliberate `RESET_KEEPS` entry —
+ * "internal reconciliation ledger, not schedule data", which is true and was
+ * not the whole story. `listPendingMediaDeletions` feeds Today an
+ * `urgency: "now"` row, so a stale attempt written by one test (which is what
+ * `/api/test/seed-trouble-states` exists to do) left a "Recap photo" cleanup
+ * card on Today for whichever spec Playwright's sharding ran next in that
+ * worker. It surfaced as three visual captures — `close-out`,
+ * `nav-more-menu`, `nav-more-sheet` — reporting as changed on a pull request
+ * that had touched none of them, with the leaked row visible in the diff.
+ *
+ * The seed writes none of these, so clearing them restores exactly the seeded
+ * state and loses nothing.
+ */
+describe("the reset and the trouble states", () => {
+  it("clears a stale media deletion, so it cannot leak into the next spec", async () => {
+    const db = await seededTestDb();
+    const [shop] = await db.select().from(shops).limit(1);
+    if (!shop) throw new Error("expected the seeded shop");
+    await db.insert(mediaDeletionAttempts).values({
+      shopId: shop.id,
+      kind: "recap_photo",
+      url: "https://example.invalid/recap/leaked.jpg",
+    });
+    expect(
+      await db
+        .select()
+        .from(mediaDeletionAttempts)
+        .where(eq(mediaDeletionAttempts.shopId, shop.id)),
+    ).toHaveLength(1);
+
+    await resetDemoSchedule(db, shop.id);
+
+    expect(
+      await db
+        .select()
+        .from(mediaDeletionAttempts)
+        .where(eq(mediaDeletionAttempts.shopId, shop.id)),
+    ).toHaveLength(0);
   });
 });
