@@ -21,6 +21,11 @@ if (process.env.VERCEL_ENV === "production") {
   // past CI, not that a session was surprised here.
   // ADR 20260806-destructive-migration-guard.
   run("node", ["scripts/check-migrations.mjs"], SUBPROCESS_TIMEOUTS.nodeScript);
+  // `drizzle-kit migrate` runs this same commutativity walk itself, and would
+  // refuse the tree two lines below on its own -- but it prints a diagram and
+  // no remedy, which is how a build once died here naming two migrations and
+  // no way forward. Running it first means the deploy log carries the fix.
+  run("node", ["scripts/check-migration-graph.mjs"], SUBPROCESS_TIMEOUTS.nodeScript);
   // Five minutes, and the tightest bound in this file on purpose: a migration
   // blocked on a lock held by the previous release is the one wedge here that
   // would otherwise spend the platform's whole build budget before saying so.

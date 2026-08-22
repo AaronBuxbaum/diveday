@@ -88,6 +88,15 @@ export const SUBPROCESS_TIMEOUTS = {
    * or the parent kills a child that is making honest progress.
    */
   wizardStep: 900_000,
+  /**
+   * One `drizzle-kit check` -- a read of the committed `drizzle/` folder with
+   * no database connection anywhere in it, and under a second in practice.
+   * The ceiling is a minute because the caller
+   * (`scripts/check-migration-graph.mjs`) runs inside `check:repo`, whose own
+   * per-check bound is 90s: a wedge here has to report itself as a named
+   * command rather than as the parent's anonymous timeout.
+   */
+  drizzleKitCheck: 60_000,
   /** `pnpm db:migrate` inside the production build, while the previous release still serves. */
   migrate: 300_000,
   /**

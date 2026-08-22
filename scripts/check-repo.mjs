@@ -58,6 +58,7 @@ const checks = [
   ["copy", "check-copy.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
   ["migrations", "check-migrations.mjs"],
+  ["migration-graph", "check-migration-graph.mjs"],
   ["open-graph", "check-open-graph.mjs"],
 ];
 
