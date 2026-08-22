@@ -1132,8 +1132,25 @@ export const boats = pgTable(
     name: text("name").notNull(),
     capacity: integer("capacity").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Deleting a hull stamps this and leaves the row (ADR
+     * 20260820-every-delete-is-soft). It has to: `trips.boat_id` is
+     * `onDelete: "set null"`, so a real delete did not fail loudly — it quietly
+     * erased which vessel sailed on **every past departure** that used the
+     * boat, which is the first fact an insurer or an incident review asks for.
+     *
+     * The word on screen is still "Delete"; a shop is never told about this
+     * column.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
-  (table) => [index("boats_shop_id_idx").on(table.shopId)],
+  (table) => [
+    index("boats_shop_id_idx").on(table.shopId),
+    // Over the live rows only — the fleet list, the board's picker and the
+    // capacity check all read this shape, and a deleted hull is not a boat the
+    // shop has.
+    index("boats_shop_live_idx").on(table.shopId).where(sql`${table.deletedAt} is null`),
+  ],
 );
 
 /** DiveDay-maintained common-site catalog; shops copy a published version into their own library. */

@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { listBoats } from "@/db/boats";
+import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
@@ -189,7 +189,15 @@ export default async function ScheduleBoardPage({
     after ? [] : openAfterDiveRollCalls(db, shop.id, now),
     listBoats(db, shop.id),
   ]);
-  const boatMap = new Map(shopBoats.map((b) => [b.id, b.name]));
+  // **Names come from every hull the shop has ever had, not just the live
+  // ones.** A departure that sailed on a boat the shop has since deleted must
+  // still say which vessel — that is the whole reason deleting one is a stamp
+  // rather than a delete (ADR 20260820-every-delete-is-soft). `shopBoats` above
+  // stays live: it is the picker and the fleet count, and a deleted hull is not
+  // a boat this shop has.
+  const boatMap = new Map(
+    (await listBoatsForHistory(db, shop.id)).map((boat) => [boat.id, boat.name]),
+  );
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
