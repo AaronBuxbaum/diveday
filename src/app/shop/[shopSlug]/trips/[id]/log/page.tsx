@@ -8,9 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { getDb } from "@/db/client";
 import { getIncidentExport } from "@/db/incident-export";
-import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -29,7 +27,7 @@ import type {
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import type { CertificationLevel } from "@/lib/readiness";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
@@ -87,15 +85,12 @@ export default async function IncidentExportPage({
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // Checked against the database, not the JWT, so a demoted owner loses this

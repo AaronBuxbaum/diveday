@@ -34,7 +34,7 @@ import type {
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
@@ -110,7 +110,6 @@ export default async function EditDiveSitePage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{ notice?: string; error?: string; undo?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -118,13 +117,10 @@ export default async function EditDiveSitePage({
   if (!uuidParam(id)) notFound();
   const { notice, error, undo } = await searchParams;
   const back = shopPath(shopSlug, "dive-sites");
-  const db = await getDb();
-  const [site, shop] = await Promise.all([
-    getDiveSite(db, session.user.shopId, id),
-    getShopById(db, session.user.shopId),
-  ]);
+  const { db, shop } = await requireShopSurface(shopSlug);
+  const site = await getDiveSite(db, shop.id, id);
   if (!site) notFound();
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // The species picker previews what a *diver* will read off this site's
   // briefing, so its words come from the diver bundle -- in the staffer's own
@@ -138,10 +134,10 @@ export default async function EditDiveSitePage({
   const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
   const errorKey = noticeFromParam(error, ERROR_KEYS);
   const [upcomingTrips, creatures] = await Promise.all([
-    listUpcomingTripsForSite(db, session.user.shopId, id),
-    listDiveSiteCreatures(db, session.user.shopId, id),
+    listUpcomingTripsForSite(db, shop.id, id),
+    listDiveSiteCreatures(db, shop.id, id),
   ]);
-  const templateUpdate = await getDiveSiteTemplateUpdate(db, session.user.shopId, id);
+  const templateUpdate = await getDiveSiteTemplateUpdate(db, shop.id, id);
 
   async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";

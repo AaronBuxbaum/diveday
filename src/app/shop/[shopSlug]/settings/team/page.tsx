@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -13,14 +12,12 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
-import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
-import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
+import { requireShopSurface } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import {
   inviteStaffAction,
   removeStaffAction,
@@ -337,26 +334,20 @@ export default async function TeamSettingsPage({
     contactFor?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName, contactFor } =
     await searchParams;
-  const db = await getDb();
-
-  const canManage = await canPersonManageStaffAccounts(
-    db,
-    session.user.shopId,
-    session.user.personId,
-  );
   // Settings, not Today: Team is a Settings sub-page, and the nearest parent
   // surface is where a refusal explains itself best (the same landing the
   // promos and WhatsApp gates already use). A code the destination handles,
   // never a silent teleport (task 82).
-  if (!canManage) redirect(noticeUrl(shopPath(shopSlug), "team-not-authorized"));
+  const { db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageStaffAccounts,
+    refusal: { notice: "team-not-authorized" },
+  });
 
-  const staff = await listShopStaff(db, session.user.shopId);
-  const shop = await getShopById(db, session.user.shopId);
-  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  const staff = await listShopStaff(db, shop.id);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const banner = noticeFromParam(notice, noticeMessages(t));
   // An invitation's outcome belongs on the invitation form — and the three
   // refusals that are really about one address belong on that address box.

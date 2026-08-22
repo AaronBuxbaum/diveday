@@ -14,10 +14,8 @@ import { sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
-import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
-import { getShopById } from "@/db/shops";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -32,7 +30,7 @@ import {
 } from "@/lib/manifests";
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
@@ -78,20 +76,17 @@ export default async function TripManifestPage({
     buddies?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
   const { checkpoint: requestedCheckpoint, buddyError, buddies } = await searchParams;
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  const { db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  if (!shop) notFound();
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
   const [completeManifests, buddyTeamsList, bookingNotes, diverNotes] = await Promise.all([

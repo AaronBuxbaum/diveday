@@ -26,7 +26,7 @@ import {
   listTripInvitations,
   recordTripInvitation,
 } from "@/db/trip-invitations";
-import { sendLastMinuteDealBlast } from "@/db/trip-promos";
+import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -38,12 +38,17 @@ import {
   setSeriesRepeat,
   setTripStatus,
   type TripCrewChange,
+  type UpdateTripOutcome,
   updateSeriesCadence,
   updateTrip,
   updateTripConditions,
 } from "@/db/trips";
-import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
-import { recordInPersonWaiver, saveBookingEmergencyContact } from "@/db/waivers";
+import { inviteWaitlistDiver, joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
+import {
+  type InPersonWaiverOutcome,
+  recordInPersonWaiver,
+  saveBookingEmergencyContact,
+} from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -52,7 +57,6 @@ import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
-import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
@@ -72,10 +76,10 @@ import {
   temperatureToCelsius,
   temperatureUnitFor,
 } from "@/lib/temperature-units";
-import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
+import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
+import { tripDetailsPatch } from "@/lib/trip-details";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
-import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const detailsSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -230,6 +234,71 @@ async function requireTripConfig(shopSlug: string, tripId: string) {
   return session;
 }
 
+/**
+ * A trip-save refusal's `?notice=` code. `invalid` and `not_found` both land on
+ * the generic form error — the staffer's next move is the same either way — but
+ * they are spelled out rather than reached by falling off the end of a ladder.
+ */
+const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reason"], string> = {
+  invalid: "invalid",
+  not_found: "invalid",
+  capacity_below_booked: "capacity-below-booked",
+  planned_dives_below_history: "planned-dives-below-history",
+};
+
+/**
+ * A last-minute blast refusal's `?notice=` code.
+ *
+ * This used to be `` `last-minute-${outcome.reason}` ``. Every code it produced
+ * exists in `TripNoticeBanner`'s map today — but `scripts/check-notice-codes.mjs`
+ * cannot read an interpolated string, so nothing proved it, and a seventh reason
+ * would have redirected to a code with no banner behind it: indistinguishable
+ * from a dead link, and green in every test.
+ */
+const LAST_MINUTE_NOTICE: Record<
+  Extract<SendLastMinuteDealOutcome, { ok: false }>["reason"],
+  string
+> = {
+  invalid_discount: "last-minute-invalid-discount",
+  trip_unavailable: "last-minute-trip-unavailable",
+  trip_full: "last-minute-trip-full",
+  not_connected: "last-minute-not-connected",
+  no_recipients: "last-minute-no-recipients",
+  stripe_failed: "last-minute-stripe-failed",
+};
+
+/**
+ * A wait-list refusal's `?notice=` code. `already_waitlisted` never reaches this
+ * table — a repeat joiner is answered as success above, deliberately — but it is
+ * spelled out because the union contains it, and a table that quietly omitted an
+ * arm would be the ladder this replaced.
+ */
+const WAITLIST_NOTICE: Record<Extract<WaitlistOutcome, { ok: false }>["reason"], string> = {
+  trip_available: "diver-waitlist-available",
+  already_booked: "diver-already",
+  already_waitlisted: "diver-waitlisted",
+  trip_unavailable: "diver-unavailable",
+};
+
+/**
+ * An in-person waiver refusal's `?notice=` code. Six of the seven share one
+ * message — the staffer's next move is the same for every "that row is not what
+ * you think it is" — but the seventh is the medical attestation, which is a
+ * different act, and the ternary this replaces made the other six invisible.
+ */
+const IN_PERSON_WAIVER_NOTICE: Record<
+  Extract<InPersonWaiverOutcome, { ok: false }>["reason"],
+  string
+> = {
+  medical_attestation_required: "waiver-medical-attestation",
+  booking_not_found: "waiver-error",
+  booking_unavailable: "waiver-error",
+  person_not_found: "waiver-error",
+  template_not_found: "waiver-error",
+  staff_not_found: "waiver-error",
+  invalid_signature: "waiver-error",
+};
+
 export async function saveDetails(shopSlug: string, tripId: string, formData: FormData) {
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
@@ -250,68 +319,65 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     minimumBookings,
     minimumDecisionHours,
   } = parsed.data;
-  const sw = parseWallTime(date, startTime);
-  const ew = parseWallTime(date, endTime);
-  if (!sw || !ew) redirect(noticeUrl(back, "invalid", { form: "details" }));
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
   if (!shopNow) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  const startsAt = wallTimeToUtc(sw, shopNow.timezone);
-  const endsAt = wallTimeToUtc(ew, shopNow.timezone);
-  if (endsAt <= startsAt) redirect(noticeUrl(back, "end-before-start"));
-  // Day one's window, repeated across however many days the departure runs.
-  // Each day is converted on its own date so a trip that straddles a DST
-  // change keeps the wall-clock time the shop actually promised.
-  const meetingDays = tripMeetingDays({ start: sw, end: ew }, dayCount);
-  if (!meetingDays) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  const scheduleDays = meetingDays.map((day, index) => ({
-    dayNumber: index + 1,
-    startsAt: wallTimeToUtc(day.start, shopNow.timezone),
-    endsAt: wallTimeToUtc(day.end, shopNow.timezone),
-  }));
-  const lastDay = scheduleDays.at(-1);
-  if (!lastDay) redirect(noticeUrl(back, "invalid", { form: "details" }));
-  // What the numbers in the price boxes mean — the shop's own currency.
-  const tripCurrency = toShopCurrency(shopNow.currency);
-  const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency);
-  const depositCents =
-    depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency);
-  // The ceiling every other price validator applies (course fees, rental
-  // pricing, order line items). These two were the odd ones out with no
-  // `.max()` at all, so a forged submit could store a ten-million-dollar trip
-  // or overflow the integer column outright (security-reviewer finding).
-  // Checked on the converted minor units, not the typed number, because the
-  // schemas are module-level and parse before the shop's currency is known.
-  if (
-    (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) ||
-    (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
-  ) {
+  // One pipeline, shared with the board's add panel (`src/lib/trip-details.ts`).
+  // Editing a departure now applies the same rules creating one does — an
+  // impossible calendar day is refused, and a free-cancellation window with no
+  // minimum beside it is not stored as a policy. Both were the board's rules
+  // only until that module existed.
+  const details = tripDetailsPatch(
+    {
+      date,
+      startTime,
+      endTime,
+      dayCount,
+      priceDollars,
+      depositDollars,
+      cancellationWindowHours,
+      minimumBookings,
+      minimumDecisionHours,
+    },
+    shopNow,
+  );
+  if (!details.ok) {
+    if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
     redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
+  const dives = tripDiveDraftsFromForm(formData, plannedDives);
+
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
-    startsAt,
+    startsAt: details.patch.startsAt,
     // The whole departure, first day's departure to last day's return.
-    endsAt: lastDay.endsAt,
-    scheduleDays,
+    endsAt: details.patch.endsAt,
+    scheduleDays: details.patch.scheduleDays,
     capacity,
     plannedDives,
-    priceCents: priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency),
-    depositCents: depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency),
-    cancellationWindowHours: cancellationWindowHours ?? null,
-    minimumBookings: minimumBookings ?? null,
-    minimumDecisionHours: minimumDecisionHours ?? null,
-    diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
-    dives: tripDiveDraftsFromForm(formData, plannedDives),
+    priceCents: details.patch.priceCents,
+    depositCents: details.patch.depositCents,
+    cancellationWindowHours: details.patch.cancellationWindowHours,
+    minimumBookings: details.patch.minimumBookings,
+    minimumDecisionHours: details.patch.minimumDecisionHours,
+    diveSiteId: dives[0]?.diveSiteId ?? null,
+    dives,
   });
   if (!outcome.ok) {
+    // Two of the three refusals carry a number into the banner ("4 divers are
+    // already booked"), which is why this is a ladder over a plain table lookup
+    // — but the code itself comes from one.
     if (outcome.reason === "capacity_below_booked") {
-      redirect(noticeUrl(back, "capacity-below-booked", { count: outcome.detail.bookedCount }));
+      redirect(
+        noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
+          count: outcome.detail.bookedCount,
+        }),
+      );
     }
     if (outcome.reason === "planned_dives_below_history") {
       redirect(
-        noticeUrl(back, "planned-dives-below-history", {
+        noticeUrl(back, UPDATE_TRIP_NOTICE[outcome.reason], {
           count: outcome.detail.recordedDiveCount,
         }),
       );
@@ -664,13 +730,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
     await trackEvent({ name: "waitlist_joined", source: "staff" });
     revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
   }
-  const code =
-    outcome.reason === "trip_available"
-      ? "diver-waitlist-available"
-      : outcome.reason === "already_booked"
-        ? "diver-already"
-        : "diver-unavailable";
-  redirect(noticeUrl(back, code));
+  redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
 }
 
 /**
@@ -840,10 +900,8 @@ export async function sendLastMinuteDealAction(
     redirect(noticeUrl(`${back}${anchor}`, "last-minute-sent", { count: outcome.recipientCount }));
   }
   // The anchor goes into the path `noticeUrl` is handed, which puts the query
-  // ahead of the `#last-minute-deal` fragment where it belongs. The reason keeps
-  // the domain layer's own `snake_case` spelling: `noticeCode` inside `noticeUrl`
-  // kebabs it, so the hand-rolled `replaceAll` this used to end with is gone.
-  redirect(noticeUrl(`${back}${anchor}`, `last-minute-${outcome.reason}`));
+  // ahead of the `#last-minute-deal` fragment where it belongs.
+  redirect(noticeUrl(`${back}${anchor}`, LAST_MINUTE_NOTICE[outcome.reason]));
 }
 
 /**
@@ -862,25 +920,34 @@ async function bookingRefundMayBeOwed(
   return payment?.status === "paid" || payment?.status === "deposit_paid";
 }
 
+/**
+ * What a removed booking's refund outcome is called in the URL.
+ *
+ * A table rather than the `switch` with a `default:` this replaces: the default
+ * arm answered for `no_policy` and `unpaid` by name in a comment, and would have
+ * silently answered for any status added later too. Keyed by the union, so a
+ * seventh outcome is a compile error here instead of an unexplained "spot is
+ * open" banner on a refund a shop is owed.
+ */
+const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
+  refunded: "booking-removed-refunded",
+  forfeit: "booking-removed-forfeit",
+  failed: "booking-removed-refund-failed",
+  manual: "booking-removed-refund-manual",
+  // Nothing owed either way — today's plain "spot is open" notice.
+  no_policy: "booking-removed",
+  unpaid: "booking-removed",
+};
+
 function refundNotice(refund: CancellationRefundOutcome): string {
-  switch (refund.status) {
-    case "refunded":
-      return "booking-removed-refunded";
-    case "forfeit":
-      return "booking-removed-forfeit";
-    case "failed":
-      return "booking-removed-refund-failed";
-    case "manual":
-      // `not_refundable` is a data mismatch (local row says paid, Stripe
-      // captured nothing) — a "review", not the "refund owed by hand" claim the
-      // counter/disconnected cases make.
-      return refund.reason === "not_refundable"
-        ? "booking-removed-refund-review"
-        : "booking-removed-refund-manual";
-    default:
-      // no_policy or unpaid: nothing owed, today's plain "spot is open" notice.
-      return "booking-removed";
+  // `not_refundable` is a data mismatch (local row says paid, Stripe captured
+  // nothing) — a "review", not the "refund owed by hand" claim the
+  // counter/disconnected cases make. The only refusal whose code depends on
+  // more than the status.
+  if (refund.status === "manual" && refund.reason === "not_refundable") {
+    return "booking-removed-refund-review";
   }
+  return REFUND_NOTICE[refund.status];
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
@@ -1026,11 +1093,12 @@ export async function markWaiverInPersonAction(
     medicalAttested: formData.get("medicalAttested") === "on",
   });
   if (!outcome.ok) {
-    const notice =
-      outcome.reason === "medical_attestation_required"
-        ? "waiver-medical-attestation"
-        : "waiver-error";
-    revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, IN_PERSON_WAIVER_NOTICE[outcome.reason], {
+        bid: bookingId,
+      }),
+    );
   }
   revalidatePath(back);
 }

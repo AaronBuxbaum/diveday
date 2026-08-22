@@ -17,9 +17,7 @@ import {
   FormStatus,
   PriceField,
 } from "@/components/ui/form";
-import { getDb } from "@/db/client";
 import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
-import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -27,7 +25,7 @@ import type { CourseTemplateField } from "@/lib/course-template-sync";
 import { formatFaqs } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
@@ -52,15 +50,11 @@ export default async function EditCoursePage({
   params: Promise<{ shopSlug: string; slug: string }>;
   searchParams: Promise<{ notice?: string; error?: string; field?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, slug } = await params;
   const { notice, error, field } = await searchParams;
-  const db = await getDb();
-  const [course, shop] = await Promise.all([
-    getCourseBySlug(db, session.user.shopId, slug),
-    getShopById(db, session.user.shopId),
-  ]);
-  if (!course || !shop) notFound();
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const course = await getCourseBySlug(db, shop.id, slug);
+  if (!course) notFound();
   const back = `/shop/${shopSlug}/courses`;
   const locale = await requestLocale(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);

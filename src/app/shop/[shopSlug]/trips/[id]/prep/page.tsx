@@ -11,29 +11,21 @@ import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass } from "@/components/ui/form";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
-import { getDb } from "@/db/client";
-import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "@/db/gear";
-import { listTripPrepDivers } from "@/db/rental-fit";
-import { getShopById } from "@/db/shops";
-import { getTripCrewIds, getTripWithBooked, listStaff } from "@/db/trips";
+import { getTripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
 import {
-  buildDivePrepChecklist,
   isPrepGrouping,
   type PrepGrouping,
   type PrepPiece,
-  rentalFitLine,
   UNSIZED_ITEM_KINDS,
 } from "@/lib/dive-prep";
-import { rankUnitsForSize, tripReservationWindow } from "@/lib/gear";
+import { rankUnitsForSize } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
@@ -97,7 +89,6 @@ export default async function TripPrepPage({
     group?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
   const { notice, group } = await searchParams;
   const grouping: PrepGrouping = isPrepGrouping(group) ? group : "item";
@@ -105,43 +96,15 @@ export default async function TripPrepPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  const { db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  if (!shop) notFound();
-  const trip = await getTripWithBooked(db, shop.id, tripId);
-  if (!trip) notFound();
+  const prep = await getTripPrep(db, shop, tripId);
+  if (!prep) notFound();
+  const { trip, checklist, gearFleetTotal, freeByKind, assignmentRows } = prep;
 
-  const gearWindow = tripReservationWindow(trip, shop.timezone);
-  const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
-  const [divers, staff, crewIds, fleetByKind, assignmentsByBooking, freeUnits] = await Promise.all([
-    listTripPrepDivers(db, shop.id, tripId),
-    listStaff(db, shop.id),
-    getTripCrewIds(db, shop.id, tripId),
-    countGearItemsByKind(db, shop.id),
-    listTripGearAssignments(db, shop.id, tripId),
-    listAvailableGearUnits(db, shop.id, { ...gearWindow, todayLocal }),
-  ]);
-  // Only the crew who actually dive the trip need their own tank — a captain
-  // or deckhand assigned for the boat stays dry and is not part of the plan.
-  const divingCrew = staff
-    .filter(
-      (entry) =>
-        crewIds.includes(entry.person.id) &&
-        (entry.roles.includes("instructor") || entry.roles.includes("divemaster")),
-    )
-    .map((entry) => entry.person.fullName);
-  const checklist = buildDivePrepChecklist({
-    divers,
-    plannedDives: trip.plannedDives,
-    divingCrew,
-    // The shop's own catalog, so "this diver is missing a size" is only ever
-    // said about gear this shop still hands over (src/lib/rentals.ts).
-    offeredKinds: shop.rentalItems,
-  });
   /**
    * The size a staffer pulls, or the honest reason there isn't one — null when
    * the piece has no size to carry at all. Shared by the phone cards, both
@@ -178,35 +141,6 @@ export default async function TripPrepPage({
     checklist.tanks.nitrox > 0 ||
     checklist.nitroxBlockers.length > 0;
 
-  // The gear register's half of the page (ADR 20260815-minimal-gear-register).
-  // Opt-in by presence: a shop with no units on the register sees none of it.
-  const gearFleetTotal = [...fleetByKind.values()].reduce((sum, value) => sum + value, 0);
-  const freeByKind = new Map<string, typeof freeUnits>();
-  for (const unit of freeUnits) {
-    const bucket = freeByKind.get(unit.kind) ?? [];
-    bucket.push(unit);
-    freeByKind.set(unit.kind, bucket);
-  }
-  const assignmentRows = divers
-    .map((diver) => {
-      const line = rentalFitLine(diver.fit);
-      const assigned = assignmentsByBooking.get(diver.bookingId) ?? [];
-      // Weights stay off: lead is bulk stock, never a tagged unit to be short
-      // of (glossary, "Needs staff fit"). Kinds the fleet doesn't track at
-      // all stay off too — no point offering a wetsuit picker to a shop that
-      // only tags its regulators.
-      const wanted =
-        line.state === "rents"
-          ? line.items.filter(
-              (item) =>
-                item.kind !== "weights" &&
-                (fleetByKind.get(item.kind) ?? 0) > 0 &&
-                !assigned.some((assignment) => assignment.kind === item.kind),
-            )
-          : [];
-      return { diver, assigned, wanted };
-    })
-    .filter((row) => row.assigned.length > 0 || row.wanted.length > 0);
   const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
   // Both groupings are this page at a different `?group=`, so the switch's
   // links carry no other state — a `?notice=` is spent by the time anyone taps

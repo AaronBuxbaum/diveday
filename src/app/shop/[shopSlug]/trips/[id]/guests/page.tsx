@@ -10,31 +10,12 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { getDb } from "@/db/client";
-import { findSimilarDivers, listBookableDivers } from "@/db/divers";
-import { listLastMinuteList } from "@/db/last-minute-list";
-import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "@/db/operations";
-import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "@/db/readiness";
-import { listTripPrepDivers } from "@/db/rental-fit";
-import { listCertificationSummaries } from "@/db/self-declared-cards";
-import { getShopById } from "@/db/shops";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { listTripInvitations } from "@/db/trip-invitations";
-import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "@/db/trip-promos";
-import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
+import { getTripGuests } from "@/db/trips-guests";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { demandRecommendation } from "@/lib/demand";
 import { cancellationDeadline } from "@/lib/deposits";
-import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatShortDate } from "@/lib/format";
-import {
-  filterEligibleLastMinuteRecipients,
-  lastMinuteEntryMatchesTripDate,
-  orderLastMinuteRecipients,
-} from "@/lib/last-minute-list";
-import { combineCertRequirements } from "@/lib/readiness";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
@@ -142,7 +123,6 @@ async function TripGuestsBody({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: TripGuestsSearchParams;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
@@ -163,124 +143,47 @@ async function TripGuestsBody({
     confirmPhone,
   } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  const { db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  if (!shop) notFound();
-  const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
-  const trip = await getTripWithBooked(db, shop.id, tripId);
-  if (!trip) notFound();
-  // The returning-diver picker only books, so it is skipped once the boat is
-  // full — hand-entry then wait-lists instead.
-  const diverQuery = diverq?.trim() ?? "";
-  const diverCandidates =
-    isFull(trip) || diverQuery === ""
-      ? []
-      : await listBookableDivers(db, shop.id, tripId, { query: diverQuery });
-  const [
+  const guests = await getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName });
+  if (!guests) notFound();
+  const {
+    trip,
+    cancelled,
     roster,
     requirement,
-    siteRequirement,
-    readinessRows,
-    prepDivers,
     waitlist,
     invitations,
-    lastMinuteList,
-    lastMinutePromos,
-    lastMinutePromoRecipients,
-    bookingNotes,
-    diverNotes,
     activity,
-    stripeAccount,
-  ] = await Promise.all([
-    getTripRoster(db, shop.id, tripId),
-    getTripRequirements(db, shop.id, tripId),
-    getTripSiteRequirement(db, shop.id, tripId),
-    listTripReadiness(db, shop.id, tripId),
-    listTripPrepDivers(db, shop.id, tripId),
-    getTripWaitlist(db, shop.id, tripId),
-    listTripInvitations(db, shop.id, tripId),
-    listLastMinuteList(db, shop.id),
-    listTripLastMinutePromos(db, shop.id, tripId),
-    listTripLastMinutePromoRecipients(db, shop.id, tripId),
-    listBookingNotes(db, shop.id, tripId),
-    listDiverNotesForTrip(db, shop.id, tripId),
-    listTripActivity(db, shop.id, tripId),
-    getShopStripeAccount(db, shop.id),
-  ]);
-  // `orders/new` refuses without a payable account, so each seat's "Create
-  // order" link points at connecting one instead of at a door that bounces.
-  const paymentsConnected = canAcceptPayments(stripeAccount);
-  const demand = demandRecommendation({
-    capacity: trip.capacity,
-    booked: trip.booked,
-    waitlisted: waitlist.length,
-  });
-  const notesByBooking = new Map<
-    string,
-    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
-  >();
-  for (const row of bookingNotes) {
-    if (!row.note.bookingId) continue;
-    const rows = notesByBooking.get(row.note.bookingId) ?? [];
-    rows.push({ ...row, deletable: true });
-    notesByBooking.set(row.note.bookingId, rows);
-  }
-  // Keep the three staff-note entry points one system: a diver-record note is
-  // visible on Guests for the same booking, just as it is on Manifest. It is
-  // edited on the diver record, the canonical scope, so this roster does not
-  // offer a delete action that would silently do nothing.
-  for (const row of diverNotes) {
-    const rows = notesByBooking.get(row.bookingId) ?? [];
-    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
-    notesByBooking.set(row.bookingId, rows);
-  }
-  for (const rows of notesByBooking.values()) {
-    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
-  }
-  const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
-    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
-  );
-  const waitlistPersonIds = waitlist.map(({ person }) => person.id);
-  const preCertSummaries = await listCertificationSummaries(db, shop.id, [
-    ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
-  ]);
-
-  const dealRequirement = combineCertRequirements(
-    requirement ?? {
-      minimumCertificationLevel: null,
-      requiredSpecialties: [],
-      requiresNitrox: false,
-    },
-    siteRequirement,
-  );
-
-  const courseTarget = trip.course
-    ? {
-        slug: trip.course.slug,
-        title: trip.course.title,
-        sourceTemplateSlug: trip.course.sourceTemplateSlug,
-        minimumCertificationLevel: trip.course.minimumCertificationLevel,
-        isIntroCourse: trip.course.isIntroCourse,
-      }
-    : null;
-
-  const rawMatchesWithCert = lastMinuteMatched.map((m) => ({
-    ...m,
-    certification: preCertSummaries.get(m.person.id) ?? null,
-  }));
-
-  const eligibleMatches = filterEligibleLastMinuteRecipients(
-    rawMatchesWithCert,
+    confirmMatches,
+    diverCandidates,
+    notesByBooking,
+    paymentsConnected,
+    demand,
+    lastMinute,
+    certificationSummaries,
+    byBooking,
+    diverQuery,
+    tripDateIso,
     dealRequirement,
     courseTarget,
-  );
-  const lastMinuteRecipients = orderLastMinuteRecipients(eligibleMatches, waitlistPersonIds);
-  const certificationSummaries = preCertSummaries;
+  } = guests;
+  const {
+    showPromote,
+    promos: lastMinutePromos,
+    promoRecipients: lastMinutePromoRecipients,
+    recipients: lastMinuteRecipients,
+  } = lastMinute;
+  const {
+    rentalFit: rentalFitByBooking,
+    nitrox: nitroxByBooking,
+    readiness: readinessByBooking,
+    waiver: waiverByBooking,
+  } = byBooking;
+
   // Undo is safe for every money-neutral removal but must never appear after a
   // real refund: restoreBooking can't un-refund, so it would re-seat a diver
   // whose money is already gone (dive-domain review).
@@ -298,7 +201,6 @@ async function TripGuestsBody({
     notice === "contact-saved" || notice === "contact-incomplete" || notice === "payment"
       ? bid
       : undefined;
-  const cancelled = trip.status === "cancelled";
   // One resolution, routed to the form it answers. The roster's per-diver
   // outcomes stay on the page banner — they carry the undo control, and the
   // row they belong to is already named by `?bid=`.
@@ -318,7 +220,6 @@ async function TripGuestsBody({
   // range covers this trip (even if they don't meet current requirements) OR if
   // there are promos (history of blasts sent). This allows the empty state
   // "Nobody to send this to yet" to render when requirements are raised.
-  const showPromote = lastMinuteMatched.length > 0 || lastMinutePromos.length > 0;
   // The deal panel, when shown, is inside a <details> whose `#last-minute-deal`
   // landing auto-opens; the add-diver section is not rendered on a cancelled
   // departure, so its notices fall back to the banner — as do the deal's own on
@@ -328,23 +229,6 @@ async function TripGuestsBody({
     ...(showPromote ? ["last-minute-deal"] : []),
   ]);
   const pageNotice = tripNotice && guestSections.has(tripNotice.form) ? undefined : tripNotice;
-  const rentalFitByBooking = new Map(prepDivers.map((row) => [row.bookingId, row.fit] as const));
-  const nitroxByBooking = new Map(
-    prepDivers
-      .filter((row) => row.wantsNitrox)
-      .map(
-        (row) => [row.bookingId, { requested: true, approved: nitroxTanksApproved(row) }] as const,
-      ),
-  );
-  // The roster is the spine of the diver section; waiver and readiness detail
-  // hang off it by booking id so each diver renders as one consolidated card.
-  const readinessByBooking = new Map(readinessRows.map((row) => [row.booking.id, row] as const));
-  const waiverByBooking = new Map(
-    readinessRows.map(
-      (row) =>
-        [row.booking.id, { booking: row.booking, person: row.person, waiver: row.waiver }] as const,
-    ),
-  );
 
   return (
     <div data-trip-guests-ready className="contents">

@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { FormStatus } from "@/components/ui/form";
-import { getDb } from "@/db/client";
 import {
   countReviewsAwaitingModeration,
   getShopReviewAggregate,
@@ -21,14 +20,13 @@ import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
 } from "@/db/reviews";
-import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
@@ -104,14 +102,12 @@ export default async function ReviewsPage({
     published?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice, undo, page, filter, published } = await searchParams;
   const onlyWaiting = filter === "waiting";
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  const locale = await requestLocale(shop?.defaultLocale);
-  const timezone = shop?.timezone ?? "UTC";
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const locale = await requestLocale(shop.defaultLocale);
+  const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means
   // the same thing here as it does on the reports page (src/lib/zoned.ts).
   const nowWall = utcToWallTime(nowDate(), timezone);

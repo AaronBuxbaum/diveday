@@ -8,16 +8,14 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
-import { getDb } from "@/db/client";
 import { getBookingContext, listOrderableCustomers } from "@/db/orders";
-import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { createOrderAction } from "./actions";
@@ -62,7 +60,6 @@ export default async function NewOrderPage({
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{ notice?: string; personId?: string; bookingId?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
   const { notice, personId, bookingId } = await searchParams;
   // Both ids arrive from a link another page built (a diver record, a roster
@@ -76,17 +73,16 @@ export default async function NewOrderPage({
   // gets the blank order form they can still use.
   const prefillPersonId = uuidParam(personId);
   const prefillBookingId = uuidParam(bookingId);
-  const db = await getDb();
-
   // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization),
   // like the refund on the order it becomes and the discount codes that set what
   // a trip costs. The whole page is that one concern, so for anyone else it isn't
   // a surface — but the landing is the Orders index with the reason rather than
   // Today, because a captain can still *read* orders: the door is closed, not the
   // room. `createOrderAction` re-checks; this only saves a wasted round trip.
-  if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
-    redirect(noticeUrl(shopPath(shopSlug, "orders"), "not-authorized"));
-  }
+  const { session, db, shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonManageOrders,
+    refusal: { notice: "not-authorized", landing: ["orders"] },
+  });
 
   // The gate, not a courtesy: the entry links hide themselves when the shop
   // can't accept payments, but this page refuses regardless of how it was
@@ -117,10 +113,9 @@ export default async function NewOrderPage({
   const locale = await requestLocale();
   const t = staffTranslator(locale);
   const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
-  const [customers, bookingContext, shop] = await Promise.all([
-    listOrderableCustomers(db, session.user.shopId),
-    prefillBookingId ? getBookingContext(db, session.user.shopId, prefillBookingId) : null,
-    getShopById(db, session.user.shopId),
+  const [customers, bookingContext] = await Promise.all([
+    listOrderableCustomers(db, shop.id),
+    prefillBookingId ? getBookingContext(db, shop.id, prefillBookingId) : null,
   ]);
 
   // Auto-fill from the linked booking so staff only review and send. A course
@@ -133,7 +128,7 @@ export default async function NewOrderPage({
   // is a shop-authored proper noun, and the words around it come from the staff
   // bundle here. Whatever this composes is what staff can edit and what
   // `createOrder` then freezes onto the invoice.
-  const currency = toShopCurrency(shop?.currency);
+  const currency = toShopCurrency(shop.currency);
   // A zero-decimal currency has no ¥1.50 to type — `step="0.01"` invited one,
   // and `majorToMinor` would have rounded it to 2.
   const unitAmountDigits = currencyFractionDigits(currency);

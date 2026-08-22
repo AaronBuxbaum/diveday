@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
-import { getDb } from "@/db/client";
 import { listDateRequestsByIds } from "@/db/course-inquiries";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { canPersonViewShopReports } from "@/db/reporting";
-import { getShopById } from "@/db/shops";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
   pagedUpcomingTripsWithCounts,
@@ -41,7 +38,7 @@ import {
   popCursor,
   pushCursor,
 } from "@/lib/schedule-pagination";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { uuidParam } from "@/lib/uuid";
@@ -154,12 +151,7 @@ export default async function ScheduleBoardPage({
         .filter((value): value is string => Boolean(value)),
     ),
   ];
-  const session = await requireStaffSession();
-  const db = await getDb();
-  // Scoped by the session's own shop, never the URL slug — a staff member
-  // can't read another shop's board by editing the address bar.
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { session, db, shop } = await requireShopSurface(shopSlug);
 
   const tz = shop.timezone;
   // Some of this staff page's copy (the header eyebrow/title/description,

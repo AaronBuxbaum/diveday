@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
-import { getDb } from "@/db/client";
 import { canPersonImportShopData } from "@/db/import";
-import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -13,8 +10,7 @@ import {
   type ImportIssueCode,
   type ImportScopeRowId,
 } from "@/lib/import";
-import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { requireShopSurface } from "@/lib/session";
 import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
@@ -301,18 +297,14 @@ export default async function ImportContactsPage({
 }: {
   params: Promise<{ shopSlug: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const db = await getDb();
-
-  if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
-    // Settings, not Today — Import is a Settings sub-page, and its parent is
-    // where the refusal is legible. Same pattern as promos/WhatsApp/team.
-    redirect(noticeUrl(shopPath(shopSlug), "import-not-authorized"));
-  }
-
-  const shop = await getShopById(db, session.user.shopId);
-  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  // Settings, not Today — Import is a Settings sub-page, and its parent is
+  // where the refusal is legible. Same pattern as promos/WhatsApp/team.
+  const { shop } = await requireShopSurface(shopSlug, {
+    allow: canPersonImportShopData,
+    refusal: { notice: "import-not-authorized" },
+  });
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const chips = scopeChip(t);
 
   return (

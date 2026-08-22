@@ -28,9 +28,8 @@ vi.mock("@/db/courses", () => ({
   getCourseBySlug: vi.fn(),
   getCourseTemplateUpdate: vi.fn(),
 }));
-vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/storage/limits", () => ({
   MAX_IMAGE_MB: 5,
   MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION: 8,
@@ -45,8 +44,7 @@ vi.mock("@/i18n/staff-messages", () => ({
 }));
 
 const { getCourseBySlug, getCourseTemplateUpdate } = await import("@/db/courses");
-const { getShopById } = await import("@/db/shops");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireShopSurface } = await import("@/lib/session");
 const { default: EditCoursePage } = await import("./page");
 
 const COURSE = {
@@ -85,15 +83,15 @@ afterEach(() => cleanup());
 
 describe("EditCoursePage template update panel", () => {
   it("shows the diff and both explicit update choices", async () => {
-    vi.mocked(requireStaffSession).mockResolvedValue({
-      user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" },
+    // One mock where there were two: the page opens with requireShopSurface,
+    // which resolves the session, the db handle and the shop row together and
+    // 404s a slug that is not this session's shop.
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
+      db: {},
+      shop: { id: COURSE.shopId, slug: "blue-mantis", defaultLocale: "en-US", currency: "usd" },
     } as never);
     vi.mocked(getCourseBySlug).mockResolvedValue(COURSE as never);
-    vi.mocked(getShopById).mockResolvedValue({
-      id: COURSE.shopId,
-      defaultLocale: "en-US",
-      currency: "usd",
-    } as never);
     vi.mocked(getCourseTemplateUpdate).mockResolvedValue({
       currentVersion: 1,
       latestVersion: 2,

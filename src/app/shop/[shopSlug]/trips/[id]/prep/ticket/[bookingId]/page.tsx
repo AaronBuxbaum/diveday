@@ -4,17 +4,15 @@ import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { getDb } from "@/db/client";
 import { listTripGearAssignments } from "@/db/gear";
 import { listTripPrepDivers } from "@/db/rental-fit";
-import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
@@ -49,7 +47,6 @@ export default async function RentalTicketPage({
 }: {
   params: Promise<{ shopSlug: string; id: string; bookingId: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id: rawTripId, bookingId: rawBookingId } = await params;
   // Two caller-controlled uuids, both narrowed before any read: an unparseable
   // literal raises in Postgres rather than missing, so without this a mistyped
@@ -58,9 +55,7 @@ export default async function RentalTicketPage({
   const bookingId = uuidParam(rawBookingId);
   if (!tripId || !bookingId) notFound();
 
-  const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) notFound();
+  const { db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 

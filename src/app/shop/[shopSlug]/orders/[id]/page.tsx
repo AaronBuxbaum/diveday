@@ -18,7 +18,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
@@ -172,26 +172,24 @@ export default async function OrderDetailPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{ notice?: string }>;
 }) {
-  const session = await requireStaffSession();
   const { shopSlug, id } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
   const { notice } = await searchParams;
-  const db = await getDb();
-  const order = await getOrder(db, session.user.shopId, id);
-  if (!order) notFound();
   // One shop read for both the demo guard and the timezone the order's date is
   // written in — a money screen should say "3 Aug" in the shop's own day, not
   // the server's.
-  const shop = await getShopById(db, session.user.shopId);
-  const demo = shop?.isDemo ?? false;
-  const timezone = shop?.timezone ?? "UTC";
+  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const order = await getOrder(db, shop.id, id);
+  if (!order) notFound();
+  const demo = shop.isDemo ?? false;
+  const timezone = shop.timezone ?? "UTC";
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
-  const canRefund = await canPersonRefund(db, session.user.shopId, session.user.personId);
-  const locale = await requestLocale(shop?.defaultLocale);
+  const canRefund = await canPersonRefund(db, shop.id, session.user.personId);
+  const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const demoActionHint = t("orders.detail.demoActionHint");
   const banner = noticeFromParam(notice, NOTICES);
