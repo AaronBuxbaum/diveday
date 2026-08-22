@@ -4,7 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
+import {
+  canPersonConfigureTrips,
+  canPersonManagePaymentSettings,
+  canPersonRefund,
+} from "@/db/authz";
 import { getBoatById } from "@/db/boats";
 import {
   bookingDiverName,
@@ -146,6 +150,17 @@ const conditionsSchema = z.object({
 
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
+
+/**
+ * The two payment statuses that are a *decision about* money rather than a
+ * record of it — a free seat, and a refund marked without any money moving.
+ * `canRefund` gates that write-off everywhere else in the app; see
+ * `markPaymentAction` (issue #714).
+ */
+const WRITE_OFF_PAYMENT_STATUSES: ReadonlySet<z.infer<typeof paymentStatusSchema>> = new Set([
+  "waived",
+  "refunded",
+]);
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
   // The requirable set, not the ladder: Divemaster and Instructor are working
@@ -895,7 +910,21 @@ export async function sendLastMinuteDealAction(
 ) {
   const back = guestsPath(shopSlug, tripId);
   const anchor = "#last-minute-deal";
-  const s = (await requireShopSurface(shopSlug)).session;
+  // **Discounting is money work, wherever the button sits.** This mints a real
+  // percentage coupon on the shop's connected Stripe account and mails it to a
+  // list of divers — the same act as a shop-wide promo code, which
+  // `/shop/[shopSlug]/promos` gates on this very predicate on both its page and
+  // its actions. Ungated, a captain who may not change a departure's price
+  // (`canConfigureTrips` says so explicitly) could discount that same departure
+  // by the allowed maximum and send it out (issue #714). `canManagePaymentSettings`
+  // names discount codes in its own docstring; two spellings of one concept had
+  // opposite answers.
+  const s = (
+    await requireShopSurface(shopSlug, {
+      allow: canPersonManagePaymentSettings,
+      refusal: { notice: "not-authorized", landing: ["trips", tripId, "guests"] },
+    })
+  ).session;
   const discountPercent = Number(formData.get("discountPercent"));
   if (!isValidLastMinuteDiscountPercent(discountPercent)) {
     redirect(noticeUrl(`${back}${anchor}`, "last-minute-invalid-discount"));
@@ -1164,9 +1193,28 @@ export async function saveRosterEmergencyContactAction(
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = guestsPath(shopSlug, tripId);
-  const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const status = paymentStatusSchema.safeParse(formData.get("status"));
+  // **Recording money is crew work; deciding about money is not.** Counter cash
+  // at the dock is exactly front-desk work, so `paid` and `deposit_paid` stay
+  // open to every staff member. `waived` is a free seat and `refunded` marks a
+  // booking refunded *without moving any money* — taking it out of
+  // `COLLECTED_PAYMENT_STATUSES` and silently reducing the shop's reported
+  // revenue for the month. Both are the write-off that `canRefund` gates
+  // everywhere else, and this action accepted the whole enum from the form
+  // (issue #714).
+  const decidesAboutMoney = status.success && WRITE_OFF_PAYMENT_STATUSES.has(status.data);
+  const s = (
+    await requireShopSurface(
+      shopSlug,
+      decidesAboutMoney
+        ? {
+            allow: canPersonRefund,
+            refusal: { notice: "not-authorized", landing: ["trips", tripId, "guests"] },
+          }
+        : undefined,
+    )
+  ).session;
   const db = await getDb();
   const saved =
     bookingId && status.success

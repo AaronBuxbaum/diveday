@@ -38,7 +38,33 @@ import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
-import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
+import {
+  type PaymentStatus,
+  PaymentStatusControl,
+  type PaymentStatusControlCopy,
+} from "./PaymentStatusControl";
+
+/** Everything the enum holds — for a staffer who may write money off. */
+const PAYMENT_STATUSES_ALL: readonly PaymentStatus[] = [
+  "unpaid",
+  "deposit_paid",
+  "paid",
+  "waived",
+  "refunded",
+];
+
+/**
+ * Recording money received or not yet received. Counter cash at the dock is
+ * front-desk work and stays open to the whole crew; `waived` (a free seat) and
+ * `refunded` (which reduces reported revenue without moving any money) are not
+ * here (issue #714).
+ */
+const PAYMENT_STATUSES_RECORDING_ONLY: readonly PaymentStatus[] = [
+  "unpaid",
+  "deposit_paid",
+  "paid",
+];
+
 import { RosterAllClear } from "./RosterAllClear";
 import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
 import type {
@@ -135,6 +161,7 @@ export function RosterSection({
   cancellationDeadline,
   markWaiverInPersonAction,
   markPaymentAction,
+  mayWriteOffPayment,
   removeBookingAction,
   confirmIdentityAction,
   notesByBooking,
@@ -199,6 +226,12 @@ export function RosterSection({
   cancellationDeadline: Date | null;
   markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
+  /**
+   * Whether this staffer may set `waived` or `refunded` — a decision about
+   * money rather than a record of it, gated by `canRefund` everywhere else
+   * (issue #714). Recording counter cash stays open to the whole crew.
+   */
+  mayWriteOffPayment: boolean;
   removeBookingAction: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
   notesByBooking: Map<string, RosterPrivateNote[]>;
@@ -912,6 +945,9 @@ export function RosterSection({
                       bookingId={booking.id}
                       status={paymentStatus ?? "unpaid"}
                       action={markPaymentAction}
+                      allowedStatuses={
+                        mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
+                      }
                       sourceNote={paymentSource}
                       refundNote={
                         refundEligible && cancellationDeadline
