@@ -2127,6 +2127,8 @@ export const shopPromoScope = pgEnum("shop_promo_scope", ["all", "trips", "cours
  */
 export const divePackageScope = pgEnum("dive_package_scope", ["all", "fun_dives"]);
 
+export type DivePackageScope = (typeof divePackageScope.enumValues)[number];
+
 export const shopPromoStatus = pgEnum("shop_promo_status", [
   "pending",
   "active",
