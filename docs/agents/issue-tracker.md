@@ -164,6 +164,14 @@ reader already is.
 ​```
 ```
 
+**`Touches:` names paths that exist on `main` today.** `pnpm check:follow-ups` resolves every
+backticked path on that line against the working tree, so a file that only your own unmerged branch
+adds turns `pnpm check` red for every other session until you merge — twice within one hour on
+2026-08-21, from two sessions that had each just filed a perfectly good follow-up about the change
+they were finishing. The file the work will really touch still belongs in the issue: name it in
+prose, without backticks, saying which PR brings it. Nothing is lost — the prompt names it too, and
+the reader gets the same path either way.
+
 An issue blocked on somebody *outside this repo* — an upstream release, a third party's answer, a
 measurement that needs traffic the site has not had — also carries `waiting-on-external`, plus a
 `**Waiting on:**` line naming the event *and how a reader would check whether it has happened*.

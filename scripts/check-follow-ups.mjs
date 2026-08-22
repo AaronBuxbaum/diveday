@@ -261,7 +261,7 @@ async function main() {
         await access(path.join(root, touched));
       } catch {
         problems.push(
-          `#${issue.number} “${issue.title}”: **Touches:** path “${touched}” does not exist — name where the work lives today`,
+          `#${issue.number} “${issue.title}”: **Touches:** path “${touched}” does not exist — name where the work lives today. A file only your own unmerged branch adds is not that: this resolves against the working tree, so it reddens every other session's \`pnpm check\` until you merge. List paths that exist on main and name the arriving ones in prose instead.`,
         );
       }
     }
