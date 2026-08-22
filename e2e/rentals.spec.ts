@@ -44,8 +44,12 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // diver skipping one piece is never charged more than the full set (H-06, HD-9).
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   await expect(fit.getByText("Full-set price — you save $5.00.")).toBeVisible();
-  // Nitrox carries its per-dive surcharge in the label, and the explanation of
-  // what nitrox *is* moved into a hover-over rather than a standing paragraph.
-  await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
-  await expect(fit.getByRole("button", { name: "What is Nitrox?" })).toBeVisible();
+  // Nitrox is not a row until it is real (ADR 20260821-the-ready-page-asks-once,
+  // issue #627). Rin has just booked and has no nitrox card, so the page offers
+  // the card disclosure instead of a checkbox she could not use — and with no
+  // checkbox there is no per-dive surcharge label beside it either. The rule is
+  // `nitroxHidden = nitroxCardEntryOffered && !wantsNitrox` (RentalFitForm.tsx);
+  // e2e/nitrox.spec.ts covers the other side, where a card exists.
+  await expect(fit.getByText(/\$12\.00 per dive/)).toHaveCount(0);
+  await expect(fit.getByRole("checkbox", { name: /Nitrox/ })).toHaveCount(0);
 });

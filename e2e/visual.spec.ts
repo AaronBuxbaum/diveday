@@ -2392,7 +2392,10 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **The same panel when nobody is eligible.**
        *
-       * The reef departure is raised to Instructor first. The newly
+       * The reef departure is raised to Rescue first — the highest rung a trip
+       * may demand, since a shop asking a paying diver for a professional
+       * rating is exactly what issue #630 took off the list
+       * (`REQUIRABLE_CERTIFICATION_LEVELS`, src/lib/readiness.ts). The newly
        * added no-certification and Open Water joiners are then filtered out of
        * the send list instead of being shown with a warning that could be
        * overlooked.
@@ -2420,7 +2423,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page.getByText("Edit requirements", { exact: true }).click();
-        await page.getByLabel("Minimum certification").selectOption("instructor");
+        await page.getByLabel("Minimum certification").selectOption("rescue");
         await page.getByRole("button", { name: "Save requirements" }).click();
         // Raising the bar mid-season strands the divers already booked under
         // the old one, so the save answers with its warning variant ("8 booked
