@@ -21,6 +21,42 @@ describe("English bundles", () => {
     ]);
   });
 
+  /**
+   * **The euphemism does not have to be one of the banned words.**
+   *
+   * These four shipped on the diver record while this check passed, because
+   * the vocabulary that drifted there was "removed" and "off your active
+   * lists" — neither of which is `archive`. The caption sat under a heading
+   * saying *Delete* and above a button saying *Delete <name>*, and was the one
+   * of the three that declined to say it (issue #779).
+   */
+  it.each([
+    ["the caption that would not say Delete", "Takes this diver off your active lists."],
+    ["its twin on the way back", "Diver restored. They're back on your active lists."],
+    [
+      "the sentence AGENTS.md forbids by name",
+      "Certification removed. It no longer counts toward readiness; its history is kept for records.",
+    ],
+    ["the shorter form of it", "Deleted. Kept for records."],
+  ])("catches %s", (_label, value) => {
+    expect(paths({ notice: value })).toEqual(["value:notice"]);
+  });
+
+  /**
+   * **"Remove" is not banned, and must not be.** It is the right word for
+   * taking something out of a collection it belongs to, about sixty times
+   * across these bundles — the script's header says why no pattern can tell
+   * those from a delete wearing the word.
+   */
+  it.each([
+    ["a landmark off a site's list", "Remove this landmark"],
+    ["a photo out of a gallery", "Removed from the gallery."],
+    ["a member out of a buddy team", "Remove Priya from this team"],
+    ["a heading about lists that are active", "Your active lists"],
+  ])("leaves %s alone", (_label, value) => {
+    expect(paths({ label: value })).toEqual([]);
+  });
+
   it("catches the key name too — it is what the next author reads first", () => {
     expect(paths({ edit: { archiveSite: "Delete site" } })).toEqual(["key:edit.archiveSite"]);
   });
