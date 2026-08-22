@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { countSignedWaiversOnCurrentVersion, saveWaiverTemplate } from "@/db/waivers";
+import { saveWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -38,7 +38,7 @@ export async function saveWaiverAction(formData: FormData) {
   // yet. This is the same act `saveRequirementsAction` performs for one
   // departure — "here is who that just blocked" — and the reason it exists
   // there applies with the whole shop's roster behind it.
-  const atRisk = await countSignedWaiversOnCurrentVersion(editor, staff.user.shopId);
+  const atRisk = await standingWaiverExposure(editor, staff.user.shopId);
   // No title: this form has no field for one, so a save cannot mean "rename"
   // and `saveWaiverTemplate` carries the shop's own forward.
   const { versioned } = await saveWaiverTemplate(editor, {
@@ -52,8 +52,8 @@ export async function saveWaiverAction(formData: FormData) {
   }
   revalidateAndRedirect(
     waivers,
-    atRisk > 0
-      ? noticeUrl(waivers, "waiver-resigning", { count: atRisk })
+    atRisk.divers > 0
+      ? noticeUrl(waivers, "waiver-resigning", { count: atRisk.divers })
       : noticeUrl(waivers, "saved"),
   );
 }

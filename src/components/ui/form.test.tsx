@@ -98,6 +98,39 @@ describe("FormStatus", () => {
     expect(container.querySelectorAll("p")).toHaveLength(0);
   });
 
+  /**
+   * **Two empty children are still empty.**
+   *
+   * The guard was `if (!children)`, which held only while every caller passed
+   * exactly one expression. `{undefined}` is falsy; `{undefined}{null}` is an
+   * *array*, and an array is truthy — so the waiver editor, which appended a
+   * conditional link beside its banner, rendered a bare ✅ with no message on a
+   * page at rest, and no test noticed (issue #790).
+   */
+  it("still renders nothing when a caller passes several empty children", () => {
+    const { container } = render(
+      <FieldActions>
+        <button type="submit">Save</button>
+        <FormStatus tone="success">
+          {undefined}
+          {null}
+          {false}
+        </FormStatus>
+      </FieldActions>,
+    );
+    expect(container.querySelectorAll("p")).toHaveLength(0);
+  });
+
+  it("renders when one of several children has something to say", () => {
+    render(
+      <FormStatus tone="success">
+        {undefined}
+        {"Saved."}
+      </FormStatus>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+  });
+
   it("gives a refusal role=alert so it interrupts", () => {
     render(<FormStatus tone="danger">That code is already in use.</FormStatus>);
     expect(screen.getByRole("alert")).toHaveTextContent("That code is already in use.");

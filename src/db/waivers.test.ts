@@ -4,16 +4,31 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { operationalWindow } from "@/lib/operational-window";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness } from "./readiness";
-import { people, personRoles, shops, userAccounts, waiverRecords, waiverTemplates } from "./schema";
-import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  setTripStatus,
+  upcomingTripsWithCounts,
+} from "./trips";
 import {
   completeWaiver,
-  countSignedWaiversOnCurrentVersion,
   getCurrentWaiverTemplate,
   getEmergencyContactForBooking,
   getSignedWaiverRecordForShop,
@@ -25,6 +40,7 @@ import {
   recordInPersonWaiver,
   saveBookingEmergencyContact,
   saveWaiverTemplate,
+  standingWaiverExposure,
   WAIVER_INTEGRITY_PAGE_SIZE,
 } from "./waivers";
 
@@ -1351,7 +1367,7 @@ describe("saving the waiver template", () => {
   it("writes no version at all when the body has not changed", async () => {
     const { db, shop, template } = await signedContext();
     const before = await listWaiverTemplateHistory(db, shop.id);
-    const standing = await countSignedWaiversOnCurrentVersion(db, shop.id, now);
+    const standing = (await standingWaiverExposure(db, shop.id, now)).divers;
 
     const result = await saveWaiverTemplate(db, {
       shopId: shop.id,
@@ -1367,7 +1383,7 @@ describe("saving the waiver template", () => {
     // Every signature it would have invalidated is untouched, which is the
     // whole point — the history length above only proves nothing was inserted.
     expect(standing).toBeGreaterThan(0);
-    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBe(standing);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(standing);
   });
 
   it("versions a real edit, and reports the signatures it just put back in the queue", async () => {
@@ -1375,7 +1391,7 @@ describe("saving the waiver template", () => {
     // Counted before the save, which is the only moment the number exists: the
     // new version is current the instant it lands and nothing is signed
     // against it yet.
-    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBeGreaterThan(0);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBeGreaterThan(0);
 
     const result = await saveWaiverTemplate(db, {
       shopId: shop.id,
@@ -1385,18 +1401,18 @@ describe("saving the waiver template", () => {
 
     expect(result.versioned).toBe(true);
     expect(result.template.version).toBe(template.version + 1);
-    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBe(0);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(0);
   });
 
   it("does not count a signature the validity window has already aged out", async () => {
     const { db, shop } = await signedContext();
-    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBeGreaterThan(0);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBeGreaterThan(0);
     // Far enough past every seeded signature's validity window that none of
     // them stand. Those were not going to clear anyone tomorrow either, so
     // publishing a version costs them nothing — and a number a shop can
     // disprove is a number they stop reading.
     const later = new Date(now.getTime() + WAIVER_SIGNATURE_VALIDITY_MS * 3);
-    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, later)).toBe(0);
+    expect((await standingWaiverExposure(db, shop.id, later)).divers).toBe(0);
   });
 
   /**
@@ -1451,6 +1467,235 @@ describe("saving the waiver template", () => {
 
   it("counts nothing for a shop that has never published a release", async () => {
     const { db } = await waiverContext();
-    expect(await countSignedWaiversOnCurrentVersion(db, randomUUID(), now)).toBe(0);
+    expect(await standingWaiverExposure(db, randomUUID(), now)).toEqual({
+      divers: 0,
+      boardingSoon: 0,
+    });
+  });
+
+  /**
+   * **Divers, not records, and only divers who could still sign.**
+   *
+   * The count was over `waiver_records` while both strings called them divers,
+   * and those are different numbers: one diver can hold several standing
+   * records on the current version, because `issueWaiverRequest`'s
+   * `alreadyStanding` check for a booking subject only looks at records on
+   * *that* booking (issue #790).
+   */
+  it("counts a diver holding two standing records once", async () => {
+    const { db, shop } = await signedContext();
+    const before = await standingWaiverExposure(db, shop.id, now);
+    expect(before.divers).toBeGreaterThan(0);
+
+    // A second completed, non-superseded record on the current version for a
+    // diver who already has one — the exact state a staff "Send waiver" on a
+    // second seat produces.
+    const [existing] = await db
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.status, "completed")))
+      .limit(1);
+    if (!existing) throw new Error("expected a completed record in the seed");
+    await db.insert(waiverRecords).values({
+      ...existing,
+      id: undefined,
+      bookingId: null,
+      // `token_hash` is unique — the second link is a second link, which is
+      // exactly how this state arises in production.
+      tokenHash: `${existing.tokenHash}-second-seat`,
+      createdAt: existing.createdAt,
+    });
+
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(before.divers);
+  });
+
+  /**
+   * **A deleted diver is still on the boat.**
+   *
+   * `deleteDiver` is "removal from the active lists, not erasure" and leaves
+   * the bookings live; `getTripRoster` and `listTripsWaiverStatuses` both
+   * honour that. So a soft-deleted diver holding a live seat is on the
+   * manifest, is in the readiness queue, and owes a fresh signature — and a
+   * number smaller than the boat is the one direction this must not err
+   * (`dive-domain-expert`, on issue #790). A shop merging a duplicate diver
+   * mid-season is the ordinary way it happens.
+   */
+  it("still counts a diver the shop deleted, because their booking is still live", async () => {
+    const { db, shop } = await signedContext();
+    const before = await standingWaiverExposure(db, shop.id, now);
+    expect(before.divers).toBeGreaterThan(0);
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.status, "completed")))
+      .limit(1);
+    if (!record) throw new Error("expected a completed record in the seed");
+    await db.update(people).set({ deletedAt: now }).where(eq(people.id, record.personId));
+
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(before.divers);
+  });
+
+  it("does not count a diver the shop erased, who will never sign anything again", async () => {
+    const { db, shop } = await signedContext();
+    const before = await standingWaiverExposure(db, shop.id, now);
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.status, "completed")))
+      .limit(1);
+    if (!record) throw new Error("expected a completed record in the seed");
+    // Erasure stamps both columns (`anonymizeDiver`), which is why the query
+    // asks only about `anonymized_at`.
+    await db
+      .update(people)
+      .set({ anonymizedAt: now, deletedAt: now })
+      .where(eq(people.id, record.personId));
+
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBeLessThan(before.divers);
+  });
+
+  /**
+   * **The operational half.** A three-season shop read "the release that 812
+   * divers have signed": accurate, alarming, useless. The number that changes
+   * a decision is which boat it lands on this afternoon.
+   */
+  it("counts only the divers who board inside the operational window as boarding soon", async () => {
+    const { db, shop } = await signedContext();
+    const exposure = await standingWaiverExposure(db, shop.id, now);
+
+    expect(exposure.divers).toBeGreaterThan(0);
+    expect(exposure.boardingSoon).toBeGreaterThan(0);
+    // **Strictly fewer**, not merely "no more than". The seeded shop has far
+    // more signed divers than it has booked on the next seven days, and the
+    // first version of this filter keyed on the *booking* join — which matches
+    // any seat on any departure ever — so the two numbers came out equal and
+    // the confirm read "127 divers have signed. 127 of them board in the next
+    // 7 days." A `<=` assertion passed against exactly that.
+    expect(exposure.boardingSoon).toBeLessThan(exposure.divers);
+  });
+
+  /**
+   * **The window lives on the trip, not the booking.**
+   *
+   * The first version filtered on `bookings.id is not null` while the horizon
+   * sat on a `LEFT JOIN` to `trips` — and a left join cannot eliminate a row
+   * from the table on its left, so every diver with any non-cancelled seat on
+   * any departure ever was counted as boarding this week. The confirm read
+   * "127 divers have signed. 127 of them board in the next 7 days", which is
+   * the alarming number restated as an operational one
+   * (`dive-domain-expert`, on issue #790).
+   *
+   * Built explicitly rather than off the seed: two divers, two departures, one
+   * inside the horizon and one a day past it.
+   */
+  it("counts only the diver whose departure falls inside the horizon", async () => {
+    const { db, shop, template } = await signedContext();
+    const window = operationalWindow(now);
+
+    const sign = async (name: string, startsAt: Date) => {
+      const [person] = await db
+        .insert(people)
+        .values({ shopId: shop.id, fullName: name })
+        .returning();
+      if (!person) throw new Error("person insert failed");
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title: `${name}'s charter`,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+        capacity: 8,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("trip insert failed");
+      const [booking] = await db
+        .insert(bookings)
+        .values({ shopId: shop.id, tripId: trip.id, personId: person.id, status: "booked" })
+        .returning();
+      if (!booking) throw new Error("booking insert failed");
+      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+      if (!issued.ok) throw new Error("expected a waiver link");
+      await completeWaiver(db, issued.token, {
+        signerName: name,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+      });
+      return { person, trip };
+    };
+
+    const before = await standingWaiverExposure(db, shop.id, now);
+    await sign("Inside The Horizon", new Date(window.to.getTime() - 60 * 60 * 1000));
+    await sign("Outside The Horizon", new Date(window.to.getTime() + 24 * 60 * 60 * 1000));
+
+    const after = await standingWaiverExposure(db, shop.id, now);
+    // Both signed, so both are exposure…
+    expect(after.divers).toBe(before.divers + 2);
+    // …and exactly one of them boards inside the window.
+    expect(after.boardingSoon).toBe(before.boardingSoon + 1);
+    void template;
+  });
+
+  /**
+   * **A called-off Saturday has nobody boarding on it.** `liveTrip()` is only
+   * `deleted_at is null`; a blow-out sets `status = 'cancelled'` and leaves the
+   * bookings alone until staff work the cascade per seat, so without the status
+   * filter a cancelled departure still counted a boatload.
+   */
+  it("does not count a diver whose departure inside the horizon was cancelled", async () => {
+    const { db, shop } = await signedContext();
+    const window = operationalWindow(now);
+    const startsAt = new Date(window.to.getTime() - 60 * 60 * 1000);
+
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Blown Out" })
+      .returning();
+    if (!person) throw new Error("person insert failed");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Blown out charter",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip insert failed");
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: trip.id, personId: person.id, status: "booked" })
+      .returning();
+    if (!booking) throw new Error("booking insert failed");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: "Blown Out",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    const sailing = await standingWaiverExposure(db, shop.id, now);
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+    const calledOff = await standingWaiverExposure(db, shop.id, now);
+
+    // Still owed a signature — the departure went away, the void one did not.
+    expect(calledOff.divers).toBe(sailing.divers);
+    // But not boarding this week.
+    expect(calledOff.boardingSoon).toBe(sailing.boardingSoon - 1);
+  });
+
+  it("counts nobody as boarding soon when no departure falls inside the horizon", async () => {
+    const { db, shop } = await signedContext();
+    // Ninety days *before* the seeded schedule, so the window [now, now+7d]
+    // closes long before the first departure. Moving `now` forward would not
+    // do it — the window travels with it and keeps finding departures.
+    //
+    // The validity check is a lower bound (`signedAt > now - validity`), so
+    // every signature still stands from here, which is the half that makes
+    // this a test of the horizon rather than of signature ageing.
+    const beforeTheSeason = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const early = await standingWaiverExposure(db, shop.id, beforeTheSeason);
+    expect(early.divers).toBeGreaterThan(0);
+    expect(early.boardingSoon).toBe(0);
   });
 });
