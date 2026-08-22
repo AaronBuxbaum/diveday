@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 /**
  * Every read of `trips` that means "the board" filters out deleted departures.
@@ -49,12 +50,24 @@ const GUARDED_ROOTS = ["src/db", "src/features", "src/app", "src/lib"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
 /**
- * How far past the anchor line to look for the filter. Generous on purpose: a
- * paged board query with four joins and a keyset cursor is comfortably 40 lines
- * between `.from(trips)` and the end of its `where`, and the cost of looking
- * too far is a query that passes because a *neighbouring* one filtered — which
- * a reviewer catches, where the reverse (a false failure on a correct query)
- * teaches people to reach for the exemption comment.
+ * How far past the anchor line to look for the filter, when nothing closer ends
+ * the search first. Generous on purpose: a paged board query with four joins
+ * and a keyset cursor is comfortably 40 lines between `.from(trips)` and the
+ * end of its `where`, and a false failure on a correct query teaches people to
+ * reach for the exemption comment, which is worse than looking too far.
+ *
+ * **The window also stops at the next anchor, and that half is not a tuning
+ * knob.** A fixed line count alone let one query pass because a *neighbouring*
+ * one filtered; the docstring used to answer that with "which a reviewer
+ * catches", and the reviewer did not. `listTripsReadiness` shipped a
+ * site-requirement join with no `liveTrip()` twelve lines above a course read
+ * that had one, inside the same `queryAll` array, and this script counted it
+ * among the reads it called filtered (issue #635).
+ *
+ * Ending at the next anchor is the cheapest rule that closes that hole without
+ * shrinking the count: a query is now only ever proven by a filter that is
+ * inside *it*. Shrinking the number instead would have traded this hole for the
+ * false failures the paragraph above exists to avoid.
  */
 const QUERY_WINDOW = 60;
 
@@ -100,40 +113,68 @@ async function walk(relativeDirectory) {
   return files;
 }
 
-const violations = [];
-let guarded = 0;
+/**
+ * Every guarded read of `trips` in one file, and which of them prove nothing.
+ *
+ * Split out so the rule is testable in isolation
+ * (`check-live-trips.test.mjs`) — the shape it has to get right is two queries
+ * sharing one array, which is awkward to stage as a fixture tree and trivial to
+ * state as a string.
+ */
+export function findUnfilteredTripReads(source) {
+  const lines = source.split("\n");
+  const anchors = lines.reduce((found, line, index) => {
+    if (ANCHOR.test(line)) found.push(index);
+    return found;
+  }, []);
+  const findings = [];
+  anchors.forEach((index, position) => {
+    // The window stops at the *next* anchor, so one query can never be covered
+    // by its neighbour's filter — see {@link QUERY_WINDOW}.
+    const end = Math.min(index + QUERY_WINDOW, anchors[position + 1] ?? lines.length);
+    const window = lines.slice(index, end).join("\n");
+    if (window.includes("liveTrip()") || ALLOW.test(window)) return;
+    findings.push({ line: index + 1, text: lines[index].trim() });
+  });
+  return { guarded: anchors.length, findings };
+}
 
-for (const root of GUARDED_ROOTS) {
-  for (const file of await walk(root)) {
-    const normalized = path.normalize(file);
-    if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
-    if (path.basename(file).startsWith("seed-")) continue;
-    const lines = (await readFile(path.join(ROOT, file), "utf8")).split("\n");
-    lines.forEach((line, index) => {
-      if (!ANCHOR.test(line)) return;
-      guarded += 1;
-      const window = lines.slice(index, index + QUERY_WINDOW).join("\n");
-      if (window.includes("liveTrip()") || ALLOW.test(window)) return;
-      violations.push(`${file}:${index + 1}: ${line.trim()}`);
-    });
+async function main() {
+  const violations = [];
+  let guarded = 0;
+
+  for (const root of GUARDED_ROOTS) {
+    for (const file of await walk(root)) {
+      const normalized = path.normalize(file);
+      if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
+      if (path.basename(file).startsWith("seed-")) continue;
+      const source = await readFile(path.join(ROOT, file), "utf8");
+      const result = findUnfilteredTripReads(source);
+      guarded += result.guarded;
+      for (const finding of result.findings) {
+        violations.push(`${file}:${finding.line}: ${finding.text}`);
+      }
+    }
   }
+
+  if (violations.length > 0) {
+    console.error(
+      `Reads of \`trips\` that would surface a deleted departure:\n${violations
+        .map((violation) => `- ${violation}`)
+        .join("\n")}`,
+    );
+    console.error(
+      "Add `liveTrip()` (src/db/trips-live.ts) to the query's where clause. Deleting a departure sets `trips.deleted_at` and leaves the row and its children in place, so an unfiltered read shows a departure the shop took off the board — on the public schedule, that is a seat an anonymous visitor can try to book.",
+    );
+    console.error(
+      "A read that genuinely means deleted rows too (the export bundle, the series horizon roll, a staff view of deleted departures) says `diveday:allow-deleted-trips: <why>` in a comment inside the query.",
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    `live-trips: ${guarded} reads of trips all filter deleted departures (or say why they don't)`,
+  );
 }
 
-if (violations.length > 0) {
-  console.error(
-    `Reads of \`trips\` that would surface a deleted departure:\n${violations
-      .map((violation) => `- ${violation}`)
-      .join("\n")}`,
-  );
-  console.error(
-    "Add `liveTrip()` (src/db/trips-live.ts) to the query's where clause. Deleting a departure sets `trips.deleted_at` and leaves the row and its children in place, so an unfiltered read shows a departure the shop took off the board — on the public schedule, that is a seat an anonymous visitor can try to book.",
-  );
-  console.error(
-    "A read that genuinely means deleted rows too (the export bundle, the series horizon roll, a staff view of deleted departures) says `diveday:allow-deleted-trips: <why>` in a comment inside the query.",
-  );
-  process.exit(1);
-}
-
-console.log(
-  `live-trips: ${guarded} reads of trips all filter deleted departures (or say why they don't)`,
-);
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();

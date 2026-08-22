@@ -88,6 +88,19 @@ the export bundle (a shop taking everything it owns, tombstones included), the s
 "has this cadence slot ever been materialized?" (which wants the tombstone — it is the half that
 survives somebody deleting the skip row), and the seeds.
 
+**Amended 2026-08-21 (issue #635):** the gate proves a query only by a filter inside *that* query.
+It used to look a fixed 60 lines past the anchor and accept anything it found there, and its own
+docstring named the cost — "a query that passes because a *neighbouring* one filtered — which a
+reviewer catches". The reviewer did not: `listTripsReadiness` shipped a site-requirement join with
+no `liveTrip()` twelve lines above a course read that had one, inside the same `queryAll` array, and
+this script counted the unfiltered one among the 90 reads it called filtered. The window now also
+ends at the next anchor, which closes that without shrinking the line count — shrinking it instead
+would trade the hole for the false failures the generous window exists to avoid, and a false failure
+teaches people to reach for `diveday:allow-deleted-trips:`, which is worse than either. Tightening
+the rule turned up no other reads sitting in the same blind spot. The missing predicate is fixed and
+`src/db/readiness.test.ts` pins it; the rule itself is pinned by `scripts/check-live-trips.test.mjs`,
+which stages the two-queries-in-one-array shape directly.
+
 ## Alternatives considered
 
 - **Keep "Archive" as the visible word.** Rejected: it is our storage model on a shop's screen. The

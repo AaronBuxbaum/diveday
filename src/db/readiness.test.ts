@@ -25,7 +25,7 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
-import { certifications, diveSites, specialtyCertifications } from "./schema";
+import { certifications, diveSites, specialtyCertifications, trips } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -925,6 +925,41 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
       (row) => row.booking.id === rosterEntry.booking.id,
     );
     expect(batch?.readiness.blockers).toEqual(expect.arrayContaining(expected));
+  });
+
+  it("stops reading a deleted departure's site requirement", async () => {
+    // The site-requirement join in `listTripsReadiness` had no `liveTrip()`,
+    // and passed `scripts/check-live-trips.mjs` only because the course/age
+    // read twelve lines below it filtered (issue #635 — the checker looked 60
+    // lines from the anchor, so a neighbouring query covered for it).
+    //
+    // **Latent, not live.** Every production caller reaches this with ids that
+    // came from an already-filtered source, so nothing a user could do surfaced
+    // it — which is exactly why it has to be called directly here rather than
+    // through a surface, and why this fixes no user-visible behaviour.
+    const { db, shop, reef, rosterEntry } = await withSecondSiteRequirement({
+      minimumCertificationLevel: "advanced_open_water",
+    });
+    // Present first, so the assertion below is about the delete and not about
+    // the requirement having never been readable.
+    const before = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === rosterEntry.booking.id,
+    );
+    expect(before[0]?.siteRequirement).toMatchObject({
+      minimumCertificationLevel: "advanced_open_water",
+    });
+
+    // Deleting a departure stamps the column and leaves the row and all five of
+    // its children in place (ADR 20260820-every-delete-is-soft), which is what
+    // makes a forgotten filter render it.
+    await db
+      .update(trips)
+      .set({ deletedAt: nowDate() })
+      .where(and(eq(trips.shopId, shop.id), eq(trips.id, reef.id)));
+
+    for (const row of await listTripsReadiness(db, shop.id, [reef.id])) {
+      expect(row.siteRequirement).toBeNull();
+    }
   });
 
   it("still reads a requirement on the primary site when no other site has one", async () => {
