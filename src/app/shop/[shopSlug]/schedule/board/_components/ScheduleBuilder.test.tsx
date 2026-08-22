@@ -1156,23 +1156,54 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
     );
   }
 
-  for (const locale of ["en-US", "es-ES"]) {
-    for (const [divemasters, divers] of [
-      [1, 1],
-      [3, 3],
-    ]) {
-      it(`renders finished sentences in ${locale} at ${divemasters} divemaster(s)`, () => {
-        const { container } = renderPlan(locale, divemasters, divers);
+  /**
+   * The finished sentence, spelled out rather than rebuilt from the bundle —
+   * a fixture that composes the expectation the same way the component does
+   * agrees with any bug both of them share. `diversPerDivemaster` is 4 in the
+   * plan below, so the ratio is fixed too.
+   */
+  const CASES = [
+    {
+      locale: "en-US",
+      count: 1,
+      panel: "Starting from requests",
+      crew: "Bring 1 divemaster — your 4:1 target.",
+      lead: "Marisol (1 diver)",
+    },
+    {
+      locale: "en-US",
+      count: 3,
+      panel: "Starting from requests",
+      crew: "Bring 3 divemasters — your 4:1 target.",
+      lead: "Marisol (3 divers)",
+    },
+    {
+      locale: "es-ES",
+      count: 1,
+      panel: "Partir de las peticiones",
+      crew: "Lleva 1 divemaster — tu objetivo de 4:1.",
+      lead: "Marisol (1 buceador)",
+    },
+    {
+      locale: "es-ES",
+      count: 3,
+      panel: "Partir de las peticiones",
+      crew: "Lleva 3 divemasters — tu objetivo de 4:1.",
+      lead: "Marisol (3 buceadores)",
+    },
+  ];
 
-        const panel = container.querySelector("fieldset.sticky");
-        expect(panel).not.toBeNull();
-        // The whole failure mode in one assertion: an unresolved template — an
-        // ICU plural `fill()` cannot see, or a `{name}` nobody supplied —
-        // reaches the screen as a brace.
-        expect(panel?.textContent).not.toContain("{");
-        expect(panel?.textContent).toContain(String(divemasters));
-        expect(panel?.textContent).toContain("Marisol");
-      });
-    }
+  for (const expected of CASES) {
+    it(`says the ${expected.count === 1 ? "singular" : "plural"} in ${expected.locale}`, () => {
+      renderPlan(expected.locale, expected.count, expected.count);
+
+      const panel = screen.getByRole("group", { name: expected.panel });
+      expect(within(panel).getByText(expected.crew)).toBeInTheDocument();
+      expect(within(panel).getByText(expected.lead)).toBeInTheDocument();
+      // The failure mode in one line: an unresolved template — an ICU plural
+      // `fill()` cannot see, or a `{name}` nobody supplied — reaches the reader
+      // as a brace.
+      expect(panel.textContent).not.toContain("{");
+    });
   }
 });

@@ -26,8 +26,6 @@ import { STAFF_MESSAGES } from "./staff-messages";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const ICU_ARGUMENT_TYPE = /\{\s*[a-zA-Z][a-zA-Z0-9]*\s*,\s*(plural|select|selectordinal)\s*,/;
-
 /**
  * The eleven the gate found already in the tree when it was written, all in
  * the CSV import wizard, all tracked in issue #649. A shop moving its data
@@ -78,44 +76,85 @@ const sourceFiles = (dir: string): string[] =>
     return /\.tsx?$/.test(entry.name) ? [full] : [];
   });
 
-/** Every key matching `pattern` under `src/`, as key → the files that ask for it. */
-function callSites(pattern: RegExp): Map<string, string[]> {
+/** Every key a `pattern` match yields, as key -> the files that ask for it. */
+function callSites(
+  pattern: RegExp,
+  keysIn: (match: RegExpMatchArray) => string[],
+): Map<string, string[]> {
   const found = new Map<string, string[]>();
   for (const file of sourceFiles(SRC_DIR)) {
     const source = readFileSync(file, "utf8");
     for (const match of source.matchAll(pattern)) {
-      const key = match[1];
-      found.set(key, [...(found.get(key) ?? []), relative(SRC_DIR, file)]);
+      for (const key of keysIn(match)) {
+        found.set(key, [...(found.get(key) ?? []), relative(SRC_DIR, file)]);
+      }
     }
   }
   return found;
 }
 
-/** `t.raw("some.key")` / `st.raw("some.key")` — asked for as a template. */
-const RAW_CALL = /\.raw\(\s*"([a-zA-Z][\w.]*)"\s*\)/g;
-
 /**
- * `t("some.key")` / `st("some.key")` with **no second argument** — asked for
- * formatted, and given nothing to format with. The other half of #606: the
- * board fetched an ICU plural this way, and next-intl raised `FORMATTING_ERROR`
- * for the argument that by definition was not there. `translatorOnError`
- * rethrows outside production, so the whole board crashed to its error
- * boundary in dev; in production it swallowed the error and printed the
- * fallback, which was the raw template.
+ * `t.raw("some.key")` / `st.raw("some.key")` — asked for as a template.
+ *
+ * The `,?` is not decoration. `biome.json` sets `lineWidth: 100` and
+ * `trailingCommas: "all"`, so a call whose key pushes the line past 100 is
+ * reformatted to `t.raw(\n  "some.key",\n)` — and a pattern that cannot cross
+ * that comma goes blind on exactly the longest keys, which is the wrong half
+ * to lose.
  */
-const FORMATTED_CALL = /\bs?t\(\s*"([a-zA-Z][\w.]*)"\s*\)/g;
+const RAW_CALL = /\.raw\(\s*"([a-zA-Z][\w.]*)"\s*,?\s*\)/g;
 
 /**
- * Whether a message has an argument the caller must supply. ICU-quoted
- * segments are stripped first: `'{depth18}'` is a *literal* brace, which is
- * how `courses.edit.errorDepthPlaceholder` shows a shop the marker to type.
+ * A call whose whole argument list is keys — `t("some.key")`,
+ * `staffT("some.key")`, `t(long ? "a.key" : "b.key")` — and no values. The
+ * other half of #606: the board fetched an ICU plural this way, and next-intl
+ * raised `FORMATTING_ERROR` for the argument that by definition was not there.
+ * `translatorOnError` rethrows outside production, so the whole board crashed
+ * to its error boundary in dev; in production it swallowed the error and
+ * printed the fallback, which was the raw template.
+ *
+ * Deliberately blind to the *receiver*: an earlier version matched only `t` and
+ * `st`, which meant renaming a local `const st =` to `const staffT =` switched
+ * the gate off for that whole file — and nineteen production calls already
+ * bind the translator to `anonT`, `staffT`, `diverT` or `tRoot`. The argument
+ * list may hold no comma and no nested call, so a call carrying values never
+ * matches; `.raw` receivers are dropped below because they are the other rule's
+ * business. A key must be dotted, which is what keeps an ordinary
+ * `expect("something")` out of the net.
+ */
+const KEYS_ONLY_CALL = /\b([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\(\s*([^(),`]*?)\s*,?\s*\)/g;
+const DOTTED_KEY = /"([a-zA-Z][\w]*(?:\.[\w]+)+)"/g;
+
+function formattedKeysIn(match: RegExpMatchArray): string[] {
+  if (match[1].endsWith(".raw")) return [];
+  return [...match[2].matchAll(DOTTED_KEY)].map((key) => key[1]);
+}
+
+/**
+ * An ICU argument carrying a *type* — `{n, plural, …}`, `{when, date, short}`,
+ * `{amount, number}`. `fill()` resolves a bare `{name}` and nothing else, so
+ * any of these reaches the screen as source. Not just `plural`: a date skeleton
+ * leaks exactly the same way and would have passed a narrower rule.
+ */
+const ICU_ARGUMENT_TYPE = /\{\s*\w+\s*,\s*\w/;
+
+/**
+ * Whether a message has an argument the caller must supply.
+ *
+ * ICU-quoted segments are stripped first, but only the ones ICU actually
+ * treats as quoted: `'` opens a literal section only when the next character is
+ * `{`, `}` or `#`. That is what lets `courses.edit.errorDepthPlaceholder` show
+ * a shop the literal `'{depth18}'` marker to type. A blanket `'[^']*'` strip
+ * would also swallow everything between two *prose* apostrophes — which in
+ * this bundle means `"You're on {shopName}'s list…"` loses its `{shopName}`
+ * and reads as naming no argument at all.
  */
 function namesAnArgument(message: string): boolean {
-  return /\{\s*[a-zA-Z]/.test(message.replace(/'[^']*'/g, ""));
+  return /\{\s*\w/.test(message.replace(/'[{}#][^']*'/g, ""));
 }
 
 describe("messages fetched with .raw()", () => {
-  const sites = callSites(RAW_CALL);
+  const sites = callSites(RAW_CALL, (match) => [match[1]]);
 
   it("finds the call sites at all", () => {
     expect(sites.size).toBeGreaterThan(20);
@@ -154,7 +193,7 @@ describe("messages fetched with .raw()", () => {
       staff: flatten(STAFF_MESSAGES["en-US"]),
     };
     const unfed: string[] = [];
-    for (const [key, files] of callSites(FORMATTED_CALL)) {
+    for (const [key, files] of callSites(KEYS_ONLY_CALL, formattedKeysIn)) {
       for (const [which, bundle] of Object.entries(bundles)) {
         const message = bundle[key];
         if (message === undefined || !namesAnArgument(message)) continue;
