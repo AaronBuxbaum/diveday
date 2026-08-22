@@ -49,6 +49,30 @@ test("a diver's record shows their still-scheduled trips, linked straight to the
 });
 
 /**
+ * Currency, on the surface that shows the whole answer rather than a flag (ADR
+ * 20260821-currency-is-what-catches-people).
+ *
+ * Priya dived **this season** — one of the three bands the roster deliberately
+ * stays quiet about, so this line existing at all is the thing being asserted:
+ * it is the difference between the diver record and every other surface. It
+ * rides on the booking rather than the person, so it is read inside the
+ * upcoming-trips row it was answered for.
+ *
+ * Nothing gates on it and nothing may start to; there is no state to drive
+ * here, only a render.
+ */
+test("a diver's record states how long it has been, even when the roster would not", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers?q=Priya");
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  const upcoming = page.getByRole("region", { name: "Upcoming trips" });
+  await expect(upcoming.getByText("Last dived this season").first()).toBeVisible();
+});
+
+/**
  * The diver record is one ~6,400px scroll on a phone. Payments — the section a
  * staffer opens this page for when somebody is standing at the counter with a
  * bill — used to sit seventh, below "Book an activity", reachable only by

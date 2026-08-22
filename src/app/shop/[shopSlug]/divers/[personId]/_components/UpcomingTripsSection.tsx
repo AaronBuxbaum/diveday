@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { sectionCardClass } from "@/components/ui/card";
+import { diveRecencyText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { BookingMoneyCell } from "./BookingMoneyCell";
 import type { DiverProfile, Shop } from "./shared";
@@ -87,6 +89,37 @@ export function UpcomingTripsSection({
                 {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
                 {course ? ` · ${course.title}` : ""}
               </p>
+              {/* **Every band here, not only the two the roster picks out**, and
+                  against the departure it was answered for. This is the one
+                  surface where the whole answer is the point rather than a
+                  flag: a staffer opening a returning diver's record is deciding
+                  what to say to them, and "last dived this season" is worth
+                  reading — on a roster it would be the noise that stops the
+                  other two being seen.
+
+                  It stays on the booking rather than collapsing to a
+                  most-recent value because an answer given in March is not
+                  evidence about a November trip; that is the reason the column
+                  is on `bookings` at all (ADR
+                  20260821-currency-is-what-catches-people).
+
+                  Same tone rule as everywhere else — `diveRecencyIsNotable`,
+                  no second one — and `diveRecencyText` returns null for a diver
+                  who was never asked, so silence renders nothing. */}
+              {diveRecencyText(t, booking.lastDivedBand) ? (
+                <p
+                  className={`text-sm ${
+                    diveRecencyIsNotable(booking.lastDivedBand)
+                      ? "text-warning-strong"
+                      : "text-muted"
+                  }`}
+                >
+                  {diveRecencyIsNotable(booking.lastDivedBand) ? (
+                    <span aria-hidden="true">▲ </span>
+                  ) : null}
+                  {diveRecencyText(t, booking.lastDivedBand)}
+                </p>
+              ) : null}
             </div>
             <BookingMoneyCell
               diver={diver}

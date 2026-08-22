@@ -20,6 +20,7 @@
  */
 
 import { DAY_MS } from "@/lib/clock";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { nowDate } from "./clock";
 import { rentalFitCompleteness, type SizedRentalKind } from "./rentals";
 
@@ -86,6 +87,12 @@ export type PrepDiver = {
   fit: RentalFit | null;
   wantsNitrox: boolean;
   hasVerifiedNitroxCard: boolean;
+  /**
+   * How long since this diver was last in the water, as they answered it on
+   * `/ready`. Null for a booking taken before the question existed, or a diver
+   * who skipped it — which is silence, not an answer, and renders nothing.
+   */
+  lastDivedBand: DiveRecencyBand | null;
 };
 
 /**
@@ -139,6 +146,8 @@ export type PrepDiverLine = {
   fullName: string;
   items: PrepPiece[];
   state: "rents" | "own_kit" | "not_recorded";
+  /** Carried through so the by-diver view can show it beside the name. */
+  lastDivedBand: DiveRecencyBand | null;
 };
 
 export type TankPlan = {
@@ -391,6 +400,7 @@ export function buildDivePrepChecklist(input: {
         fullName: diver.fullName,
         items: [],
         state: "not_recorded",
+        lastDivedBand: diver.lastDivedBand,
       });
       continue;
     }
@@ -419,6 +429,7 @@ export function buildDivePrepChecklist(input: {
       fullName: diver.fullName,
       items,
       state: items.length > 0 ? "rents" : "own_kit",
+      lastDivedBand: diver.lastDivedBand,
     });
     for (const item of items) {
       const key = `${item.kind}:${item.fitAtCheckIn ? "\u0000fit" : (item.size?.toLowerCase() ?? "")}`;
