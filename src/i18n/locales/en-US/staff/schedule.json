@@ -124,7 +124,8 @@
     "requestPlanDescription": "Checked people will be invited to this departure, not booked.",
     "requestPlanRecommendation": "About {divers} divers are represented. Suggested starting capacity: {capacity} seats.",
     "requestPlanDivers": "{divers} divers",
-    "requestPlanPerson": "{name} ({divers, plural, one {# diver} other {# divers}})"
+    "requestPlanPersonOne": "{name} ({divers} diver)",
+    "requestPlanPersonOther": "{name} ({divers} divers)"
   },
   "addBooking": "Add a booking"
 }

@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   type BuilderCopy,
   type BuilderDay,
@@ -1086,4 +1087,123 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.queryByRole("button", { name: /Add a departure/ })).toBeNull();
     expect(screen.getByText(/limited to owners, managers, and instructors/)).toBeInTheDocument();
   });
+});
+
+/**
+ * The request-plan panel is the one place on the board where staff copy is
+ * composed on the *client* from a template the server handed over unformatted.
+ * That boundary is where issue #606 lived: `boats.requestPlanCrewSuggestion`
+ * carried an ICU plural, the page fetched it with `st()` — which formats — and
+ * so raised a `FORMATTING_ERROR` on every board render outside production,
+ * while production swallowed the error and printed the ICU source to the shop.
+ *
+ * These tests therefore take their copy from the **real** bundles through a
+ * real `staffTranslator`, not from the `COPY` fixture above: a fixture cannot
+ * throw the way the page did, and cannot leak a template the fixture doesn't
+ * carry. Both locales, and both sides of the plural.
+ */
+describe("ScheduleBuilder request plan: copy composed on the client", () => {
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [],
+    },
+  ];
+
+  /** The half of the copy map `page.tsx` builds for this panel, built the same way. */
+  function requestPlanCopy(locale: string) {
+    const st = staffTranslator(locale);
+    return {
+      requestPlanHeading: st("schedule.builder.requestPlanHeading"),
+      requestPlanDescription: st("schedule.builder.requestPlanDescription"),
+      requestPlanRecommendation: st.raw("schedule.builder.requestPlanRecommendation"),
+      requestPlanDivers: st.raw("schedule.builder.requestPlanDivers"),
+      requestPlanPersonOne: st.raw("schedule.builder.requestPlanPersonOne"),
+      requestPlanPersonOther: st.raw("schedule.builder.requestPlanPersonOther"),
+      requestPlanBoatRecommendation: st.raw("boats.requestPlanBoatRecommendation"),
+      requestPlanBoatExceeded: st("boats.requestPlanBoatExceeded"),
+      requestPlanCrewSuggestionOne: st.raw("boats.requestPlanCrewSuggestionOne"),
+      requestPlanCrewSuggestionOther: st.raw("boats.requestPlanCrewSuggestionOther"),
+    };
+  }
+
+  function renderPlan(locale: string, divemasters: number, divers: number) {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={{ ...COPY, ...requestPlanCopy(locale) }}
+        more={MORE}
+        initialCourse={null}
+        openAdd="expanded"
+        requestPlan={{
+          estimatedDivers: divers,
+          suggestedCapacity: 12,
+          suggestedDivemasters: divemasters,
+          diversPerDivemaster: 4,
+          suggestedBoatName: "Reef Runner",
+          exceedsKnownBoats: false,
+          requests: [{ id: "inq-1", name: "Marisol", subject: "Saturday reef", divers }],
+        }}
+      />,
+    );
+  }
+
+  /**
+   * The finished sentence, spelled out rather than rebuilt from the bundle —
+   * a fixture that composes the expectation the same way the component does
+   * agrees with any bug both of them share. `diversPerDivemaster` is 4 in the
+   * plan below, so the ratio is fixed too.
+   */
+  const CASES = [
+    {
+      locale: "en-US",
+      count: 1,
+      panel: "Starting from requests",
+      crew: "Bring 1 divemaster — your 4:1 target.",
+      lead: "Marisol (1 diver)",
+    },
+    {
+      locale: "en-US",
+      count: 3,
+      panel: "Starting from requests",
+      crew: "Bring 3 divemasters — your 4:1 target.",
+      lead: "Marisol (3 divers)",
+    },
+    {
+      locale: "es-ES",
+      count: 1,
+      panel: "Partir de las peticiones",
+      crew: "Lleva 1 divemaster — tu objetivo de 4:1.",
+      lead: "Marisol (1 buceador)",
+    },
+    {
+      locale: "es-ES",
+      count: 3,
+      panel: "Partir de las peticiones",
+      crew: "Lleva 3 divemasters — tu objetivo de 4:1.",
+      lead: "Marisol (3 buceadores)",
+    },
+  ];
+
+  for (const expected of CASES) {
+    it(`says the ${expected.count === 1 ? "singular" : "plural"} in ${expected.locale}`, () => {
+      renderPlan(expected.locale, expected.count, expected.count);
+
+      const panel = screen.getByRole("group", { name: expected.panel });
+      expect(within(panel).getByText(expected.crew)).toBeInTheDocument();
+      expect(within(panel).getByText(expected.lead)).toBeInTheDocument();
+      // The failure mode in one line: an unresolved template — an ICU plural
+      // `fill()` cannot see, or a `{name}` nobody supplied — reaches the reader
+      // as a brace.
+      expect(panel.textContent).not.toContain("{");
+    });
+  }
 });

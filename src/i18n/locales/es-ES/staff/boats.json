@@ -47,5 +47,6 @@
   "requestCrewSuggestion": "Lleva {divemasters, plural, one {# divemaster} other {# divemasters}} — tu objetivo de {ratio}:1.",
   "requestPlanBoatRecommendation": "Embarcación sugerida: {boatName} ({capacity} plazas)",
   "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande",
-  "requestPlanCrewSuggestion": "Lleva {divemasters, plural, one {# divemaster} other {# divemasters}} — tu objetivo de {ratio}:1."
+  "requestPlanCrewSuggestionOne": "Lleva {divemasters} divemaster — tu objetivo de {ratio}:1.",
+  "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters — tu objetivo de {ratio}:1."
 }
