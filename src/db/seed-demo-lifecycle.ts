@@ -18,6 +18,8 @@ import {
   courseInquiries,
   courses,
   dayCloseouts,
+  divePackageEntitlements,
+  divePackages,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -127,6 +129,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // Redemptions reference checkouts; the codes themselves are referenced *by*
   // checkouts, so the codes go after them (docs ADR 20260729-shop-promo-codes).
   await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
+  // The shop is going, so its prepaid dives go with it. Entitlements reference
+  // bookings, orders *and* the package they came from, so they go before all
+  // three (ADR 20260822-a-package-is-entitlements-not-money).
+  await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
+  await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));

@@ -2120,6 +2120,13 @@ export const tripLastMinutePromoRecipients = pgTable(
 /** What a shop-wide promo code may be spent on; `all` is both. */
 export const shopPromoScope = pgEnum("shop_promo_scope", ["all", "trips", "courses"]);
 
+/**
+ * Which departures a dive package covers. `fun_dives` excludes course sessions,
+ * which is the ordinary shape — a shop sells cheap dives to a certified diver,
+ * not cheap instruction (ADR 20260822-a-package-is-entitlements-not-money).
+ */
+export const divePackageScope = pgEnum("dive_package_scope", ["all", "fun_dives"]);
+
 export const shopPromoStatus = pgEnum("shop_promo_status", [
   "pending",
   "active",
@@ -2215,6 +2222,144 @@ export const shopPromoRedemptions = pgTable(
   (table) => [
     uniqueIndex("shop_promo_redemptions_checkout_unique").on(table.checkoutId),
     index("shop_promo_redemptions_promo_idx").on(table.promoCodeId, table.redeemedAt),
+  ],
+);
+
+/**
+ * **What a shop sells when it sells "ten dives".** The definition, not a
+ * purchase — one row per product on the shop's price list
+ * (ADR 20260822-a-package-is-entitlements-not-money).
+ *
+ * The unit is a **dive**, never an amount. A diver who buys ten dives for $900
+ * and takes a $180 wreck charter has used one dive, not $90 of $900, and every
+ * shop that sells packages sells them precisely so the diver stops thinking
+ * about the per-dive price. A stored-value model reintroduces it, most sharply
+ * on the expensive departure — which is why gift cards (stored value, and their
+ * unclaimed-balance rules) are a different product and remain unscheduled.
+ */
+export const divePackages = pgTable(
+  "dive_packages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** What the diver sees on the price list — "Ten-dive package". */
+    name: text("name").notNull(),
+    /** How many dives it buys. Unlimited is deliberately out of scope. */
+    diveCount: integer("dive_count").notNull(),
+    /** In the shop's own currency's minor units, like every other price here. */
+    priceCents: integer("price_cents").notNull(),
+    /**
+     * Which departures it covers. `all` is every departure; `fun_dives` excludes
+     * course sessions, which is the ordinary shape — a shop sells cheap dives to
+     * a certified diver, not cheap instruction.
+     *
+     * Resolved against the departure at booking time, which is a read: what the
+     * shop sold cannot depend on when the diver books.
+     */
+    scope: divePackageScope("scope").notNull().default("all"),
+    /**
+     * How long a purchased package stays usable, in days from purchase. Null
+     * means it never lapses — the behaviour that cannot surprise anyone, and
+     * the default until the policy question in the ADR is answered. An expiry
+     * that silently eats prepaid dives is what generates the complaint.
+     */
+    validityDays: integer("validity_days"),
+    /**
+     * Soft-deleted like everything a user can delete
+     * (ADR 20260820-every-delete-is-soft). Deleting a package the shop no longer
+     * sells must never invalidate the dives someone already bought — the
+     * entitlements below reference this row and outlive it.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdByPersonId: uuid("created_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("dive_packages_shop_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
+    check("dive_packages_dive_count_positive", sql`${table.diveCount} > 0`),
+    check("dive_packages_price_positive", sql`${table.priceCents} > 0`),
+    check(
+      "dive_packages_validity_positive",
+      sql`${table.validityDays} is null or ${table.validityDays} > 0`,
+    ),
+  ],
+);
+
+/**
+ * **One dive a diver has already paid for and not yet taken.** N rows per
+ * purchase, one consumed per covered booking
+ * (ADR 20260822-a-package-is-entitlements-not-money).
+ *
+ * Rows rather than a counter, for two facts a counter cannot hold: *which*
+ * booking consumed *which* dive, and when. Without the first, a cancellation
+ * cannot hand back precisely what it took; without the second, consumption-based
+ * revenue recognition is not reportable at all — so a counter would decide the
+ * ADR's open accounting question by accident, in the direction that is harder to
+ * reverse.
+ *
+ * An entitlement is **consumed, never spent**: returning one on a cancellation
+ * undoes a link rather than crediting an amount, so it cannot round, drift, or
+ * give back more than it took.
+ */
+export const divePackageEntitlements = pgTable(
+  "dive_package_entitlements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    packageId: uuid("package_id")
+      .notNull()
+      .references(() => divePackages.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /**
+     * The order the diver paid on. Every entitlement from one purchase shares
+     * it, which is what makes "refund the whole package" a question that can be
+     * asked of the data.
+     */
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    /**
+     * The booking this dive was used on, and `consumedAt` beside it. Null means
+     * unused. Unique on the booking, so one seat can never eat two dives — the
+     * guard that matters most, because `bookSpot` runs concurrently.
+     */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    /**
+     * When this dive stops being usable, resolved from the package's
+     * `validityDays` at purchase. Null never lapses. Stamped per entitlement
+     * rather than read back through the package, so a later edit to the product
+     * cannot retroactively shorten a package somebody already bought.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The hot read: "how many dives does this diver have left?"
+    index("dive_package_entitlements_person_idx")
+      .on(table.shopId, table.personId)
+      .where(sql`${table.consumedAt} is null`),
+    index("dive_package_entitlements_order_idx").on(table.orderId),
+    // One seat, one dive. Partial so the many unused rows (null booking) do not
+    // collide with each other.
+    uniqueIndex("dive_package_entitlements_booking_unique")
+      .on(table.bookingId)
+      .where(sql`${table.bookingId} is not null`),
+    // Consumed and unconsumed are the only two shapes; a row carrying one half
+    // of the pair is a bug that would read as "used by nobody" or "used at no
+    // time", and both are worse than a refusal.
+    check(
+      "dive_package_entitlements_consumption_paired",
+      sql`(${table.bookingId} is null) = (${table.consumedAt} is null)`,
+    ),
   ],
 );
 

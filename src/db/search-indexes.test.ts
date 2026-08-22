@@ -109,6 +109,10 @@ describe("leading-wildcard ILIKE search is indexed (DATA-L6)", () => {
  * of `people`, which is exactly the failure mode DATA-L6 was about.
  */
 describe("the phone-digits search expression", () => {
+  // Deliberately a plain string, `${…}` and all: this *is* the source text the
+  // two files must share, so interpolating it here would compare something
+  // neither of them contains. The placeholder is drizzle's, not JavaScript's.
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the placeholder is the thing under test
   const DIGITS_EXPRESSION = "regexp_replace(coalesce(${people.phone}, ''), '[^0-9]', '', 'g')";
 
   it("is the same expression in the query and in the index", async () => {

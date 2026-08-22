@@ -22,6 +22,7 @@ import {
   courseInquiries,
   courses,
   dayCloseouts,
+  divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -872,6 +873,11 @@ export async function resetDemoSchedule(
   // (docs ADR 20260729-shop-promo-codes). The codes themselves are shop config
   // and survive a schedule reset.
   await db.delete(shopPromoRedemptions).where(eq(shopPromoRedemptions.shopId, shopId));
+  // An entitlement points at the booking that consumed it and the order it was
+  // bought on, so it goes before both. The package *definitions* are the shop's
+  // price list and survive a schedule reset, exactly like the promo codes above
+  // (ADR 20260822-a-package-is-entitlements-not-money).
+  await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
   await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
   // Orders (and their line items) reference bookings and people; the waitlist
   // references trips and people. Both must go before the parents below.
