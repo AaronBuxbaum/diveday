@@ -11,6 +11,7 @@ export type ConnectivityStatusCopy = {
 export function ConnectivityStatus({
   offlineLabel,
   onlyWhenOffline = false,
+  className = "",
   copy,
 }: {
   /** What "offline" means on this surface (the manifest has a device copy; a
@@ -28,6 +29,17 @@ export function ConnectivityStatus({
    * absence of a badge reads as "fine", which is exactly what it means.
    */
   onlyWhenOffline?: boolean;
+  /**
+   * Extra classes on the pill itself — spacing included.
+   *
+   * **Not a wrapper element, deliberately.** With `onlyWhenOffline` this
+   * component renders `null`, and a wrapper carrying the margin still occupies
+   * that margin: an empty `<span className="mt-2 inline-flex">` left 24px of
+   * dead space under the page title and moved forty visual surfaces while
+   * showing nothing at all. Spacing that belongs to a thing has to disappear
+   * with the thing.
+   */
+  className?: string;
   copy: ConnectivityStatusCopy;
 }) {
   // Start "online" so the server render and the first client render agree — a
@@ -57,9 +69,11 @@ export function ConnectivityStatus({
         // Badge doesn't fit here (role/title/live-region props, min-h-9, its
         // own glyph pair) — but the AA rule from ui/badge.tsx still applies:
         // -strong text on the tinted fill.
-        online
-          ? "inline-flex min-h-9 items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success-strong"
-          : "inline-flex min-h-9 items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-sm font-bold text-warning-strong"
+        `${
+          online
+            ? "border-success/30 bg-success/10 text-success-strong"
+            : "border-warning/40 bg-warning/10 text-warning-strong"
+        } inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold ${className}`
       }
     >
       <span aria-hidden="true" className="text-base leading-none">

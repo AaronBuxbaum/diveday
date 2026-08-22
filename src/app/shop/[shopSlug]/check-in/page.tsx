@@ -285,17 +285,16 @@ export default async function CheckInPage({
                 may be stale instead") and nothing in the app had ever mounted
                 it that way (issue #819). A staffer who can see the connection
                 is down does not have to wonder whether the tap landed. */}
-            <span className="mt-2 inline-flex">
-              <ConnectivityStatus
-                offlineLabel={t("checkIn.offlineLabel")}
-                onlyWhenOffline
-                copy={{
-                  online: t("shared.connectivity.online"),
-                  onlineTitle: t("shared.connectivity.onlineTitle"),
-                  offlineTitle: t("shared.connectivity.offlineTitle"),
-                }}
-              />
-            </span>
+            <ConnectivityStatus
+              offlineLabel={t("checkIn.offlineLabel")}
+              onlyWhenOffline
+              className="mt-2"
+              copy={{
+                online: t("shared.connectivity.online"),
+                onlineTitle: t("shared.connectivity.onlineTitle"),
+                offlineTitle: t("shared.connectivity.offlineTitle"),
+              }}
+            />
           </>
         }
       />

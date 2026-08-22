@@ -419,17 +419,16 @@ async function TodayBody({
                 means the counts, the crew line and the blocked names are
                 whatever they were when the signal went. A staffer who can see
                 that does not act on a stale board (issue #819). */}
-            <span className="mt-2 inline-flex">
-              <ConnectivityStatus
-                offlineLabel={t("shopHome.offlineLabel")}
-                onlyWhenOffline
-                copy={{
-                  online: t("shared.connectivity.online"),
-                  onlineTitle: t("shared.connectivity.onlineTitle"),
-                  offlineTitle: t("shared.connectivity.offlineTitle"),
-                }}
-              />
-            </span>
+            <ConnectivityStatus
+              offlineLabel={t("shopHome.offlineLabel")}
+              onlyWhenOffline
+              className="mt-2"
+              copy={{
+                online: t("shared.connectivity.online"),
+                onlineTitle: t("shared.connectivity.onlineTitle"),
+                offlineTitle: t("shared.connectivity.offlineTitle"),
+              }}
+            />
           </>
         }
       />
