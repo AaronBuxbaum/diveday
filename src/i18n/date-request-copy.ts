@@ -38,6 +38,7 @@ export function dateRequestCopy(t: DiverTranslator, subject: "course" | "dive"):
     messagePlaceholder: t("inquiry.messagePlaceholder"),
     orWriteTo: t("inquiry.orWriteTo"),
     callLabel: t("inquiry.callLabel"),
+    orCall: t("inquiry.orCall"),
     send: t("inquiry.send"),
     sending: t("inquiry.sending"),
     sentHeading: t("inquiry.sentHeading"),

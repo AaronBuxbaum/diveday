@@ -25,6 +25,7 @@ import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-label
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
   isNotBackAboard,
@@ -1082,7 +1083,12 @@ export function OfflineManifestView() {
           here in airplane mode (issue #688). */}
       <EmergencyReferenceCard
         className="mt-6"
-        reference={envelope.snapshot.shop.emergencyReference}
+        // A snapshot saved before this field existed still decrypts, so it
+        // arrives without one. Falls back to the empty reference, which renders
+        // the "nothing recorded yet" prompt — the same thing a shop that has
+        // filled nothing in sees, and the only outcome that does not throw on
+        // the one surface a crew has offshore.
+        reference={envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
         copy={{
           heading: t("trips.emergency.heading"),
           empty: t("trips.emergency.empty"),

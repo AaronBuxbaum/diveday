@@ -144,25 +144,45 @@ export function DateRequestForm({
    * The shop's own address and number — the way out of the form, twice over.
    * Absent entirely for a shop with no contact details on file: an offer to
    * write to nobody is worse than no offer.
+   *
+   * **Either detail on its own is enough.** The first version hung the whole
+   * line off the email address, so a shop with a phone number and no email —
+   * an ordinary small dive shop, and the one most likely to want a call — had
+   * its number silently dropped from the one place a diver is told what to do
+   * when the date they wanted is not on the board. The docblock above already
+   * claimed this was the behaviour; only the code disagreed.
    */
-  const contactLine = contactEmail ? (
-    <p className="mt-4 text-sm text-muted">
-      {copy.orWriteTo}{" "}
-      <a href={`mailto:${contactEmail}`} className="font-medium text-primary hover:underline">
-        {contactEmail}
-      </a>
-      {contactPhone ? (
-        <>
-          {" "}
-          · {copy.callLabel}{" "}
-          <a href={telHref(contactPhone)} className="font-medium text-primary hover:underline">
-            {contactPhone}
-          </a>
-        </>
-      ) : null}
-      .
-    </p>
+  const emailLink = contactEmail ? (
+    <a href={`mailto:${contactEmail}`} className="font-medium text-primary hover:underline">
+      {contactEmail}
+    </a>
   ) : null;
+  const phoneLink = contactPhone ? (
+    <a href={telHref(contactPhone)} className="font-medium text-primary hover:underline">
+      {contactPhone}
+    </a>
+  ) : null;
+  const contactLine =
+    emailLink || phoneLink ? (
+      <p className="mt-4 text-sm text-muted">
+        {emailLink ? (
+          <>
+            {copy.orWriteTo} {emailLink}
+            {phoneLink ? (
+              <>
+                {" "}
+                · {copy.callLabel} {phoneLink}
+              </>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {copy.orCall} {phoneLink}
+          </>
+        )}
+        .
+      </p>
+    ) : null;
 
   if (state.success) {
     return (

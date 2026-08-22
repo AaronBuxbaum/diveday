@@ -263,7 +263,11 @@ export function tripJsonLd(
     // its address is the honest one. Deliberately *not* the site's own
     // latitude/longitude: those point two miles offshore, and telling Google
     // the event happens out at sea is worse than telling it about the dock.
-    location: { "@type": "Place", name: trip.diveSiteName ?? shop.name, address },
+    // `||`, not `??`: `pruneJsonLd` drops null and undefined but keeps an empty
+    // string, so a site row whose name is blank would publish `name: ""` on the
+    // Place — a nameless location, which is worse than falling back to the
+    // shop. This was a truthiness check before and the `??` quietly narrowed it.
+    location: { "@type": "Place", name: trip.diveSiteName || shop.name, address },
     organizer: shopJsonLd(shop, origin, aggregate),
     offers:
       trip.priceCents === null

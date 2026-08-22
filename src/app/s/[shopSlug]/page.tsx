@@ -15,6 +15,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
+  countShopTrips,
   pagedUpcomingTripsWithCounts,
   tripDiveSiteSummaries,
   upcomingScheduleRange,
@@ -192,6 +193,19 @@ export default async function SchedulePage({
     }),
   ]);
   const hasUpcoming = range.first !== null;
+  /**
+   * **Has this shop ever run a departure** — which is not what `hasUpcoming`
+   * asks.
+   *
+   * `upcomingScheduleRange` is scheduled, public, and ahead of now, so it goes
+   * false for a shop between seasons with three hundred departures behind it,
+   * and for one whose whole board is currently private. The deal list below
+   * stands down on that signal, and standing it down for those two shops is
+   * backwards: an off-season visitor is exactly the person worth telling when a
+   * boat needs to fill seats at a discount. The count only runs in the rare
+   * case the cheap signal already says no.
+   */
+  const everHadDeparture = hasUpcoming || (await countShopTrips(db, shop.id)) > 0;
   // Where each departure on this page actually goes. One read for the page,
   // not one per card — and read off the *dives* rather than `trips.dive_site_id`
   // (dive one's site, copied onto the trip row), so a two-site day names both
@@ -757,8 +771,9 @@ export default async function SchedulePage({
               departure. It asks a diver to be told when a boat needs to fill
               seats at a discount, and points them at "that trip's own page" —
               on a shop with no boats it collects addresses it will never mail,
-              about trips that do not exist (issue #710). */}
-          {hasUpcoming ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
+              about trips that do not exist (issue #710). `everHadDeparture`,
+              not `hasUpcoming`: see above. */}
+          {everHadDeparture ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
           {/* Not gated on `contactEmail`. The request lands in
               `course_inquiries` and staff read it at /shop/<slug>/requests, so
               the shop's email is only needed for the notification — which

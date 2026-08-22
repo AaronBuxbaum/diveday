@@ -1,3 +1,5 @@
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
@@ -37,6 +39,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const settingsModule = await import("./SettingsPage");
+const settingsRowsModule = await import("./_components/SettingsRows");
 const SettingsPage = settingsModule.default;
 const { SETTINGS_GROUPS, SettingsGroup } = settingsModule;
 
@@ -116,6 +119,58 @@ describe("settings findability", () => {
     // the day, so the gate moved up to the page and the honest assertion is
     // that they never reach it (ADR 20260724-role-gated-surfaces-hide-not-explain).
     await expect(renderSettings("divemaster")).rejects.toThrow(/NEXT_REDIRECT/);
+  });
+});
+
+/**
+ * **A deep link into a `<details>` opens nothing on its own.**
+ *
+ * Every settings row is a closed disclosure, so `settings#units` scrolled a
+ * brand-new shop to the top of a 7,000px page with the row it had just been
+ * sent to still shut. `SettingsRow` has the mechanism for this — `anchorId`
+ * puts the target *inside* the disclosure so a hard navigation's reveal
+ * algorithm opens it, and `openOnHash` does the same on a client navigation —
+ * and three rows already used it, which is exactly what made the missing
+ * fourth invisible.
+ *
+ * Written against every `settings#…` link in the tree rather than the one that
+ * was broken: the next dead fragment will be a new link into an old row, and a
+ * test naming `units` would not see it. It found a second one immediately —
+ * `#money`, the door every "connect payments first" fallback in the app opens.
+ */
+describe("deep links into settings", () => {
+  it("opens the row every settings fragment in the app points at", async () => {
+    const rendered = await renderSettings("owner");
+    const rows = findElements<{ openOnHash?: string; anchorId?: string }>(
+      rendered,
+      settingsRowsModule.SettingsRow,
+    );
+    const openable = new Set(
+      rows.flatMap((row) => (row.props.openOnHash ? [row.props.openOnHash] : [])),
+    );
+    const anchored = new Set(
+      rows.flatMap((row) => (row.props.anchorId ? [row.props.anchorId] : [])),
+    );
+    // A link may also point at a whole *group* — a plain `<h2 id>` outside any
+    // disclosure, so it needs nothing to reveal it. `#data-integrations` is
+    // one, and reading it as a broken row link would be this test crying wolf.
+    const groups = new Set<string>(SETTINGS_GROUPS.map((group) => group.id));
+
+    const linked = new Set<string>();
+    for (const file of await readdirDeep("src")) {
+      if (!/\.tsx?$/.test(file) || file.includes(".test.")) continue;
+      const source = await readFile(file, "utf8");
+      for (const [, fragment] of source.matchAll(/\/settings#([a-z-]+)/g)) linked.add(fragment);
+    }
+    // A guard on the guard: if the scan finds nothing, the assertion below is
+    // vacuously true and this test is worthless.
+    expect(linked.size).toBeGreaterThan(0);
+
+    for (const fragment of linked) {
+      if (groups.has(fragment)) continue;
+      expect(openable, `${fragment} has no row that opens on its fragment`).toContain(fragment);
+      expect(anchored, `${fragment} has no target inside a row`).toContain(fragment);
+    }
   });
 });
 
@@ -312,3 +367,15 @@ describe("the dock-day preview and the sites that override it", () => {
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/dive-sites/${overridden}`);
   });
 });
+
+/** Every file under `dir`, recursively — the scan the deep-link test walks. */
+async function readdirDeep(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const out: string[] = [];
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await readdirDeep(full)));
+    else out.push(full);
+  }
+  return out;
+}

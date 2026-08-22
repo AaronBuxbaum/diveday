@@ -79,6 +79,38 @@ describe("the tel: link", () => {
     expect(telHref("ask the divemaster")).toBeNull();
     expect(telHref("--")).toBeNull();
   });
+
+  /**
+   * **A tap must dial what is written, or nothing.**
+   *
+   * The first version stripped the non-dialable characters and asked only
+   * whether three digits survived, which turned every mixed value into a
+   * confidently *wrong* link. The seeded shop already writes
+   * `Mantis II - VHF 16, MMSI 338055501` into this shape, so these are the
+   * expected data rather than adversarial input — and the earlier tests missed
+   * it entirely by probing only the zero-digit case (`code-reviewer`).
+   */
+  it.each([
+    ["VHF 16 / 22A", "a channel and a backup channel"],
+    ["VHF Ch 16, backup 68", "two channels in one field"],
+    ["Ch 16 (MMSI 338055501)", "a channel beside a vessel identity"],
+    ["1-800-DIVE-911", "a vanity number"],
+    ["Chamber 305-555-0177 ext 4", "an extension"],
+    ["911 or +1 305 555 0000", "two numbers in one field"],
+  ])("never invents a number from %s (%s)", (value) => {
+    expect(telHref(value)).toBeNull();
+  });
+
+  it("still dials the shapes a real number arrives in", () => {
+    // The other half: a rule strict enough to refuse the above must not refuse
+    // the punctuation people actually type.
+    expect(telHref("+1 305 555 0177")).toBe("tel:+13055550177");
+    expect(telHref("(305) 555-0177")).toBe("tel:3055550177");
+    expect(telHref("305.555.0177")).toBe("tel:3055550177");
+    // A pause/wait tail is dialable and is how a shop reaches an extension
+    // without writing the word.
+    expect(telHref("+1 305 555 0177,,123")).toBe("tel:+13055550177,,123");
+  });
 });
 
 /**
