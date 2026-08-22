@@ -22,12 +22,16 @@ const entitlement = (over: Partial<SpendableEntitlement> = {}): SpendableEntitle
 });
 
 describe("defining a package", () => {
+  // The USD line-item ceiling, so these cases are about the rules rather than
+  // the bound; the bound has its own case below.
+  const MAX = 999_999_99;
   const base = {
     name: "Ten dives",
     diveCount: 10,
     priceCents: 90_000,
     scope: "all" as const,
     validityDays: null,
+    maxPriceCents: MAX,
   };
 
   it("accepts the ordinary product", () => {
@@ -42,6 +46,17 @@ describe("defining a package", () => {
     // is a seat the shop gave away by accident.
     const result = validateDivePackage({ ...base, priceCents: 0 });
     expect(result).toEqual({ ok: false, reason: "price_required" });
+  });
+
+  it("refuses a price the order layer would not accept", () => {
+    // Otherwise a package that cannot be sold sits on the price list looking
+    // sellable until somebody tries — and a big enough number overflows `int4`
+    // on insert rather than being refused.
+    expect(validateDivePackage({ ...base, priceCents: MAX + 1 })).toEqual({
+      ok: false,
+      reason: "price_required",
+    });
+    expect(validateDivePackage({ ...base, priceCents: MAX }).ok).toBe(true);
   });
 
   it("refuses a typo rather than clamping it", () => {

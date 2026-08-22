@@ -43,6 +43,13 @@ export function validateDivePackage(input: {
   priceCents: number;
   scope: DivePackageScope;
   validityDays: number | null;
+  /**
+   * The ceiling a line item on this shop's currency may carry
+   * (`maxLineItemUnitAmountCents`). Passed in rather than imported: this module
+   * is framework-free and the bound is the *order* layer's rule, so a package
+   * that could not be sold is refused at the moment it is defined.
+   */
+  maxPriceCents: number;
 }):
   | { ok: true; value: DivePackageDefinition & { name: string } }
   | { ok: false; reason: DivePackageRefusal } {
@@ -57,7 +64,17 @@ export function validateDivePackage(input: {
   }
   // Zero is not a free package, it is a package nobody paid for — and an
   // entitlement nobody paid for is a seat the shop gave away by accident.
-  if (!Number.isInteger(input.priceCents) || input.priceCents < 1) {
+  //
+  // Bounded above too, against the same ceiling `createOrder` applies to a line
+  // item. Without it, a price over ~21.5M major units overflows `int4` on
+  // insert — and worse, a price the *order* would refuse could sit on the price
+  // list looking sellable until someone tried to sell it
+  // (`security-reviewer`, issue #706).
+  if (
+    !Number.isInteger(input.priceCents) ||
+    input.priceCents < 1 ||
+    input.priceCents > input.maxPriceCents
+  ) {
     return { ok: false, reason: "price_required" };
   }
   if (
