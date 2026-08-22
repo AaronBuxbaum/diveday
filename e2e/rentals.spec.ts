@@ -1,9 +1,11 @@
 import { expect, test } from "./fixtures";
 import { e2eNow } from "./helpers";
 
-// The demo shop prices its rental gear (src/db/seed.ts): a $45 full set, per-piece
-// prices, and a per-dive nitrox surcharge. A diver setting their rental fit should
-// see those prices and a running estimate, not a bare "ask the shop" line.
+// The demo shop prices its rental gear (src/db/seed.ts): a $45 full set and
+// per-piece prices. A diver setting their rental fit should see those prices and
+// a running estimate, not a bare "ask the shop" line. The shop also carries a
+// per-dive nitrox surcharge, which this diver never sees: nitrox waits for a
+// card (ADR 20260821-the-ready-page-asks-once), and Rin has none.
 test("a diver sees rental prices and an estimate on the booking confirmation", async ({ page }) => {
   await page.goto("/s/blue-mantis");
   await page
@@ -44,8 +46,12 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // diver skipping one piece is never charged more than the full set (H-06, HD-9).
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   await expect(fit.getByText("Full-set price — you save $5.00.")).toBeVisible();
-  // Nitrox carries its per-dive surcharge in the label, and the explanation of
-  // what nitrox *is* moved into a hover-over rather than a standing paragraph.
-  await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
-  await expect(fit.getByRole("button", { name: "What is Nitrox?" })).toBeVisible();
+  // Nitrox is *not* here, and its absence is the assertion. Rin has no nitrox
+  // card, and since ADR 20260821-the-ready-page-asks-once the section does not
+  // exist until the card that makes it real does — asking a diver whether they
+  // want enriched air, and then refusing to fill it, was a question with no
+  // answer. The per-dive surcharge and the "What is Nitrox?" hover-over went
+  // with it. `e2e/nitrox.spec.ts` owns the other side, where a card exists.
+  await expect(fit.getByText(/per dive/)).toHaveCount(0);
+  await expect(fit.getByRole("button", { name: "What is Nitrox?" })).toHaveCount(0);
 });
