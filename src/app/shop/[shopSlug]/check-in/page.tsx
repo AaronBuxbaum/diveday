@@ -225,6 +225,28 @@ export default async function CheckInPage({
     else departures.push({ tripId: row.tripId, first: row, rows: [row] });
   }
 
+  // **The email is a disambiguator, so it renders only where it disambiguates.**
+  //
+  // This page calls itself Counter mode: it is the screen on the front desk
+  // that divers queue at, which makes it the one staff surface whose audience
+  // is not the person signed in. Printing a personal email under all 26 rows
+  // publishes 25 addresses nobody needed so that two same-named divers can be
+  // told apart (issue #716) — and whoever is second in the queue can read the
+  // address of whoever is first.
+  //
+  // Ambiguity is judged across the **whole visible queue**, not within one
+  // departure: two Anna Kowalskis on different boats are still two rows on one
+  // screen, and a staffer reading down the page has the same problem.
+  // Case-folded, because "anna kowalski" and "Anna Kowalski" are one collision
+  // to a reader.
+  const namesSeen = new Map<string, number>();
+  for (const row of queue) {
+    const key = row.personName.trim().toLocaleLowerCase();
+    namesSeen.set(key, (namesSeen.get(key) ?? 0) + 1);
+  }
+  const nameIsAmbiguous = (personName: string) =>
+    (namesSeen.get(personName.trim().toLocaleLowerCase()) ?? 0) > 1;
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* Every code this page carries is now a refusal, and the acts that
@@ -409,13 +431,14 @@ export default async function CheckInPage({
                             },
                             t,
                           );
-                      // Who this row is: the name, the quiet email that tells
-                      // two same-named divers apart, and the one exceptional
-                      // badge (boarded on the manifest). One builder for all
-                      // three row states so they can never drift apart — the
-                      // blocked row passes a name wrapped in its record link,
-                      // the tappable rows pass the plain name (their tap is
-                      // spoken for).
+                      // Who this row is: the name, the one exceptional badge
+                      // (boarded on the manifest), and — only where two visible
+                      // divers share a name — the quiet email that tells them
+                      // apart. One builder for all three row states so they can
+                      // never drift apart: the blocked row passes a name wrapped
+                      // in its record link, the tappable rows pass the plain name
+                      // (their tap is spoken for).
+                      const showEmail = nameIsAmbiguous(row.personName);
                       const identityFor = (name: React.ReactNode) => (
                         <>
                           <span className="flex flex-wrap items-center gap-2">
@@ -428,7 +451,7 @@ export default async function CheckInPage({
                               <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
                             ) : null}
                           </span>
-                          {row.email ? (
+                          {showEmail && row.email ? (
                             <span className="mt-0.5 block truncate text-sm text-muted">
                               {row.email}
                             </span>
@@ -543,6 +566,16 @@ export default async function CheckInPage({
                                 waiverCopy={waiverSendCopy(t)}
                                 blockers={row.readiness.blockers}
                                 fix={fix}
+                                // Behind a tap on this surface alone. The badge
+                                // above still says Blocked in danger tone, and
+                                // every reason is one tap away — what waits for
+                                // that tap is the queue reading a diver's
+                                // outstanding payment over a shoulder (#716).
+                                collapseReasons={{
+                                  summary: t("checkIn.blockerReasons", {
+                                    count: row.readiness.blockers.length,
+                                  }),
+                                }}
                                 t={t}
                                 extra={
                                   // A diver at the counter with a signed paper release in

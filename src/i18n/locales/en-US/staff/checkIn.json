@@ -67,5 +67,6 @@
     "addToBoat": "Add to boat",
     "addPersonAriaLabel": "Add {name} to this boat",
     "handEntryDescription": "Email is optional — the crew can collect it later. A name is enough to get them on the boat now."
-  }
+  },
+  "blockerReasons": "{count, plural, one {Why: # reason} other {Why: # reasons}}"
 }
