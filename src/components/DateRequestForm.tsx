@@ -66,7 +66,14 @@ export function DateRequestForm({
   /** True on the schedule page, where there is no course to be about. */
   askInterest?: boolean;
   sectionId?: string;
-  contactEmail: string;
+  /**
+   * Null for a shop that has not filled its contact details in yet. The form
+   * still renders and the request still lands in `course_inquiries` for staff
+   * to read on the Requests page — only this line stands down. Guarding the
+   * whole form on it switched off the one public conversion available to a
+   * shop with nothing on the books (issue #710).
+   */
+  contactEmail: string | null;
   contactPhone: string | null;
   copy: DateRequestCopy;
 }) {
@@ -133,8 +140,12 @@ export function DateRequestForm({
     });
   }
 
-  /** The shop's own address and number — the way out of the form, twice over. */
-  const contactLine = (
+  /**
+   * The shop's own address and number — the way out of the form, twice over.
+   * Absent entirely for a shop with no contact details on file: an offer to
+   * write to nobody is worse than no offer.
+   */
+  const contactLine = contactEmail ? (
     <p className="mt-4 text-sm text-muted">
       {copy.orWriteTo}{" "}
       <a href={`mailto:${contactEmail}`} className="font-medium text-primary hover:underline">
@@ -151,7 +162,7 @@ export function DateRequestForm({
       ) : null}
       .
     </p>
-  );
+  ) : null;
 
   if (state.success) {
     return (
