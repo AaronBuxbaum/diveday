@@ -88,9 +88,20 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // Sampled every frame from before hydration rather than asserted on the
   // settled page — a settled-page check passes just as happily against a
   // control that flashed and left, which is precisely what is being guarded.
+  //
+  // Sampled only while the row is *visible*, which is the third timing artifact
+  // this test has had to shed. The HTML parser builds the form left to right,
+  // and `tripType` is the first of its two controls, so there is a frame where
+  // the DOM holds a form with one control in it — CI caught exactly that and
+  // reported `[1, 2]`. It is not a control coming or going: until the inline
+  // script relocates it, the whole subtree sits inside `<div hidden id="S:…">`,
+  // so every half-built state of it is behind that `hidden` and no diver ever
+  // sees one (ADR 20260812-javascript-is-required). Skipping the hidden frames
+  // costs the test nothing it was guarding — hydration mutates the *relocated*
+  // DOM, so both regressions in the history above still fail here.
   await page.addInitScript(() => {
-    const w = window as unknown as { __filterControls: number[] };
-    w.__filterControls = [];
+    const w = window as unknown as { __filterSamples: Array<[number, boolean]> };
+    w.__filterSamples = [];
     const sample = () => {
       // Found through its own `<select>`, never `document.querySelector("form")`
       // — this page carries more than one form, they stream in in an order
@@ -98,9 +109,15 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
       // different element from one frame to the next. That is what made the
       // first version of this test pass alone and fail under parallel workers.
       const form = document.querySelector('select[name="tripType"]')?.closest("form");
-      if (form) {
+      if (form && !form.closest("[hidden]")) {
         const count = form.querySelectorAll("button, input, select, textarea").length;
-        if (w.__filterControls.at(-1) !== count) w.__filterControls.push(count);
+        // Recorded alongside the count so the assertions below can prove the
+        // sampler was running *across* the hydration window rather than only
+        // after it — a sampler that woke up late would report a stable row for
+        // the most boring of reasons.
+        const live = form.querySelector("[data-hydrated]") !== null;
+        const last = w.__filterSamples.at(-1);
+        if (!last || last[0] !== count || last[1] !== live) w.__filterSamples.push([count, live]);
       }
       requestAnimationFrame(sample);
     };
@@ -111,14 +128,19 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // The filters are live, so the hydration window has closed and the sampler
   // above ran across all of it.
   await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
-  const counts = await page.evaluate(
-    () => (window as unknown as { __filterControls: number[] }).__filterControls,
+  const samples = await page.evaluate(
+    () => (window as unknown as { __filterSamples: Array<[number, boolean]> }).__filterSamples,
   );
+  // The sampler saw the row before it went live, so the window it reports on is
+  // the one that matters. Without this, everything below passes vacuously on a
+  // machine where the first visible frame is already hydrated.
+  expect(samples[0]?.[1]).toBe(false);
+
   // One count for the whole window, and it is the two filters and nothing else.
   // (The sampler only records changes, so a stable row is exactly one entry;
   // asserting the value rather than just the length is what stops an empty or
   // never-found form passing as "never changed".)
-  expect(counts).toEqual([2]);
+  expect([...new Set(samples.map(([count]) => count))]).toEqual([2]);
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
