@@ -73,6 +73,26 @@ describe("MarketingScreenFallbacks", () => {
       expect(screen.getByText("Data export")).toBeInTheDocument();
     });
 
+    /**
+     * **The row counts are numbers, and the message formats them.**
+     *
+     * `fallback.export.rowCount` became an ICU plural (issue #778) while these
+     * three mock figures were still pre-grouped *strings* — and `"1,204"` is
+     * not a number, so ICU rendered **NaN rows** on the pricing page. Nothing
+     * failed: no test read the figure, and it took the pricing page's own
+     * visual capture to see it. The upside of the fix is that the grouping is
+     * the reader's now rather than hard-coded English.
+     */
+    it.each([
+      ["en-US", "1,204 rows", "128 rows"],
+      ["es-ES", "1204 filas", "128 filas"],
+    ])("formats the row counts for %s", (locale, biggest, smallest) => {
+      render(<ExportBundleFallback locale={locale as "en-US" | "es-ES"} />);
+      expect(screen.getByText(biggest)).toBeInTheDocument();
+      expect(screen.getByText(smallest)).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
     it("renders the export bundle mockup in Spanish", () => {
       render(<ExportBundleFallback locale="es-ES" />);
       expect(screen.getByText("Exportar datos")).toBeInTheDocument();
