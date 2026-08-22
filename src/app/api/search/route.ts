@@ -1,6 +1,6 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { searchShop } from "@/db/search";
+import { EMPTY_RESULTS, searchShop } from "@/db/search";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { auth } from "@/lib/auth";
@@ -52,10 +52,7 @@ export async function GET(request: Request) {
   // is a different fact from "you are no longer their staff", and this constant
   // discloses nothing either way.
   if (!shop) {
-    return Response.json(
-      { divers: [], trips: [], diveSites: [], courses: [], orders: [] },
-      { headers: NO_STORE },
-    );
+    return Response.json(EMPTY_RESULTS, { headers: NO_STORE });
   }
 
   // The gate that decides: live roles, re-read on every keystroke's request. No

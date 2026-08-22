@@ -1,10 +1,11 @@
 import type { RentalItemKind } from "@/lib/dive-prep";
-import type {
-  GearItemKind,
-  GearItemStatus,
-  GearReservationPhase,
-  GearServiceKind,
-  GearServiceState,
+import {
+  GEAR_ITEM_STATUSES,
+  type GearItemKind,
+  type GearItemStatus,
+  type GearReservationPhase,
+  type GearServiceKind,
+  type GearServiceState,
 } from "@/lib/gear";
 import { rentalItemLabel } from "./rental-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
@@ -44,6 +45,19 @@ const STATUS_KEYS: Record<GearItemStatus, StaffMessageKey> = {
 
 export function gearStatusLabel(t: StaffTranslator, status: GearItemStatus): string {
   return t(STATUS_KEYS[status]);
+}
+
+/**
+ * Every gear status, worded — for a caller that has to render all of them and
+ * cannot ask one at a time. The palette is the case: `src/db/search.ts` returns
+ * the status *code* with each gear hit (domain returns codes), and the words
+ * have to be resolved once, server-side, before crossing into the client
+ * component (issue #719).
+ */
+export function gearStatusLabels(t: StaffTranslator): Record<GearItemStatus, string> {
+  return Object.fromEntries(
+    GEAR_ITEM_STATUSES.map((status) => [status, gearStatusLabel(t, status)]),
+  ) as Record<GearItemStatus, string>;
 }
 
 const SERVICE_KIND_KEYS: Record<GearServiceKind, StaffMessageKey> = {

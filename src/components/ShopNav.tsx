@@ -1,5 +1,6 @@
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
+import { gearStatusLabels } from "@/i18n/gear-labels";
 import { localeEndonym } from "@/i18n/language-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -170,6 +171,10 @@ export function ShopNav({
                 groupDiveSites: t("shared.commandPalette.groupDiveSites"),
                 groupCourses: t("shared.commandPalette.groupCourses"),
                 groupOrders: t("shared.commandPalette.groupOrders"),
+                groupGear: t("shared.commandPalette.groupGear"),
+                // Every status worded here, where the translator is: `src/db`
+                // returns the code (`src/i18n/gear-labels.ts` owns the words).
+                gearStatuses: gearStatusLabels(t),
                 groupGoTo: t("shared.commandPalette.groupGoTo"),
                 destinationLabels,
                 goToBoarding: t("shared.commandPalette.goToBoarding"),

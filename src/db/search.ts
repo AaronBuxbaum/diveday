@@ -1,7 +1,16 @@
-import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import type { AppDb } from "./client";
-import { courses, diveSites, orders, people, trips } from "./schema";
+import {
+  courses,
+  diveSites,
+  type GearItemStatus,
+  gearItems,
+  orders,
+  people,
+  trips,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -17,24 +26,47 @@ export type TripHit = { id: string; title: string; detail: string };
 export type DiveSiteHit = { id: string; name: string };
 export type CourseHit = { id: string; slug: string; title: string };
 export type OrderHit = { id: string; personName: string; detail: string };
+/**
+ * A unit of the shop's own gear. `label` is the tag written on it, which the
+ * schema says in as many words is "how a wet hand finds the row" — and was the
+ * one identifier the shop's search box could not find (issue #719).
+ *
+ * The **status code**, not its words: this module returns codes and the palette
+ * picks the language (`src/i18n/gear-labels.ts`). Carried at all because
+ * finding "BCD #14" and learning it is out for service in the same glance is
+ * the whole value of the row.
+ */
+export type GearHit = {
+  id: string;
+  label: string;
+  status: GearItemStatus;
+  detail: string | null;
+};
 export type SearchResults = {
   divers: DiverHit[];
   trips: TripHit[];
   diveSites: DiveSiteHit[];
   courses: CourseHit[];
   orders: OrderHit[];
+  gear: GearHit[];
 };
 
 const PER_GROUP = 8;
 /** One character matches everything; wait for a real query. */
 const MIN_QUERY = 2;
 
-const EMPTY_RESULTS: SearchResults = {
+/**
+ * Every group, empty. Exported because the route hands it back for a session
+ * whose shop no longer resolves, and a second hand-written copy there silently
+ * lost a group the day one was added (issue #719).
+ */
+export const EMPTY_RESULTS: SearchResults = {
   divers: [],
   trips: [],
   diveSites: [],
   courses: [],
   orders: [],
+  gear: [],
 };
 
 export async function searchShop(
@@ -53,7 +85,23 @@ export async function searchShop(
   if (query.length < MIN_QUERY) return EMPTY_RESULTS;
   const like = `%${query}%`;
 
-  const [diverRows, tripRows, diveSiteRows, courseRows, orderRows] = await Promise.all([
+  // Digits to digits. `people.phone` is free text, so a staffer typing what
+  // caller ID showed them never matched a stored `"+1 305 555 0142"`.
+  // Deliberately *added* to the raw `ilike` rather than replacing it: the raw
+  // comparison is the indexed one this module's docblock is built around, and
+  // this expression is not, so the index still carries every name, email and
+  // as-typed phone query — only a bare-digits query pays for the scan. Guarded
+  // by a digit floor so an ordinary two-letter name query never triggers it.
+  const digits = phoneDigits(query);
+  const phoneMatch =
+    digits.length >= MIN_PHONE_SEARCH_DIGITS
+      ? or(
+          ilike(people.phone, like),
+          sql`regexp_replace(coalesce(${people.phone}, ''), '[^0-9]', '', 'g') like ${`%${digits}%`}`,
+        )
+      : ilike(people.phone, like);
+
+  const [diverRows, tripRows, diveSiteRows, courseRows, orderRows, gearRows] = await Promise.all([
     db
       .select({
         id: people.id,
@@ -66,7 +114,7 @@ export async function searchShop(
         and(
           eq(people.shopId, shopId),
           isNull(people.deletedAt),
-          or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like)),
+          or(ilike(people.fullName, like), ilike(people.email, like), phoneMatch),
         ),
       )
       .orderBy(people.fullName)
@@ -120,6 +168,32 @@ export async function searchShop(
       )
       .orderBy(desc(orders.createdAt))
       .limit(PER_GROUP),
+    // The register is opt-in **by presence** (ADR 20260815-minimal-gear-register),
+    // so a shop that has never used it simply matches nothing here and the
+    // group does not render — no extra "does this shop have gear" query, and no
+    // empty heading for the shops that don't.
+    db
+      .select({
+        id: gearItems.id,
+        label: gearItems.label,
+        status: gearItems.status,
+        brandModel: gearItems.brandModel,
+        serialNumber: gearItems.serialNumber,
+      })
+      .from(gearItems)
+      .where(
+        and(
+          eq(gearItems.shopId, shopId),
+          isNull(gearItems.deletedAt),
+          or(
+            ilike(gearItems.label, like),
+            ilike(gearItems.serialNumber, like),
+            ilike(gearItems.brandModel, like),
+          ),
+        ),
+      )
+      .orderBy(gearItems.label)
+      .limit(PER_GROUP),
   ]);
 
   return {
@@ -144,6 +218,15 @@ export async function searchShop(
       // The order row's own currency, not the shop's current setting — a
       // settled amount is evidence and is never re-denominated.
       detail: `${formatMoneyCents(row.totalCents, row.currency, locale)} · ${formatShortDate(row.createdAt, locale, timeZone)}`,
+    })),
+    gear: gearRows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      status: row.status,
+      // What the unit *is*, beside what it is called — a serial only matters
+      // when a recall or a service centre names one, and then it is the whole
+      // question, so it wins the line.
+      detail: row.serialNumber ?? row.brandModel ?? null,
     })),
   };
 }

@@ -481,6 +481,23 @@ export const people = pgTable(
     index("people_full_name_trgm_idx").using("gin", sql`${table.fullName} gin_trgm_ops`),
     index("people_email_trgm_idx").using("gin", sql`${table.email} gin_trgm_ops`),
     index("people_phone_trgm_idx").using("gin", sql`${table.phone} gin_trgm_ops`),
+    // The same column with its punctuation removed. `people.phone` is free text
+    // — the seed holds "+1 305 555 0142" — so a staffer typing the digits off a
+    // caller ID matched nothing (issue #719). Search compares digits to digits
+    // now, and an expression index is what keeps that comparison indexed rather
+    // than turning every bare-digit query into a sequential scan. The
+    // expression here must stay character-for-character identical to the one in
+    // `src/db/search.ts`, or Postgres will not use this index at all.
+    //
+    // `[^0-9]` rather than `\D` deliberately: drizzle-kit's migration writer
+    // swallows the backslash, so `\D` reached the generated SQL as a bare `D`
+    // — an index that strips the letter D from phone numbers, and one Postgres
+    // would never match against the query's own expression. A character class
+    // has nothing to escape.
+    index("people_phone_digits_trgm_idx").using(
+      "gin",
+      sql`regexp_replace(coalesce(${table.phone}, ''), '[^0-9]', '', 'g') gin_trgm_ops`,
+    ),
   ],
 );
 
@@ -4366,6 +4383,14 @@ export const gearItems = pgTable(
     index("gear_items_shop_kind_idx")
       .on(table.shopId, table.kind)
       .where(sql`${table.deletedAt} is null`),
+    // The command palette searches all three (issue #719), and a B-tree cannot
+    // serve `ilike '%query%'` — only pg_trgm's GIN similarity index can
+    // (CR-018, same reasoning as `people_full_name_trgm_idx`). The tag is the
+    // one the schema comment above calls "how a wet hand finds the row"; the
+    // serial is what a recall or a service centre names.
+    index("gear_items_label_trgm_idx").using("gin", sql`${table.label} gin_trgm_ops`),
+    index("gear_items_serial_trgm_idx").using("gin", sql`${table.serialNumber} gin_trgm_ops`),
+    index("gear_items_brand_model_trgm_idx").using("gin", sql`${table.brandModel} gin_trgm_ops`),
   ],
 );
 

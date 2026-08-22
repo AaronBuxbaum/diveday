@@ -1,0 +1,1 @@
+CREATE INDEX "people_phone_digits_trgm_idx" ON "people" USING gin (regexp_replace(coalesce("phone", ''), '[^0-9]', '', 'g') gin_trgm_ops);
