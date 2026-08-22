@@ -369,3 +369,100 @@ describe("booking a departure with a package", () => {
     expect(payments).toHaveLength(0);
   });
 });
+
+/**
+ * **A stranger must not be able to spend a diver's prepaid dives.**
+ *
+ * `identityUnconfirmed` is set when a public booking reuses an existing person
+ * by email but the submitted *name* disagrees — a possible shared-inbox or
+ * different-human signal (H-13). `persistDeclaration` already refuses to write
+ * a certification claim in that state, on the grounds that a statement made
+ * under a disagreeing name is not provably about that person.
+ *
+ * Spending that person's prepaid property is the same act with a worse failure:
+ * anyone who knows a regular's email could book seats in their name on the
+ * public form and drain their package, and the victim's only notice would be a
+ * balance nothing renders (`dive-domain-expert`, issue #706).
+ */
+describe("a booking made under an unconfirmed identity", () => {
+  it("never spends the matched diver's dives", async () => {
+    const { db, shop } = await seededShopContext();
+    const [staffPerson] = await listStaff(db, shop.id);
+    if (!staffPerson) throw new Error("seed has no staff");
+    const pkg = await createDivePackage(db, {
+      shopId: shop.id,
+      name: "Ten dives",
+      diveCount: 10,
+      priceCents: 90_000,
+      scope: "all",
+      validityDays: null,
+    });
+    if (!pkg) throw new Error("package insert returned no row");
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips.find((row) => row.courseId === null && row.capacity > row.booked);
+    if (!trip) throw new Error("seed has no open fun-dive departure");
+
+    // The regular, booked once so they exist, then given their package.
+    const regular = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Rosa Regular",
+        email: "rosa-regular@example.com",
+      },
+    ]);
+    if (!regular.ok) throw new Error(`booking failed: ${regular.reason}`);
+    const personId = regular.bookings[0].personId;
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId,
+        createdByPersonId: staffPerson.person.id,
+        description: "Ten-dive package",
+        totalCents: 90_000,
+        currency: "usd",
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_test",
+        stripeInvoiceId: "in_test",
+      })
+      .returning();
+    if (!order) throw new Error("order insert returned no row");
+    await grantPackageEntitlements(db, {
+      shopId: shop.id,
+      packageId: pkg.id,
+      personId,
+      orderId: order.id,
+      diveCount: 10,
+      validityDays: null,
+    });
+
+    // Someone else, on the public form, using the regular's email under a
+    // different name — which is exactly what raises `identityUnconfirmed`.
+    const second = trips.find(
+      (row) => row.id !== trip.id && row.courseId === null && row.capacity > row.booked,
+    );
+    if (!second) throw new Error("seed has no second open fun-dive departure");
+    const impostor = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: second.id,
+        fullName: "Someone Else Entirely",
+        email: "rosa-regular@example.com",
+      },
+    ]);
+    if (!impostor.ok) throw new Error(`booking failed: ${impostor.reason}`);
+
+    // The seat exists — this is not a refusal, and the shop still gets the
+    // booking. What did not happen is the spend.
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(10);
+    const payments = await db
+      .select({ status: bookingPayments.status })
+      .from(bookingPayments)
+      .where(eq(bookingPayments.bookingId, impostor.bookings[0].bookingId));
+    expect(payments).toHaveLength(0);
+  });
+});

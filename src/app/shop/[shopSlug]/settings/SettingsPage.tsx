@@ -1059,6 +1059,17 @@ export default async function SettingsPage({
               heading={t("settings.main.units.heading")}
               value={unitsValue}
               open={activeSection === "units"}
+              // The setup checklist's currency-and-depth step links to
+              // `settings#units`, and for as long as this row carried neither
+              // of these that link did **nothing**: the page loaded at the top
+              // with the row still shut, leaving a brand-new shop to hunt for
+              // the one setting it had just been sent to answer. The row is a
+              // `<details>`, so a fragment only reveals it when the target is
+              // *inside* it (`anchorId`) or `AutoOpenDetails` opens it on a
+              // client navigation (`openOnHash`) — which is why the three rows
+              // that already had deep links have both.
+              openOnHash="units"
+              anchorId="units"
             >
               <SectionNotice banner={banner} section="units" active={activeSection} />
               {/* What Stripe reports for the connected account is advisory, so a

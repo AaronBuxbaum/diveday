@@ -1,4 +1,4 @@
-import { and, eq, exists, gt, isNotNull, isNull, or } from "drizzle-orm";
+import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
@@ -8,7 +8,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import type { SendWindow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
-import { orders, shops, trips } from "./schema";
+import { courses, divePackages, orders, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 export async function getShopBySlug(db: AppDb, slug: string) {
@@ -116,15 +116,29 @@ export async function setShopEmergencyReference(
 }
 
 /**
- * Whether the shop has money on its books yet — a priced departure or a single
- * order.
+ * Whether the shop has written a number down in its own currency yet — any
+ * price it set, or a single order.
  *
  * The one question the currency select needs answering before a shop changes
- * it. `price_cents` is an integer count of the **current** currency's minor
- * unit and nothing converts on a switch, so a shop moving `usd → mxn` after
- * pricing a $95 trip is left with a ninety-five *peso* trip (ADR
+ * it. Every `*_cents` column is an integer count of the **current** currency's
+ * minor unit and nothing converts on a switch, so a shop moving `usd → mxn`
+ * after pricing a $95 trip is left with a ninety-five *peso* trip (ADR
  * 20260731-shop-currency). Before any of that exists the change is free, and
  * saying so to a shop on its first afternoon would be noise (issue #712).
+ *
+ * **Every place the shop sets a price counts, not only `trips.price_cents`.**
+ * The first version asked about priced trips and orders alone, which is the
+ * shape a shop has on day one and stops being the shape it has by week two: a
+ * shop that had priced its course catalogue, published a rental price list,
+ * built a dive package or taken a deposit — but not yet a fun dive — was told
+ * the switch was free, and the *silence* was the whole failure, since the
+ * warning is the only thing standing between it and a catalogue of pesos
+ * priced in dollars. Course, package, deposit and rental prices are all read
+ * back to a diver at the point of sale, so each of them is exactly the money
+ * the warning exists for.
+ *
+ * Percentage discounts (`shop_promo_codes`, `trip_last_minute_promos`) stay
+ * out on purpose — a percentage means the same thing in any currency.
  *
  * Deliberately not a count: "how much money" is not the question, and a shop
  * with one priced trip is in exactly the same position as one with a thousand.
@@ -141,14 +155,55 @@ export async function shopHasPricedRecords(db: AppDb, shopId: string): Promise<b
             db
               .select({ one: trips.id })
               .from(trips)
-              .where(and(eq(trips.shopId, shopId), gt(trips.priceCents, 0), liveTrip())),
+              .where(
+                and(
+                  eq(trips.shopId, shopId),
+                  or(gt(trips.priceCents, 0), gt(trips.depositCents, 0)),
+                  liveTrip(),
+                ),
+              ),
           ),
           exists(
             db
-              .select({ one: orders.id })
-              .from(orders)
-              .where(and(eq(orders.shopId, shopId), isNotNull(orders.id))),
+              .select({ one: courses.id })
+              .from(courses)
+              .where(
+                and(
+                  eq(courses.shopId, shopId),
+                  // Not narrowed to active courses: an inactive one keeps its
+                  // price on the row and is one toggle from being sold again,
+                  // so its number is still denominated in the old currency.
+                  or(
+                    gt(courses.priceCents, 0),
+                    gt(courses.eLearningPriceCents, 0),
+                    gt(courses.privatePriceCents, 0),
+                  ),
+                ),
+              ),
           ),
+          exists(
+            db
+              .select({ one: divePackages.id })
+              .from(divePackages)
+              .where(
+                and(
+                  eq(divePackages.shopId, shopId),
+                  isNull(divePackages.deletedAt),
+                  gt(divePackages.priceCents, 0),
+                ),
+              ),
+          ),
+          // The rental price list is a jsonb document rather than a table, so
+          // it is asked in its own shape: a set price, a nitrox surcharge, or
+          // any per-piece price at all.
+          sql`(
+            (${shops.rentalPricing}->>'setCents') is not null
+            or (${shops.rentalPricing}->>'nitroxCents') is not null
+            or coalesce(${shops.rentalPricing}->'perItemCents', '{}'::jsonb) <> '{}'::jsonb
+          )`,
+          // No `isNotNull(orders.id)` beside the tenant predicate — it is the
+          // primary key, so it can only ever be true.
+          exists(db.select({ one: orders.id }).from(orders).where(eq(orders.shopId, shopId))),
         ),
       ),
     )

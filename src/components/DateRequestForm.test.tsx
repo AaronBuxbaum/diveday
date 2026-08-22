@@ -30,6 +30,7 @@ const copy: DateRequestCopy = {
   anythingElse: "Anything else",
   messagePlaceholder: "We are ashore on Tuesday.",
   orWriteTo: "Or write to",
+  orCall: "Or call",
   callLabel: "call",
   send: "Send inquiry",
   sending: "Sending…",
@@ -277,12 +278,59 @@ describe("DateRequestForm — one way out of the form", () => {
    * the Requests page — the email only ever fed the notification, which the
    * action already skips when there is none (issue #710).
    */
-  it("still sends when the shop has no contact details, and offers to write to nobody", () => {
-    renderInquiry(vi.fn(), { contactEmail: null, contactPhone: null });
+  it("still sends when the shop has no contact details, and offers to write to nobody", async () => {
+    // It **sends**: the old version passed a `vi.fn()` it never invoked and
+    // asserted only that the button existed, so the one word in its name that
+    // mattered was untested.
+    const submitInquiry = succeeds();
+    renderInquiry(submitInquiry, { contactEmail: null, contactPhone: null });
 
-    expect(screen.getByRole("button", { name: "Send inquiry" })).toBeInTheDocument();
-    expect(screen.queryByText(/Or write to us/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /mailto/i })).not.toBeInTheDocument();
+    fillEmail();
+    pickExperience();
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+
+    // And offers no way out of the form, because there is none on file. Asked
+    // by *role and href*: the old `queryByRole("link", { name: /mailto/i })`
+    // was vacuous — a link's accessible name is the address it shows, never
+    // the scheme, so it passed identically whether or not the link rendered.
+    expect(screen.queryByText(/Or write to/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Or call/)).not.toBeInTheDocument();
+    for (const link of screen.queryAllByRole("link")) {
+      expect(link.getAttribute("href")).not.toMatch(/^(mailto|tel):/);
+    }
+  });
+
+  /**
+   * **A number with no email address is still a way to reach the shop.**
+   *
+   * The contact line hung off the email address alone, so a phone-only shop —
+   * an ordinary small operation, and the one most likely to want the call —
+   * had its number dropped from the one place a diver is told what to do when
+   * the date they wanted is not on the board. The test above passed the whole
+   * time, because it only ever asked about a shop with *neither*.
+   */
+  it("offers the phone number to a shop that has one and no email address", () => {
+    renderInquiry(vi.fn(), { contactEmail: null, contactPhone: "+1 305 555 0134" });
+
+    const call = screen.getByRole("link", { name: "+1 305 555 0134" });
+    expect(call).toHaveAttribute("href", "tel:+13055550134");
+    expect(screen.getByText(/Or call/)).toBeInTheDocument();
+    // Not the email opener, which would be an offer to write to nobody.
+    expect(screen.queryByText(/Or write to/)).not.toBeInTheDocument();
+  });
+
+  it("keeps both when the shop has both", () => {
+    renderInquiry(vi.fn(), {
+      contactEmail: "hello@example.com",
+      contactPhone: "+1 305 555 0134",
+    });
+
+    expect(screen.getByRole("link", { name: "hello@example.com" })).toHaveAttribute(
+      "href",
+      "mailto:hello@example.com",
+    );
+    expect(screen.getByRole("link", { name: "+1 305 555 0134" })).toBeInTheDocument();
   });
 
   it("carries every answer to the server instead", async () => {

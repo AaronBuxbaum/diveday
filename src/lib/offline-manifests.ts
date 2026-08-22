@@ -106,7 +106,18 @@ export type OfflineManifestPayload = {
     slug: string;
     name: string;
     timezone: string;
-    emergencyReference: EmergencyReference;
+    /**
+     * **Optional, and read with a fallback**, for the same reason a diver's
+     * `buddyTeamNames` below is: a record written by an older build still
+     * decrypts, because `OFFLINE_MANIFEST_RECORD_VERSION` is the AAD and this
+     * field did not change it. `loadOfflineManifest`'s shape guard only checks
+     * `manifests`, so a stale envelope reaches the viewer intact — and a
+     * required field would arrive `undefined`, `hasEmergencyReference` would
+     * read `.lines.length` off it, and the one surface a crew has with no
+     * signal would throw during render, with no `error.tsx` under
+     * `/offline-manifest` to catch it. It fails toward silence instead.
+     */
+    emergencyReference?: EmergencyReference;
   };
   manifests: Array<
     Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {

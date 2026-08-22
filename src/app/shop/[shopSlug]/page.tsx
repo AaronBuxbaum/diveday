@@ -241,9 +241,22 @@ async function TodayBody({
     await dismissOrientation(await getDb(), staff.user.personId);
     revalidateAndRedirect(`/shop/${staff.user.shopSlug}`);
   }
-  // The first-run checklist only matters for a real shop with nothing on the
-  // books yet — for any other visit these two extra queries never run.
-  const showFirstRunChecklist = !shop.isDemo && !nextDeparture;
+  // **First run is "never had a departure", not "none coming up".**
+  //
+  // `nextDeparture` is null in three different situations, and only one of them
+  // is a new shop: `getTodayWork` hands it back *only when nothing sails today*
+  // (`src/db/today.ts`), so a shop whose boat left this morning read as
+  // identical to a shop that had never opened. That shop was shown "Schedule
+  // your first trip" — above a board listing the trip it had just scheduled —
+  // and, because the checklist suppresses the queue's all-clear panel
+  // (`TodayQueue`'s `firstRun`, added in #740), it also lost the one panel
+  // saying its roster was in order, on the exact morning that mattered.
+  //
+  // So `!nextDeparture` stays only as the cheap prefilter it can honestly be —
+  // a shop with no trips has none upcoming, so a first-run shop always has a
+  // null one — and the count is what decides.
+  const totalTrips = !shop.isDemo && !nextDeparture ? await countShopTrips(db, shop.id) : null;
+  const showFirstRunChecklist = totalTrips === 0;
   const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
     ? await Promise.all([listDiveSites(db, shop.id), getShopStripeAccount(db, shop.id)])
     : [null, null];
@@ -258,7 +271,7 @@ async function TodayBody({
   const firstBookableMoment =
     Boolean(created) &&
     !shop.isDemo &&
-    (await countShopTrips(db, shop.id)) === Math.max(seriesCount, 1);
+    (totalTrips ?? (await countShopTrips(db, shop.id))) === Math.max(seriesCount, 1);
   const shareOrigin = showFirstRunChecklist || firstBookableMoment ? publicAppUrl() : null;
   const publicScheduleUrl = shareOrigin
     ? new URL(publicSchedulePath(shopSlug), `${shareOrigin}/`).toString()

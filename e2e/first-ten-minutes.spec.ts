@@ -149,3 +149,52 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
   await expect(page.getByText("“Afternoon Drift” is on the board.")).toBeVisible();
   await expect(page.getByRole("heading", { name: /your shop is bookable/ })).toHaveCount(0);
 });
+
+/**
+ * **A departure *today* is not an empty shop.**
+ *
+ * `getTodayWork` hands back `nextDeparture` only when nothing sails today, so
+ * for a whole year "no next departure" was read as "this shop has never had
+ * one" — and a shop whose boat left this morning got the new-shop checklist
+ * telling it to schedule its first trip, above the board listing the trip it
+ * had just scheduled. Worse, the checklist suppresses the queue's all-clear
+ * panel (#740), so the one screen saying the roster was in order vanished on
+ * the exact morning it mattered. The two tests above never caught it because
+ * both schedule for *tomorrow*, which is the case that always worked.
+ */
+test("a shop with a departure today is not treated as a shop with no departures", async ({
+  page,
+}) => {
+  const unique = `ten-min-today-${Date.now()}`;
+  await page.goto("/onboard");
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Sails Today E2E");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill(`${unique}@example.com`);
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
+  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+  await page.waitForURL(new RegExp(`/shop/${unique}$`));
+  await expect(page.getByRole("heading", { name: "Get your shop ready" })).toBeVisible();
+
+  // Today, late enough in the day that it has not sailed yet under the frozen
+  // clock — the ordinary case of a shop opening its own home page mid-morning.
+  const today = E2E_FROZEN_CLOCK.slice(0, 10);
+  await page.goto(`/shop/${unique}/schedule/board?add=1`);
+  await page.locator('input[name="title"]').fill("Afternoon Two-Tank");
+  await page.locator('input[name="date"]').fill(today);
+  await page.locator('input[name="startTime"]').fill("16:00");
+  await page.locator('input[name="endTime"]').fill("19:30");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+
+  await page.goto(`/shop/${unique}`);
+  await expect(page.getByText("Afternoon Two-Tank").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Get your shop ready" })).toHaveCount(0);
+  // And the panel the checklist was suppressing is back.
+  await expect(page.getByRole("heading", { name: "Nothing is waiting on you" })).toBeVisible();
+});

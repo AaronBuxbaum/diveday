@@ -5,6 +5,7 @@ import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNa
 import type { DiverTranslator } from "@/i18n/messages";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
 /**
  * The public shop's own identity and the map of its public pages, shown on
@@ -78,14 +79,66 @@ export function PublicShopFooter({
   shop,
   t,
 }: {
-  shop: { slug: string; name: string; contactEmail: string | null; contactPhone: string | null };
+  shop: {
+    slug: string;
+    name: string;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    addressStreet: string | null;
+    addressLocality: string | null;
+    addressRegion: string | null;
+    addressPostalCode: string | null;
+    addressCountry: string | null;
+  };
   t: DiverTranslator;
 }) {
+  // **Where the shop is** — the first question a visiting diver asks, and the
+  // one that decides whether a shop is even a candidate. It was modelled, it
+  // was in the page's JSON-LD, and it was on `/ready`, which a diver reaches
+  // *after* they have paid. A crawler reading this page learned the postal
+  // address; a tourist comparing three Key Largo shops on their phone had to
+  // leave the site to find out which one was walkable (issue #704).
+  //
+  // Nothing at all when there is nothing on file — the same call `shopAddressOf`
+  // already makes for the structured data, rather than an empty block.
+  const address = {
+    street: shop.addressStreet,
+    locality: shop.addressLocality,
+    region: shop.addressRegion,
+    postalCode: shop.addressPostalCode,
+    country: shop.addressCountry,
+  };
+  const addressLines = shopAddressLines(address);
+  // A link out, never an embedded map: a third-party frame on an anonymous,
+  // marketing-facing page costs Core Web Vitals and adds a tracker. `/ready`'s
+  // iframe is a page the diver already trusts.
+  const mapQuery = shopMapQuery(shop.name, address);
+  const addressText = addressLines.join(", ");
+  // Built above the JSX rather than nested in it: `check:copy` reads a ternary
+  // chain inside an element as prose, and this one is three deep.
+  const addressNode =
+    addressLines.length === 0 ? null : mapQuery ? (
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-foreground hover:underline"
+      >
+        {addressText}
+      </a>
+    ) : (
+      // On file, but not enough to point a map at a real place — a country and
+      // a shop name would centre on a continent and present it as the front
+      // door. The words still help; the link would not.
+      <span>{addressText}</span>
+    );
+
   return (
     <footer className="border-t border-border bg-surface">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {addressNode}
           {shop.contactPhone ? (
             <a href={telHref(shop.contactPhone)} className="hover:text-foreground hover:underline">
               {shop.contactPhone}

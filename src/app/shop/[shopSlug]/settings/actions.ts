@@ -13,6 +13,7 @@ import { getDb } from "@/db/client";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { retryMediaDeletion } from "@/db/media-deletions";
+import { maxLineItemUnitAmountCents } from "@/db/orders";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
 import {
   getShopById,
@@ -360,6 +361,7 @@ export async function createDivePackageAction(formData: FormData) {
     diveCount: Number(formData.get("diveCount")),
     priceCents: majorToMinor(Number(formData.get("priceDollars")), currency),
     scope: formData.get("scope") === "fun_dives" ? "fun_dives" : "all",
+    maxPriceCents: maxLineItemUnitAmountCents(currency),
     // Blank means "never lapses", which is the behaviour that cannot surprise
     // anyone — not zero, which the domain rule refuses.
     validityDays: validityRaw === "" ? null : Number(validityRaw),
@@ -385,10 +387,17 @@ export async function deleteDivePackageAction(formData: FormData) {
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
-  const packageId = String(formData.get("packageId") ?? "");
-  if (packageId) {
-    await deleteDivePackage(await getDb(), session.user.shopId, packageId);
+  // `uuidParam`, like `deleteBoatAction` two hundred lines down: a malformed id
+  // reaches `eq(divePackages.id, $1)` against a uuid column, Postgres raises
+  // 22P02, and the owner gets an unhandled 500 where a refusal belongs
+  // (`security-reviewer`, issue #706).
+  const packageId = uuidParam(String(formData.get("packageId") ?? ""));
+  if (!packageId) {
+    redirect(noticeUrl(settings, "package-invalid", { saved: "divePackages" }));
   }
+  // Deliberately the same notice whether or not a row matched: a cross-tenant
+  // id must not be distinguishable from a real one.
+  await deleteDivePackage(await getDb(), session.user.shopId, packageId);
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "package-deleted", { saved: "divePackages" }),
