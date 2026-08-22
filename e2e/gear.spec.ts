@@ -33,6 +33,14 @@ test.describe("staff", () => {
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
     await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
+    // **The unit's own row, before touching the page again.** The status banner
+    // is rendered by the redirect's *destination*, but the register list behind
+    // it is what proves the navigation has fully landed — and until it has, the
+    // "Add gear" click below can hit the pre-navigation DOM, open that
+    // disclosure, and then be thrown away by the remount. The Tag field never
+    // appears and `fill` times out fifteen seconds later, which is what shard
+    // 2/4 kept reporting under load.
+    await expect(page.getByRole("link", { name: tag })).toBeVisible();
 
     // A successful add redirects with `?notice=added` — a real navigation
     // that remounts the page, so the disclosure is closed again.
