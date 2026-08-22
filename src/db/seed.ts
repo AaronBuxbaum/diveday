@@ -220,6 +220,22 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@demo.invalid",
       contactPhone: "+1 305 555 0142",
+      // The numbers a divemaster needs with a diver on the deck and no signal.
+      // Seeded because the offline manifest renders them, so an unseeded shop
+      // would photograph its own empty state on every capture of that page.
+      emergencyReference: {
+        lines: [
+          // i18n-exempt: a shop types its own labels here, like its packing list.
+          { label: "Recompression chamber", phone: "+1 305 555 0177" },
+          // i18n-exempt: the shop's own words, not DiveDay's.
+          { label: "Coast Guard (Sector Key West)", phone: "+1 305 555 0188" },
+          // i18n-exempt: the shop's own words, not DiveDay's.
+          { label: "DAN emergency hotline", phone: "+1 919 555 0111" },
+        ],
+        vessel: "Mantis II - VHF 16, MMSI 338055501",
+        shoreContact: "Front desk, +1 305 555 0142",
+        plan: "Give O2, call the chamber first, then the Coast Guard on 16.",
+      },
       // A real street exercises the address end to end (structured data,
       // settings form) without publishing anything a search engine could act
       // on for a demo fixture.

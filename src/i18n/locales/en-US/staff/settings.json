@@ -28,7 +28,8 @@
       "refreshed": "Payment status refreshed from Stripe.",
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
       "timezoneSaved": "Timezone saved.",
-      "timezoneInvalid": "That isn’t a timezone we recognize — pick one from the list."
+      "timezoneInvalid": "That isn’t a timezone we recognize — pick one from the list.",
+      "emergencySaved": "Emergency reference saved."
     },
     "timezone": {
       "heading": "Timezone",
@@ -310,6 +311,20 @@
     },
     "dataExport": {
       "description": "Take everything your shop holds back out as a ZIP of CSVs."
+    },
+    "emergency": {
+      "heading": "Emergency reference",
+      "value": "{count, plural, one {# number} other {# numbers}} the crew can reach offline",
+      "empty": "Nothing recorded",
+      "intro": "These ride on the boat manifest, including offline. DiveDay never fills them in — the nearest chamber and the right hotline depend on where you dive.",
+      "lineLabel": "What it is {n}",
+      "linePlaceholder": "Chamber, dive-accident hotline, coast guard…",
+      "phoneLabel": "Number {n}",
+      "vesselLabel": "Vessel",
+      "shoreContactLabel": "Shore contact",
+      "planLabel": "If something goes wrong",
+      "submit": "Save emergency reference",
+      "saving": "Saving…"
     }
   },
   "team": {

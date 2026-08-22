@@ -55,7 +55,12 @@ vi.mock("@/lib/offline-manifest-store", () => ({
 
 function payload(tripId: string, title: string, totalDivers = 2): OfflineManifestPayload {
   return {
-    shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
+    shop: {
+      slug: "blue-mantis",
+      name: "Blue Mantis Divers",
+      timezone: "America/New_York",
+      emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
+    },
     manifests: [
       {
         trip: {
@@ -247,7 +252,12 @@ function richPayload(
   const divers = opts.withCarriedNotBoarded ? [priya, carried] : [priya];
   const diversAfterDive = opts.withCarriedNotBoarded ? [priya, carriedAfterDive] : [priya];
   return {
-    shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
+    shop: {
+      slug: "blue-mantis",
+      name: "Blue Mantis Divers",
+      timezone: "America/New_York",
+      emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
+    },
     manifests: [
       {
         trip,

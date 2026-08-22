@@ -21,6 +21,7 @@ import {
   setShopDepthUnit,
   setShopDivingOptions,
   setShopDockDayRhythm,
+  setShopEmergencyReference,
   setShopPackingList,
   setShopRentalItems,
   setShopRentalPricing,
@@ -46,6 +47,7 @@ import {
   MIN_DIVERS_PER_DIVEMASTER,
 } from "@/lib/divemaster-ratio";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
+import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
 import { isValidTimeZone } from "@/lib/format";
 import {
   isShopCurrency,
@@ -271,6 +273,32 @@ export async function saveDockDayRhythmAction(formData: FormData) {
   }
   await setShopDockDayRhythm(await getDb(), session.user.shopId, rhythm);
   revalidateAndRedirect(settings, noticeUrl(settings, "dock-saved", { saved: "dockCall" }));
+}
+
+/**
+ * **The numbers a crew dials during** — chamber, dive-accident hotline,
+ * coastguard, vessel, shore contact and the shop's own plan (issue #688).
+ *
+ * Free text throughout, and DiveDay validates only that a line has something to
+ * dial. The nearest chamber differs by dock and the hotline differs by country,
+ * so any shape this imposed would be wrong somewhere — and a wrong number on
+ * the one screen a crew reads offshore is worse than an empty one.
+ */
+export async function saveEmergencyReferenceAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const reference = normalizeEmergencyReference({
+    lines: Array.from({ length: MAX_EMERGENCY_LINES }, (_, index) => ({
+      label: String(formData.get(`emergencyLabel-${index}`) ?? "").slice(0, 80),
+      phone: String(formData.get(`emergencyPhone-${index}`) ?? "").slice(0, 40),
+    })),
+    vessel: String(formData.get("emergencyVessel") ?? "").slice(0, 120),
+    shoreContact: String(formData.get("emergencyShoreContact") ?? "").slice(0, 160),
+    plan: String(formData.get("emergencyPlan") ?? "").slice(0, 2000),
+  });
+  await setShopEmergencyReference(await getDb(), session.user.shopId, reference);
+  revalidateAndRedirect(settings, noticeUrl(settings, "emergency-saved", { saved: "emergency" }));
 }
 
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */

@@ -674,6 +674,10 @@ export async function loadShopExportBundleInput(
             "packing_list",
             "rental_items",
             "rental_pricing",
+            // The shop's own emergency numbers. Exported because the bundle is
+            // the backup: a shop restoring from one must come back with the
+            // chamber's number on its manifests, not an empty card.
+            "emergency_reference",
             // Whether the shop asked to stay out of search engines
             // (ADR 20260813-search-listing-is-a-choice). Exported because the
             // bundle is also the *backup*: a shop that opted out and later
@@ -712,6 +716,7 @@ export async function loadShopExportBundleInput(
               JSON.stringify(shop.packingList),
               JSON.stringify(shop.rentalItems),
               JSON.stringify(shop.rentalPricing),
+              JSON.stringify(shop.emergencyReference),
               shop.searchListingOptOutAt,
               shop.createdAt,
             ],

@@ -23,6 +23,7 @@ import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
+import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 
@@ -187,6 +188,26 @@ export const shops = pgTable(
       .$type<RentalPricing>()
       .notNull()
       .default({ setCents: null, perItemCents: {}, nitroxCents: null }),
+    /**
+     * **The numbers a crew reaches for during, not after** — the shop's own
+     * chamber, dive-accident hotline, coastguard, vessel and shore contact, and
+     * its emergency action plan (`src/lib/emergency-reference.ts`).
+     *
+     * On `shops` rather than a table of its own because there is exactly one
+     * per shop and it is read wholesale on every manifest, the same shape
+     * `rentalPricing` takes. It rides in the encrypted offline snapshot, which
+     * is the entire point: the document a crew has with no signal carried who
+     * is aboard and who to phone afterwards, and nothing for the minute in
+     * between (issue #688).
+     *
+     * DiveDay ships no values. The nearest chamber differs by dock and the
+     * hotline differs by country, so a default here would be a confidently
+     * wrong number on the one screen that cannot afford one.
+     */
+    emergencyReference: jsonb("emergency_reference")
+      .$type<EmergencyReference>()
+      .notNull()
+      .default({ lines: [], vessel: "", shoreContact: "", plan: "" }),
     /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is

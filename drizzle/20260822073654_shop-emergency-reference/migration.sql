@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "emergency_reference" jsonb DEFAULT '{"lines":[],"vessel":"","shoreContact":"","plan":""}' NOT NULL;

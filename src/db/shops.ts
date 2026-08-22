@@ -2,6 +2,7 @@ import { and, eq, exists, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
+import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
@@ -95,6 +96,24 @@ export async function setShopTimezone(db: AppDb, shopId: string, timezone: strin
  * has to fit inside is how a shop ends up with a day that reads back
  * differently from the one they typed.
  */
+/**
+ * The shop's own emergency reference — the numbers a crew dials during, carried
+ * into the offline manifest snapshot (issue #688). Replaced wholesale: it is one
+ * card the shop retypes, not a set of independently-edited fields.
+ */
+export async function setShopEmergencyReference(
+  db: AppDb,
+  shopId: string,
+  emergencyReference: EmergencyReference,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ emergencyReference })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
   return shop ?? null;

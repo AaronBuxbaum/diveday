@@ -2889,6 +2889,27 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-dock-day-rhythm", scheme);
       });
 
+      /**
+       * The emergency reference, open — the five number slots, the vessel and
+       * shore-contact boxes, and the free-text plan (issue #688). Its own
+       * capture for the same reason as the two rows above: it is closed in
+       * `settings-payments`, so the only form in the app whose output a crew
+       * reads offshore is otherwise never looked at.
+       *
+       * The seeded shop fills it in, so this is the state a configured shop
+       * sees. The *empty* state is covered where it matters more — on the
+       * offline manifest itself, which renders a prompt rather than nothing.
+       */
+      test(`the emergency reference card renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Emergency reference" }).waitFor();
+        await openSettingsRow(page, "Emergency reference");
+        await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
+        await capture(page, "settings-emergency", scheme);
+      });
+
       // Where a shop connects its own WhatsApp Business number (ADR
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what

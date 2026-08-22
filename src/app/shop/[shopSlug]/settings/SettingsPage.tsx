@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Fragment } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -45,6 +46,7 @@ import {
   type DockDayStep,
   dockDayOffsets,
 } from "@/lib/diver-planning";
+import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
@@ -72,6 +74,7 @@ import {
   saveContactAction,
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
+  saveEmergencyReferenceAction,
   savePackingAction,
   saveRentalItemsAction,
   saveRentalPricingAction,
@@ -99,6 +102,7 @@ function noticeMessages(
     "timezone-saved": { tone: "success", text: t("settings.main.notice.timezoneSaved") },
     "timezone-invalid": { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
+    "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
@@ -366,6 +370,7 @@ const SECTION_IDS = [
   "dockCall",
   "units",
   "divingOptions",
+  "emergency",
   "boats",
   "rentals",
   "rentalPricing",
@@ -538,6 +543,11 @@ export default async function SettingsPage({
   ].join(" · ");
   const boatsValue =
     shopBoats.length > 0 ? t("boats.value", { count: shopBoats.length }) : t("boats.noBoats");
+  // A count, not the numbers themselves: this row is read on the hub and the
+  // numbers belong on the boat, not on a settings list somebody is scrolling.
+  const emergencyValue = hasEmergencyReference(shop.emergencyReference)
+    ? t("settings.main.emergency.value", { count: shop.emergencyReference.lines.length })
+    : t("settings.main.emergency.empty");
   const rentalsValue = t("settings.main.rentals.value", { count: offeredKinds.size });
   const rentalPricingValue =
     shop.rentalPricing.setCents !== null
@@ -1129,6 +1139,81 @@ export default async function SettingsPage({
                 is a question you have to answer twice. Existing boat rows are
                 left alone: turning the option back on brings the fleet back
                 exactly as it was. */}
+            {/* **Above the fleet, and not gated on boat diving.** A shore
+                operation's crew needs a chamber number exactly as much as a
+                boat's does. Its own row rather than a line inside another
+                because it is the one thing on this page a crew reads when
+                something has gone wrong (issue #688). */}
+            <SettingsRow
+              heading={t("settings.main.emergency.heading")}
+              value={emergencyValue}
+              open={activeSection === "emergency"}
+            >
+              <SectionNotice banner={banner} section="emergency" active={activeSection} />
+              <form action={saveEmergencyReferenceAction} className="mt-4 flex flex-col gap-4">
+                <p className="text-sm text-muted">{t("settings.main.emergency.intro")}</p>
+                <FieldGrid columns={2}>
+                  {EMERGENCY_LINE_SLOTS.map((slot, index) => (
+                    <Fragment key={slot}>
+                      <Field label={t("settings.main.emergency.lineLabel", { n: index + 1 })}>
+                        <input
+                          name={`emergencyLabel-${index}`}
+                          type="text"
+                          maxLength={80}
+                          defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
+                          placeholder={t("settings.main.emergency.linePlaceholder")}
+                          className={controlClass}
+                        />
+                      </Field>
+                      <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
+                        <input
+                          name={`emergencyPhone-${index}`}
+                          type="tel"
+                          maxLength={40}
+                          defaultValue={shop.emergencyReference.lines[index]?.phone ?? ""}
+                          className={controlClass}
+                        />
+                      </Field>
+                    </Fragment>
+                  ))}
+                  <Field label={t("settings.main.emergency.vesselLabel")}>
+                    <input
+                      name="emergencyVessel"
+                      type="text"
+                      maxLength={120}
+                      defaultValue={shop.emergencyReference.vessel}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field label={t("settings.main.emergency.shoreContactLabel")}>
+                    <input
+                      name="emergencyShoreContact"
+                      type="text"
+                      maxLength={160}
+                      defaultValue={shop.emergencyReference.shoreContact}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+                <Field label={t("settings.main.emergency.planLabel")}>
+                  <textarea
+                    name="emergencyPlan"
+                    rows={4}
+                    maxLength={2000}
+                    defaultValue={shop.emergencyReference.plan}
+                    className={controlClass}
+                  />
+                </Field>
+                <div>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.emergency.saving")}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("settings.main.emergency.submit")}
+                  </SubmitButton>
+                </div>
+              </form>
+            </SettingsRow>
             {shop.hasBoatDiving ? (
               <SettingsRow
                 heading={t("boats.heading")}
