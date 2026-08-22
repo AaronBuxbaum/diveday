@@ -363,6 +363,15 @@ test.describe("the prep list's two groupings", () => {
     // flagged diver keeps their kit and still names no size to pull it in.
     await expect(kit).toContainText("Fit at check-in");
     await expect(kit).not.toContainText("XL");
+    // The state only this grouping can express: a diver with nothing to pull.
+    // The by-item view cannot show them at all — they contribute no line — so
+    // "Own kit" beside a name is the whole reason the roster grouping exists.
+    // Ines brings her own (`src/db/seed-rental-fit.ts`).
+    const ines = kit.getByRole("row").filter({ hasText: "Ines Costa" });
+    await expect(ines).toContainText("Own kit");
+    // And it is genuinely "asked and answered", not the "nobody asked" row
+    // sitting a few lines above it — the two read differently on purpose.
+    await expect(ines).not.toContainText("not asked");
     // Every row is one diver, so every row is a door to that diver's record —
     // the by-item grouping can only name them inside a comma list. A raw
     // locator needs its own visibility filter (the fixture only patches the
