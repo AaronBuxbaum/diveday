@@ -2930,8 +2930,12 @@ for (const scheme of ["light", "dark"] as const) {
        * reads offshore is otherwise never looked at.
        *
        * The seeded shop fills it in, so this is the state a configured shop
-       * sees. The *empty* state is covered where it matters more — on the
-       * offline manifest itself, which renders a prompt rather than nothing.
+       * sees. The *empty* state — the prompt a crew meets when nobody filled
+       * this in — is `manifest-emergency-empty` at the bottom of this file,
+       * which needs a shop of its own to produce. This comment used to claim
+       * the empty state was "covered where it matters more, on the offline
+       * manifest itself"; there was no such capture, and `seed.ts` fills the
+       * field precisely so no offline capture could ever show it.
        */
       test(`the emergency reference card renders true to the design (${scheme})`, async ({
         page,
@@ -3959,3 +3963,53 @@ test.describe("print", () => {
     await capturePrint(page, "departure-log");
   });
 });
+
+/**
+ * **The emergency card with nothing in it.**
+ *
+ * The one panel on a safety surface that renders *because* the shop has not
+ * answered a question — a red-bordered prompt where five phone numbers should
+ * be, read by a crew at the rail. Every other capture in this file sees the
+ * seeded shop, which fills the field in deliberately ("an unseeded shop would
+ * photograph its own empty state on every capture of that page", `seed.ts`),
+ * so this state had never been looked at and the settings capture above
+ * claimed, wrongly, that it had been.
+ *
+ * A private shop, because clearing the reference is shop-wide configuration —
+ * the reset restores the schedule, not the settings, so doing this to
+ * blue-mantis would hand a blank emergency card to whichever spec ran next in
+ * this worker (ADR 20260815-per-test-private-shops).
+ */
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — the unanswered emergency reference`, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the manifest prompts for an emergency reference nobody filled in (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      await page.goto(`/shop/${privateShop.slug}/settings`);
+      await openSettingsRow(page, "Emergency reference");
+      // Cleared through the shop's own form, which is how a shop would arrive
+      // in this state — not by writing the column behind the app's back.
+      const filled = page.locator(
+        'input[name^="emergencyLabel-"], input[name^="emergencyPhone-"], ' +
+          'input[name="emergencyVessel"], input[name="emergencyShoreContact"]',
+      );
+      for (const field of await filled.all()) await field.fill("");
+      await page.locator('textarea[name="emergencyPlan"]').fill("");
+      await page.getByRole("button", { name: "Save emergency reference" }).click();
+      // The row comes back open with its saved notice — the destination's own
+      // render, not a timing guess.
+      await page.getByText("Emergency reference saved.").waitFor();
+
+      await page.goto(`/shop/${privateShop.slug}/schedule/board`);
+      await openTripFromBoard(page, REEF_TRIP);
+      await openTripTab(page, "Manifest");
+      // The prompt itself, not just the heading — the whole point of the
+      // capture is the state where there is nothing under it.
+      await page.getByText("No emergency numbers recorded").waitFor();
+      await capture(page, "manifest-emergency-empty", scheme);
+    });
+  });
+}

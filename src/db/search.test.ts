@@ -112,6 +112,29 @@ describe("searchShop", () => {
     expect(result.divers.map((d) => d.fullName)).toContain("Priya Sharma");
   });
 
+  /**
+   * **Where the floor actually is.** The test above searches `"priya"` — zero
+   * digits — so it passes identically at every possible value of
+   * `MIN_PHONE_SEARCH_DIGITS`, which makes it a test of the *name* path and not
+   * of the floor at all. This pins the boundary from both sides with a query
+   * that can only be answered digit-wise: `8877` is not a substring of
+   * `"+1 (999) 888-7766"` (the dash is in the way), only of its digits.
+   */
+  it("switches to digit matching at the floor and not below it", async () => {
+    const { db, shop } = await seededShopContext();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Floor Case", phone: "+1 (999) 888-7766" })
+      .returning();
+    if (!person) throw new Error("person insert returned no row");
+
+    const atFloor = await searchShop(db, shop.id, "8877", "America/New_York", "en-US");
+    expect(atFloor.divers.map((d) => d.id)).toContain(person.id);
+
+    const belowFloor = await searchShop(db, shop.id, "877", "America/New_York", "en-US");
+    expect(belowFloor.divers.map((d) => d.id)).not.toContain(person.id);
+  });
+
   it("finds a trip by a substring of its title", async () => {
     const { db, shop } = await seededShopContext();
     // A distinctively-worded seeded trip, not a generic "Two-Tank Reef —"

@@ -88,6 +88,8 @@ export interface DateRequestCopy {
   messagePlaceholder: string;
   orWriteTo: string;
   callLabel: string;
+  /** The phone-only opener, for a shop with a number and no email address. */
+  orCall: string;
   send: string;
   sending: string;
   sentHeading: string;

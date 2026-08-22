@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { seededShopContext, seededTestDb } from "@/test/db";
-import { shops, trips } from "./schema";
+import { seededShopContext, seededTestDb, unseededTestDb } from "@/test/db";
+import type { AppDb } from "./client";
+import { courses, divePackages, shops, trips } from "./schema";
 import {
   getShopBySlug,
   listShopsForSitemap,
@@ -11,6 +13,7 @@ import {
   setShopDepthUnit,
   setShopSearchListing,
   setShopTemperatureUnit,
+  shopHasPricedRecords,
 } from "./shops";
 import { createTrip } from "./trips";
 
@@ -180,5 +183,129 @@ describe("listShopsForSitemap", () => {
     const { db, shop } = await shopWithNoDepartures("demo-shop", true);
     await scheduleADeparture(db, shop.id);
     expect((await listShopsForSitemap(db)).map((row) => row.slug)).not.toContain("demo-shop");
+  });
+});
+
+/**
+ * **The currency warning is only as good as the places it looks.**
+ *
+ * `shopHasPricedRecords` decides whether Settings warns a shop that switching
+ * currency will silently redenominate every number it has written down (ADR
+ * 20260731-shop-currency). The first version asked about priced trips and
+ * orders alone — the shape a shop has on day one, and not the shape it has by
+ * week two — so a shop that had priced its courses, published a rental price
+ * list, built a dive package or taken a deposit but not yet a fun dive was
+ * told the switch was free. It had no test of any kind.
+ */
+describe("shopHasPricedRecords", () => {
+  async function bareShop(db: AppDb, slug: string) {
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Bare Reef", slug, timezone: "America/New_York" })
+      .returning();
+    if (!shop) throw new Error("shop insert failed");
+    return shop;
+  }
+
+  const laterToday = () => new Date(nowDate().getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  async function unpricedTrip(db: AppDb, shopId: string) {
+    const startsAt = laterToday();
+    const trip = await createTrip(db, {
+      shopId,
+      title: "Two-tank morning",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip insert failed");
+    return trip;
+  }
+
+  it("says no for a shop that has not priced anything", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, "bare-nothing");
+    // A departure on the board with no price on it is still free to switch:
+    // there is no number in the old currency to redenominate.
+    await unpricedTrip(db, shop.id);
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(false);
+  });
+
+  it("says yes for a priced departure", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, "bare-trip");
+    const trip = await unpricedTrip(db, shop.id);
+    await db.update(trips).set({ priceCents: 9500 }).where(eq(trips.id, trip.id));
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(true);
+  });
+
+  it("says yes for a deposit on an otherwise unpriced departure", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, "bare-deposit");
+    const trip = await unpricedTrip(db, shop.id);
+    await db.update(trips).set({ depositCents: 2500 }).where(eq(trips.id, trip.id));
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(true);
+  });
+
+  it("says yes for a priced course, and for one nobody is selling right now", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, "bare-course");
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        slug: "open-water",
+        title: "Open Water",
+        priceCents: 45000,
+        isActive: false,
+      })
+      .returning();
+    if (!course) throw new Error("course insert failed");
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(true);
+  });
+
+  it("says yes for a course priced only for its e-learning half", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, "bare-elearning");
+    await db.insert(courses).values({
+      shopId: shop.id,
+      slug: "open-water-elearning",
+      title: "Open Water",
+      eLearningPriceCents: 12000,
+    });
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(true);
+  });
+
+  it("says yes for a dive package", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, "bare-package");
+    await db
+      .insert(divePackages)
+      .values({ shopId: shop.id, name: "Ten-dive package", diveCount: 10, priceCents: 40000 });
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(true);
+  });
+
+  it.each([
+    ["a set price for the core kit", { setCents: 3500, perItemCents: {}, nitroxCents: null }],
+    ["one per-piece price", { setCents: null, perItemCents: { bcd: 1200 }, nitroxCents: null }],
+    ["a nitrox surcharge", { setCents: null, perItemCents: {}, nitroxCents: 1000 }],
+  ])("says yes for a rental price list carrying %s", async (_label, rentalPricing) => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db, `bare-rental-${_label.replace(/\W+/g, "-")}`);
+    await db.update(shops).set({ rentalPricing }).where(eq(shops.id, shop.id));
+    expect(await shopHasPricedRecords(db, shop.id)).toBe(true);
+  });
+
+  it("never answers for another shop's prices", async () => {
+    const db = await unseededTestDb();
+    const bare = await bareShop(db, "bare-isolated");
+    const rival = await bareShop(db, "rival-priced");
+    const trip = await unpricedTrip(db, rival.id);
+    await db.update(trips).set({ priceCents: 9500 }).where(eq(trips.id, trip.id));
+    await db
+      .insert(divePackages)
+      .values({ shopId: rival.id, name: "Ten dives", diveCount: 10, priceCents: 40000 });
+    expect(await shopHasPricedRecords(db, bare.id)).toBe(false);
   });
 });

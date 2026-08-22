@@ -5,8 +5,12 @@ import { buttonClass } from "@/components/ui/button";
 
 /**
  * The one door every "connect payments first" fallback opens —
- * `/shop/<slug>/settings#money`, the anchor the Stripe Connect card on
- * Settings owns. Kept beside the two CTAs below, which are its only callers.
+ * `/shop/<slug>/settings#money`, the **Money group** heading on Settings
+ * (`SETTINGS_GROUPS`) — not the Stripe row inside it, which is a `<details>`
+ * whose own `id` would have to live inside the disclosure to reveal anything.
+ * The group heading needs no reveal, and the Stripe row opens itself whenever
+ * payments are unconnected, which is the only state these CTAs render in. Kept
+ * beside the two CTAs below, which are its only callers.
  */
 function paymentsConnectHref(shopSlug: string): string {
   return `/shop/${shopSlug}/settings#money`;

@@ -300,10 +300,18 @@ describe("tripPageJsonLd", () => {
     expect(tripPageJsonLd(addresslessShop, trip, ORIGIN)).toBeNull();
   });
 
-  it("falls back to the shop as the venue when no dive site is named", () => {
-    const graph = eventFor(tripPageJsonLd(shop, { ...trip, diveSiteName: null }, ORIGIN));
-    expect(at(graph, "location.name")).toBe("Blue Mantis Divers");
-  });
+  it.each([
+    ["null", null],
+    // An empty string too: `pruneJsonLd` drops null and undefined but keeps
+    // `""`, so a `??` here would publish a Place with no name at all.
+    ["blank", ""],
+  ])(
+    "falls back to the shop as the venue when the dive site name is %s",
+    (_label, diveSiteName) => {
+      const graph = eventFor(tripPageJsonLd(shop, { ...trip, diveSiteName }, ORIGIN));
+      expect(at(graph, "location.name")).toBe("Blue Mantis Divers");
+    },
+  );
 
   it("makes no offer at all for an unpriced charter, rather than publishing it as free", () => {
     const graph = eventFor(tripPageJsonLd(shop, { ...trip, priceCents: null }, ORIGIN));

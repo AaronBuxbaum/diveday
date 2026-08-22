@@ -667,7 +667,15 @@ export default async function ScheduleBoardPage({
 
       {!hasUpcoming ? (
         <EmptyState>
-          <h2 className="font-medium">{t("schedule.noTrips")}</h2>
+          {/* **"Nothing upcoming", not "nothing ever".** `hasUpcoming` is
+              `upcomingScheduleRange` — departures ahead of now — so the diver
+              page's "No trips on the books yet" and a heading offering to
+              schedule "your first" departure were both a claim this signal
+              cannot make: a shop between seasons has three hundred departures
+              behind it and reads the same as a shop that opened this morning.
+              The genuine first run is owned by Today's setup checklist, which
+              knows the shop's whole trip count. */}
+          <h2 className="font-medium">{t("schedule.noUpcomingStaff")}</h2>
           <p className="mt-1 text-sm text-muted">{t("schedule.noTripsStaff")}</p>
           {/* An empty board's one job is to stop being empty: this opens the
               add panel right below it rather than sending anyone to a second

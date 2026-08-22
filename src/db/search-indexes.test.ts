@@ -102,11 +102,15 @@ describe("leading-wildcard ILIKE search is indexed (DATA-L6)", () => {
  * #719). The sweep above cannot see it: it reads `ilike(<table>.<column>` call
  * sites, and this arm is neither.
  *
- * That matters more than it looks. Postgres only uses an expression index when
- * the query's expression is *character-for-character* the one the index was
- * built on, so a whitespace difference between these two files does not fail
- * anything — it silently turns every bare-digit search into a sequential scan
- * of `people`, which is exactly the failure mode DATA-L6 was about.
+ * That matters more than it looks. Postgres matches a query to an expression
+ * index by comparing *parsed trees*, not source text, so whitespace alone is
+ * harmless — but any real difference in the expression (a different character
+ * class, a missing `coalesce`, a different column) leaves the index unmatched
+ * and silently turns every bare-digit search into a sequential scan of
+ * `people`, which is exactly the failure mode DATA-L6 was about. Comparing the
+ * source text of the two files is a stricter rule than Postgres's, chosen
+ * because it is the one a test can actually check cheaply; the second test
+ * below reads what Postgres *stored*, which is the honest half.
  */
 describe("the phone-digits search expression", () => {
   // Deliberately a plain string, `${…}` and all: this *is* the source text the
@@ -139,5 +143,12 @@ describe("the phone-digits search expression", () => {
     // And built on the digits, not the raw column — an index on `phone` would
     // exist, satisfy a careless assertion, and never be used by this query.
     expect(row?.indexdef).toContain("regexp_replace");
+    // **The character class, not merely the function name.** The failure this
+    // test exists for is drizzle-kit swallowing a backslash and writing `'D'`
+    // where `'\D'` was meant — an index that strips the letter D, is never
+    // matched to this query, and contains both `gin` and `regexp_replace`
+    // while doing it. `[^0-9]` is what the schema writes for exactly that
+    // reason, so this asserts the body Postgres actually stored.
+    expect(row?.indexdef).toContain("'[^0-9]'");
   });
 });
