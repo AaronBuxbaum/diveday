@@ -55,10 +55,55 @@ const KEY_PATTERN = /archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[-_]?delete
  * cannot (see the note above), so it names the three action forms — `archivar`
  * (the infinitive, only ever an action label here), `archivando`, and
  * `desarchivar`, which has no innocent meaning at all.
+ *
+ * ## The second half of the rule: the reassurance
+ *
+ * AGENTS.md bans two things, and the word list above only covered one. The
+ * other is the sentence: "**No sentence explains which history survived**: a
+ * caption reassuring the reader about an outcome they never doubted earns
+ * nothing." Four strings on the diver record were in exactly that state while
+ * this check passed, because the vocabulary that drifted there was not
+ * `archive` at all (issue #779):
+ *
+ * - "Takes this diver off your active lists." — under a heading saying *Delete*
+ *   and above a button saying *Delete Adaeze Nwosu*. The one sentence in the
+ *   three that declined to say it.
+ * - "Certification removed. It no longer counts toward readiness; **its history
+ *   is kept for records**." — the forbidden sentence, verbatim, on a key
+ *   already named `cardDeleted`.
+ *
+ * So the euphemism families join the word families. Both are anchored phrases
+ * rather than single words: "active list" is fine in a heading about active
+ * lists, and it is `off your active lists` *standing in for* "deleted" that is
+ * the tell.
+ *
+ * ## Why a bare `remove` is **not** on these lists
+ *
+ * It would be wrong about sixty times. "Remove" is the correct word for taking
+ * something *out of a collection it belongs to* — a landmark off a site's list,
+ * a photo out of a gallery, a member out of a buddy team, a destination off the
+ * backup list. In every one of those the thing removed still exists and the
+ * sentence is honest.
+ *
+ * What is banned is *remove* standing in for *delete* of a first-class record,
+ * and no pattern can tell those apart, because the difference is what kind of
+ * thing the object is. A check for it would need the object's identity, which
+ * means an allowlist of the ~60 legitimate sites — a list nobody would keep
+ * accurate, and whose staleness would read as permission. The honest fix for
+ * that class is the one already in place: the record's *action* words come from
+ * a `remove`/`delete` block a reviewer reads whole, and AGENTS.md states the
+ * rule in prose. If this drifts again, the shape worth building is a check over
+ * the handful of blocks that name a destructive action, not a word ban.
  */
 const VALUE_PATTERNS = new Map([
-  ["en-US", /archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[- ]?delete/i],
-  ["es-ES", /desarchiv|archivar|archivand|retirar|retirad/i],
+  [
+    "en-US",
+    /archiv|unarchiv|deactivat|retir(?:e|ing|ed)|soft[- ]?delete|(?:off|on|from|in) your active lists?\b|history is kept|kept for (?:records|your records)|no longer (?:appears|shows) (?:on|in) your active/i,
+  ],
+  [
+    "es-ES",
+    /desarchiv|archivar|archivand|retirar|retirad|(?:de|en|fuera de) (?:tus|sus|las) listas? activas?|historial se conserva|se conserva para (?:los )?registros/i,
+  ],
 ]);
 
 /**

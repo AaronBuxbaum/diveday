@@ -193,7 +193,6 @@
   },
   "remove": {
     "heading": "Eliminar",
-    "description": "Saca a este buceador de tus listas activas.",
     "removePersonSummary": "Eliminar a {name}",
     "removing": "Eliminando…",
     "removeDiver": "Eliminar buceador"
@@ -314,7 +313,7 @@
   },
   "notices": {
     "verified": "Certificación marcada como verificada. Ahora cuenta para la disposición.",
-    "cardDeleted": "Certificación eliminada. Ya no cuenta para la disposición; su historial se conserva para los registros.",
+    "cardDeleted": "Certificación eliminada.",
     "cardRestored": "Certificación restaurada. Vuelve a contar para la disposición.",
     "cardRestoreConflict": "No se pudo restaurar esa certificación — otro registro ahora usa su número. Vuelve a añadirla si aún la necesitas.",
     "personSaved": "Datos del buceador actualizados.",
@@ -339,9 +338,9 @@
     "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
     "demoDisabled": "Este es un pedido de demostración — no se puede reembolsar.",
     "deleted": "Buceador eliminado.",
-    "restored": "Buceador restaurado. Vuelve a estar en tus listas activas.",
+    "restored": "Buceador restaurado.",
     "restoreRefused": "No se pudo restaurar a este buceador: un buceador activo usa ahora su correo. Cambia ese correo e inténtalo de nuevo.",
-    "removedReadOnly": "Restaura a este buceador antes de cambiar sus datos: ahora mismo está fuera de tus listas activas.",
+    "removedReadOnly": "Restaura a este buceador antes de cambiar sus datos.",
     "paymentNotConnected": "Los pagos aún no están conectados — conéctalos para cobrar a este buceador.",
     "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
     "notAuthorizedDelete": "Eliminar a un buceador está limitado a propietarios y gerentes; pide a uno de ellos que lo haga.",

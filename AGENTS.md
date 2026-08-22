@@ -365,7 +365,19 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   is "Deleted" and its action is "Restore". No sentence explains which history survived: a caption
   reassuring the reader about an outcome they never doubted earns nothing, and "archive" makes a
   shop stop mid-afternoon to work out whether we mean the thing they asked for. Reversibility is a
-  promise we keep, not a concept they hold. **Two exceptions.** *Legal erasure*, where an obligation
+  promise we keep, not a concept they hold. The euphemism does not have to be one of those words to
+  be one: "Takes this diver off your active lists", under a heading saying **Delete** and above a
+  button saying **Delete Adaeze Nwosu**, was the only one of the three that declined to say it
+  (issue #779). `pnpm check:repo` now refuses that family too.
+  **A publish state is not a delete, and says so.** Hiding a review and taking a course off the
+  public site are both *unpublishing*: `tripReviews.isPublished` is reversible by republishing and a
+  hidden review still counts against the shop's suppression share (ADR
+  20260813-review-moderation-has-a-floor), and `courses.is_active` is the toggle on the "Live at
+  /s/<slug>/courses/<slug>" line — neither table has a delete at all. So "Hidden" is the honest word
+  in both, the ban on **Hide** does not reach them, and the test is whether the thing is *gone* or
+  merely *not shown*. A diver's own words are the clearest case: a shop cannot delete a review it
+  did not write, only decline to publish it.
+  **Two exceptions.** *Legal erasure*, where an obligation
   requires real destruction — it stays one-way, stays a separate column from `deleted_at`
   (`people.anonymized_at` plus its check constraint), never becomes the primary action, and is the
   one place the distinction *is* expressed, because the reader is choosing between two outcomes and

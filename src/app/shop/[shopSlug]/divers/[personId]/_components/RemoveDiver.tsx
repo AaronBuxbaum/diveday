@@ -25,7 +25,6 @@ export function RemoveDiver({
       <h2 id="remove-heading" className="scroll-mt-24 text-lg font-semibold">
         {t("divers.remove.heading")}
       </h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.remove.description")}</p>
       {/* Opened by its own outcome: a refusal rendered inside a shut
           disclosure is invisible, which is worse than page-top. */}
       <details

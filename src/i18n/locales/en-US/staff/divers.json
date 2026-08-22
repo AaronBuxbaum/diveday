@@ -193,7 +193,6 @@
   },
   "remove": {
     "heading": "Delete",
-    "description": "Takes this diver off your active lists.",
     "removePersonSummary": "Delete {name}",
     "removing": "Deleting…",
     "removeDiver": "Delete diver"
@@ -314,7 +313,7 @@
   },
   "notices": {
     "verified": "Certification marked verified. It counts toward readiness.",
-    "cardDeleted": "Certification removed. It no longer counts toward readiness; its history is kept for records.",
+    "cardDeleted": "Certification deleted.",
     "cardRestored": "Certification restored. It counts toward readiness again.",
     "cardRestoreConflict": "Couldn't restore that certification — another record now uses its number. Re-add it if you still need it.",
     "personSaved": "Diver details updated.",
@@ -339,9 +338,9 @@
     "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
     "demoDisabled": "This is a demo order — it can't be refunded.",
     "deleted": "Diver deleted.",
-    "restored": "Diver restored. They're back on your active lists.",
+    "restored": "Diver restored.",
     "restoreRefused": "Couldn't restore this diver — an active diver now uses their email. Change that email, then try again.",
-    "removedReadOnly": "Restore this diver before changing their details — they're off your active lists right now.",
+    "removedReadOnly": "Restore this diver before changing their details.",
     "paymentNotConnected": "Payments aren't connected yet — connect them to charge this diver.",
     "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
     "notAuthorizedDelete": "Deleting a diver is limited to owners and managers — ask one of them to do it.",
@@ -352,7 +351,7 @@
     "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
     "notAuthorizedWaiver": "Your account can’t record a paper waiver for this shop any more. Ask an owner or manager to check your access.",
     "invalid": "Check the details and try again.",
-    "cardRemovedToast": "Certification removed by {name}.",
+    "cardRemovedToast": "Certification deleted by {name}.",
     "waiverPaperRecorded": "Paper waiver recorded — signed and on file.",
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
     "waiverError": "That paper waiver couldn’t be recorded. Open the diver’s next departure to see why.",
