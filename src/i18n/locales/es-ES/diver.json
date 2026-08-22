@@ -32,7 +32,7 @@
       "levelUnsaid": "Prefiero no decirlo",
       "levelNone": "Todavía no tengo certificación",
       "levelInfoLabel": "Por qué preguntamos por la certificación",
-      "levelDescription": "Ayuda al centro a proponerte salidas que puedas bucear. Lo confirmarán con tu certificación antes de que entres al agua.",
+      "levelDescription": "El centro compara esto con lo que pide cada salida. Respóndelo aunque no tengas la certificación a mano.",
       "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
     },
     "units": {

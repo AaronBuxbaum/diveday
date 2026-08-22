@@ -20,12 +20,17 @@ afterEach(cleanup);
  * they told the shop about an enriched-air card — the same broken promise as
  * asking a question and discarding the answer.
  */
-function renderFields(props: { showNitrox?: boolean } = {}) {
+function renderFields(props: { showNitrox?: boolean; locale?: "en-US" | "es-ES" } = {}) {
+  const { locale = "en-US", ...fieldProps } = props;
   return render(
     // The same two namespaces the public forms mount it under: `common` for the
     // question, `course` for the level words it shares with the course pages.
-    <DiverIntlProvider locale="en-US" timeZone="America/New_York" namespaces={["common", "course"]}>
-      <DiveDeclarationFields {...props} />
+    <DiverIntlProvider
+      locale={locale}
+      timeZone="America/New_York"
+      namespaces={["common", "course"]}
+    >
+      <DiveDeclarationFields {...fieldProps} />
     </DiverIntlProvider>,
   );
 }
@@ -49,15 +54,43 @@ describe("DiveDeclarationFields", () => {
     expect(
       screen.getByRole("button", { name: "Why we ask about certification" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Helps the shop tell you about trips you can dive/),
-    ).toBeInTheDocument();
-    // It used to promise "Nothing here is checked", which stopped being true on
-    // 2026-08-20: the admission gate reads this answer at the sale now (ADR
-    // 20260820-attested-at-booking-verified-at-boarding). What survives is the
-    // promise that still holds — the card gets confirmed before the water.
+    // **What the answer does**, which the sentence used to understate. It read
+    // "Helps the shop tell you about trips you can dive" — true while the level
+    // was informational, and not since 2026-08-20, when the admission gate
+    // started reading it at the sale (ADR
+    // 20260820-attested-at-booking-verified-at-boarding). A diver who skipped
+    // it because it sounded like marketing skipped the thing that would have
+    // told them the boat wants Advanced.
+    expect(screen.getByText(/matches this against what each trip asks for/)).toBeInTheDocument();
+    // **Permission to answer without the card**, which is the state a diver
+    // cannot get from the form: a diver whose card is in another country is the
+    // one who abandons the checkout. It says "answer it", not "leave the number
+    // blank", because `DiveCardFields` renders only once a level is picked — a
+    // sentence naming a box that is not on screen is worse than no sentence.
+    expect(screen.getByText(/Answer it even if your card isn't to hand/)).toBeInTheDocument();
+    // Two promises this sentence used to carry and no longer does. "Nothing
+    // here is checked" stopped being true at the sale; "they'll confirm it
+    // against your card" is still true and is still said — by
+    // `booking.noAccountNeeded`, on this same page, under the button ("The shop
+    // will confirm your certification and rental fit when you arrive"). Saying
+    // it twice spent the room the line above needed.
     expect(screen.queryByText(/Nothing here is checked/)).not.toBeInTheDocument();
-    expect(screen.getByText(/confirm it against your card/)).toBeInTheDocument();
+    expect(screen.queryByText(/confirm it against your card/)).not.toBeInTheDocument();
+  });
+
+  it("says the same two things in Spanish, and calls the shop el centro", () => {
+    // The other half of the string's history: it said "la tienda", which tells
+    // a diver their *retail store* will check their certification. The es-ES
+    // README settled that a dive shop is "el centro" and `check:shop-word` now
+    // refuses the other word — this asserts the rendered sentence, not the
+    // bundle, so the two cannot drift apart.
+    renderFields({ locale: "es-ES" });
+
+    expect(
+      screen.getByText(/El centro compara esto con lo que pide cada salida/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/aunque no tengas la certificación a mano/)).toBeInTheDocument();
+    expect(screen.queryByText(/tienda/)).not.toBeInTheDocument();
   });
 
   it("can omit nitrox from the broad deal-list form", () => {
