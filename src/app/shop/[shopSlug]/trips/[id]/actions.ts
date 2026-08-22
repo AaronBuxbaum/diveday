@@ -62,7 +62,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
-import { BLOCKER_CATEGORY, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
+import { REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
 import {
   isValidWeekdaySet,
   MAX_INTERVAL_WEEKS,
@@ -1202,6 +1202,12 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
   if (!specialties.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
+  // Who was already blocked, read *before* the write — see the count below.
+  const blockedBefore = new Set(
+    (await listTripReadiness(db, s.user.shopId, tripId))
+      .filter((row) => row.readiness.status === "blocked")
+      .map((row) => row.booking.id),
+  );
   const saved = await upsertTripRequirements(db, {
     shopId: s.user.shopId,
     tripId,
@@ -1220,10 +1226,28 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   // tightened it walked away not knowing, and found out when a diver did.
   //
   // So this is a notice, not a gate: it never refuses the save (a shop may
-  // legitimately tighten a gate and then work the roster), it just counts the
-  // booked divers the new rule leaves with a certification blocker.
-  const blocked = (await listTripReadiness(db, s.user.shopId, tripId)).filter((row) =>
-    row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification"),
+  // legitimately tighten a gate and then work the roster), it just counts who
+  // the new rule left behind.
+  //
+  // **Blocked status, differenced across the save** — not a filter on blocker
+  // category. This counted only `certification` blockers, so ticking "Requires
+  // waiver" on a roster nobody had signed, or "Requires payment" on a roster
+  // nobody had paid, blocked every diver aboard and reported *zero* — and then
+  // rendered the reassuring plain-success notice, which actively says nobody
+  // was affected. Those two are the toggles most likely to block a whole
+  // roster at once, because certification varies diver by diver while "has
+  // anyone paid yet" is usually uniform: the notice was quietest exactly where
+  // it had the most to say (issue #693).
+  //
+  // The difference, rather than the total, is what makes the sentence true —
+  // it says these divers "no longer meet" the requirements, and a departure
+  // where nobody had signed yet was already showing them as blocked. It also
+  // needs no category list to maintain: a `setup` blocker cannot *appear* from
+  // saving a requirement row (saving is what clears `requirements_not_configured`),
+  // so nothing has to be excluded by hand. The cost is one extra readiness pass
+  // over one boat's roster, on a form submit that already redirects.
+  const blocked = (await listTripReadiness(db, s.user.shopId, tripId)).filter(
+    (row) => row.readiness.status === "blocked" && !blockedBefore.has(row.booking.id),
   ).length;
   revalidateAndRedirect(
     back,
