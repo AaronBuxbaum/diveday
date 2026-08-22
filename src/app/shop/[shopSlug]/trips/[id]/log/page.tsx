@@ -13,7 +13,6 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate } from "@/lib/calendar-date";
 import {
   formatDateTimeTz,
   formatShortDate,
@@ -350,7 +349,6 @@ export default async function IncidentExportPage({
                         card={card}
                         agencyText={agencyText}
                         dateTime={dateTime}
-                        locale={locale}
                       />
                     </li>
                   ))}
@@ -544,13 +542,11 @@ function CertificationLine({
   card,
   agencyText,
   dateTime,
-  locale,
 }: {
   t: StaffTranslator;
   card: IncidentCertificationEvidence;
   agencyText: (agency: string) => string;
   dateTime: (isoString: string) => string;
-  locale: string;
 }) {
   const levelKey = card.level
     ? CERTIFICATION_LEVEL_KEYS[card.level as CertificationLevel]
@@ -558,9 +554,10 @@ function CertificationLine({
   const specialtyKey = card.specialty
     ? SPECIALTY_KEYS[card.specialty as keyof typeof SPECIALTY_KEYS]
     : undefined;
-  // A self-declared card has no number, and "absence is stated, never blank" is
-  // rule 2 of this document (src/lib/incident-export.ts) — a bare gap where a
-  // card number belongs reads as a missing page to an investigator.
+  // A self-declared card has no number the shop holds, and "absence is stated,
+  // never blank" is rule 2 of this document (src/lib/incident-export.ts) — a
+  // bare gap where a card number belongs reads as a missing page to an
+  // investigator. The card is separately tagged as the diver's own word below.
   const identifier = card.identifier ?? t("incidentExport.certNoNumber");
   const line =
     card.kind === "level" && levelKey
@@ -598,17 +595,6 @@ function CertificationLine({
       {card.imported ? <> · {t("incidentExport.certImportedTag")}</> : null}
       {/* The weakest thing on the page, and it has to read that way. */}
       {card.selfDeclared ? <> · {t("incidentExport.certSelfDeclaredTag")}</> : null}
-      {card.expiresAt ? (
-        <>
-          {" "}
-          ·{" "}
-          {t("incidentExport.certRefresherDue", {
-            // Date-only value: formatted as a calendar date, never through a
-            // timezone conversion that could shift the printed day (CR-009).
-            date: formatCalendarDate(card.expiresAt, locale),
-          })}
-        </>
-      ) : null}
     </>
   );
 }

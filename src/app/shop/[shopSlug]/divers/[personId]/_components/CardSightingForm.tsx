@@ -15,10 +15,12 @@ import { AGENCY_KEYS } from "./shared";
  * Every other pending card on this page certifies on one tap, and that is right:
  * a staffer already held something and typed its number, so the tap only records
  * that the number checked out. A **self-declared** card (a diver named their own
- * level on one of the two public opt-ins — `certifications.selfDeclaredAt`) has
- * no number at all and would otherwise inherit that same tap, promoting a
- * stranger's typing to `verified` — the state readiness and the nitrox fill gate
- * read.
+ * level on one of the three public forms that ask —
+ * `certifications.selfDeclaredAt`) has no number *the shop holds* and would
+ * otherwise inherit that same tap, promoting a stranger's typing to `verified` —
+ * the state readiness and the nitrox fill gate read. A number the diver typed
+ * beside their level lands in `declaredIdentifier` and changes nothing here: it
+ * is the thing being checked, never the check.
  *
  * So this is the exception, and it is deliberately the *same work* as capturing
  * a card rather than an extra attestation checkbox: name the agency, type the

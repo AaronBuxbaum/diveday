@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
-import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
 import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
@@ -185,8 +185,6 @@ export type NewCertification = {
   agency: CertificationAgency;
   level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
   identifier: string;
-  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
-  expiresAt?: CalendarDate;
   /**
    * **The diver typed this about themselves.** Set only by the diver-facing
    * entry form on `/ready/[token]`; a staff capture leaves it unset, because a
@@ -446,8 +444,6 @@ export type NewSpecialtyCertification = {
   agency: CertificationAgency;
   specialty: DiveSpecialty;
   identifier: string;
-  /** Date-only "YYYY-MM-DD", the shop's own local calendar date (CR-009). */
-  expiresAt?: CalendarDate;
   /**
    * The diver typed this about themselves — see the column's own note in
    * `src/db/schema.ts`. Set only by the entry form on `/ready/[token]`; a staff
@@ -711,17 +707,10 @@ export async function listTripReadiness(
   const tripDate = tripRow[0]?.startsAt
     ? calendarDateInTimezone(tripRow[0].startsAt, timezone)
     : null;
-  // Card validity is asked about *today* (is this card expired right now?),
-  // which is a different question from the trip date the junior band is
-  // measured on — a card expiring next week is valid today and invalid on a
-  // trip a fortnight out.
-  const todayLocal = calendarDateInTimezone(now, timezone);
-
   return rows.map((row) => {
     const depthLimit = diverDepthLimit(
       row.certifications,
       row.specialtyCertifications,
-      todayLocal,
       row.person.dateOfBirth,
       tripDate,
     );
@@ -768,6 +757,18 @@ export type BookingReadinessDetail = {
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
   person: { fullName: string };
   requirement: Awaited<ReturnType<typeof getTripRequirements>>;
+  /**
+   * The gate the trip's *itinerary* adds — every site it visits folded into
+   * one (`combineSiteRequirements`), or null when no site demands anything.
+   *
+   * Carried beside `requirement` rather than pre-merged into it because the two
+   * answer different questions: `requirement` is what the shop set on this
+   * departure, and callers that state the rule to a diver want the stricter of
+   * the pair (`combineCertRequirements`). The readiness engine already composes
+   * both; without this, a surface naming the required level off `requirement`
+   * alone would understate a gate the site imposes and the engine enforces.
+   */
+  siteRequirement: SiteCertRequirement | null;
   readiness: NonNullable<Awaited<ReturnType<typeof getBookingReadiness>>>;
   cancelled: boolean;
 };
@@ -814,6 +815,10 @@ export async function getBookingReadinessDetail(
     trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
     person: { fullName: row.personName },
     requirement,
+    // Null on the fallback path above: a booking the roster no longer knows has
+    // already fallen through to `unavailableReadiness()`, so there is no gate
+    // to state either way.
+    siteRequirement: match?.siteRequirement ?? null,
     readiness,
     cancelled: row.status === "cancelled",
   };
@@ -998,7 +1003,6 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         now,
-        timezone,
       }),
     };
   });

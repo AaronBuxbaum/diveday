@@ -585,6 +585,12 @@ async function writeEvidence(
       ...(row.sizes.wetsuitSize ? { wetsuitSize: row.sizes.wetsuitSize } : {}),
       ...(row.sizes.bootSize ? { bootSize: row.sizes.bootSize } : {}),
       ...(row.sizes.finSize ? { finSize: row.sizes.finSize } : {}),
+      // A size arriving from the shop's old system *is* a stated fit — this is
+      // the column that separates a real fit from a row holding only the
+      // diver's note (schema.ts, `rental_fit_profiles.fit_stated_at`). Without
+      // it every imported diver would land as "nobody asked" and drop off the
+      // packing list, which is the opposite of what an import is for.
+      fitStatedAt: now,
     };
     await tx
       .insert(rentalFitProfiles)
@@ -629,7 +635,6 @@ async function writeEvidence(
           agency: row.cert.agency,
           level: row.cert.level,
           identifier: row.cert.identifier,
-          expiresAt: row.cert.expiresAt,
           status: row.cert.status,
           // Flagged imported either way: provenance is a fact about where the
           // card came from, independent of whether we trusted it on arrival.
@@ -666,7 +671,6 @@ async function writeEvidence(
         agency: card.agency,
         specialty: card.specialty,
         identifier: card.identifier,
-        expiresAt: card.expiresAt,
         status: card.status,
         importedAt: now,
         importedFromLabel: card.sourceLabel,

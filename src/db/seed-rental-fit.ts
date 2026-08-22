@@ -88,6 +88,10 @@ export async function seedRentalFit(
         bootSize: fit.boot,
         finSize: fit.fin,
         weightPreference: fit.weights ?? null,
+        // A seeded fit is a stated fit — without this every demo diver would
+        // read as "nobody asked" on the packing list (schema.ts,
+        // `rental_fit_profiles.fit_stated_at`).
+        fitStatedAt: nowDate(),
         needsStaffFitAt: fit.needsStaffFit ? nowDate() : null,
         needsStaffFitNote: fit.needsStaffFit ? "No XL BCD left — fit from the spares" : null,
       };

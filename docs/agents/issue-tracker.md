@@ -65,6 +65,13 @@ means a conflict rather than a collision. Both are the same declaration AGENTS.m
 in a draft PR description; the claim just makes it at the moment work starts, which is when the
 next session needs it.
 
+**A stack gets one claim, not one per layer.** Where the work is a dependent chain opened as
+stacked pull requests (AGENTS.md's *Parallel work*, the `stacked-prs` skill), `Branch:` is the
+**bottom** branch and the comment names the layers you intend to open, bottom to top. `pnpm gates`
+verifies the branch it is given, so naming the bottom one keeps the claim checkable from the moment
+the first layer exists — and three half-pushed branches in no stated order is the state this
+convention is built to prevent.
+
 **Clear it when you are done.** Remove the label when the PR merges, or when you stop. A claim you
 abandon without clearing is the failure mode this is built around, which is why it is checkable
 rather than trusted.
@@ -156,6 +163,25 @@ session to close this issue when the work lands — not a file path, since the i
 reader already is.
 ​```
 ```
+
+**`Touches:` names paths that exist on `main` today.** The mechanism is not that, and the gap is the
+whole point: `pnpm check:follow-ups` resolves every backticked path on that line against **whatever
+tree it is run in**. So a path your own unmerged branch adds passes on your branch — where you file
+it and where you check it — and reddens `pnpm check` for every other session until you merge. Twice
+within one hour on 2026-08-21, from two sessions that had each just filed a perfectly good follow-up
+about the change they were finishing; neither could have seen it locally. The file the work will
+really touch still belongs in the issue: name it in prose, without backticks, saying which PR brings
+it. Nothing is lost — the prompt names it too, and the reader gets the same path either way.
+
+The same mechanism runs the other way, and that one *is* the check doing its job: if your change
+deletes or renames a path an open follow-up names, `check:follow-ups` fails on your branch. Fix the
+issue's `Touches:` line as part of your change — an entry pointing at a file that no longer exists
+is exactly the stale entry this check exists to catch, and it was going to mislead its cold reader
+whether or not anything failed.
+
+Resolving against `main` instead of the checkout would look like the tighter rule and is not
+available: CI checks out only the pull request's own ref, so there is no `main` there to resolve
+against, and the check would fail everywhere it currently passes.
 
 An issue blocked on somebody *outside this repo* — an upstream release, a third party's answer, a
 measurement that needs traffic the site has not had — also carries `waiting-on-external`, plus a

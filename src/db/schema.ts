@@ -3666,12 +3666,49 @@ export const certifications = pgTable(
      */
     identifier: text("identifier"),
     /**
-     * Date-only, no time-of-day or timezone (CR-009): a card is valid
-     * through the end of its own local calendar day in the shop's
-     * timezone, not a fixed UTC instant that expires early or late
-     * depending on the shop's offset. See src/lib/calendar-date.ts.
+     * **The card number a diver typed about themselves**, kept deliberately
+     * apart from `identifier` above — which is what the *shop* holds.
+     *
+     * The three public forms started asking for one on 2026-08-21 (issue #630)
+     * so the verify queue has something to pre-check before the dive date. It
+     * would have been cheaper to write it into `identifier` and the column is
+     * nullable for exactly this row shape, but a `security-reviewer` pass found
+     * two things wrong with that, and both are about `identifier` being a *key*:
+     *
+     * 1. **A number already on a live card raises 23505 inside the booking
+     *    transaction** (`certifications_shop_agency_identifier_unique`), which
+     *    fails the sale — and answers "is this number on file at this shop?" for
+     *    anyone who types one and watches. Dropping the number on a collision
+     *    only moved the tell: an unsighted claim *with* a number reads as
+     *    `certification_pending` and one without reads as
+     *    `certification_self_declared`, so the difference is rendered in words
+     *    on the attacker's own readiness page.
+     * 2. **It strands the real diver.** `certification_pending` withdraws the
+     *    card-entry form (`CERT_ENTRY_CODES`) and says "your details are being
+     *    verified" — so a stranger who knows a diver's name and email could
+     *    take away that diver's only way to send their actual card.
+     *
+     * A column outside the unique index has neither problem: nothing collides,
+     * nothing is dropped, and every unsighted claim reads the same however much
+     * the diver typed. It is **never** evidence — `reviewCertification` still
+     * demands a staffer type what is on the plastic, and what they type lands in
+     * `identifier`, leaving this as the claim it was. A staffer comparing the
+     * two is the whole point.
+     *
+     * The *agency* needs no such twin: it rides in `agency` (`other` when the
+     * diver did not say), which is safe precisely because a claim's `identifier`
+     * stays NULL, and a NULL is invisible to the unique index.
      */
-    expiresAt: date("expires_at", { mode: "string" }),
+    declaredIdentifier: text("declared_identifier"),
+    /**
+     * **There is no expiry column here, and its absence is the decision.**
+     * Neither PADI nor SSI expires a recreational certification or mandates a
+     * refresher, so the date this table carried until 2026-08-21 modelled a
+     * rule that does not exist — and gated boarding on it
+     * (ADR 20260821-a-card-does-not-expire, superseding
+     * 20260723-certification-expiry-date-only). `waiver_records.expiresAt` is
+     * a different thing entirely and stays: a waiver really does lapse.
+     */
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -3817,8 +3854,7 @@ export const specialtyCertifications = pgTable(
     agency: certificationAgency("agency").notNull(),
     specialty: diveSpecialty("specialty").notNull(),
     identifier: text("identifier").notNull(),
-    /** Date-only, shop-local expiry — see certifications.expiresAt (CR-009). */
-    expiresAt: date("expires_at", { mode: "string" }),
+    /** No expiry column, for the reason `certifications` states. */
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -4128,6 +4164,22 @@ export const rentalFitProfiles = pgTable(
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),
     note: text("note"),
+    /**
+     * When a **fit** was last stated — by the diver's own gear form or by staff
+     * editing it. Null means this row exists for something other than a fit.
+     *
+     * There is exactly one such something today, and it is why this column
+     * exists: since issue 627 the diver's free-text note ("titanium hip, I run
+     * heavy") is its own question on `/ready`, saved by `saveRentalFitNote`,
+     * which will create this row for a diver who has never touched the gear
+     * form. Every `rents_*` column above defaults to **true**, so without this
+     * discriminator a diver who only left a note would appear on the boat's
+     * packing list renting a BCD, regulator, wetsuit, mask, fins and weights —
+     * six pieces, no sizes, nobody asked for any of them. `rentalFitLine` and
+     * the prep checklist read a null here as "no fit recorded", exactly as they
+     * already read a missing row.
+     */
+    fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
     /**
      * The safe fallback when a requested size isn't available (H-06): staff
      * flag the diver for hands-on fitting at check-in instead of silently

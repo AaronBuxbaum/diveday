@@ -36,8 +36,6 @@ afterEach(() => {
 
 const ISSUE_CODES: ImportIssueCode[] = [
   "email_invalid",
-  "expiry_unreadable",
-  "expiry_assumed_month_first",
   "card_marked_unverified",
   "specialty_not_gated",
   "specialty_no_card_number",

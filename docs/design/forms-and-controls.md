@@ -51,6 +51,59 @@ import { SectionCard } from "@/components/ui/card";
 - **`as`** is the element the card *is*: `section` by default, `li` for a person on a roster,
   `details` for a disclosure, `div` for a shell.
 
+### Where a heading goes
+
+Inside the card it names, above the group it governs. The test is one question, asked of whatever
+sits directly under the heading:
+
+> **Would this heading still be telling the truth if the card under it disappeared, multiplied, or
+> swapped for an `EmptyState`?**
+
+If the heading and the card live and die together, the heading is the card's — pass it as `title`.
+If the heading would survive — because the body is a list that grows, a stack of sibling cards, or
+a section whose body swaps to an empty state — the heading stands above, bare, and everything under
+it names itself.
+
+- **One card, one subject → the heading is the card's `title`.** The card *is* the section, so
+  `SectionCard` renders the `h2` and derives its `aria-labelledby` from it. A bare heading floated
+  above a single card splits one object into two: the named region and the visible border disagree,
+  so a screen reader lands on an unnamed panel while the heading sits ownerless in the gutter. The
+  staff waivers page and the diver record's "Book an activity" both read that way until 2026-08-21.
+- **A plural body → the heading stands above, and the members name themselves.** "Plural" means a
+  stack of sibling cards, a grid of object cards, one `padding="none"` shell of divided rows, or a
+  body that renders `EmptyState` when it is empty. The group heading is a bare `<h2
+  className="text-lg font-semibold">` — the **same scale** as a card's own `h2`, because a section
+  speaks at one volume whether its heading sits inside one card or above five — and each card under
+  it steps down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing.
+  The heading has to live above precisely because the body is unreliable: close-out's "Tomorrow"
+  heading must survive its card swapping to an `EmptyState`, and a heading inside that card would
+  vanish at the moment the section most needs to say "nothing waiting".
+- **A collapsable's heading is its `<summary>`. Never a bare heading above a `<details>`.** A closed
+  disclosure under a floated heading is a heading over apparently nothing — and worse, the heading
+  is the tap-sized text a reader will press, and it opens nothing. The summary is the heading *and*
+  the control, at the level the card would have had: `h2` when the disclosure is a page section,
+  `h3` when it sits inside a group's shell. A *group* of collapsables takes a group heading above,
+  like any other group. A disclosure *inside* a titled card (an "Edit" toggle) is not a heading at
+  all — it is a control label, and it stays out of the heading hierarchy.
+- **A band takes no heading.** A search or filter form wearing the card's chrome acts on the content
+  below it rather than containing content of its own; its field labels are its words. Giving a band
+  a title manufactures a section where there is only a control.
+
+**One card, or a group?** When a section could be built either way, the line is ownership of state.
+Parts only true *together* — a progress figure over its own rows, a map above the address it locates
+— are one card with internal structure. Members that can be added, removed, or linked to on their
+own are a group under one heading. **A group of one is still a group if it can grow.**
+
+**The hand-spelled anatomies place by this grammar too.** The marketing exemption above is a
+*type-scale* exemption, not a placement one, and the marketing pages already prove it: `/product`'s
+mid-CTA heading sits **inside** its card, hand-spelled under 36px display type where `text-lg` would
+turn the page's one checkable proof into fine print. The same goes for a tone-carrying panel, a
+full-bleed shell, and an eyebrow — each hand-spells its heading for a reason stated at the site, and
+each still *places* it by this grammar. So does a card that is a `<form>`: `SectionCard`'s element
+set excludes `<form>`, so such a card cannot take a `title` at all, and its heading is hand-spelled
+at the `h2` scale as the card's first child (`BookActivity` on the diver record) rather than floated
+above it.
+
 ### Section rhythm: `space-y-10`, never `mt-*`
 
 `SectionCard` carries **no outer margin at all**. A page stacks its sections in one `space-y-10`

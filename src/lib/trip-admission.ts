@@ -1,5 +1,6 @@
 import type {
   Certification,
+  CertificationAgency,
   DiveSpecialty,
   NitroxCertification,
   SpecialtyCertification,
@@ -26,9 +27,8 @@ import {
  * **Readiness asks "is this diver cleared right now?" — admission asks "could
  * this diver ever be cleared for this trip?"** Everything readiness refuses
  * that a person can still fix before the boat leaves — an unsigned waiver, a
- * card captured but not yet verified, a refresher that has come due, a payment
- * outstanding — is *not* a reason to refuse the sale. Only a settled
- * impossibility is.
+ * card captured but not yet verified, a payment outstanding — is *not* a reason
+ * to refuse the sale. Only a settled impossibility is.
  *
  * **Absence of evidence is never a refusal.** A shop that has never carded this
  * diver knows nothing about them, and refusing there would lock out every new
@@ -39,12 +39,10 @@ import {
  * and this rule follows it rather than inventing a second policy. Readiness and
  * the dock still hold that line — nothing here weakens them.
  *
- * Note what is deliberately *not* consulted: expiry and verification status.
- * Both are states a diver or a staffer can move before departure (the stored
- * "expiry" is a shop-set refresher-due date, not a card expiry — see the
- * glossary's C-card entry), so neither can make a seat impossible. What cannot
- * be moved by paperwork is the rung of the ladder a diver stands on and whether
- * they hold a specialty card at all.
+ * Note what is deliberately *not* consulted: verification status. It is a state
+ * a diver or a staffer can move before departure, so it cannot make a seat
+ * impossible. What cannot be moved by paperwork is the rung of the ladder a
+ * diver stands on and whether they hold a specialty card at all.
  *
  * **Why ignoring `status` is safe, and what would make it unsafe.** A `pending`
  * card is *almost* never a self-assertion: with one stamped exception, divers
@@ -109,8 +107,8 @@ export type TripAdmissionRefusal = {
   /** Nitrox demanded with no enriched-air card on file at all. */
   nitroxRequired: boolean;
   /**
-   * The highest rung this decision saw, whatever its status or refresher date:
-   * the record, **or the claim this submitter just typed**, whichever is higher.
+   * The highest rung this decision saw, whatever its status: the record, **or
+   * the claim this submitter just typed**, whichever is higher.
    *
    * On a refusal nothing is persisted, so a declared rung here is in no record
    * at all — a surface that words this as "on file" would be wrong. The one that
@@ -135,10 +133,9 @@ const NO_TRIP_REQUIREMENT: CertRequirementSource = {
 };
 
 /**
- * The highest rung any certification on file reaches, ignoring status and
- * refresher date entirely: a pending capture and an overdue card are both still
- * evidence of what this diver was trained to do, and neither is something a
- * booking should refuse over.
+ * The highest rung any certification on file reaches, ignoring status
+ * entirely: a pending capture is still evidence of what this diver was trained
+ * to do, and that is not something a booking should refuse over.
  */
 function highestLevelOnFile(certifications: readonly Certification[]): CertificationLevel | null {
   let best: CertificationLevel | null = null;
@@ -157,7 +154,6 @@ function highestLevelOnFile(certifications: readonly Certification[]): Certifica
  * diver's own declaration. The question this asks is "is this diver unknown to
  * us?", and a diver with three cards a staffer typed in last Tuesday is not
  * unknown; nor is one who told us their number on the booking form ten minutes
- * ago. Expiry is irrelevant — a card due for a refresher was still stated.
  *
  * It used to require a **`verified`** row, which contradicted its own name and
  * its own module docstring: the gate already trusted a `pending` staff-typed
@@ -180,7 +176,21 @@ function shopHasAdjudicated(certifications: readonly Certification[]): boolean {
  * behind it, and giving it the shape of a row is how it would end up stored as
  * one by accident.
  */
-export type SelfDeclaration = { level?: CertificationLevel | null; nitrox?: boolean };
+export type SelfDeclaration = {
+  level?: CertificationLevel | null;
+  /**
+   * The agency and number typed beside the level, when the diver gave them.
+   * **Nothing in this module reads either one**, and that is the point of
+   * carrying them here rather than in a parallel shape: the sale gate is
+   * decided by the rung alone, and a card number is evidence for a human to
+   * pre-check before the dive date (issue #630). If a future refusal ever
+   * consults `identifier`, it has stopped being evidence and become a second
+   * gate on a stranger's typing.
+   */
+  agency?: CertificationAgency | null;
+  identifier?: string | null;
+  nitrox?: boolean;
+};
 
 /** The higher of two rungs, either of which may be absent. */
 function highestOf(
@@ -311,9 +321,9 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
       : null;
 
   // A card of the right specialty in *any* state clears admission — pending
-  // review, imported and awaiting a staffer's one-tap confirm, or overdue for a
-  // refresher are all things that move before departure. Only a diver with no
-  // such card at all cannot dive this site.
+  // review, or imported and awaiting a staffer's one-tap confirm, are both
+  // things that move before departure. Only a diver with no such card at all
+  // cannot dive this site.
   const missingSpecialties = effective.requiredSpecialties.filter(
     (specialty) => !specialtyCertifications.some((card) => card.specialty === specialty),
   );

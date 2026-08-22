@@ -75,8 +75,6 @@ export type ReadyPageData = {
     /** Their own recorded reading language, or null when DiveDay has never
      * heard one first-hand (docs ADR 20260731-per-person-notification-locale). */
     locale: string | null;
-    emergencyContactName: string | null;
-    emergencyContactPhone: string | null;
   };
   wantsNitrox: boolean;
   /**
@@ -149,8 +147,6 @@ export async function getReadyPageData(
       dockCallMinutes: shops.dockCallMinutes,
       personEmail: people.email,
       personLocale: people.locale,
-      emergencyContactName: people.emergencyContactName,
-      emergencyContactPhone: people.emergencyContactPhone,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -223,8 +219,6 @@ export async function getReadyPageData(
       id: row.personId,
       email: row.personEmail,
       locale: row.personLocale,
-      emergencyContactName: row.emergencyContactName,
-      emergencyContactPhone: row.emergencyContactPhone,
     },
     wantsNitrox: row.wantsNitrox,
     lastDivedBand: row.lastDivedBand,

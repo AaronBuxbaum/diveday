@@ -102,13 +102,13 @@ test.describe("contact import", () => {
  * the shape a rival's cert export actually emits.
  */
 // One row per card, the shape a real certification export emits: the same diver
-// on two rows, sharing the one PADI number that identifies them, and a US-locale
-// refresher date. Row 2 must add its specialty card to row 1's diver rather than
-// be discarded as a duplicate person.
+// on two rows, sharing the one PADI number that identifies them. Row 2 must add
+// its specialty card to row 1's diver rather than be discarded as a duplicate
+// person.
 const SPECIALTY_CSV = [
-  "Full Name,Email,Cert Agency,Cert Level,Cert Number,Refresher Due,DAN Number,Waiver Source",
-  "Deep Dana,deep.dana@example.com,PADI,Rescue Diver,PADI-9001,05/04/2031,DAN #4242,Old Blue Reef Divers",
-  "Deep Dana,deep.dana@example.com,PADI,Deep Diver,PADI-9001,,,Old Blue Reef Divers",
+  "Full Name,Email,Cert Agency,Cert Level,Cert Number,DAN Number,Waiver Source",
+  "Deep Dana,deep.dana@example.com,PADI,Rescue Diver,PADI-9001,DAN #4242,Old Blue Reef Divers",
+  "Deep Dana,deep.dana@example.com,PADI,Deep Diver,PADI-9001,,Old Blue Reef Divers",
 ].join("\n");
 
 test.describe("contact import — specialty cards", () => {

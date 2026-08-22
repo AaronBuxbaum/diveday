@@ -7,7 +7,7 @@ import { ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass } from "@/components/ui/form";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -244,7 +244,7 @@ export default async function TripPrepPage({
               // only the border and fill say which of them is a problem.
               className="mt-6 rounded-2xl border border-warning/40 bg-warning/10 p-4 shadow-sm sm:p-5"
             >
-              <h2 id="nitrox-blocked-heading" className="font-semibold">
+              <h2 id="nitrox-blocked-heading" className="text-lg font-semibold">
                 {t("trips.prep.nitroxBlockedHeading")}
               </h2>
               <p className="mt-1 text-sm">{t("trips.prep.nitroxBlockedDescription")}</p>
@@ -271,23 +271,18 @@ export default async function TripPrepPage({
               telling the packer nobody asked would send them to re-ask a
               question that already has half an answer. */}
           {checklist.diversWithIncompleteFit.length > 0 ? (
-            <section
-              aria-labelledby="missing-sizes-heading"
-              // The `<h2 id>` stays spelled out rather than folding into
-              // `SectionCard`'s `title`: `aria-labelledby` needs that id.
-              className={sectionCardClass({ className: "mt-6" })}
+            <SectionCard
+              className="mt-6"
+              title={t("trips.prep.missingSizesHeading")}
+              description={t("trips.prep.missingSizesDescription")}
             >
-              <h2 id="missing-sizes-heading" className="font-semibold">
-                {t("trips.prep.missingSizesHeading")}
-              </h2>
-              <p className="mt-1 text-sm text-muted">{t("trips.prep.missingSizesDescription")}</p>
               {/* Two different situations, said differently: a diver with
                   *some* sizes on file keeps a row naming exactly what's
                   missing, while the never-asked share one sentence said once
                   above their names — the old list repeated "nothing on file;
                   they may be bringing their own kit…" per row, the same clause
                   chanted seven times (principle 9). */}
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
+              <ul className="flex flex-col gap-1 text-sm">
                 {checklist.diversWithIncompleteFit
                   .filter((diver) => diver.state !== "not_recorded")
                   .map((diver) => (
@@ -329,7 +324,7 @@ export default async function TripPrepPage({
                   </ul>
                 </div>
               ) : null}
-            </section>
+            </SectionCard>
           ) : null}
 
           {checklist.diversNeedingStaffFit.length > 0 ? (
@@ -337,7 +332,7 @@ export default async function TripPrepPage({
               aria-labelledby="staff-fit-heading"
               className="mt-6 rounded-2xl border border-warning/40 bg-warning/5 p-4 shadow-sm sm:p-5"
             >
-              <h2 id="staff-fit-heading" className="font-semibold">
+              <h2 id="staff-fit-heading" className="text-lg font-semibold">
                 {t("trips.prep.staffFitHeading")}
               </h2>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.staffFitDescription")}</p>

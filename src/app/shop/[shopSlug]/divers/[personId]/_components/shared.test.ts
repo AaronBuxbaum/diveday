@@ -5,54 +5,17 @@ import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import {
   bookingMoney,
   bookingMoneyStatusTone,
-  cardDisplayStatus,
   cardsNeedingLookCount,
   type DiverProfile,
   HELD_CARD_STATUS_KEYS,
   heldCardDisplayStatus,
   heldCardStatusTone,
-  isCardExpired,
   isImportedCard,
   needsImportConfirm,
   PAYMENT_STATUS_KEYS,
   PAYMENT_STATUS_TONES,
   unpaidBookingCount,
 } from "./shared";
-
-const TODAY = "2026-07-21";
-
-describe("certification card display state", () => {
-  it("treats a card past its expiry as expired", () => {
-    expect(isCardExpired({ expiresAt: "2026-01-01" }, TODAY)).toBe(true);
-  });
-
-  it("does not treat a future or missing expiry as expired", () => {
-    expect(isCardExpired({ expiresAt: "2027-01-01" }, TODAY)).toBe(false);
-    expect(isCardExpired({ expiresAt: null }, TODAY)).toBe(false);
-    expect(isCardExpired({}, TODAY)).toBe(false);
-  });
-
-  it("shows an expired verified card as `expired`, not `certified`", () => {
-    expect(cardDisplayStatus({ status: "verified", expiresAt: "2026-01-01" }, TODAY)).toBe(
-      "expired",
-    );
-  });
-
-  it("keeps a verified, unexpired card certified", () => {
-    expect(cardDisplayStatus({ status: "verified", expiresAt: null }, TODAY)).toBe("verified");
-    expect(cardDisplayStatus({ status: "verified", expiresAt: "2027-01-01" }, TODAY)).toBe(
-      "verified",
-    );
-  });
-
-  it("leaves a pending card pending even once its stated expiry has passed", () => {
-    // Expiry is only meaningful for a card that was actually certified; a pending
-    // card still needs staff review, so it must not read as `expired`.
-    expect(cardDisplayStatus({ status: "pending", expiresAt: "2026-01-01" }, TODAY)).toBe(
-      "pending",
-    );
-  });
-});
 
 describe("imported card provenance and confirm nudge", () => {
   it("flags any card with an importedAt as imported", () => {
@@ -72,8 +35,6 @@ describe("imported card provenance and confirm nudge", () => {
 });
 
 describe("heldCardDisplayStatus", () => {
-  const today = "2026-07-25";
-
   it("distinguishes a card whose gate is still shut from one that clears", () => {
     // The badge is the only thing on screen saying so. A hand-verified card reads
     // plain "certified" and does clear; an imported, unconfirmed one holds its
@@ -87,23 +48,26 @@ describe("heldCardDisplayStatus", () => {
     const unconfirmed = { status: "verified" as const, importedAt: new Date(), reviewedAt: null };
     const byHand = { status: "verified" as const, importedAt: null, reviewedAt: null };
 
-    expect(heldCardDisplayStatus(unconfirmed, today)).toBe("confirm_to_clear");
+    expect(heldCardDisplayStatus(unconfirmed)).toBe("confirm_to_clear");
     expect(HELD_CARD_STATUS_KEYS.confirm_to_clear).toBe("divers.shared.cardStatus.confirmToClear");
     expect(heldCardStatusTone("confirm_to_clear")).toBe("warning");
 
     // Both of these genuinely clear, so both keep the plain certified badge.
-    expect(heldCardDisplayStatus(confirmed, today)).toBe("verified");
-    expect(heldCardDisplayStatus(byHand, today)).toBe("verified");
+    expect(heldCardDisplayStatus(confirmed)).toBe("verified");
+    expect(heldCardDisplayStatus(byHand)).toBe("verified");
     expect(heldCardStatusTone("verified")).toBe("success");
   });
 
-  it("lets an overdue refresher outrank the confirm, since expiry is the harder fact", () => {
+  it("leaves a pending card pending, imported or not", () => {
+    // There is no third display state to fall into any more: what the badge
+    // shows is the stored status, plus the one imported-but-unconfirmed
+    // overlay above (ADR 20260821-a-card-does-not-expire).
+    expect(heldCardDisplayStatus({ status: "pending", importedAt: null, reviewedAt: null })).toBe(
+      "pending",
+    );
     expect(
-      heldCardDisplayStatus(
-        { status: "verified", expiresAt: "2026-07-17", importedAt: new Date(), reviewedAt: null },
-        today,
-      ),
-    ).toBe("expired");
+      heldCardDisplayStatus({ status: "pending", importedAt: new Date(), reviewedAt: null }),
+    ).toBe("pending");
   });
 });
 

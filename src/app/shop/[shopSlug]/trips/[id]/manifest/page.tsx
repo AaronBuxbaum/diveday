@@ -418,9 +418,9 @@ export default async function TripManifestPage({
           mechanism exists to prevent. */}
       <section
         aria-labelledby="on-this-phone-heading"
-        // The `<h2 id>` stays spelled out rather than folding into
-        // `SectionCard`'s `title`: `aria-labelledby` needs that id, and this
-        // heading is a deliberate eyebrow rather than a section heading.
+        // The `<h2>` stays spelled out rather than folding into
+        // `SectionCard`'s `title`: this heading is a deliberate eyebrow rather
+        // than a section heading, which is a scale `title` does not render.
         className={sectionCardClass({ className: "mt-8 print:hidden" })}
       >
         <h2

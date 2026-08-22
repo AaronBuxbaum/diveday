@@ -632,7 +632,6 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // omit (task 102).
   expect(templateBody).toContain("dive_insurance");
   expect(templateBody).toContain("specialty");
-  expect(templateBody).toContain("refresher_due");
   // A few realistic, clearly-fake example rows (task 102) — headers alone
   // left a shop owner guessing at the shape of a filled-in row.
   const templateRows = templateBody.trim().split("\n");

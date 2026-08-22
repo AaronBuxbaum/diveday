@@ -5,7 +5,6 @@ import type { getShopById } from "@/db/shops";
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
-import { type CalendarDate, isCalendarDateExpired } from "@/lib/calendar-date";
 
 export type DiverProfile = NonNullable<Awaited<ReturnType<typeof getDiverProfile>>>;
 export type Shop = NonNullable<Awaited<ReturnType<typeof getShopById>>>;
@@ -155,59 +154,25 @@ export function cardsNeedingLookCount(diver: DiverProfile): number {
 export type CardStatus = "pending" | "verified";
 
 /**
- * What the badge shows: the stored status, or `expired` when a verified card is
- * past the shop's refresher-due date. Real C-cards do not expire (glossary
- * **C-card**); this date is a shop-set *refresher-due* policy, not a card
- * expiry — so the `expired` display key surfaces to staff as "refresher due".
- * It is a display overlay, not a stored state.
+ * What the badge shows. **The same two values the column stores**, since
+ * 2026-08-21: a certification does not expire, so there is no third display
+ * state overlaid on top of the stored one
+ * (ADR 20260821-a-card-does-not-expire).
  */
-export type CardDisplayStatus = CardStatus | "expired";
+export type CardDisplayStatus = CardStatus;
 
 /**
  * Staff-facing card labels. A card is "certified" once staff confirm it (they
  * look the number up with the issuing agency and click Mark certified); the
- * stored status is still `verified`, which is what readiness reads. Once a card
- * passes its shop-set refresher-due date it reads as "refresher due" and no
- * longer counts as valid until refreshed (H-08).
+ * stored status is still `verified`, which is what readiness reads.
  */
 export const CARD_STATUS_KEYS: Record<CardDisplayStatus, StaffMessageKey> = {
   pending: "divers.shared.cardStatus.pending",
   verified: "divers.shared.cardStatus.verified",
-  expired: "divers.shared.cardStatus.expired",
 };
 
-/**
- * A card past its shop-set refresher-due date no longer counts as a valid
- * certification — the same rule the readiness engine applies in
- * `validVerifiedCertification`, compared against the shop's own local calendar
- * date rather than a UTC instant (CR-009, src/lib/calendar-date.ts). The name
- * predates the H-08 refresher-due relabel and still tracks the same
- * `expiresAt` column.
- */
-export function isCardExpired(
-  card: { expiresAt?: CalendarDate | null },
-  todayLocal: CalendarDate,
-): boolean {
-  return Boolean(card.expiresAt && isCalendarDateExpired(card.expiresAt, todayLocal));
-}
-
-/** An expired verified card reads as `expired`; every other state is unchanged. */
-export function cardDisplayStatus(
-  card: { status: CardStatus; expiresAt?: CalendarDate | null },
-  todayLocal: CalendarDate,
-): CardDisplayStatus {
-  return card.status === "verified" && isCardExpired(card, todayLocal) ? "expired" : card.status;
-}
-
 export function statusTone(status: CardDisplayStatus): BadgeTone {
-  switch (status) {
-    case "verified":
-      return "success";
-    case "expired":
-      return "danger";
-    default:
-      return "warning";
-  }
+  return status === "verified" ? "success" : "warning";
 }
 
 /**
@@ -250,11 +215,9 @@ export const HELD_CARD_STATUS_KEYS: Record<HeldCardDisplayStatus, StaffMessageKe
 };
 
 export function heldCardDisplayStatus(
-  card: { status: CardStatus; expiresAt?: CalendarDate | null } & ImportedCard,
-  todayLocal: CalendarDate,
+  card: { status: CardStatus } & ImportedCard,
 ): HeldCardDisplayStatus {
-  const base = cardDisplayStatus(card, todayLocal);
-  return base === "verified" && needsImportConfirm(card) ? "confirm_to_clear" : base;
+  return card.status === "verified" && needsImportConfirm(card) ? "confirm_to_clear" : card.status;
 }
 
 export function heldCardStatusTone(status: HeldCardDisplayStatus): BadgeTone {

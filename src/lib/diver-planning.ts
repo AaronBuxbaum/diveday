@@ -452,7 +452,12 @@ export function exposureSuitFor(celsius: number): ExposureSuit {
 
 export function packingConfidence(
   shopItems: string[],
-  rental: null | Record<string, boolean | string | null>,
+  /**
+   * `Date` in the union for `fitStatedAt` alone: an explicit null there means
+   * the row exists only to carry the diver's note and states no fit at all, so
+   * it packs like no row (schema.ts, `rental_fit_profiles.fit_stated_at`).
+   */
+  rental: null | Record<string, boolean | string | Date | null>,
   /**
    * Whether the shop runs a briefing at all (`briefingMinutes > 0`). "Crew
    * briefing" used to be an unconditional entry under *Provided*, which put the
@@ -465,7 +470,11 @@ export function packingConfidence(
   rented: RentableItemKind[];
   provided: ProvidedItemCode[];
 } {
-  const rented = rental
+  // A note-only row rents nothing: every `rents_*` column defaults to true, so
+  // without this the diver would be told the shop is bringing a BCD, regulator,
+  // wetsuit, mask, fins and weights they never asked for.
+  const statesAFit = rental !== null && rental.fitStatedAt !== null;
+  const rented = statesAFit
     ? RENTAL_FIELD_KINDS.filter(([field]) => rental[field] === true).map(([, kind]) => kind)
     : [];
   return {

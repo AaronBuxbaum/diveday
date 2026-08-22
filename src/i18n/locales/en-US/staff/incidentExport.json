@@ -43,7 +43,6 @@
   "certStatusVerifiedNoDate": "Certified",
   "certStatusPending": "Pending review — not certified",
   "certImportedTag": "Imported from a prior system",
-  "certRefresherDue": "Refresher due {date}",
   "waiverComplete": "Waiver signed {date} — “{title}”, version {version}.",
   "waiverCompleteAttested": "Recorded by staff from an in-person signature.",
   "waiverPaperMarkedBy": "Recorded by {name} from an in-person signature.",

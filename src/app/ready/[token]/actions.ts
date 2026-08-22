@@ -11,16 +11,14 @@ import { recordDiverOwnLocale } from "@/db/people";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
-import { saveRentalFit } from "@/db/rental-fit";
+import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
-import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
+import { issueWaiverRequest } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
-import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { emergencyContactSchema } from "@/lib/contact";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -116,26 +114,27 @@ export async function signWaiverFromReady(token: string) {
   redirect(`/waivers/${issued.token}`);
 }
 
-export async function saveEmergencyContactFromReady(token: string, formData: FormData) {
+/**
+ * The diver's own words to the crew, saved on their own.
+ *
+ * Its own action rather than a field of `saveFitFromReady` (issue 627): the
+ * note is a question of its own on the page now, and `saveRentalFitNote` writes
+ * the note column alone — so answering it cannot blank sizes the diver set on a
+ * different day, and saving sizes cannot blank the note.
+ */
+const noteSchema = z.object({ note: z.string().trim().max(300) });
+
+export async function saveNoteFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
-  const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=contact`);
-  const name = (parsed.data.emergencyContactName ?? "").trim();
-  const phone = (parsed.data.emergencyContactPhone ?? "").trim();
-  await saveBookingEmergencyContact(ctx.db, {
+  const parsed = noteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=note`);
+  const saved = await saveRentalFitNote(ctx.db, {
     shopId: ctx.data.shop.id,
-    bookingId: ctx.bookingId,
-    name,
-    phone,
+    personId: ctx.data.person.id,
+    note: parsed.data.note,
   });
-  // A contact is only usable with a reachable number, so only a name+phone pair
-  // earns the "saved" confirmation; a partial entry is nudged, never thanked.
-  const complete = Boolean(name && phone);
-  revalidateAndRedirect(
-    base(token),
-    `${base(token)}?saved=${complete ? "contact" : "contact-empty"}`,
-  );
+  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=note" : "error=note"}`);
 }
 
 const fitSchema = z.object({
@@ -151,7 +150,6 @@ const fitSchema = z.object({
   wetsuitSize: z.string().trim().max(20),
   finSize: z.string().trim().max(20),
   weightPreference: z.string().trim().max(80),
-  note: z.string().trim().max(300),
 });
 
 export async function saveFitFromReady(token: string, formData: FormData) {
@@ -177,7 +175,11 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     bootSize: parsed.data.finSize,
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
-    note: parsed.data.note,
+    // Deliberately absent, and `saveRentalFit` reads that absence as "leave the
+    // stored note alone": the note is `saveNoteFromReady`'s to write since issue
+    // 627, so a diver nudging a boot size here must not silently delete words
+    // the crew is relying on.
+    note: undefined,
   });
   // The nitrox checkbox is only in this form when the shop currently fills
   // nitrox *and* the course being taught runs on it (RentalFitForm.tsx) — when
@@ -345,14 +347,6 @@ const certificationSchema = z.object({
   // Long enough for every agency's format, short enough that the box can never
   // be used to push a body at the column.
   identifier: z.string().trim().min(2).max(60),
-  // Optional: most recreational cards carry no expiry at all, and an empty box
-  // must never become a date.
-  expiresAt: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || undefined)
-    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
 });
 
 export async function saveCertificationFromReady(token: string, formData: FormData) {
@@ -377,7 +371,6 @@ export async function saveCertificationFromReady(token: string, formData: FormDa
     // number typed on a phone into `verified`, the state readiness and the
     // fill gate both read. `security-reviewer`, 2026-08-20.
     selfDeclaredAt: nowDate(),
-    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
   });
   // `createCertification` returns null when a live card already holds this
   // shop/agency/number — most often the diver's own card, already on file and
@@ -405,12 +398,6 @@ const specialtySchema = z.object({
   agency: z.enum(certificationAgency.enumValues),
   specialty: z.enum(diveSpecialty.enumValues),
   identifier: z.string().trim().min(2).max(60),
-  expiresAt: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || undefined)
-    .refine((value) => value === undefined || isValidCalendarDate(value), { message: "invalid" }),
 });
 
 export async function saveSpecialtyFromReady(token: string, formData: FormData) {
@@ -427,7 +414,6 @@ export async function saveSpecialtyFromReady(token: string, formData: FormData) 
     specialty: parsed.data.specialty,
     identifier: parsed.data.identifier,
     selfDeclaredAt: nowDate(),
-    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt as CalendarDate } : {}),
   });
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
 }

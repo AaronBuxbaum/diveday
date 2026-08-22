@@ -570,10 +570,7 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
             isNull(certifications.deletedAt),
           ),
         );
-      const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
-      if (
-        !hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel, todayLocal)
-      ) {
+      if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
         return { ok: false, reason: "course_prerequisite" };
       }
     }
@@ -784,6 +781,8 @@ async function persistDeclaration(
     shopId: req.shopId,
     personId,
     level: declared.level ?? undefined,
+    agency: declared.agency,
+    identifier: declared.identifier,
     nitrox: declared.nitrox,
     // The answer the form was asking for all along. Dropping it here was the
     // "ask a question and discard the answer" failure ADR

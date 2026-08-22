@@ -385,6 +385,24 @@ describe("booking delight planning", () => {
     expect(plan.rented).toEqual(["bcd"]);
   });
 
+  it("rents nothing off a row that only carries the diver's note", () => {
+    // `rental_fit_profiles` gained a second writer in issue 627 — the note,
+    // saved on its own. Every `rents_*` column defaults to true, so a diver who
+    // typed one sentence and never opened the gear form would otherwise be told
+    // the shop has a full kit waiting for them.
+    const plan = packingConfidence(["Swimsuit"], {
+      rentsBcd: true,
+      rentsWetsuit: true,
+      fitStatedAt: null,
+    });
+    expect(plan.rented).toEqual([]);
+    expect(plan.bring).toContain("Swimsuit");
+  });
+
+  it("still rents off a fit built without the marker, so no real diver is dropped", () => {
+    expect(packingConfidence([], { rentsBcd: true }).rented).toEqual(["bcd"]);
+  });
+
   it("gives every diver the same fixed provided-item codes", () => {
     expect(packingConfidence([], null).provided).toEqual(["tanksAndWeights", "crewBriefing"]);
   });

@@ -6,7 +6,13 @@ import {
   isUnsightedSelfDeclaration,
 } from "@/lib/readiness";
 import type { DbExecutor } from "./client";
-import { certifications, nitroxCertifications, people, specialtyCertifications } from "./schema";
+import {
+  type CertificationAgency,
+  certifications,
+  nitroxCertifications,
+  people,
+  specialtyCertifications,
+} from "./schema";
 
 /**
  * **What a diver said about themselves on a public opt-in, written down as
@@ -80,6 +86,23 @@ export type RecordSelfDeclaredCardsInput = {
    * `certifications` row: a Discover Scuba experience is not a certification.
    */
   noCertification?: boolean;
+  /**
+   * **The card the diver described, when they described one** — both optional,
+   * both meaningless without a `level`, and neither gates anything (issue #630).
+   *
+   * They are written onto the same `pending`, `selfDeclaredAt`-stamped row the
+   * level lands on, which changes nothing about how that row is *read*: the
+   * anti-displacement rule below still refuses to touch a person who holds real
+   * evidence, `decideTripAdmission` still believes the level and not the number,
+   * and `reviewCertification` still refuses the one-tap promote until a staffer
+   * types what is on the card in their hand. What they change is what the verify
+   * queue has to work with before the dive date, which until now was nothing.
+   *
+   * The number lands in `certifications.declared_identifier`, a column outside
+   * the unique index and outside every evidence read — see that column.
+   */
+  agency?: CertificationAgency | null;
+  identifier?: string | null;
   /** False and undefined are the same thing here: an unticked box says nothing. */
   nitrox?: boolean;
   now?: Date;
@@ -490,6 +513,24 @@ async function recordLevel(
   // can still tell a staffer; the alternative is a stranger moving a gate.
   if (await holdsRealCardOutsideLevels(tx, input)) return "card_on_file";
 
+  // **The card the diver described**, in the two places it is safe to put it.
+  //
+  // The number goes to `declaredIdentifier`, never to `identifier`: that column
+  // is a *key*, and writing a stranger's typing into it makes the sale fail on
+  // a collision, answers "is this number on file here?" to anyone who watches,
+  // and — via `heldForReview` — takes the card-entry form away from the real
+  // diver. See the column's own note in schema.ts for the `security-reviewer`
+  // findings behind each of those.
+  //
+  // The agency does go to `agency`, and that is safe for one specific reason: a
+  // claim's `identifier` stays NULL, and a NULL is invisible to the unique
+  // index. `other` when the diver did not say — the enum's honest "unstated",
+  // never an invented agency.
+  const card = {
+    agency: input.agency ?? "other",
+    declaredIdentifier: input.identifier?.trim() || null,
+  } as const;
+
   // `find`, not `live[0]`: every row here passed the guard above, but choosing
   // by predicate rather than by position means a record that somehow holds more
   // than one row cannot be arbitrated by insertion order.
@@ -497,11 +538,15 @@ async function recordLevel(
   if (own) {
     await tx
       .update(certifications)
-      .set({ level: input.level, selfDeclaredAt: now })
+      .set({ level: input.level, selfDeclaredAt: now, ...card })
       .where(
         and(
           eq(certifications.id, own.id),
           eq(certifications.shopId, input.shopId),
+          // The read above filtered deleted rows; a staff `deleteCertification`
+          // landing between the two would otherwise let an anonymous post edit
+          // a card the shop has just retracted (`security-reviewer`).
+          isNull(certifications.deletedAt),
           // Defence in depth: the guard above already proved this row is a
           // still-unsighted claim, and this re-states it in the statement that
           // actually writes, where no later refactor of the read can lose it.
@@ -515,15 +560,13 @@ async function recordLevel(
   await tx.insert(certifications).values({
     shopId: input.shopId,
     personId: input.personId,
-    // The forms never ask which agency, and inventing one would be the same
-    // laundering the `selfDeclaredAt` stamp exists to prevent. `other` is the
-    // enum's honest "unstated"; the staff surfaces render the level alone for a
-    // still-pending self-declaration rather than naming an agency nobody gave.
-    agency: "other",
     level: input.level,
+    // NULL, always: the shop holds no number for this person, and that is the
+    // fact `heldForReview` and the diver's own checklist both read.
     identifier: null,
     status: "pending",
     selfDeclaredAt: now,
+    ...card,
   });
   return "recorded";
 }

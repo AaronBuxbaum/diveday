@@ -376,11 +376,9 @@ export const BLOCKER_ACTIONS: Record<
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },
-  certification_expired: { kind: "certification", target: "diver" },
   certification_insufficient: { kind: "certification", target: "diver" },
   specialty_missing: { kind: "certification", target: "diver" },
   specialty_pending: { kind: "certification", target: "diver" },
-  specialty_expired: { kind: "certification", target: "diver" },
   // An imported specialty card is one tap from clearing its gate, so this reads
   // as a confirmation, not a card to chase (ADR 20260725-import-specialty-cards).
   specialty_import_unconfirmed: { kind: "certification", target: "diver" },

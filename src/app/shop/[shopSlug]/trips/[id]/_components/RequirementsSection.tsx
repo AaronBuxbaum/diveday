@@ -2,7 +2,11 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
+import {
+  CERTIFICATION_LEVEL_KEYS,
+  REQUIRABLE_CERTIFICATION_LEVEL_KEYS,
+  SPECIALTY_KEYS,
+} from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { FormNotice } from "@/lib/staff-notices";
@@ -207,7 +211,9 @@ export function RequirementsSection({
                       className={controlClass}
                     >
                       <option value="">{t("trips.requirements.noCardRequired")}</option>
-                      {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+                      {/* Recreational rungs only — a departure may not demand a
+                          working rating of a paying diver (issue #630). */}
+                      {REQUIRABLE_CERTIFICATION_LEVEL_KEYS.map(([value, key]) => (
                         <option key={value} value={value}>
                           {t(key)}
                         </option>

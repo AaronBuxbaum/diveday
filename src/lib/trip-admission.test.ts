@@ -25,7 +25,6 @@ function certification(overrides: Partial<Certification> = {}): Certification {
   return {
     status: "verified",
     level: "open_water",
-    expiresAt: null,
     ...overrides,
   } as Certification;
 }
@@ -34,7 +33,6 @@ function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): Special
   return {
     specialty: "deep",
     status: "verified",
-    expiresAt: null,
     importedAt: null,
     reviewedAt: null,
     ...overrides,
@@ -308,32 +306,14 @@ describe("decideTripAdmission — the ladder", () => {
     ).toEqual({ admitted: true });
   });
 
-  it("admits an overdue card at the required level — a refresher is not an impossibility", () => {
-    // The stored date is a shop-set refresher-due date, not a card expiry
-    // (glossary, C-card), and it can be cleared before the boat leaves.
-    // Readiness still blocks boarding until it is.
-    expect(
-      decideTripAdmission({
-        requirement: advancedTrip,
-        siteRequirement: null,
-        evidence: evidence({
-          certifications: [
-            certification({ level: "advanced_open_water", expiresAt: "2020-01-01" }),
-            certification({ level: "open_water" }),
-          ],
-        }),
-      }),
-    ).toEqual({ admitted: true });
-  });
-
-  it("still refuses when every card — overdue or not — sits below the bar", () => {
+  it("still refuses when every card sits below the bar", () => {
     expect(
       decideTripAdmission({
         requirement: requirement({ minimumCertificationLevel: "divemaster" }),
         siteRequirement: null,
         evidence: evidence({
           certifications: [
-            certification({ level: "open_water", expiresAt: "2020-01-01" }),
+            certification({ level: "open_water", status: "pending" }),
             certification({ level: "advanced_open_water" }),
           ],
         }),
@@ -371,11 +351,10 @@ describe("decideTripAdmission — specialties and nitrox", () => {
     });
   });
 
-  it("admits on a specialty card in any state — pending, imported-unconfirmed, or overdue", () => {
+  it("admits on a specialty card in any state — pending or imported-unconfirmed", () => {
     const states: Array<Partial<SpecialtyCertification>> = [
       { status: "pending" },
       { importedAt: new Date("2026-01-01T00:00:00Z"), reviewedAt: null },
-      { expiresAt: "2020-01-01" },
     ];
     for (const state of states) {
       expect(
@@ -714,11 +693,11 @@ describe("admission is monotone with respect to readiness", () => {
       evidence: evidence({ certifications: [certification({ level: "instructor" })] }),
     },
     {
-      name: "an overdue Advanced card over a verified Open Water one",
+      name: "a pending Advanced card over a verified Open Water one",
       evidence: evidence({
         certifications: [
           certification({ level: "open_water" }),
-          certification({ level: "advanced_open_water", expiresAt: "2020-01-01" }),
+          certification({ level: "advanced_open_water", status: "pending" }),
         ],
       }),
     },
@@ -820,7 +799,6 @@ describe("admission is monotone with respect to readiness", () => {
                 specialtyCertifications: held.specialtyCertifications,
                 nitroxCertifications: held.nitroxCertifications,
                 now,
-                timezone: "UTC",
               });
               expect(
                 readiness.status,

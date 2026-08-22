@@ -48,7 +48,6 @@
     "cardStatus": {
       "pending": "pending",
       "verified": "certified",
-      "expired": "refresher due",
       "confirmToClear": "certified · confirm to clear"
     }
   },
@@ -59,13 +58,9 @@
     "agency": "Agency",
     "level": "Level",
     "cardNumber": "Certification number",
-    "refresherDue": "Refresher due",
-    "refresherHint": "(optional)",
     "capturing": "Capturing…",
     "captureForReview": "Capture for review",
     "empty": "No level certifications yet — add their first certification above.",
-    "refresherOverdue": " · refresher overdue {date}",
-    "refresherDueOn": " · refresher due {date}",
     "importedLabel": "imported",
     "importedWithSource": "imported · {source}",
     "confirming": "Confirming…",
@@ -73,6 +68,7 @@
     "confirmCard": "Confirm certification",
     "verifiedBy": "Certified by {name} on {date}.",
     "selfDeclaredLabel": "Self-declared — no certification number yet",
+    "declaredNumber": "Diver says {number}",
     "sightCard": "Verify certification record",
     "sightCardHint": "The diver told us this level. Enter the agency and number from the certification record you verified.",
     "sightNitroxCardHint": "The diver told us they're nitrox certified. Enter what the digital certification record or other certification evidence shows. RAID and GUE don't issue a separate nitrox credential — their enriched air is covered by the level credential (RAID Open Water 20 or Advanced 35, GUE Fundamentals or Rec 1), so record that credential. Every other agency issues a separate enriched-air credential, and a level credential from them is not nitrox evidence.",

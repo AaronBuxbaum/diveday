@@ -14,6 +14,21 @@
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
     "certification": {
       "level": "Certification level",
+      "agency": "Certification agency",
+      "agencyUnsaid": "Not sure",
+      "agencies": {
+        "padi": "PADI",
+        "ssi": "SSI",
+        "naui": "NAUI",
+        "sdi": "SDI",
+        "tdi": "TDI",
+        "cmas": "CMAS",
+        "raid": "RAID",
+        "gue": "GUE",
+        "bsac": "BSAC",
+        "other": "Another agency"
+      },
+      "cardNumber": "Certification number",
       "levelUnsaid": "Rather not say",
       "levelNone": "I'm not certified yet",
       "levelInfoLabel": "Why we ask about certification",
@@ -503,18 +518,10 @@
     "namelessFallback": "there",
     "allSetHeading": "You’re all set",
     "allSetBody": "Your shop is finishing the last checks — there’s nothing you need to do right now.",
-    "emergencyContact": "Emergency contact",
-    "emergencyContactBody": "Someone we can reach for you on the day — a name and a phone the crew can call.",
-    "contactName": "Contact name",
-    "contactPhone": "Contact phone",
-    "saveContact": "Save contact",
     "openingPayment": "Opening payment…",
     "cancelledHeading": "This booking was cancelled",
     "unavailableHeading": "This readiness link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
-    "contactSaved": "Emergency contact saved — thank you.",
-    "contactIncomplete": "We need both a name and a phone number so the crew can reach someone.",
-    "contactTooLong": "That name or phone number is too long — try a shorter version.",
     "paymentReceived": "Payment received — we’re confirming it with your shop. Nothing more to do.",
     "waiverUnavailable": "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
@@ -533,6 +540,7 @@
     "stateDone": "Done",
     "stateAction": "Your turn",
     "stateWaiting": "With the shop",
+    "stateOptional": "Optional",
     "opening": "Opening…",
     "signWaiver": "Sign your waiver",
     "freshWaiverLink": "Get a fresh waiver link",
@@ -561,11 +569,9 @@
       "certificationMissing": "Add your certification details to your record.",
       "certificationPending": "Your certification details are being verified.",
       "certificationSelfDeclared": "Your certification level has not been verified yet.",
-      "certificationExpired": "Your certification on file is past the refresher date your shop set — check with them about a refresher before you dive.",
       "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
       "specialtyMissing": "This dive needs a specialty certification — share its details with the shop or get in touch so they can add it.",
       "specialtyPending": "Your specialty certification is with the shop for verification.",
-      "specialtyExpired": "Your specialty certification on file is past the refresher date your shop set — check with them about it before you dive.",
       "specialtyImportUnconfirmed": "Your specialty certification came across from your shop’s old system and is with them to confirm.",
       "nitroxMissing": "This dive uses Nitrox — verified Nitrox certification is required.",
       "nitroxPending": "Your nitrox certification is with the shop for verification.",
@@ -576,7 +582,6 @@
       "paymentDone": "Paid up — thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file — share the details for each one it calls for, and your shop will confirm you’re set."
     },
-    "emergencyOnFile": "On file — {name}.",
     "shopHeading": "Your dive shop",
     "shopMapTitle": "Map of {shop}",
     "gearAndSetup": "Gear and setup",
@@ -590,26 +595,12 @@
     "certAgency": "Training agency",
     "certLevel": "Level",
     "certNumber": "Certification number",
-    "certExpiry": "Expires",
-    "certExpiryHint": "Only if your certification record shows one.",
     "certChoose": "Choose one",
     "certSubmit": "Add my certification",
     "certSubmitting": "Adding…",
     "certSaved": "Certification added. Your shop will verify it against the certification record or other evidence.",
     "certKnown": "That certification number is already on file here — nothing more to do.",
     "certInvalid": "Check the agency, level, and certification number, then try again.",
-    "certAgencies": {
-      "padi": "PADI",
-      "ssi": "SSI",
-      "naui": "NAUI",
-      "sdi": "SDI",
-      "tdi": "TDI",
-      "cmas": "CMAS",
-      "raid": "RAID",
-      "gue": "GUE",
-      "bsac": "BSAC",
-      "other": "Another agency"
-    },
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep — bookmark it, and it stays up to date until you sail.",
     "gearBody": "Tell the crew what you'd like to rent, and roughly what size.",
@@ -626,7 +617,11 @@
       "oneToFiveYears": "One to five years ago",
       "overFiveYears": "More than five years ago",
       "never": "I haven’t dived yet"
-    }
+    },
+    "certMinimumLevel": "This trip is for {level} and above.",
+    "saveNote": "Save note",
+    "noteSaved": "Saved — the crew will see that.",
+    "noteUnavailable": "That did not save. Try again, or tell the crew on the day."
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",
@@ -777,8 +772,7 @@
       "bcd": "The inflatable vest you wear that holds your tank and lets you control whether you float or sink.",
       "regulator": "The mouthpiece and hose that let you breathe air from your tank underwater.",
       "nitrox": "A breathing gas with extra oxygen that lets specially trained divers spend a bit more time underwater on some dives."
-    },
-    "nitroxNeedsCard": "Add your nitrox card above and the crew can set a nitrox tank aside for you."
+    }
   },
   "party": {
     "numberOfDivers": "Number of divers",
@@ -1898,10 +1892,6 @@
           "column": "Certification",
           "detail": "Agency, level, and certification number. The certification number is what lets a record come across at all."
         },
-        "refresherDue": {
-          "column": "Refresher due",
-          "detail": "Written however your sheet writes dates (05/04/2030, 4-May-2030, 2030-05-04). A past date lands as a certification that's due — that's the point. An unreadable one goes to staff review."
-        },
         "specialty": {
           "column": "Specialty",
           "detail": "Deep, wreck, night, or drysuit. One cell can name several (“Deep, Wreck”) and each becomes its own certification under the diver's agency number."
@@ -2307,7 +2297,7 @@
           },
           "certificationCard": {
             "what": "Certification record",
-            "detail": "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry."
+            "detail": "Imported verified and flagged imported — staff give it a one-tap confirm; unrecognized levels need manual entry."
           },
           "specialtyCards": {
             "what": "Specialty certifications (deep, wreck, night, drysuit)",
@@ -2964,12 +2954,10 @@
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired — grab a fresh one, it only takes about two minutes",
       "certificationMissing": "Send your shop your certification details",
-      "certificationExpired": "Check on your shop's refresher date for your certification",
       "certificationInsufficient": "Check your certification level with the shop",
       "certificationSelfDeclared": "Bring your certification card so the shop can check it",
       "nitroxSelfDeclared": "Bring your nitrox card so the shop can check it",
       "specialtyMissing": "Send your shop your specialty certification details",
-      "specialtyExpired": "Update your specialty certification with the shop",
       "nitroxMissing": "Send your shop your nitrox certification details",
       "paymentDue": "Settle your balance"
     },

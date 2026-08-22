@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { rentalFitLine } from "@/lib/dive-prep";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
@@ -10,6 +11,7 @@ import {
   listTripPrepDivers,
   rentalFitByBooking,
   saveRentalFit,
+  saveRentalFitNote,
   setNeedsStaffFit,
 } from "./rental-fit";
 import { people } from "./schema";
@@ -121,6 +123,93 @@ describe("saveRentalFit / getRentalFit", () => {
   it("returns null for a person with no fit on file", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    expect(await getRentalFit(db, shopId, personId)).toBeNull();
+  });
+});
+
+/**
+ * The diver's own words to the crew, saved on their own. The note used to ride
+ * along with the gear form's sizes and checkboxes; it is its own question on
+ * `/ready` now (issue 627), so it needs a writer that touches nothing else —
+ * a diver adding "titanium hip, I run heavy" must not blank the sizes they set
+ * last week.
+ */
+describe("saveRentalFitNote", () => {
+  it("writes a note for a diver with no fit on file yet", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    const saved = await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip." });
+    expect(saved).not.toBeNull();
+    expect((await getRentalFit(db, shopId, personId))?.note).toBe("Titanium hip.");
+  });
+
+  it("does not state a fit, so a note-only diver packs nothing", async () => {
+    // The bug this column exists to stop. Every `rents_*` column defaults to
+    // **true**, so the row this writer creates would otherwise read as a diver
+    // renting a BCD, regulator, wetsuit, boots, mask, fins and weights — seven
+    // pieces, no sizes, none of them asked for — on the boat's packing list.
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFitNote(db, { shopId, personId, note: "Bringing my own mask." });
+
+    const fit = await getRentalFit(db, shopId, personId);
+    expect(fit?.fitStatedAt).toBeNull();
+    // Read exactly as a missing row is: nothing to pack from.
+    expect(rentalFitLine(fit)).toEqual({ state: "not_recorded" });
+  });
+
+  it("leaves a stated fit stated when the note is rewritten", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+
+    await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip." });
+
+    const fit = await getRentalFit(db, shopId, personId);
+    expect(fit?.fitStatedAt).not.toBeNull();
+    expect(rentalFitLine(fit)).toMatchObject({ state: "rents" });
+  });
+
+  it("leaves every size and rental choice untouched", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "First words" });
+
+    await saveRentalFitNote(db, { shopId, personId, note: "Second words" });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched?.note).toBe("Second words");
+    expect(fetched?.bcdSize).toBe("M");
+    expect(fetched?.wetsuitSize).toBe("3 mm / M");
+    expect(fetched?.weightPreference).toBe("12 lbs");
+    expect(fetched?.rentsBcd).toBe(true);
+  });
+
+  it("clears the note when the diver empties the box", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), note: "Temporary note" });
+
+    await saveRentalFitNote(db, { shopId, personId, note: "  " });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched?.note).toBeNull();
+    // ...and the fit itself survived the clearing.
+    expect(fetched?.bcdSize).toBe("M");
+  });
+
+  it("refuses to write a note for a person who belongs to a different shop", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    const saved = await saveRentalFitNote(db, {
+      shopId: "99999999-8888-4777-8666-555555555555",
+      personId,
+      note: "Not mine to write",
+    });
+    expect(saved).toBeNull();
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
   });
 });

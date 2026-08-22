@@ -283,7 +283,7 @@ export default async function CheckInPage({
               list that includes everyone blocked, with a second line under it
               naming what the list actually held. One honest line instead of a
               slogan plus its correction. */}
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold">
             {query ? t("checkIn.searchResultsFor", { query }) : t("checkIn.todaysDepartures")}
           </h2>
           {/* A count is a fact, not an alert (design principle 9) — quiet

@@ -138,12 +138,16 @@ test.describe("a shop that stops filling nitrox", () => {
     await page.getByRole("button", { name: "Save rental catalog" }).click();
     await expect(page.getByText("Rental catalog saved.")).toBeVisible();
 
-    // The diver comes back to add an unrelated note. The nitrox fieldset is
-    // gone (the shop doesn't fill it any more), but saving must not
-    // silently erase the request already on file for this trip.
+    // The diver comes back and resaves their gear for any reason at all. The
+    // nitrox fieldset is gone (the shop doesn't fill it any more), but saving
+    // must not silently erase the request already on file for this trip.
+    //
+    // A bare resave, with nothing changed: since issue 627 the free-text note
+    // is its own form with its own save (`saveNoteFromReady`), so the note is
+    // no longer a way to make this form submit — and the submit itself is the
+    // whole point here, not what was typed into it.
     await anon.goto(bookingUrl);
     await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
-    await anon.getByLabel("Anything else the crew should know?").fill("Bringing my own mask.");
     await anon.getByRole("button", { name: "Save rental fit" }).click();
     await expect(anon.getByText("Saved.").filter({ visible: true })).toBeVisible();
 
@@ -239,15 +243,20 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await expect(page.locator('input[name="nitroxPrice"]').filter({ visible: true })).toHaveCount(1);
 });
 
-test("the nitrox request is locked until the diver files a nitrox card, then unlocks", async ({
+test("the nitrox request is hidden until the diver files a nitrox card, then appears", async ({
   page,
 }) => {
   // The request box is not a place to ask for a card; it is a thing the card
-  // unlocks. Before this the box was live for anyone, ticking it grew two card
-  // fields inside the gear form, and a diver could leave with a request and no
-  // card at all — a tank the crew cannot fill and only finds out about at the
-  // dock. Nothing about the safety contract moved: the number is still believed
-  // for planning and sighted before the dive (ADR
+  // brings into being. Before this the box was live for anyone, ticking it grew
+  // two card fields inside the gear form, and a diver could leave with a request
+  // and no card at all — a tank the crew cannot fill and only finds out about at
+  // the dock. It then spent a while rendering *disabled* under a line pointing
+  // back up the page, which is a control a diver cannot use and therefore a
+  // question they have to work out the answer to; since issue 627 the section
+  // simply is not there until the card that makes it real is.
+  //
+  // Nothing about the safety contract moved: the number is still believed for
+  // planning and sighted before the dive (ADR
   // 20260820-attested-at-booking-verified-at-boarding), and `authorizesNitroxFill`
   // still reads `verified`, which only a staffer can set.
   await page.goto("/s/blue-mantis");
@@ -267,14 +276,13 @@ test("the nitrox request is locked until the diver files a nitrox card, then unl
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
-  // Nothing on file, so the box is there and locked, and the one line under it
-  // says where the card goes rather than why we cannot reserve a tank.
-  const nitrox = page.locator('input[name="nitrox"]').filter({ visible: true });
-  await expect(nitrox).toHaveCount(1);
-  await expect(nitrox).toBeDisabled();
-  await expect(page.getByText(/Add your nitrox card above/)).toBeVisible();
-  // ...and the card the line points at is a real control on this page, in the
-  // certification row with the other cards, marked as the optional offer it is.
+  // Nothing on file, so there is no request box at all — and no sentence
+  // pointing at one either.
+  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
+  await expect(page.getByText(/Add your nitrox card above/)).toHaveCount(0);
+  // What there *is* is the card itself, in the certification row with the other
+  // cards, marked as the optional offer it is — and the explanation of what
+  // nitrox even is now lives inside it, where a diver meets the word.
   const nitroxCard = page
     .locator("details")
     .filter({ has: page.getByText("Add your nitrox card", { exact: true }) });
@@ -285,16 +293,19 @@ test("the nitrox request is locked until the diver files a nitrox card, then unl
   // the disclosure, and a diver short three cards sees three summaries rather
   // than three open forms.
   await nitroxCard.getByText("Add your nitrox card", { exact: true }).click();
+  // The "what is nitrox?" explanation moved off the gear row's locked legend
+  // and into this section (issue 627), as text rather than a hover marker.
+  await expect(nitroxCard.getByText(/breathing gas with extra oxygen/i)).toBeVisible();
   await nitroxCard.locator('select[name="agency"]').selectOption("padi");
   await nitroxCard.locator('input[name="identifier"]').fill("EANX-E2E-001");
   await nitroxCard.getByRole("button", { name: "Add my certification" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Certification added" })).toBeVisible();
 
   // The card is on the record — pending, never verified, since only a staffer
-  // can sight one — and that is enough to unlock the request.
-  const unlocked = page.locator('input[name="nitrox"]').filter({ visible: true });
-  await expect(unlocked).toBeEnabled();
-  await unlocked.check();
+  // can sight one — and that is enough for the request to appear.
+  const request = page.locator('input[name="nitrox"]').filter({ visible: true });
+  await expect(request).toBeEnabled();
+  await request.check();
   await page.getByRole("button", { name: "Save rental fit" }).click();
   await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
   // The offer is answered, so the page stops making it.

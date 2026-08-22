@@ -1,15 +1,18 @@
 import { z } from "zod";
+import { type CertificationAgency, certificationAgency } from "@/db/schema";
+import { isPlausibleCardNumber, MAX_CARD_NUMBER_LENGTH } from "./card-number";
 import type { CertificationLevel } from "./readiness";
 
 /**
  * **What an anonymous joiner is allowed to say about their own diving**, and
  * the only shape of it the server will accept.
  *
- * The two public "tell me when something comes up" opt-ins — the shop-wide
- * last-minute-deal list and a full trip's wait list — ask an optional
- * certification level and an optional nitrox tick (`DiveDeclarationFields`).
- * Both forms post to different actions in different route segments, and both
- * parse through here, so there is one answer to "what can a stranger write".
+ * Three public forms ask — the shop-wide last-minute-deal list, a full trip's
+ * wait list, and the trip booking form — and between them they collect an
+ * optional certification level, an optional agency and card number, and an
+ * optional nitrox tick (`DiveDeclarationFields`). They post to different actions
+ * in different route segments and all parse through here, so there is one answer
+ * to "what can a stranger write".
  *
  * Two properties this file exists to guarantee:
  *
@@ -59,10 +62,49 @@ export const DECLARABLE_CERTIFICATION_LEVELS = [
  */
 export const NO_CERTIFICATION_ANSWER = "none_declared";
 
+/**
+ * **The card number, as a stranger may type it.**
+ *
+ * The same two properties `isPlausibleCardNumber` asserts anywhere else — three
+ * characters and a digit — and for the same reason: it is a typo filter, never
+ * proof, and nothing downstream may cite it as evidence. What is different here
+ * is what a *failure* costs. This box is optional on a booking form, so a number
+ * that does not survive the filter must not take the booking down with it:
+ * `diveDeclarationSchema` catches the refusal and drops the field
+ * (`toDiveDeclaration`), leaving the level standing on its own.
+ */
+const declaredCardNumberSchema = z
+  .string()
+  .trim()
+  .max(MAX_CARD_NUMBER_LENGTH)
+  .refine(isPlausibleCardNumber);
+
 export const diveDeclarationSchema = z.object({
   certificationLevel: z
     .enum([...DECLARABLE_CERTIFICATION_LEVELS, NO_CERTIFICATION_ANSWER])
     .optional(),
+  /**
+   * **Which body issued the card, and its number — both optional, both inert.**
+   *
+   * A level alone was all these forms collected until 2026-08-21, which left
+   * "verified before the dive date" with nothing to work from: the queue read
+   * "Advanced Open Water (self-declared)" and the only check available was the
+   * sighting at the dock that was happening anyway (issue #630, from #609).
+   *
+   * Optional is the decision, not the default. A diver who knows their rung but
+   * not their number is still worth believing at the sale, and refusing that
+   * submission trades a booking for a form field. And the number gates
+   * **nothing**: there is no agency lookup (H-10 was dropped), so it is evidence
+   * for a human to pre-check and a way to catch an obvious typo. The boarding
+   * sighting is unchanged, and `recordSelfDeclaredCards`' anti-displacement rule
+   * still does the safety work — a claim never touches a real card.
+   *
+   * `.catch(undefined)` on both: an unparseable value is silence, exactly like
+   * an empty box. These ride on a form whose *point* is the booking, and a
+   * mistyped optional field must never refuse a sale.
+   */
+  certificationAgency: z.enum(certificationAgency.enumValues).optional().catch(undefined),
+  certificationNumber: declaredCardNumberSchema.optional().catch(undefined),
   // The checkbox posts `on` or nothing at all. A literal rather than a coerced
   // boolean so an arbitrary posted string is a *refusal* to parse rather than a
   // truthy tick nobody made.
@@ -78,6 +120,14 @@ export type DiveDeclaration = {
    * contradiction if some other caller ever sends one.
    */
   noCertification: boolean;
+  /**
+   * The agency and number the diver typed beside their level, when they gave
+   * them. Both absent unless a real level was picked — the two fields are
+   * about a card, and there is no card to describe under "I'm not certified
+   * yet" or "Rather not say".
+   */
+  agency?: CertificationAgency;
+  identifier?: string;
   nitrox: boolean;
 };
 
@@ -90,6 +140,8 @@ export type DiveDeclaration = {
 export function diveDeclarationInput(formData: FormData) {
   return {
     certificationLevel: formData.get("certificationLevel") || undefined,
+    certificationAgency: formData.get("certificationAgency") || undefined,
+    certificationNumber: formData.get("certificationNumber") || undefined,
     nitroxCertified: formData.get("nitroxCertified") || undefined,
   };
 }
@@ -112,6 +164,8 @@ export function diveDeclarationInput(formData: FormData) {
 export function diveDeclarationInputAt(formData: FormData, index: number) {
   return {
     certificationLevel: formData.get(`certificationLevel-${index}`) || undefined,
+    certificationAgency: formData.get(`certificationAgency-${index}`) || undefined,
+    certificationNumber: formData.get(`certificationNumber-${index}`) || undefined,
     nitroxCertified: undefined,
   };
 }
@@ -128,9 +182,18 @@ export function diveDeclarationInputAt(formData: FormData, index: number) {
  */
 export function toDiveDeclaration(parsed: z.infer<typeof diveDeclarationSchema>): DiveDeclaration {
   const answer = parsed.certificationLevel;
+  const level = answer === NO_CERTIFICATION_ANSWER ? undefined : answer;
+  // **The card fields ride with the level, and fall with it.** The form reveals
+  // them only once a real rung is picked, but a hand-crafted post can send them
+  // beside "I'm not certified yet" or beside nothing at all — an agency and a
+  // number describing a card the same submission says does not exist. Dropped
+  // here rather than downstream, so nothing after this parse ever has to
+  // arbitrate a contradiction the UI cannot produce.
   return {
-    level: answer === NO_CERTIFICATION_ANSWER ? undefined : answer,
+    level,
     noCertification: answer === NO_CERTIFICATION_ANSWER,
+    agency: level ? parsed.certificationAgency : undefined,
+    identifier: level ? parsed.certificationNumber : undefined,
     nitrox: parsed.nitroxCertified === "on",
   };
 }

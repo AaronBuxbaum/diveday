@@ -8,10 +8,12 @@ import type {
 } from "@/db/schema";
 import {
   calculateReadiness,
+  certificationRank,
   combineCertRequirements,
   combineSiteRequirements,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
+  REQUIRABLE_CERTIFICATION_LEVELS,
 } from "./readiness";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
@@ -29,7 +31,6 @@ function certification(overrides: Partial<Certification> = {}): Certification {
   return {
     status: "verified",
     level: "advanced_open_water",
-    expiresAt: null,
     ...overrides,
   } as Certification;
 }
@@ -38,7 +39,6 @@ function specialtyCard(overrides: Partial<SpecialtyCertification> = {}): Special
   return {
     specialty: "deep",
     status: "verified",
-    expiresAt: null,
     ...overrides,
   } as SpecialtyCertification;
 }
@@ -92,15 +92,6 @@ describe("calculateReadiness", () => {
       "certification_pending",
     ],
     [
-      "expired certification",
-      {
-        requirement,
-        waiver: signedWaiver,
-        certifications: [certification({ expiresAt: "2026-07-17" })],
-      },
-      "certification_expired",
-    ],
-    [
       "insufficient certification",
       {
         requirement,
@@ -110,7 +101,7 @@ describe("calculateReadiness", () => {
       "certification_insufficient",
     ],
   ] as const)("fails closed for %s", (_name, input, code) => {
-    expect(calculateReadiness({ ...input, now, timezone: "UTC" }).blockers).toContainEqual(
+    expect(calculateReadiness({ ...input, now }).blockers).toContainEqual(
       expect.objectContaining({ code }),
     );
   });
@@ -142,7 +133,6 @@ describe("calculateReadiness", () => {
         }),
       ],
       now,
-      timezone: "UTC",
     }).blockers;
 
     expect(blockers).toContainEqual(
@@ -180,7 +170,6 @@ describe("calculateReadiness", () => {
         }),
       ],
       now,
-      timezone: "UTC",
     }).blockers;
 
     expect(blockers).toContainEqual(expect.objectContaining({ code: "certification_pending" }));
@@ -202,7 +191,6 @@ describe("calculateReadiness", () => {
         certification({ status: "pending", level: "advanced_open_water" }),
       ],
       now,
-      timezone: "UTC",
     }).blockers;
 
     // The staff-captured row is the stronger fact and wins the sentence.
@@ -222,7 +210,6 @@ describe("calculateReadiness", () => {
         }),
       ],
       now,
-      timezone: "UTC",
     }).blockers;
 
     expect(blockers).toContainEqual(
@@ -239,21 +226,19 @@ describe("calculateReadiness", () => {
         nitroxCard({ status: "pending", selfDeclaredAt: new Date("2026-07-17T00:00:00.000Z") }),
       ],
       now,
-      timezone: "UTC",
     }).blockers;
 
     expect(blockers).toContainEqual(expect.objectContaining({ code: "nitrox_self_declared" }));
     expect(blockers).not.toContainEqual(expect.objectContaining({ code: "nitrox_pending" }));
   });
 
-  it("is ready only with completed waiver and a verified sufficient unexpired card", () => {
+  it("is ready only with a completed waiver and a verified card at or above the bar", () => {
     expect(
       calculateReadiness({
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
         now,
-        timezone: "UTC",
       }),
     ).toEqual({
       status: "ready",
@@ -270,7 +255,6 @@ describe("calculateReadiness", () => {
       certifications: [certification()],
       identityUnconfirmed: true,
       now,
-      timezone: "UTC",
     });
     expect(result.status).toBe("blocked");
     expect(result.blockers).toContainEqual(
@@ -286,7 +270,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         identityUnconfirmed,
         now,
-        timezone: "UTC",
       });
       expect(result.status).toBe("ready");
       expect(result.blockers).toEqual([]);
@@ -302,7 +285,6 @@ describe("calculateReadiness", () => {
       dateOfBirth: "2012-03-01",
       courseDate: "2026-08-15", // 14 on this date — under 15
       now,
-      timezone: "UTC",
     });
     expect(result.status).toBe("blocked");
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
@@ -320,7 +302,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         ...input,
         now,
-        timezone: "UTC",
       });
       expect(result.status).toBe("ready");
     }
@@ -345,7 +326,6 @@ describe("calculateReadiness", () => {
       dateOfBirth: "2012-03-01",
       courseDate: "2026-08-15",
       now,
-      timezone: "UTC",
     });
     expect(result.blockers[0]?.code).toBe("identity_unconfirmed");
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
@@ -354,7 +334,6 @@ describe("calculateReadiness", () => {
   it.each([
     ["missing specialty card", undefined, "specialty_missing"],
     ["pending specialty card", specialtyCard({ status: "pending" }), "specialty_pending"],
-    ["expired specialty card", specialtyCard({ expiresAt: "2026-07-17" }), "specialty_expired"],
     ["wrong-specialty card", specialtyCard({ specialty: "wreck" }), "specialty_missing"],
     // A specialty authorizes a riskier dive, so a migrated card holds the gate
     // until a staffer confirms it (ADR 20260725-import-specialty-cards) — this
@@ -376,17 +355,6 @@ describe("calculateReadiness", () => {
       }),
       "specialty_pending",
     ],
-    // Expiry is the harder fact: an imported card that is also past its
-    // refresher date reports as expired, not as one tap from cleared.
-    [
-      "imported specialty card that is also expired",
-      specialtyCard({
-        importedAt: new Date("2026-07-20T00:00:00Z"),
-        reviewedAt: null,
-        expiresAt: "2026-07-17",
-      }),
-      "specialty_expired",
-    ],
   ] as const)("fails closed on a required specialty for %s", (_name, card, code) => {
     expect(
       calculateReadiness({
@@ -395,12 +363,11 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         specialtyCertifications: card ? [card] : [],
         now,
-        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code }));
   });
 
-  it("is ready when a required specialty has a verified unexpired card", () => {
+  it("is ready when a required specialty has a verified card", () => {
     expect(
       calculateReadiness({
         requirement: deepRequirement,
@@ -408,7 +375,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         specialtyCertifications: [specialtyCard()],
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -426,7 +392,6 @@ describe("calculateReadiness", () => {
           }),
         ],
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -441,7 +406,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         specialtyCertifications: [specialtyCard({ importedAt: null, reviewedAt: null })],
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -458,7 +422,6 @@ describe("calculateReadiness", () => {
           specialtyCard({ importedAt: new Date("2026-07-20T00:00:00Z"), reviewedAt: null }),
         ],
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -474,7 +437,6 @@ describe("calculateReadiness", () => {
       waiver: signedWaiver,
       certifications: [certification({ level: "advanced_open_water" })],
       now,
-      timezone: "UTC",
     });
     expect(result.status).toBe("blocked");
     expect(result.blockers).toContainEqual(
@@ -494,7 +456,6 @@ describe("calculateReadiness", () => {
       certifications: [certification()],
       specialtyCertifications: [],
       now,
-      timezone: "UTC",
     });
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "specialty_missing" }));
   });
@@ -510,7 +471,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         nitroxCertifications: card ? [card] : [],
         now,
-        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code }));
   });
@@ -523,7 +483,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         nitroxCertifications: [nitroxCard()],
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -540,7 +499,6 @@ describe("calculateReadiness", () => {
       certifications: [certification()],
       nitroxCertifications: [],
       now,
-      timezone: "UTC",
     });
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "nitrox_missing" }));
   });
@@ -556,7 +514,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: status,
         now,
-        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code: "payment_due" }));
   });
@@ -569,7 +526,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: "refunded",
         now,
-        timezone: "UTC",
       }).blockers,
     ).toContainEqual(expect.objectContaining({ code: "payment_refunded" }));
   });
@@ -582,7 +538,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: status,
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -595,7 +550,6 @@ describe("calculateReadiness", () => {
         certifications: [certification()],
         paymentStatus: "unpaid",
         now,
-        timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
   });
@@ -609,26 +563,41 @@ describe("calculateReadiness", () => {
  * them can refuse for half a dozen other reasons — a gate that quietly stopped
  * checking `status` would still look like it was working from the outside.
  *
- * Three things have to hold at once: verified, unexpired, and at or above the
- * required rung. Anything less is evidence, not clearance.
+ * Two things have to hold at once: verified, and at or above the required
+ * rung. Anything less is evidence, not clearance.
  */
 describe("hasVerifiedCertificationAtLeast", () => {
-  /** The shop's local calendar date the caller measures expiry against (CR-009). */
-  const todayLocal = "2026-07-18";
-
   it("admits a card on the exact rung the trip demands, and any rung above it", () => {
     expect(
       hasVerifiedCertificationAtLeast(
         [certification({ level: "advanced_open_water" })],
         "advanced_open_water",
-        todayLocal,
       ),
     ).toBe(true);
     expect(
+      hasVerifiedCertificationAtLeast([certification({ level: "instructor" })], "open_water"),
+    ).toBe(true);
+  });
+
+  /**
+   * **The rule the dropped column used to break** (issue #630, ADR
+   * 20260821-a-card-does-not-expire). A recreational certification does not
+   * expire, so a card sighted in 2019 clears a 2026 departure exactly as one
+   * sighted yesterday does — and this is stated positively rather than left as
+   * the absence of a check, because an absence is what somebody reinstates by
+   * accident on a safety surface.
+   */
+  it("clears on a card verified years ago — a certification does not go stale", () => {
+    expect(
       hasVerifiedCertificationAtLeast(
-        [certification({ level: "instructor" })],
-        "open_water",
-        todayLocal,
+        [
+          certification({
+            level: "advanced_open_water",
+            reviewedAt: new Date("2019-04-02T00:00:00.000Z"),
+            createdAt: new Date("2019-04-02T00:00:00.000Z"),
+          }),
+        ],
+        "advanced_open_water",
       ),
     ).toBe(true);
   });
@@ -638,7 +607,6 @@ describe("hasVerifiedCertificationAtLeast", () => {
       hasVerifiedCertificationAtLeast(
         [certification({ level: "open_water" })],
         "advanced_open_water",
-        todayLocal,
       ),
     ).toBe(false);
   });
@@ -648,43 +616,56 @@ describe("hasVerifiedCertificationAtLeast", () => {
       hasVerifiedCertificationAtLeast(
         [certification({ level: "instructor", status: "pending" })],
         "open_water",
-        todayLocal,
       ),
     ).toBe(false);
-  });
-
-  it("refuses a verified card that lapsed before today, and keeps one expiring today", () => {
-    expect(
-      hasVerifiedCertificationAtLeast(
-        [certification({ expiresAt: "2026-07-17" })],
-        "advanced_open_water",
-        todayLocal,
-      ),
-    ).toBe(false);
-    // Valid through the end of its own local day — never hours early because
-    // the shop sits in a negative UTC offset.
-    expect(
-      hasVerifiedCertificationAtLeast(
-        [certification({ expiresAt: todayLocal })],
-        "advanced_open_water",
-        todayLocal,
-      ),
-    ).toBe(true);
   });
 
   it("refuses a diver with no cards at all, rather than reading an empty list as nothing to check", () => {
-    expect(hasVerifiedCertificationAtLeast([], "open_water", todayLocal)).toBe(false);
+    expect(hasVerifiedCertificationAtLeast([], "open_water")).toBe(false);
   });
 
   it("takes the best card on file when a diver holds several", () => {
-    // A lapsed AOW and a live Open Water is a real record shape; each card is
-    // judged on its own, so neither one drags the other down or props it up.
+    // A pending AOW and a verified Open Water is a real record shape; each card
+    // is judged on its own, so neither one drags the other down or props it up.
     const cards = [
-      certification({ level: "advanced_open_water", expiresAt: "2026-07-17" }),
+      certification({ level: "advanced_open_water", status: "pending" }),
       certification({ level: "open_water" }),
     ];
-    expect(hasVerifiedCertificationAtLeast(cards, "open_water", todayLocal)).toBe(true);
-    expect(hasVerifiedCertificationAtLeast(cards, "advanced_open_water", todayLocal)).toBe(false);
+    expect(hasVerifiedCertificationAtLeast(cards, "open_water")).toBe(true);
+    expect(hasVerifiedCertificationAtLeast(cards, "advanced_open_water")).toBe(false);
+  });
+});
+
+/**
+ * **What a shop may demand of a paying diver, versus what a person may hold.**
+ *
+ * Two different sets since 2026-08-21 (issue #630). The distinction is a named
+ * constant rather than a filter at the two `<select>`s, because a filter at one
+ * call site is a rule the other call site does not have.
+ */
+describe("REQUIRABLE_CERTIFICATION_LEVELS", () => {
+  it("stops at the top recreational rung", () => {
+    expect([...REQUIRABLE_CERTIFICATION_LEVELS]).toEqual([
+      "open_water",
+      "advanced_open_water",
+      "rescue",
+    ]);
+  });
+
+  it("leaves the professional ratings on the ladder a diver can hold", () => {
+    // Crew hold these, `course-ratios.ts` counts them, and an instructor-led
+    // session is gated on one being assigned — none of which is a shop telling
+    // a customer to hold a working rating to board a charter.
+    const requirable = new Set<string>(REQUIRABLE_CERTIFICATION_LEVELS);
+    expect(requirable.has("divemaster")).toBe(false);
+    expect(requirable.has("instructor")).toBe(false);
+    expect(certificationRank("divemaster")).toBeGreaterThan(certificationRank("rescue"));
+    expect(certificationRank("instructor")).toBeGreaterThan(certificationRank("divemaster"));
+    // And they still clear a requirement they sit above, which is the half
+    // that would break silently if the enum had been narrowed instead.
+    expect(
+      hasVerifiedCertificationAtLeast([certification({ level: "instructor" })], "rescue"),
+    ).toBe(true);
   });
 });
 
