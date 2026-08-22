@@ -84,7 +84,9 @@ test("staff captures and verifies level and specialty certifications before eith
       name: "Delete",
     })
     .click();
-  await expect(page.getByRole("status")).toContainText("Certification removed");
+  // The button says Delete and so does the toast — this used to be the one
+  // sentence in the flow that said "removed" instead (issue #779).
+  await expect(page.getByRole("status")).toContainText("Certification deleted");
   await expect(
     page.locator("li").filter({ hasText: cardNo }).filter({ visible: true }),
   ).toHaveCount(0);
