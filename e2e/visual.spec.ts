@@ -2957,6 +2957,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-send-window", scheme);
       });
 
+      /**
+       * The shop's prepaid dive packages — the price list, and the form that
+       * adds one (issue #706). Its own capture for the same reason as the rows
+       * above: it is closed in `settings-payments`, and this is the only place
+       * a shop states what "ten dives" costs.
+       *
+       * The seeded shop sells none, so this photographs the empty state plus
+       * the add form — which is exactly what a shop meets before the feature
+       * turns itself on.
+       */
+      test(`the dive-packages card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Dive packages" }).waitFor();
+        await openSettingsRow(page, "Dive packages");
+        await page.getByRole("button", { name: "Add package" }).waitFor();
+        await capture(page, "settings-dive-packages", scheme);
+      });
+
       // Where a shop connects its own WhatsApp Business number (ADR
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what
