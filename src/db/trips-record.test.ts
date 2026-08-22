@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { createBoat, deleteBoat } from "./boats";
 import { rollCallEvents } from "./schema";
 import {
   createTrip,
@@ -289,5 +290,110 @@ describe("trip records (in-memory PGlite)", () => {
     const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const found = upcoming.find((t) => t.id === privateTrip.id);
     expect(found?.isPrivate).toBe(true);
+  });
+});
+
+/**
+ * **The departure's own three, editable after creation** (issue #681).
+ *
+ * `boat_id`, `dive_mode` and `is_private` were writable only at the insert. So
+ * the commonest real edit — the boat that was going to run this is in for
+ * service, move it to the other hull — was impossible, and
+ * delete-and-recreate is not available once anyone has booked, because
+ * `deleteTrip` refuses a departure carrying bookings.
+ */
+describe("editing a departure's boat, mode and public sale", () => {
+  async function boatTrip() {
+    const { db, shop } = await seededShopContext();
+    const hull = await createBoat(db, shop.id, "Reef Runner", 12);
+    const spare = await createBoat(db, shop.id, "Blue Horizon", 12);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef",
+      startsAt: new Date("2030-08-03T13:00:00.000Z"),
+      endsAt: new Date("2030-08-03T17:00:00.000Z"),
+      capacity: 10,
+      plannedDives: 2,
+      diveMode: "boat",
+      boatId: hull.id,
+      isPrivate: false,
+    });
+    if (!trip) throw new Error("trip not created");
+    return { db, shop, trip, hull, spare };
+  }
+
+  const patch = (trip: { title: string; startsAt: Date; endsAt: Date }) => ({
+    title: trip.title,
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    capacity: 10,
+    plannedDives: 2,
+  });
+
+  it("moves a departure to another hull", async () => {
+    const { db, shop, trip, spare } = await boatTrip();
+
+    const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
+
+    expect(outcome.ok).toBe(true);
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.boatId).toBe(spare.id);
+  });
+
+  it("takes a departure off its hull entirely", async () => {
+    // "No boat" is a real answer, not a missing one.
+    const { db, shop, trip } = await boatTrip();
+    await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: null });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.boatId).toBeNull();
+  });
+
+  it("turns a boat dive into a shore dive", async () => {
+    // What a marginal-weather morning actually becomes.
+    const { db, shop, trip } = await boatTrip();
+    await updateTrip(db, shop.id, trip.id, { ...patch(trip), diveMode: "shore", boatId: null });
+    const after = await getTripWithBooked(db, shop.id, trip.id);
+    expect(after?.diveMode).toBe("shore");
+    expect(after?.boatId).toBeNull();
+  });
+
+  it("puts a private departure on public sale, and back", async () => {
+    // A one-way door in both directions until now: a private charter whose
+    // group fell through could never be sold publicly.
+    const { db, shop, trip } = await boatTrip();
+    await updateTrip(db, shop.id, trip.id, { ...patch(trip), isPrivate: true });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.isPrivate).toBe(true);
+    await updateTrip(db, shop.id, trip.id, { ...patch(trip), isPrivate: false });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.isPrivate).toBe(false);
+  });
+
+  it("leaves all three alone when the edit does not carry them", async () => {
+    // The reason each is `undefined`-guarded: a form without the field must not
+    // write a default over the shop's own answer.
+    const { db, shop, trip, hull } = await boatTrip();
+    await updateTrip(db, shop.id, trip.id, { ...patch(trip), title: "Renamed" });
+    const after = await getTripWithBooked(db, shop.id, trip.id);
+    expect(after?.title).toBe("Renamed");
+    expect(after?.boatId).toBe(hull.id);
+    expect(after?.diveMode).toBe("boat");
+    expect(after?.isPrivate).toBe(false);
+  });
+
+  it("refuses a hull belonging to another shop", async () => {
+    // The edit form must not become the cross-tenant door `createTrip` closes.
+    const { db, shop, trip } = await boatTrip();
+    const other = await seededShopContext();
+    const theirs = await createBoat(other.db, other.shop.id, "Their Boat", 12);
+
+    const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: theirs.id });
+
+    expect(outcome).toMatchObject({ ok: false, reason: "boat_not_found" });
+  });
+
+  it("refuses a hull the shop has deleted", async () => {
+    const { db, shop, trip, spare } = await boatTrip();
+    await deleteBoat(db, shop.id, spare.id);
+
+    const outcome = await updateTrip(db, shop.id, trip.id, { ...patch(trip), boatId: spare.id });
+
+    expect(outcome).toMatchObject({ ok: false, reason: "boat_not_found" });
   });
 });

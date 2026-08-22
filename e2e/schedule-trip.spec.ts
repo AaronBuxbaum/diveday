@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner, tripPathByTitle } from "./helpers";
 
 signedInAsOwner();
 
@@ -155,4 +155,53 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await expect(page.getByText(/^2 days · /)).toBeVisible();
   await expect(page.getByText(/^Day 1 · /)).toBeVisible();
   await expect(page.getByText(/^Day 2 · /)).toBeVisible();
+});
+
+/**
+ * **Moving a departure to another hull** — the edit this exists for (issue
+ * #681).
+ *
+ * The boat, the dive mode and the public/private flag were settable only when a
+ * departure was created. So the commonest real edit — the boat that was going
+ * to run this is in for service, put it on the other one — had no route at all,
+ * and delete-and-recreate is not available once anyone has booked, because
+ * `deleteTrip` refuses a departure carrying bookings.
+ */
+test("staff moves a departure to a different boat after it is on the board", async ({ page }) => {
+  test.setTimeout(BOARD_FLOW_TIMEOUT_MS);
+  const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+  await page.goto(tripPath);
+
+  // The Details form lives behind `EditDisclosure` — the card states the
+  // settled facts and opens to edit them, as a `<details>`/`<summary>` rather
+  // than a button (a focusable descendant of a summary fails axe's
+  // nested-interactive rule). Every field below is inside it.
+  await page.getByText("Edit details", { exact: true }).click();
+  // Located by its form name, the same shape `visual.spec.ts` uses for the
+  // onboarding inputs. Not by label: `Field` renders its `(optional)` hint
+  // inside the caption, so an accessible-name match here is fragile in a way
+  // that says nothing about the behaviour under test. There is exactly one
+  // boat select on this page, so it needs no scoping.
+  const boat = page.locator('select[name="boatId"]');
+  await expect(boat).toBeVisible();
+
+  // The seeded shop runs two hulls; pick whichever is not on the departure now,
+  // so the assertion is about the change rather than about the seed.
+  const before = await boat.inputValue();
+  const options = await boat.locator("option").all();
+  const other = [];
+  for (const option of options) {
+    const value = await option.getAttribute("value");
+    if (value && value !== before) other.push(value);
+  }
+  if (other.length === 0) throw new Error("expected the seeded shop to run more than one boat");
+
+  await boat.selectOption(other[0]);
+  await page.getByRole("button", { name: "Save changes" }).click();
+
+  // Read back off a fresh render: the point is that it *stored*, not that the
+  // select kept what was typed into it.
+  await page.goto(tripPath);
+  await page.getByText("Edit details", { exact: true }).click();
+  await expect(page.locator('select[name="boatId"]')).toHaveValue(other[0]);
 });

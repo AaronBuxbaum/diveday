@@ -59,6 +59,7 @@
     "capacityBelowBookedCount": "{count, plural, one {Capacity is below the # diver already booked — cancel bookings first, or set it higher.} other {Capacity is below the # divers already booked — cancel bookings first, or set it higher.}}",
     "capacityAboveBoat": "That capacity is above what the assigned boat holds — pick a smaller number, or move the departure to a bigger hull.",
     "capacityAboveBoatCount": "{count, plural, one {The assigned boat holds # diver — lower the capacity, or move this departure to a bigger hull.} other {The assigned boat holds # divers — lower the capacity, or move this departure to a bigger hull.}}",
+    "boatNotFound": "That boat isn't on this shop's fleet any more — pick another, or leave it unassigned.",
     "lastMinuteSent": "Last-minute deal sent.",
     "lastMinuteSentCount": "{count, plural, one {Last-minute deal sent to # diver.} other {Last-minute deal sent to # divers.}}",
     "lastMinuteInvalidDiscount": "Pick a discount between 5% and 90%.",
