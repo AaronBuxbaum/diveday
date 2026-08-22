@@ -4,11 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { saveWaiverTemplate } from "@/db/waivers";
+import { countSignedWaiversOnCurrentVersion, saveWaiverTemplate } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 const templateSchema = z.object({
   body: z.string().trim().min(40).max(12_000),
@@ -34,10 +33,27 @@ export async function saveWaiverAction(formData: FormData) {
   const waivers = shopPath(staff.user.shopSlug, "waivers");
   const parsed = templateSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(waivers, "invalid"));
-  await saveWaiverTemplate(editor, {
+  // Counted *before* the save, because after it the number is zero by
+  // construction: the new version is current and nothing is signed against it
+  // yet. This is the same act `saveRequirementsAction` performs for one
+  // departure — "here is who that just blocked" — and the reason it exists
+  // there applies with the whole shop's roster behind it.
+  const atRisk = await countSignedWaiversOnCurrentVersion(editor, staff.user.shopId);
+  // No title: this form has no field for one, so a save cannot mean "rename"
+  // and `saveWaiverTemplate` carries the shop's own forward.
+  const { versioned } = await saveWaiverTemplate(editor, {
     shopId: staff.user.shopId,
-    title: DEFAULT_WAIVER_TITLE,
     body: parsed.data.body,
   });
-  revalidateAndRedirect(waivers, noticeUrl(waivers, "saved"));
+  if (!versioned) {
+    // Nothing was written, so "Saved" would be a lie in the one direction that
+    // matters: it would teach a staffer that pressing Save is free.
+    revalidateAndRedirect(waivers, noticeUrl(waivers, "waiver-unchanged"));
+  }
+  revalidateAndRedirect(
+    waivers,
+    atRisk > 0
+      ? noticeUrl(waivers, "waiver-resigning", { count: atRisk })
+      : noticeUrl(waivers, "saved"),
+  );
 }

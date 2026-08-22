@@ -568,11 +568,61 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   await releaseTextarea.fill(
     "Revised release: I accept the inherent risks of boat charters and open-water diving for this trip.",
   );
+  // Two taps, because the demo shop holds signed releases against version 3 and
+  // publishing a version puts every one of them back in the queue. The count in
+  // front of the staffer is the point: it used to be a one-tap "Saved" (issue
+  // #720).
   await page.getByRole("button", { name: "Save new version" }).click();
-  await expect(page.getByRole("status")).toContainText("new version");
+  await expect(page.getByText(/\d+ divers have signed/)).toBeVisible();
+  await page.getByRole("button", { name: "Publish new version" }).click();
+  await expect(page.getByRole("status")).toContainText("no longer count");
 
   // The current card advances to the next version.
   await expect(release.getByText("Version 4")).toBeVisible();
+});
+
+/**
+ * **Opening the editor and pressing Save must cost nothing.**
+ *
+ * Nothing used to compare the submitted body to the current one, so a staffer
+ * who opened the release to *read* it and pressed Save on the way out published
+ * a version — and a new version is what makes every signature the shop holds
+ * stop counting. The whole roster of every forward departure flipped to
+ * blocked, and the page said "Saved" (issue #720).
+ *
+ * A shop of its own: this writes the shop's waiver template, which the per-test
+ * reset does not restore (ADR 20260815-per-test-private-shops).
+ */
+/**
+ * **Opening the editor and pressing Save must cost nothing.**
+ *
+ * Nothing used to compare the submitted body to the current one, so a staffer
+ * who opened the release to *read* it and pressed Save on the way out published
+ * a version — and a new version is what makes every signature the shop holds
+ * stop counting. The whole roster of every forward departure flipped to
+ * blocked, and the page said "Saved" (issue #720).
+ *
+ * Runs against the shared demo shop rather than a `privateShop`, and that is
+ * the assertion, not a shortcut: if this regresses, the save it makes is a real
+ * one. The version number below is what catches it either way.
+ */
+test("saving the release unchanged publishes nothing and says so", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/waivers");
+
+  const release = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Release text" }) })
+    .filter({ visible: true });
+  await expect(release.getByText("Version 3")).toBeVisible();
+
+  // Not one character touched — the tap a staffer makes on the way out. The
+  // confirm still arms, because until the body is submitted nothing knows this
+  // is a no-op; what changed is what happens when it lands.
+  await page.getByRole("button", { name: "Save new version" }).click();
+  await page.getByRole("button", { name: "Publish new version" }).click();
+
+  await expect(page.getByRole("status")).toContainText("No change");
+  await expect(release.getByText("Version 3")).toBeVisible();
 });
 
 /**

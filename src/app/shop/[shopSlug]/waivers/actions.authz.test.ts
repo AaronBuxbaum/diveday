@@ -70,7 +70,9 @@ function withBody(body: string) {
 /** The version divers would sign right now — text and version number. */
 async function currentTemplate(db: AppDb, shopId: string) {
   const template = await getCurrentWaiverTemplate(db, shopId);
-  return template ? { body: template.body, version: template.version } : null;
+  return template
+    ? { title: template.title, body: template.body, version: template.version }
+    : null;
 }
 
 beforeEach(() => {
@@ -119,12 +121,31 @@ describe("publishing a waiver template", () => {
 
     const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY)));
 
-    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
+    // Not a bare "saved": the demo shop holds signed releases against the
+    // version this just replaced, and every one of them stops counting the
+    // instant it lands. The staffer is told how many rather than walking away
+    // believing nothing happened (issue #720).
+    expect(to).toMatch(
+      new RegExp(`^/shop/${shop.slug}/waivers\\?notice=waiver-resigning&count=[1-9]\\d*$`),
+    );
     const after = await currentTemplate(db, shop.id);
     expect(after?.body).toBe(NEW_BODY);
     // A new version, never an edit in place — the old text stays evidence of
     // what earlier signatures were given against.
     expect(after?.version).toBe((before?.version ?? 0) + 1);
+    // ...and the shop's own name for its release survives the edit.
+    expect(after?.title).toBe(before?.title);
+  });
+
+  it("publishes nothing when the body has not changed, and does not say 'saved'", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => saveWaiverAction(withBody(before?.body ?? "")));
+
+    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=waiver-unchanged`);
+    expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
 
   it("refuses a body too short to be a release, without touching the current one", async () => {

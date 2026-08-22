@@ -3097,6 +3097,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-waivers", scheme);
       });
 
+      /**
+       * …and the confirm that arms in front of Save. Publishing a version makes
+       * every signature the shop holds stop counting at once, so the count goes
+       * in front of the staffer before the tap rather than in a notice
+       * afterwards (issue #720). Photographed because it is a warning-toned
+       * block of consequence a shop reads at a decision point, and the number
+       * in it comes off the seeded roster — a change that quietly stops
+       * counting shows up here as pixels.
+       */
+      test(`the waiver's publish confirm renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/waivers");
+        await page.getByRole("heading", { level: 1, name: "Waiver template" }).waitFor();
+        await page.getByRole("button", { name: "Save new version" }).click();
+        await page.getByRole("button", { name: "Publish new version" }).waitFor();
+        await capture(page, "staff-waivers-confirm", scheme);
+      });
+
       // … and Signatures is the signed-record evidence audit, paginated
       // (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
       // shop's 150+ signed records render as one page under the shared pager

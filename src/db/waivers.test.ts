@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
+import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness } from "./readiness";
@@ -11,6 +13,7 @@ import { people, personRoles, shops, userAccounts, waiverRecords, waiverTemplate
 import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
+  countSignedWaiversOnCurrentVersion,
   getCurrentWaiverTemplate,
   getEmergencyContactForBooking,
   getSignedWaiverRecordForShop,
@@ -277,7 +280,7 @@ describe("waiver records (in-memory PGlite)", () => {
       title: template.title,
       body: "A materially different v2 release long enough to be valid.",
     });
-    expect(newer.version).toBe(template.version + 1);
+    expect(newer.template.version).toBe(template.version + 1);
 
     const state = await getWaiverForToken(db, issued.token, now);
     expect(state).toMatchObject({
@@ -478,11 +481,11 @@ describe("waiver records (in-memory PGlite)", () => {
       title: template.title,
       body: "An updated release, edited by staff and long enough to be valid.",
     });
-    expect(next.version).toBe(seeded + 1);
+    expect(next.template.version).toBe(seeded + 1);
 
     // The newest version is always current.
     const currentNow = await getCurrentWaiverTemplate(db, shop.id);
-    expect(currentNow?.id).toBe(next.id);
+    expect(currentNow?.id).toBe(next.template.id);
     const history = await listWaiverTemplateHistory(db, shop.id);
     // Newest first, gapless, all the way back to the shop's first release.
     expect(history.map((row) => row.version)).toEqual(
@@ -512,7 +515,9 @@ describe("waiver records (in-memory PGlite)", () => {
       }),
     ]);
 
-    const versions = [a.version, b.version, c.version].sort((x, y) => x - y);
+    const versions = [a.template.version, b.template.version, c.template.version].sort(
+      (x, y) => x - y,
+    );
     expect(versions).toEqual([seeded + 1, seeded + 2, seeded + 3]);
     const history = await listWaiverTemplateHistory(db, shop.id);
     expect(history.map((row) => row.version)).toEqual(
@@ -1309,5 +1314,110 @@ describe("signed waivers after a diver is erased", () => {
     const records = signed.get(personId) ?? [];
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ signedName: null, medicalAnswers: null });
+  });
+});
+
+/**
+ * **Pressing Save must not cost a shop every signature it holds.**
+ *
+ * `isCompletedWaiverCurrent` reads a signature against an older version as no
+ * longer current, so publishing a version invalidates the whole shop's signed
+ * releases at once — every booked diver on every forward departure flips to
+ * blocked. A staffer who opened the editor to read the release and pressed Save
+ * on the way out had done exactly that, and been told "Saved" (issue #720).
+ */
+describe("saving the waiver template", () => {
+  const now = new Date("2026-07-20T12:00:00.000Z");
+
+  async function signedContext() {
+    const { db, shop, booking, person, template } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    return { db, shop, template };
+  }
+
+  // The demo shop is not a toy fixture here: it carries ~170 signed releases on
+  // its current version, which is the ticket's whole point — one tap of Save
+  // used to put every one of them back in the queue. So these assert against
+  // what the seed actually holds rather than a hand-counted number, and each
+  // one first proves the number is non-zero, or "nothing was lost" would pass
+  // just as happily against a shop with nothing to lose.
+
+  it("writes no version at all when the body has not changed", async () => {
+    const { db, shop, template } = await signedContext();
+    const before = await listWaiverTemplateHistory(db, shop.id);
+    const standing = await countSignedWaiversOnCurrentVersion(db, shop.id, now);
+
+    const result = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      // Untrimmed on purpose: the editor hands back whatever the textarea
+      // holds, and trailing whitespace is not an edit anyone made.
+      body: `  ${template.body}  `,
+    });
+
+    expect(result.versioned).toBe(false);
+    expect(result.template.id).toBe(template.id);
+    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(before.length);
+    // Every signature it would have invalidated is untouched, which is the
+    // whole point — the history length above only proves nothing was inserted.
+    expect(standing).toBeGreaterThan(0);
+    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBe(standing);
+  });
+
+  it("versions a real edit, and reports the signatures it just put back in the queue", async () => {
+    const { db, shop, template } = await signedContext();
+    // Counted before the save, which is the only moment the number exists: the
+    // new version is current the instant it lands and nothing is signed
+    // against it yet.
+    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBeGreaterThan(0);
+
+    const result = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "A materially different release, long enough to be valid as a version.",
+    });
+
+    expect(result.versioned).toBe(true);
+    expect(result.template.version).toBe(template.version + 1);
+    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBe(0);
+  });
+
+  it("does not count a signature the validity window has already aged out", async () => {
+    const { db, shop } = await signedContext();
+    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, now)).toBeGreaterThan(0);
+    // Far enough past every seeded signature's validity window that none of
+    // them stand. Those were not going to clear anyone tomorrow either, so
+    // publishing a version costs them nothing — and a number a shop can
+    // disprove is a number they stop reading.
+    const later = new Date(now.getTime() + WAIVER_SIGNATURE_VALIDITY_MS * 3);
+    expect(await countSignedWaiversOnCurrentVersion(db, shop.id, later)).toBe(0);
+  });
+
+  it("carries the shop's own title forward instead of renaming its release", async () => {
+    const { db, shop, template } = await waiverContext();
+    // The demo shop calls its release "Blue Mantis Diving Release". The editor
+    // has no title field, so a save cannot mean "rename" — but it used to pass
+    // the platform default, which silently retitled a shop's legal instrument
+    // on its first edit.
+    expect(template.title).not.toBe(DEFAULT_WAIVER_TITLE);
+
+    const result = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: "An edit that changes the words and must not change the name of the document.",
+    });
+
+    expect(result.versioned).toBe(true);
+    expect(result.template.title).toBe(template.title);
+  });
+
+  it("counts nothing for a shop that has never published a release", async () => {
+    const { db } = await waiverContext();
+    expect(await countSignedWaiversOnCurrentVersion(db, randomUUID(), now)).toBe(0);
   });
 });
