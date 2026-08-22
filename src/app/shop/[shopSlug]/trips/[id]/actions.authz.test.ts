@@ -146,11 +146,20 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
   });
 }
 
-function requirementsForm(minimumCertificationLevel: string): FormData {
+function requirementsForm(
+  minimumCertificationLevel: string,
+  toggles: { requiresWaiver?: boolean; requiresPayment?: boolean } = { requiresWaiver: true },
+): FormData {
   const formData = new FormData();
   formData.set("minimumCertificationLevel", minimumCertificationLevel);
-  formData.set("requiresWaiver", "on");
+  if (toggles.requiresWaiver) formData.set("requiresWaiver", "on");
+  if (toggles.requiresPayment) formData.set("requiresPayment", "on");
   return formData;
+}
+
+/** The count a `requirements-blocking` redirect reports, or 0 for the plain notice. */
+function blockedCountFrom(to: string): number {
+  return Number(new URL(to, "https://dive.day").searchParams.get("count") ?? 0);
 }
 
 beforeEach(() => {
@@ -227,6 +236,81 @@ describe("setting what a trip admits", () => {
     );
     // Saved regardless — the notice never stands in the way of the write.
     expect((await requirementsOf(db, tripId))?.minimumCertificationLevel).toBe("rescue");
+  });
+
+  /**
+   * **The notice was quietest exactly where it had the most to say.**
+   *
+   * The count filtered blockers to `BLOCKER_CATEGORY === "certification"`, and
+   * this form has four toggles. Ticking "Requires waiver" on a roster nobody
+   * had signed, or "Requires payment" on a roster nobody had paid, blocked
+   * every diver aboard and reported zero — then rendered the plain success
+   * notice, which actively tells the staffer nobody was affected. Those two
+   * are the toggles most likely to block a whole roster at once, because
+   * certification varies diver by diver while "has anyone paid yet" does not
+   * (issue #693).
+   *
+   * Nothing could have caught it: a test asserting the notice fires when the
+   * certification gate tightens passes whether or not the other categories
+   * count.
+   */
+  it("counts the divers a payment gate just blocked, not only certification ones", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(shop, owner);
+
+    // Demand nothing about certification, so any count here is payment's.
+    const to = await redirectedTo(() =>
+      saveRequirementsAction(shop.slug, tripId, requirementsForm("", { requiresPayment: true })),
+    );
+
+    expect(blockedCountFrom(to)).toBeGreaterThan(0);
+    expect(to).toContain("notice=requirements-blocking");
+    expect((await requirementsOf(db, tripId))?.requiresPayment).toBe(true);
+  });
+
+  it("counts the divers a waiver gate just blocked", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(shop, owner);
+    // Clear the seeded gate first, so the roster starts unblocked and the
+    // count below is what *this* save did rather than what was already true.
+    await saveRequirementsAction(
+      shop.slug,
+      tripId,
+      requirementsForm("", { requiresWaiver: false }),
+    ).catch(() => {});
+
+    const to = await redirectedTo(() =>
+      saveRequirementsAction(shop.slug, tripId, requirementsForm("", { requiresWaiver: true })),
+    );
+
+    expect(blockedCountFrom(to)).toBeGreaterThan(0);
+    expect((await requirementsOf(db, tripId))?.requiresWaiver).toBe(true);
+  });
+
+  /**
+   * The difference, not the total. A departure where nobody had signed yet was
+   * already showing those divers as blocked, so re-saving the same gate has
+   * changed nothing for anybody and must say so — reporting them again would
+   * be a different lie.
+   */
+  it("reports nobody when a save leaves every diver exactly as blocked as they were", async () => {
+    const { shop, tripId, owner } = await context();
+    signIn(shop, owner);
+    await saveRequirementsAction(
+      shop.slug,
+      tripId,
+      requirementsForm("rescue", { requiresWaiver: true }),
+    ).catch(() => {});
+
+    const to = await redirectedTo(() =>
+      saveRequirementsAction(
+        shop.slug,
+        tripId,
+        requirementsForm("rescue", { requiresWaiver: true }),
+      ),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?notice=requirements`);
   });
 });
 
