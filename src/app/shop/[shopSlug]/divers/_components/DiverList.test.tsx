@@ -24,6 +24,32 @@ type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 
 const emptyPage: DiverPage = { divers: [], total: 0, page: 1, pageCount: 0, pageSize: 25 };
 
+/** One live diver, so a test can tap the row link the roster is made of. */
+const rosterPage: DiverPage = {
+  ...emptyPage,
+  total: 1,
+  pageCount: 1,
+  divers: [
+    {
+      person: {
+        id: "person-2",
+        fullName: "Mira Castellanos",
+        email: "mira@example.com",
+        phone: null,
+        deletedAt: null,
+      },
+      certificationLevel: null,
+      certificationCount: 0,
+      pendingCertificationCount: 0,
+      specialtyCount: 0,
+      pendingSpecialtyOrNitroxCount: 0,
+      importedUnconfirmedCount: 0,
+      nitroxCertificationCount: 0,
+      rentalFit: null,
+    } as unknown as DiverPage["divers"][number],
+  ],
+};
+
 const copy = {
   addDiverLabel: t("divers.list.addDiverAction"),
   addDiverWithName: t.raw("divers.list.addDiverWithName"),
@@ -311,6 +337,44 @@ describe("DiverList removed view", () => {
 
       // Let the old debounce window elapse. The chip's href owns this
       // navigation now; nothing may replace the URL behind it.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * Regression: the same race as the chip above, on the link a staffer actually
+   * uses. The roster already shows every diver, so a name typed into the box
+   * matches a row that is *on screen before the debounce fires*. Tapping it
+   * opened the record and then, 250ms later, the late timer replaced the URL
+   * with `?q=<name>` — putting the staffer back on the list they had just left,
+   * with no sign anything had happened.
+   *
+   * The chips, the empty-state "show all" link and the quick-add form all
+   * cancelled the pending timer; the two row links were the ones missed, and
+   * they are the only ones a staffer uses on the way to somewhere. Reproduced
+   * in e2e/certifications.spec.ts, which could not reach a diver's record at
+   * all once the machine was loaded enough for the click to beat the timer.
+   */
+  it("does not let a pending search undo a diver row tapped inside the debounce window", () => {
+    vi.useFakeTimers();
+    try {
+      renderList({ page: rosterPage });
+      const input = screen.getByRole("searchbox", { name: "Search divers" });
+
+      // Type a name; the row for it is already rendered, so the staffer can
+      // reach it without waiting for the search to commit.
+      fireEvent.change(input, { target: { value: "Mira" } });
+      const row = screen.getAllByRole("link", { name: /Mira Castellanos/ })[0];
+      expect(row).toHaveAttribute("href", "/shop/blue-mantis/divers/person-2");
+      fireEvent.click(row);
+
+      // The record owns this navigation now. A replace landing behind it is
+      // the staffer's tap being silently undone.
       act(() => {
         vi.advanceTimersByTime(1000);
       });

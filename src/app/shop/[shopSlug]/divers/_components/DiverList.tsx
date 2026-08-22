@@ -471,6 +471,11 @@ export function DiverList({
               <li key={diver.person.id}>
                 <Link
                   href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                  // Same reasoning as the view chips above: a keystroke still
+                  // sitting in the debounce was scheduled against the roster,
+                  // so letting it fire 250ms after this tap replaces the record
+                  // the staffer just opened with the list they just left.
+                  onClick={cancelPendingSearch}
                   className={sectionCardClass({
                     className:
                       "block transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken",
@@ -539,6 +544,7 @@ export function DiverList({
                   <Td className="align-middle text-base">
                     <Link
                       href={`/shop/${shopSlug}/divers/${diver.person.id}`}
+                      onClick={cancelPendingSearch}
                       className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
                     >
                       <span

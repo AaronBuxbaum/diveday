@@ -23,6 +23,12 @@ function specialtyForm(page: Page) {
 test("staff captures and verifies level and specialty certifications before either can be trusted", async ({
   page,
 }) => {
+  // Nine navigations and five sequential form round-trips — the longest flow in
+  // this file, and the only one that was still running on the 15s per-test
+  // default while its three siblings declare 30s and 90s for less work. Not a
+  // widened timeout papering over a race: the budget was never declared, and a
+  // ceiling only ever bounds a *failure* (playwright.config.ts).
+  test.setTimeout(60_000);
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("link", { name: /Priya Sharma/ }).click();
@@ -306,6 +312,7 @@ test("a diver's card number typed at booking reaches the staff record as their w
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diver);
   await page.getByRole("link", { name: new RegExp(diver) }).click();
+  await expect(page.getByRole("heading", { name: diver, level: 1 })).toBeVisible();
 
   const card = page.locator("li").filter({ hasText: cardNumber }).filter({ visible: true }).last();
   // The agency the diver named renders beside the rung, and the number renders
