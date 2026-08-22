@@ -175,12 +175,61 @@ describe("auditLedger", () => {
         ...HEALTHY.ledger,
         "/shop/[shopSlug]/staffing": {
           e2e: ["booking.spec.ts"],
-          visual: [],
+          visual: ["staffing"],
           exempt: "no coverage yet — needs a spec",
         },
       },
     });
     expect(messages(result)).toContain("covered now, but still carries an `exempt`");
+  });
+
+  /**
+   * **A spec is not coverage on its own.** This used to pass: the check
+   * accepted *either* dimension, so a route could arrive with a spec, no
+   * capture and no exemption, and the report line read as a summary rather
+   * than a shortfall. Three real routes were in that state, including the
+   * add-diver form and the first screen a new hire ever sees (issue #727).
+   */
+  it("fails a route with a spec, no capture and nothing written down", async () => {
+    const result = await audit({
+      ledger: {
+        ...HEALTHY.ledger,
+        "/shop/[shopSlug]/staffing": { e2e: ["booking.spec.ts"], visual: [] },
+      },
+    });
+    expect(messages(result)).toContain("no visual capture");
+  });
+
+  it("names the missing half rather than reporting a bare gap", async () => {
+    const result = await audit({
+      ledger: {
+        ...HEALTHY.ledger,
+        "/shop/[shopSlug]/staffing": { e2e: [], visual: ["staffing"] },
+      },
+    });
+    // The other direction, said in its own words — "no e2e spec and no visual
+    // capture" about a route that has one of them sends a reader looking for
+    // the wrong thing.
+    expect(messages(result)).toContain("no e2e spec");
+    expect(messages(result)).not.toContain("no e2e spec and no visual capture");
+  });
+
+  it("accepts a half-covered route that says why in writing", async () => {
+    // The exemption is what turns a gap into a decision, which is the whole
+    // reason the field exists.
+    const result = await audit({
+      ledger: {
+        ...HEALTHY.ledger,
+        "/shop/[shopSlug]/staffing": {
+          e2e: ["booking.spec.ts"],
+          visual: [],
+          exempt: "a redirect with nothing of its own to photograph",
+        },
+      },
+    });
+    expect(result.violations).toEqual([]);
+    // The healthy fixture already carries one exempt route; this is the second.
+    expect(result.stats.exempt).toBe(2);
   });
 
   it("reports a malformed entry instead of crashing on it", async () => {

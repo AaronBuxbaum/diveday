@@ -2230,6 +2230,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers", scheme);
       });
 
+      /**
+       * The form the front desk fills in most often, and the one the command
+       * palette's create flow lands on. Four specs reach it and none of them
+       * had ever looked at it: `check:route-coverage` counted an e2e spec as
+       * coverage and passed silently (issue #727). Forms are where visual
+       * regressions hide — alignment, the `Field`/`FieldGrid` wrappers, the
+       * shape of an optional-vs-required row.
+       */
+      test(`the add-diver form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers/new");
+        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await capture(page, "divers-new", scheme);
+      });
+
       // The roster's one view that leaves the active list behind: where a
       // deleted diver can be found and restored, once the undo toast is long
       // gone. The demo shop deletes nobody, so this photographs the view's own
@@ -3074,6 +3088,48 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-team", scheme);
       });
 
+      /**
+       * **The first DiveDay screen a new hire ever sees**, and nothing had ever
+       * looked at it. It has an `error.tsx` of its own — somebody thought about
+       * its failure path — while its happy path went uncaptured because
+       * `check:route-coverage` counted `staff-invite.spec.ts` as coverage and
+       * passed (issue #727).
+       *
+       * Driven through the real invite, because the token is hashed at rest and
+       * `/api/test/seed-account-token` will only re-mint for an account that
+       * already exists — `inviteStaffMember` is what creates it (ADR
+       * 20260726-staff-invite-accounts). Deterministic email, not `Date.now()`:
+       * a wall-clock value here is a permanent diff between CI runs, not a
+       * regression (same reasoning as the onboarding capture).
+       */
+      test(`the staff invite page renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const email = `invite-capture-${scheme}@example.com`;
+        await page.goto("/shop/blue-mantis/settings/team");
+        const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+        await inviteSection.getByLabel("Full name").fill("Priya Nair");
+        await inviteSection.getByLabel("Email").fill(email);
+        await inviteSection.getByLabel("Instructor").check();
+        await inviteSection.getByRole("button", { name: "Send invite" }).click();
+        await expect(page.getByText("Invite sent.")).toBeVisible();
+
+        const seeded = await request.post("/api/test/seed-account-token", {
+          data: { email, purpose: "invite" },
+        });
+        expect(seeded.ok()).toBe(true);
+        const { token } = (await seeded.json()) as { token: string };
+
+        await page.goto(`/invite/${token}`);
+        // Streams behind a loading.tsx — wait for the page's own h1, the same
+        // signal every other account-lifecycle capture here gates on.
+        await page.locator("h1").first().waitFor();
+        await page.getByLabel("Password", { exact: true }).waitFor();
+        await capture(page, "staff-invite", scheme);
+      });
+
       // Calendar subscriptions, in the un-subscribed state: both scopes
       // offered to an owner, neither yet minted. Deliberately not the
       // just-minted state — that panel shows a live feed token, which is
@@ -3650,6 +3706,19 @@ for (const scheme of ["light", "dark"] as const) {
         // mounted and read the coordinate fields beside it.
         await page.getByLabel("What the route is called").waitFor();
         await capture(page, "dive-site-edit", scheme);
+      });
+
+      /**
+       * The same long form with nothing in it — a landmark editor, a creature
+       * picker, and every field a shop meets before it has anything to edit.
+       * Its sibling above was captured and this one never was (issue #727),
+       * and an empty form is a different picture: every placeholder, every
+       * "(optional)", and the empty states of both list editors.
+       */
+      test(`the new-dive-site form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/dive-sites/new");
+        await page.getByLabel("What the route is called").waitFor();
+        await capture(page, "dive-site-new", scheme);
       });
 
       // The front desk's invoice builder. It redirects to Divers for a shop

@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
@@ -18,7 +18,7 @@
   },
   "/invite/[token]": {
     "e2e": ["staff-invite.spec.ts"],
-    "visual": []
+    "visual": ["staff-invite"]
   },
   "/offline-manifest": {
     "e2e": ["a11y.spec.ts", "manifest.spec.ts"],
@@ -206,15 +206,7 @@
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
-    "visual": []
-  },
-  "/shop/[shopSlug]/gear": {
-    "e2e": ["gear.spec.ts"],
-    "visual": ["gear-register", "gear-register-deleted", "gear-register-trouble"]
-  },
-  "/shop/[shopSlug]/gear/[id]": {
-    "e2e": ["gear.spec.ts"],
-    "visual": ["gear-unit"]
+    "visual": ["dive-site-new"]
   },
   "/shop/[shopSlug]/divers": {
     "e2e": [
@@ -250,7 +242,15 @@
   },
   "/shop/[shopSlug]/divers/new": {
     "e2e": ["add-diver.spec.ts", "check-in.spec.ts", "divers.spec.ts", "gear-fit-and-age.spec.ts"],
-    "visual": []
+    "visual": ["divers-new"]
+  },
+  "/shop/[shopSlug]/gear": {
+    "e2e": ["gear.spec.ts"],
+    "visual": ["gear-register", "gear-register-deleted", "gear-register-trouble"]
+  },
+  "/shop/[shopSlug]/gear/[id]": {
+    "e2e": ["gear.spec.ts"],
+    "visual": ["gear-unit"]
   },
   "/shop/[shopSlug]/orders": {
     "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],
@@ -446,7 +446,7 @@
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "gear.spec.ts", "nitrox.spec.ts"],
-    "visual": ["prep", "prep-by-diver", "prep-no-nitrox", "prep-assignments"]
+    "visual": ["prep", "prep-assignments", "prep-by-diver", "prep-no-nitrox"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
     "e2e": ["gear.spec.ts"],

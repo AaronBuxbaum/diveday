@@ -10,14 +10,26 @@
 //
 // So the coverage is written down. `scripts/route-coverage.json` names, for every
 // `page.tsx` under `src/app`, which specs exercise it and which visual captures
-// photograph it — and, for a route that genuinely has neither, an `exempt` reason
-// a human had to type. The check keeps that ledger honest against the tree:
+// photograph it — and, for a route that genuinely warrants less, an `exempt`
+// reason a human had to type. The check keeps that ledger honest against the tree:
 //
 //   - every route has an entry, and every entry still names a real route;
 //   - every spec file listed exists under `e2e/`;
 //   - every capture name listed appears as `capture(page, "<name>"` in
 //     `e2e/visual.spec.ts`;
-//   - a route with neither carries a written reason.
+//   - **every route has both a spec and a capture, or a written reason.**
+//
+// That last one used to read "a route with *neither* carries a written reason",
+// which left a fourth state the ledger tolerated in silence: a spec, no capture,
+// no exemption. Three routes were in it (issue #727) — the add-diver form the
+// front desk fills in most often, the long dive-site form, and `/invite/[token]`,
+// the first DiveDay screen a new hire ever sees, which has an `error.tsx` of its
+// own and had never been looked at in light or dark. Nothing said so: the report
+// line read "66 with a visual capture" as a summary rather than a shortfall.
+//
+// AGENTS.md asks for both — every important *flow* gets a spec, every important
+// *surface* gets a capture — so a route that has one and not the other is a
+// decision, and this is where it gets written down.
 //
 // ## Why the coverage lists are hand-maintained
 //
@@ -59,7 +71,7 @@ export const VISUAL_SPEC = "e2e/visual.spec.ts";
 export const LEDGER_PATH = "scripts/route-coverage.json";
 
 export const LEDGER_NOTE =
-  "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.";
+  "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.";
 
 const ENTRY_KEYS = new Set(["e2e", "visual", "exempt"]);
 
@@ -254,11 +266,19 @@ export function auditLedger({ routes, ledger, specs, captures }) {
       }
     }
 
-    const hasCoverage = e2eNames.length > 0 || visualNames.length > 0;
-    if (hasCoverage) {
-      if (e2eNames.length > 0) stats.e2e += 1;
-      if (visualNames.length > 0) stats.visual += 1;
-      if (typeof entry.exempt === "string" && entry.exempt.trim() !== "") {
+    if (e2eNames.length > 0) stats.e2e += 1;
+    if (visualNames.length > 0) stats.visual += 1;
+    const exempt = typeof entry.exempt === "string" && entry.exempt.trim() !== "";
+
+    // **Both, or a written reason.** This used to pass on *either* — so a route
+    // could arrive with a spec, no capture and no exemption, and the report line
+    // read as a summary rather than a shortfall. Three were in that state
+    // (issue #727), including the form the front desk fills in most often and
+    // the first screen a new hire ever sees. That fourth state is the one the
+    // `exempt` field was invented to make impossible, so it is a failure now:
+    // a gap has to be a decision somebody wrote down.
+    if (e2eNames.length > 0 && visualNames.length > 0) {
+      if (exempt) {
         violations.push(
           `${route}: covered now, but still carries an \`exempt\` reason. Bank the closed gap — \`node scripts/check-route-coverage.mjs --write\` removes it.`,
         );
@@ -266,13 +286,19 @@ export function auditLedger({ routes, ledger, specs, captures }) {
       continue;
     }
 
-    if (typeof entry.exempt === "string" && entry.exempt.trim() !== "") {
+    if (exempt) {
       stats.exempt += 1;
       continue;
     }
     stats.uncovered += 1;
+    const missing =
+      e2eNames.length === 0 && visualNames.length === 0
+        ? "no e2e spec and no visual capture"
+        : e2eNames.length === 0
+          ? "no e2e spec"
+          : "no visual capture";
     violations.push(
-      `${route}: no e2e spec and no visual capture. Every important flow gets an e2e spec and every important surface gets a capture (AGENTS.md) — add one, or write an \`exempt\` reason saying why this route needs neither.`,
+      `${route}: ${missing}. Every important flow gets an e2e spec and every important surface gets a capture (AGENTS.md) — add the missing one, or write an \`exempt\` reason saying why this route needs neither.`,
     );
   }
 
