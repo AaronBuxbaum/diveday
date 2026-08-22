@@ -37,6 +37,16 @@ const EMPTY: ShopAddressFields = {
   addressCountry: "",
 };
 
+/**
+ * What the hidden form sends for a place the geocoder gave no coordinates for.
+ *
+ * `toFormData` used to omit the keys entirely; the form carries a fixed field
+ * list, so they arrive empty instead. `addressSchema` accepts `""` for both and
+ * `saveAddressAction` stores `null` either way, so the row that lands is
+ * identical — this is the shape of the submission, not a change to the address.
+ */
+const NO_COORDINATES = { latitude: "", longitude: "" };
+
 const KEY_LARGO_ADDRESS: ShopAddressFields = {
   addressStreet: "102 Ocean Drive",
   addressLocality: "Key Largo",
@@ -144,7 +154,7 @@ describe("the address card with a geocoder", () => {
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     const form = save.mock.calls[0][0];
-    expect(Object.fromEntries(form)).toEqual(KEY_LARGO_ADDRESS);
+    expect(Object.fromEntries(form)).toEqual({ ...KEY_LARGO_ADDRESS, ...NO_COORDINATES });
     // And the shop sees the address it just chose, not the one it replaced.
     expect(screen.getByText("102 Ocean Drive")).toBeInTheDocument();
   });
@@ -165,6 +175,7 @@ describe("the address card with a geocoder", () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(Object.fromEntries(save.mock.calls[0][0])).toEqual({
       ...EMPTY,
+      ...NO_COORDINATES,
       addressLocality: "Cozumel",
     });
   });
@@ -180,7 +191,10 @@ describe("the address card with a geocoder", () => {
     await user.keyboard("{ArrowDown}{Enter}");
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-    expect(Object.fromEntries(save.mock.calls[0][0])).toEqual(KEY_LARGO_ADDRESS);
+    expect(Object.fromEntries(save.mock.calls[0][0])).toEqual({
+      ...KEY_LARGO_ADDRESS,
+      ...NO_COORDINATES,
+    });
   });
 
   /**
@@ -199,7 +213,7 @@ describe("the address card with a geocoder", () => {
     await user.click(screen.getByRole("button", { name: copy.removeLabel }));
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-    expect(Object.fromEntries(save.mock.calls[0][0])).toEqual(EMPTY);
+    expect(Object.fromEntries(save.mock.calls[0][0])).toEqual({ ...EMPTY, ...NO_COORDINATES });
     expect(screen.getByText(copy.noneSet)).toBeInTheDocument();
   });
 
@@ -313,5 +327,95 @@ describe("the address card with a geocoder", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/**
+ * The reason this card mutates through a hidden `<form>` at all (issue #629).
+ *
+ * `saveAddressAction` redirects back to `/shop/<slug>/settings` on its
+ * validation-failure branch, and `PreserveFormScroll` remembers the viewport by
+ * listening for a `submit` DOM event on `document`. All three of this card's
+ * mutations used to call the action straight out of their click handler, so no
+ * such event ever fired — and a staffer who picked an address two-thirds of the
+ * way down Settings and hit that branch was thrown back to the top of the page
+ * with nothing to restore them.
+ *
+ * These assert the event, not the scroll: the restoring half is
+ * `PreserveFormScroll`'s own, already covered, and it is reached by any form.
+ */
+describe("every mutation the address card makes", () => {
+  let submissions: HTMLFormElement[];
+  function record(event: Event) {
+    if (event.target instanceof HTMLFormElement) submissions.push(event.target);
+  }
+
+  beforeEach(() => {
+    submissions = [];
+    document.addEventListener("submit", record);
+  });
+  afterEach(() => document.removeEventListener("submit", record));
+
+  it("fires a real submit event when a suggestion is picked", async () => {
+    const user = userEvent.setup();
+    suggest.mockResolvedValue({ status: "ok", suggestions: [RAINBOW_REEF] });
+    renderCard();
+
+    await user.type(screen.getByRole("combobox"), "Rainbow Reef");
+    await user.click(await screen.findByText(RAINBOW_REEF.label));
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(submissions).toHaveLength(1);
+    // Opting out of preservation is a thing a form can do; this one must not.
+    expect(submissions[0]?.dataset.scrollReset).toBeUndefined();
+  });
+
+  it("fires one when the pick was made with the keyboard", async () => {
+    const user = userEvent.setup();
+    suggest.mockResolvedValue({ status: "ok", suggestions: [RAINBOW_REEF] });
+    renderCard();
+
+    await user.type(screen.getByRole("combobox"), "Rainbow Reef");
+    await screen.findByText(RAINBOW_REEF.label);
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(submissions).toHaveLength(1);
+  });
+
+  it("fires one when the address is removed", async () => {
+    const user = userEvent.setup();
+    renderCard({ initial: KEY_LARGO_ADDRESS });
+
+    await user.click(screen.getByRole("button", { name: copy.removeLabel }));
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(submissions).toHaveLength(1);
+  });
+
+  it("carries a geocoded place's coordinates through the hidden boxes", async () => {
+    // The field list is fixed now, so the pair that is usually empty is the one
+    // that could silently stop being sent at all.
+    const user = userEvent.setup();
+    suggest.mockResolvedValue({
+      status: "ok",
+      suggestions: [
+        {
+          ...RAINBOW_REEF,
+          address: { ...KEY_LARGO_ADDRESS, latitude: 25.0865, longitude: -80.4473 },
+        },
+      ],
+    });
+    renderCard();
+
+    await user.type(screen.getByRole("combobox"), "Rainbow Reef");
+    await user.click(await screen.findByText(RAINBOW_REEF.label));
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(Object.fromEntries(save.mock.calls[0][0])).toEqual({
+      ...KEY_LARGO_ADDRESS,
+      latitude: "25.0865",
+      longitude: "-80.4473",
+    });
   });
 });

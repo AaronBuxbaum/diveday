@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, useTransition } from "react";
+import { useActionState, useId, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
@@ -76,14 +76,31 @@ function addressLines(address: ShopAddressFields): string[] {
   return [address.addressStreet, rest].filter(Boolean);
 }
 
-function toFormData(address: ShopAddressFields): FormData {
-  const form = new FormData();
-  for (const [field, value] of Object.entries(address)) {
-    if (value !== null && value !== undefined) {
-      form.set(field, String(value));
-    }
-  }
-  return form;
+/**
+ * Every field the action's schema reads, as strings a hidden input can hold.
+ *
+ * Written into the DOM rather than rendered from state: `commit` has to fill
+ * the form and submit it in the same synchronous tick as the pick, and a
+ * re-render has not happened by then.
+ */
+function toFieldValues(address: ShopAddressFields): Record<string, string> {
+  return {
+    addressStreet: address.addressStreet,
+    addressLocality: address.addressLocality,
+    addressRegion: address.addressRegion,
+    addressPostalCode: address.addressPostalCode,
+    addressCountry: address.addressCountry,
+    // `""` is exactly what `addressSchema` accepts for "this place has no
+    // coordinates", so an absent value and an empty box are the same answer and
+    // the form's field list can stay fixed.
+    latitude: address.latitude == null ? "" : String(address.latitude),
+    longitude: address.longitude == null ? "" : String(address.longitude),
+  };
+}
+
+function setField(form: HTMLFormElement, name: string, value: string) {
+  const field = form.elements.namedItem(name);
+  if (field instanceof HTMLInputElement) field.value = value;
 }
 
 /**
@@ -135,7 +152,26 @@ export function AddressSearch({
   const [status, setStatus] = useState<"idle" | "none" | "failed" | "resting">("idle");
   const [active, setActive] = useState(-1);
   const [isPending, startTransition] = useTransition();
-  const [saving, setSaving] = useState<"none" | "picking" | "removing">("none");
+  // *Which* control started the save, for the Remove button's own label. The
+  // question of whether one is still in flight belongs to the form below.
+  const [savingKind, setSavingKind] = useState<"picking" | "removing">("picking");
+  const formRef = useRef<HTMLFormElement>(null);
+  // The action is reached through a real `<form>` submit, and that is the whole
+  // point rather than a style choice: `saveAddressAction` redirects on its
+  // validation-failure branch, and `PreserveFormScroll` can only remember the
+  // viewport for a mutation that fires a `submit` DOM event. Called straight
+  // out of the click handler, as this was, a staffer who picks an address
+  // two-thirds of the way down Settings and hits that branch is thrown back to
+  // the top of the page with nothing to restore them (issue #629).
+  //
+  // `useActionState` rather than `useFormStatus`: the pending flag is read here,
+  // beside the three call sites that share this one form, instead of inside a
+  // child component that would exist only to report it upwards.
+  const [, saveAction, isSaving] = useActionState(async (_previous: null, formData: FormData) => {
+    await saveAddressAction(formData);
+    return null;
+  }, null);
+  const saving = isSaving ? savingKind : "none";
   const listId = useId();
   const optionId = (index: number) => `${listId}-option-${index}`;
   // Guards against an out-of-order response overwriting a newer one: only the
@@ -208,11 +244,13 @@ export function AddressSearch({
     if (debounce.current) clearTimeout(debounce.current);
     requestSeq.current += 1;
     lastSent.current = null;
-    setSaving(kind);
-    startTransition(async () => {
-      await saveAddressAction(toFormData(next));
-      setSaving("none");
-    });
+    setSavingKind(kind);
+    const form = formRef.current;
+    if (!form) return;
+    for (const [field, value] of Object.entries(toFieldValues(next))) setField(form, field, value);
+    // Not `form.submit()`, which bypasses the submit event entirely — the event
+    // is the thing being restored here.
+    form.requestSubmit();
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -249,6 +287,16 @@ export function AddressSearch({
 
   return (
     <div className="mt-4 grid gap-4">
+      {/* Every mutation this card makes goes through here. It has no submit
+          control of its own: picking a suggestion *is* the save, so the three
+          call sites fill these boxes and call `requestSubmit()`. */}
+      {/* `hidden`, not merely empty: the wrapper above is a grid, so a
+          zero-height child would still take a row and a `gap-4` with it. */}
+      <form ref={formRef} action={saveAction} className="hidden">
+        {Object.keys(toFieldValues(EMPTY_ADDRESS)).map((field) => (
+          <input key={field} type="hidden" name={field} />
+        ))}
+      </form>
       {enabled ? (
         <div>
           {/* `Field` subgrids its caption and control onto two rows of the grid
