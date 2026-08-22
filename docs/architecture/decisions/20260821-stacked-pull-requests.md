@@ -115,8 +115,45 @@ protection, and keeping the chained-base convention legible in pull request bodi
 finds layer 3 first can walk down.
 
 Escape hatch: `gh stack unstack` dissolves a stack and leaves ordinary chained-base pull requests
-behind, so reverting this decision costs one command and no history. If the first stacks show
-baselines failing to resolve, stacks stay off for anything that moves a rendered surface — schema,
-`src/db`, and docs chains only — until `reg-keygen-git-hash-plugin`'s key resolution across a
-rebased chain is understood. If GitHub changes the preview under us, the fallback is the same
-chained-base shape we already produce.
+behind, so reverting this decision costs one command and no history. If GitHub changes the preview
+under us, the fallback is the same chained-base shape we already produce.
+
+### Measured: visual baselines across a stack (2026-08-22, issue #644)
+
+This ADR shipped with a restriction — no stacking work that moves pixels — and an admission that
+nobody had checked. It has now been checked, and **the restriction stays, because the thing it
+guards against is real.**
+
+The measurement did not need the ~9 CI runs this ADR priced it at.
+`reg-keygen-git-hash-plugin` decides the baseline key by walking the **local git graph**
+(`CommitExplorer.getBaseCommitHash()`) with no network call, so a two-layer stack built in a
+throwaway repository answers it for free:
+
+| state | layer 2's baseline resolves to | is there a snapshot under that key? |
+| --- | --- | --- |
+| stack as opened | layer 1's head | yes, once layer 1's visual job has published |
+| after a cascading rebase | the **rewritten** layer 1 head | **not yet, and maybe not ever in time** |
+
+So the first half of the worry is confirmed and benign: layer 2 really does compare against layer 1
+rather than `main`, which is what makes a stack's diffs readable — each layer shows only its own
+pixels.
+
+The second half is the problem. GitHub's server-side cascading rebase rewrites every commit above a
+merge point, so layer 2's key moves to a commit hash that no CI run has published under. It is a
+**race, not a certainty**: layer 1's own rebase triggers a fresh run that will publish that key, so
+whether layer 2 finds a baseline depends on layer 1's four visual shards finishing first. Losing the
+race is not silent — reg-suit reports the surfaces as **new** rather than changed, and the repo's
+`diveday:visual-summary` comment prints that count in its own column — but "new" on 60 surfaces
+reads as noise at exactly the moment a reviewer is least able to tell noise from a regression.
+
+The related failure is worth stating because it is the ordinary case and it bit this repository on
+2026-08-22: a branch whose parent has fallen behind `main` compares against that **parent**, while
+CI captures the pull request **merged with `main`**. PR #668 reported 60 changed surfaces of which
+39 were other people's already-merged work. Rebasing onto `main` reduced it to 21. That is the same
+key-resolution rule doing exactly what it says, and it is a good argument for rebasing a stack's
+layers before reading their visual reports at all.
+
+Not done, and deliberately: no `matchingThreshold` in `regconfig.json`, and no re-anchoring the
+capture to `main` — that would report every lower layer's own changes on every layer above it. If
+this is to be lifted, the fix belongs in key resolution or in ordering the layers' visual jobs, not
+in loosening what counts as a match.
