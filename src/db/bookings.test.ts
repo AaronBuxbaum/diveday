@@ -22,6 +22,7 @@ import {
   certifications,
   courses,
   diveSites,
+  nitroxCertifications,
   people,
   personRoles,
   shops,
@@ -30,6 +31,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import * as selfDeclaredCardsModule from "./self-declared-cards";
 import {
   changeTripCrew,
   createTrip,
@@ -1820,5 +1822,171 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
       .from(bookings)
       .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, person.id)));
     expect(rows).toHaveLength(0);
+  });
+});
+
+/**
+ * The all-or-nothing promise, stated about the *declarations* rather than the
+ * seats — and the lock order that keeps two parties from deadlocking over them
+ * (issue #654, split out of #612).
+ */
+describe("createBookingParty declaration writes", () => {
+  /** Six seats' worth of room, so nothing here is refused as a full boat. */
+  async function roomFor(db: AppDb, shopId: string, tripId: string, capacity: number) {
+    await db
+      .update(trips)
+      .set({ capacity })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    await db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null, requiredSpecialties: [], requiresNitrox: false })
+      .where(and(eq(tripRequirements.tripId, tripId), eq(tripRequirements.shopId, shopId)));
+  }
+
+  /** Every self-declared claim this shop holds, in either table, plus the stamps. */
+  async function declarationsHeldBy(db: AppDb, shopId: string) {
+    const levels = await db
+      .select({ personId: certifications.personId })
+      .from(certifications)
+      .where(and(eq(certifications.shopId, shopId), isNotNull(certifications.selfDeclaredAt)));
+    const nitrox = await db
+      .select({ personId: nitroxCertifications.personId })
+      .from(nitroxCertifications)
+      .where(
+        and(
+          eq(nitroxCertifications.shopId, shopId),
+          isNotNull(nitroxCertifications.selfDeclaredAt),
+        ),
+      );
+    const stamped = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shopId), isNotNull(people.noCertificationDeclaredAt)));
+    return { levels, nitrox, stamped };
+  }
+
+  it("a party refused at the last member writes no declaration for the first five", async () => {
+    // The invariant that stands between an anonymous poster and five strangers'
+    // certification records. It holds only because the declaration write shares
+    // the party transaction — an implementation detail until this test, and one
+    // a refactor could move without anything going red. Post six members, make
+    // the sixth an email already booked on that departure, collect
+    // `already_booked`, roll back: at zero seat cost, five claims would
+    // otherwise have landed on five people's records.
+    const { db, shop, open } = await seededContext();
+    await roomFor(db, shop.id, open.id, 12);
+
+    // The sixth member's seat already exists, and is *not* itself declared —
+    // so every row this test finds afterwards can only have come from the party.
+    const held = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Sixth Member",
+      email: "sixth@example.com",
+    });
+    if (!held.ok) throw new Error("setup booking failed");
+    expect(await declarationsHeldBy(db, shop.id)).toMatchObject({
+      levels: [],
+      nitrox: [],
+      stamped: [],
+    });
+
+    const outcome = await createBookingParty(db, [
+      ...[0, 1, 2, 3].map((n) => ({
+        actor: "public" as const,
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: `Party Member ${n}`,
+        email: `party-member-${n}@example.com`,
+        declared: { level: "rescue" as const, nitrox: true },
+        admissionGate: "advise" as const,
+      })),
+      {
+        // The commonest answer at a shop selling Discover Scuba, and the one
+        // that writes a stamp on the person rather than a card.
+        actor: "public" as const,
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Party Member 4",
+        email: "party-member-4@example.com",
+        declared: { noCertification: true },
+        admissionGate: "advise" as const,
+      },
+      {
+        actor: "public" as const,
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Sixth Member",
+        email: "sixth@example.com",
+        declared: { level: "instructor" as const },
+        admissionGate: "advise" as const,
+      },
+    ]);
+
+    expect(outcome).toMatchObject({ ok: false, reason: "already_booked", failedIndex: 5 });
+    // Nothing for members 0..4 — not a card, not a nitrox claim, not a stamp.
+    expect(await declarationsHeldBy(db, shop.id)).toMatchObject({
+      levels: [],
+      nitrox: [],
+      stamped: [],
+    });
+    // And no seats either, which is the half that was already covered.
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).toEqual(["Sixth Member"]);
+  });
+
+  it("takes the party's person locks in resolved-id order, whatever order the form posted", async () => {
+    // The deadlock fix, pinned where the unit suite can see it. PGlite is
+    // single-connection and cannot exhibit `40P01`, so what is asserted here is
+    // the property that removes the cycle rather than the crash it prevents —
+    // the sequence of `people` rows the declaration pass locks is sorted by id,
+    // not by the order the six fieldsets were submitted in. Two parties on
+    // different trips naming the same divers therefore agree on the order, and
+    // there is no cycle left to break. `bookings.postgres.test.ts` races two
+    // real connections and asserts the crash itself.
+    const { db, shop, open } = await seededContext();
+    await roomFor(db, shop.id, open.id, 12);
+
+    // Created first and submitted in *descending* id order, so "sorted" is a
+    // fact about this run rather than a one-in-720 coincidence of six uuids.
+    const divers = [];
+    for (const n of [0, 1, 2, 3, 4, 5]) {
+      const person = await createDiver(db, {
+        shopId: shop.id,
+        fullName: `Ordered Member ${n}`,
+        email: `ordered-member-${n}@example.com`,
+      });
+      if (!person) throw new Error("diver setup failed");
+      divers.push(person);
+    }
+    const descending = [...divers].sort((a, b) => (a.id < b.id ? 1 : -1));
+
+    const locked: string[] = [];
+    const spy = vi
+      .spyOn(selfDeclaredCardsModule, "recordSelfDeclaredCards")
+      .mockImplementation(async (_tx, input) => {
+        locked.push(input.personId);
+        return { level: "not_said", noCertification: "not_said", nitrox: "not_said" };
+      });
+    try {
+      const outcome = await createBookingParty(
+        db,
+        descending.map((person) => ({
+          actor: "public" as const,
+          shopId: shop.id,
+          tripId: open.id,
+          fullName: person.fullName,
+          email: person.email ?? "",
+          declared: { level: "rescue" as const },
+        })),
+      );
+      if (!outcome.ok) throw new Error("expected all six seats to be sold");
+      // Submitted high-to-low, locked low-to-high: the pass reordered them.
+      expect(outcome.bookings.map((b) => b.personId)).toEqual(descending.map((p) => p.id));
+      expect(locked).toEqual([...descending].reverse().map((p) => p.id));
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

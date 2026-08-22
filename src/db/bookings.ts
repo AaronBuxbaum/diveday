@@ -235,7 +235,12 @@ export type BookingPartyOutcome =
  * the one-booking-per-person constraint.
  */
 export async function createBooking(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
-  return db.transaction((tx) => createBookingRecord(tx, req));
+  return db.transaction(async (tx) => {
+    const pending: PendingDeclaration[] = [];
+    const outcome = await createBookingRecord(tx, req, pending);
+    if (outcome.ok) await flushDeclarations(tx, pending);
+    return outcome;
+  });
 }
 
 /** Books every named diver as one all-or-nothing party reservation. */
@@ -252,8 +257,9 @@ export async function createBookingParty(
         personName: string;
         admissionAdvisory?: BookingAdmissionAdvisory;
       }> = [];
+      const pending: PendingDeclaration[] = [];
       for (const [index, request] of requests.entries()) {
-        const outcome = await createBookingRecord(tx, request);
+        const outcome = await createBookingRecord(tx, request, pending);
         if (!outcome.ok) throw new PartyBookingError(outcome, index);
         // Every seat past the organizer's own records which booking leads its
         // party (docs ADR 20260804-seat-claim-links) — the fact the claim-link
@@ -271,6 +277,7 @@ export async function createBookingParty(
         }
         created.push(outcome);
       }
+      await flushDeclarations(tx, pending);
       return { ok: true as const, bookings: created };
     })
     .catch((error: unknown): BookingPartyOutcome => {
@@ -451,7 +458,15 @@ async function readCertificationEvidence(tx: DbExecutor, shopId: string, personI
   };
 }
 
-async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise<BookingOutcome> {
+async function createBookingRecord(
+  db: DbExecutor,
+  req: BookingRequest,
+  /**
+   * Where this seat's declaration goes instead of straight to the database —
+   * see {@link flushDeclarations} for why the write cannot happen here.
+   */
+  pending: PendingDeclaration[],
+): Promise<BookingOutcome> {
   const tx = db;
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
@@ -718,7 +733,7 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
         claimedAt: null,
       })
       .where(eq(bookings.id, existing.id));
-    await persistDeclaration(tx, req, person.id, identityUnconfirmed);
+    pending.push({ req, personId: person.id, identityUnconfirmed });
     return {
       ok: true,
       bookingId: existing.id,
@@ -740,7 +755,7 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
-  await persistDeclaration(tx, req, person.id, identityUnconfirmed);
+  pending.push({ req, personId: person.id, identityUnconfirmed });
   return {
     ok: true,
     bookingId: created.id,
@@ -748,6 +763,71 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
     personName: person.fullName,
     admissionAdvisory,
   };
+}
+
+/** One seat's declaration, held until every seat in the submission is settled. */
+type PendingDeclaration = {
+  req: BookingRequest;
+  personId: string;
+  identityUnconfirmed: boolean;
+};
+
+/**
+ * Write the submission's declarations in one pass, ordered by the id of the
+ * `people` row each one locks.
+ *
+ * **The order is the point, not the batching.** `recordSelfDeclaredCards` opens
+ * with `SELECT ... FOR UPDATE` on the person, and a lock taken inside a
+ * transaction is held to commit — so a six-member party holds six `people`
+ * locks, and used to take them in the order the form posted them. Two parties
+ * on *different* trips naming the same two divers in opposite order therefore
+ * took the same two locks in opposite order, and Postgres broke the cycle by
+ * aborting one with `40P01`. That is not a `PartyBookingError`, so it did not
+ * surface as a booking refusal that a caller could word: it escaped the server
+ * action as an unhandled error and the diver saw a crash. Two seats, two trips,
+ * opposite name order was the whole recipe.
+ *
+ * Sorting by the **resolved** id is what removes the cycle — not by submitted
+ * order, and not by email, because the id is the thing being locked. Any total
+ * order would do; this is the one every caller can agree on without
+ * coordinating, since it is a property of the row itself.
+ *
+ * **This is half the fix, and it is the half that does not show up first.**
+ * There is a second deadlock underneath it that ordering cannot touch, because
+ * it is a lock *upgrade* on a single row: the `bookings` insert above takes
+ * `FOR KEY SHARE` on the diver it names, and `recordSelfDeclaredCards` used to
+ * ask for `FOR UPDATE` on that same tuple. Two submissions naming one diver
+ * each waited for the other's key-share, on one row, with no second lock to
+ * reorder. That is fixed where it lives — `self-declared-cards.ts` now takes
+ * `FOR NO KEY UPDATE` — and this sort is still needed for the genuine two-row
+ * cycle between two parties.
+ *
+ * **Not a retry loop, deliberately.** Catching `40P01` and trying again hides
+ * the cycle instead of removing it, and doubles the write under exactly the
+ * contention that provoked it.
+ *
+ * **Still inside the party transaction, and that is load-bearing.** It is what
+ * makes a party refused at member N leave no certification row and no
+ * `no_certification_declared_at` stamp for members 0..N-1 — the difference
+ * between an anonymous poster paying a committed seat per claim they write onto
+ * a stranger's record and paying nothing at all. `bookings.test.ts` pins it
+ * ("a party refused at the last member writes no declaration for the first
+ * five") so that a later refactor moving this write out of the transaction goes
+ * red rather than quiet.
+ */
+async function flushDeclarations(tx: DbExecutor, pending: PendingDeclaration[]): Promise<void> {
+  // Plain codepoint order, never `localeCompare`: the requirement is that every
+  // concurrent submission agrees on the sequence, and a collation that depends
+  // on the reader's locale is the one thing that could make two of them
+  // disagree about the same pair of ids.
+  const ordered = [...pending].sort((a, b) =>
+    a.personId < b.personId ? -1 : a.personId > b.personId ? 1 : 0,
+  );
+  // Sequential on purpose: a drizzle transaction is one checked-out client, so
+  // a fan-out here would be queued rather than parallel (`check:db-concurrency`).
+  for (const entry of ordered) {
+    await persistDeclaration(tx, entry.req, entry.personId, entry.identityUnconfirmed);
+  }
 }
 
 /**
