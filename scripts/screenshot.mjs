@@ -149,7 +149,13 @@ const SKELETON_SELECTOR = "main .animate-pulse:not([data-live-pulse])";
  */
 async function waitPastTheSkeleton(page, target) {
   try {
-    await page.waitForFunction(() => !document.querySelector(SKELETON_SELECTOR), undefined, {
+    // The selector is passed in, never closed over: `waitForFunction` runs its
+    // predicate **inside the page**, where this module's consts do not exist.
+    // Closing over it threw `ReferenceError: SKELETON_SELECTOR is not defined`
+    // on every route — swallowed by the catch below and reported as "the page
+    // never finished streaming", which is the one explanation that sends the
+    // reader to look at the dev server instead of at this line.
+    await page.waitForFunction((selector) => !document.querySelector(selector), SKELETON_SELECTOR, {
       timeout: SKELETON_TIMEOUT_MS,
     });
   } catch {
