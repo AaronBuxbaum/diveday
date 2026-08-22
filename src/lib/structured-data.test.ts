@@ -18,12 +18,29 @@ import {
 
 const ORIGIN = "https://diveday.example";
 
+/**
+ * A shop with an address on file, which is what a set-up shop looks like — and
+ * what the Event needs to be eligible at all. This fixture carried five nulls
+ * until 2026-08-22, so every `tripPageJsonLd` case below was silently asserting
+ * against an Event Google rejects (issue #703). `addresslessShop` is the state
+ * that used to be the default; it now has one test rather than all of them.
+ */
 const shop: ShopForStructuredData = {
   name: "Blue Mantis Divers",
   slug: "blue-mantis",
   contactEmail: "hello@bluemantis.example",
   contactPhone: "+1 305 555 0134",
   currency: "usd",
+  addressStreet: "100 Ocean Drive",
+  addressLocality: "Key Largo",
+  addressRegion: "FL",
+  addressPostalCode: "33037",
+  addressCountry: "US",
+};
+
+/** A shop legitimately set up with no street address — see `shopAddressOf`. */
+const addresslessShop: ShopForStructuredData = {
+  ...shop,
   addressStreet: null,
   addressLocality: null,
   addressRegion: null,
@@ -108,11 +125,11 @@ describe("shopAddressOf", () => {
   });
 
   it("emits nothing when no address field is set at all", () => {
-    expect(shopAddressOf(shop)).toBeUndefined();
+    expect(shopAddressOf(addresslessShop)).toBeUndefined();
   });
 
   it("still builds a partial PostalAddress when only some fields are set", () => {
-    const address = shopAddressOf({ ...shop, addressCountry: "MX" });
+    const address = shopAddressOf({ ...addresslessShop, addressCountry: "MX" });
     expect(address).toEqual({
       "@type": "PostalAddress",
       streetAddress: null,
@@ -155,7 +172,7 @@ describe("shopJsonLd", () => {
   });
 
   it("omits the address key entirely when the shop has none on file", () => {
-    expect(shopJsonLd(shop, ORIGIN).address).toBeUndefined();
+    expect(shopJsonLd(addresslessShop, ORIGIN).address).toBeUndefined();
   });
 
   it("publishes a full PostalAddress once the shop has one on file", () => {
@@ -215,9 +232,19 @@ describe("shopJsonLd", () => {
   });
 });
 
+/**
+ * Every case below is about a shop with an address, so the Event exists. This
+ * unwraps the `| null` in one place rather than making each assertion carry a
+ * `?.` that would quietly pass against no Event at all.
+ */
+function eventFor(graph: JsonLdObject | null): JsonLdObject {
+  if (!graph) throw new Error("expected an Event — this shop has an address on file");
+  return graph;
+}
+
 describe("tripPageJsonLd", () => {
   it("describes the departure as a bookable offline Event", () => {
-    const graph = tripPageJsonLd(shop, trip, ORIGIN);
+    const graph = eventFor(tripPageJsonLd(shop, trip, ORIGIN));
     expect(graph["@context"]).toBe("https://schema.org");
     expect(graph["@type"]).toBe("Event");
     expect(graph.startDate).toBe("2026-08-04T12:00:00.000Z");
@@ -229,7 +256,7 @@ describe("tripPageJsonLd", () => {
   });
 
   it("publishes the offer in the shop's own currency, not dollars", () => {
-    const graph = tripPageJsonLd({ ...shop, currency: "mxn" }, trip, ORIGIN);
+    const graph = eventFor(tripPageJsonLd({ ...shop, currency: "mxn" }, trip, ORIGIN));
     expect(at(graph, "offers.priceCurrency")).toBe("MXN");
     expect(at(graph, "offers.price")).toBe("180.00");
   });
@@ -237,34 +264,65 @@ describe("tripPageJsonLd", () => {
   // A fixed `.toFixed(2)` published a ¥18,000 charter as "180.00" — a price a
   // hundred times too low, to the one audience that can't ask about it.
   it("uses the currency's own decimal places for a zero-decimal currency", () => {
-    const graph = tripPageJsonLd({ ...shop, currency: "jpy" }, trip, ORIGIN);
+    const graph = eventFor(tripPageJsonLd({ ...shop, currency: "jpy" }, trip, ORIGIN));
     expect(at(graph, "offers.priceCurrency")).toBe("JPY");
     expect(at(graph, "offers.price")).toBe("18000");
   });
 
+  /**
+   * **`location.address` is what makes the Event eligible at all.**
+   *
+   * Google requires it for an offline event; a `Place` carrying only a name is
+   * an error in the Rich Results Test, and the whole Event — seat count,
+   * availability, offer and all — is dropped from the rich result. Every
+   * departure this app has published was in that state, and this file never
+   * caught it because it asserted `location.name` and nothing else, against a
+   * fixture that had no address (issue #703).
+   */
+  it("gives the venue the shop's postal address, keeping the dive site's name", () => {
+    const graph = eventFor(tripPageJsonLd(shop, trip, ORIGIN));
+
+    expect(at(graph, "location.name")).toBe("Molasses Reef");
+    expect(at(graph, "location.address")).toEqual({
+      "@type": "PostalAddress",
+      streetAddress: "100 Ocean Drive",
+      addressLocality: "Key Largo",
+      addressRegion: "FL",
+      postalCode: "33037",
+      addressCountry: "US",
+    });
+  });
+
+  it("emits no Event at all for a shop with no address, rather than an invalid one", () => {
+    // A real, deliberate state — a shop can be fully set up with no street. A
+    // missing rich result beats a permanent error in its Search Console, and
+    // it is the same call `shopAddressOf` makes about an address of five nulls.
+    expect(tripPageJsonLd(addresslessShop, trip, ORIGIN)).toBeNull();
+  });
+
   it("falls back to the shop as the venue when no dive site is named", () => {
-    const graph = tripPageJsonLd(shop, { ...trip, diveSiteName: null }, ORIGIN);
+    const graph = eventFor(tripPageJsonLd(shop, { ...trip, diveSiteName: null }, ORIGIN));
     expect(at(graph, "location.name")).toBe("Blue Mantis Divers");
   });
 
   it("makes no offer at all for an unpriced charter, rather than publishing it as free", () => {
-    const graph = tripPageJsonLd(shop, { ...trip, priceCents: null }, ORIGIN);
+    const graph = eventFor(tripPageJsonLd(shop, { ...trip, priceCents: null }, ORIGIN));
     expect(graph.offers).toBeUndefined();
   });
 
   it("reports a full trip as sold out", () => {
-    const graph = tripPageJsonLd(shop, { ...trip, booked: 12 }, ORIGIN);
+    const graph = eventFor(tripPageJsonLd(shop, { ...trip, booked: 12 }, ORIGIN));
     expect(at(graph, "offers.availability")).toBe("https://schema.org/SoldOut");
     expect(graph.remainingAttendeeCapacity).toBe(0);
   });
 
   it("reports a trip on a conditions hold as sold out — it cannot be booked right now", () => {
-    const graph = tripPageJsonLd(shop, { ...trip, conditionsHold: true }, ORIGIN);
+    const graph = eventFor(tripPageJsonLd(shop, { ...trip, conditionsHold: true }, ORIGIN));
     expect(at(graph, "offers.availability")).toBe("https://schema.org/SoldOut");
   });
 
   it("never reports negative capacity if an overbooked roster ever slips through", () => {
-    const graph = tripPageJsonLd(shop, { ...trip, booked: 20 }, ORIGIN);
+    const graph = eventFor(tripPageJsonLd(shop, { ...trip, booked: 20 }, ORIGIN));
     expect(graph.remainingAttendeeCapacity).toBe(0);
   });
 
@@ -325,6 +383,15 @@ describe("scheduleJsonLd", () => {
         datePublished: "2026-07-15T10:00:00.000Z",
       },
     ]);
+  });
+
+  it("falls back to the bare shop when no departure can carry an address", () => {
+    // With no address every Event is omitted, and an ItemList of zero is the
+    // same noise an empty schedule is — the shop node already says "this
+    // operator exists, with nothing on the books" (issue #703).
+    const graph = scheduleJsonLd(addresslessShop, [trip, { ...trip, id: "trip-2" }], ORIGIN);
+    expect(graph["@type"]).toBe("SportsActivityLocation");
+    expect(graph.itemListElement).toBeUndefined();
   });
 
   it("never threads reviews into a per-trip Event's organizer", () => {
