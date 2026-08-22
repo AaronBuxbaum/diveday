@@ -16,6 +16,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, nextCreatedAt } from "./seed-clock";
+import { reviewedBy } from "./seed-review";
 
 /**
  * **The four boats that say no, and the one that must not.**
@@ -107,6 +108,7 @@ export async function seedCertGates(
     level: "instructor" as const,
     identifier: "DEMO-GATE-0001",
     status: "verified" as const,
+    ...reviewedBy(ctx.instructorId),
     createdAt: nextCreatedAt(),
   });
 

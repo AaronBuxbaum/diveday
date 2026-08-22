@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, certifications, people, personRoles, type trips, waiverRecords } from "./schema";
 import { at } from "./seed-clock";
+import { reviewedBy } from "./seed-review";
 
 /** A fictitious diver used only to train on the unresolved medical-review state. */
 const DEMO_MEDICAL_REVIEW_DIVER = "Morgan Vale";
@@ -22,6 +23,8 @@ export async function seedMedicalReview(
   shopId: string,
   waiverTemplate: { id: string; title: string; version: number; body: string },
   tripRows: (typeof trips.$inferSelect)[],
+  /** The staffer this diver's card was checked by — see `reviewedBy`. */
+  reviewerId: string,
 ): Promise<void> {
   const trip = tripRows.find((row) => row.title === DEMO_MEDICAL_REVIEW_TRIP);
   if (!trip) throw new Error("seedMedicalReview: training trip missing");
@@ -68,6 +71,7 @@ export async function seedMedicalReview(
       level: "open_water",
       identifier: "DEMO-MEDICAL-REVIEW",
       status: "verified",
+      ...reviewedBy(reviewerId),
     })
     .onConflictDoNothing();
 

@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import { bookings, importedPaymentHistory, nitroxCertifications, priorVisits } from "./schema";
 import { dateAt } from "./seed-clock";
+import { reviewedBy } from "./seed-review";
 
 /**
  * Nitrox demo: a couple of verified EANx cards (and one pending), plus an
@@ -15,6 +16,8 @@ export async function seedNitrox(
   customers: { id: string }[],
   wreck: { id: string },
   bookingRows: { id: string; tripId: string; personId: string }[],
+  /** The staffer every verified card here was checked by — see `reviewedBy`. */
+  reviewerId: string,
 ): Promise<void> {
   // Two verified EANx cards, one still pending review.
   await db.insert(nitroxCertifications).values([
@@ -24,6 +27,7 @@ export async function seedNitrox(
       agency: "padi" as const,
       identifier: "EANX-0001",
       status: "verified" as const,
+      ...reviewedBy(reviewerId),
       reviewedAt: nowDate(),
     },
     {
@@ -32,6 +36,7 @@ export async function seedNitrox(
       agency: "ssi" as const,
       identifier: "EANX-0002",
       status: "verified" as const,
+      ...reviewedBy(reviewerId),
       reviewedAt: nowDate(),
     },
     {
@@ -62,7 +67,10 @@ export async function seedNitrox(
         agency: "padi" as const,
         identifier: `EANX-${String(index + 1).padStart(4, "0")}`,
         status,
-        reviewedAt: status === "verified" ? nowDate() : null,
+        // The review is a pair — the date and the staffer who made it. This row
+        // carried only the date, so the departure log fell to "Certified —
+        // reviewer not recorded" (issue #625).
+        ...(status === "verified" ? reviewedBy(reviewerId) : { reviewedAt: null }),
       };
     })
     .filter((row) => row !== null);
@@ -80,6 +88,9 @@ export async function seedNitrox(
         agency: "padi" as const,
         identifier: "EANX-0013",
         status: "verified" as const,
+        // No reviewer and no date, deliberately: an import is not a review, and
+        // `importedAt IS NOT NULL AND reviewedAt IS NULL` is the exact pair that
+        // raises the "certified · confirm to clear" nudge (H-24).
         importedAt: nowDate(),
         importedFromLabel: "Coral Coast Divers",
       },

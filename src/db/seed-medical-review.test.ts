@@ -58,7 +58,10 @@ describe("seeded medical-review training scenario", () => {
       .delete(waiverRecords)
       .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, fixturePerson.id)));
 
-    await seedMedicalReview(db, shop.id, template, tripRows);
+    // Re-running the scenario names the same reviewer it would have the first
+    // time; who that is does not matter to this test, only that it is a real
+    // staff row the foreign key accepts.
+    await seedMedicalReview(db, shop.id, template, tripRows, fixturePerson.id);
 
     const peopleRows = await db
       .select({ id: people.id })
