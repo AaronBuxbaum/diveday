@@ -573,9 +573,34 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // front of the staffer is the point: it used to be a one-tap "Saved" (issue
   // #720).
   await page.getByRole("button", { name: "Save new version" }).click();
-  await expect(page.getByText(/\d+ divers have signed/)).toBeVisible();
+  // **The consequence, in sentence one.** "Replaces the release" is a statement
+  // about a document and says nothing about a signature ceasing to count; the
+  // second sentence then partitions the group, so a manager could read "11 need
+  // chasing, the other 801 are fine". "every one of them" forecloses that, and
+  // it is the only text read before an act with no undo (`dive-domain-expert`,
+  // on issue #790).
+  await expect(page.getByText(/voids the signatures of \d+ divers/)).toBeVisible();
+  await expect(page.getByText(/every one of them signs again/)).toBeVisible();
+  // **The operational half.** The lifetime number says what publishing costs;
+  // this one says which boat it lands on, and it is the one that changes what
+  // the shop does next (issue #790). Never larger than the whole set.
+  const confirm = page.getByText(/voids the signatures of/);
+  const [, signed] = /signatures of (\d+) divers/.exec(await confirm.innerText()) ?? [];
+  const [, soon] = /(\d+) of them board/.exec(await confirm.innerText()) ?? [];
+  expect(Number(soon)).toBeGreaterThan(0);
+  // Strictly fewer, not merely no more: the first filter keyed on the booking
+  // join rather than the trip join, so the two numbers came out equal and the
+  // confirm restated the alarming number as an operational one.
+  expect(Number(soon)).toBeLessThan(Number(signed));
+
   await page.getByRole("button", { name: "Publish new version" }).click();
-  await expect(page.getByRole("status")).toContainText("no longer count");
+  await expect(page.getByRole("status")).toContainText("sign again before boarding");
+  // The shop now owes those divers a link, and the batch send is one tap away
+  // rather than a hunt.
+  await expect(page.getByRole("link", { name: "Send them by departure" })).toHaveAttribute(
+    "href",
+    /\?view=departures$/,
+  );
 
   // The current card advances to the next version.
   await expect(release.getByText("Version 4")).toBeVisible();

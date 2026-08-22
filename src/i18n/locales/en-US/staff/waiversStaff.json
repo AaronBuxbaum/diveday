@@ -7,10 +7,12 @@
     "savedFirst": "Your waiver is saved.",
     "invalid": "That didn't save. The release needs to be at least a few sentences long.",
     "unchanged": "No change — the release is exactly as it was, so nothing was published and no signature was affected.",
-    "resigning": "{count, plural, one {New version published. # signed release no longer counts — that diver signs again before boarding.} other {New version published. # signed releases no longer count — those divers sign again before boarding.}}"
+    "resigningSendLink": "Send them by departure",
+    "resigning": "{count, plural, one {New version published. # diver signs again before boarding.} other {New version published. # divers sign again before boarding.}}"
   },
   "confirm": {
-    "message": "{count, plural, one {Publishing this replaces the release that # diver has signed. They sign again before boarding.} other {Publishing this replaces the release that # divers have signed. They all sign again before boarding.}}",
+    "message": "{count, plural, one {Publishing this voids the signature of # diver — they sign again before their next dive.} other {Publishing this voids the signatures of # divers — every one of them signs again before their next dive.}}",
+    "boardingSoon": "{count, plural, one {# of them boards in the next {days} days.} other {# of them board in the next {days} days.}}",
     "publish": "Publish new version",
     "cancel": "Never mind"
   },
