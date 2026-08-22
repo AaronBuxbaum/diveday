@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
@@ -269,12 +270,32 @@ export default async function CheckInPage({
         // (`arrivalsWindowIsInsideHorizon`), so a diver at the counter is
         // always someone Today also shows (task 141, UX persona lens 17).
         meta={
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            {t("shared.operationalWindow.arrivalsLens", {
-              lookback: ARRIVALS_LOOKBACK_HOURS,
-              ahead: ARRIVALS_AHEAD_HOURS,
-            })}
-          </p>
+          <>
+            <p className="mt-1 max-w-2xl text-sm text-muted">
+              {t("shared.operationalWindow.arrivalsLens", {
+                lookback: ARRIVALS_LOOKBACK_HOURS,
+                ahead: ARRIVALS_AHEAD_HOURS,
+              })}
+            </p>
+            {/* **Say it before the tap, not after.** The counter is live-only —
+                the boat has an encrypted device copy and this does not — so a
+                dropped signal means the board is stale and the next tap will
+                not send. `ConnectivityStatus`'s own doc comment anticipated
+                exactly this ("a live-only surface like boarding warns its board
+                may be stale instead") and nothing in the app had ever mounted
+                it that way (issue #819). A staffer who can see the connection
+                is down does not have to wonder whether the tap landed. */}
+            <span className="mt-2 inline-flex">
+              <ConnectivityStatus
+                offlineLabel={t("checkIn.offlineLabel")}
+                copy={{
+                  online: t("shared.connectivity.online"),
+                  onlineTitle: t("shared.connectivity.onlineTitle"),
+                  offlineTitle: t("shared.connectivity.offlineTitle"),
+                }}
+              />
+            </span>
+          </>
         }
       />
 
@@ -486,6 +507,7 @@ export default async function CheckInPage({
                             <CheckInActionForm
                               action={checkInAction.bind(null, shopSlug)}
                               bookingId={row.bookingId}
+                              sendFailedLabel={t("checkIn.sendFailed")}
                               ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
                               className="hover:bg-surface-sunken/60"
                               trailing={
@@ -513,6 +535,7 @@ export default async function CheckInPage({
                             <CheckInActionForm
                               action={undoCheckInAction.bind(null, shopSlug)}
                               bookingId={row.bookingId}
+                              sendFailedLabel={t("checkIn.sendFailed")}
                               ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
                               className="hover:bg-success/15"
                               trailing={

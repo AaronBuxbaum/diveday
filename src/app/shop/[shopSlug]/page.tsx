@@ -12,6 +12,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { TodayQueue } from "@/app/shop/[shopSlug]/_components/today/TodayQueue";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
@@ -412,6 +413,22 @@ async function TodayBody({
                 nav tabs and the phone dock already carry one tap away. A
                 cross-link earns its place by saving a reader something; one
                 that duplicates permanent chrome only adds a thing to read. */}
+            {/* **Live-only, and it should say so.** Today's board is read
+                straight from the server every render — the boat has an
+                encrypted device copy, this does not — so a dropped signal
+                means the counts, the crew line and the blocked names are
+                whatever they were when the signal went. A staffer who can see
+                that does not act on a stale board (issue #819). */}
+            <span className="mt-2 inline-flex">
+              <ConnectivityStatus
+                offlineLabel={t("shopHome.offlineLabel")}
+                copy={{
+                  online: t("shared.connectivity.online"),
+                  onlineTitle: t("shared.connectivity.onlineTitle"),
+                  offlineTitle: t("shared.connectivity.offlineTitle"),
+                }}
+              />
+            </span>
           </>
         }
       />
