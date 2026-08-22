@@ -57,6 +57,8 @@
     "endBeforeStart": "La salida tiene que terminar después de empezar.",
     "capacityBelowBooked": "Esa capacidad está por debajo de los buceadores que ya tienen reserva en esta salida — cancela reservas primero, o fija una capacidad mayor.",
     "capacityBelowBookedCount": "{count, plural, one {La capacidad es menor que el # buceador ya reservado: cancela reservas primero o súbela.} other {La capacidad es menor que los # buceadores ya reservados: cancela reservas primero o súbela.}}",
+    "capacityAboveBoat": "Esa capacidad supera lo que admite el barco asignado — elige un número menor o pasa la salida a un barco mayor.",
+    "capacityAboveBoatCount": "{count, plural, one {El barco asignado admite # buceador — baja la capacidad o pasa esta salida a un barco mayor.} other {El barco asignado admite # buceadores — baja la capacidad o pasa esta salida a un barco mayor.}}",
     "lastMinuteSent": "Oferta de última hora enviada.",
     "lastMinuteSentCount": "{count, plural, one {Oferta de última hora enviada a # buceador.} other {Oferta de última hora enviada a # buceadores.}}",
     "lastMinuteInvalidDiscount": "Elige un descuento entre el 5% y el 90%.",

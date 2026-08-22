@@ -17,7 +17,8 @@
     "alreadySailed": "The crew has already counted heads against this departure. Cancel it from its own page if the day is off.",
     "hasRoster": "Divers have booked this departure, so it can’t be deleted. Cancel it from its own page.",
     "addedNamed": "“{title}” is on the board.",
-    "addedSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled."
+    "addedSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled.",
+    "capacityAboveBoat": "That capacity is above what the assigned boat holds."
   },
   "builder": {
     "ariaLabel": "Schedule builder",

@@ -266,10 +266,29 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       minimumDecisionHours,
       diveMode,
       boatId,
+      capacity,
+      // The hull the panel just assigned. Its own prefill puts this number in
+      // the box, but the box is editable afterwards and the server has to be
+      // the one that says no.
+      boatCapacity: boatId
+        ? ((await listBoats(await getDb(), shop.id)).find((boat) => boat.id === boatId)?.capacity ??
+          null)
+        : null,
     },
     shop,
   );
   if (!details.ok) {
+    if (details.reason === "capacity_above_boat") {
+      await trackEvent({
+        name: "schedule_builder_action",
+        action: "add",
+        outcome: "capacity_above_boat",
+      });
+      // The board's own `?builder=` channel, not `noticeUrl` — this page reads
+      // its refusals through `BUILDER_NOTICE_KEYS`. `count` rides alongside so
+      // the banner can name the hull's number rather than say "too many".
+      redirect(`${back}?builder=capacity-above-boat&count=${details.boatCapacity}`);
+    }
     if (details.reason === "end_before_start") {
       await trackEvent({
         name: "schedule_builder_action",

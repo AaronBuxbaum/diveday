@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
+import { getBoatById } from "@/db/boats";
 import {
   bookingDiverName,
   cancelBooking,
@@ -322,6 +323,15 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
   if (!shopNow) redirect(noticeUrl(back, "invalid", { form: "details" }));
+  // **The hull this departure already sails on.** This form has no boat field,
+  // so a staffer can raise capacity with the vessel entirely off screen — which
+  // is exactly why the check has to read the stored `boat_id` rather than trust
+  // a submitted one. A departure with no boat, or a shore or pool dive, yields
+  // no capacity and is not checked.
+  const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
+  const assignedBoat = tripNow?.boatId
+    ? await getBoatById(dbi, s.user.shopId, tripNow.boatId)
+    : null;
   // One pipeline, shared with the board's add panel (`src/lib/trip-details.ts`).
   // Editing a departure now applies the same rules creating one does — an
   // impossible calendar day is refused, and a free-cancellation window with no
@@ -338,11 +348,21 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       cancellationWindowHours,
       minimumBookings,
       minimumDecisionHours,
+      capacity,
+      boatCapacity: assignedBoat?.capacity ?? null,
     },
     shopNow,
   );
   if (!details.ok) {
     if (details.reason === "end_before_start") redirect(noticeUrl(back, "end-before-start"));
+    if (details.reason === "capacity_above_boat") {
+      redirect(
+        noticeUrl(back, "capacity-above-boat", {
+          count: details.boatCapacity,
+          form: "details",
+        }),
+      );
+    }
     redirect(noticeUrl(back, "invalid", { form: "details" }));
   }
   const dives = tripDiveDraftsFromForm(formData, plannedDives);

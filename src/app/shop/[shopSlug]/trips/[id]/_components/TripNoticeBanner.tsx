@@ -208,6 +208,14 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.capacityBelowBooked",
     countKey: "trips.notices.capacityBelowBookedCount",
   },
+  // This form has no boat field, so the refusal has to name the hull's number —
+  // otherwise a staffer is told they are over a limit they cannot see.
+  "capacity-above-boat": {
+    form: "details",
+    tone: "danger",
+    key: "trips.notices.capacityAboveBoat",
+    countKey: "trips.notices.capacityAboveBoatCount",
+  },
   "last-minute-sent": {
     form: "last-minute-deal",
     tone: "success",
