@@ -58,6 +58,18 @@ export type TripDetailsFields = {
    */
   diveMode?: TripDiveMode;
   boatId?: string | null;
+  /**
+   * The seats this submission asks for, and the capacity of the hull it is
+   * assigned to. Both optional: a caller that is not changing capacity, or a
+   * departure with no boat, supplies neither and is not checked.
+   */
+  capacity?: number;
+  /**
+   * The assigned hull's own capacity. `null` for a shore or pool dive, an
+   * unassigned departure, or a boat row whose capacity was never recorded —
+   * every case where there is no vessel number to be over.
+   */
+  boatCapacity?: number | null;
 };
 
 export type TripDetailsShop = {
@@ -73,7 +85,7 @@ export type TripDetailsShop = {
  * callers say something specific about it — the board also counts it as an
  * analytics outcome — while everything else lands as one "that didn't parse".
  */
-export type TripDetailsRefusal = "invalid" | "end_before_start";
+export type TripDetailsRefusal = "invalid" | "end_before_start" | "capacity_above_boat";
 
 export type TripDetailsPatch = {
   startsAt: Date;
@@ -91,7 +103,10 @@ export type TripDetailsPatch = {
 
 export type TripDetailsResult =
   | { ok: true; patch: TripDetailsPatch }
-  | { ok: false; reason: TripDetailsRefusal };
+  | { ok: false; reason: "invalid" | "end_before_start" }
+  // Carries the hull's number so the notice can say "Reef Runner holds 6"
+  // rather than a bare "that didn't work".
+  | { ok: false; reason: "capacity_above_boat"; boatCapacity: number };
 
 export function tripDetailsPatch(
   fields: TripDetailsFields,
@@ -117,6 +132,26 @@ export function tripDetailsPatch(
   // Day by day rather than one offset: a multi-day trip can straddle a DST
   // change, and what a shop promises is the wall-clock time — "back at the dock
   // at 12:30" on both days.
+  // **The hull is the ceiling, and nothing checked it until now.** A departure
+  // and a boat both carry a capacity; the only thing that ever joined them was
+  // the add panel's client-side prefill, which is help rather than a rule and
+  // loses to anything typed after it. So a shop could sell 24 seats on a boat
+  // it had recorded as holding 6 — and every gate downstream would defend that
+  // 24 faithfully, through waivers, cert checks and a manifest. On a US
+  // uninspected vessel the six-passenger limit is a legal line, and the app had
+  // the number that would catch it and was not looking at it.
+  //
+  // **Refused, never clamped.** Quietly lowering a number a staffer typed
+  // leaves a shop with fewer seats than it meant to sell and no way to find out
+  // why.
+  if (
+    fields.capacity !== undefined &&
+    fields.boatCapacity != null &&
+    fields.capacity > fields.boatCapacity
+  ) {
+    return { ok: false, reason: "capacity_above_boat", boatCapacity: fields.boatCapacity };
+  }
+
   const meetingDays = tripMeetingDays({ start: startWall, end: endWall }, fields.dayCount);
   if (!meetingDays) return invalid;
   const scheduleDays = meetingDays.map((meeting, index) => ({
