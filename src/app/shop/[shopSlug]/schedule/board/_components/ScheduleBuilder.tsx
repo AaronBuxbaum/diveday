@@ -23,6 +23,12 @@ import {
 export type BuilderTrip = {
   id: string;
   title: string;
+  /**
+   * The assigned hull's id, for the board's per-boat double-booking check
+   * (`overlappingBoatIds`). `boatName` below is what a card renders; this is
+   * what identifies the vessel, since two hulls may share a name.
+   */
+  boatId?: string | null;
   /** `YYYY-MM-DD` in the shop's timezone — the grouping key and the date input's value. */
   dateIso: string;
   /** `HH:mm` in the shop's timezone. */

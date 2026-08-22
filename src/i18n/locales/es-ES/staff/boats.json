@@ -36,6 +36,7 @@
   "boatDeleted": "Embarcación eliminada.",
   "boatInvalid": "Proporciona un nombre de embarcación y una capacidad.",
   "concurrencyWarning": "{tripCount} salidas en barco simultáneas programadas, pero tu centro tiene {boatCount, plural, =1 {1 embarcación} other {# embarcaciones}}.",
+  "doubleBookedWarning": "{boats} tiene dos salidas a la vez — un barco no puede estar en dos sitios.",
   "diveModeLabel": "Modo de inmersión",
   "modeBoat": "Inmersión en barco",
   "modeShore": "Inmersión desde costa",
