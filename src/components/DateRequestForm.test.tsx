@@ -39,14 +39,18 @@ const copy: DateRequestCopy = {
 
 function renderInquiry(
   submitInquiry: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>,
-  { askInterest = false }: { askInterest?: boolean } = {},
+  {
+    askInterest = false,
+    contactEmail = "hello@example.com",
+    contactPhone = "+1 305 555 0134" as string | null,
+  }: { askInterest?: boolean; contactEmail?: string | null; contactPhone?: string | null } = {},
 ) {
   return renderDiver(
     <DateRequestForm
       submitRequest={submitInquiry}
       askInterest={askInterest}
-      contactEmail="hello@example.com"
-      contactPhone="+1 305 555 0134"
+      contactEmail={contactEmail}
+      contactPhone={contactPhone}
       copy={copy}
     />,
   );
@@ -261,6 +265,24 @@ describe("DateRequestForm — one way out of the form", () => {
     expect(screen.queryByRole("button", { name: /copy/i })).not.toBeInTheDocument();
     expect(screen.getByText("hello@example.com")).toBeInTheDocument();
     expect(screen.getByText("+1 305 555 0134")).toBeInTheDocument();
+  });
+
+  /**
+   * **A shop with no contact details still takes requests.**
+   *
+   * The whole form used to be gated on the shop having an email, which is the
+   * exact inverse of useful: a shop with no departures at all is the one whose
+   * only public conversion is "tell me what you want and when", and it was
+   * switched off. The request lands in `course_inquiries` and staff read it on
+   * the Requests page — the email only ever fed the notification, which the
+   * action already skips when there is none (issue #710).
+   */
+  it("still sends when the shop has no contact details, and offers to write to nobody", () => {
+    renderInquiry(vi.fn(), { contactEmail: null, contactPhone: null });
+
+    expect(screen.getByRole("button", { name: "Send inquiry" })).toBeInTheDocument();
+    expect(screen.queryByText(/Or write to us/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /mailto/i })).not.toBeInTheDocument();
   });
 
   it("carries every answer to the server instead", async () => {

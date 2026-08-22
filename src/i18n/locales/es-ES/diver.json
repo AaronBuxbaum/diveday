@@ -68,6 +68,7 @@
     "noTrips": "Todavía no hay salidas programadas",
     "noTripsStaff": "El tablón está vacío. Programa la primera salida y los buceadores podrán reservar.",
     "noTripsPublic": "Vuelve pronto — o llámanos y te buscamos un barco.",
+    "noTripsPublicNoPhone": "Vuelve pronto — o cuéntanos abajo cuándo estás por aquí.",
     "noTripsMonth": "No hay salidas este mes — prueba otro mes.",
     "filters": {
       "tripType": "Tipo de salida",

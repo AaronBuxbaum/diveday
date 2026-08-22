@@ -413,7 +413,15 @@ export default async function SchedulePage({
       {!hasUpcoming ? (
         <EmptyState>
           <h2 className="font-medium">{t("schedule.noTrips")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("schedule.noTripsPublic")}</p>
+          {/* "or call the shop" only where there is a number to call. A shop
+              that has not filled in its contact details yet — the state its own
+              setup checklist leaves it in while it shares this link — was
+              offering an affordance the page withholds, so it points at the
+              date-request form below instead, which is now always there
+              (issue #710). */}
+          <p className="mt-1 text-sm text-muted">
+            {t(shop.contactPhone ? "schedule.noTripsPublic" : "schedule.noTripsPublicNoPhone")}
+          </p>
         </EmptyState>
       ) : upcoming.length === 0 ? (
         <EmptyState>
@@ -745,17 +753,26 @@ export default async function SchedulePage({
           // pages — `DiveDeclarationFields` inside the deal-list form reads them.
           namespaces={["lastMinute", "inquiry", "common", "course"]}
         >
-          <LastMinuteListForm shopSlug={shopSlug} />
-          {shop.contactEmail ? (
-            <DateRequestForm
-              submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
-              askInterest
-              sectionId="request-a-date"
-              contactEmail={shop.contactEmail}
-              contactPhone={shop.contactPhone}
-              copy={dateRequestCopy(t, "dive")}
-            />
-          ) : null}
+          {/* The deal list stands down for a shop that has never had a
+              departure. It asks a diver to be told when a boat needs to fill
+              seats at a discount, and points them at "that trip's own page" —
+              on a shop with no boats it collects addresses it will never mail,
+              about trips that do not exist (issue #710). */}
+          {hasUpcoming ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
+          {/* Not gated on `contactEmail`. The request lands in
+              `course_inquiries` and staff read it at /shop/<slug>/requests, so
+              the shop's email is only needed for the notification — which
+              `submitInquiryAction` already skips when there is none. Guarding
+              the form on it switched off the one conversion a shop with
+              nothing on the books can still make (issue #710). */}
+          <DateRequestForm
+            submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
+            askInterest
+            sectionId="request-a-date"
+            contactEmail={shop.contactEmail}
+            contactPhone={shop.contactPhone}
+            copy={dateRequestCopy(t, "dive")}
+          />
         </DiverIntlProvider>
       ) : null}
       {/* Human-discovery footer, embed mode only — a single small line, not a

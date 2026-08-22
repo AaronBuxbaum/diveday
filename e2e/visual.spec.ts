@@ -1792,6 +1792,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Every boat is boarding-ready" }).waitFor();
         await capture(page, "today-empty-departures", scheme);
 
+        // **The page this shop is told to paste on its website.** Step 4 of the
+        // checklist above hands over this URL, and nothing had ever
+        // photographed what a visitor finds at it before the shop has data —
+        // the seed, the specs and every other capture see a shop with a board.
+        // What was there: an empty state telling a diver to call a number the
+        // page withholds, a discount list for boats that do not exist, and the
+        // one form that would help switched off because the shop had not set a
+        // contact email (issue #710). Free to take here — the shop already
+        // exists and this is one navigation.
+        await page.goto(`/s/${unique}`);
+        await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
+        await capture(page, "public-schedule-new-shop", scheme);
+
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
         await page.goto(`/shop/${unique}/settings`);
