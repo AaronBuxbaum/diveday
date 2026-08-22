@@ -34,6 +34,8 @@ import {
   certifications,
   courseInquiries,
   courses,
+  divePackageEntitlements,
+  divePackages,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -241,6 +243,25 @@ export async function loadShopExportBundleInput(
         .where(eq(shopPromoCodes.shopId, shopId))
         .orderBy(asc(shopPromoCodes.createdAt), asc(shopPromoCodes.id));
       const promoCodeText = new Map(promoCodeRows.map((row) => [row.id, row.code]));
+
+      // The shop's own price list of prepaid packages, and every dive a diver
+      // has bought and not yet taken (ADR
+      // 20260822-a-package-is-entitlements-not-money). Both are shop records by
+      // the export rule's own test — neither is a credential, an infrastructure
+      // pointer, nor DiveDay's bookkeeping about its own machinery — and the
+      // entitlements are the sharper of the two: they are money a diver has
+      // already handed over, so a bundle without them describes a shop that
+      // owes nobody anything.
+      const divePackageRows = await tx
+        .select()
+        .from(divePackages)
+        .where(eq(divePackages.shopId, shopId))
+        .orderBy(asc(divePackages.createdAt), asc(divePackages.id));
+      const entitlementRows = await tx
+        .select()
+        .from(divePackageEntitlements)
+        .where(eq(divePackageEntitlements.shopId, shopId))
+        .orderBy(asc(divePackageEntitlements.createdAt), asc(divePackageEntitlements.id));
 
       const courseRows = await tx
         .select()
@@ -2409,6 +2430,56 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["review_moderation_events.csv"],
         },
         {
+          file: "dive_packages.csv",
+          header: [
+            "id",
+            "name",
+            "dive_count",
+            "price_cents",
+            "scope",
+            "validity_days",
+            "deleted_at",
+            "created_by_person_id",
+            "created_at",
+          ],
+          rows: divePackageRows.map((row) => [
+            row.id,
+            row.name,
+            row.diveCount,
+            row.priceCents,
+            row.scope,
+            row.validityDays,
+            row.deletedAt,
+            row.createdByPersonId,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["dive_packages.csv"],
+        },
+        {
+          file: "dive_package_entitlements.csv",
+          header: [
+            "id",
+            "package_id",
+            "person_id",
+            "order_id",
+            "booking_id",
+            "consumed_at",
+            "expires_at",
+            "created_at",
+          ],
+          rows: entitlementRows.map((row) => [
+            row.id,
+            row.packageId,
+            row.personId,
+            row.orderId,
+            row.bookingId,
+            row.consumedAt,
+            row.expiresAt,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["dive_package_entitlements.csv"],
+        },
+        {
           file: "shop_promo_codes.csv",
           header: [
             "id",
@@ -2803,6 +2874,15 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(reviewModerationEvents)
         .where(eq(reviewModerationEvents.shopId, shopId)),
+    ),
+    "dive_packages.csv": await countOf(
+      db.select({ n: count() }).from(divePackages).where(eq(divePackages.shopId, shopId)),
+    ),
+    "dive_package_entitlements.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(divePackageEntitlements)
+        .where(eq(divePackageEntitlements.shopId, shopId)),
     ),
     "shop_promo_codes.csv": await countOf(
       db.select({ n: count() }).from(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId)),

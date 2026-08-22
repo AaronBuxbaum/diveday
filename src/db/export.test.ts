@@ -73,6 +73,8 @@ const EXPECTED_FILES = [
   "trip_recap_photos.csv",
   "trip_reviews.csv",
   "review_moderation_events.csv",
+  "dive_packages.csv",
+  "dive_package_entitlements.csv",
   "shop_promo_codes.csv",
   "shop_promo_redemptions.csv",
   "courses.csv",
@@ -81,6 +83,8 @@ const EXPECTED_FILES = [
 
 /** Schema tables that get their own CSV in the bundle. */
 const EXPORTED_TABLES = [
+  "dive_packages",
+  "dive_package_entitlements",
   "shops",
   "boats",
   "people",
@@ -243,6 +247,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "units_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
+  dive_packages: ["shop_id"],
+  dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [
