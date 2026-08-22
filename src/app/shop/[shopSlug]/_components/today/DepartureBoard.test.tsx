@@ -28,6 +28,11 @@ const COPY: DepartureBoardCopy = {
   blockedWarningNamed: "{name} cannot board yet — the fix is in the list below.",
   blockedWarningOne: "{count} diver cannot board yet — they are in the list below.",
   blockedWarningOther: "{count} divers cannot board yet — they are in the list below.",
+  blockedAboardNamed: "{name} is aboard with an unresolved blocker — the fix is in the list below.",
+  blockedAboardOne:
+    "{count} diver is aboard with an unresolved blocker — they are in the list below.",
+  blockedAboardOther:
+    "{count} divers are aboard with unresolved blockers — they are in the list below.",
   noneBooked: "No one’s booked yet — share the trip page and they’ll show up here.",
   everyoneAboard: "Everyone’s aboard.",
   clearToBoard: "Everyone booked on this trip is clear to board.",
@@ -40,6 +45,12 @@ const availableStaff = [
 ];
 
 function departure(overrides: Partial<DepartureSummary> = {}): DepartureSummary {
+  // `blockedAshore` defaults to *all* the blocked divers, which is what "nobody
+  // has boarded yet" means and what every case written before roll call entered
+  // this component assumed. A case about the boat mid-count sets the split
+  // explicitly.
+  const blocked = overrides.blocked ?? 1;
+  const blockedAboard = overrides.blockedAboard ?? 0;
   return {
     tripId: "trip-1",
     title: "Morning Reef Dive",
@@ -48,9 +59,11 @@ function departure(overrides: Partial<DepartureSummary> = {}): DepartureSummary 
     booked: 4,
     capacity: 10,
     ready: 3,
-    blocked: 1,
+    blocked,
     blockedNames: [],
     boarded: 0,
+    blockedAboard,
+    blockedAshore: Math.max(0, blocked - blockedAboard),
     courseTitle: null,
     crew: [{ id: "staff-1", fullName: "Keiko Tanaka", roles: ["divemaster"] }],
     ...overrides,
@@ -113,6 +126,86 @@ describe("DepartureBoard readiness caption (one bar, one caption, one count line
   it("celebrates the full boat", () => {
     renderBoard([departure({ blocked: 0, ready: 0, boarded: 4 })]);
     expect(screen.getByText(COPY.everyoneAboard)).toBeInTheDocument();
+  });
+
+  /**
+   * **The card must not describe a gate as standing in front of someone who is
+   * already past it.**
+   *
+   * On the seeded demo shop this read, verbatim: "8 aboard · 5 clear to board ·
+   * 3 blocked · 4 seats open" followed by "3 divers cannot board yet — they are
+   * in the list below." The same eight people. Worse than a wording slip: a
+   * blocked diver *on the boat* is the more urgent fact, and the card was
+   * stating the less urgent one, so a staffer scanning Today read "there is
+   * still time" about a boat where there is none (issue #698).
+   *
+   * The suite had never rendered this — every case here set `boarded: 0`.
+   */
+  it("says a blocked diver is aboard, not that they cannot board yet", () => {
+    renderBoard([departure({ booked: 8, ready: 5, blocked: 3, blockedAboard: 3, boarded: 8 })]);
+
+    expect(
+      screen.getByText(
+        "3 divers are aboard with unresolved blockers — they are in the list below.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/cannot board yet/)).toBeNull();
+  });
+
+  it("keeps both facts when some blocked divers are aboard and some are not", () => {
+    renderBoard([departure({ booked: 8, ready: 3, blocked: 5, blockedAboard: 2, boarded: 5 })]);
+
+    // Neither number covers the other's people, so neither line may swallow
+    // the other. Aboard leads: it is the one nobody can still act on in time.
+    expect(
+      screen.getByText(
+        "2 divers are aboard with unresolved blockers — they are in the list below.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("3 divers cannot board yet — they are in the list below."),
+    ).toBeInTheDocument();
+  });
+
+  it("still celebrates a full boat that had nobody blocked", () => {
+    renderBoard([departure({ booked: 4, blocked: 0, ready: 0, boarded: 4 })]);
+    expect(screen.getByText(COPY.everyoneAboard)).toBeInTheDocument();
+  });
+
+  it("does not fall silent on a full boat carrying a blocked diver", () => {
+    // `blocked > 0` was checked before `boarded === booked`, so this departure
+    // got the blocked line and never the celebration; with the blocked count
+    // split it must still get a line rather than nothing.
+    renderBoard([departure({ booked: 4, ready: 3, blocked: 1, blockedAboard: 1, boarded: 4 })]);
+
+    expect(
+      screen.getByText(
+        "1 diver is aboard with an unresolved blocker — they are in the list below.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(COPY.everyoneAboard)).toBeNull();
+  });
+
+  it("says nothing about a no-show's blocker on a boat that has sailed", () => {
+    // Marked `not_boarded` at departure: they never left the dock, so they are
+    // in neither count. "Their waiver is unsigned" is noise about a boat that
+    // has gone without them — and the card falls through to the clear-to-board
+    // line, which is true of everyone who actually sailed.
+    renderBoard([
+      departure({
+        booked: 4,
+        ready: 3,
+        blocked: 1,
+        blockedAboard: 0,
+        blockedAshore: 0,
+        boarded: 3,
+      }),
+    ]);
+
+    expect(screen.queryByText(/cannot board yet/)).toBeNull();
+    expect(screen.queryByText(/unresolved blocker/)).toBeNull();
+    // The counts line still reports the roster fact — that number is right.
+    expect(screen.getByText(/3 aboard · 3 clear to board · 1 blocked/)).toBeInTheDocument();
   });
 
   it("teaches the empty boat instead of rendering zeros", () => {

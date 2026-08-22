@@ -59,7 +59,7 @@ import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { listGearDueBack, listGearServiceDue, listOverdueGearReservations } from "./gear";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
-import { listDepartureBoardedByTrip } from "./manifests";
+import { listDepartureRollCallByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
@@ -142,6 +142,25 @@ export type DepartureSummary = {
    */
   blockedNames: string[];
   boarded: number;
+  /**
+   * How `blocked` splits once roll call starts, which is what stops the card
+   * contradicting itself. `blocked` stays the readiness fact about the whole
+   * roster and is the right number for the counts line; these two say which of
+   * those divers the *sentence* can still be about (issue #698).
+   *
+   * - `blockedAboard` — blocked and already on the boat. The more serious of
+   *   the two: the gate is behind them, not in front. Boarding a blocked diver
+   *   is legitimate (this app informs, never gates), but the screen has to say
+   *   what happened.
+   * - `blockedAshore` — blocked with no departure result at all, so still
+   *   genuinely "cannot board yet".
+   *
+   * A diver whose latest departure result is `not_boarded` is in **neither**.
+   * They never left the dock, and describing their waiver as something to fix
+   * before departure is noise on a boat that has sailed.
+   */
+  blockedAboard: number;
+  blockedAshore: number;
   courseTitle: string | null;
   crew: { id: string; fullName: string; roles: string[] }[];
 };
@@ -178,21 +197,6 @@ function shopDay(date: Date, timeZone: string): string {
 
 function at(date: Date, timeZone: string, locale: string): string {
   return formatTime(date, locale, timeZone);
-}
-
-/**
- * How many divers are aboard each of today's boats — a *count*, read through
- * the one reader that owns the question (`listDepartureBoardedByTrip`,
- * src/db/manifests.ts). This used to be a second hand-written copy of that
- * query living here, which is how the two drifted: only one of them carried
- * the cancelled-booking guard. The board needs a head count, not the safety
- * document, so it stays a count — but it can no longer count differently.
- */
-async function boardedCountsByTrip(db: AppDb, shopId: string, tripIds: string[]) {
-  const byTrip = await listDepartureBoardedByTrip(db, shopId, tripIds);
-  const counts = new Map<string, number>();
-  for (const [tripId, aboard] of byTrip) counts.set(tripId, aboard.size);
-  return counts;
 }
 
 /**
@@ -972,7 +976,7 @@ export async function getTodayWork(
   );
 
   const [
-    boarded,
+    departureRollCall,
     missingFit,
     ungatedNitrox,
     missingContact,
@@ -983,7 +987,13 @@ export async function getTodayWork(
     lastMinuteWindows,
     rollCallGaps,
   ] = await Promise.all([
-    boardedCountsByTrip(
+    // Each booking's latest departure result, not just a head count. The card
+    // needs to tell "already aboard" from "still ashore" from "never left the
+    // dock", and one number cannot (issue #698). Read through the one reader
+    // that owns the question (`src/db/manifests.ts`) — a second hand-written
+    // copy of this query used to live here, and only one of the two carried the
+    // cancelled-booking guard.
+    listDepartureRollCallByTrip(
       db,
       shopId,
       todayTrips.map((trip) => trip.id),
@@ -1568,6 +1578,10 @@ export async function getTodayWork(
 
   const departures: DepartureSummary[] = todayTrips.map((trip) => {
     const rows = readinessByTrip.get(trip.id) ?? [];
+    const blockedRows = rows.filter((row) => row.readiness.status === "blocked");
+    const rollCall = departureRollCall.get(trip.id) ?? new Map();
+    let aboardCount = 0;
+    for (const state of rollCall.values()) if (state === "boarded") aboardCount += 1;
     return {
       tripId: trip.id,
       title: trip.title,
@@ -1576,11 +1590,13 @@ export async function getTodayWork(
       booked: trip.booked,
       capacity: trip.capacity,
       ready: rows.filter((row) => row.readiness.status === "ready").length,
-      blocked: rows.filter((row) => row.readiness.status === "blocked").length,
-      blockedNames: rows
-        .filter((row) => row.readiness.status === "blocked")
-        .map((row) => row.person.fullName),
-      boarded: boarded.get(trip.id) ?? 0,
+      blocked: blockedRows.length,
+      blockedNames: blockedRows.map((row) => row.person.fullName),
+      boarded: aboardCount,
+      blockedAboard: blockedRows.filter((row) => rollCall.get(row.booking.id) === "boarded").length,
+      // `undefined`, never `not_boarded`: a diver the crew marked as never
+      // having left the dock is accounted for, not waiting on a gate.
+      blockedAshore: blockedRows.filter((row) => rollCall.get(row.booking.id) === undefined).length,
       courseTitle: trip.course?.title ?? null,
       crew: crewByTrip.get(trip.id) ?? [],
     };
