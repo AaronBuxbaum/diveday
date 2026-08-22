@@ -29,10 +29,19 @@ export function PaymentStatusControl({
   action,
   sourceNote,
   refundNote,
+  allowedStatuses,
   copy,
 }: {
   bookingId: string;
   status: PaymentStatus;
+  /**
+   * Which statuses this staffer may set. `waived` and `refunded` are decisions
+   * *about* money rather than records of it, and `canRefund` gates that
+   * write-off everywhere else, so they are absent for anyone else — hidden
+   * rather than explained (issue #714). The action refuses independently; a
+   * missing option is not a gate.
+   */
+  allowedStatuses: readonly PaymentStatus[];
   action: (formData: FormData) => void;
   /** e.g. "Paid on Stripe" — shown after the status. */
   sourceNote: string | null;
@@ -68,11 +77,19 @@ export function PaymentStatusControl({
           container. */}
       <span className="w-fit">
         <select name="status" defaultValue={status} className={`${controlClass} text-sm`}>
-          {Object.entries(copy.statuses).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+          {/* The booking's current status is always among the options, even
+              when this staffer could not have set it. Without that, a captain
+              opening a booking an owner had waived would find the select
+              showing the *first* option instead — and one tap of Update would
+              silently move a free seat to unpaid. Order comes from the copy
+              map, so the list reads the same for everyone who sees it. */}
+          {(Object.keys(copy.statuses) as PaymentStatus[])
+            .filter((value) => value === status || allowedStatuses.includes(value))
+            .map((value) => (
+              <option key={value} value={value}>
+                {copy.statuses[value]}
+              </option>
+            ))}
         </select>
       </span>
       <SubmitButton

@@ -10,6 +10,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { getTripGuests } from "@/db/trips-guests";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -143,7 +144,7 @@ async function TripGuestsBody({
     confirmPhone,
   } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
@@ -172,11 +173,21 @@ async function TripGuestsBody({
     courseTarget,
   } = guests;
   const {
-    showPromote,
+    showPromote: dealHasRecipients,
     promos: lastMinutePromos,
     promoRecipients: lastMinutePromoRecipients,
     recipients: lastMinuteRecipients,
   } = lastMinute;
+  // Hidden, not explained, for a staffer who cannot use it (ADR
+  // 20260724-role-gated-surfaces-hide-not-explain). Discounting is money work —
+  // the same gate the shop-wide promo page carries on both its page and its
+  // actions — and `sendLastMinuteDealAction` refuses independently, because a
+  // hidden control is not a gate (issue #714).
+  const mayDiscount = await canPersonManagePaymentSettings(db, shop.id, session.user.personId);
+  // `waived` and `refunded` are decisions about money, gated by `canRefund`
+  // everywhere else; recording counter cash stays open to the crew (issue #714).
+  const mayWriteOffPayment = await canPersonRefund(db, shop.id, session.user.personId);
+  const showPromote = dealHasRecipients && mayDiscount;
   const {
     rentalFit: rentalFitByBooking,
     nitrox: nitroxByBooking,
@@ -328,6 +339,7 @@ async function TripGuestsBody({
         cancellationDeadline={cancellationDeadline(trip)}
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
+        mayWriteOffPayment={mayWriteOffPayment}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
         confirmIdentityAction={confirmDiverIdentityAction.bind(null, shopSlug, tripId)}
         notesByBooking={notesByBooking}

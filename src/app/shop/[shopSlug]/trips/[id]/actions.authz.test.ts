@@ -49,9 +49,13 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const { removeBookingAction, reinstateTripAction, saveRequirementsAction } = await import(
-  "./actions"
-);
+const {
+  markPaymentAction,
+  removeBookingAction,
+  reinstateTripAction,
+  saveRequirementsAction,
+  sendLastMinuteDealAction,
+} = await import("./actions");
 
 /**
  * A seeded ordinary charter — not a course session, whose rules are frozen —
@@ -394,5 +398,150 @@ describe("removing a paid diver from the manifest", () => {
       shopId: shop.id,
       bookingId,
     });
+  });
+});
+
+/**
+ * **Every action in this file has a written-down answer, open or closed.**
+ *
+ * `requireTripConfig` was introduced for the configuration actions and named
+ * for them, so it reads as "the trips gate" — and the nineteen actions that are
+ * not about *configuring* a trip naturally did not take it. Two of those moved
+ * money and nobody had noticed, because a test asserting "a captain may not
+ * lower the certification gate" passes whether or not anything else is gated
+ * (issue #714).
+ *
+ * So this is a roster of intent rather than a behaviour test. A new action that
+ * is not listed here fails, which is the point: defaulting open by omission is
+ * exactly how the last-minute blast and the payment write-off got in. Adding a
+ * name to `OPEN_TO_ALL_STAFF` is a claim someone has to make deliberately, in a
+ * diff a reviewer reads.
+ */
+describe("who may run each action on the trip page", () => {
+  /** The dive itself and who it admits — never the crew's to change. */
+  const TRIP_CONFIG = [
+    "saveDetails",
+    "saveRequirementsAction",
+    "updateTripCrewAction",
+    "applySeriesDetailsAction",
+    "cancelSeriesAction",
+    "setSeriesRepeatAction",
+    "updateSeriesCadenceAction",
+    "cancelOffCadenceSeriesAction",
+  ];
+
+  /** Money: what a dive costs, and writing off what it earned. */
+  const MONEY = ["sendLastMinuteDealAction", "markPaymentAction"];
+
+  /**
+   * The day's work, and deliberately open. Running the boat, the roster, the
+   * notes, the wait list and the head count is what the crew are for, and
+   * `src/lib/authz.ts` is explicit that these stay open. `removeBookingAction`
+   * is the subtle one and has its own case above: a captain may free a seat,
+   * and the refund that would otherwise fire is handed up to an owner.
+   */
+  const OPEN_TO_ALL_STAFF = [
+    "recordTripPrintPdfAction",
+    "saveConditionsAction",
+    "clearConditionsAction",
+    "cancelTripAction",
+    "reinstateTripAction",
+    "addInternalNoteAction",
+    "deleteInternalNoteAction",
+    "restoreInternalNoteAction",
+    "addToWaitlistAction",
+    "inviteWaitlistAction",
+    "recordTripInvitationAction",
+    "createDirectTripInvitationAction",
+    "removeBookingAction",
+    "undoRemoveBookingAction",
+    "confirmDiverIdentityAction",
+    "markWaiverInPersonAction",
+    "saveRosterEmergencyContactAction",
+  ];
+
+  it("has an answer recorded for every exported action, and no stale ones", async () => {
+    const source = await import("node:fs").then(({ readFileSync }) =>
+      readFileSync(
+        new URL("./actions.ts", import.meta.url).pathname.replace(/%5B/g, "[").replace(/%5D/g, "]"),
+        "utf8",
+      ),
+    );
+    const exported = [...source.matchAll(/^export async function (\w+)/gm)].map((m) => m[1]);
+    const recorded = [...TRIP_CONFIG, ...MONEY, ...OPEN_TO_ALL_STAFF];
+
+    // Read off the file rather than off the module's exports: a `const` arrow
+    // export would slip past the latter, and the point is that *nothing* new
+    // lands here without an answer.
+    expect(exported.filter((name) => !recorded.includes(name))).toEqual([]);
+    expect(recorded.filter((name) => !exported.includes(name))).toEqual([]);
+  });
+
+  it("keeps the money actions apart from the trip-config ones", () => {
+    // They are gated by different predicates for different reasons — a captain
+    // may not lower a safety gate, and separately may not decide about money —
+    // so an action must never be filed under both.
+    expect(TRIP_CONFIG.filter((name) => MONEY.includes(name))).toEqual([]);
+  });
+});
+
+/**
+ * The two money actions themselves, which had no gate at all: a captain could
+ * mint a percentage coupon on the shop's connected Stripe account and mail it
+ * to a list of divers, on a departure whose price they are explicitly not
+ * allowed to change (issue #714).
+ */
+describe("money on the trip page", () => {
+  it("refuses a captain the last-minute deal blast", async () => {
+    const { shop, tripId, captain } = await context();
+    signIn(shop, captain);
+
+    const form = new FormData();
+    form.set("discountPercent", "25");
+
+    const to = await redirectedTo(() => sendLastMinuteDealAction(shop.slug, tripId, form));
+
+    expect(to).toContain("notice=not-authorized");
+  });
+
+  it("lets an owner send it", async () => {
+    const { shop, tripId, owner } = await context();
+    signIn(shop, owner);
+
+    const form = new FormData();
+    form.set("discountPercent", "25");
+
+    // Not asserting a send here — the fleet configures no provider — only that
+    // it is not the authorization refusal.
+    const to = await redirectedTo(() => sendLastMinuteDealAction(shop.slug, tripId, form));
+    expect(to).not.toContain("notice=not-authorized");
+  });
+
+  it("lets a captain record counter cash but not write a seat off", async () => {
+    const { db, shop, tripId, captain } = await context();
+    signIn(shop, captain);
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
+    if (!booking) throw new Error("seeded trip has no bookings");
+
+    const form = (status: string) => {
+      const data = new FormData();
+      data.set("bookingId", booking.id);
+      data.set("status", status);
+      return data;
+    };
+
+    // Cash at the dock is front-desk work.
+    const paid = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("paid")));
+    expect(paid).not.toContain("notice=not-authorized");
+
+    // A free seat is not.
+    const waived = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("waived")));
+    expect(waived).toContain("notice=not-authorized");
+
+    // And `refunded` — which reduces reported revenue without moving money.
+    const refunded = await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, form("refunded")),
+    );
+    expect(refunded).toContain("notice=not-authorized");
   });
 });
