@@ -563,6 +563,10 @@ async function TodayBody({
           blockedAboardNamed: t.raw("shared.today.departureBoard.blockedAboardNamed"),
           blockedAboardOne: t.raw("shared.today.departureBoard.blockedAboardOne"),
           blockedAboardOther: t.raw("shared.today.departureBoard.blockedAboardOther"),
+          aboardReasonMedical: t("shared.today.departureBoard.aboardReasonMedical"),
+          aboardReasonUnknown: t("shared.today.departureBoard.aboardReasonUnknown"),
+          aboardReasonCertification: t("shared.today.departureBoard.aboardReasonCertification"),
+          aboardReasonPayment: t("shared.today.departureBoard.aboardReasonPayment"),
           sailingToday: t("shared.today.departureBoard.sailingToday"),
         }}
       />

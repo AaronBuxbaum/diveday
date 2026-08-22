@@ -193,6 +193,21 @@ new domain concept, define it here in the same PR.
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
+- **Aboard blocker kind** — what a blocker is asking of the crew once the diver is *already on the
+  boat*, which is not the same question as which requirement family it belongs to. Four kinds,
+  worst first: **medical** (a review hold — a doctor must confirm in writing, so nobody aboard can
+  clear it), **unknown** (nothing on file that clears them: an unsigned, unsent or expired waiver
+  is *no medical declaration at all*, and so are an unconfirmed identity, a failed readiness
+  lookup, or a trip with no requirements configured), **certification** (a card missing,
+  unverified, self-declared or too shallow, a specialty absent, or a diver under the course's
+  minimum age), and **payment** — the only one of the four that does not change what happens in
+  the water today. Worst-first holds *within* one diver, so a diver on medical review who is also
+  missing a card is a medical hold; it never holds *across* a group, because a count is a census
+  and a reason is not — the departure card renders one line per kind present. Deliberately not the
+  blocker **category** (`waiver`/`certification`/`payment`/`setup`), which files a medical hold
+  under *waiver*, correctly, since that is where the answer was collected. No line naming one of
+  these names a role: DiveDay informs and never gates, the captain owns the vessel while the dive
+  leader decides who splashes, and a pool session has neither.
 - **Trip admission** — the answer to a *different* question, asked when the **seat is sold**:
   “could this diver **ever** be cleared for this trip?” It is **deliberately weaker than readiness
   and is never the boarding authority.** Readiness asks “is this diver cleared *right now*?”;

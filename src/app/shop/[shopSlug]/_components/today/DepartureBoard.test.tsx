@@ -33,14 +33,17 @@ const COPY: DepartureBoardCopy = {
   boardingBlockedOther: "{count} blocked",
   boardingOpenOne: "{count} seat open",
   boardingOpenOther: "{count} seats open",
+  aboardReasonMedical: "a medical hold. A doctor has to sign off, so nobody aboard can clear it.",
+  aboardReasonUnknown:
+    "nothing on file that clears them. An unsigned waiver is no medical declaration.",
+  aboardReasonCertification: "a certification this dive asks for that we have not seen.",
+  aboardReasonPayment: "payment still owed. It is in the list below.",
   blockedWarningNamed: "{name} cannot board yet — the fix is in the list below.",
   blockedWarningOne: "{count} diver cannot board yet — they are in the list below.",
   blockedWarningOther: "{count} divers cannot board yet — they are in the list below.",
-  blockedAboardNamed: "{name} is aboard with an unresolved blocker — the fix is in the list below.",
-  blockedAboardOne:
-    "{count} diver is aboard with an unresolved blocker — they are in the list below.",
-  blockedAboardOther:
-    "{count} divers are aboard with unresolved blockers — they are in the list below.",
+  blockedAboardNamed: "{name} is aboard — {reason}",
+  blockedAboardOne: "{count} diver is aboard — {reason}",
+  blockedAboardOther: "{count} divers are aboard — {reason}",
   noneBooked: "No one’s booked yet — share the trip page and they’ll show up here.",
   everyoneAboard: "Everyone’s aboard.",
   clearToBoard: "Everyone booked on this trip is clear to board.",
@@ -68,7 +71,8 @@ function departure(overrides: Partial<DepartureSummary> = {}): DepartureSummary 
     capacity: 10,
     ready: 3,
     blocked,
-    blockedNames: [],
+    blockedAboardGroups: [],
+    blockedAshoreNames: [],
     boarded: 0,
     blockedAboard,
     blockedAshore: Math.max(0, blocked - blockedAboard),
@@ -137,7 +141,9 @@ describe("DepartureBoard boarding counts", () => {
 
 describe("DepartureBoard readiness caption (one bar, one caption, one count line)", () => {
   it("names a lone blocked diver outright — the answer, not a door to the list", () => {
-    renderBoard([departure({ blocked: 1, blockedNames: ["Priya Sharma"], ready: 3, boarded: 0 })]);
+    renderBoard([
+      departure({ blocked: 1, blockedAshoreNames: ["Priya Sharma"], ready: 3, boarded: 0 }),
+    ]);
     expect(
       screen.getByText("Priya Sharma cannot board yet — the fix is in the list below."),
     ).toBeInTheDocument();
@@ -149,7 +155,7 @@ describe("DepartureBoard readiness caption (one bar, one caption, one count line
 
   it("falls back to the count when several divers are blocked", () => {
     renderBoard([
-      departure({ blocked: 2, blockedNames: ["Priya Sharma", "Lena Fischer"], ready: 2 }),
+      departure({ blocked: 2, blockedAshoreNames: ["Priya Sharma", "Lena Fischer"], ready: 2 }),
     ]);
     expect(
       screen.getByText("2 divers cannot board yet — they are in the list below."),
@@ -187,25 +193,43 @@ describe("DepartureBoard readiness caption (one bar, one caption, one count line
    * The suite had never rendered this — every case here set `boarded: 0`.
    */
   it("says a blocked diver is aboard, not that they cannot board yet", () => {
-    renderBoard([departure({ booked: 8, ready: 5, blocked: 3, blockedAboard: 3, boarded: 8 })]);
+    renderBoard([
+      departure({
+        booked: 8,
+        ready: 5,
+        blocked: 3,
+        blockedAboard: 3,
+        blockedAboardGroups: [
+          { kind: "payment", names: Array.from({ length: 3 }, (_, i) => `Owes ${i}`) },
+        ],
+        boarded: 8,
+      }),
+    ]);
 
     expect(
-      screen.getByText(
-        "3 divers are aboard with unresolved blockers — they are in the list below.",
-      ),
+      screen.getByText(`3 divers are aboard — ${COPY.aboardReasonPayment}`),
     ).toBeInTheDocument();
     expect(screen.queryByText(/cannot board yet/)).toBeNull();
   });
 
   it("keeps both facts when some blocked divers are aboard and some are not", () => {
-    renderBoard([departure({ booked: 8, ready: 3, blocked: 5, blockedAboard: 2, boarded: 5 })]);
+    renderBoard([
+      departure({
+        booked: 8,
+        ready: 3,
+        blocked: 5,
+        blockedAboard: 2,
+        blockedAboardGroups: [
+          { kind: "payment", names: Array.from({ length: 2 }, (_, i) => `Owes ${i}`) },
+        ],
+        boarded: 5,
+      }),
+    ]);
 
     // Neither number covers the other's people, so neither line may swallow
     // the other. Aboard leads: it is the one nobody can still act on in time.
     expect(
-      screen.getByText(
-        "2 divers are aboard with unresolved blockers — they are in the list below.",
-      ),
+      screen.getByText(`2 divers are aboard — ${COPY.aboardReasonPayment}`),
     ).toBeInTheDocument();
     expect(
       screen.getByText("3 divers cannot board yet — they are in the list below."),
@@ -217,16 +241,115 @@ describe("DepartureBoard readiness caption (one bar, one caption, one count line
     expect(screen.getByText(COPY.everyoneAboard)).toBeInTheDocument();
   });
 
+  /**
+   * **Which blocker, because the gate is behind them.**
+   *
+   * Both lines used to end "the fix is in the list below" — clerical guidance,
+   * right for the ashore group and wrong for a diver already on the boat (issue
+   * #791). The four kinds are not the requirement families: an unsigned waiver
+   * is *no medical declaration*, not filing, and only money is office work.
+   */
+  it.each([
+    ["medical", COPY.aboardReasonMedical],
+    ["unknown", COPY.aboardReasonUnknown],
+    ["certification", COPY.aboardReasonCertification],
+    ["payment", COPY.aboardReasonPayment],
+  ] as const)("names a %s blocker on the aboard line", (kind, reason) => {
+    renderBoard([
+      departure({
+        booked: 4,
+        ready: 3,
+        blocked: 1,
+        blockedAboard: 1,
+        blockedAboardGroups: [{ kind, names: ["Priya Sharma"] }],
+        boarded: 4,
+      }),
+    ]);
+    expect(screen.getByText(`Priya Sharma is aboard — ${reason}`)).toBeInTheDocument();
+  });
+
+  /**
+   * **One line per kind — never one reason over a whole count.**
+   *
+   * The first cut of this reduced the aboard group to a single worst kind and
+   * rendered it against the group's total, so one medical hold beside two
+   * certification gaps read "3 divers are aboard — a medical hold", false about
+   * two of the three. Run the other way and the two vanish behind the one the
+   * crew was told about (`dive-domain-expert`, on issue #791).
+   */
+  it("gives each kind aboard its own true line, worst first", () => {
+    renderBoard([
+      departure({
+        booked: 8,
+        ready: 5,
+        blocked: 3,
+        blockedAboard: 3,
+        blockedAboardGroups: [
+          { kind: "medical", names: ["Priya Sharma"] },
+          { kind: "certification", names: ["Lena Fischer", "Tom Okafor"] },
+        ],
+        boarded: 8,
+      }),
+    ]);
+
+    expect(
+      screen.getByText(`Priya Sharma is aboard — ${COPY.aboardReasonMedical}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`2 divers are aboard — ${COPY.aboardReasonCertification}`),
+    ).toBeInTheDocument();
+    // And the medical reason is never said about the other two.
+    expect(screen.queryByText(`3 divers are aboard — ${COPY.aboardReasonMedical}`)).toBeNull();
+  });
+
+  /**
+   * **The mixed boat, which named nobody.**
+   *
+   * The names were one flat list while the counts were split, and each line's
+   * naming condition read `blocked === 1`. So a boat with one diver blocked
+   * aboard and one blocked ashore rendered two lines, one person each, both
+   * known by name — and named neither.
+   */
+  it("names each lone diver on a boat with one blocked aboard and one ashore", () => {
+    renderBoard([
+      departure({
+        booked: 6,
+        ready: 4,
+        blocked: 2,
+        blockedAboard: 1,
+        blockedAboardGroups: [{ kind: "medical", names: ["Priya Sharma"] }],
+        blockedAshore: 1,
+        blockedAshoreNames: ["Lena Fischer"],
+        boarded: 4,
+      }),
+    ]);
+
+    expect(
+      screen.getByText(`Priya Sharma is aboard — ${COPY.aboardReasonMedical}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Lena Fischer cannot board yet — the fix is in the list below."),
+    ).toBeInTheDocument();
+  });
+
   it("does not fall silent on a full boat carrying a blocked diver", () => {
     // `blocked > 0` was checked before `boarded === booked`, so this departure
     // got the blocked line and never the celebration; with the blocked count
     // split it must still get a line rather than nothing.
-    renderBoard([departure({ booked: 4, ready: 3, blocked: 1, blockedAboard: 1, boarded: 4 })]);
+    renderBoard([
+      departure({
+        booked: 4,
+        ready: 3,
+        blocked: 1,
+        blockedAboard: 1,
+        blockedAboardGroups: [{ kind: "payment", names: ["Osric Bell"] }],
+        boarded: 4,
+      }),
+    ]);
 
+    // A lone diver is named, which is the point of naming them at all.
     expect(
-      screen.getByText(
-        "1 diver is aboard with an unresolved blocker — they are in the list below.",
-      ),
+      screen.getByText(`Osric Bell is aboard — ${COPY.aboardReasonPayment}`),
     ).toBeInTheDocument();
     expect(screen.queryByText(COPY.everyoneAboard)).toBeNull();
   });

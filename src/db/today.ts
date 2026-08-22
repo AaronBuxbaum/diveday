@@ -45,6 +45,7 @@ import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
+import { type AboardBlockerKind, groupAboardBlockers } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import {
   collapseDiverActions,
@@ -135,12 +136,19 @@ export type DepartureSummary = {
   ready: number;
   blocked: number;
   /**
-   * Who `blocked` counts, in roster order. The card's caption names a lone
-   * blocked diver outright — the answer, not a door to the list that holds it
-   * (design/principles.md #10) — and falls back to the count once naming
-   * everyone would be a paragraph.
+   * Who each of the two blocked groups holds, in roster order. The card's
+   * caption names a lone blocked diver outright — the answer, not a door to
+   * the list that holds it (design/principles.md #10) — and falls back to the
+   * count once naming everyone would be a paragraph.
+   *
+   * **Split, because the counts are.** This was one flat list while
+   * `blockedAboard`/`blockedAshore` were separate numbers, and the card's
+   * naming condition read `blocked === 1` — so on a boat with one diver
+   * blocked aboard and one blocked ashore it rendered two lines, one person
+   * each, both known by name, and named neither (issue #791). Each line asks
+   * about its own group now, so its condition is correct on its own.
    */
-  blockedNames: string[];
+  blockedAshoreNames: string[];
   boarded: number;
   /**
    * How `blocked` splits once roll call starts, which is what stops the card
@@ -161,6 +169,17 @@ export type DepartureSummary = {
    */
   blockedAboard: number;
   blockedAshore: number;
+  /**
+   * The aboard group split by what each diver is blocked *on*, worst kind
+   * first — **one entry per kind present, never one reason over the whole
+   * count.** See `groupAboardBlockers` for why a single kind for the group
+   * states a falsehood about most of it, and `aboardBlockerKind` for why this
+   * is not `BLOCKER_CATEGORY`.
+   *
+   * Empty when nobody blocked is aboard. `blockedAboard` above stays the total
+   * across these: the counts line is a census, and this is not.
+   */
+  blockedAboardGroups: { kind: AboardBlockerKind; names: string[] }[];
   courseTitle: string | null;
   crew: { id: string; fullName: string; roles: string[] }[];
 };
@@ -1589,6 +1608,23 @@ export async function getTodayWork(
     const rollCall = departureRollCall.get(trip.id) ?? new Map();
     let aboardCount = 0;
     for (const state of rollCall.values()) if (state === "boarded") aboardCount += 1;
+    const aboardBlocked = blockedRows.filter((row) => rollCall.get(row.booking.id) === "boarded");
+    // `not_boarded` drops out **only once the boat has actually gone.**
+    //
+    // At the departure checkpoint that result means "never left the dock",
+    // which is benign and accounted for — but the control a deckhand taps is
+    // labelled "Mark not boarded", and at 07:05 on a 07:30 boat that reads as
+    // "isn't aboard yet", not "isn't coming". This card lives from the moment a
+    // trip is scheduled until about an hour after it sails, so silencing on the
+    // tap alone took the prompt off the front desk 25 minutes before it stopped
+    // being fixable (found by `dive-domain-expert` after #698 shipped). The
+    // same 1-hour buffer every other "has it sailed" question in this app uses.
+    const ashoreBlocked = blockedRows.filter((row) => {
+      const result = rollCall.get(row.booking.id);
+      if (result === "boarded") return false;
+      if (result === undefined) return true;
+      return trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
+    });
     return {
       tripId: trip.id,
       title: trip.title,
@@ -1598,26 +1634,16 @@ export async function getTodayWork(
       capacity: trip.capacity,
       ready: rows.filter((row) => row.readiness.status === "ready").length,
       blocked: blockedRows.length,
-      blockedNames: blockedRows.map((row) => row.person.fullName),
       boarded: aboardCount,
-      blockedAboard: blockedRows.filter((row) => rollCall.get(row.booking.id) === "boarded").length,
-      // `not_boarded` drops out **only once the boat has actually gone.**
-      //
-      // At the departure checkpoint that result means "never left the dock",
-      // which is benign and accounted for — but the control a deckhand taps is
-      // labelled "Mark not boarded", and at 07:05 on a 07:30 boat that reads as
-      // "isn't aboard yet", not "isn't coming". This card lives from the moment
-      // a trip is scheduled until about an hour after it sails, so silencing on
-      // the tap alone took the prompt off the front desk 25 minutes before it
-      // stopped being fixable (found by `dive-domain-expert` after #698
-      // shipped). The same 1-hour buffer every other "has it sailed" question
-      // in this app uses.
-      blockedAshore: blockedRows.filter((row) => {
-        const result = rollCall.get(row.booking.id);
-        if (result === "boarded") return false;
-        if (result === undefined) return true;
-        return trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
-      }).length,
+      blockedAboard: aboardBlocked.length,
+      blockedAboardGroups: groupAboardBlockers(
+        aboardBlocked.map((row) => ({
+          blockers: row.readiness.blockers,
+          value: row.person.fullName,
+        })),
+      ).map((group) => ({ kind: group.kind, names: group.members })),
+      blockedAshore: ashoreBlocked.length,
+      blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
       courseTitle: trip.course?.title ?? null,
       crew: crewByTrip.get(trip.id) ?? [],
     };

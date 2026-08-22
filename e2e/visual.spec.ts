@@ -1951,6 +1951,37 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today", scheme);
       });
 
+      /**
+       * **The departure card once a blocked diver is on the boat.**
+       *
+       * The card's aboard line says what the blocker *is* — a medical hold, a
+       * certification this dive asks for, an unsigned waiver, money owed — and
+       * one line per kind, because a count is a census and a reason is not
+       * (issue #791). Nothing had ever photographed it: the seeded shop starts
+       * with nobody boarded, so every capture of this card saw the *ashore*
+       * sentence, and the one a crew reads at the rail with the gate already
+       * behind somebody was never looked at.
+       *
+       * Priya Sharma is the seeded blocked diver (waiver not sent), so boarding
+       * her is the shortest honest route into the state. The reset restores the
+       * schedule before the next test, which is what makes it safe to board her
+       * here.
+       */
+      test(`the departure card names a blocker aboard (${scheme})`, async ({ page, request }) => {
+        // **Through the trouble-states route, because it cannot be clicked.**
+        // The departure checkpoint offers a blocked diver no boarding button —
+        // that is the app's gate — and the after-dive head count writes a
+        // different checkpoint than this card reads. In production the state
+        // arises the other way round: a diver boards while clear and *then*
+        // becomes blocked, because readiness is evaluated live.
+        await request.post("/api/test/seed-trouble-states");
+        await page.goto("/shop/blue-mantis");
+        // The destination's own words, not a timing guess: this sentence is
+        // what the capture exists for.
+        await page.getByText(/is aboard —/).waitFor();
+        await capture(page, "today-blocked-aboard", scheme);
+      });
+
       // The nav's other door (ADR 20260813-more-is-the-shops-other-door):
       // the header's More menu holding the "Run the shop" / "Set up" groups.
       // The menu only exists from `lg` up, so this capture's 390 image is

@@ -11,6 +11,7 @@ import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { DepartureSummary } from "@/db/today";
 import { fill, pluralForm } from "@/i18n/fill";
 import { formatTime, formatTimeRange } from "@/lib/format";
+import type { AboardBlockerKind } from "@/lib/readiness";
 
 export type DepartureBoardCopy = {
   crewingBadge: string;
@@ -42,11 +43,23 @@ export type DepartureBoardCopy = {
   blockedAboardNamed: string;
   blockedAboardOne: string;
   blockedAboardOther: string;
+  aboardReasonMedical: string;
+  aboardReasonUnknown: string;
+  aboardReasonCertification: string;
+  aboardReasonPayment: string;
   noneBooked: string;
   everyoneAboard: string;
   clearToBoard: string;
   sailingToday: string;
 };
+
+/** What one aboard group is blocked on, in words. */
+function aboardReasonText(copy: DepartureBoardCopy, kind: AboardBlockerKind): string {
+  if (kind === "medical") return copy.aboardReasonMedical;
+  if (kind === "unknown") return copy.aboardReasonUnknown;
+  if (kind === "certification") return copy.aboardReasonCertification;
+  return copy.aboardReasonPayment;
+}
 
 /** One count of the boarding summary, inflected for its own number. */
 function boardingFragment(count: number, one: string, other: string, locale: string): string {
@@ -75,8 +88,17 @@ function DepartureCard({
   ) => Promise<{ ok: boolean }>;
   copy: DepartureBoardCopy;
 }) {
-  const { blocked, blockedNames, blockedAboard, blockedAshore, ready, boarded, booked, capacity } =
-    departure;
+  const {
+    blocked,
+    blockedAshoreNames,
+    blockedAboard,
+    blockedAboardGroups,
+    blockedAshore,
+    ready,
+    boarded,
+    booked,
+    capacity,
+  } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
   const [assignError, setAssignError] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -257,24 +279,45 @@ function DepartureCard({
           // is the more serious of the two; where both are true both lines
           // render, since neither number covers the other's people.
           <>
-            {blockedAboard > 0 ? (
-              <p className="mt-1.5 text-base">
-                {blockedAboard === 1 && blocked === 1 && blockedNames[0]
-                  ? fill(copy.blockedAboardNamed, { name: blockedNames[0] })
-                  : fill(
-                      pluralForm(
-                        blockedAboard,
+            {/* **One line per kind, worst first — never one reason over a
+                whole count.** The first cut returned a single kind for the
+                aboard group and rendered it against the group's total: one
+                medical hold beside four certification gaps read "5 divers are
+                aboard — a medical hold", which is false about four of the
+                five. Run it the other way and the four vanish, so a crew
+                clears the one diver it was told about and sails with four who
+                have made no medical declaration. Almost always this is one
+                line; at worst four, and four true lines beat one false one on
+                a boat (`dive-domain-expert`, on issue #791).
+
+                Each group carries its own names, so the naming condition asks
+                about that group alone — `blocked === 1` meant a boat with one
+                diver blocked aboard and one ashore named neither of them. */}
+            {blockedAboardGroups.map((group) => (
+              <p key={group.kind} className="mt-1.5 text-base">
+                {fill(
+                  group.names.length === 1 && group.names[0]
+                    ? copy.blockedAboardNamed
+                    : pluralForm(
+                        group.names.length,
                         { one: copy.blockedAboardOne, other: copy.blockedAboardOther },
                         locale,
                       ),
-                      { count: blockedAboard },
-                    )}
+                  {
+                    name: group.names[0],
+                    count: group.names.length,
+                    reason: aboardReasonText(copy, group.kind),
+                  },
+                )}
               </p>
-            ) : null}
+            ))}
             {blockedAshore > 0 ? (
               <p className="mt-1.5 text-base">
-                {blockedAshore === 1 && blocked === 1 && blockedNames[0]
-                  ? fill(copy.blockedWarningNamed, { name: blockedNames[0] })
+                {/* Unchanged in substance: this group's answer genuinely is
+                    the list below, and the card is not a manifest. Only the
+                    naming condition moved to its own group's names. */}
+                {blockedAshore === 1 && blockedAshoreNames[0]
+                  ? fill(copy.blockedWarningNamed, { name: blockedAshoreNames[0] })
                   : fill(
                       pluralForm(
                         blockedAshore,
