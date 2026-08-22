@@ -1399,6 +1399,39 @@ describe("saving the waiver template", () => {
     expect(await countSignedWaiversOnCurrentVersion(db, shop.id, later)).toBe(0);
   });
 
+  /**
+   * **An edit nobody made must not invalidate every signature a shop holds.**
+   *
+   * Text pasted back from Word, Pages or an email can arrive Unicode-decomposed
+   * — `exención` byte-unequal to the identical-looking stored string, with
+   * nothing on screen to distinguish them. A Spanish-language shop is the
+   * likeliest victim, and the cost is the entire forward roster blocked
+   * (`dive-domain-expert`, after #720 shipped).
+   *
+   * NFC is *canonical equivalence*, so this is not inferring materiality from a
+   * diff: the rendered legal document is the same document.
+   */
+  it("treats a decomposed paste of the same text as no change at all", async () => {
+    const { db, shop } = await signedContext();
+    // A Spanish release, because that is where this bites: the seeded English
+    // body is pure ASCII, where NFD and NFC are the same bytes and the bug is
+    // invisible.
+    const spanish =
+      "Exención de responsabilidad: reconozco los riesgos del buceo, la inmersión " +
+      "y la navegación, y participo de forma voluntaria bajo mi propia decisión médica.";
+    await saveWaiverTemplate(db, { shopId: shop.id, body: spanish });
+    const before = await listWaiverTemplateHistory(db, shop.id);
+    expect(spanish.normalize("NFD")).not.toBe(spanish);
+
+    const result = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      body: spanish.normalize("NFD"),
+    });
+
+    expect(result.versioned).toBe(false);
+    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(before.length);
+  });
+
   it("carries the shop's own title forward instead of renaming its release", async () => {
     const { db, shop, template } = await waiverContext();
     // The demo shop calls its release "Blue Mantis Diving Release". The editor

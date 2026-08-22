@@ -185,6 +185,15 @@ function DepartureCard({
           // in bold red made the card sound an alarm three times for one fact
           // (principle 9). The words carry the state; the name is the value.
           //
+          // **A card may go quiet about a blocker; it may never affirm the
+          // opposite.** The all-clear line below is gated on `blocked === 0`,
+          // not on the split counts: when every blocked diver on a boat is
+          // marked `not_boarded`, both split counts are zero and the chain used
+          // to fall through to "Everyone booked on this trip is clear to board"
+          // — three pixels under a counts line reading "1 blocked". That is the
+          // same self-contradicting card #698 existed to remove, pointing the
+          // other way (found by `dive-domain-expert` after it shipped).
+          //
           // **Two facts, not one.** A blocked diver already on the boat and a
           // blocked diver still ashore are different situations, and the card
           // used to describe both — plus divers the crew had marked as never
@@ -225,7 +234,7 @@ function DepartureCard({
           </>
         ) : booked === 0 ? (
           <p className="mt-2 text-base text-muted">{copy.noneBooked}</p>
-        ) : boarded === booked ? (
+        ) : boarded === booked && blocked === 0 ? (
           // The manifest already celebrates this milestone ("Roll call complete
           // ✦"); Today watches the same board without ever visiting the
           // manifest, so it earns the same coral rise-in moment here (principle
@@ -235,9 +244,9 @@ function DepartureCard({
             <span aria-hidden="true">🎉 </span>
             {copy.everyoneAboard}
           </p>
-        ) : (
+        ) : blocked === 0 ? (
           <p className="mt-1.5 text-base font-medium text-success">{copy.clearToBoard}</p>
-        )}
+        ) : null}
       </div>
 
       {/* Crew is one quiet line — names when assigned, a plain gap note when

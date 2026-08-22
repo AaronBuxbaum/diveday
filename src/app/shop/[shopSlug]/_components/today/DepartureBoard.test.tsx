@@ -206,6 +206,12 @@ describe("DepartureBoard readiness caption (one bar, one caption, one count line
     expect(screen.queryByText(/unresolved blocker/)).toBeNull();
     // The counts line still reports the roster fact — that number is right.
     expect(screen.getByText(/3 aboard · 3 clear to board · 1 blocked/)).toBeInTheDocument();
+    // **And the card says nothing else.** Going quiet about a blocker is
+    // allowed; affirming the opposite is not. This state used to fall through
+    // to "Everyone booked on this trip is clear to board", three pixels under a
+    // counts line reading "1 blocked" (found by `dive-domain-expert`).
+    expect(screen.queryByText(COPY.clearToBoard)).toBeNull();
+    expect(screen.queryByText(COPY.everyoneAboard)).toBeNull();
   });
 
   it("teaches the empty boat instead of rendering zeros", () => {

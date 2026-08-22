@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { setBookingPayment } from "@/db/payments";
+import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { bookings, tripRequirements, trips } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { seededShopContext } from "@/test/db";
@@ -159,6 +159,14 @@ function requirementsForm(
   if (toggles.requiresWaiver) formData.set("requiresWaiver", "on");
   if (toggles.requiresPayment) formData.set("requiresPayment", "on");
   return formData;
+}
+
+/** One booking's payment submission, as the roster's control posts it. */
+function paymentForm(bookingId: string, status: string): FormData {
+  const data = new FormData();
+  data.set("bookingId", bookingId);
+  data.set("status", status);
+  return data;
 }
 
 /** Strip a departure's price, to reach the unpriced-and-payment-gated state. */
@@ -559,6 +567,66 @@ describe("money on the trip page", () => {
     // it is not the authorization refusal.
     const to = await redirectedTo(() => sendLastMinuteDealAction(shop.slug, tripId, form));
     expect(to).not.toContain("notice=not-authorized");
+  });
+
+  /**
+   * **The way *out* of a write-off is a write-off too.**
+   *
+   * The first gate asked only "is this staffer entering `waived`/`refunded`",
+   * which left the reverse wide open: a shop blows out a departure, the owner
+   * refunds the seats, the bookings survive on the roster, and a captain marks
+   * one `paid` again. `setBookingPayment` trusts its caller, so it lands.
+   *
+   * Three consequences, none of them cosmetic: reported revenue rises on money
+   * that was returned (`COLLECTED_PAYMENT_STATUSES`), the row stops pointing at
+   * the real Stripe refund, and the seat re-enters
+   * `listOwedShopCancellationRefunds` — whose own docstring calls a `paid` row
+   * on a cancelled trip "the obvious way to get this wrong".
+   *
+   * Found by `security-reviewer` after #714 shipped.
+   */
+  it("refuses a captain moving a refunded booking back to paid", async () => {
+    const { db, shop, tripId, captain, owner } = await context();
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
+    if (!booking) throw new Error("seeded trip has no bookings");
+
+    // The owner writes the refund off, as they may.
+    signIn(shop, owner);
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "refunded")),
+    );
+
+    signIn(shop, captain);
+    const to = await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "paid")),
+    );
+
+    expect(to).toContain("notice=not-authorized");
+    // And the row still says what the owner decided.
+    const after = await getBookingPayment(db, shop.id, booking.id);
+    expect(after?.status).toBe("refunded");
+  });
+
+  it("lets a captain re-submit a settled status without a confusing refusal", async () => {
+    // The current status stays selectable in the control, so a captain looking
+    // at a waived booking can submit `waived` unchanged. Refusing a tap that
+    // changes nothing is the wrong answer to the right rule.
+    const { db, shop, tripId, captain, owner } = await context();
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
+    if (!booking) throw new Error("seeded trip has no bookings");
+
+    signIn(shop, owner);
+    await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "waived")),
+    );
+
+    signIn(shop, captain);
+    const to = await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "waived")),
+    );
+
+    expect(to).not.toContain("not-authorized");
+    expect((await getBookingPayment(db, shop.id, booking.id))?.status).toBe("waived");
   });
 
   it("lets a captain record counter cash but not write a seat off", async () => {
