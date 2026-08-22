@@ -284,6 +284,29 @@ export async function bookSpot(
     return parsed.success ? toDiveDeclaration(parsed.data) : null;
   });
 
+  // **The narrow net, beside the per-IP one taken at the top.** A completed
+  // booking writes each diver's answer onto that diver's record, and
+  // `RATE_LIMITS.booking` is keyed by IP — which on its own lets anyone who
+  // knows a name and an email address spray claims onto that person's record
+  // from a rotating set of addresses. Keyed to the address the declaration is
+  // *about*, never to the lead booker: a party names up to six people, so a
+  // bucket on the submitter would be cleared by putting the victim in seat two.
+  //
+  // Spent only for a seat that actually answered — "Rather not say" writes
+  // nothing, so there is no record for it to protect — and only where there is
+  // an email to key on, since a seat booked with no address is the walk-in path
+  // and reaches no inbox and no pre-existing record.
+  //
+  // Checked here rather than around `persistDeclaration` so a refusal is a
+  // booking outcome the form can word, not an exception out of the transaction.
+  for (const [index, entry] of validParty.entries()) {
+    if (!entry.email || !declarationFor(declaredByIndex[index] ?? null)) continue;
+    const personKey = rateLimitKey("declaration", shopNow.id, entry.email.toLowerCase());
+    if (!(await checkRateLimit(personKey, RATE_LIMITS.declarationByPerson)).allowed) {
+      return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
+    }
+  }
+
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
