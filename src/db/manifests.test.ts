@@ -1197,7 +1197,12 @@ describe("crew emergency contacts (in-memory PGlite)", () => {
     if (!manifest) throw new Error("manifest missing");
     const payload = serializeManifests(
       [manifest],
-      { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+      {
+        slug: shop.slug,
+        name: shop.name,
+        timezone: shop.timezone,
+        emergencyReference: shop.emergencyReference,
+      },
       (blocker) => blocker.code,
     );
     const crew = JSON.stringify(payload.manifests[0]?.crew);
@@ -1888,7 +1893,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       if (!manifests) throw new Error("manifests missing");
       const payload = serializeManifests(
         manifests,
-        { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+        {
+          slug: shop.slug,
+          name: shop.name,
+          timezone: shop.timezone,
+          emergencyReference: shop.emergencyReference,
+        },
         (blocker) => blocker.code,
       );
       const departure = payload.manifests.find((entry) => entry.checkpoint === "departure");
@@ -1916,7 +1926,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     if (!beforeCalling) throw new Error("manifests missing");
     const uncalledPayload = serializeManifests(
       beforeCalling,
-      { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+      {
+        slug: shop.slug,
+        name: shop.name,
+        timezone: shop.timezone,
+        emergencyReference: shop.emergencyReference,
+      },
       (blocker) => blocker.code,
     );
     const uncalledAfterDive = uncalledPayload.manifests.find(
@@ -1945,7 +1960,12 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     if (!manifests) throw new Error("manifests missing");
     const payload = serializeManifests(
       manifests,
-      { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+      {
+        slug: shop.slug,
+        name: shop.name,
+        timezone: shop.timezone,
+        emergencyReference: shop.emergencyReference,
+      },
       (blocker) => blocker.code,
     );
     const afterDive = payload.manifests.find((entry) => entry.checkpoint === "after_dive_1");

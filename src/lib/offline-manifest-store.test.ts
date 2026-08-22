@@ -42,7 +42,12 @@ const EXPIRED_PAST_GRACE = new Date(
 ).toISOString();
 
 const payload: OfflineManifestPayload = {
-  shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
+  shop: {
+    slug: "blue-mantis",
+    name: "Blue Mantis Divers",
+    timezone: "America/New_York",
+    emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
+  },
   manifests: [
     {
       trip: {
@@ -112,7 +117,12 @@ const earlierPayload: OfflineManifestPayload = {
 // cross-tenant scenario purgeOfflineManifestsExceptShop exists to close (see
 // ADR 20260726-shopwide-offline-manifest-priming).
 const otherShopPayload: OfflineManifestPayload = {
-  shop: { slug: "reef-runners", name: "Reef Runners", timezone: "America/New_York" },
+  shop: {
+    slug: "reef-runners",
+    name: "Reef Runners",
+    timezone: "America/New_York",
+    emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
+  },
   manifests: [
     {
       ...payload.manifests[0],

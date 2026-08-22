@@ -92,7 +92,14 @@ export async function GET() {
   const windowEnd = new Date(now.getTime() + AUTO_SAVE_WINDOW_MS);
   const tripIds = await listTripIdsInOfflineManifestWindow(db, shop.id, now, windowEnd);
 
-  const shopIdentity = { slug: shop.slug, name: shop.name, timezone: shop.timezone };
+  const shopIdentity = {
+    slug: shop.slug,
+    name: shop.name,
+    timezone: shop.timezone,
+    // Primed with the board, because the whole point is that it is already on
+    // the device when the signal goes (issue #688).
+    emergencyReference: shop.emergencyReference,
+  };
   const payloads = await Promise.all(
     tripIds.map(async (tripId): Promise<OfflineManifestPayload | null> => {
       const manifests = await getTripManifests(db, shop.id, tripId);

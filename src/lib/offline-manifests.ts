@@ -1,5 +1,6 @@
 import { MINUTE_MS } from "@/lib/clock";
 import { nowDate } from "./clock";
+import type { EmergencyReference } from "./emergency-reference";
 import type { TripManifest } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // The roll-call rules come from `./roll-call`, never from `./manifests`: this
@@ -94,7 +95,19 @@ export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
-  shop: { slug: string; name: string; timezone: string };
+  /**
+   * `emergencyReference` rides here, and that is the point of carrying it at
+   * all: this snapshot is the document a crew has with no signal, and until
+   * issue #688 it held who is aboard and who to phone *afterwards* and nothing
+   * for the minute in between. A chamber number on a laminated card in the shop
+   * is worth nothing on the boat.
+   */
+  shop: {
+    slug: string;
+    name: string;
+    timezone: string;
+    emergencyReference: EmergencyReference;
+  };
   manifests: Array<
     Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {
       trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {

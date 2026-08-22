@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
 import type { TripManifest } from "./manifests";
 import {
   canRecordOfflineCrewStatus,
@@ -46,7 +47,12 @@ function snapshot(): OfflineManifestSnapshot {
     snapshotId: "snapshot-1",
     savedAt: "2026-07-20T11:00:00.000Z",
     expiresAt: "2026-07-27T16:00:00.000Z",
-    shop: { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+    shop: {
+      slug: "blue-mantis",
+      name: "Blue Mantis",
+      timezone: "America/New_York",
+      emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+    },
     manifests: checkpoints.map((checkpoint) => ({
       trip: {
         id: "trip-1",
@@ -956,7 +962,12 @@ describe("offline manifest policy", () => {
 
     const payload = serializeManifests(
       [manifest],
-      { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
       (blocker) => blocker.code,
     );
     expect(payload.manifests[0]?.divers[0]?.rollCall).toEqual({
@@ -1052,7 +1063,12 @@ describe("offline manifest policy", () => {
 
     const payload = serializeManifests(
       [manifest],
-      { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
       (blocker) => blocker.code,
     );
     const [tom, omar] = payload.manifests[0]?.divers ?? [];
@@ -1129,7 +1145,12 @@ describe("offline manifest policy", () => {
 
     const payload = serializeManifests(
       [manifest],
-      { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
       (blocker) => blocker.code,
     );
     const diver = payload.manifests[0]?.divers[0] as Record<string, unknown> | undefined;

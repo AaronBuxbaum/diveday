@@ -510,5 +510,12 @@
     "heading": "{shortfall, plural, one {# diver short} other {# divers short}} of the {minimum} this departure needs",
     "shortBody": "If it hasn't got there by {deadline}, DiveDay cancels it and emails everyone aboard. Fill the seats, or clear the minimum in Details to run it anyway.",
     "dueBody": "The deadline passed at {deadline}. DiveDay will cancel this departure and email everyone aboard on its next pass — clear the minimum in Details if you want to run it anyway."
+  },
+  "emergency": {
+    "heading": "In an emergency",
+    "empty": "No emergency numbers recorded. Add the chamber, the dive-accident hotline and your shore contact in Settings — the crew reads this offline.",
+    "vesselLabel": "Vessel:",
+    "shoreContactLabel": "Shore contact:",
+    "planLabel": "If something goes wrong"
   }
 }

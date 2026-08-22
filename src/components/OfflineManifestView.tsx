@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
@@ -1073,6 +1074,23 @@ export function OfflineManifestView() {
           {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}
         </p>
       </div>
+
+      {/* **Above the roster, deliberately.** This is the one document a crew has
+          with no signal, and the numbers on it are the ones you reach for while
+          somebody is bent — not after the boat is back. Everything below is who
+          is aboard; this is what to do about it. Rides in the snapshot, so it is
+          here in airplane mode (issue #688). */}
+      <EmergencyReferenceCard
+        className="mt-6"
+        reference={envelope.snapshot.shop.emergencyReference}
+        copy={{
+          heading: t("trips.emergency.heading"),
+          empty: t("trips.emergency.empty"),
+          vesselLabel: t("trips.emergency.vesselLabel"),
+          shoreContactLabel: t("trips.emergency.shoreContactLabel"),
+          planLabel: t("trips.emergency.planLabel"),
+        }}
+      />
 
       <nav
         className="mt-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2"

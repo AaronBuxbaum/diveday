@@ -33,7 +33,12 @@ const EXPIRES_AT = "2026-08-15T09:00:00.000Z";
 
 function tripPayload(tripId: string, shopSlug: string): OfflineManifestPayload {
   return {
-    shop: { slug: shopSlug, name: shopSlug, timezone: "America/New_York" },
+    shop: {
+      slug: shopSlug,
+      name: shopSlug,
+      timezone: "America/New_York",
+      emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
+    },
     manifests: [
       {
         trip: {

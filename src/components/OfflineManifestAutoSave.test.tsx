@@ -17,7 +17,12 @@ vi.mock("@/lib/offline-manifest-store", () => ({
 
 function payloadFor(tripId: string): OfflineManifestPayload {
   return {
-    shop: { slug: "blue-mantis", name: "Blue Mantis Divers", timezone: "America/New_York" },
+    shop: {
+      slug: "blue-mantis",
+      name: "Blue Mantis Divers",
+      timezone: "America/New_York",
+      emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
+    },
     manifests: [
       {
         trip: {

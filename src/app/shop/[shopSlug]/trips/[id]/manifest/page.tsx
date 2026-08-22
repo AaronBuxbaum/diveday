@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
+import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import {
   OfflineManifestManager,
@@ -297,6 +298,23 @@ export default async function TripManifestPage({
           souls: manifest.summary.totalDivers + manifest.crew.length,
         })}
       </p>
+      {/* **The numbers a crew dials during**, above the roster and on paper.
+          This screen and its printout are what a crew has at the rail, and
+          until issue #688 the only phone numbers on either were the ones you
+          ring a diver's family on afterwards. Not `print:hidden`: paper is the
+          fallback under the fallback, and a laminated card in the shop is worth
+          nothing on the boat. */}
+      <EmergencyReferenceCard
+        className="mt-6"
+        reference={shop.emergencyReference}
+        copy={{
+          heading: t("trips.emergency.heading"),
+          empty: t("trips.emergency.empty"),
+          vesselLabel: t("trips.emergency.vesselLabel"),
+          shoreContactLabel: t("trips.emergency.shoreContactLabel"),
+          planLabel: t("trips.emergency.planLabel"),
+        }}
+      />
       {/* A segmented control, not a row of buttons: the active checkpoint used
           to wear the same filled-primary costume as "Mark boarded", which gave
           the page a second primary that was not an action at all (principle
@@ -434,7 +452,12 @@ export default async function TripManifestPage({
             locale={locale}
             payload={serializeManifests(
               completeManifests,
-              { slug: shopSlug, name: shop.name, timezone: shop.timezone },
+              {
+                slug: shopSlug,
+                name: shop.name,
+                timezone: shop.timezone,
+                emergencyReference: shop.emergencyReference,
+              },
               (blocker) => readinessBlockerText(t, blocker),
             )}
             copy={

@@ -28,7 +28,8 @@
       "refreshed": "Estado de pagos actualizado desde Stripe.",
       "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
       "timezoneSaved": "Zona horaria guardada.",
-      "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista."
+      "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
+      "emergencySaved": "Referencia de emergencia guardada."
     },
     "timezone": {
       "heading": "Zona horaria",
@@ -310,6 +311,20 @@
     },
     "dataExport": {
       "description": "Llévate todo lo que guarda tu centro en un ZIP de CSV."
+    },
+    "emergency": {
+      "heading": "Referencia de emergencia",
+      "value": "{count, plural, one {# número} other {# números}} que la tripulación puede ver sin conexión",
+      "empty": "Sin registrar",
+      "intro": "Aparecen en la lista de pasajeros, también sin conexión. DiveDay nunca los rellena — la cámara más cercana y la línea correcta dependen de dónde bucees.",
+      "lineLabel": "Qué es {n}",
+      "linePlaceholder": "Cámara, línea de accidentes de buceo, guardacostas…",
+      "phoneLabel": "Número {n}",
+      "vesselLabel": "Embarcación",
+      "shoreContactLabel": "Contacto en tierra",
+      "planLabel": "Si algo sale mal",
+      "submit": "Guardar referencia de emergencia",
+      "saving": "Guardando…"
     }
   },
   "team": {
