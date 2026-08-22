@@ -131,7 +131,6 @@ describe("blockerFixFor and diverBlockerAction agree on every blocker code", () 
     certification_insufficient: { requiredLevel: "advanced_open_water" },
     specialty_missing: { specialty: "deep" },
     specialty_pending: { specialty: "deep" },
-    specialty_expired: { specialty: "deep" },
     specialty_import_unconfirmed: { specialty: "deep" },
     under_minimum_age: { age: 11, minimumAge: 12 },
   };

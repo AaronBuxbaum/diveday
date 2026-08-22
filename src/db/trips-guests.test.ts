@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { getTripGuests } from "./trips-guests";
 import { upcomingTripsWithCounts } from "./trips";
+import { getTripGuests } from "./trips-guests";
 
 async function context() {
   const { db, shop } = await seededShopContext();
