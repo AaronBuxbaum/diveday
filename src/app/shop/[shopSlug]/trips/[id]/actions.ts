@@ -164,15 +164,26 @@ const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
 
 /**
- * The two payment statuses that are a *decision about* money rather than a
- * record of it — a free seat, and a refund marked without any money moving.
- * `canRefund` gates that write-off everywhere else in the app; see
- * `markPaymentAction` (issue #714).
+ * Whether a payment status *records* money or *decides about* it — a free seat
+ * and a refund-without-a-refund are the write-off that `canRefund` gates
+ * everywhere else (issue #714).
+ *
+ * An exhaustive `Record`, not a `Set`: a sixth status added to the column would
+ * silently fall outside a set and be treated as ordinary counter work, which is
+ * the one direction this classification must never fail. Here it is a compile
+ * error instead.
  */
-const WRITE_OFF_PAYMENT_STATUSES: ReadonlySet<z.infer<typeof paymentStatusSchema>> = new Set([
-  "waived",
-  "refunded",
-]);
+const PAYMENT_STATUS_CLASS: Record<z.infer<typeof paymentStatusSchema>, "record" | "write_off"> = {
+  unpaid: "record",
+  deposit_paid: "record",
+  paid: "record",
+  waived: "write_off",
+  refunded: "write_off",
+};
+
+function paymentStatusClass(status: z.infer<typeof paymentStatusSchema>): "record" | "write_off" {
+  return PAYMENT_STATUS_CLASS[status];
+}
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
   // The requirable set, not the ladder: Divemaster and Instructor are working
@@ -1238,19 +1249,33 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // revenue for the month. Both are the write-off that `canRefund` gates
   // everywhere else, and this action accepted the whole enum from the form
   // (issue #714).
-  const decidesAboutMoney = status.success && WRITE_OFF_PAYMENT_STATUSES.has(status.data);
-  const s = (
-    await requireShopSurface(
-      shopSlug,
-      decidesAboutMoney
-        ? {
-            allow: canPersonRefund,
-            refusal: { notice: "not-authorized", landing: ["trips", tripId, "guests"] },
-          }
-        : undefined,
-    )
-  ).session;
+  //
+  // **The gate is on the transition, not the destination.** Asking only "is
+  // this staffer entering a write-off" left the way *out* of one wide open:
+  // `setBookingPayment` trusts its caller (only `setBookingPaymentIfNotFinal`
+  // refuses to overwrite a final status), so a captain could take a booking the
+  // owner had already refunded and mark it `paid` again. That is not a wording
+  // problem — it raises reported revenue on money that was returned, wipes the
+  // row's pointer at the real Stripe refund, and puts the seat back into
+  // `listOwedShopCancellationRefunds`, whose own docstring calls a `paid` row on
+  // a cancelled trip "the obvious way to get this wrong". Found by
+  // `security-reviewer` after #714 shipped.
   const db = await getDb();
+  const s = (await requireShopSurface(shopSlug)).session;
+  const current = bookingId ? await getBookingPayment(db, s.user.shopId, bookingId) : null;
+  // Checked before the gate: the control keeps a booking's *current* status
+  // selectable, so a captain looking at a waived seat can submit `waived`
+  // unchanged. Nothing is decided by a tap that changes nothing, and refusing
+  // it would be a confusing refusal rather than a protection.
+  if (status.success && current?.status === status.data) {
+    revalidateAndRedirect(back, noticeUrl(back, "payment", { bid: bookingId }));
+  }
+  const decidesAboutMoney =
+    (status.success && paymentStatusClass(status.data) === "write_off") ||
+    (current?.status !== undefined && paymentStatusClass(current.status) === "write_off");
+  if (decidesAboutMoney && !(await canPersonRefund(db, s.user.shopId, s.user.personId))) {
+    redirect(noticeUrl(back, "not-authorized"));
+  }
   const saved =
     bookingId && status.success
       ? await setBookingPayment(db, {

@@ -228,6 +228,13 @@ export const RETURNED_ROLL_CALL_LOOKBACK_MS = 48 * HOUR_MS;
 export const ROLL_CALL_RESIDUE_MS = 30 * 24 * HOUR_MS;
 
 /**
+ * How long after its scheduled departure a boat is still treated as at the
+ * dock. Trips run late, so every "has it sailed" question in this app carries
+ * the same hour (`src/db/ready.ts`).
+ */
+const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
+
+/**
  * One trip's unclosed head count, as codes and numbers — `src/i18n/today-labels.ts`
  * picks the words. Named `OpenRollCall` still because the schedule board reads
  * the same shape.
@@ -1594,9 +1601,23 @@ export async function getTodayWork(
       blockedNames: blockedRows.map((row) => row.person.fullName),
       boarded: aboardCount,
       blockedAboard: blockedRows.filter((row) => rollCall.get(row.booking.id) === "boarded").length,
-      // `undefined`, never `not_boarded`: a diver the crew marked as never
-      // having left the dock is accounted for, not waiting on a gate.
-      blockedAshore: blockedRows.filter((row) => rollCall.get(row.booking.id) === undefined).length,
+      // `not_boarded` drops out **only once the boat has actually gone.**
+      //
+      // At the departure checkpoint that result means "never left the dock",
+      // which is benign and accounted for — but the control a deckhand taps is
+      // labelled "Mark not boarded", and at 07:05 on a 07:30 boat that reads as
+      // "isn't aboard yet", not "isn't coming". This card lives from the moment
+      // a trip is scheduled until about an hour after it sails, so silencing on
+      // the tap alone took the prompt off the front desk 25 minutes before it
+      // stopped being fixable (found by `dive-domain-expert` after #698
+      // shipped). The same 1-hour buffer every other "has it sailed" question
+      // in this app uses.
+      blockedAshore: blockedRows.filter((row) => {
+        const result = rollCall.get(row.booking.id);
+        if (result === "boarded") return false;
+        if (result === undefined) return true;
+        return trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
+      }).length,
       courseTitle: trip.course?.title ?? null,
       crew: crewByTrip.get(trip.id) ?? [],
     };

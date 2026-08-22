@@ -216,12 +216,18 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   /**
-   * A diver the crew marked `not_boarded` at departure never left the dock, and
-   * is in neither half — "their waiver is unsigned" is noise about a boat that
-   * has sailed without them (issue #698). `not_boarded` means the opposite at
-   * an after-dive checkpoint; this reads only the departure one.
+   * A diver the crew marked `not_boarded` at departure never left the dock —
+   * but **only once the boat has actually gone.**
+   *
+   * The control says "Mark not boarded", and at 07:05 on a 07:30 boat that
+   * reads as "isn't aboard yet", not "isn't coming". Dropping them from the
+   * card on the tap alone took the prompt off the front desk 25 minutes before
+   * it stopped being fixable (`dive-domain-expert`, after #698 shipped). This
+   * asserts both sides of the hour-long departure buffer, which is what the
+   * original version of this test missed: it drove an *upcoming* trip while its
+   * own docstring said "a boat that has sailed without them".
    */
-  it("counts a diver left ashore as neither aboard nor waiting on a gate", async () => {
+  it("keeps a not-boarded diver's blocker on the card until the boat has gone", async () => {
     const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -244,13 +250,26 @@ describe("today's work queue (in-memory PGlite)", () => {
       status: "not_boarded",
     });
 
-    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const departure = after.departures.find((row) => row.tripId === reef.id);
-    if (!departure) throw new Error("reef departure missing after roll call");
-    expect(departure.blockedAboard).toBe(0);
-    expect(departure.blockedAshore).toBe(wasDeparture.blockedAshore - 1);
+    // Still at the dock: the blocker stays on the card, because a diver marked
+    // not boarded before the lines are off is still someone the desk can chase.
+    const atDock = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const stillHere = atDock.departures.find((row) => row.tripId === reef.id);
+    if (!stillHere) throw new Error("reef departure missing after roll call");
+    expect(stillHere.blockedAshore).toBe(wasDeparture.blockedAshore);
+
+    expect(stillHere.blockedAboard).toBe(0);
     // Still on the roster, still blocked — the counts line is unchanged.
-    expect(departure.blocked).toBe(wasDeparture.blocked);
+    expect(stillHere.blocked).toBe(wasDeparture.blocked);
+
+    // **And an hour past departure the card is gone entirely**, which is the
+    // part worth pinning: the board's own window ends at the same buffer the
+    // rule above uses, so "the boat has sailed" is a state this surface never
+    // renders. The gate stays because it states the rule correctly for whoever
+    // widens that window — but nobody should go looking for the silenced case
+    // on this card, because there isn't one.
+    const sailed = new Date(reef.startsAt.getTime() + 61 * 60 * 1000);
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone, sailed);
+    expect(after.departures.find((row) => row.tripId === reef.id)).toBeUndefined();
   });
 
   it("drops a cancelled booking from the boarded count, not just the booked count", async () => {

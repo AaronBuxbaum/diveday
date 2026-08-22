@@ -789,6 +789,14 @@ new domain concept, define it here in the same PR.
   crew *attestation* ("crew aboard: 2 of 2") preceded this and is gone, table and all — a number
   that named nobody could not help anyone find a missing person
   ([ADR 20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md)).
+
+  A departure-checkpoint result also changes what Today's departure card says about a **blocked**
+  diver, and the split is worth knowing: blocked-and-**aboard** is the more serious of the two — the
+  gate is behind them, not in front — and leads the card; blocked-and-**ashore** keeps the "cannot
+  board yet" wording; a diver marked **not boarded** stays in the ashore group until an hour past
+  the scheduled departure, because until the lines are off "not boarded" still reads as *isn't
+  aboard yet* to the deckhand tapping it, and the desk can still chase them. The card may go quiet
+  about a blocker once the boat has gone; it never says everyone is clear while one stands.
 - **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
   manifest and every checkpoint, saved and refreshed automatically while the device has signal
   (staff can also force an immediate "Refresh now"). It is safety evidence as saved, never an
@@ -827,10 +835,18 @@ new domain concept, define it here in the same PR.
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
-  statement**. DiveDay keeps one versioned release per shop: editing it saves a new immutable version
-  and new links snapshot the current one. The exact template version is snapshotted into each issued
-  record; a signed record is immutable and a replacement link creates a new record. Some answers on the
-  medical form require a physician sign-off — that's a blocking state, not a checkbox.
+  statement**. DiveDay keeps one versioned release per shop: a *changed* release saves a new immutable
+  version and new links snapshot the current one. The exact template version is snapshotted into each
+  issued record; a signed record is immutable and a replacement link creates a new record. Some
+  answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox.
+
+  **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
+  held against the version it was signed on, so a new version leaves every booked diver on every
+  forward departure blocked until they sign again. That is why re-saving *identical* text publishes
+  nothing at all — trimmed, newline-normalised and Unicode-normalised, so a paste from Word that
+  differs only in Unicode form is not an edit — and why the editor says how many signed releases a
+  real edit is about to put back in the queue before the tap. Whether a shop may declare an edit
+  *non-material* and keep those signatures is an open legal question (H-01/H-03), not a gap.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

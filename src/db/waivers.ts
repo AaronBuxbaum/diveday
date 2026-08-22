@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
@@ -274,10 +274,15 @@ export async function saveWaiverTemplate(
     const [current] = await tx
       .select()
       .from(waiverTemplates)
-      .where(eq(waiverTemplates.shopId, input.shopId))
+      // `version`, not `createdAt` — that is transaction time, the same trap
+      // `roll_call_events.seq` exists for. And live rows only: comparing a
+      // staffer's text against a *deleted* body would silently refuse a real
+      // edit while the release actually in force is different
+      // (`dive-domain-expert`).
+      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
       .orderBy(desc(waiverTemplates.version))
       .limit(1);
-    const title = input.title?.trim() || current?.title || DEFAULT_WAIVER_TITLE;
+    const title = (input.title?.normalize("NFC").trim() || current?.title) ?? DEFAULT_WAIVER_TITLE;
     // Newlines normalised, not just trimmed. A browser submits a `<textarea>`
     // with CRLF line breaks whatever it was rendered with (the HTML form
     // payload spec), so a release stored with LF comes back with a `\r` on
@@ -285,7 +290,20 @@ export async function saveWaiverTemplate(
     // never once fire in a real browser while passing every unit test, and the
     // stored text would gain a `\r` per line on each save. Normalising on the
     // way in keeps one spelling in the column.
-    const body = input.body.replace(/\r\n?/g, "\n").trim();
+    // Newlines *and* Unicode form. A browser submits a `<textarea>` with CRLF
+    // whatever it was rendered with, so a release stored with LF comes back
+    // with a `\r` on every line — the no-op check below would never once fire
+    // in a real browser while passing every unit test.
+    //
+    // NFC for the same class of invisible difference: text pasted back from
+    // Word, Pages or an email can arrive decomposed, so `exención` is
+    // byte-unequal to the identical-looking stored string. A Spanish shop is
+    // the likeliest victim, and the cost is an edit nobody made invalidating
+    // every signature the shop holds (`dive-domain-expert`, after #720
+    // shipped). Safe in a way semantic diffing is not: NFC is *canonical
+    // equivalence*, so the rendered legal text is the same document — this is
+    // not inferring materiality from a diff.
+    const body = input.body.replace(/\r\n?/g, "\n").normalize("NFC").trim();
     if (current && current.title === title && current.body === body) {
       return { template: current, versioned: false };
     }
@@ -328,7 +346,10 @@ export async function countSignedWaiversOnCurrentVersion(
   const [current] = await db
     .select({ version: waiverTemplates.version })
     .from(waiverTemplates)
-    .where(eq(waiverTemplates.shopId, shopId))
+    // Same reader shape as `saveWaiverTemplate` above, and for the same reason:
+    // a count against a version readiness does not consider current is a
+    // number nobody can act on.
+    .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
     .orderBy(desc(waiverTemplates.version))
     .limit(1);
   if (!current) return 0;
@@ -341,7 +362,12 @@ export async function countSignedWaiversOnCurrentVersion(
         eq(waiverRecords.shopId, shopId),
         eq(waiverRecords.status, "completed"),
         isNull(waiverRecords.supersededAt),
-        ne(waiverRecords.signatureMethod, "imported"),
+        // `or(isNull, ne)`, not a bare `ne`: in SQL `x <> 'imported'` is NULL for
+        // a NULL column and the row silently drops out, while the JS predicate
+        // this mirrors (`isCompletedWaiverCurrent`) treats the same record as
+        // *not* imported and does apply the version check. These two exist to
+        // agree; a bare `ne` is where they stop.
+        or(isNull(waiverRecords.signatureMethod), ne(waiverRecords.signatureMethod, "imported")),
         eq(waiverRecords.templateVersion, current.version),
         // `signedAt ?? completedAt`, the same fallback `isCompletedWaiverCurrent`
         // applies, resolved in SQL so this stays one counting query.
