@@ -288,6 +288,20 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   it is not optional there. And where the headline is a stable name of its own, it goes in
   `STAFF_DESTINATION_TITLE_KEYS` so ⌘K finds the page by it: a staffer who thinks of Reports as
   "how's my month" and types that used to get nothing back (issue #824).
+- **A surface below depth 1 names its parent and links to it.** Through the page's eyebrow where it
+  has one — `ShopPageHeader`'s `eyebrowHref`, or `EyebrowBackLink` for a header that is not that
+  component — and through an explicit "← Parent" link only where the page has no eyebrow to spend
+  (the diver record's "← All divers", the course editor's "← Courses"). Two forms, chosen by whether
+  the header has an eyebrow, and never a third: three ways up existed before this rule and which one
+  a page got was a function of when it was written (issue #823).
+  The four trip surfaces were the case that named it. They are the deepest pages in the staff app,
+  and their first header link was the Overview/Guests/Manifest/Prep strip — which moves you
+  *sideways* between one departure's own pages and never back to the board. A crew member finishing
+  a roll call had the global nav, which on a phone is the dock at the bottom of the screen: a jump
+  out of the departure rather than a step up from it.
+  The word is the parent's own, from `STAFF_DESTINATION_LABEL_KEYS`, for the same reason the eyebrow
+  is. And no breadcrumb *trail*: chrome defers, the eyebrow already carries the parent's name, and a
+  two-level app does not need one.
 - **Remove until it breaks.** The test for every control and border on a finished surface: take
   it away — if the screen still works, it was noise. What survives is what the screen is.
 - **Page width says what kind of surface this is.** Staff work surfaces (the shop home, orders,

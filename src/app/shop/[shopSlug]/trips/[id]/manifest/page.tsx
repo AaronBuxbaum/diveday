@@ -33,6 +33,8 @@ import {
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
@@ -270,6 +272,8 @@ export default async function TripManifestPage({
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
+        boardHref={shopPath(shopSlug, "schedule", "board")}
+        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}

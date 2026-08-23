@@ -15,6 +15,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -312,6 +313,8 @@ export default async function ManageTripPage({
     <>
       <FlashParams params={["notice", "count", "form"]} />
       <TripPageHeader
+        boardHref={shopPath(shopSlug, "schedule", "board")}
+        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}

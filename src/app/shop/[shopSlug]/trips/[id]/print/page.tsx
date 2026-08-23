@@ -5,6 +5,8 @@ import { getTripOverview } from "@/db/trips-overview";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { AutoPrint } from "../_components/AutoPrint";
 import { TripPageHeader } from "../_components/TripPageHeader";
@@ -99,7 +101,13 @@ export default async function TripPrintPage({
         {/* Each section breaks onto its own page, so page one has to say which
             departure it is — through the same header the four tabs wear, not a
             hand-rolled title line that would drift from them. */}
-        <TripPageHeader trip={details.trip} locale={locale} timeZone={shop.timezone} />
+        <TripPageHeader
+          trip={details.trip}
+          boardHref={shopPath(resolvedParams.shopSlug, "schedule", "board")}
+          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+          locale={locale}
+          timeZone={shop.timezone}
+        />
         <PacketDives
           dives={details.tripDiveList.map(({ dive, diveSite }) => ({
             diveNumber: dive.diveNumber,
