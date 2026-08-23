@@ -5,7 +5,7 @@ import { THEME_COLORS } from "./_brand/colors";
 import "./globals.css";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { SkipLink } from "@/components/SkipLink";
-import { localeCorrectionScript } from "@/i18n/lang-script";
+import { localeCorrectionScript, localeDirection } from "@/i18n/lang-script";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -112,6 +112,11 @@ export default function RootLayout({
   return (
     <html
       lang={DEFAULT_DIVER_LOCALE}
+      // Derived, never hard-coded — see `localeDirection`. Both shipped
+      // locales read left to right, so this changes not one pixel today; what
+      // it changes is that `globals.css`'s `:dir(rtl)` rule for the `<select>`
+      // indicator can match at all, which it never could (issue #733).
+      dir={localeDirection(DEFAULT_DIVER_LOCALE)}
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} h-full antialiased`}
     >

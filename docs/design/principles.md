@@ -363,6 +363,26 @@ done for you. `text-success`/`text-warning` on `--surface-sunken` want the `-str
 same reason, and dimming a row with `opacity-*` dims its contrast ratio with it — quiet ink is
 `text-muted`, which is a measured token.
 
+### Writing direction
+
+DiveDay's layout is written to be **direction-agnostic**: logical properties (`ms-`/`me-`, `ps-`/`pe-`,
+`start-`/`end-`, `text-start`/`text-end`, `border-s`/`border-e`) rather than their physical twins, so a
+margin that means "after the text" stays after the text whichever way the text runs. About 190 of them
+are already in `src/components` against a few dozen physical ones, and
+`pnpm check:logical-properties` is what keeps that ratio moving one way — ratcheted per file like
+`check:tokens`, with the existing ones grandfathered.
+
+`<html dir>` is derived from the negotiated locale (`localeDirection`, `src/i18n/lang-script.ts`),
+alongside `lang` and corrected by the same pre-hydration script. Both shipped locales resolve to
+`ltr`, so it renders nothing differently today; what it changes is that `globals.css`'s `:dir(rtl)`
+rule for the `<select>` indicator can match at all. It never could — somebody wrote RTL-aware CSS on
+purpose and nothing in the app had ever set a direction (issue #733).
+
+**This is not RTL support and must not be described as one.** No RTL locale ships, and nobody has
+looked at this app in one. The honest statement is the one above: the layout is written to be
+direction-agnostic and is untested in an RTL locale — the same care the WCAG AA wording takes in
+[product/features/roadmap.md](../product/features/roadmap.md).
+
 ## The holistic pass (run it before any checklist)
 
 Every design review starts holistic, before the itemized criteria — a surface can pass every
