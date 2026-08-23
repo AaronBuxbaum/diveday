@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMoneyCents } from "./format";
+import { formatMoneyCents, formatMoneyScanned } from "./format";
 import {
   currencyFractionDigits,
   currencyMinorUnits,
@@ -127,6 +127,36 @@ describe("formatMoneyCents", () => {
 
   it("accepts the uppercase spelling", () => {
     expect(formatMoneyCents(13_000, "USD", "en-US")).toBe("$130.00");
+  });
+});
+
+/**
+ * The scanning twin: it may drop minor units, and only when there are none to
+ * lose. Everything a shop reconciles keeps `formatMoneyCents` above, so these
+ * tests are as much about what stays two-decimal as what stops being it.
+ */
+describe("formatMoneyScanned", () => {
+  it("drops the minor units of a whole amount", () => {
+    expect(formatMoneyScanned(9_500, "usd", "en-US")).toBe("$95");
+    expect(formatMoneyScanned(0, "usd", "en-US")).toBe("$0");
+  });
+
+  // The line between this and rounding, and the reason the check is on the
+  // major-unit value rather than a currency-wide setting.
+  it("keeps them when the amount is not a whole major unit", () => {
+    expect(formatMoneyScanned(6_250, "usd", "en-US")).toBe("$62.50");
+    expect(formatMoneyScanned(9_501, "usd", "en-US")).toBe("$95.01");
+  });
+
+  it("renders a zero-decimal currency exactly as the exact formatter does", () => {
+    expect(formatMoneyScanned(5_000, "jpy", "en-US")).toBe(formatMoneyCents(5_000, "jpy", "en-US"));
+  });
+
+  it("formats for the reader's locale", () => {
+    const spanish = formatMoneyScanned(13_000, "eur", "es-ES");
+    expect(spanish).toContain("130");
+    expect(spanish).not.toContain("130,00");
+    expect(spanish).toContain("€");
   });
 });
 

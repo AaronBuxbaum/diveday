@@ -53,7 +53,10 @@ test.describe("staff", () => {
     await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("6 spots left")).toBeVisible();
-    await expect(page.getByText("$120.00")).toBeVisible();
+    // "$120", not "$120.00": a price a diver is *scanning* drops minor units it
+    // does not have (`formatMoneyScanned`, issue #769). The order this booking
+    // becomes still reconciles in two decimals.
+    await expect(page.getByText("$120", { exact: true })).toBeVisible();
     const partySize = page.getByLabel("Number of divers");
     await expect(partySize).toHaveAttribute("data-hydrated", "true");
     await partySize.selectOption("2");

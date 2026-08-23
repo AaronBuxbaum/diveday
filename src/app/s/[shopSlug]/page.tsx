@@ -29,7 +29,7 @@ import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@
 import { nowDate } from "@/lib/clock";
 import {
   formatDayParts,
-  formatMoneyCents,
+  formatMoneyScanned,
   formatShortDate,
   formatTime,
   formatTimeRange,
@@ -565,7 +565,7 @@ export default async function SchedulePage({
                       ) : null}
                       {trip.priceCents !== null ? (
                         <p className="mt-2 text-sm font-semibold tabular-nums">
-                          {formatMoneyCents(trip.priceCents, currency, locale)}{" "}
+                          {formatMoneyScanned(trip.priceCents, currency, locale)}{" "}
                           <span className="font-normal text-muted">{t("common.perDiver")}</span>
                         </p>
                       ) : null}

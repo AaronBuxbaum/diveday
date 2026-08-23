@@ -12,7 +12,7 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
-import { formatMoneyCents } from "@/lib/format";
+import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
@@ -155,7 +155,7 @@ export default async function PublicCoursesPage({
                   </div>
                   {totalCents !== null ? (
                     <p className="shrink-0 text-base font-semibold tabular-nums">
-                      {formatMoneyCents(totalCents, currency, locale)}
+                      {formatMoneyScanned(totalCents, currency, locale)}
                     </p>
                   ) : null}
                 </Link>
