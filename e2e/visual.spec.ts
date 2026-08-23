@@ -2425,6 +2425,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers");
         await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
         await page.getByRole("searchbox", { name: "Search divers" }).waitFor();
+        // The search row is a box *and* a button now, both from first paint
+        // (issue #782). Waiting for only half of it is how a baseline ends up
+        // holding a row that is still assembling.
+        await page.getByRole("link", { name: "Add diver" }).waitFor();
         await capture(page, "divers", scheme);
       });
 

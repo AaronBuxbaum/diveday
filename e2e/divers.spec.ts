@@ -504,56 +504,43 @@ test("a section's outcome renders inside that section, not in a banner at the to
 });
 
 /**
- * **The quick-add reveal, on a phone, where the slide was wrong.**
+ * **The search row on a phone, where nothing may move.**
  *
- * Typing the first character reveals an "Add <name>" button and the search
- * input slides left to make room — right at `sm` and up, where the input is a
- * fixed 20rem beside the button. Below it the input is full width in a clipped
- * row, so the same 250ms carried the whole focused search box across the
- * screen while somebody was typing into it (issue #781).
+ * Typing the first character used to mount an "Add diver" button and slide the
+ * search input sideways to make room. At `sm` and up the input is a fixed 20rem
+ * beside the button and that read as the button pushing it aside; below it the
+ * input is full width, so the same 250ms carried the whole focused search box
+ * across the screen while somebody was typing into it (issue #781), and the
+ * button popping in beside it was the other half of the report (issue #782).
  *
- * Two things have to be true, and neither can be checked in jsdom — it
- * implements no `AnimationEvent` and resolves no media query.
+ * The button is on screen from first paint now, so the row is static. That is a
+ * claim about geometry across a state change, which jsdom cannot answer —
+ * nothing there lays anything out.
  */
 test.describe("the divers search on a phone", () => {
   test.use({ viewport: { width: 390, height: 800 } });
 
-  /**
-   * Reading the *computed* duration rather than watching the box move: the
-   * slide ends where the element started, so anything measured after it
-   * finishes is identical either way, and measuring while it runs would be a
-   * timing guess. This asks the browser what the rule resolves to at this
-   * width, which is exact.
-   */
-  test("collapses the quick-add slide, and still lets the reveal settle", async ({ page }) => {
+  test("keeps the add-diver door on screen from first paint, and the search box still", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/divers");
     const search = page.getByRole("searchbox", { name: "Search divers" });
     await search.waitFor();
 
-    const durationOfSlide = () =>
-      page.evaluate(() => {
-        const probe = document.createElement("div");
-        probe.className = "animate-slide-in-right";
-        document.body.append(probe);
-        const duration = getComputedStyle(probe).animationDuration;
-        probe.remove();
-        return duration;
-      });
+    // Nothing typed: the same words, leading to the full form rather than to a
+    // quick-add with nothing to add from.
+    const openForm = page.getByRole("link", { name: "Add diver" });
+    await expect(openForm).toBeVisible();
+    await expect(openForm).toHaveAttribute("href", "/shop/blue-mantis/divers/new");
+    const before = await search.boundingBox();
 
-    // `0.01ms`, as the browser prints it — the same collapse the reduced-motion
-    // kill-switch uses, and short enough that nothing travels.
-    expect(await durationOfSlide()).toBe("1e-05s");
-
-    // **And the reveal still settles.** `animationend` is the only thing that
-    // advances `entering -> visible`, so removing the animation instead of
-    // shortening it would strand this button mid-state forever.
     await search.fill("Nora");
-    const add = page.getByRole("button", { name: /Add/ }).first();
-    await expect(add).toBeVisible();
-    await expect(add.locator("xpath=ancestor::div[1]")).not.toHaveClass(/animate-slide-in-right/);
+    // Awaiting the swap, not a duration: the link becomes a submit button, and
+    // that assertion is what makes the measurement below deterministic.
+    await expect(page.getByRole("button", { name: "Add diver" })).toBeVisible();
+    await expect(openForm).toHaveCount(0);
 
-    // The desktop layout keeps the motion it was designed for.
-    await page.setViewportSize({ width: 1280, height: 800 });
-    expect(await durationOfSlide()).toBe("0.25s");
+    // The box a staffer is typing into is exactly where it was.
+    expect(await search.boundingBox()).toEqual(before);
   });
 });
