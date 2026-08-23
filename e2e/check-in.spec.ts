@@ -29,14 +29,15 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
   // (Badge.tsx toneGlyph), so the element's own text is "❌Blocked".
   await expect(card.getByText("❌Blocked")).toBeVisible();
-  // **The reasons are one tap away, not gone.** This screen calls itself
-  // Counter mode — it faces a queue — so "Payment is outstanding for this trip"
-  // no longer sits open for whoever is next in line to read (issue #716). The
-  // badge above stays loud, the summary says how many reasons there are, and
-  // the staffer gets all of them on one tap.
-  await expect(card.getByText("Waiver has not been sent.")).toBeHidden();
-  await card.getByText(/Why: \d+ reasons?/).click();
+  // **The one reason is on the row, because it is one a lobby may overhear.**
+  // This screen calls itself Counter mode — it faces a queue — so a diver's
+  // money, medical answers and age stay behind a tap (issue #716). An unsent
+  // waiver is not that: it is the fact the staffer and the diver are both
+  // standing there to fix, and a disclosure hiding a single one of those made
+  // the row a staffer must act on the least informative thing in the queue
+  // (issue #759). Priya has exactly one, so there is nothing to open.
   await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
+  await expect(card.getByText(/Why: \d+ reasons?/)).toHaveCount(0);
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 
   await search.fill("not-a-real-diver");
@@ -47,6 +48,34 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   // when nothing had been typed at all (docs/design/principles.md #4).
   await page.getByRole("link", { name: "Show everyone arriving" }).click();
   await expect(page).toHaveURL("/shop/blue-mantis/check-in");
+});
+
+/**
+ * **The other half of the counter's privacy posture.** A diver with a stack of
+ * reasons keeps the disclosure — five of them open on three rows is the
+ * scannability it exists for, spent — but the closed state now names the first
+ * reason a lobby may overhear rather than counting alone. What must not be on
+ * the row, at any count, is the money: "Payment is outstanding for this trip."
+ * beside a named person on a screen a queue reads is the sentence issue #716
+ * was filed about, and this is the only place a browser holds it.
+ */
+test("a diver blocked five ways names the first reason and keeps the money behind the tap", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in");
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill("Ferreira");
+  await search.press("Enter");
+
+  const card = page.locator("article").filter({ hasText: "Ferreira" }).filter({ visible: true });
+  await expect(card).toHaveCount(1);
+  const summary = card.getByText("Waiver has not been sent. And 4 more reasons.");
+  await expect(summary).toBeVisible();
+  await expect(card.getByText("Payment is outstanding for this trip.")).toBeHidden();
+
+  await summary.click();
+  await expect(card.getByText("Payment is outstanding for this trip.")).toBeVisible();
 });
 
 /**

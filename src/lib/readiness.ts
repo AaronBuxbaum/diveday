@@ -256,6 +256,80 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
 };
 
 /**
+ * **Whether this reason may be named on a screen a queue can read.**
+ *
+ * Only one surface asks: `/shop/[shopSlug]/check-in` calls itself Counter
+ * mode, and it is the one staff screen whose audience is not the person signed
+ * in — it sits on the front desk facing a lobby, and the diver second in line
+ * reads whatever is on it. That is what put every reason behind a tap there
+ * (issue #716), and *"Payment is outstanding for this trip."* printed beside a
+ * named person is the sentence that argument was made about.
+ *
+ * A blanket tap is too blunt in the other direction, though: a collapsed row
+ * saying only "Why: 1 reason" makes the one row a staffer must act on the least
+ * informative thing in the queue, with the diver standing in front of them
+ * (issue #759). So the two facts are told apart rather than traded off — a
+ * reason that is ordinary shop paperwork can be said out loud, and a reason
+ * that is about somebody's money, health, or age cannot.
+ *
+ * `false` for exactly four codes, and each for the same reason the rest of the
+ * product is careful about them:
+ *
+ * - **`payment_due` / `payment_refunded`** — what a named person owes. A shop
+ *   would not say it out loud in front of the queue, and a staffer reading it
+ *   off the screen is what happens next.
+ * - **`medical_review`** — a review hold means the diver answered *yes* to
+ *   something on the RSTC form. The incident export deliberately carries waiver
+ *   *status* and never the answers; this is the same line.
+ * - **`under_minimum_age`** — its sentence names the diver's actual age against
+ *   the course minimum, i.e. it discloses that this person is a child. This is
+ *   the same disclosure `BLOCKER_CATEGORY` files under `setup` to keep off the
+ *   diver's own confirmation panel.
+ *
+ * Everything else is a fact about the shop's paperwork rather than about the
+ * person — an unsent waiver, a card nobody has captured, a requirement nobody
+ * configured — and is the thing the staffer and the diver are both there to
+ * fix.
+ *
+ * A `Record` and not a `Set`, so a new `ReadinessBlockerCode` is a compile
+ * error here and somebody has to decide which half it belongs in.
+ */
+export const BLOCKER_SAYABLE_AT_COUNTER: Record<ReadinessBlockerCode, boolean> = {
+  requirements_not_configured: true,
+  readiness_unavailable: true,
+  identity_unconfirmed: true,
+  waiver_not_sent: true,
+  waiver_pending: true,
+  waiver_expired: true,
+  medical_review: false,
+  certification_missing: true,
+  certification_pending: true,
+  certification_self_declared: true,
+  certification_insufficient: true,
+  specialty_missing: true,
+  specialty_pending: true,
+  specialty_import_unconfirmed: true,
+  nitrox_missing: true,
+  nitrox_pending: true,
+  nitrox_self_declared: true,
+  under_minimum_age: false,
+  payment_due: false,
+  payment_refunded: false,
+};
+
+/**
+ * The first reason a counter screen may name aloud, or `null` when every one of
+ * them is somebody's private business. Order is the readiness engine's own,
+ * which is worst-first, so this is the most serious sayable reason rather than
+ * merely the earliest.
+ */
+export function firstSayableAtCounter(
+  blockers: readonly ReadinessBlocker[],
+): ReadinessBlocker | null {
+  return blockers.find((blocker) => BLOCKER_SAYABLE_AT_COUNTER[blocker.code]) ?? null;
+}
+
+/**
  * **What a blocker aboard a boat is asking of the crew.**
  *
  * `BLOCKER_CATEGORY` answers "which requirement family", which is the right

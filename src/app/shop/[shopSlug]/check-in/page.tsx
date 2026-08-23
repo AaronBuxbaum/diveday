@@ -32,6 +32,7 @@ import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
+import { counterBlockerDisclosure } from "./blocker-disclosure";
 import { CheckInActionForm } from "./CheckInActionForm";
 import { CheckInSearch } from "./CheckInSearch";
 
@@ -589,16 +590,18 @@ export default async function CheckInPage({
                                 waiverCopy={waiverSendCopy(t)}
                                 blockers={row.readiness.blockers}
                                 fix={fix}
-                                // Behind a tap on this surface alone. The badge
-                                // above still says Blocked in danger tone, and
-                                // every reason is one tap away — what waits for
-                                // that tap is the queue reading a diver's
-                                // outstanding payment over a shoulder (#716).
-                                collapseReasons={{
-                                  summary: t("checkIn.blockerReasons", {
-                                    count: row.readiness.blockers.length,
-                                  }),
-                                }}
+                                // Behind a tap on this surface alone, and only
+                                // as far as the tap earns: what waits behind it
+                                // is the queue reading a diver's outstanding
+                                // payment over a shoulder (#716), not the fact
+                                // that a waiver is unsigned. So a single
+                                // sayable reason sits open on the row and the
+                                // rest name their first one in the summary
+                                // (#759). The badge above is untouched and
+                                // still says Blocked in danger tone.
+                                collapseReasons={
+                                  counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined
+                                }
                                 t={t}
                                 extra={
                                   // A diver at the counter with a signed paper release in
