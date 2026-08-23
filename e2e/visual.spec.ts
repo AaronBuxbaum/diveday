@@ -3588,35 +3588,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-guests-identity", scheme);
       });
 
-      // A shop that doesn't fill nitrox (or a trip with no live request left
-      // on it once nitrox is off) sees Total and Air collapse into a single
-      // tile — there's nothing for a second number to distinguish. Toggling
-      // the shared demo shop's rental catalog is contained here and reverted
-      // regardless of pass/fail, matching the pattern in e2e/nitrox.spec.ts.
-      test(`the prep page's tank tile collapses with nitrox off (${scheme})`, async ({ page }) => {
-        // Two settings round-trips bracket the capture, plus board → trip →
-        // Prep in between.
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        try {
-          await page.goto("/shop/blue-mantis/settings");
-          await openSettingsRow(page, "What we rent");
-          await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
-          await page.getByRole("button", { name: "Save rental catalog" }).click();
-          await page.getByText("Rental catalog saved.").waitFor();
-
-          await openReefTrip(page);
-          await openTripTab(page, "Prep");
-          await page.getByRole("heading", { name: "Tanks" }).waitFor();
-          await capture(page, "prep-no-nitrox", scheme);
-        } finally {
-          await page.goto("/shop/blue-mantis/settings");
-          await openSettingsRow(page, "What we rent");
-          await page.getByRole("checkbox", { name: "Nitrox fills" }).check();
-          await page.getByRole("button", { name: "Save rental catalog" }).click();
-          await page.getByText("Rental catalog saved.").waitFor();
-        }
-      });
-
       /**
        * DOM-H3. After a dive, the only control that isn't "Boarded" means
        * **did not return to the boat** — a different state from the dock's
@@ -3762,41 +3733,44 @@ for (const scheme of ["light", "dark"] as const) {
       // tone and *outside* the red blocker list, because it never blocks — an
       // instructor may be keeping that diver shallower on purpose. Nothing in
       // the seed reaches this state (every seeded site sits within its divers'
-      // ceilings), so the depth is raised for the capture and put back after,
-      // matching the nitrox pattern above.
+      // ceilings), so the depth is raised for the capture.
+      //
+      // **No revert, and none needed.** A dive site is schedule data, not shop
+      // configuration: `resetDemoSchedule` deletes `dive_sites` and re-seeds it
+      // before every test, so the next one reads Molasses Reef back at the
+      // seeded 12m whatever this test did or how it died. The `finally` that
+      // used to set it back was restoring a value the harness restores anyway,
+      // and it was not free — it put a second full form round-trip inside the
+      // same ceiling the capture had already spent, which is precisely how the
+      // nitrox capture at the foot of this file used to fail: the renderer
+      // wedged, the paint waits and the screenshot burned the budget, and the
+      // timeout landed on the revert. A revert that cannot run when it matters
+      // and is not needed when it can is only a way to run out of clock.
       test(`the roster's depth warning renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        // Two full briefing saves bracket the capture — set the depth, walk
-        // board → trip → Guests, shoot, then put the depth back in a `finally`
-        // — so this is six navigations and two form round-trips. Measured
-        // failing at HEAD *and* on `main` at one worker, so it was never a
-        // contention problem: the budget was simply never sized for what the
-        // test does. A flat 60s when it was written, which stopped tracking the
-        // budgets the moment they were derived — and by now *lowered* this test
-        // below the plain-capture ceiling it was raised above. Same allowance
-        // as every other flow capture here.
+        // One briefing save, then board → trip → Guests before the shot.
+        // Measured failing at HEAD *and* on `main` at one worker, so it was
+        // never a contention problem: the budget was simply never sized for
+        // what the test does. A flat 60s when it was written, which stopped
+        // tracking the budgets the moment they were derived — and by now
+        // *lowered* this test below the plain-capture ceiling it was raised
+        // above. Same allowance as every other flow capture here.
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const setDepth = async (meters: string) => {
-          await page.goto("/shop/blue-mantis/dive-sites");
-          await page.getByRole("link", { name: "Molasses Reef" }).first().click();
-          await page.waitForURL(/\/dive-sites\//);
-          await page.getByLabel(/Maximum depth/).fill(meters);
-          await page.getByRole("button", { name: "Save dive site" }).click();
-          await page.getByText("Dive site saved.").waitFor();
-        };
-        try {
-          await setDepth("32");
-          await openReefTrip(page);
-          await openTripTab(page, "Guests");
-          await page
-            .getByText(/deeper than the/)
-            .first()
-            .waitFor();
-          await capture(page, "trip-guests-depth-warning", scheme);
-        } finally {
-          await setDepth("12");
-        }
+        await page.goto("/shop/blue-mantis/dive-sites");
+        await page.getByRole("link", { name: "Molasses Reef" }).first().click();
+        await page.waitForURL(/\/dive-sites\//);
+        await page.getByLabel(/Maximum depth/).fill("32");
+        await page.getByRole("button", { name: "Save dive site" }).click();
+        await page.getByText("Dive site saved.").waitFor();
+
+        await openReefTrip(page);
+        await openTripTab(page, "Guests");
+        await page
+          .getByText(/deeper than the/)
+          .first()
+          .waitFor();
+        await capture(page, "trip-guests-depth-warning", scheme);
       });
 
       // Land-then-undo (docs/design/principles.md §7): deleting a private
@@ -4320,6 +4294,75 @@ for (const scheme of ["light", "dark"] as const) {
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();
       await capture(page, "manifest-emergency-empty", scheme);
+    });
+  });
+}
+
+/**
+ * **A shop that doesn't fill nitrox.**
+ *
+ * With the catalog off and no live request left on the departure, Total and Air
+ * collapse into a single tile — there is nothing for a second number to
+ * distinguish. The reef charter is the fixture that can show it: unlike the
+ * wreck charter it never had a nitrox request seeded onto it, so turning the
+ * catalog off leaves no live data to keep the tile alive (the same premise
+ * `e2e/nitrox.spec.ts` asserts on).
+ *
+ * **A shop of its own, because this writes shop-wide configuration.**
+ * `shops.rental_items` is not restored by the per-test reset — it puts back
+ * three `shops` columns and no others — so this used to bracket the capture in
+ * a `try/finally` that turned blue-mantis's catalog back on. That is the shape
+ * AGENTS.md and ADR 20260815-per-test-private-shops refuse, and on 2026-08-23
+ * it failed exactly as predicted: the capture hit the known unattributed
+ * Chromium wedge, both paint waits and the screenshot burned the test's
+ * ceiling, and the timeout landed on the **first line of the `finally`** — so
+ * the revert never ran and blue-mantis was left not filling nitrox for every
+ * later test in that worker. A `finally` is not isolation: it competes for the
+ * same clock as the failure it is there for, and it does not run at all when
+ * the worker dies. `e2e/nitrox.spec.ts` moved off this pattern for the same
+ * reason; this capture was the one site left on it, and its comment still
+ * pointed at that file as the precedent.
+ *
+ * The wedge itself is unchanged and unfixed by this — a wedged renderer still
+ * fails the test, and ci.yml's visual job still reruns the failed captures once
+ * on the probe's "wedged, not slow" verdict. What changes is the blast radius:
+ * the failure now costs one capture instead of quietly re-premising the rest of
+ * the shard.
+ *
+ * **A pinned identity**, for the same reason `manifest-emergency-empty` has
+ * one: the minted shop's name renders in the staff header and its slug-derived
+ * owner email in the dev banner, and `generateDemoShopIdentity` draws both at
+ * random — so an unpinned capture reports as changed on the very next pull
+ * request with nothing about the page itself different.
+ */
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — a shop that stops filling nitrox`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "slack-tide-dive-charters",
+    });
+
+    test(`the prep page's tank tile collapses with nitrox off (${scheme})`, async ({
+      page,
+      privateShop,
+    }) => {
+      // The mint and the live sign-in the fixture pays for, then one settings
+      // round-trip and board → trip → Prep before the capture.
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      await page.goto(`/shop/${privateShop.slug}/settings`);
+      await openSettingsRow(page, "What we rent");
+      await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
+      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      // The row comes back open with its saved notice — the destination's own
+      // render, not a timing guess.
+      await page.getByText("Rental catalog saved.").waitFor();
+
+      await page.goto(`/shop/${privateShop.slug}/schedule/board`);
+      await openTripFromBoard(page, REEF_TRIP);
+      await openTripTab(page, "Prep");
+      await page.getByRole("heading", { name: "Tanks" }).waitFor();
+      await capture(page, "prep-no-nitrox", scheme);
     });
   });
 }
