@@ -37,6 +37,7 @@ export function DiveBriefingCard({
   site,
   creatures,
   moments,
+  leadWithFieldGuide = false,
   locale,
 }: {
   diveNumber: number;
@@ -45,6 +46,23 @@ export function DiveBriefingCard({
   site: Site | null;
   creatures: Creature[];
   moments: Moment[];
+  /**
+   * **Put the species photos in front of a diver who has not booked yet.**
+   *
+   * They are the only photography on the page a diver decides to spend $95
+   * on — a licensed, credited grid of what they would actually see down there
+   * — and they were folded inside the disclosure below, whose closed summary
+   * reads "What to look for down there · 3 landmarks · 8 species" (issue
+   * #760). The page comment that justified folding it argues about the
+   * *confirmed* state: a just-paid diver should reach their confirmation
+   * without scrolling past a creature gallery. That is right, and it is the
+   * only state this stays folded for.
+   *
+   * The landmarks and the moment figure stay in the disclosure either way.
+   * They are reference for someone already going; the pictures are the
+   * argument for someone deciding.
+   */
+  leadWithFieldGuide?: boolean;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
 }) {
@@ -57,17 +75,24 @@ export function DiveBriefingCard({
   const fit = site ? siteFit(site) : null;
   const difficulty = diveSiteDifficultyLabel(site?.difficultyLevel, t);
   const landmarks = site ? parseDiveSiteLandmarks(site.landmarks) : [];
+  const hasFieldGuide =
+    creatures.length > 0 || Boolean(site?.marineLifeDescription) || Boolean(site?.marineLife);
+  // Above the fold for a diver still deciding, inside it for one who has
+  // already paid — see `leadWithFieldGuide`.
+  const fieldGuideLeads = leadWithFieldGuide && Boolean(site) && hasFieldGuide;
   // The long-tail site content folds behind one tap so the page stays a
-  // briefing, not a scroll marathon — the essentials above stay in view.
+  // briefing, not a scroll marathon — the essentials above stay in view. What
+  // counts as long-tail depends on where the field guide went: once it leads,
+  // the disclosure holds the landmarks and the moment alone, and a card with
+  // neither has no disclosure at all rather than an empty one.
   const hasSiteExtras =
-    landmarks.length > 0 ||
-    creatures.length > 0 ||
-    Boolean(site?.marineLifeDescription) ||
-    Boolean(site?.marineLife) ||
-    Boolean(moments[0]);
+    landmarks.length > 0 || Boolean(moments[0]) || (!fieldGuideLeads && hasFieldGuide);
   const extrasHint = [
     landmarks.length > 0 ? t("trip.siteLandmarkCount", { count: landmarks.length }) : null,
-    creatures.length > 0 ? t("trip.siteSpeciesCount", { count: creatures.length }) : null,
+    // Never advertise species the disclosure no longer holds.
+    creatures.length > 0 && !fieldGuideLeads
+      ? t("trip.siteSpeciesCount", { count: creatures.length })
+      : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -161,6 +186,17 @@ export function DiveBriefingCard({
             <p className="mt-2 leading-relaxed text-muted">{site.divePlan}</p>
           </section>
         ) : null}
+        {fieldGuideLeads && site ? (
+          <div className="mt-7 border-t border-border pt-5">
+            <DiveSiteFieldGuide
+              creatures={creatures}
+              summary={site.marineLifeDescription}
+              highlights={site.marineLife}
+              tipsHeading={site.fieldGuideTipsHeading}
+              t={t}
+            />
+          </div>
+        ) : null}
         {hasSiteExtras ? (
           <details className="group mt-7 border-t border-border">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
@@ -176,7 +212,7 @@ export function DiveBriefingCard({
               </span>
             </summary>
             <DiveSiteLandmarks landmarks={landmarks} t={t} />
-            {site ? (
+            {site && !fieldGuideLeads ? (
               <DiveSiteFieldGuide
                 creatures={creatures}
                 summary={site.marineLifeDescription}

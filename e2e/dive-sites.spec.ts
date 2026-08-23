@@ -94,8 +94,11 @@ test.describe("staff", () => {
       .getByRole("link")
       .click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
-    // Marine life folds behind the per-dive "look for" tap (P2 content fold).
-    await page.getByText("What to look for down there").first().click();
+    // **No tap.** Marine life used to fold behind the per-dive "look for"
+    // disclosure; for a diver who has not booked it now leads the briefing,
+    // because those photos are the argument for the trip rather than pre-trip
+    // reading (issue #760). This site carries no landmarks, so nothing is left
+    // to fold and the disclosure is absent entirely.
     await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
     await expect(page.getByText("27°C", { exact: true })).toBeVisible();
     await expect(page.getByText("18 m")).toBeVisible();
@@ -586,8 +589,10 @@ test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, a
   await expect(page.getByTitle("Terrain map of Molasses Reef")).toBeVisible();
   await expect(page.getByText("Reef garden loop")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
-  // Landmarks, the field guide, and diver moments fold behind one tap per
-  // dive so the page stays a briefing; open both tanks' folds to read them.
+  // Landmarks and diver moments fold behind one tap per dive so the page stays
+  // a briefing; open both tanks' folds to read them. The field guide is
+  // *outside* those folds for a diver who has not booked (issue #760), which is
+  // why the species assertions below hold whether or not these clicks land.
   for (const summary of await page.getByText("What to look for down there").all()) {
     await summary.click();
   }

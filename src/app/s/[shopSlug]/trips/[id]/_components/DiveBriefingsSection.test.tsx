@@ -36,9 +36,60 @@ function briefing(diveId: string, site: { id: string; name: string } | null): Di
   } as unknown as DiveBriefing;
 }
 
-function renderSection(briefings: DiveBriefing[]) {
-  render(<DiveBriefingsSection briefings={briefings} trip={trip} locale={DEFAULT_DIVER_LOCALE} />);
+function renderSection(briefings: DiveBriefing[], leadWithFieldGuide = false) {
+  render(
+    <DiveBriefingsSection
+      briefings={briefings}
+      trip={trip}
+      leadWithFieldGuide={leadWithFieldGuide}
+      locale={DEFAULT_DIVER_LOCALE}
+    />,
+  );
 }
+
+/** A briefing whose site carries species photos, which is what #760 is about. */
+function briefingWithSpecies(diveId: string): DiveBriefing {
+  return {
+    ...briefing(diveId, { id: "site-a", name: "Molasses Reef" }),
+    creatures: [
+      {
+        id: "creature-1",
+        slug: "stoplight-parrotfish",
+        name: "Stoplight parrotfish",
+        scientificName: "Sparisoma viride",
+        kind: "Fish",
+        description: "Grazes the reef in daylight.",
+        preparationTip: "Hang back and it carries on.",
+        imageUrl: "/marine-life/stoplight-parrotfish.jpg",
+      },
+    ],
+  } as unknown as DiveBriefing;
+}
+
+/**
+ * **The only photography on the page a diver buys from** sat inside a
+ * default-closed disclosure, whose summary read "What to look for down there ·
+ * 3 landmarks · 8 species" (issue #760). It leads for a diver who is still
+ * deciding and stays folded for one who has already paid — the split the page
+ * comment about the seat coming first was actually arguing for.
+ */
+describe("the field guide", () => {
+  it("leads, outside the disclosure, for a diver who has not booked", () => {
+    renderSection([briefingWithSpecies("d1")], true);
+
+    const heading = screen.getByRole("heading", { name: "A few faces to learn" });
+    expect(heading.closest("details")).toBeNull();
+    // And the disclosure does not advertise species it no longer holds.
+    expect(screen.queryByText(/1 species/)).not.toBeInTheDocument();
+  });
+
+  it("stays folded for a diver who has already paid", () => {
+    renderSection([briefingWithSpecies("d1")], false);
+
+    const heading = screen.getByRole("heading", { name: "A few faces to learn" });
+    expect(heading.closest("details")).not.toBeNull();
+  });
+});
 
 describe("compare the sites", () => {
   it("compares two dives at different sites", () => {

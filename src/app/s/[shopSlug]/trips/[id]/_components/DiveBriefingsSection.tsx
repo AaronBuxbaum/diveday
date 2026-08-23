@@ -8,10 +8,13 @@ import type { DiveBriefing, Trip } from "./types";
 export function DiveBriefingsSection({
   briefings,
   trip,
+  leadWithFieldGuide = false,
   locale,
 }: {
   briefings: DiveBriefing[];
   trip: Trip;
+  /** Passed straight through to every card — see `DiveBriefingCard`. */
+  leadWithFieldGuide?: boolean;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
 }) {
@@ -92,7 +95,7 @@ export function DiveBriefingsSection({
           multi-column grid would strand a tall card beside a near-empty one.
           Full-width cards size to their own content, so there is no blank box. */}
       <div className="-mx-6 mt-3 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3 sm:mx-0 sm:mt-5 sm:grid sm:snap-none sm:grid-cols-1 sm:overflow-visible sm:px-0">
-        {briefings.map(({ dive, diveSite, creatures, moments }) => (
+        {briefings.map(({ dive, diveSite, creatures, moments }, index) => (
           <DiveBriefingCard
             key={dive.id}
             diveNumber={dive.diveNumber}
@@ -101,6 +104,15 @@ export function DiveBriefingsSection({
             site={diveSite}
             creatures={creatures}
             moments={moments}
+            // Only the first card at a given site leads with its photos. A
+            // two-tank day on one mooring renders the same briefing twice, so
+            // without this the same four species fill the page twice over —
+            // the duplication principle 9 is about, made louder by the very
+            // pictures this exists to surface.
+            leadWithFieldGuide={
+              leadWithFieldGuide &&
+              briefings.findIndex((other) => other.diveSite?.id === diveSite?.id) === index
+            }
             locale={locale}
           />
         ))}
