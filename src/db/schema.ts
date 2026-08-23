@@ -1911,6 +1911,26 @@ export const activityEvents = pgTable(
     actorPersonId: uuid("actor_person_id")
       .notNull()
       .references(() => people.id),
+    /**
+     * The person this line is **about**, where that is neither the actor nor
+     * reachable through `booking_id` — today, a note written on a diver's
+     * record rather than on one of their seats (`addDiverNote`).
+     *
+     * Every other line in this table is about a departure or a seat, and stays
+     * that way: this column is null for all of them. It exists because the
+     * diver record's Activity panel claims a line when the booking is one of
+     * theirs or they are the actor, and a record-scoped note is neither — the
+     * subject lived only inside the free-text `message`, so the line landed on
+     * the trail of the staffer who wrote it and never on the record it was
+     * written on (issue #615).
+     *
+     * It is read by `pagedDiverActivity` and redacted under by
+     * `anonymizeDiver`'s activity sweep — **both, or neither**. That pairing is
+     * what keeps "the set a shop can read about a person" and "the set an
+     * erasure destroys" the same set by construction rather than by two
+     * functions happening to agree.
+     */
+    subjectPersonId: uuid("subject_person_id").references(() => people.id),
     message: text("message").notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
     /**
@@ -1932,6 +1952,11 @@ export const activityEvents = pgTable(
   },
   (table) => [
     index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
+    index("activity_events_shop_subject_idx").on(
+      table.shopId,
+      table.subjectPersonId,
+      table.occurredAt,
+    ),
     check("activity_events_message_not_blank", sql`length(trim(${table.message})) > 0`),
   ],
 );

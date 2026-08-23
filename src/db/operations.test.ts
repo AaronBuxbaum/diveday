@@ -16,7 +16,7 @@ import {
   listTripActivity,
   pagedDiverActivity,
 } from "./operations";
-import { people } from "./schema";
+import { activityEvents, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 describe("staff-only operational context", () => {
@@ -338,10 +338,10 @@ describe("staff-only operational context", () => {
 /**
  * The same append-only table the Guests tab reads, filtered to one person
  * instead of one departure — the question a staffer at the counter actually
- * has. Two things make a line theirs: it happened to a seat of theirs, or they
- * did it. That pair is not a choice made here; it is the predicate
- * `anonymizeDiver` redacts under, so what a shop can read and what an erasure
- * destroys are the same set by construction.
+ * has. Three things make a line theirs: it happened to a seat of theirs, they
+ * did it, or it is about them. That set is not a choice made here; it is the
+ * predicate `anonymizeDiver` redacts under, so what a shop can read and what an
+ * erasure destroys are the same set by construction.
  */
 describe("a diver's own activity trail", () => {
   /** The seeded cast's headline diver — `seed-diver-trail.ts` gives her the long one. */
@@ -419,6 +419,14 @@ describe("a diver's own activity trail", () => {
       total: 0,
       rows: [],
     });
+
+    // A malformed id is an empty trail, never a raised `invalid input syntax
+    // for type uuid` — which Postgres would turn into a 500 on a page whose
+    // own notFound() is two lines further down.
+    expect(await pagedDiverActivity(db, shop.id, "not-a-uuid")).toMatchObject({
+      total: 0,
+      rows: [],
+    });
   });
 
   /**
@@ -443,6 +451,94 @@ describe("a diver's own activity trail", () => {
 
     const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 50 });
     expect(after.rows.length).toBeGreaterThan(0);
+    for (const row of after.rows) expect(row.message).toBe(REDACTED_TEXT);
+  });
+
+  /**
+   * The reported failure: a note written on a diver's record hangs off no seat
+   * and is written by a staffer, so neither of the two seat-shaped handles
+   * claims it — it landed on the trail of whoever wrote it and never on the
+   * record it was written on. `subject_person_id` is what claims it now.
+   */
+  it("puts a note written on a diver's record on that diver's trail, and on the writer's", async () => {
+    const { db, shop } = await seededShopContext();
+    const priya = await seededDiver(db, shop.id, "Priya Sharma");
+    const [actor] = await listStaff(db, shop.id);
+    if (!actor) throw new Error("expected seeded staff");
+
+    const before = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
+    const note = await addDiverNote(db, {
+      shopId: shop.id,
+      personId: priya,
+      actorPersonId: actor.person.id,
+      body: "Keeps her own logbook; ask before writing in it.",
+    });
+    if (!note) throw new Error("expected the diver note to be created");
+
+    const added = `${actor.person.fullName} added a private note about Priya Sharma`;
+    const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
+    expect(after.total).toBe(before.total + 1);
+    expect(after.rows[0]?.message).toBe(added);
+    // Still on the writer's own trail too — the actor handle is unchanged.
+    const writersTrail = await pagedDiverActivity(db, shop.id, actor.person.id, { pageSize: 100 });
+    expect(writersTrail.rows.some((row) => row.message === added)).toBe(true);
+
+    // The matching delete line lands on the same record, not only on the writer's.
+    await expect(
+      deleteDiverNote(db, {
+        shopId: shop.id,
+        personId: priya,
+        noteId: note.id,
+        actorPersonId: actor.person.id,
+      }),
+    ).resolves.toMatchObject({ deleted: true });
+    const afterDelete = await pagedDiverActivity(db, shop.id, priya, { pageSize: 100 });
+    expect(afterDelete.rows[0]?.message).toBe(
+      `${actor.person.fullName} deleted a private note about Priya Sharma`,
+    );
+  });
+
+  /**
+   * The pairing, proven rather than restored: whatever handle claims a line for
+   * a person, an erasure of that person destroys its wording. The row inserted
+   * here is reachable **only** through `subject_person_id` — a different actor,
+   * no booking, and a message that never spells her name, so the erasure
+   * sweep's fuzzy name pass cannot reach it either. Drop the subject clause
+   * from that sweep and this fails while the reader still hands the line back.
+   */
+  it("destroys every line the trail claims, whichever handle claims it", async () => {
+    const { db, shop } = await seededShopContext();
+    const priya = await seededDiver(db, shop.id, "Priya Sharma");
+    const owner = await seededDiver(db, shop.id, "Dana Reyes");
+    const [actor] = await listStaff(db, shop.id);
+    if (!actor) throw new Error("expected seeded staff");
+
+    await addDiverNote(db, {
+      shopId: shop.id,
+      personId: priya,
+      actorPersonId: actor.person.id,
+      body: "Prefers the second wave.",
+    });
+    const subjectOnly = "A staffer corrected a rental size on a record";
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      actorPersonId: owner,
+      subjectPersonId: priya,
+      message: subjectOnly,
+    });
+
+    const claimed = await pagedDiverActivity(db, shop.id, priya, { pageSize: 200 });
+    expect(claimed.rows.some((row) => row.message === subjectOnly)).toBe(true);
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: priya,
+      actorPersonId: owner,
+    });
+    expect(erased.ok).toBe(true);
+
+    const after = await pagedDiverActivity(db, shop.id, priya, { pageSize: 200 });
+    expect(after.total).toBe(claimed.total);
     for (const row of after.rows) expect(row.message).toBe(REDACTED_TEXT);
   });
 });

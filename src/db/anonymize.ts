@@ -710,14 +710,19 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // redacted rather than cleared.
   //
   // Two statements, because the exact handles are not enough on their own. The
-  // first sweeps by booking and by actor: everything attached to a seat, and
-  // everything this person did themselves. The name-scoped one after it catches
-  // what neither can:
-  // an internal note attached to the *diver* rather than a booking writes an
-  // event with a null `booking_id` and a message that names the diver outright
-  // ("… added a private note about Nora Quinn", src/db/operations.ts), and
-  // `activity_events` carries no person link to sweep on. Matching the stored
-  // name is the only handle that exists.
+  // first sweeps by booking, by actor and by subject: everything attached to a
+  // seat, everything this person did themselves, and everything written *about*
+  // them on their own record. That third clause is the same one
+  // `pagedDiverActivity` reads under (`src/db/operations.ts`) and the two move
+  // together or not at all — a reader wider than this sweep would leave lines
+  // legible on a record after an erasure had run.
+  //
+  // The name-scoped statement after it stays, for what none of the three exact
+  // handles can reach: any message that names the diver while hanging off
+  // another person's seat or none at all. It used to be the *only* handle on a
+  // record-scoped note, whose subject lived solely inside the message text
+  // ("… added a private note about Nora Quinn"); `subject_person_id` now carries
+  // that outright, so the fuzzy pass is a backstop rather than the mechanism.
   //
   // The name match is bounded to whole words (`activityMessageNameMatch`) and
   // is skipped entirely below MIN_NAME_MATCH_CHARS. A substring match is not
@@ -738,12 +743,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         or(
           owned ? inArray(activityEvents.bookingId, bookingIds) : undefined,
           eq(activityEvents.actorPersonId, personId),
+          eq(activityEvents.subjectPersonId, personId),
         ),
       ),
     );
 
   // Run second and counted separately, so the number logged is exactly the
-  // rows the fuzzy handle reached *beyond* the two exact ones above — the
+  // rows the fuzzy handle reached *beyond* the three exact ones above — the
   // figure an owner needs to judge whether the name match over-reached.
   const nameMatch = activityMessageNameMatch(ctx.fullName);
   if (nameMatch) {

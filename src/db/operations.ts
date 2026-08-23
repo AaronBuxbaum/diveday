@@ -104,6 +104,9 @@ export async function addDiverNote(
       tripId: null,
       bookingId: null,
       actorPersonId: input.actorPersonId,
+      // The seat-shaped handles are both null here, so the subject is the only
+      // thing tying this line to the record it was written on.
+      subjectPersonId: input.personId,
       message: `${actor.name} added a private note about ${diver.name}`,
       occurredAt: nowDate(),
     });
@@ -219,6 +222,7 @@ export async function deleteDiverNote(
       tripId: null,
       bookingId: null,
       actorPersonId: input.actorPersonId,
+      subjectPersonId: input.personId,
       message: `${actor.name} deleted a private note about ${note.diverName}`,
       occurredAt: nowDate(),
     });
@@ -328,14 +332,20 @@ export const DIVER_ACTIVITY_PAGE_SIZE = PAGE_SIZE.section;
  * Everything in the shop's activity trail that is **about one person**, newest
  * first, one page at a time.
  *
- * Two things make an event theirs, and the pair is not arbitrary — it is
+ * Three things make an event theirs, and the set is not arbitrary — it is
  * exactly the predicate `anonymizeDiver` redacts under (`src/db/anonymize.ts`),
  * so the set a shop can read here and the set an erasure destroys are the same
  * set by construction:
  *
  * - it happened **to a seat of theirs** (`booking_id` is one of their bookings),
  * - or they **did** it (`actor_person_id`) — a divemaster's own trail across
- *   every boat they ran.
+ *   every boat they ran,
+ * - or it is **about them** (`subject_person_id`) — a note written on their
+ *   record, which hangs off no seat at all.
+ *
+ * A clause added here is added to that sweep in the same change or not at all.
+ * Widening the reader alone would leave lines readable on a record *after* an
+ * erasure had run, which is the exact failure the pairing exists to prevent.
  *
  * Nothing is redacted at read time and nothing needs to be: an erased person's
  * lines already read `[redacted]` in the table, written once inside the erasure
@@ -357,6 +367,12 @@ export async function pagedDiverActivity(
   personId: string,
   options: { page?: number; pageSize?: number } = {},
 ) {
+  // Postgres *raises* on a malformed literal compared against a `uuid` column
+  // rather than selecting nothing, so an unguarded id is a 500 where an empty
+  // trail belongs — the same hazard `uuidParam` covers on a route segment.
+  // Both writers above guard this way; this reader's only caller narrows its
+  // segment today, and the next one may not.
+  const usable = isUuid(shopId) && isUuid(personId);
   const theirs = and(
     eq(activityEvents.shopId, shopId),
     or(
@@ -368,23 +384,27 @@ export async function pagedDiverActivity(
           .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId))),
       ),
       eq(activityEvents.actorPersonId, personId),
+      eq(activityEvents.subjectPersonId, personId),
     ),
   );
   return offsetPage({
     page: options.page,
     pageSize: options.pageSize ?? DIVER_ACTIVITY_PAGE_SIZE,
     countRows: async () => {
+      if (!usable) return 0;
       const [row] = await db.select({ count: count() }).from(activityEvents).where(theirs);
       return row?.count ?? 0;
     },
-    fetchRows: (offset, limit) =>
-      db
-        .select()
-        .from(activityEvents)
-        .where(theirs)
-        .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
-        .limit(limit)
-        .offset(offset),
+    fetchRows: async (offset, limit) =>
+      usable
+        ? await db
+            .select()
+            .from(activityEvents)
+            .where(theirs)
+            .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
+            .limit(limit)
+            .offset(offset)
+        : [],
   });
 }
 
