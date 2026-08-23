@@ -182,6 +182,17 @@
    * eye reads the whole thing as an instant jump followed by a pause and then a
    * hard cut — which is how the board's row menu managed to feel simultaneously
    * too fast to see and 450ms long. Slow off the mark, then away.
+   *
+   * **An exit says so in its name, so the curve can be checked.** The rule was
+   * written down when the row menu was fixed and then three exits sat on the
+   * arrival curve for weeks anyway — the toast dismiss, the diver row leaving
+   * the roster, the scaled-out overlay — because nothing could tell an entrance
+   * keyframe from a departing one (issue #756). So the convention is now load
+   * bearing: a keyframe that animates something *away* carries `out` or
+   * `dismiss` as a hyphen-separated word in its name, and
+   * `scripts/check-exit-curves.mjs` holds every such utility to this curve. A
+   * keyframe that names itself an exit and genuinely is not one says
+   * `diveday:allow-exit-curve: <why>`.
    */
   --ease-in-soft: cubic-bezier(0.55, 0, 0.85, 0.3);
   /*
@@ -563,7 +574,7 @@ summary {
 }
 
 .toast-dismiss {
-  animation: toast-dismiss 200ms var(--ease-out-soft) both;
+  animation: toast-dismiss 200ms var(--ease-in-soft) both;
 }
 
 /*
@@ -598,7 +609,7 @@ summary {
 }
 
 .animate-slide-out-right {
-  animation: slide-out-right 250ms var(--ease-out-soft) both;
+  animation: slide-out-right 250ms var(--ease-in-soft) both;
 }
 
 @keyframes scale-in {
@@ -750,7 +761,7 @@ summary {
 }
 
 .animate-scale-out {
-  animation: scale-out 180ms var(--ease-out-soft) both;
+  animation: scale-out 180ms var(--ease-in-soft) both;
 }
 
 /*

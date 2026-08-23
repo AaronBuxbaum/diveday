@@ -46,6 +46,7 @@
     "check:loading-skeletons": "node scripts/check-loading-skeletons.mjs",
     "check:notice-codes": "node scripts/check-notice-codes.mjs",
     "check:soft-delete": "node scripts/check-soft-delete.mjs",
+    "check:exit-curves": "node scripts/check-exit-curves.mjs",
     "check:redirect-in-try": "node scripts/check-redirect-in-try.mjs",
     "check:text": "node scripts/check-source-text.mjs",
     "check:infra-ascii": "node scripts/check-infra-ascii.mjs",

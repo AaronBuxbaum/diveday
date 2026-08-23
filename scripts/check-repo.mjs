@@ -49,6 +49,7 @@ const checks = [
   ["uuid-segments", "check-uuid-segments.mjs"],
   ["notice-codes", "check-notice-codes.mjs"],
   ["scroll-preservation", "check-scroll-preservation.mjs"],
+  ["exit-curves", "check-exit-curves.mjs"],
   ["soft-delete", "check-soft-delete.mjs"],
   ["shop-word", "check-shop-word.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
