@@ -128,6 +128,26 @@ export default async function SchedulePage({
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
   const isEmbed = embed === "1";
+  /**
+   * **How many departures the widget shows before it hands over.**
+   *
+   * The recommended snippet frames this page at 900px tall; the full list
+   * rendered **2,734px** into it, so a shop's own website got a scrollbar
+   * inside a scrollbar and showed about a third of the schedule — worst on a
+   * phone, where a visitor swiping over the frame cannot tell which thing they
+   * are scrolling and momentum hands off unpredictably between the two
+   * (issue #805).
+   *
+   * A frame cannot guess the right height, because the height *is* however many
+   * departures a shop runs — 900px is right for a quiet shop and wrong for a
+   * busy one, and busy is the shop that most wants the widget. So the widget
+   * stops trying to be the schedule and becomes a window onto it: the next few
+   * departures and one link to the real page.
+   *
+   * Six because that is roughly a week for a shop running a boat a day, and it
+   * fits the frame at both widths the snippet allows.
+   */
+  const EMBED_TRIP_LIMIT = 4;
   // The view a diver has built — month, embed mode, and both list filters —
   // must survive every link that re-renders this page. A pager or month arrow
   // that drops `hasSpace` quietly hands back the full unfiltered list with
@@ -192,6 +212,21 @@ export default async function SchedulePage({
       publicOnly: true,
     }),
   ]);
+  // The widget shows a window; the page shows the schedule. Sliced here rather
+  // than asked for in the query so the two surfaces read the same list and can
+  // never disagree about what is next (issue #805).
+  const listedTrips = isEmbed ? upcoming.slice(0, EMBED_TRIP_LIMIT) : upcoming;
+  // The zone the times below are in, for the widget's footer. Anchored on a
+  // real departure so a shop that switches to summer time reads correctly
+  // either side of the change, falling back to the range's first.
+  const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
+  const zoneNote =
+    isEmbed && zoneAnchor
+      ? t("schedule.timesInZoneFooter", {
+          shop: shop.name,
+          zone: timeZoneLabel(zoneAnchor, locale, tz),
+        })
+      : null;
   const hasUpcoming = range.first !== null;
   /**
    * **Has this shop ever run a departure** — which is not what `hasUpcoming`
@@ -305,23 +340,14 @@ export default async function SchedulePage({
           </p>
         </header>
       )}
-      {/* The embed widget keeps the timezone sentence even without the
-          masthead: it is the same list of times, and a remote booker
-          misreading them is the same mistake wherever it is framed. */}
-      {isEmbed
-        ? (() => {
-            const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
-            if (!zoneAnchor) return null;
-            return (
-              <p className="mb-4 text-sm text-muted">
-                {t("schedule.timesInZone", {
-                  shop: shop.name,
-                  zone: timeZoneLabel(zoneAnchor, locale, tz),
-                })}
-              </p>
-            );
-          })()
-        : null}
+      {/* **The timezone sentence moved to the footer**, it did not go. It is
+          the same list of times and a remote booker misreading them is the
+          same mistake wherever it is framed — but as the *opening line* of a
+          widget on the shop's own website it was the first thing a visitor
+          read, above any departure, and a local visitor would not get anything
+          wrong without it (principles.md §4; issue #805). Below the
+          departures, whoever needs it still finds it beside what it
+          qualifies. */}
 
       {nextDeparture ? (
         <Link
@@ -358,7 +384,7 @@ export default async function SchedulePage({
         </Link>
       ) : null}
 
-      {hasUpcoming && (prevMonthKey || nextMonthKey || explicitMonth) ? (
+      {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
         // A labeled region rather than a `<nav>` landmark, matching the month
         // grid it replaced: the embed widget promises "no page chrome" as
         // literally zero navigation landmarks inside the iframe
@@ -403,7 +429,11 @@ export default async function SchedulePage({
         </section>
       ) : null}
 
-      {hasUpcoming ? (
+      {/* No filters in the frame. A month pager and a "has space" checkbox are
+          page furniture inside a 900px window whose whole job is "here is
+          what's next" — and every control in there is one more thing competing
+          with the shop's own page around it (issue #805). */}
+      {hasUpcoming && !isEmbed ? (
         // Server-fed, same house pattern as the roster search in
         // AddDiverSection.tsx: the URL carries the filters and the list below
         // re-renders filtered. Changing a filter submits the form itself —
@@ -628,7 +658,7 @@ export default async function SchedulePage({
                 </li>
               );
             };
-            return upcoming.flatMap((trip) => {
+            return listedTrips.flatMap((trip) => {
               const dayIso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
               // The day header is a calendar block — big day numeral, weekday
               // and month as its caps — because the question a diver scans
@@ -665,7 +695,11 @@ export default async function SchedulePage({
           })()}
         </ul>
       )}
-      {nextCursor || after || explicitMonth ? (
+      {/* No pager in the frame either. "Show later departures" is the same
+          nested navigation the fixed height caused — a second page loaded
+          inside somebody else's site — and the widget already offers the way
+          out to the real schedule below (issue #805). */}
+      {!isEmbed && (nextCursor || after || explicitMonth) ? (
         <div className="mt-5 flex flex-wrap items-center gap-3">
           {(() => {
             const backStack = decodeCursorStack(back);
@@ -795,6 +829,25 @@ export default async function SchedulePage({
           20260726-schedule-embed). A relative href resolves against the
           iframe's own document (this page's origin), not the parent page, so
           it reaches the DiveDay homepage regardless of what site framed it. */}
+      {isEmbed ? (
+        <div className="mt-8 flex flex-col items-center gap-2 border-t border-border pt-6">
+          {/* **The way out of the frame.** The widget shows the next few
+              departures; everything else is one tap away on a real page, which
+              is a better answer than a scrollbar inside somebody else's site.
+              `target="_blank"` for the same reason the DiveDay link below has
+              it — a schedule opened *inside* a 900px frame is the nested scroll
+              this change exists to remove (issue #805). */}
+          <Link
+            href={publicSchedulePath(shopSlug)}
+            target="_blank"
+            rel="noopener"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("schedule.embedSeeFullSchedule")}
+          </Link>
+          {zoneNote ? <p className="text-xs text-muted">{zoneNote}</p> : null}
+        </div>
+      ) : null}
       {isEmbed ? (
         <p className="mt-4 text-center text-xs text-muted">
           <Link

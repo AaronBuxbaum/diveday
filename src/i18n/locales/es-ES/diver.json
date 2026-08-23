@@ -66,6 +66,8 @@
     "eyebrow": "Salidas",
     "title": "Calendario",
     "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
+    "timesInZoneFooter": "Las horas son locales de {shop} ({zone}).",
+    "embedSeeFullSchedule": "Ver el calendario completo",
     "diverDescription": "Encuentra tu próximo día en el agua, mira qué esperar y reserva tu plaza.",
     "noTrips": "Todavía no hay salidas programadas",
     "noUpcomingStaff": "No hay salidas próximas en el tablón",

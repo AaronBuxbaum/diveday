@@ -57,13 +57,32 @@ test.describe("as owner", () => {
     await expect(page.getByRole("status")).toBeVisible();
     await signOut(page);
 
+    // **Through the widget's own way out.** The embed shows the next four
+    // departures and links to the full schedule (issue #805), and this trip is
+    // six days out — past the window on a seeded shop that runs a boat a day.
+    // Following that link is the path a visitor takes to reach exactly this
+    // trip, so the test takes it too rather than reaching for a URL, and it
+    // proves the link works while it is there.
     await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
-    await page
+    const [fullSchedule] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: "See the full schedule" }).click(),
+    ]);
+    await fullSchedule
       .locator("li, a")
       .filter({ hasText: title })
       .filter({ visible: true })
       .first()
       .click();
+    // The destination's own URL shape, not a duration: the click is a client
+    // navigation and reading `url()` before it settles hands back the schedule.
+    await fullSchedule.waitForURL(/\/trips\//);
+    // The full schedule opens outside the frame, so the rest of this flow —
+    // which is about embed mode surviving a booking — carries on in the embed
+    // itself, reached directly at the trip the visitor just found.
+    const tripUrl = new URL(fullSchedule.url());
+    await fullSchedule.close();
+    await page.goto(`${tripUrl.pathname}?embed=1`, { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/embed=1/);
     await expect(page.getByRole("link", { name: "← All trips" })).toHaveCount(0);
 

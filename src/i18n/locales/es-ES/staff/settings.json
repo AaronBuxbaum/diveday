@@ -712,7 +712,7 @@
     "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada en esta instancia de DiveDay — contacta a {email} para activarla.",
     "calendarEmbed": {
       "heading": "Widget de calendario",
-      "description": "Un calendario de reservas completo, ajustado al tamaño donde lo coloques en tu página. Ideal para una página dedicada de \"Reservar ahora\" en tu web.",
+      "description": "Tus próximas cuatro salidas con un enlace al resto, con un tamaño que nunca genera scroll dentro de tu página. Ideal para una página «Reservar» en tu web.",
       "attributionNote": "Incluye un pequeño enlace de crédito \"Con la tecnología de DiveDay\" debajo del calendario, en tu propia página — no dentro del widget.",
       "fieldLabel": "Código del widget",
       "attributionLinkText": "Con la tecnología de DiveDay"
