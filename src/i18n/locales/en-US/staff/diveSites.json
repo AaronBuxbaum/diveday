@@ -181,6 +181,7 @@
     "errorDepth": "That maximum depth is deeper than any dive site.",
     "errorImages": "One of those photos couldn't be stored — a site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
     "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet — save the briefing without photos for now, or ask your shop's owner or manager to configure it.",
+    "errorConflict": "Somebody else changed this briefing while you had it open, so nothing was saved. What you typed is still here \u2014 copy anything you need, then reload the page.",
     "errorNameTaken": "Another dive site here already goes by that name, and a deleted one still holds its name too. Give this briefing a name of its own and save again — everything else you typed is still here."
   },
   "edit": {

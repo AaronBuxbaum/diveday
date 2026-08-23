@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 // @vitest-environment node
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
@@ -1157,13 +1158,115 @@ describe("course content and public pages (in-memory PGlite)", () => {
       ],
       faqs: [{ question: "Do I need a computer?", answer: "We rent one." }],
     });
-    expect(saved).toMatchObject({
+    expect(saved.ok).toBe(true);
+    expect(saved.ok && saved.course).toMatchObject({
       summary: "Plan and make dives to 40 metres",
       minimumAge: 15,
       priceCents: 32500,
       minimumCertificationLevel: "open_water",
     });
-    expect(saved?.faqs).toEqual([{ question: "Do I need a computer?", answer: "We rent one." }]);
+    expect(saved.ok && saved.course.faqs).toEqual([
+      { question: "Do I need a computer?", answer: "We rent one." },
+    ]);
+  });
+
+  /**
+   * **Two writers, one page, and the second must not silently revert the
+   * first.** `updateCourseContent` writes every field it is given, so the loss
+   * is the whole page — nine sections, pricing, photos, the day-by-day plan and
+   * the FAQ — not one field (issue #820).
+   */
+  it("refuses a save whose generation has moved on", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    const asBothTabsSawIt = course.updatedAt ?? course.createdAt;
+
+    const first = await updateCourseContent(
+      db,
+      shop.id,
+      course.id,
+      { ...emptyContent, summary: "Saved by the first tab" },
+      { expectedUpdatedAt: asBothTabsSawIt },
+    );
+    expect(first.ok).toBe(true);
+
+    // The second tab still holds the generation it loaded.
+    const second = await updateCourseContent(
+      db,
+      shop.id,
+      course.id,
+      { ...emptyContent, summary: "Saved by the second tab" },
+      { expectedUpdatedAt: asBothTabsSawIt },
+    );
+    expect(second).toEqual({ ok: false, reason: "conflict" });
+
+    // And the refusal wrote nothing — the first tab's page is intact.
+    const [after] = await listCourses(db, shop.id);
+    expect(after?.summary).toBe("Saved by the first tab");
+  });
+
+  /**
+   * **A row nobody has saved since the column arrived still has a generation.**
+   * Without the `coalesce(updated_at, created_at)` the protection switched
+   * itself off for exactly those rows: `updated_at` was null, both tabs sent
+   * nothing, and both saves went through. Found by the two-tab e2e, which is
+   * the only thing that could see it.
+   */
+  it("protects a course that has never been saved", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    expect(course.updatedAt).toBeNull();
+
+    const first = await updateCourseContent(
+      db,
+      shop.id,
+      course.id,
+      { ...emptyContent, summary: "First" },
+      { expectedUpdatedAt: course.createdAt },
+    );
+    expect(first.ok).toBe(true);
+    expect(
+      await updateCourseContent(
+        db,
+        shop.id,
+        course.id,
+        { ...emptyContent, summary: "Second" },
+        { expectedUpdatedAt: course.createdAt },
+      ),
+    ).toEqual({ ok: false, reason: "conflict" });
+  });
+
+  /**
+   * **The expand/contract half.** The migration runs while the previous release
+   * is still serving, and a page rendered by that release sends no hidden field
+   * at all. Refusing those would break every save for as long as the two
+   * releases overlap.
+   */
+  it("allows a save that carries no generation, because the page may predate the column", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    await updateCourseContent(db, shop.id, course.id, { ...emptyContent, summary: "First" });
+    const second = await updateCourseContent(db, shop.id, course.id, {
+      ...emptyContent,
+      summary: "Second",
+    });
+    expect(second.ok).toBe(true);
+  });
+
+  it("says `missing` rather than `conflict` for another shop's course", async () => {
+    // Different words for different situations: a generation that moved is
+    // somebody else's edit; a row that is not there is not this shop's.
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    expect(
+      await updateCourseContent(db, randomUUID(), course.id, emptyContent, {
+        expectedUpdatedAt: course.createdAt,
+      }),
+    ).toEqual({ ok: false, reason: "missing" });
   });
 
   it("stores each gallery caption on the photo it belongs to, and reads it back paired", async () => {

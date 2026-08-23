@@ -35,6 +35,8 @@
     "errorDepthPlaceholder": "One of your depth markers is broken, so nothing saved. Write it exactly as '{depth18}' — the choices are '{depth12}', '{depth18}', '{depth21}', '{depth30}' and '{depth40}'. If you would rather write the depth in your own words, delete the marker instead.",
     "pitchLegend": "The pitch",
     "subheadLabel": "Subhead",
+    "conflictMessage": "Somebody else changed this page while you had it open, so nothing was saved. What you typed is still here — copy anything you need, then reload.",
+    "conflictReload": "Reload the page",
     "subheadDescription": "One line under the title, e.g. “How to become a PADI Open Water Diver”.",
     "overviewLabel": "Overview",
     "overviewDescription": "A few paragraphs in the diver's words, not the agency's.",

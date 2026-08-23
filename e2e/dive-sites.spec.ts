@@ -1,5 +1,5 @@
 import type { Locator } from "@playwright/test";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
 
 /**
@@ -509,6 +509,55 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Route still")).toHaveAttribute("type", "file");
     await expect(page.getByLabel(/Site photos/)).toHaveAttribute("type", "file");
     await expect(page.getByLabel(/image URL/i)).toHaveCount(0);
+  });
+
+  /**
+   * **Two staffers with the same briefing open.**
+   *
+   * This form posts its *whole* page — twenty-odd fields, the landmark list,
+   * the field guide, the drawn route — so the second save does not overwrite
+   * one field between them: it reverts every section to whatever the row held
+   * when that tab opened. It did that silently until issue #820, and the first
+   * writer's afternoon was gone with no record it had existed.
+   */
+  test("a second tab's save is refused rather than reverting the first", async ({
+    page,
+    context,
+  }) => {
+    const siteName = `Two Tabs Reef ${e2eNow().getTime()}`;
+    const first = page;
+    await first.goto("/shop/blue-mantis/dive-sites/new");
+    await first.getByLabel("Name").fill(siteName);
+    await first.getByRole("button", { name: "Save dive site" }).click();
+    await expect(first.getByRole("heading", { name: siteName })).toBeVisible();
+    const url = first.url();
+
+    // Both tabs load the briefing *before* either saves — the whole premise.
+    const second = makeActivitySafe(await context.newPage());
+    await second.goto(url);
+    const secondNote = second.getByLabel("What makes this site special?");
+    await expect(secondNote).toBeVisible();
+
+    await first.getByLabel("What makes this site special?").fill("Written by the first tab");
+    await first.getByRole("button", { name: "Save dive site" }).click();
+    await expect(first.getByText("Dive site saved.")).toBeVisible();
+
+    // The second tab is still holding the generation it opened with.
+    await secondNote.fill("Written by the second tab");
+    await second.getByRole("button", { name: "Save dive site" }).click();
+
+    // Refused, and it says so.
+    await expect(second.getByText(/Somebody else changed this briefing/)).toBeVisible();
+    // **And what they typed is still in the box** — the point of refusing
+    // rather than redirecting, which re-renders the form from the database and
+    // so is itself what loses the work the message says was not lost.
+    await expect(secondNote).toHaveValue("Written by the second tab");
+
+    // The first writer's briefing survived.
+    await first.reload();
+    await expect(first.getByLabel("What makes this site special?")).toHaveValue(
+      "Written by the first tab",
+    );
   });
 });
 

@@ -1,4 +1,5 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -403,20 +404,57 @@ export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
   return course ?? null;
 }
 
+/** What a save can come back as: it landed, or somebody else got there first. */
+export type CourseContentSave =
+  | { ok: true; course: typeof courses.$inferSelect }
+  | { ok: false; reason: "conflict" }
+  | { ok: false; reason: "missing" };
+
 /**
  * Saves the whole marketing page at once. Pricing, the cert gate, the agency's
  * minimum age, and the taster flag are untouched — none of those are marketing
  * prose, and the last one is a safety cap (see {@link CourseContentPatch}).
+ *
+ * **Refuses a save that would silently revert somebody else's**, which is what
+ * "the whole page at once" costs when two people have it open. Two tabs, both
+ * loaded, both saving: the second did not overwrite one field, it reverted
+ * every section — nine of them, plus pricing, photos, the day-by-day plan and
+ * the FAQ — to whatever the row held when that tab opened, with no warning and
+ * no record that the first writer's work had existed (issue #820). An owner and
+ * a manager tidying the catalogue in one afternoon is enough to hit it.
+ *
+ * `expectedUpdatedAt` is the row's edit generation as the writer's page last
+ * saw it, carried back as a hidden field and compared here in the `where`, so
+ * the check and the write are one statement and nothing can slip between them.
+ *
+ * **Refused, never merged.** Resolution is a merge UI and this does not need
+ * one: the caller keeps every value the writer typed and offers a reload.
+ *
+ * **A null `expectedUpdatedAt` means "no information, allow."** That is about
+ * the *page*, not the row: the migration runs while the previous release is
+ * still serving (AGENTS.md's expand/contract rule), and a page rendered by that
+ * release sends no hidden field at all. Refusing those would break saves for as
+ * long as the two releases overlap.
+ *
+ * The *row* always has a generation, because a null `updated_at` compares
+ * against `created_at` instead. Without that, protection switched itself
+ * off for the rows most likely to be edited by two people — a course nobody had
+ * saved since the column arrived had a null `updated_at`, so both tabs sent
+ * nothing and both saves went through.
  */
 export async function updateCourseContent(
   db: AppDb,
   shopId: string,
   courseId: string,
   input: CourseContentPatch,
-) {
+  options: { expectedUpdatedAt?: Date | null; now?: Date } = {},
+): Promise<CourseContentSave> {
+  const now = options.now ?? nowDate();
+  const expected = options.expectedUpdatedAt;
   const [course] = await db
     .update(courses)
     .set({
+      updatedAt: now,
       summary: input.summary?.trim() || null,
       overview: input.overview?.trim() || null,
       heroImageUrl: input.heroImageUrl?.trim() || null,
@@ -430,7 +468,36 @@ export async function updateCourseContent(
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
     })
-    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .where(
+      and(
+        eq(courses.id, courseId),
+        eq(courses.shopId, shopId),
+        // **The generation is `updated_at`, falling back to `created_at` for a
+        // row that has never been saved.** Without that fallback the protection switched
+        // itself off for exactly the rows most likely to be edited by two
+        // people: a course nobody had touched since the column arrived had
+        // `updated_at` null, both tabs sent nothing, and both saves were
+        // allowed. Every row has a `created_at`.
+        //
+        // A null *input* still means allow — that is the expand/contract half,
+        // and it is about the page, not the row: a page rendered by the
+        // previous release sends no hidden field at all.
+        expected
+          ? or(
+              eq(courses.updatedAt, expected),
+              and(isNull(courses.updatedAt), eq(courses.createdAt, expected)),
+            )
+          : undefined,
+      ),
+    )
     .returning();
-  return course ?? null;
+  if (course) return { ok: true, course };
+  // The write matched nothing. Either the row is gone (or another shop's), or
+  // the generation moved — and those want different words, so ask which.
+  const [current] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .limit(1);
+  return current ? { ok: false, reason: "conflict" } : { ok: false, reason: "missing" };
 }

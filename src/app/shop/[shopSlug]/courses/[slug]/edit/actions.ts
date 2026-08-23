@@ -184,20 +184,40 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
   if (broken) redirect(`${base}?error=depth-placeholder&field=${broken[0]}`);
 
-  const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
-    summary: value.summary,
-    overview: value.overview,
-    heroImageUrl,
-    heroImageAlt,
-    galleryPhotos,
-    durationText: value.durationText,
-    groupSizeText: value.groupSizeText,
-    prerequisiteNote: value.prerequisiteNote,
-    includes: parseLines(value.includes),
-    excludes: parseLines(value.excludes),
-    scheduleDays,
-    faqs: parseFaqs(value.faqs),
-  });
+  // The row's edit generation as this page last saw it. Absent means the page
+  // was rendered by a release that did not send one — see `updateCourseContent`.
+  const expectedRaw = formData.get("expectedUpdatedAt");
+  const expectedUpdatedAt =
+    typeof expectedRaw === "string" && expectedRaw ? new Date(expectedRaw) : null;
+
+  const saved = await updateCourseContent(
+    db,
+    staff.user.shopId,
+    course.id,
+    {
+      summary: value.summary,
+      overview: value.overview,
+      heroImageUrl,
+      heroImageAlt,
+      galleryPhotos,
+      durationText: value.durationText,
+      groupSizeText: value.groupSizeText,
+      prerequisiteNote: value.prerequisiteNote,
+      includes: parseLines(value.includes),
+      excludes: parseLines(value.excludes),
+      scheduleDays,
+      faqs: parseFaqs(value.faqs),
+    },
+    { expectedUpdatedAt: Number.isNaN(expectedUpdatedAt?.getTime()) ? null : expectedUpdatedAt },
+  );
+  // **Refused, and the page keeps what you typed.** Returning rather than
+  // redirecting is the whole point: a redirect re-renders the form from the
+  // database, which would throw away the very work this refusal exists to
+  // protect (issue #820). Nothing else has been written at this point — the
+  // pricing update below and the photo cleanup both come after.
+  if (!saved.ok && saved.reason === "conflict") {
+    return { ok: false as const, reason: "conflict" as const };
+  }
   // Pricing and the nitrox answer are the shop's own decisions rather than
   // marketing copy, but the editor saves everything in one submit, so they land
   // together with the page.

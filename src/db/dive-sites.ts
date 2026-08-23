@@ -338,10 +338,13 @@ export async function updateDiveSite(
   shopId: string,
   siteId: string,
   input: DiveSiteInput,
+  options: { expectedUpdatedAt?: Date | null; now?: Date } = {},
 ) {
+  const expected = options.expectedUpdatedAt;
   const [site] = await db
     .update(diveSites)
     .set({
+      updatedAt: options.now ?? nowDate(),
       name: input.name,
       description: input.description || null,
       locationName: input.locationName || null,
@@ -378,7 +381,30 @@ export async function updateDiveSite(
       // prevents a later Undo from clobbering edits made after the pull.
       templateUpdateUndo: null,
     })
-    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .where(
+      and(
+        eq(diveSites.id, siteId),
+        eq(diveSites.shopId, shopId),
+        isNull(diveSites.deletedAt),
+        // **The row's edit generation, as the writer's page last saw it.** The
+        // check and the write are one statement, so nothing can slip between
+        // them. `updated_at` is null on a site nobody has saved since the
+        // column arrived, and those are the rows most likely to be edited by
+        // two people at once, so a null falls back to `created_at` rather than
+        // silently matching nothing.
+        //
+        // A null *input* means allow, which is about the page and not the row:
+        // the migration runs while the previous release is still serving
+        // (AGENTS.md's expand/contract rule), and a page that release rendered
+        // sends no hidden field at all.
+        expected
+          ? or(
+              eq(diveSites.updatedAt, expected),
+              and(isNull(diveSites.updatedAt), eq(diveSites.createdAt, expected)),
+            )
+          : undefined,
+      ),
+    )
     .returning();
   if (!site) return null;
   // Only when the caller manages the guide. An undefined list means "leave it
@@ -402,14 +428,40 @@ export function createDiveSiteForForm(db: AppDb, input: DiveSiteInput) {
   return refusingNameClash(() => createDiveSite(db, input));
 }
 
+/**
+ * What a site write answers with when someone else saved the briefing first.
+ *
+ * A briefing posts its *whole* page, so two staffers with it open do not
+ * overwrite one field between them: the second save reverts every section to
+ * whatever the row held when that tab opened. It used to do that silently, and
+ * the first writer's afternoon was gone with no record it had existed (issue
+ * #820).
+ *
+ * **Refused, never merged.** Resolution is a merge UI and this does not need
+ * one: the form keeps every value the staffer typed and offers a reload.
+ */
+export const SITE_EDIT_CONFLICT = "conflict";
+
 /** `updateDiveSite` for the form a staffer types into. See `createDiveSiteForForm`. */
-export function updateDiveSiteForForm(
+export async function updateDiveSiteForForm(
   db: AppDb,
   shopId: string,
   siteId: string,
   input: DiveSiteInput,
+  options: { expectedUpdatedAt?: Date | null; now?: Date } = {},
 ) {
-  return refusingNameClash(() => updateDiveSite(db, shopId, siteId, input));
+  const written = await refusingNameClash(() => updateDiveSite(db, shopId, siteId, input, options));
+  if (written !== null) return written;
+  // The write matched nothing. Either the site is gone (or another shop's), or
+  // the generation moved on — and those want different answers, so ask which.
+  // Scoped by `shopId` like every other read here: another shop's id reports as
+  // missing, so this cannot be used to learn that a row exists.
+  const [current] = await db
+    .select({ id: diveSites.id })
+    .from(diveSites)
+    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .limit(1);
+  return current && options.expectedUpdatedAt ? SITE_EDIT_CONFLICT : null;
 }
 
 /** Keep historical trip briefings intact while removing a site from new-trip pickers. */

@@ -181,6 +181,7 @@
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo.",
     "errorImages": "Una de esas fotos no se pudo guardar — un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
     "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro — guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
+    "errorConflict": "Alguien m\u00e1s cambi\u00f3 este briefing mientras lo ten\u00edas abierto, as\u00ed que no se guard\u00f3 nada. Lo que escribiste sigue aqu\u00ed: copia lo que necesites y recarga la p\u00e1gina.",
     "errorNameTaken": "Otro sitio de buceo de este centro ya se llama así, y un sitio eliminado también conserva su nombre. Dale a este briefing un nombre propio y vuelve a guardar — todo lo demás que escribiste sigue aquí."
   },
   "edit": {

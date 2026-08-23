@@ -17,6 +17,7 @@ import {
   listDiveSiteCreatures,
   listUpcomingTripsForSite,
   pullDiveSiteTemplateUpdates,
+  SITE_EDIT_CONFLICT,
   SITE_NAME_TAKEN,
   undoDiveSiteTemplateUpdate,
   updateDiveSiteForForm,
@@ -184,35 +185,53 @@ export default async function EditDiveSitePage({
       expectedBottomTime: _expectedBottomTime,
       ...siteFields
     } = parsed.fields;
-    const updated = await updateDiveSiteForForm(activeDb, activeSession.user.shopId, id, {
-      shopId: activeSession.user.shopId,
-      ...siteFields,
-      forecastLatitude:
-        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
-      forecastLongitude:
-        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
-      satelliteImageUrl: photos.photos.satelliteImageUrl,
-      routeImageUrl: photos.photos.routeImageUrl,
-      imageUrls: photos.photos.imageUrls,
-      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-      requiredSpecialties: specialties.data,
-      requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficultyLevel: parsed.difficultyLevel,
-      depthRange: parsed.fields.depthRange,
-      maxDepthMeters: parsed.maxDepthMeters,
-      expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
-      currentNote: parsed.fields.currentNote,
-      divePlan: parsed.fields.divePlan,
-      fitTone: parsed.fields.fitTone,
-      fitNote: parsed.fields.fitNote,
-      fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
-      landmarks: parsed.landmarks,
-      creatures: parsed.creatures,
-      routePoints: parsed.route.points,
-      routeLabel: parsed.route.label,
-      routeNote: parsed.route.note,
-      routeZoom: parsed.route.zoom,
-    });
+    // The generation this page was rendered from, as the staffer's tab last saw
+    // it. Unparseable is treated as absent rather than thrown: the page that
+    // sent it is the only thing that writes it, so a bad value means an old
+    // release or a hand-crafted post, and neither is worth a 500 over a field
+    // that only ever tightens the write.
+    const sentGeneration = new Date(String(formData.get("expectedUpdatedAt") ?? ""));
+    const expectedUpdatedAt = Number.isNaN(sentGeneration.getTime()) ? null : sentGeneration;
+    const updated = await updateDiveSiteForForm(
+      activeDb,
+      activeSession.user.shopId,
+      id,
+      {
+        shopId: activeSession.user.shopId,
+        ...siteFields,
+        forecastLatitude:
+          parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
+        forecastLongitude:
+          parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
+        satelliteImageUrl: photos.photos.satelliteImageUrl,
+        routeImageUrl: photos.photos.routeImageUrl,
+        imageUrls: photos.photos.imageUrls,
+        minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
+        requiredSpecialties: specialties.data,
+        requiresNitrox: formData.get("requiresNitrox") === "on",
+        difficultyLevel: parsed.difficultyLevel,
+        depthRange: parsed.fields.depthRange,
+        maxDepthMeters: parsed.maxDepthMeters,
+        expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
+        currentNote: parsed.fields.currentNote,
+        divePlan: parsed.fields.divePlan,
+        fitTone: parsed.fields.fitTone,
+        fitNote: parsed.fields.fitNote,
+        fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
+        landmarks: parsed.landmarks,
+        creatures: parsed.creatures,
+        routePoints: parsed.route.points,
+        routeLabel: parsed.route.label,
+        routeNote: parsed.route.note,
+        routeZoom: parsed.route.zoom,
+      },
+      { expectedUpdatedAt },
+    );
+    // Somebody else saved the briefing between this page rendering and this
+    // post. Refused rather than merged, and `refuse` hands back everything that
+    // was typed, so the message announcing that nothing was lost is not itself
+    // what loses it (issue #820).
+    if (updated === SITE_EDIT_CONFLICT) return refuse("conflict");
     // The name is the one rule the parse above could not check — it takes the
     // whole shop's library to know — so the database refuses it and the
     // briefing comes back to the form like any other refusal.
@@ -412,6 +431,16 @@ export default async function EditDiveSitePage({
         errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
         savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
       >
+        {/* The row's edit generation as this render saw it, posted back so the
+            save can refuse rather than quietly overwrite a colleague's briefing
+            (issue #820). A site nobody has saved since the column arrived has a
+            null `updated_at`, and `created_at` stands in for it — those are the
+            rows two people are most likely to open at once. */}
+        <input
+          type="hidden"
+          name="expectedUpdatedAt"
+          value={(site.updatedAt ?? site.createdAt).toISOString()}
+        />
         <SiteFields
           t={t}
           depthUnit={depthUnit}

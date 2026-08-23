@@ -28,6 +28,7 @@ import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
+import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
 import { pullCourseTemplateUpdatesAction, saveCourseContentAction } from "./actions";
@@ -234,7 +235,23 @@ export default async function EditCoursePage({
       </p>
 
       <UnsavedChangesGuard>
-        <form action={saveAction} className="mt-6 flex flex-col gap-6">
+        <ConflictGuardedForm
+          action={saveAction}
+          conflictMessage={t("courses.edit.conflictMessage")}
+          reloadLabel={t("courses.edit.conflictReload")}
+          className="mt-6 flex flex-col gap-6"
+        >
+          {/* The row's edit generation, as this render saw it. The save
+              compares it and refuses rather than reverting somebody else's
+              page (issue #820). `createdAt` when the row has never been saved
+              since the column arrived, which is what stops the protection
+              switching itself off for a course nobody has edited yet — the
+              comparison coalesces the same way. */}
+          <input
+            type="hidden"
+            name="expectedUpdatedAt"
+            value={(course.updatedAt ?? course.createdAt).toISOString()}
+          />
           {/* These panels are fieldsets, not SectionCards: each legend is the
               accessible name of a control group, and SectionCard deliberately
               has no `fieldset` element. */}
@@ -604,7 +621,7 @@ export default async function EditCoursePage({
             </SubmitButton>
             <FormStatus tone="danger">{errorText}</FormStatus>
           </FieldActions>
-        </form>
+        </ConflictGuardedForm>
       </UnsavedChangesGuard>
     </main>
   );

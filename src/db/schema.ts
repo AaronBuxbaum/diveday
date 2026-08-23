@@ -855,6 +855,26 @@ export const courses = pgTable(
      * course cannot deliver.
      */
     nitroxCompatible: boolean("nitrox_compatible").notNull().default(true),
+    /**
+     * **The row's edit generation, for the "somebody else changed this" refusal.**
+     *
+     * Both editors post their *whole* form — nine sections, pricing, photos,
+     * the day-by-day plan — so a second writer does not overwrite one field,
+     * they revert every section to whatever it held when their tab opened. Two
+     * tabs, no warning, and the first writer's work gone with no record that it
+     * existed (issue #820).
+     *
+     * The page carries this value back as a hidden field and the save compares
+     * it. A mismatch is **refused, never merged**: resolution is a merge UI and
+     * this does not need one — the refusal keeps every value the writer typed.
+     *
+     * **Nullable, and a null compares as "no information, allow."** The
+     * migration runs inside the production build while the previous release is
+     * still serving (AGENTS.md's expand/contract rule), and that release writes
+     * rows without touching this column. Treating a null as a conflict would
+     * refuse saves for as long as the two releases overlap.
+     */
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1164,6 +1184,26 @@ export const diveSites = pgTable(
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     /** Archived briefings remain attached to historical trips but leave active pickers. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * **The row's edit generation, for the "somebody else changed this" refusal.**
+     *
+     * Both editors post their *whole* form — nine sections, pricing, photos,
+     * the day-by-day plan — so a second writer does not overwrite one field,
+     * they revert every section to whatever it held when their tab opened. Two
+     * tabs, no warning, and the first writer's work gone with no record that it
+     * existed (issue #820).
+     *
+     * The page carries this value back as a hidden field and the save compares
+     * it. A mismatch is **refused, never merged**: resolution is a merge UI and
+     * this does not need one — the refusal keeps every value the writer typed.
+     *
+     * **Nullable, and a null compares as "no information, allow."** The
+     * migration runs inside the production build while the previous release is
+     * still serving (AGENTS.md's expand/contract rule), and that release writes
+     * rows without touching this column. Treating a null as a conflict would
+     * refuse saves for as long as the two releases overlap.
+     */
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
