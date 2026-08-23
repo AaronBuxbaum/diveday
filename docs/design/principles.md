@@ -26,6 +26,22 @@ contrast well past the app palette in both schemes: every boat-mode ink and acti
 connectivity/freshness states, a sticky progress cue, and an accessible skip link keep any
 operational state from hiding behind deck glare.
 
+**Haptics are an Android-only channel, and the screen carries the same job everywhere.**
+`navigator.vibrate` — the tick when a roll-call tap lands, the triple buzz when one is refused, the
+pattern as the head count crosses each quarter — is **not implemented in Safari on iOS at any
+version**, so on an iPhone none of it has ever fired. The call sites feature-detect correctly and do
+nothing, which is why nobody noticed for as long as they did (issue #817). There is no sound
+anywhere in the app either, so on iOS the whole feedback layer is visual.
+
+What follows from that, for anything built on the channel: **a haptic is never the only carrier of
+a state**, and least of all a refusal, which is the one with a safety-adjacent job. The roll-call
+row changes under the thumb that pressed it and a refusal renders `role="alert"` text beside the
+control; the buzz confirms what the screen already said. The channel also has an off switch —
+per device, beside boat mode, because `prefers-reduced-motion` is about animation and does not
+reach vibration ([accessibility-tradeoffs.md](accessibility-tradeoffs.md)). One module,
+`src/components/haptics.ts`, holds the availability check, the preference and the platform note, so
+none of this has to be rediscovered at a call site.
+
 ## 3. Calm surfaces, earned moments of joy
 
 The everyday UI is quiet: generous whitespace, few borders, muted ink for secondary text. Joy is

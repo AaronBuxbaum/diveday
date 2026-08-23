@@ -622,6 +622,9 @@
     "labelLand": "Land mode",
     "labelBoat": "Boat mode"
   },
+  "haptics": {
+    "toggleLabel": "Buzz on each tap"
+  },
   "rentalFit": {
     "itemLabels": {
       "bcd": "BCD",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { vibrate } from "./haptics";
 
 /**
  * Fires a milestone haptic buzz as roll-call progress crosses 25/50/75/100%.
@@ -26,22 +27,17 @@ export function MilestoneHaptics({ total, boarded }: { total: number; boarded: n
 
     if (pct !== prevPct.current) {
       if (pct > prevPct.current) {
-        if (typeof window !== "undefined" && "vibrate" in navigator) {
-          try {
-            if (pct === 100) {
-              navigator.vibrate([100, 50, 100, 50, 200]);
-            } else if (pct >= 75 && prevPct.current < 75) {
-              navigator.vibrate([20, 50, 20, 50, 20]);
-            } else if (pct >= 50 && prevPct.current < 50) {
-              navigator.vibrate([20, 50, 20]);
-            } else if (pct >= 25 && prevPct.current < 25) {
-              navigator.vibrate(20);
-            }
-          } catch (err) {
-            // A haptic is decoration — worth a trace, never an error-level
-            // alarm nobody can act on.
-            console.warn("Vibration failed:", err);
-          }
+        // Availability, this device's preference and the platform's refusals
+        // all live in `vibrate` — including the fact that no iPhone has ever
+        // run any of these patterns (see ./haptics).
+        if (pct === 100) {
+          vibrate([100, 50, 100, 50, 200]);
+        } else if (pct >= 75 && prevPct.current < 75) {
+          vibrate([20, 50, 20, 50, 20]);
+        } else if (pct >= 50 && prevPct.current < 50) {
+          vibrate([20, 50, 20]);
+        } else if (pct >= 25 && prevPct.current < 25) {
+          vibrate(20);
         }
       }
       prevPct.current = pct;
