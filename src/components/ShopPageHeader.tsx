@@ -1,8 +1,50 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { sectionCardClass } from "@/components/ui/card";
 import { toneGlyph } from "@/components/ui/tone";
 
-const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
+export const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
+
+/**
+ * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
+ *
+ * `TripPageHeader` is the one — the four trip surfaces share their own header,
+ * and they were the only staff pages at depth 2–3 with no way back to their
+ * parent at all (issue #823). Exported rather than copied so the chevron, the
+ * sizing and the `-my-1 py-1` thumb slop stay one decision: a second hand-rolled
+ * back link is how three ways up became three (a linked eyebrow, an explicit
+ * "← Parent", and the global nav).
+ */
+export function EyebrowBackLink({
+  href,
+  children,
+  className = "",
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`${EYEBROW_CLASS} -my-1 inline-flex items-center gap-1 py-1 hover:underline ${className}`.trim()}
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-3 shrink-0"
+      >
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+      {children}
+    </Link>
+  );
+}
 
 export function ShopPageHeader({
   eyebrow,
@@ -41,27 +83,7 @@ export function ShopPageHeader({
       >
         <div className="min-w-0">
           {eyebrow && eyebrowHref ? (
-            // Sized exactly like the plain eyebrow it replaces, so a page that
-            // gains a way back does not gain a line of height. `py-1 -my-1`
-            // buys a little slop for a thumb without moving anything around it.
-            <Link
-              href={eyebrowHref}
-              className={`${EYEBROW_CLASS} -my-1 inline-flex items-center gap-1 py-1 hover:underline`}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-3 shrink-0"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              {eyebrow}
-            </Link>
+            <EyebrowBackLink href={eyebrowHref}>{eyebrow}</EyebrowBackLink>
           ) : eyebrow ? (
             <p className={EYEBROW_CLASS}>{eyebrow}</p>
           ) : null}

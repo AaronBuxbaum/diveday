@@ -27,6 +27,7 @@ import { rankUnitsForSize } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
@@ -201,6 +202,8 @@ export default async function TripPrepPage({
     <>
       <FlashParams params={["notice"]} />
       <TripPageHeader
+        boardHref={shopPath(shopSlug, "schedule", "board")}
+        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}

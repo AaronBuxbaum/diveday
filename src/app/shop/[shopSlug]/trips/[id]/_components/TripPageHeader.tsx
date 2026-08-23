@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -51,6 +52,8 @@ export function TripCapacityBadge({
  */
 export function TripPageHeader({
   trip,
+  boardHref,
+  backLabel,
   locale,
   timeZone,
   badge,
@@ -59,6 +62,10 @@ export function TripPageHeader({
   actions,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
+  /** This shop's schedule board — the parent every trip surface belongs to. */
+  boardHref: string;
+  /** The nav's own word for it, so the two cannot drift (issue #824). */
+  backLabel: string;
   locale: string;
   /** The shop's own zone — never the host's. See `src/lib/format.ts`. */
   timeZone: string;
@@ -76,6 +83,24 @@ export function TripPageHeader({
 }) {
   return (
     <header className="mb-8">
+      {/* **The way back up.** These four surfaces are the deepest pages in the
+          staff app and were the only ones at depth 2-3 with no link to their
+          parent at all: the first link in the header was the sub-tab strip,
+          which moves you *sideways* between one departure's own pages and
+          never back to the board you came from (issue #823). A crew member who
+          has finished a roll call and wants the next boat had the global nav
+          or the browser's back button — on a phone in boat-mode, on a deck,
+          the nav is the dock at the bottom of the screen: reachable, but a jump
+          out of the departure rather than a step up from it.
+
+          The word is the nav's own, from `STAFF_DESTINATION_LABEL_KEYS`, so
+          the eyebrow and the tab that highlights for these routes can never
+          come to call one place two things. `print:hidden` because
+          `print/page.tsx` wears this header too and a paper sheet has no
+          navigation. */}
+      <EyebrowBackLink href={boardHref} className="mb-2 print:hidden">
+        {backLabel}
+      </EyebrowBackLink>
       <h1 className="text-4xl font-semibold tracking-tight text-balance">{trip.title}</h1>
       {/* One geometry for every trip, whatever the length of its name: the
           name owns its line; beneath it, the trip's own facts — when it sails
