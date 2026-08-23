@@ -478,7 +478,7 @@ export function DiverList({
                   onClick={cancelPendingSearch}
                   className={sectionCardClass({
                     className:
-                      "block transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken",
+                      "block transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken",
                   })}
                 >
                   <span className="flex min-w-0 items-center gap-3">

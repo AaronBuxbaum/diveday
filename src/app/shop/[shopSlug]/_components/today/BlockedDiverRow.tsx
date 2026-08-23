@@ -197,7 +197,7 @@ export function BlockedDiverRow({
         // before deciding to open them — and the danger-toned `Blocked` badge
         // the host drew above this is untouched and still loud.
         <details className="group/reasons mt-3">
-          <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-danger-strong transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+          <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-danger-strong transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
             <DisclosureCaret className="group-open/reasons:rotate-90" />
             {collapseReasons.summary}
           </summary>

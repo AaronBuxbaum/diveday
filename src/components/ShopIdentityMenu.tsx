@@ -84,7 +84,7 @@ export function ShopIdentityMenu({
         data-identity-menu
         className="flex min-h-11 min-w-0 shrink cursor-pointer items-center gap-2 font-semibold tracking-tight"
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform hover:rotate-6">
           <LogoMark className="size-5" />
         </span>
         {/* No fixed clamp at any width. The 10rem one that survived at `lg`
@@ -100,7 +100,7 @@ export function ShopIdentityMenu({
             rotating with state (transform-only, ≤250ms, principle 5). */}
         <span
           aria-hidden="true"
-          className={`text-xs text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`text-xs text-muted transition-transform ${open ? "rotate-180" : ""}`}
         >
           ▾
         </span>

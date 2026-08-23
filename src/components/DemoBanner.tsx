@@ -93,7 +93,7 @@ export function DemoBanner({
   };
 
   return (
-    <div className="border-b border-accent/40 bg-accent/5 transition-all duration-300 print:hidden">
+    <div className="border-b border-accent/40 bg-accent/5 transition-all print:hidden">
       <div className="mx-auto w-full max-w-4xl px-4 py-3 sm:px-6">
         {/*
          * One wrapping row, not a phone-only column. The column put "Switch
@@ -170,7 +170,7 @@ export function DemoBanner({
                 return (
                   <div
                     key={role.id}
-                    className={`flex flex-col justify-between rounded-xl border bg-surface p-4 transition-all duration-200 ${
+                    className={`flex flex-col justify-between rounded-xl border bg-surface p-4 transition-all ${
                       isActive
                         ? "border-primary shadow-sm ring-1 ring-primary/25"
                         : "border-border hover:border-primary/30 hover:shadow-xs"

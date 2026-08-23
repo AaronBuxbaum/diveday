@@ -186,7 +186,7 @@ export default async function CoursesPage({
             {courseList.map((course) => (
               <li
                 key={course.id}
-                className={`group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors duration-200 hover:bg-surface-sunken sm:px-5 ${
+                className={`group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-surface-sunken sm:px-5 ${
                   course.isActive ? "" : "text-muted"
                 }`}
               >

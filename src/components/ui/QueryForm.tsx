@@ -81,7 +81,7 @@ export function QueryForm({
       aria-busy={pending}
       // Fixed-size, always-rendered feedback: the form dims while the server
       // re-renders behind it, so a tap is acknowledged without anything moving.
-      className={`transition-opacity duration-200 aria-busy:opacity-60 ${className}`}
+      className={`transition-opacity aria-busy:opacity-60 ${className}`}
       {...rest}
     >
       {children}

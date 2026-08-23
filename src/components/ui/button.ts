@@ -50,7 +50,7 @@
  * a disabled button — its variant selector carries the higher specificity.
  */
 const base =
-  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98]";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] ease-out-soft active:scale-[0.98]";
 
 /**
  * What a disabled state *means*, which is two different things this app renders

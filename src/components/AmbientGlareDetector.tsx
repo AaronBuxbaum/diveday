@@ -231,7 +231,7 @@ export function AmbientContrastControl({
           return (
             <label
               key={value}
-              className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+              className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
                 active ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
               }`}
             >

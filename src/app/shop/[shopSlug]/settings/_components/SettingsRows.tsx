@@ -50,7 +50,7 @@ function Chevron({
       aria-hidden="true"
       className={`${
         direction === "down"
-          ? "size-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180"
+          ? "size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
           : "size-4 shrink-0 -rotate-90 text-muted"
       } ${className}`.trim()}
     >

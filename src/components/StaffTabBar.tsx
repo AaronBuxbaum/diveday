@@ -134,7 +134,7 @@ export function StaffTabBar({
   };
 
   const tabClass = (active: boolean) =>
-    `flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-0.5 pt-1.5 pb-1 transition-colors duration-200 ${
+    `flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-0.5 pt-1.5 pb-1 transition-colors ${
       active ? "text-primary" : "text-muted hover:text-foreground"
     }`;
   // The active pill is the same grammar the header tabs speak (bg-primary/10

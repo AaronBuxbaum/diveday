@@ -140,7 +140,7 @@ export default async function PublicCoursesPage({
               <li key={course.id}>
                 <Link
                   href={publicCoursePath(shopSlug, course.slug)}
-                  className="group -mx-3 flex flex-col gap-2 rounded-2xl px-3 py-5 transition-colors duration-200 hover:bg-surface-sunken sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+                  className="group -mx-3 flex flex-col gap-2 rounded-2xl px-3 py-5 transition-colors hover:bg-surface-sunken sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
                 >
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold group-hover:text-primary">

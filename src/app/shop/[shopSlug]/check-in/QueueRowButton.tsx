@@ -36,7 +36,7 @@ export function QueueRowButton({
       type="submit"
       aria-label={ariaLabel}
       disabled={pending}
-      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 px-4 py-3 text-left transition-[background-color,transform] duration-200 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:px-5 ${className}`}
+      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:px-5 ${className}`}
     >
       <span className="min-w-0">{children}</span>
       <span aria-hidden="true" className="shrink-0">
