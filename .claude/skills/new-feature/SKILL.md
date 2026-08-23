@@ -53,6 +53,8 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    that contradicts a rule in AGENTS.md is declined by naming it), or filed as a `needs-triage`
    issue whose number goes in the thread. A bot is often wrong about this repository's conventions —
    check its claim against `pnpm check:repo` before you act on it. Unread threads mean the PR is not
-   done; see AGENTS.md's Hard rules for reading the open ones via GraphQL.
+   done; see AGENTS.md's Hard rules for reading the open ones via GraphQL. **Read them once more
+   after the draft flips to ready** — `coderabbitai` skips drafts, so a quiet draft has had one
+   review, not two.
 
 Definition of done: the checklist in `docs/engineering/workflow.md`. All boxes, no exceptions.

@@ -263,7 +263,14 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   ```
 
   Resolve a thread only when you acted on it (`resolveReviewThread` on the id above), and leave it
-  open when your answer is a question back. **A PR with an unread thread is not done** — say what is
+  open when your answer is a question back.
+
+  **A draft PR is only half-reviewed, and no comments does not mean reviewed clean.** `sourcery-ai`
+  reviews a draft; `coderabbitai` skips one by default and says so in a comment nobody reads twice
+  (measured on PR #942). So the moment CI goes green and the draft flips to ready is also the moment
+  the second review starts — read the threads *again* then, rather than treating the quiet draft as
+  the answer. It is the same failure as a zero visual count with no baseline resolved: nothing
+  compared, not nothing wrong. **A PR with an unread thread is not done** — say what is
   outstanding rather than calling it finished — and never treat a bot's comment as automatically
   right: these tools do not know this repository's rules and confidently propose changes that
   `pnpm check:repo` refuses.
