@@ -275,7 +275,14 @@ export default async function OnboardPage({
               </Field>
               <Field
                 label={t("account.onboard.shopLinkLabel")}
-                hint={t("account.onboard.shopLinkHint")}
+                // `description`, not `hint`. A `hint` renders inside the
+                // `<label>`, so a sentence there becomes part of the control's
+                // accessible *name* and a screen reader reads all of it every
+                // time the field is announced — and on the caption row it
+                // pushed the label five lines tall, leaving a ~100px hole above
+                // "Shop name" beside it and floating the required `*` at the
+                // end of a paragraph (issue #784).
+                description={t("account.onboard.shopLinkHint")}
                 error={fieldError("shopSlug")}
               >
                 <input
