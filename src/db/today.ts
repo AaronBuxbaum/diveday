@@ -42,7 +42,11 @@ import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
-import { rollCallCheckpoints } from "@/lib/manifests";
+import {
+  type CrewIncompleteReason,
+  rollCallCheckpoints,
+  rollCallCompleteness,
+} from "@/lib/manifests";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
 import { type AboardBlockerKind, groupAboardBlockers } from "@/lib/readiness";
@@ -60,7 +64,7 @@ import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { listGearDueBack, listGearServiceDue, listOverdueGearReservations } from "./gear";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
-import { listDepartureRollCallByTrip } from "./manifests";
+import { listDepartureCrewRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
@@ -182,6 +186,24 @@ export type DepartureSummary = {
   blockedAboardGroups: { kind: AboardBlockerKind; names: string[] }[];
   courseTitle: string | null;
   crew: { id: string; fullName: string; roles: string[] }[];
+  /**
+   * **The crew half of "is this checkpoint closed", from the one authority.**
+   *
+   * The card's celebration used to fire on `boarded === booked`, which counts
+   * bookings — so Today threw confetti while the manifest, reading the same
+   * departure, correctly refused to close a checkpoint with a divemaster
+   * unaccounted for. Two surfaces, one fact, two answers (issue #789);
+   * `docs/product/glossary.md` is explicit that "divers alone were never the
+   * whole boat".
+   *
+   * Computed by `rollCallCompleteness` in `src/lib/manifests.ts` — the same
+   * call the live manifest and the offline copy make — rather than by a second
+   * rule written here, which is how the two came to disagree in the first
+   * place.
+   */
+  crewAccountedFor: boolean;
+  /** Why the crew half is open, as a **code**; the UI picks the words. */
+  crewReason: CrewIncompleteReason | null;
 };
 
 export type CrewedSessionSummary = {
@@ -1003,6 +1025,7 @@ export async function getTodayWork(
 
   const [
     departureRollCall,
+    departureCrewRollCall,
     missingFit,
     ungatedNitrox,
     missingContact,
@@ -1020,6 +1043,15 @@ export async function getTodayWork(
     // copy of this query used to live here, and only one of the two carried the
     // cancelled-booking guard.
     listDepartureRollCallByTrip(
+      db,
+      shopId,
+      todayTrips.map((trip) => trip.id),
+    ),
+    // The crew half of the same checkpoint. Read for the same reason the diver
+    // half is — the card has to tell an accounted-for boat from one where
+    // somebody may still be in the water, and the diver count alone cannot
+    // (issue #789).
+    listDepartureCrewRollCallByTrip(
       db,
       shopId,
       todayTrips.map((trip) => trip.id),
@@ -1625,6 +1657,24 @@ export async function getTodayWork(
       if (result === undefined) return true;
       return trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
     });
+    // The crew list this trip names *now*, each carrying their own departure
+    // result — the shape `rollCallCompleteness` requires, so that the verdict
+    // Today renders is literally the manifest's own.
+    const tripCrew = crewByTrip.get(trip.id) ?? [];
+    const crewResults = departureCrewRollCall.get(trip.id) ?? new Map();
+    const completeness = rollCallCompleteness({
+      checkpoint: "departure",
+      totalDivers: rows.length,
+      awaiting: rows.filter((row) => rollCall.get(row.booking.id) === undefined).length,
+      // Structurally zero at departure — there is no dive to not come back
+      // from yet — and passed anyway, because the signature refuses to let a
+      // caller quietly omit the half that means somebody is in the water.
+      notBackAboard: 0,
+      crew: tripCrew.map((member) => {
+        const state = crewResults.get(member.id);
+        return state ? { rollCall: { state, implied: false } } : {};
+      }),
+    });
     return {
       tripId: trip.id,
       title: trip.title,
@@ -1645,7 +1695,9 @@ export async function getTodayWork(
       blockedAshore: ashoreBlocked.length,
       blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
       courseTitle: trip.course?.title ?? null,
-      crew: crewByTrip.get(trip.id) ?? [],
+      crew: tripCrew,
+      crewAccountedFor: completeness.crewAccountedFor,
+      crewReason: completeness.crewReason,
     };
   });
 

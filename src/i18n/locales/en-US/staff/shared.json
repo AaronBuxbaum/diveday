@@ -244,6 +244,7 @@
       "aboardReasonPayment": "payment still owed. It is in the list below.",
       "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
       "everyoneAboard": "Everyone’s aboard.",
+      "crewRollCallOpen": "Every diver is aboard \u2014 the crew roll call is still open.",
       "clearToBoard": "Everyone booked on this trip is clear to board.",
       "sailingToday": "Sailing today"
     },

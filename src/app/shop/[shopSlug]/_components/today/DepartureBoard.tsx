@@ -50,6 +50,7 @@ export type DepartureBoardCopy = {
   aboardReasonPayment: string;
   noneBooked: string;
   everyoneAboard: string;
+  crewRollCallOpen: string;
   clearToBoard: string;
   sailingToday: string;
 };
@@ -99,6 +100,8 @@ function DepartureCard({
     boarded,
     booked,
     capacity,
+    crewAccountedFor,
+    crewReason,
   } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
   const [assignError, setAssignError] = useState(false);
@@ -343,16 +346,37 @@ function DepartureCard({
           </>
         ) : booked === 0 ? (
           <p className="mt-2 text-base text-muted">{copy.noneBooked}</p>
-        ) : boarded === booked && blocked === 0 ? (
+        ) : boarded === booked && blocked === 0 && crewAccountedFor ? (
           // The manifest already celebrates this milestone ("Roll call complete
           // ✦"); Today watches the same board without ever visiting the
           // manifest, so it earns the same coral rise-in moment here (principle
           // 3) instead of readiness copy that's gone stale the moment the boat
           // is actually full.
+          //
+          // **`crewAccountedFor` is what stops the two disagreeing.** This
+          // fired on `boarded === booked` alone, and `boarded` counts bookings
+          // — so Today threw confetti over a boat the manifest, reading the
+          // same departure, correctly refused to close because the divemaster
+          // had no result (issue #789). With every diver aboard the diver half
+          // is already satisfied, so this condition is strictly stronger than
+          // the manifest's own verdict: the card cannot celebrate a checkpoint
+          // the manifest holds open.
           <p className="rise-in mt-1.5 inline-block rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-base font-semibold">
             <span aria-hidden="true">🎉 </span>
             {copy.everyoneAboard}
           </p>
+        ) : boarded === booked && blocked === 0 && crewReason !== "crew_none_assigned" ? (
+          // Every diver aboard, and a crew member the boat named has no result
+          // — which is the one state where somebody may still be in the water
+          // and nothing else on this card would say so. One line rather than
+          // the manifest's four-way breakdown of *which* crew reason: this is a
+          // glance, and the manifest is one tap away.
+          //
+          // `crew_none_assigned` deliberately falls through to the line below
+          // instead. A departure with no crew rostered is a coverage gap the
+          // page already raises as its own row, and saying it twice on one
+          // screen buys nothing.
+          <p className="mt-1.5 text-base font-medium text-warning">{copy.crewRollCallOpen}</p>
         ) : blocked === 0 ? (
           <p className="mt-1.5 text-base font-medium text-success">{copy.clearToBoard}</p>
         ) : null}
