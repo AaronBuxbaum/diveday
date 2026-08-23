@@ -21,7 +21,9 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    inline, not behind clicks), and sketch at least two compositions in prose — attach actions to
    the objects they affect and prefer in-place edits with undo over button-and-form detours. The
    default card-stack-plus-button-row is the fallback, not the target; pick the composition the
-   content's own shape asks for.
+   content's own shape asks for. A significant new surface writes those answers down in
+   [`docs/design/surfaces.md`](../../../docs/design/surfaces.md) — five sentences, once — and states
+   the one idea in a comment beside whatever code the idea constrains.
 5. **UI second** — thin routes in `src/app/`, semantic tokens only, copy in briefing voice.
    A new critical flow gets an `e2e/` spec (happy + failure path); a new surface gets a visual
    snapshot in `e2e/visual.spec.ts`. Render relative time via `nowDate()` from `src/lib/clock.ts`,

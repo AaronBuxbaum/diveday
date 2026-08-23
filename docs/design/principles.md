@@ -433,7 +433,9 @@ to it during one; it exists because every sweep re-derived the same dozen false 
 
 Every design review starts holistic, before the itemized criteria — a surface can pass every
 mechanical check and still be a pile of well-formed cards with no point of view. Answer, in
-writing, one sentence each:
+writing, one sentence each — **in [surfaces.md](surfaces.md)**, which is where "in writing" goes.
+Without a destination this requirement produced exactly one recorded answer in the whole repo, and
+every other pass evaporated with the session that ran it (issue #825):
 
 - What is this surface's **one idea**? If you can't say it, the surface doesn't know either.
 - What **question does its user arrive with**, and is the answer already on screen — or behind a
@@ -449,6 +451,12 @@ writing, one sentence each:
 
 The same pass applies, in prose form, to persuasion surfaces and collateral: a marketing page has
 one argument and a scrolls-until-answered count; a one-pager has one ask.
+
+**Where the answer constrains code, say so beside the code and pin it with a test.** The shop home is
+the one surface that recorded its one idea before `surfaces.md` existed, and the reason it held is
+that `RoleOrientationCard` defers to it *by name* in a doc comment and a test fails if the
+orientation box out-ranks the queue. An entry in `surfaces.md` is the index; a comment and a test are
+what stop it rotting.
 
 ## Review checklist
 

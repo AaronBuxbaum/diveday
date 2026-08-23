@@ -43,7 +43,9 @@ a sentence and sketch at least two compositions in prose, picking the one shaped
 the hero-plus-card-stack is the fallback, not the target. Surface the facts a buyer predictably
 wants (price, what's included, how leaving works) where the question arises rather than behind a
 click, and keep one primary CTA per screen — before adding a button, ask whether the layout could
-make it unnecessary.
+make it unnecessary. A new page's one argument and one ask go in
+[`docs/design/surfaces.md`](../../../docs/design/surfaces.md), which is where the holistic pass is
+written down.
 
 ## Copy checklist (apply to every changed sentence)
 

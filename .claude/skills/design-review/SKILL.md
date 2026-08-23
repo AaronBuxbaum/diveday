@@ -33,6 +33,12 @@ or an action the screen could have carried.
    (the one idea, the arriving question, dissolvable controls, remove-until-it-breaks, and — for
    a new significant surface — the composition sketch). The canonical question list lives there,
    not here, so it can't drift between this skill and the `design-critic` agent.
+
+   **"In writing" means [`docs/design/surfaces.md`](../../../docs/design/surfaces.md)** — read the
+   surface's entry first (it may already answer the pass, and disagreeing with a recorded answer is
+   a finding worth stating), and add or amend the entry when the surface is a significant one. Where
+   an answer constrains code, say so in a comment beside that code and pin it with a test: that is
+   why the shop home's one idea is the only one that survived the session that wrote it.
 4. **Read each PNG** and evaluate against the checklist. Look hardest at:
    - dark mode (the usual casualty — contrast, borders, raw colors that ignored tokens)
    - the phone viewport at realistic thumb reach (dock test)
