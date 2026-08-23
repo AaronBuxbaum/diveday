@@ -561,7 +561,15 @@ export default async function TripDetailPage({
           }
           locale={locale}
         />
-        <DiveBriefingsSection briefings={diveBriefings} trip={trip} locale={locale} />
+        <DiveBriefingsSection
+          briefings={diveBriefings}
+          trip={trip}
+          // The species photos lead for a diver still deciding and stay folded
+          // for one who has already paid — the same split the comment above
+          // the booking block makes about the seat coming first (issue #760).
+          leadWithFieldGuide={!confirmed}
+          locale={locale}
+        />
       </main>
     </DiverIntlProvider>
   );
