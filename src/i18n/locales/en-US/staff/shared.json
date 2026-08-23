@@ -73,7 +73,10 @@
     "popupBlocked": "Your browser blocked the print window. Allow pop-ups, then try again."
   },
   "printPacket": {
-    "title": "Trip packet"
+    "title": "Trip packet",
+    "diveNumber": "Dive {number}",
+    "travelMinutes": "{minutes} min out",
+    "conditionsHeading": "Conditions"
   },
   "rollCallNote": {
     "optionalNote": "Note",
