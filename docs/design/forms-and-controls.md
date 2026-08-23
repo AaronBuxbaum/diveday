@@ -266,6 +266,14 @@ two-field panel wearing one is a bar hovering over nothing.
 the surface cannot show on its own; a confirmation that the save worked belongs in `FormStatus` or
 the control's own face (see the ephemeral-acknowledgement section below).
 
+**A sticky bar needs its own visual capture.** Chromium's full-page screenshot stitches the document
+at scroll 0 and does not paint a *currently stuck* element at all — measured on the course editor,
+where `Save course page` reports a bounding box at y=744 and the 8,531 px capture contains no pixel
+of it anywhere. So a surface that adopts `StickyFormActions` also takes a `captureStickyFoot`
+capture in `e2e/visual.spec.ts` (it scrolls to the foot first, where the sticky offset is zero and
+the element paints normally). Without it the page's primary action has no baseline, which is the
+opposite of what a capture is for.
+
 ## Saying what happened: `Field error` + `FormStatus`
 
 **A form's answer belongs where the form is.** Not under the `<h1>`, not in a banner the length of
