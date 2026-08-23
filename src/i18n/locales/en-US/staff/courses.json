@@ -29,6 +29,7 @@
     "hiddenFromDivers": "Hidden from divers and the session picker.",
     "noticeSaved": "Course page saved.",
     "errorInvalid": "That didn't save. Check the fields and try again.",
+    "errorFaqIncomplete": "Every question needs an answer, and every answer a question.",
     "errorImages": "You can keep up to eight gallery photos. Remove one before adding more.",
     "errorUpload": "That photo didn't upload. Try a JPG, PNG, or WebP under 5 MB.",
     "errorTooManyPhotos": "Add up to {max} new gallery photos per save. Save this batch, then add more.",
@@ -81,9 +82,6 @@
     "notIncludedPlaceholder": "Marine park fee\nHotel transfers",
     "dayByDayLegend": "Day by day",
     "faqLegend": "Questions divers ask",
-    "faqDescription": "One block per question, separated by a blank line. First line is the question, the rest is the answer.",
-    "faqLabel": "FAQ",
-    "faqPlaceholder": "Is equipment included?\nYes — mask, fins, wetsuit, BCD, regulator, and tanks.\n\nDo I need to be a strong swimmer?\nYou need to be comfortable in the water.",
     "savePage": "Save course page",
     "saving": "Saving…",
     "templateUpdates": {
@@ -120,7 +118,9 @@
         "scheduleDays": "Day-by-day plan",
         "faqs": "FAQ"
       }
-    }
+    },
+    "unsavedChanges": "Unsaved changes",
+    "draftRestored": "Unsaved changes, put back from your last visit"
   },
   "dayByDay": {
     "dayLabel": "Day {number}",
@@ -140,5 +140,16 @@
     "daysMaxOne": "{max} day max",
     "daysMaxOther": "{max} days max",
     "addDay": "Add day"
+  },
+  "faq": {
+    "questionLabel": "Question {number}",
+    "questionPlaceholder": "Is gear included?",
+    "answerLabel": "Answer",
+    "answerPlaceholder": "Yes — mask, fins, wetsuit and tanks are all part of the course fee.",
+    "removeFaq": "Remove question {number}",
+    "addFaq": "Add a question",
+    "faqsMaxOne": "{max} question is the most a course page holds.",
+    "faqsMaxOther": "{max} questions is the most a course page holds.",
+    "empty": "No questions yet. Add the ones divers ask you at the counter."
   }
 }

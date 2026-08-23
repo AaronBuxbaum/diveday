@@ -269,6 +269,41 @@ export function Field({
   );
 }
 
+/**
+ * **The submit row of a form longer than a screen, pinned to the bottom edge.**
+ *
+ * `FieldActions` below is right for a form you can see all of. This one is for
+ * the ones you cannot: the course editor runs to **4,002 px** at desktop
+ * width across nine sections, and its only Save sat at the very bottom — so
+ * fixing a typo in the subhead at y≈300 meant scrolling 3,700 px to commit it,
+ * and a writer who did not know that was there had no way to tell the form
+ * from a page (issue #815).
+ *
+ * `sticky`, not `fixed`: it belongs to the form, so it rides the bottom of the
+ * viewport while the form is on screen and settles into place at the end of
+ * it. A fixed bar would hang over every other page's footer too.
+ *
+ * The negative margins let it span the full width of a padded container while
+ * its own padding keeps the buttons where the fields are. Reach for it when a
+ * form is taller than a phone screen with content still to come — a two-field
+ * panel wearing one is a bar hovering over nothing.
+ */
+export function StickyFormActions({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** Submit row for a `FieldGrid`; spans every column and centers its buttons. */
 export function FieldActions({
   className = "",

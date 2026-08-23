@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { type CourseScheduleDay, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/courses";
+import { draftFieldValue } from "./UnsavedChangesGuard";
 
 /**
  * Every value is a plain ICU-style template string (e.g. "Day {number}"),
@@ -54,12 +55,35 @@ function countItems(items: string[]): number {
  */
 export function DayByDayEditor({
   initialDays,
+  storageKey,
   copy,
 }: {
   initialDays: CourseScheduleDay[];
+  /** The unsaved-work draft these rows are part of; see `draftFieldValue`. */
+  storageKey: string;
   copy: DayByDayEditorCopy;
 }) {
   const [days, setDays] = useState<CourseScheduleDay[]>(initialDays);
+  const hidden = useRef<HTMLInputElement>(null);
+
+  // The plan as the writer last left it, if this visit is a return to unsaved
+  // work. These rows live in React state and post one hidden field, so
+  // `UnsavedChangesGuard` cannot restore them by assignment — see
+  // `draftFieldValue`. In an effect so the server and first client render
+  // agree; the `input` event is what marks the form dirty, since nothing was
+  // typed.
+  useEffect(() => {
+    const draft = draftFieldValue(storageKey, "scheduleDaysJson");
+    if (!draft || draft === JSON.stringify(initialDays)) return;
+    try {
+      const saved = JSON.parse(draft) as CourseScheduleDay[];
+      if (!Array.isArray(saved)) return;
+      setDays(saved);
+    } catch {
+      return;
+    }
+    hidden.current?.dispatchEvent(new Event("input", { bubbles: true }));
+  }, [storageKey, initialDays]);
 
   function updateDay(index: number, patch: Partial<CourseScheduleDay>) {
     setDays((current) => current.map((day, i) => (i === index ? { ...day, ...patch } : day)));
@@ -90,7 +114,7 @@ export function DayByDayEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <input type="hidden" name="scheduleDaysJson" value={JSON.stringify(days)} />
+      <input ref={hidden} type="hidden" name="scheduleDaysJson" value={JSON.stringify(days)} />
       {days.map((day, dayIndex) => {
         const dayNumber = dayIndex + 1;
         return (
