@@ -1926,6 +1926,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
         await capture(page, "public-schedule-new-shop", scheme);
 
+        // **The board before anything is on it.** The `schedule-builder`
+        // baseline is shot against blue-mantis, whose board always has
+        // fourteen departures, so the state a new owner actually opens on had
+        // no capture at all — and it had grown four controls, two of them
+        // primary-weight, one of which ("Add a booking") leads to a departure
+        // picker with no departures in it (issue 797). The header now stands
+        // down here and the empty state holds the one door. Free to take —
+        // the shop and the session already exist.
+        await page.goto(`/shop/${unique}/schedule/board`);
+        await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
+        await capture(page, "schedule-builder-empty", scheme);
+
         // **The evening of a day with nothing in it.** Close-out has three
         // sections, each with its own empty state, and the only way to see all
         // three fire at once is a shop with no departures — which the seeded

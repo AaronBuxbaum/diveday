@@ -324,7 +324,12 @@
       "trips.spec.ts",
       "waivers.spec.ts"
     ],
-    "visual": ["schedule-builder", "schedule-builder-add", "schedule-builder-add-full"]
+    "visual": [
+      "schedule-builder",
+      "schedule-builder-add",
+      "schedule-builder-add-full",
+      "schedule-builder-empty"
+    ]
   },
   "/shop/[shopSlug]/settings": {
     "e2e": [
