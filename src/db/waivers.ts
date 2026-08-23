@@ -33,7 +33,7 @@ import {
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import type { MedicalAnswers } from "./schema";
 import {
   bookings,
@@ -89,7 +89,7 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
 }
 
 /** How many audit rows the Signatures tab shows per page. */
-export const WAIVER_INTEGRITY_PAGE_SIZE = 20;
+export const WAIVER_INTEGRITY_PAGE_SIZE = PAGE_SIZE.list;
 
 /** The join shape both `listWaiverIntegrityAudit` and `getSignedWaiverRecordForShop` select. */
 type WaiverAuditJoinRow = {

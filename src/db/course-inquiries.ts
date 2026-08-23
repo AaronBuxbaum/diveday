@@ -2,7 +2,7 @@ import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { AppDb, DbExecutor } from "./client";
-import { type OffsetPage, offsetPage } from "./paging";
+import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import { courseInquiries, courses, people } from "./schema";
 
 /**
@@ -155,7 +155,7 @@ export type DateRequestRow = {
 };
 
 /** How many requests one page of the staff list holds. */
-export const DATE_REQUESTS_PAGE_SIZE = 20;
+export const DATE_REQUESTS_PAGE_SIZE = PAGE_SIZE.list;
 
 /**
  * One page of this shop's date requests, ordered by the date they are asking

@@ -27,7 +27,7 @@ import {
 import type { CertificationLevel } from "@/lib/readiness";
 import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   type DiveSiteFitTone,
   type DiveSpecialty,
@@ -168,7 +168,7 @@ export async function shopSearchAnchor(
 }
 
 /** Three rows of cards on the widest grid the library page uses. */
-export const DIVE_SITE_PAGE_SIZE = 24;
+export const DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
 
 export type DiveSiteListFilter = {
   /** Matched against the site name *and* its location — staff recall either. */
@@ -628,7 +628,7 @@ export async function listDiveSiteBriefingExtras(
 }
 
 /** How many published site templates the "Common dive sites" catalog shows per page. */
-export const GLOBAL_DIVE_SITE_PAGE_SIZE = 24;
+export const GLOBAL_DIVE_SITE_PAGE_SIZE = PAGE_SIZE.list;
 
 export type GlobalDiveSiteTemplateRow = {
   template: typeof globalDiveSites.$inferSelect;

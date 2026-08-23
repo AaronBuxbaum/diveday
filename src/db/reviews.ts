@@ -25,7 +25,7 @@ import {
 } from "@/lib/reviews";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   bookings,
   people,
@@ -224,10 +224,10 @@ export type PublicReview = {
 };
 
 /** How many reviews the schedule shows at once — a curated 2x2 on wide screens. */
-export const PUBLIC_REVIEW_PAGE_SIZE = 4;
+export const PUBLIC_REVIEW_PAGE_SIZE = PAGE_SIZE.preview;
 
 /** The full archive is still bounded, but useful enough to browse one page at a time. */
-export const PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE = 20;
+export const PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE = PAGE_SIZE.list;
 
 /** Every review the shop has released, including a rating with no comment. */
 function publishedReviewScope(shopId: string) {
@@ -407,7 +407,7 @@ export type StaffReview = {
 };
 
 /** How many reviews the moderation queue shows per page. */
-export const STAFF_REVIEW_PAGE_SIZE = 20;
+export const STAFF_REVIEW_PAGE_SIZE = PAGE_SIZE.list;
 
 export type StaffReviewPage = {
   reviews: StaffReview[];

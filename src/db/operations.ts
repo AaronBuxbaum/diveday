@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -322,7 +322,7 @@ export async function listTripActivity(db: AppDb, shopId: string, tripId: string
 }
 
 /** How many lines of a diver's trail the record shows at a time. */
-export const DIVER_ACTIVITY_PAGE_SIZE = 10;
+export const DIVER_ACTIVITY_PAGE_SIZE = PAGE_SIZE.section;
 
 /**
  * Everything in the shop's activity trail that is **about one person**, newest
