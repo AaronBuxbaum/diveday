@@ -68,7 +68,9 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   // under cacheComponents (e2e/marketing.spec.ts documents that limitation).
   await expect(page.getByRole("link", { name: /certification paths/i })).toHaveCount(0);
   await page.goto("/s/blue-mantis/courses/paths");
-  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+  // Inside a shop's namespace the refusal is the shop's own, framed by its
+  // chrome and pointing back at its schedule (issue #765).
+  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
 });
 
 /**

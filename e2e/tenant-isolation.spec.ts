@@ -207,5 +207,9 @@ test("a mistyped trip id on a shop's public page is a 404 for an anonymous visit
 }) => {
   const response = await page.goto("/s/blue-mantis/trips/nope");
   expect(response?.status()).toBeLessThan(500);
-  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+  // The *shop's* refusal, not DiveDay's app-wide one: a `notFound()` in this
+  // namespace renders inside the shop's chrome and offers its schedule (issue
+  // #765). The heading is the only thing this test cares about — that the
+  // guard produced a rendered 404 rather than a 500.
+  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
 });
