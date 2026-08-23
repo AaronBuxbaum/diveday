@@ -216,8 +216,22 @@ export default async function DiveRecapPage({
   const db = await getDb();
   const data = await getRecapPageData(db, bookingId);
   if (!data) {
+    // **Deliberately terse, and not for the reason this comment used to give.**
+    //
+    // It said the collapse matched "a bad or forged token", which is not so: a
+    // recap token is signed, and `verifyRecapToken` above rejects a forged one
+    // before this branch is reachable. Everything that arrives here carries a
+    // signature DiveDay wrote (`security-reviewer`, on issue #801).
+    //
+    // The real reason to keep it is that a recap token has **no revocation** —
+    // no `booking_capabilities` row to revoke, no expiry short of the
+    // signature's own — so this collapse is the only thing that closes the page
+    // when a booking is cancelled underneath it. `/ready` names its shop on a
+    // dead link precisely because its token *can* be revoked and expired; this
+    // one cannot, so widening what it discloses widens it forever.
+    //
     // `getRecapPageData` nulls the whole page uniformly for a cancelled/
-    // no-show booking, same as a bad or forged token — so a diver who was
+    // no-show booking — so a diver who was
     // rating or adding a photo when staff cancelled their booking underneath
     // them lands right back here on redirect, never seeing a
     // `reviews.savedDidNotDive`/`recap.photoCancelled` notice at all (those

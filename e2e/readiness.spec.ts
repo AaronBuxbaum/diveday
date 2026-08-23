@@ -107,6 +107,25 @@ test.describe("staff-prepared trip", () => {
     await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
     await expect(page.getByRole("heading", { name: "This booking was cancelled" })).toBeVisible();
 
+    // **And the same dead token, opened again later, names the shop.**
+    //
+    // `?cancelled=1` is what the redirect above carries; a diver coming back to
+    // the bookmarked URL, or opening the link out of an old email, arrives
+    // without it — and used to get four words telling them to ask a shop the
+    // page would not name. `/ready` is the link in the 24-hour reminder, so
+    // that is the ordinary way to reach it (issue #801).
+    const readyUrl = new URL(page.url());
+    readyUrl.search = "";
+    await page.goto(readyUrl.toString());
+    await expect(
+      page.getByRole("heading", { name: /readiness link isn.t available/ }),
+    ).toBeVisible();
+    await expect(page.getByText(/Blue Mantis Divers/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
+      "href",
+      "mailto:hello@demo.invalid",
+    );
+
     // And the seat is genuinely back on the boat, not merely hidden from the
     // diver: the six-seat departure reads as six again, not five.
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });

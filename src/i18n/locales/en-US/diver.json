@@ -1,6 +1,8 @@
 {
   "common": {
     "backToSchedule": "Back to the schedule",
+    "needHelpContact": "Need help? <link>Contact {shop}</link>.",
+    "needHelpPlain": "Need help? Contact {shop} directly.",
     "perDiver": "per diver",
     "optional": "(optional)",
     "varies": "Varies",
@@ -685,8 +687,6 @@
     "signatureNote": "Your typed name, agreement, and completion time are saved with this exact version of the waiver.",
     "saveForLater": "Save and finish later",
     "signButton": "Sign waiver",
-    "needHelpContact": "Need help? <link>Contact {shop}</link>.",
-    "needHelpPlain": "Need help? Contact {shop} directly.",
     "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, bring someone who can help you read it, or ask the shop first — don't sign anything you don't understand."
   },
   "checkoutLine": {

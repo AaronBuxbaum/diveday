@@ -48,6 +48,17 @@ export default async function InvitePage({
 
   const db = await getDb();
   const check = await checkAccountToken(db, { token, purpose: "invite" });
+  // **Terse on purpose, and decided rather than inherited** (issue #801).
+  //
+  // The three bearer-token pages that carry a *booking* now name the shop on a
+  // dead link, because the diver's question is "who do I ask" and the token
+  // still says which shop issued it. This one is different in both halves. An
+  // invite is a staff invitation, so naming the shop would tell whoever holds a
+  // forwarded or leaked link which shop invited somebody — a disclosure the
+  // diver-facing pages do not make, because there the bearer *is* the customer.
+  // And the way forward is not self-serve: a dead invite is reissued by the
+  // person who sent it, not by this page. "Back to sign in" is the honest door,
+  // and it is already here.
   if (!check) {
     return (
       <EntryDone
