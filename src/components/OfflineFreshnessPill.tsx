@@ -11,6 +11,17 @@ const freshnessToneClass: Record<OfflineManifestFreshness, string> = {
 };
 
 /**
+ * The same three hues as ink alone, for the line that names what to do about a
+ * copy that is no longer current. It sits directly under the pill, so it has to
+ * read as the same object rather than as ordinary muted text.
+ */
+export const freshnessInkClass: Record<OfflineManifestFreshness, string> = {
+  current: "text-success-strong",
+  aging: "text-warning-strong",
+  stale: "text-danger",
+};
+
+/**
  * The "how old is this saved copy" pill shown wherever an offline manifest
  * surfaces (the per-trip viewer, the saved-trips list, the manifest manager
  * card). One implementation for the tone-per-freshness mapping — this used to

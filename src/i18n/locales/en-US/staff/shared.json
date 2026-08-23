@@ -535,7 +535,11 @@
       "headingEmpty": "Nothing saved on this device yet",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
-      "emptyHint": "While you still have signal, open any shop page — DiveDay keeps this device's copy of the next two days current on its own."
+      "emptyHint": "While you still have signal, open any shop page — DiveDay keeps this device's copy of the next two days current on its own.",
+      "freshnessAllCurrent": "All up to date.",
+      "freshnessNeedRefresh": "{count, plural, one {# copy needs refreshing.} other {# copies need refreshing.}}",
+      "savedAgo": "Saved {ago}",
+      "refreshBeforeRelying": "Refresh before you rely on it"
     },
     "single": {
       "eyebrow": "Offline manifest",

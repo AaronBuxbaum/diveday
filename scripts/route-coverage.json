@@ -26,6 +26,7 @@
       "offline-manifest-discarded",
       "offline-manifest-empty",
       "offline-manifest-list",
+      "offline-manifest-list-needs-refresh",
       "offline-manifest-removed-other-shop",
       "offline-manifest-roll-call"
     ]
