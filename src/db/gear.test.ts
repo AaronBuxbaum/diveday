@@ -199,12 +199,19 @@ describe("gear items", () => {
     });
     expect(deleted).toMatchObject({ ok: true, deleted: { label: "GoPro A" } });
 
-    // Off the register and out of its own record…
+    // Off the register…
     expect(await countGearItems(db, shop.id)).toBe(0);
     expect((await listGearItems(db, shop.id, { todayLocal: TODAY })).rows).toHaveLength(0);
-    expect(await getGearItemDetail(db, shop.id, item.id)).toBeNull();
-    // …but the row and its care history are still there, which is the point.
+    // …but the row and its care history are still there, which is the point —
+    // and its own record still reads them back, carrying the stamp that tells
+    // the surface to render read-only (issue #614). Reading a deleted unit's
+    // service history must not cost a restore onto the live register.
     expect(await listGearServiceEvents(db, shop.id, item.id)).toHaveLength(1);
+    const record = await getGearItemDetail(db, shop.id, item.id);
+    expect(record?.item.deletedAt).toBeInstanceOf(Date);
+    expect(record?.history.map((event) => event.note)).toEqual(["housing seal replaced"]);
+    // Still nobody else's to read, deleted or not.
+    expect(await getGearItemDetail(db, rival.id, item.id)).toBeNull();
     const gone = await listDeletedGearItems(db, shop.id);
     expect(gone.rows.map((row) => row.label)).toEqual(["GoPro A"]);
 

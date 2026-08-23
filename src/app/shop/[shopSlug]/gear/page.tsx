@@ -303,7 +303,13 @@ export default async function GearRegisterPage({
             </nav>
 
             {showDeleted ? (
-              <DeletedList rows={deletedPage.rows} t={t} locale={locale} timeZone={shop.timezone} />
+              <DeletedList
+                rows={deletedPage.rows}
+                shopSlug={shopSlug}
+                t={t}
+                locale={locale}
+                timeZone={shop.timezone}
+              />
             ) : (
               <div className="mt-4">
                 <Table minWidth="45rem">
@@ -570,14 +576,20 @@ function ReturnsPanel({
  * The units that have been deleted, newest first, each with the one act this
  * list exists for. Deliberately plainer than the fleet table: nothing here is
  * in service, so there is no clock and nowhere it can be.
+ *
+ * The tag links to the unit's own record, which reads as a read-only history
+ * while the unit is deleted (issue #614) — so "when was this last serviced"
+ * no longer costs a restore-and-delete round trip.
  */
 function DeletedList({
   rows,
+  shopSlug,
   t,
   locale,
   timeZone,
 }: {
   rows: DeletedGearItemRow[];
+  shopSlug: string;
   t: StaffTranslator;
   locale: string;
   timeZone: string;
@@ -592,7 +604,12 @@ function DeletedList({
           >
             <div className="w-full min-w-0 sm:w-auto sm:flex-1">
               <p className="font-medium">
-                <span className="font-mono text-sm">{row.label}</span>
+                <Link
+                  href={`/shop/${shopSlug}/gear/${row.id}`}
+                  className="font-mono text-sm text-primary hover:underline"
+                >
+                  {row.label}
+                </Link>
                 <span className="text-muted"> · {gearItemKindLabel(t, row.kind)}</span>
                 {row.size ? <span className="text-muted"> · {row.size}</span> : null}
               </p>

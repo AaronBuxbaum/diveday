@@ -62,9 +62,11 @@ function optional(value: string | undefined) {
 
 /**
  * The register's own live-rows filter (ADR 20260820-every-delete-is-soft).
- * Every read that means "the fleet" carries it; the two that deliberately do
- * not are the deleted-units list this page offers Restore from, and the export
- * bundle, where a shop takes everything it owns, tombstones included.
+ * Every read that means "the fleet" carries it; the three that deliberately do
+ * not are the deleted-units list this page offers Restore from, one unit's own
+ * record (`getGearItemDetail`, which reports the state instead of hiding the
+ * row), and the export bundle, where a shop takes everything it owns,
+ * tombstones included.
  */
 const liveGearItem = () => isNull(gearItems.deletedAt);
 
@@ -1095,6 +1097,23 @@ export type GearItemDetail = {
   reservations: GearRowReservation[];
 };
 
+/**
+ * One unit's whole record — **deleted units included**, which is the one read
+ * here that deliberately drops `liveGearItem()`.
+ *
+ * The delete is soft precisely so the service events and the rental windows
+ * survive it, and a reader that filtered the row out made that history
+ * unreachable: a shop asked when "Reg #4" was last serviced had to restore the
+ * unit onto the live register — back into every picker — to read it, then
+ * delete it again. The diver roster has answered this the other way since its
+ * Deleted view landed, and the two pillars now agree (ADR
+ * 20260820-every-delete-is-soft, amended 2026-08-23).
+ *
+ * This is a *visibility* affordance and nothing more. The row carries its own
+ * `deletedAt`, so the surface reports the state and drops every control that
+ * writes; every operational read — the fleet, the pickers, the counts, the
+ * prep assignments — keeps `liveGearItem()`, and so does every writer.
+ */
 export async function getGearItemDetail(
   db: AppDb,
   shopId: string,
@@ -1103,7 +1122,7 @@ export async function getGearItemDetail(
   const [item] = await db
     .select()
     .from(gearItems)
-    .where(and(eq(gearItems.id, gearItemId), eq(gearItems.shopId, shopId), liveGearItem()))
+    .where(and(eq(gearItems.id, gearItemId), eq(gearItems.shopId, shopId)))
     .limit(1);
   if (!item) return null;
 

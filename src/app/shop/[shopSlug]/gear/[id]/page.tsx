@@ -21,6 +21,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import {
   GEAR_KIND_ORDER,
   GEAR_SERVICE_KINDS_FOR,
@@ -30,6 +31,9 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+// The register's restore, not a second one: one act, one code path, and a tag
+// collision on the way back answers on the page that holds the fleet it hit.
+import { restoreGearItemAction } from "../actions";
 import {
   checkOutGearReservationFromUnitAction,
   deleteGearItemAction,
@@ -90,8 +94,21 @@ export default async function GearUnitPage({
   const { item, clocks, history, reservations } = detail;
   const state = gearServiceState(clocks, todayLocal);
   const banner = noticeFromParam(notice, NOTICES);
-  const openReservations = reservations.filter((reservation) => !reservation.returnedAt);
-  const settled = reservations.filter((reservation) => reservation.returnedAt);
+  /**
+   * A deleted unit keeps this record — the service history is the reason the
+   * row survives the delete, and reaching it used to mean restoring the unit
+   * onto the live register to read it (issue #614). Read-only, without
+   * exception: every writer in `src/db/gear.ts` refuses a deleted row, so a
+   * rendered form would be a control that cannot work.
+   */
+  const deletedAt = item.deletedAt;
+  const openReservations = deletedAt
+    ? []
+    : reservations.filter((reservation) => !reservation.returnedAt);
+  // On a deleted unit the rental record is the whole list: nothing here is
+  // actionable, and a "where is it" panel would be answering about a unit the
+  // shop has taken off the wall.
+  const settled = deletedAt ? reservations : reservations.filter((r) => r.returnedAt);
 
   /**
    * A refused delete is about the unit's reservations, so it is worded from
@@ -133,7 +150,12 @@ export default async function GearUnitPage({
           title={item.label}
           description={identity}
           meta={
-            item.status !== "in_service" ? (
+            deletedAt ? (
+              // The one fact that explains the whole page: no forms, and a
+              // Restore where the Delete was. "Needs service" is a state of a
+              // unit on the wall, so it does not also render here.
+              <Badge tone="warning">{t("gear.unit.deleted.badge")}</Badge>
+            ) : item.status !== "in_service" ? (
               <Badge tone={item.status === "needs_service" ? "warning" : "neutral"}>
                 {gearStatusLabel(t, item.status)}
               </Badge>
@@ -149,7 +171,7 @@ export default async function GearUnitPage({
       <div className="mt-8 space-y-10">
         {/* Eight words don't need a card of their own: the panel exists only
             when there are reservations carrying actions. */}
-        {openReservations.length === 0 ? (
+        {deletedAt ? null : openReservations.length === 0 ? (
           <p className="text-sm text-muted">{t("gear.unit.where.inShop")}</p>
         ) : (
           <SectionCard title={t("gear.unit.where.title")}>
@@ -238,15 +260,20 @@ export default async function GearUnitPage({
           </SectionCard>
         )}
 
-        <ServiceCard
-          item={item}
-          clocks={clocks}
-          state={state}
-          history={history}
-          t={t}
-          locale={locale}
-          todayLocal={todayLocal}
-        />
+        {/* A deleted unit that was never serviced has an empty card and no
+            form to fill it, so it gets no card at all. */}
+        {deletedAt && clocks.length === 0 && history.length === 0 ? null : (
+          <ServiceCard
+            item={item}
+            clocks={clocks}
+            state={state}
+            history={history}
+            t={t}
+            locale={locale}
+            todayLocal={todayLocal}
+            readOnly={deletedAt !== null}
+          />
+        )}
 
         {settled.length > 0 ? (
           <SectionCard padding="none" title={t("gear.unit.rentals.title")}>
@@ -273,76 +300,88 @@ export default async function GearUnitPage({
           </SectionCard>
         ) : null}
 
-        <SectionCard
-          id="unit-details"
-          padding="lg"
-          title={t("gear.unit.details.title")}
-          description={t("gear.unit.details.description")}
-        >
-          <FieldGrid as="form" action={updateGearItemAction} columns={2}>
-            <input type="hidden" name="gearItemId" value={item.id} />
-            <Field label={t("gear.form.kind")}>
-              <select name="kind" className={controlClass} defaultValue={item.kind}>
-                {GEAR_KIND_ORDER.map((option) => (
-                  <option key={option} value={option}>
-                    {gearItemKindLabel(t, option)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("gear.form.label")} hint={t("gear.form.labelHint")}>
-              <input
-                name="label"
-                required
-                maxLength={80}
-                defaultValue={item.label}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
-              <input
-                name="size"
-                maxLength={40}
-                defaultValue={item.size ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.form.serialNumber")} hint={t("gear.form.optionalHint")}>
-              <input
-                name="serialNumber"
-                maxLength={80}
-                defaultValue={item.serialNumber ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.form.brandModel")} hint={t("gear.form.optionalHint")}>
-              <input
-                name="brandModel"
-                maxLength={120}
-                defaultValue={item.brandModel ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
-              <input
-                type="date"
-                name="purchasedOn"
-                defaultValue={item.purchasedOn ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("gear.unit.details.saving")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("gear.unit.details.save")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
-        </SectionCard>
+        {deletedAt ? null : (
+          <SectionCard
+            id="unit-details"
+            padding="lg"
+            title={t("gear.unit.details.title")}
+            description={t("gear.unit.details.description")}
+          >
+            <FieldGrid as="form" action={updateGearItemAction} columns={2}>
+              <input type="hidden" name="gearItemId" value={item.id} />
+              <Field label={t("gear.form.kind")}>
+                <select name="kind" className={controlClass} defaultValue={item.kind}>
+                  {GEAR_KIND_ORDER.map((option) => (
+                    <option key={option} value={option}>
+                      {gearItemKindLabel(t, option)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t("gear.form.label")} hint={t("gear.form.labelHint")}>
+                <input
+                  name="label"
+                  required
+                  maxLength={80}
+                  defaultValue={item.label}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
+                <input
+                  name="size"
+                  maxLength={40}
+                  defaultValue={item.size ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("gear.form.serialNumber")} hint={t("gear.form.optionalHint")}>
+                <input
+                  name="serialNumber"
+                  maxLength={80}
+                  defaultValue={item.serialNumber ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("gear.form.brandModel")} hint={t("gear.form.optionalHint")}>
+                <input
+                  name="brandModel"
+                  maxLength={120}
+                  defaultValue={item.brandModel ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
+                <input
+                  type="date"
+                  name="purchasedOn"
+                  defaultValue={item.purchasedOn ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("gear.unit.details.saving")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("gear.unit.details.save")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </SectionCard>
+        )}
 
-        <StatusCard item={item} held={held} t={t} />
+        {deletedAt ? (
+          <RestoreCard
+            item={item}
+            deletedAt={deletedAt}
+            t={t}
+            locale={locale}
+            timeZone={shop.timezone}
+          />
+        ) : (
+          <StatusCard item={item} held={held} t={t} />
+        )}
       </div>
     </main>
   );
@@ -360,6 +399,7 @@ function ServiceCard({
   t,
   locale,
   todayLocal,
+  readOnly,
 }: {
   item: GearItemDetail["item"];
   clocks: GearItemDetail["clocks"];
@@ -368,9 +408,15 @@ function ServiceCard({
   t: StaffTranslator;
   locale: string;
   todayLocal: string;
+  /**
+   * The unit is deleted: the clocks and the paper trail stay — they are what
+   * the record is for — and the form that winds them goes. So does the urgency
+   * line, which is an instruction to act on a unit that is off the wall.
+   */
+  readOnly: boolean;
 }) {
   const serviceText =
-    state.state === "due_soon" || state.state === "overdue"
+    !readOnly && (state.state === "due_soon" || state.state === "overdue")
       ? gearServiceStateText(t, state, formatCalendarDate(state.nextDueOn, locale))
       : null;
   return (
@@ -417,78 +463,82 @@ function ServiceCard({
             </li>
           ))}
         </ul>
-      ) : (
+      ) : readOnly ? null : (
         <p className="mb-6 text-sm text-muted">{t("gear.unit.service.noClocks")}</p>
       )}
 
-      <FieldGrid as="form" action={recordGearServiceAction} columns={2}>
-        <input type="hidden" name="gearItemId" value={item.id} />
-        <Field label={t("gear.unit.service.kind")}>
-          <select name="kind" className={controlClass}>
-            {GEAR_SERVICE_KINDS_FOR[item.kind].map((option) => (
-              <option key={option} value={option}>
-                {gearServiceKindLabel(t, option)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("gear.unit.service.servicedOn")}>
-          <input
-            type="date"
-            name="servicedOn"
-            required
-            defaultValue={todayLocal}
-            className={controlClass}
-          />
-        </Field>
-        <Field
-          label={t("gear.unit.service.nextDueOn")}
-          hint={t("gear.form.optionalHint")}
-          description={t("gear.unit.service.nextDueHint")}
-        >
-          <input type="date" name="nextDueOn" className={controlClass} />
-        </Field>
-        <Field
-          label={t("gear.unit.service.nextDueDives")}
-          hint={t("gear.form.optionalHint")}
-          description={t("gear.unit.service.nextDueDivesHint")}
-        >
-          <input
-            type="number"
-            name="nextDueDives"
-            min={1}
-            max={9999}
-            inputMode="numeric"
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("gear.unit.service.note")} hint={t("gear.form.optionalHint")}>
-          <input
-            name="note"
-            maxLength={500}
-            placeholder={t("gear.unit.service.notePlaceholder")}
-            className={controlClass}
-          />
-        </Field>
-        {item.status === "needs_service" ? (
-          <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" name="returnToService" defaultChecked className="h-4 w-4" />
-            {t("gear.unit.service.returnToService")}
-          </label>
-        ) : null}
-        <FieldActions>
-          <SubmitButton pendingLabel={t("gear.unit.service.logging")} className={buttonClass()}>
-            {t("gear.unit.service.log")}
-          </SubmitButton>
-          <FormStatus />
-        </FieldActions>
-      </FieldGrid>
+      {readOnly ? null : (
+        <FieldGrid as="form" action={recordGearServiceAction} columns={2}>
+          <input type="hidden" name="gearItemId" value={item.id} />
+          <Field label={t("gear.unit.service.kind")}>
+            <select name="kind" className={controlClass}>
+              {GEAR_SERVICE_KINDS_FOR[item.kind].map((option) => (
+                <option key={option} value={option}>
+                  {gearServiceKindLabel(t, option)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("gear.unit.service.servicedOn")}>
+            <input
+              type="date"
+              name="servicedOn"
+              required
+              defaultValue={todayLocal}
+              className={controlClass}
+            />
+          </Field>
+          <Field
+            label={t("gear.unit.service.nextDueOn")}
+            hint={t("gear.form.optionalHint")}
+            description={t("gear.unit.service.nextDueHint")}
+          >
+            <input type="date" name="nextDueOn" className={controlClass} />
+          </Field>
+          <Field
+            label={t("gear.unit.service.nextDueDives")}
+            hint={t("gear.form.optionalHint")}
+            description={t("gear.unit.service.nextDueDivesHint")}
+          >
+            <input
+              type="number"
+              name="nextDueDives"
+              min={1}
+              max={9999}
+              inputMode="numeric"
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("gear.unit.service.note")} hint={t("gear.form.optionalHint")}>
+            <input
+              name="note"
+              maxLength={500}
+              placeholder={t("gear.unit.service.notePlaceholder")}
+              className={controlClass}
+            />
+          </Field>
+          {item.status === "needs_service" ? (
+            <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
+              <input type="checkbox" name="returnToService" defaultChecked className="h-4 w-4" />
+              {t("gear.unit.service.returnToService")}
+            </label>
+          ) : null}
+          <FieldActions>
+            <SubmitButton pendingLabel={t("gear.unit.service.logging")} className={buttonClass()}>
+              {t("gear.unit.service.log")}
+            </SubmitButton>
+            <FormStatus />
+          </FieldActions>
+        </FieldGrid>
+      )}
 
       {/* The paper trail rides the card whose clocks it explains, folded —
           the newest event of each kind is already the list above, so at rest
           the history would only repeat it (principle 9). */}
       {history.length > 0 ? (
-        <details className="mt-6 border-t border-border pt-4">
+        // Open on a deleted unit: the history is the whole reason that record
+        // is reachable, so folding it would hide what the reader came for.
+        <details open={readOnly} className="mt-6 border-t border-border pt-4">
           <summary className="min-h-11 cursor-pointer text-sm font-medium">
             {t("gear.unit.history.title", { count: history.length })}
           </summary>
@@ -521,6 +571,49 @@ function ServiceCard({
           </ul>
         </details>
       ) : null}
+    </SectionCard>
+  );
+}
+
+/**
+ * The way back, where the Delete was.
+ *
+ * A deleted unit's record is read-only (`getGearItemDetail` reports the stamp
+ * rather than hiding the row), so this card is the page's only control: the
+ * day the unit came off the register, and the one act that reverses it. The
+ * restore is the register's own action, so a refused one — another unit is
+ * wearing this one's tag now — lands on the register beside the fleet that
+ * refused it, which is where the collision is.
+ */
+function RestoreCard({
+  item,
+  deletedAt,
+  t,
+  locale,
+  timeZone,
+}: {
+  item: GearItemDetail["item"];
+  deletedAt: Date;
+  t: StaffTranslator;
+  locale: string;
+  timeZone: string;
+}) {
+  return (
+    <SectionCard padding="lg" title={t("gear.unit.status.title")}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <p className="w-full text-sm text-muted sm:w-auto sm:flex-1">
+          {t("gear.deleted.on", { date: formatShortDate(deletedAt, locale, timeZone) })}
+        </p>
+        <form action={restoreGearItemAction}>
+          <input type="hidden" name="gearItemId" value={item.id} />
+          <SubmitButton
+            pendingLabel={t("gear.deleted.restoring")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("gear.unit.deleted.restore")}
+          </SubmitButton>
+        </form>
+      </div>
     </SectionCard>
   );
 }

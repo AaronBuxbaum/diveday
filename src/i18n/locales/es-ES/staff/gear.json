@@ -127,6 +127,10 @@
     "divesNeedADate": "Un número de inmersiones necesita una fecha al lado — la unidad vence con lo que ocurra primero."
   },
   "unit": {
+    "deleted": {
+      "badge": "Eliminada",
+      "restore": "Restaurar unidad"
+    },
     "backToRegister": "← Registro de equipo",
     "where": {
       "title": "Dónde está",
