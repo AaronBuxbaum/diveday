@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { fill, pluralForm } from "@/i18n/fill";
 
 /**
@@ -127,12 +128,10 @@ export function QuestionnaireProgress({
             total: questionTotal,
           })}
         </p>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-          <div
-            className="h-full rounded-full bg-primary transition-[width] ease-out-soft"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
+        <ProgressBar
+          className="mt-1.5 h-1.5"
+          segments={[{ key: "answered", fraction: percent / 100, className: "bg-primary" }]}
+        />
       </div>
       {children}
     </div>

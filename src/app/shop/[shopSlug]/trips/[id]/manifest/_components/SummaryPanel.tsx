@@ -1,3 +1,4 @@
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -236,15 +237,19 @@ export function SummaryPanel({
           aria-valuemax={summary.totalDivers}
           aria-valuenow={summary.totalDivers - summary.awaiting}
         >
-          <div
-            className="h-full rounded-full bg-primary transition-[width]"
-            style={{
-              width: `${
-                summary.totalDivers === 0
-                  ? 0
-                  : ((summary.totalDivers - summary.awaiting) / summary.totalDivers) * 100
-              }%`,
-            }}
+          <ProgressBar
+            className="h-full"
+            trackClassName=""
+            segments={[
+              {
+                key: "counted",
+                fraction:
+                  summary.totalDivers === 0
+                    ? 0
+                    : (summary.totalDivers - summary.awaiting) / summary.totalDivers,
+                className: "bg-primary",
+              },
+            ]}
           />
         </div>
         {/* The counts the six tiles used to carry, folded in under the bar they
