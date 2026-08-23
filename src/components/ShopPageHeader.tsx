@@ -304,12 +304,12 @@ export function ShopNotice({
   // needs no nudge and `warning` already reads as body text on its tint.
   const toneClass =
     tone === "danger"
-      ? "border-danger/20 bg-danger/10 text-danger"
+      ? "border-danger/20 bg-danger-tint text-danger"
       : tone === "warning"
         ? "border-warning/25 bg-warning/10 text-foreground"
         : tone === "neutral"
           ? "border-border bg-surface-sunken text-foreground"
-          : "border-success/20 bg-success/10 text-success-strong";
+          : "border-success/20 bg-success-tint text-success-strong";
   const glyph = toneGlyph(tone);
 
   return (

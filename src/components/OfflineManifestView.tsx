@@ -815,7 +815,7 @@ export function OfflineManifestView() {
                         </p>
                       </div>
                       {savedExpired ? (
-                        <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger">
+                        <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger-tint px-3 py-1.5 text-sm font-bold text-danger">
                           {t("shared.offlineManifest.list.expiredViewOnly")}
                         </span>
                       ) : savedFreshness === "current" ? null : (
@@ -1129,7 +1129,7 @@ export function OfflineManifestView() {
           }
         />
         {expired ? (
-          <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6 font-semibold text-danger">
+          <p className="mt-4 rounded-lg border border-danger/40 bg-danger-tint p-3 text-base leading-6 font-semibold text-danger">
             {t("shared.offlineManifest.single.expiredBanner")}
           </p>
         ) : (
@@ -1439,7 +1439,7 @@ export function OfflineManifestView() {
                                   ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
                                   : isDeparture
                                     ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                                    : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger/10`
+                                    : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
                             }
                           >
                             {busyBooking === crewPersonId
@@ -1832,7 +1832,7 @@ export function OfflineManifestView() {
                                 : showBoardControl
                                   ? isDeparture
                                     ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                                    : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger/10`
+                                    : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
                                   : `${OFFLINE_BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
                           }
                         >

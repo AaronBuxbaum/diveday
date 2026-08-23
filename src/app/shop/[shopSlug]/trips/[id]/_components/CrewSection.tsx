@@ -214,12 +214,12 @@ export function CrewSection({
       }
     >
       {crewGapCode === "no_instructor" ? (
-        <p className="mb-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="mb-3 rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.courseNeedsInstructor}
         </p>
       ) : null}
       {crewGapCode === "over_ratio" && copy.overRatioWarning ? (
-        <p className="mb-3 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="mb-3 rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {copy.overRatioWarning}
         </p>
       ) : null}

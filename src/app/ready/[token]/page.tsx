@@ -118,13 +118,13 @@ const STATE_STYLE: Record<
   done: {
     glyph: "✓",
     word: "ready.stateDone",
-    box: "bg-success/10 text-success-strong",
+    box: "bg-success-tint text-success-strong",
     text: "text-success-strong",
   },
   action: {
     glyph: "→",
     word: "ready.stateAction",
-    box: "bg-primary/10 text-primary",
+    box: "bg-primary-tint text-primary",
     text: "text-primary",
   },
   waiting: {
@@ -280,7 +280,7 @@ function PaymentReceiptPanel({
   // currency's minor unit — a ¥9,000 deposit is not ¥90.
   const money = (cents: number) => formatMoneyCents(cents, receipt.currency, locale);
   return (
-    <div className="mt-8 rounded-2xl border border-success/40 bg-success/10 p-4 text-left sm:p-5">
+    <div className="mt-8 rounded-2xl border border-success/40 bg-success-tint p-4 text-left sm:p-5">
       <h2 className="font-semibold text-success">
         {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
         {receipt.amountCents !== null ? ` — ${money(receipt.amountCents)}` : ""} ✅
@@ -942,8 +942,8 @@ const RESCUE_NOTICES: Record<
 };
 
 const RESCUE_TONE: Record<"success" | "danger" | "neutral", string> = {
-  success: "bg-success/10 text-success-strong",
-  danger: "bg-danger/10 text-danger",
+  success: "bg-success-tint text-success-strong",
+  danger: "bg-danger-tint text-danger",
   neutral: "bg-surface-sunken text-muted",
 };
 

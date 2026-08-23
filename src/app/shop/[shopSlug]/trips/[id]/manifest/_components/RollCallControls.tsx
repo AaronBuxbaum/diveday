@@ -254,7 +254,7 @@ export function RollCallControls({
           className={`${BOAT_TARGET_CLASS} ${
             boarded
               ? "border border-success bg-success/15 text-success"
-              : "border border-primary bg-surface text-primary hover:bg-primary/10"
+              : "border border-primary bg-surface text-primary hover:bg-primary-tint"
           }`}
           formClassName={AFFIRMATIVE_FORM_CLASS}
           noteDraftFor={noteDraftFor}
@@ -325,7 +325,7 @@ export function RollCallControls({
               : showBoardControl
                 ? isDeparture
                   ? `${BOAT_TARGET_COMPACT_CLASS} hover:bg-surface-sunken`
-                  : `${BOAT_TARGET_COMPACT_CLASS} text-danger hover:bg-danger/10`
+                  : `${BOAT_TARGET_COMPACT_CLASS} text-danger hover:bg-danger-tint`
                 : `${BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
         }
         formClassName={showBoardControl ? EXCEPTION_FORM_CLASS_PAIRED : EXCEPTION_FORM_CLASS_ALONE}

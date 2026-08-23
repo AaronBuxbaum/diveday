@@ -8,18 +8,26 @@ import { toneGlyph } from "./tone";
  */
 
 const toneClass = {
-  primary: "bg-primary/10 text-primary",
+  primary: "bg-primary-tint text-primary",
+  // Two decisions, and the second is what makes the first hold.
+  //
   // `-strong`, not the raw hue: in the light palette `text-success`/
-  // `text-warning` on their own 10% fill over `bg-surface` measure 4.39:1 and
-  // 4.38:1, just under AA's 4.5. `-strong` is the same hue with 6% black mixed
-  // in, which lands them at 4.84:1. Contrast is size-independent — the pill's
-  // 12/14px text is not "large text", so 4.5 is the bar at either size.
-  // `danger` needs no nudge (5.46:1 on its own fill). The full table, including
-  // the dark palette and the case this does NOT rescue (a tint nested on
-  // `bg-surface-sunken`), is in docs/design/forms-and-controls.md.
-  success: "bg-success/10 text-success-strong",
-  warning: "bg-warning/10 text-warning-strong",
-  danger: "bg-danger/10 text-danger",
+  // `text-warning` on their own 10% fill measure 4.39:1 and 4.38:1, just under
+  // AA's 4.5. `-strong` is the same hue with 6% black mixed in, which lands
+  // them at 4.86:1. Contrast is size-independent — the pill's 12/14px text is
+  // not "large text", so 4.5 is the bar at either size. `danger` needs no
+  // nudge (5.45:1 on its own fill).
+  //
+  // `-tint`, not `/10`: a translucent fill contrasts against whatever is
+  // *behind the pill*, and every number above assumed that was `--surface`. It
+  // is not, on a page that renders a badge straight onto `--background`
+  // (4.21:1 on `/reviews`) or inside a tinted row (4.09:1 on `/check-in`, a
+  // primary pill on a boarded row's green). The tint token resolves against
+  // `--surface` once and is opaque, so the pill is the number the palette
+  // computed wherever it is mounted (issue #793).
+  success: "bg-success-tint text-success-strong",
+  warning: "bg-warning-tint text-warning-strong",
+  danger: "bg-danger-tint text-danger",
   neutral: "border border-border bg-surface-sunken text-muted",
 } as const;
 

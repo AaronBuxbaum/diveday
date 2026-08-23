@@ -65,7 +65,7 @@ export function TripSubNav({
           <span>{copy[tab.copyKey]}</span>
           <span
             aria-hidden="true"
-            className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs tabular-nums text-primary"
+            className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary-tint px-1.5 text-xs tabular-nums text-primary"
           >
             {guestCount}
           </span>

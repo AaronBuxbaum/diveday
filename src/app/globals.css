@@ -71,6 +71,35 @@
   --success-strong: color-mix(in srgb, black 6%, var(--success));
   --warning-strong: color-mix(in srgb, black 6%, var(--warning));
 
+  /*
+   * **The tinted fill a coloured ink sits on, resolved once against
+   * `--surface` and therefore opaque.**
+   *
+   * A `bg-success/10` fill is translucent, so what the text above it actually
+   * contrasts against is 10% of the hue over *whatever is behind the element* —
+   * and every ratio this palette was tuned to assumed that was white. It often
+   * is not. Turning axe's `color-contrast` rule back on (issue #793) found 24
+   * failing nodes and every one of them was this: a status pill on the page
+   * background rather than on a card (`#e4e0d6`, not `#e8f2ec`, costing 0.65),
+   * a `bg-primary/10` badge nested inside a `bg-success/10` boarded row on
+   * `/check-in` (4.09:1, the worst on the list), and in dark mode a danger
+   * count badge sitting inside the current nav tab's own primary tint.
+   *
+   * Nesting is not the whole of it, and that is why the fix is a token rather
+   * than a rule about nesting: the same pill fails simply by sitting on
+   * `--background` instead of a card. An opaque fill makes the composite
+   * deterministic — every ink/tint pair is the number the palette computed,
+   * wherever the element is mounted. Measured, light: primary 4.67, `-strong`
+   * success and warning 4.86, danger 5.45. Dark: 5.2 to 8.0.
+   *
+   * Derived like `--primary-sunken` so a skin that retunes a hue or a surface
+   * retunes its tints with it, and so boat-mode and glare-mode get theirs free.
+   */
+  --primary-tint: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  --success-tint: color-mix(in srgb, var(--success) 10%, var(--surface));
+  --warning-tint: color-mix(in srgb, var(--warning) 10%, var(--surface));
+  --danger-tint: color-mix(in srgb, var(--danger) 10%, var(--surface));
+
   /* Shape */
   --radius: 0.75rem;
 
@@ -194,6 +223,10 @@
   --color-info: var(--info);
   --color-success-strong: var(--success-strong);
   --color-warning-strong: var(--warning-strong);
+  --color-primary-tint: var(--primary-tint);
+  --color-success-tint: var(--success-tint);
+  --color-warning-tint: var(--warning-tint);
+  --color-danger-tint: var(--danger-tint);
   --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

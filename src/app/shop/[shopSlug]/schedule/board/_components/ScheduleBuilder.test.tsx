@@ -455,7 +455,7 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
     );
 
     const capacityBadge = screen.getByText("6/6");
-    expect(capacityBadge.className).toContain("bg-success/10");
+    expect(capacityBadge.className).toContain("bg-success-tint");
     expect(capacityBadge.className).not.toContain("bg-surface-sunken");
   });
 
@@ -488,7 +488,7 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
     // reads in the muted register, and only the sold-out boat earns a badge.
     const count = screen.getByText("3/6");
     expect(count.className).toContain("text-muted");
-    expect(count.className).not.toContain("bg-primary/10");
+    expect(count.className).not.toContain("bg-primary-tint");
   });
 });
 
@@ -830,7 +830,7 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
 
     // Badge's own aria-hidden mark for the three status tones — a colorblind
     // scan gets the mark before it gets to the words (design/principles.md #6).
-    const badge = container.querySelector("a span.bg-danger\\/10");
+    const badge = container.querySelector("a span.bg-danger-tint");
     expect(badge?.textContent).toContain("❌");
   });
 

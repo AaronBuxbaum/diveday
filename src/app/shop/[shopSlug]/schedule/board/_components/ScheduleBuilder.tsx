@@ -1316,7 +1316,7 @@ export function ScheduleBuilder({
               ) : null}
             </div>
             {day.boatWarning ? (
-              <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning flex items-center gap-2">
+              <div className="mt-2 rounded-lg border border-warning/40 bg-warning-tint px-3 py-2 text-xs font-medium text-warning flex items-center gap-2">
                 <span aria-hidden="true">⚠️</span>
                 <span>{day.boatWarning}</span>
               </div>

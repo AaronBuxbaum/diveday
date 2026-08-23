@@ -24,16 +24,21 @@ import {
  * excluding the rule, unless it's a genuine false positive (document why
  * inline if so).
  *
- * `color-contrast` is excluded, not a false positive: it fires on the densest
- * surfaces this scan covers (the shop home reports 13 nodes, a trip's Guests
- * roster 10, the live manifest 9), and every instance traces back to the same
- * design-token values the audit's own contrast tasks (§3, "focus indicator",
- * "status-banner text", "placeholder text") already track as open work. The
- * product owner has explicitly ruled out touching contrast values in this
- * change — they'd fight the current color guide — so this scan enforces
- * everything else axe checks (labels, roles, landmarks, focus order,
- * `aria-live` wiring) without going permanently red over already-tracked,
- * deliberately deferred contrast debt. Re-include it once that work lands.
+ * **`color-contrast` is on**, as of 2026-08-23. It was excluded app-wide for
+ * three weeks on the belief that turning it on "would just paint CI red" over
+ * design-token values a product decision had deliberately frozen. Measured,
+ * that was not what it found: 23 failing nodes in light mode and one in dark,
+ * reducing to four colour combinations, and every one of them was the same
+ * mechanism rather than a frozen token — a translucent `bg-<hue>/10` fill
+ * composited over something that is not `--surface`, which is the only
+ * background the palette's ratios were ever computed against. A status pill on
+ * the page background instead of a card lost 0.65:1; one nested inside a
+ * tinted row lost 0.58 more. The fix was an opaque `--<hue>-tint` token
+ * (`src/app/globals.css`), and the frozen `--success`/`--warning` values were
+ * not touched (issue #793).
+ *
+ * So there is no exclusion list here, and there should not need to be one: a
+ * new contrast failure on any surface this file scans is now a red build.
  */
 async function expectNoA11yViolations(page: Page) {
   // A dynamic route with no build-time param coverage (a just-created trip,
@@ -89,6 +94,28 @@ async function expectNoA11yViolations(page: Page) {
   // while the scan then ran on a newly swapped-in one — how the add-a-booking
   // scan went red on CI run 30887575971 with `document-title`.
   await expect(page).toHaveTitle(/.+/);
+  // **And a settled *paint*, not just a settled document.** `color-contrast`
+  // reads the colours that are on screen at the instant it runs, so an element
+  // partway through an entrance animation is measured at whatever opacity it
+  // had reached: the schedule builder's inline row menu, which fades in over
+  // 200ms, reported its Remove control at 2.12:1 — a real number about a state
+  // no one reads, since a beat later it is 5.45:1.
+  //
+  // This waits on the animations themselves rather than on a duration, so it
+  // is exact and cannot be a timing guess. Infinite ones are skipped
+  // deliberately: `animate-pulse` skeletons and spinners never finish, and
+  // waiting on one would hang the scan rather than settle it.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ).then(() => undefined),
+  );
   // `document-title` is disabled because the settle-then-gate ordering above
   // did not fully close its race: it recurred on CI run 31112513322 (2026-08-06,
   // main, this file's add-a-booking door test) *after* that fix. Mechanism:
@@ -104,7 +131,7 @@ async function expectNoA11yViolations(page: Page) {
   // own transient — not a defect any visitor perceives.
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
-    .disableRules(["color-contrast", "document-title"])
+    .disableRules(["document-title"])
     .analyze();
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
 }
@@ -960,8 +987,8 @@ test.describe("automated accessibility scans for an unsupported-language visitor
  *   schedule's "Has space" filter is 91x44 with a 16px box inside it.
  *
  * Inline prose links are not exempted here because none of these surfaces has
- * one. If a page grows one, exempt it by name with a sentence, the way
- * `color-contrast` is excluded above — never by widening the rule.
+ * one. If a page grows one, exempt it by name with a sentence — never by
+ * widening the rule.
  */
 const TAP_TARGET_PAGES = [
   "/shop/blue-mantis/gear",

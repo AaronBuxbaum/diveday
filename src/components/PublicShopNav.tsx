@@ -76,7 +76,7 @@ export function PublicShopNav({
               aria-current={index === active ? "page" : undefined}
               className={`${linkClass} ${
                 index === active
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary-tint text-primary"
                   : "text-muted hover:bg-surface-sunken hover:text-foreground"
               }`}
             >

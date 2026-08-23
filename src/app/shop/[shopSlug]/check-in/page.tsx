@@ -541,7 +541,10 @@ export default async function CheckInPage({
                               ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
                               className="hover:bg-success/15"
                               trailing={
-                                <span className="text-base font-semibold whitespace-nowrap text-success">
+                                // `-strong`, because this sits *on* the boarded
+                                // row's own `bg-success/10`: the raw hue on its
+                                // own tint measures 4.38:1 (issue #793).
+                                <span className="text-base font-semibold whitespace-nowrap text-success-strong">
                                   {t("checkIn.checkedInCheck")}
                                 </span>
                               }

@@ -433,7 +433,7 @@ export function OfflineManifestManager({
         <div className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4 print:hidden">
           <div
             role="alert"
-            className="pointer-events-auto max-w-2xl rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
+            className="pointer-events-auto max-w-2xl rounded-xl border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
           >
             {rejectedNotice}
           </div>

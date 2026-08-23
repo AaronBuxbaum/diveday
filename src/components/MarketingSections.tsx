@@ -142,7 +142,7 @@ export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
           ) : null}
           <span
             aria-hidden="true"
-            className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary tabular-nums"
+            className="flex size-8 items-center justify-center rounded-full bg-primary-tint text-sm font-semibold text-primary tabular-nums"
           >
             {index + 1}
           </span>

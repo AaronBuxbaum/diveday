@@ -255,7 +255,7 @@ export function MovePhase({
     >
       <span
         aria-hidden
-        className="absolute top-0 left-0 flex size-9 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary"
+        className="absolute top-0 left-0 flex size-9 items-center justify-center rounded-full border border-primary/30 bg-primary-tint text-sm font-semibold text-primary"
       >
         {number}
       </span>
