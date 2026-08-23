@@ -419,6 +419,14 @@ describe("a diver's own activity trail", () => {
       total: 0,
       rows: [],
     });
+
+    // A malformed id is an empty trail, never a raised `invalid input syntax
+    // for type uuid` — which Postgres would turn into a 500 on a page whose
+    // own notFound() is two lines further down.
+    expect(await pagedDiverActivity(db, shop.id, "not-a-uuid")).toMatchObject({
+      total: 0,
+      rows: [],
+    });
   });
 
   /**
