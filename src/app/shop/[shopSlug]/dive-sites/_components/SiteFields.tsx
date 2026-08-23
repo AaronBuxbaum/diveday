@@ -134,6 +134,8 @@ export function SiteFields({
 }) {
   // `ImageFileInput` is a Client Component, so its words arrive resolved.
   const imageInputCopy = {
+    choose: t("shared.imageInput.choose"),
+    chooseAnother: t("shared.imageInput.chooseAnother"),
     wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
     tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
   };
@@ -233,8 +235,13 @@ export function SiteFields({
             <Field
               label={t("diveSites.form.mapImageLabel")}
               hint={t("diveSites.form.optionalHint")}
+              htmlFor="site-satellite-image"
             >
-              <ImageFileInput name="satelliteImageFile" copy={imageInputCopy} />
+              <ImageFileInput
+                id="site-satellite-image"
+                name="satelliteImageFile"
+                copy={imageInputCopy}
+              />
             </Field>
             {values?.satelliteImageUrl ? (
               <div className="mt-2">
@@ -250,8 +257,9 @@ export function SiteFields({
             <Field
               label={t("diveSites.form.routeImageLabel")}
               hint={t("diveSites.form.optionalHint")}
+              htmlFor="site-route-image"
             >
-              <ImageFileInput name="routeImageFile" copy={imageInputCopy} />
+              <ImageFileInput id="site-route-image" name="routeImageFile" copy={imageInputCopy} />
             </Field>
             {values?.routeImageUrl ? (
               <div className="mt-2">
@@ -268,8 +276,10 @@ export function SiteFields({
           <Field
             label={t("diveSites.form.sitePhotosLabel")}
             hint={t("diveSites.form.sitePhotosHint", { max: MAX_SITE_IMAGES })}
+            htmlFor="site-photos"
           >
             <ImageFileInput
+              id="site-photos"
               name="siteImageFiles"
               multiple
               maxFiles={MAX_SITE_IMAGES}

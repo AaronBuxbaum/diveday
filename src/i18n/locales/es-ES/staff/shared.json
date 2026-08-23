@@ -10,7 +10,9 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb} MB — prueba con una foto más pequeña."
+    "tooBigSuffix": ": supera los {maxMb} MB — prueba con una foto más pequeña.",
+    "choose": "Elige una foto",
+    "chooseAnother": "Elige otra foto"
   },
   "paperWaiver": {
     "markSignedOnPaper": "Marcar como firmado en papel",

@@ -314,6 +314,8 @@ export function RecapNoteEditor({
                 name="crewPhoto"
                 required
                 copy={{
+                  choose: t("shared.imageInput.choose"),
+                  chooseAnother: t("shared.imageInput.chooseAnother"),
                   wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
                   tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
                 }}

@@ -601,23 +601,17 @@ export default async function DiveRecapPage({
             action={uploadRecapPhotoAction.bind(null, token)}
             className="mt-4 flex flex-col gap-3"
           >
-            <label htmlFor="recap-photo" className="flex flex-col gap-1 text-sm font-medium">
-              {t("recap.addAPhoto")}
-            </label>
+            {/* No separate caption: the control's own button *is* "Add a photo",
+                so a label above it saying the same thing was a second reading
+                of one instruction. */}
             <ImageFileInput
-              id="recap-photo"
               name="photo"
               required
               multiple
               maxFiles={remainingPhotoSlots}
-              // file:py-3 (not py-2) so the "Choose file" pseudo-button clears the
-              // 44px dock-test floor — this is a mobile, post-dive, add-your-shots
-              // flow where the tap target matters (design/principles.md #2).
-              // Sunken-surface fill, not primary: the review above is the page's
-              // one primary ask, and a teal "Choose file" chip was competing
-              // with it from two sections away.
-              className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-surface-sunken file:px-3 file:py-3 file:text-sm file:font-medium file:text-foreground"
               copy={{
+                choose: t("recap.addAPhoto"),
+                chooseAnother: t("recap.addAnotherPhoto"),
                 wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
                 tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
                 tooMany: t("recap.photoTooMany", { max: remainingPhotoSlots }),

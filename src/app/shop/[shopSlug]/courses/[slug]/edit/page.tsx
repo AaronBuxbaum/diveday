@@ -324,6 +324,7 @@ export default async function EditCoursePage({
               <Field
                 label={t("courses.edit.heroPhotoLabel")}
                 hint={t("courses.edit.heroPhotoHint")}
+                htmlFor="course-hero-photo"
               >
                 {course.heroImageUrl ? (
                   <div className="mb-2 flex items-center gap-3">
@@ -340,8 +341,11 @@ export default async function EditCoursePage({
                   </div>
                 ) : null}
                 <ImageFileInput
+                  id="course-hero-photo"
                   name="heroImageFile"
                   copy={{
+                    choose: t("shared.imageInput.choose"),
+                    chooseAnother: t("shared.imageInput.chooseAnother"),
                     wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
                     tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
                   }}
@@ -368,6 +372,7 @@ export default async function EditCoursePage({
                 hint={t("courses.edit.galleryPhotosHint", {
                   max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
                 })}
+                htmlFor="course-gallery-photos"
               >
                 {course.galleryPhotos.length > 0 ? (
                   <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -421,10 +426,13 @@ export default async function EditCoursePage({
                   </div>
                 ) : null}
                 <ImageFileInput
+                  id="course-gallery-photos"
                   name="galleryImageFiles"
                   multiple
                   maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
                   copy={{
+                    choose: t("shared.imageInput.choose"),
+                    chooseAnother: t("shared.imageInput.chooseAnother"),
                     tooMany: t("shared.imageInput.tooMany", {
                       count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
                     }),
