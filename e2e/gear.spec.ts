@@ -225,7 +225,10 @@ test.describe("staff", () => {
       .click();
     await expect(page).toHaveURL(record);
     await expect(page.getByRole("heading", { level: 1, name: "Reg #5" })).toBeVisible();
-    await expect(page.getByText("Deleted", { exact: true }).first()).toBeVisible();
+    // Scoped to the page's own header — the badge is the only thing that says
+    // "Deleted" there, and `exact` would miss the tone mark Badge renders
+    // beside it.
+    await expect(page.locator("main header").getByText("Deleted")).toBeVisible();
 
     // The service clock is still on the page — it is the whole reason this
     // record is reachable — and the paper trail beneath it is unfolded.
