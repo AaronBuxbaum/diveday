@@ -268,7 +268,10 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   move it to a tier when redesigning that page, never in passing. And a route's `loading.tsx`
   wears the **exact same width** as its page,
   because a skeleton narrower or wider than what replaces it is a sideways layout jump on every
-  navigation into the route.
+  navigation into the route. `pnpm check:loading-skeletons` (in `pnpm check:repo`) enforces both
+  halves — that a page *has* a sibling skeleton, and that the two containers match — because a
+  route with none silently paints its nearest ancestor's, a picture of a different page at a
+  different width, and that only shows up on a cold navigation over a slow link.
 
 ## 11. Creative within the system
 
