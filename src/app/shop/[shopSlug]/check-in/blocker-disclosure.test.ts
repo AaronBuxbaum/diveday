@@ -4,12 +4,12 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { counterBlockerDisclosure } from "./blocker-disclosure";
 
 /**
- * The counter's three-way call about how a blocked row says why. Tested
- * directly rather than only through the page because every branch is a
- * *judgment about who is standing there* rather than a rendering detail, and
- * two of the three came out of incidents — a lobby reading a diver's
- * outstanding payment (#716), and the row a staffer must act on saying only
- * "Why: 1 reason" with the diver in front of them (#759).
+ * The counter's call about how a blocked row says why. Tested directly rather
+ * than only through the page because both branches came out of incidents: a
+ * blocked row saying only "Why: 1 reason" with the diver in front of the
+ * staffer (#759), and, before #890 settled it, a lobby reading a diver's
+ * outstanding payment off the same row (#716) — the counter is a staff
+ * surface like any other now, so it names the worst reason same as the rest.
  *
  * The real translator throughout (repo convention): a key that never landed in
  * the bundle fails here instead of rendering raw on a front desk.
@@ -18,21 +18,16 @@ describe("counterBlockerDisclosure", () => {
   const t = staffTranslator("en-US");
   const es = staffTranslator("es-ES");
 
-  it("puts one sayable reason on the row, with no disclosure to open", () => {
+  it("puts the one reason on the row, with no disclosure to open", () => {
     expect(counterBlockerDisclosure(t, [{ code: "waiver_not_sent" }])).toBeNull();
   });
 
-  it("still hides one reason that is the diver's private business", () => {
-    // The row #716 was really about. The badge above it still says Blocked.
-    expect(counterBlockerDisclosure(t, [{ code: "payment_due" }])).toEqual({
-      summary: "Why: 1 reason",
-    });
-    expect(counterBlockerDisclosure(t, [{ code: "medical_review" }])).toEqual({
-      summary: "Why: 1 reason",
-    });
+  it("names a private reason too — the counter is a staff surface (issue 890)", () => {
+    expect(counterBlockerDisclosure(t, [{ code: "payment_due" }])).toBeNull();
+    expect(counterBlockerDisclosure(t, [{ code: "medical_review" }])).toBeNull();
   });
 
-  it("names the first sayable reason and counts the rest", () => {
+  it("names the worst reason and counts the rest", () => {
     expect(
       counterBlockerDisclosure(t, [
         { code: "waiver_not_sent" },
@@ -44,23 +39,20 @@ describe("counterBlockerDisclosure", () => {
     ).toEqual({ summary: "Waiver has not been sent. And 4 more reasons." });
   });
 
-  it("counts every other reason, including the ones it skipped to find a sayable one", () => {
-    // Two reasons, the money one first: the summary names the waiver and the
-    // count is still 1, because it counts what stays behind the tap rather
-    // than what came after the one it named.
+  it("names the first reason and counts the rest, private ones included", () => {
     expect(
       counterBlockerDisclosure(t, [{ code: "payment_due" }, { code: "waiver_not_sent" }]),
-    ).toEqual({ summary: "Waiver has not been sent. And 1 more reason." });
+    ).toEqual({ summary: "Payment is outstanding for this trip. And 1 more reason." });
   });
 
-  it("says nothing but a count when every reason is private", () => {
+  it("names the worst reason even when every reason is private", () => {
     expect(
       counterBlockerDisclosure(t, [
         { code: "payment_due" },
         { code: "medical_review" },
         { code: "under_minimum_age", params: { age: 11, minimumAge: 12 } },
       ]),
-    ).toEqual({ summary: "Why: 3 reasons" });
+    ).toEqual({ summary: "Payment is outstanding for this trip. And 2 more reasons." });
   });
 
   it("renders the reason the diver's own record would show, params and all", () => {

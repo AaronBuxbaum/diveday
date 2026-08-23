@@ -10,12 +10,10 @@ import type { ReadinessBlockerCode } from "./readiness";
 import {
   aboardBlockerKind,
   BLOCKER_CATEGORY,
-  BLOCKER_SAYABLE_AT_COUNTER,
   calculateReadiness,
   certificationRank,
   combineCertRequirements,
   combineSiteRequirements,
-  firstSayableAtCounter,
   groupAboardBlockers,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
@@ -836,58 +834,6 @@ describe("aboardBlockerKind", () => {
       (code) => aboardBlockerKind([{ code }]) === "payment",
     );
     expect(paymentCodes.sort()).toEqual(["payment_due", "payment_refunded"]);
-  });
-});
-
-/**
- * **What the counter may read out with a queue behind the diver.**
- *
- * The counter is the one staff screen whose audience is not the person signed
- * in, which is why every reason went behind a tap there (#716) and why naming
- * the ordinary ones on the row is safe (#759). The list of four is the whole
- * decision, so it is pinned rather than described.
- */
-describe("BLOCKER_SAYABLE_AT_COUNTER", () => {
-  it("withholds exactly the four that are about the person, not the paperwork", () => {
-    const withheld = (Object.keys(BLOCKER_SAYABLE_AT_COUNTER) as ReadinessBlockerCode[]).filter(
-      (code) => !BLOCKER_SAYABLE_AT_COUNTER[code],
-    );
-    expect(withheld.sort()).toEqual([
-      "medical_review",
-      "payment_due",
-      "payment_refunded",
-      "under_minimum_age",
-    ]);
-  });
-
-  it("says the ordinary paperwork out loud, since it is what both people are there to fix", () => {
-    expect(BLOCKER_SAYABLE_AT_COUNTER.waiver_not_sent).toBe(true);
-    expect(BLOCKER_SAYABLE_AT_COUNTER.certification_missing).toBe(true);
-    expect(BLOCKER_SAYABLE_AT_COUNTER.requirements_not_configured).toBe(true);
-  });
-});
-
-describe("firstSayableAtCounter", () => {
-  it("takes the engine's own worst-first order, not merely the earliest", () => {
-    // `payment_due` sorts ahead here; the answer is still the waiver, because
-    // the money is the half that may not be said.
-    expect(firstSayableAtCounter([{ code: "payment_due" }, { code: "waiver_not_sent" }])).toEqual({
-      code: "waiver_not_sent",
-    });
-  });
-
-  it("keeps a blocker's params, so the sentence it renders is the specific one", () => {
-    expect(
-      firstSayableAtCounter([
-        { code: "medical_review" },
-        { code: "certification_insufficient", params: { requiredLevel: "rescue" } },
-      ]),
-    ).toEqual({ code: "certification_insufficient", params: { requiredLevel: "rescue" } });
-  });
-
-  it("is null when every reason is somebody's private business", () => {
-    expect(firstSayableAtCounter([{ code: "payment_due" }, { code: "medical_review" }])).toBeNull();
-    expect(firstSayableAtCounter([])).toBeNull();
   });
 });
 

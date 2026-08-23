@@ -29,13 +29,12 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
   // (Badge.tsx toneGlyph), so the element's own text is "❌Blocked".
   await expect(card.getByText("❌Blocked")).toBeVisible();
-  // **The one reason is on the row, because it is one a lobby may overhear.**
-  // This screen calls itself Counter mode — it faces a queue — so a diver's
-  // money, medical answers and age stay behind a tap (issue #716). An unsent
-  // waiver is not that: it is the fact the staffer and the diver are both
-  // standing there to fix, and a disclosure hiding a single one of those made
-  // the row a staffer must act on the least informative thing in the queue
-  // (issue #759). Priya has exactly one, so there is nothing to open.
+  // **The one reason is on the row, full stop.** A disclosure hiding a
+  // single reason made the row a staffer must act on the least informative
+  // thing in the queue (issue #759). Priya has exactly one, so there is
+  // nothing to open. The counter used to keep money, medical answers and age
+  // behind a tap here (issue #716); #890 settled it — this is a staff
+  // surface like any other, so nothing on a blocked row is withheld any more.
   await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
   await expect(card.getByText(/Why: \d+ reasons?/)).toHaveCount(0);
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
@@ -51,17 +50,16 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
 });
 
 /**
- * **The other half of the counter's privacy posture.** A diver with a stack of
- * reasons keeps the disclosure — five of them open on three rows is the
- * scannability it exists for, spent — but the closed state now names the first
- * reason a lobby may overhear rather than counting alone. What must not be on
- * the row, at any count, is the money: "Payment is outstanding for this trip."
- * beside a named person on a screen a queue reads is the sentence issue #716
- * was filed about, and this is the only place a browser holds it.
+ * **The other half of the disclosure.** A diver with a stack of reasons keeps
+ * it collapsed — five of them open on three rows is the scannability it
+ * exists for, spent — but the closed state names the worst reason (the
+ * readiness engine's own order) rather than counting alone. Nothing is
+ * special-cased out of that order any more, money included: #890 removed the
+ * check-in counter's old privacy filter, so the summary would name
+ * "Payment is outstanding for this trip." here too if it were this diver's
+ * worst reason (it isn't — the waiver is).
  */
-test("a diver blocked five ways names the first reason and keeps the money behind the tap", async ({
-  page,
-}) => {
+test("a diver blocked five ways names the worst reason and counts the rest", async ({ page }) => {
   await page.goto("/shop/blue-mantis/check-in");
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
   await expect(search).toHaveAttribute("data-hydrated", "true");
