@@ -212,6 +212,25 @@ be real and not just a visual convention.
 </Field>
 ```
 
+### `hint` or `description`: where the words go, not how long they are
+
+Both take a `ReactNode` and both read as "the helper text", which is how a **31-word** sentence
+ended up in `hint` on the sign-up form — pushing that caption to five lines, leaving a ~100px hole
+beside it in the two-column grid, floating the required `*` at the end of a paragraph, and folding
+the whole thing into the control's accessible name (issue #784).
+
+The line is not length, it is **where it renders**:
+
+- **`hint`** renders *inside* the `<label>*, on the caption row. A `<label>`'s text content is the
+  control's accessible name, so a screen reader reads a hint **every time the field is announced**.
+  That is right for `(optional)` and wrong for a sentence.
+- **`description`** renders under the control, gets its own id, and is referenced from
+  `aria-describedby` — read once, as a description, and free to be as long as it needs to be.
+
+`src/components/ui/form.test.tsx` holds `hint` to a 15-word ceiling by scanning every
+`hint={t("…")}` in the app and resolving it against the bundles. The bound is generous on purpose:
+it is not a style rule about brevity, it is the point past which the other prop is the right one.
+
 ### `aria-describedby` and control association
 
 `Field` clones the single control it's given (the documented `children` contract: pass the
