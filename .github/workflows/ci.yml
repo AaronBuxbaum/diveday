@@ -372,7 +372,11 @@ jobs:
     # sentence that matters when it is real.
     if: ${{ !cancelled() && github.event_name != 'schedule' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Ten minutes for the compare itself, plus the twenty a stacked layer may
+    # spend waiting for the layer below to publish the baseline it is keyed to
+    # (`scripts/wait-for-baseline.mjs`, whose own deadline is what actually
+    # bounds that wait — this is only the backstop above it).
+    timeout-minutes: 35
     # The only job in this workflow that writes anything back to GitHub: the
     # sticky visual-summary comment in the last step. Scoped here rather than at
     # workflow level so no other job's third-party actions inherit write access.
@@ -383,74 +387,63 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      # reg-keygen-git-hash-plugin derives both keys from git: the actual one
-      # from HEAD, the expected one by walking back to this commit's parent and
-      # asking S3 for that snapshot. A default checkout gives it neither — on a
-      # pull_request it lands on a *detached* merge commit ("Can't detect branch
-      # name because HEAD is on detached commit node"), and `fetch-depth: 1`
-      # leaves no parent to walk to. Both keys then come back null, every
-      # screenshot reads as new rather than compared, and the run dies on "Fail
-      # to detect the current branch" — a red job that never looked at a pixel.
-      # Check out the branch with full history instead — but by *SHA*, not by
-      # name. This job runs 6-10 minutes after the run starts (it needs every
-      # visual shard), and an auto-merged PR deletes its head branch in that
-      # window; a by-name checkout then dies with "A branch or tag with the
-      # name '…' could not be found", the summary step finds no script on
+      # This job needs the *commit* right and the *history* whole, for two
+      # reasons that outlived the plugin that first demanded them.
+      #
+      # By SHA, not by name. This job runs 6-10 minutes after the run starts (it
+      # needs every visual shard), and an auto-merged PR deletes its head branch
+      # in that window; a by-name checkout then dies with "A branch or tag with
+      # the name '…' could not be found", the summary step finds no script on
       # disk (MODULE_NOT_FOUND), and the run goes red on a PR that already
       # merged green. Seven runs failed exactly this way over 2026-08-06/07
       # (31206641034, 31147282309, 31123395013, 31120081666, 31118732846,
       # 31118383496, 31113162291). The head *commit* outlives the branch —
-      # GitHub keeps it reachable via refs/pull/N/head forever — so fetching
-      # the SHA always works; the step after this puts a local branch name on
-      # it, which is all reg-keygen actually needs.
+      # GitHub keeps it reachable via refs/pull/N/head forever — so fetching the
+      # SHA always works.
       #
-      # `github.sha` for `push` too, not `github.ref_name`: this job runs 6-10
-      # minutes into the run (it needs every visual shard), and `ref: main`
-      # checks out whatever `main` points to *at that moment* — not the commit
-      # that triggered this run. A second merge landing in that window moves
-      # the branch tip, so this step would silently check out someone else's
-      # commit while the screenshots downloaded below stay this run's own
-      # (matched by workflow run, not by SHA). reg-suit then computes its git
-      # keys from the wrong commit and publishes this run's screenshots to S3
-      # under the *next* commit's hash — so this commit's own hash is never
-      # published, and the next run's baseline lookup finds nothing and
-      # reports everything as new. Two merges within ~10 minutes of each other
-      # reproduced this exactly (427 new items, 0 compared, on a push to
-      # main). Pinning to `github.sha` — the exact commit this run is for,
-      # same as every other job's default checkout — closes the race.
+      # `github.sha` for `push` too, not `github.ref_name`: `ref: main` checks
+      # out whatever `main` points to *at that moment*, not the commit that
+      # triggered this run. A second merge landing in that window would silently
+      # check out someone else's commit while the screenshots downloaded below
+      # stay this run's own (matched by workflow run, not by SHA). reg-suit then
+      # keys this run's screenshots to the *next* commit — so this commit's own
+      # key is never published, and the next run's baseline lookup finds nothing
+      # and reports everything as new. Two merges within ~10 minutes of each
+      # other reproduced this exactly (427 new items, 0 compared, on a push to
+      # main). It is also the tripwire in `scripts/reg-suit-keys.mjs`: the
+      # resolver refuses to run when HEAD disagrees with the event's head sha.
+      #
+      # `fetch-depth: 0` because the expected key is a merge-base (or HEAD^),
+      # and a shallow clone has neither.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-      # reg-keygen-git-hash-plugin refuses a detached HEAD ("Can't detect
-      # branch name"), so give the checked-out commit its branch name back
-      # locally. `-B` because nothing else owns this name in a fresh workspace,
-      # and the remote branch may no longer exist to track. For `push`, this
-      # intentionally reuses `main`'s name for a local branch that may now
-      # point at an older commit than the remote tip — reg-keygen only needs
-      # *a* name to stop calling HEAD detached, not for it to track anything.
-      - name: Name the detached head for reg-keygen
-        run: git checkout -B "${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}"
-      # reg-keygen-git-hash-plugin's expected-key algorithm only works by
-      # triangulating a merge-base against *other* local branches (it's built
-      # for topic-branch-vs-trunk, per the checkout comment above) — it has no
-      # "just diff against the previous commit" mode. A direct push to main
-      # checks out only `main`, so there is no other branch, getBaseCommitHash()
-      # returns null, and every push reports every screenshot as brand new
-      # (confirmed in CI logs: "Failed to detect the previous snapshot key" /
-      # "New items: N" / "Passed items: 0" on every main push — never actually
-      # comparing a pixel). Creating a branch ref at HEAD^ gives the plugin the
-      # second branch its algorithm needs, so it resolves the previous commit's
-      # published S3 snapshot as the baseline instead. If that snapshot was
-      # never published (e.g. the very first run), the S3 fetch just comes back
-      # empty and this degrades to the same all-new behavior as before — it
-      # never turns into a hard failure.
-      - name: Anchor reg-suit's baseline detection to the previous commit (main pushes only)
-        if: github.event_name == 'push'
-        run: |
-          if git rev-parse --verify -q HEAD^ > /dev/null; then
-            git branch reg-suit-baseline-parent HEAD^
-          fi
+      # Name both snapshot keys outright, into this job's environment
+      # (`regconfig.json` interpolates them) and into this step's outputs (the
+      # wait below needs the expected one before the compare runs).
+      #
+      # This replaces three steps whose only job was to arrange the local git
+      # graph the way `reg-keygen-git-hash-plugin` wanted to read it: a
+      # `git checkout -B` to un-detach HEAD, and a `reg-suit-baseline-parent`
+      # branch invented at HEAD^ so a push to main had a second branch for the
+      # plugin's merge-base triangulation to find. The plugin took no options,
+      # so steering the workspace was the only lever there was. Naming the key
+      # is a smaller trick than any of them, and it is the half of ADR
+      # 20260821-stacked-pull-requests that makes a stacked layer's baseline
+      # something this pipeline states rather than infers.
+      #
+      # Bare `node`, before `setup` installs anything: the resolver imports node
+      # builtins and one sibling script, and a run that cannot even name its
+      # keys should say so before it spends four minutes on `pnpm install`.
+      - name: Resolve the reg-suit snapshot keys
+        id: keys
+        run: node scripts/reg-suit-keys.mjs --github-env
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       - uses: ./.github/actions/setup
       # Every shard uploaded its own e2e/screenshots/ as a separate artifact
       # (actions/upload-artifact refuses to let two jobs write the same
@@ -470,8 +463,38 @@ jobs:
           pattern: visual-screenshots-*
           path: e2e/screenshots
           merge-multiple: true
+      # The other half of ADR 20260821-stacked-pull-requests' fix, and the half
+      # that actually removes the race: an explicit key cannot conjure a
+      # snapshot. A stacked layer's baseline is the layer below's head commit,
+      # and the only run that publishes that commit is the layer below's own —
+      # which GitHub's cascading rebase restarts every time something merges
+      # underneath it. So on the run right after a rebase both layers are in
+      # flight at once, and without this the upper one asks S3 for a key that
+      # will exist in four minutes' time and reports all 200 of its surfaces as
+      # *new*, with `Changed: 0` at the top.
+      #
+      # `needs:` cannot express this: the layer below's jobs are in a different
+      # workflow run on a different pull request, and `needs:` is intra-run
+      # only. So it is a poll, and three things keep it from becoming the
+      # nine-hour wait loop AGENTS.md was written around: it has its own
+      # deadline (20 minutes, inside this job's 35), it exits 0 on every path
+      # including that deadline, and it runs *only* for a stacked layer — the
+      # `stacked` output is false whenever the base is the default branch, and
+      # an ordinary pull request would otherwise block on a run that never
+      # exists. A layer that gives up falls through to the compare and to the
+      # summary below, which says "NOTHING WAS COMPARED" in those words.
+      - name: Wait for the layer below to publish this layer's baseline
+        if: ${{ needs.visual.result == 'success' && steps.keys.outputs.stacked == 'true' }}
+        run: node scripts/wait-for-baseline.mjs
+        env:
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+      # `steps.keys.outcome` as well as the shards: an `if:` expression replaces
+      # the implicit `success()`, so without naming it this step would run after
+      # the resolver's tripwire fired and publish this run's screenshots under
+      # whatever key `visual:compare` re-derived on its own — which is the one
+      # thing the tripwire exists to prevent.
       - name: Run reg-suit visual regression
-        if: ${{ needs.visual.result == 'success' }}
+        if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
         run: pnpm visual:compare
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
@@ -552,9 +575,9 @@ jobs:
       # has already skipped it, and pushes to main are never auto-cancelled
       # (`cancel-in-progress` is false for them, for this same reason).
       - name: Refuse to miss main's baseline silently
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.visual.result != 'success' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success') }}
         run: |
-          echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
+          echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, or this run could not name the key to publish them under, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
           exit 1
 
   db-surface-changes:

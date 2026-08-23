@@ -192,9 +192,11 @@ bucket the run — each bucket has a different owner and several need no work:
 - **`reg-suit visual regression` red with "A branch or tag with the name '…' could not be
   found" + `Cannot find module …visual-pr-comment.mjs`** — the merged-branch checkout race
   (7 of the 34): the job checked out the PR head *branch by name* minutes after an auto-merge
-  deleted it. Fixed 2026-08-07 by checking out the head SHA (which GitHub keeps reachable via
-  `refs/pull/N/head` forever) and recreating the branch name locally for reg-keygen. If this
-  signature reappears, look at that job's checkout step, not at any test.
+  deleted it. Fixed 2026-08-07 by checking out the head SHA, which GitHub keeps reachable via
+  `refs/pull/N/head` forever. (The fix also recreated the branch name locally, because the key
+  generator of the day refused a detached HEAD; that half went away on 2026-08-23 when the keys
+  became explicit.) If this signature reappears, look at that job's checkout step, not at any
+  test.
 - **A visual capture shard red with `wedged, not slow` in its log** — the known unattributed
   Chromium renderer wedge; see the e2e-and-visual skill's renderer-wedge section. CI reruns
   only the failed captures once when that verdict is present; a run that is still red either

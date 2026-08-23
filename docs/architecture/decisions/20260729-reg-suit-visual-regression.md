@@ -84,6 +84,21 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   with an error naming the consequence and the fix (re-run the failed shard; a green re-run publishes
   the snapshot). Pull requests are deliberately exempt — a PR's missed snapshot is never anyone else's
   baseline, and its `reg` status and sticky comment already say what happened.
+- **Both keys are now named outright, and the two entries above are history** (changed 2026-08-23,
+  issue #909). `reg-keygen-git-hash-plugin` took no options at all, so the only way to steer it was
+  to arrange the local git graph the way its merge-base triangulation wanted to read it — which is
+  what the detached-HEAD `git checkout -B` and the invented `reg-suit-baseline-parent` branch above
+  were for. `regconfig.json` now carries `reg-simple-keygen-plugin` and `scripts/reg-suit-keys.mjs`
+  computes the two keys from the CI event: the head commit for the actual one, and
+  `git merge-base origin/<base ref> HEAD` (pull request) or `HEAD^` (push to main) for the expected
+  one. Measured against the plugin it replaces over a throwaway stack, it returns the identical sha
+  in every case the plugin could answer at all, which is the property that matters — the whole
+  published baseline history is keyed by full 40-character sha, so a different key format would make
+  all of it unreachable at once. Both steps are deleted; the checkout keeps its SHA pin and
+  `fetch-depth: 0`, which a merge-base still needs. The consumer side is unchanged: an unresolvable
+  expected key still degrades to "no baseline, everything reported as new" rather than failing hard,
+  and the log still says `Failed to detect the previous snapshot key`. Reasoning and the measurement
+  are in [20260821-stacked-pull-requests](20260821-stacked-pull-requests.md).
 - **Two merges landing within `visual-report`'s 6-10 minute runtime raced the checkout onto the wrong
   commit** (found 2026-08-14). The job's checkout used `ref: ${{ github.event.pull_request.head.sha ||
   github.ref_name }}` — a branch *name* (`main`) for push events, resolved to whatever `main` currently

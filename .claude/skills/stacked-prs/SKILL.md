@@ -141,38 +141,29 @@ commit, then the `POST .../stacks` above.
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
   do not "fix" it by re-anchoring to the layer below.
-- **Visual regression: a stack may move pixels, and the price is that a layer's counts are not
-  always readable yet.** `reg-keygen-git-hash-plugin` resolves layer 2's baseline to **layer 1's head
-  commit** — confirmed by running its `CommitExplorer` over a throwaway two-layer stack, which needs
-  no CI at all because it reads only the local git graph. That half is what makes a stack's diffs
-  readable: each layer shows its own pixels rather than everything below it. The other half is a
-  race. A cascading rebase rewrites layer 1, so layer 2's key moves to a commit **no CI run has
-  published under**; layer 1's own rebase will publish it, so whether layer 2 finds a baseline
-  depends on layer 1's four visual shards finishing first.
-
-  This skill used to answer that by keeping stacks off rendered surfaces. **Aaron lifted that on
-  2026-08-23: stack everything, pixels included** (ADR
+- **Visual regression handles a stack on its own, and a stack may move pixels.** Two things make
+  that true. First, the baseline key is *named* rather than inferred: `regconfig.json` uses
+  `reg-simple-keygen-plugin` and `scripts/reg-suit-keys.mjs` resolves a layer's baseline to
+  `git merge-base origin/<base ref> HEAD` — the layer below's head, which is what makes each layer's
+  diff show only its own pixels rather than everything beneath it. Second, an explicit key cannot
+  conjure a snapshot, so a stacked layer's `visual-report` job **waits** for the layer below to
+  finish publishing before it compares (`scripts/wait-for-baseline.mjs`): up to 20 minutes, only
+  when the base is not `main`, and never a reason for a red run. The wait-and-re-run this file used
+  to ask of you is what the pipeline now does (ADR
   [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
-  "Reversed: a stack may move pixels"). Backlog work is mostly rendered surfaces, so the restriction
-  was disqualifying the ordinary case, and losing the race costs a **re-read**, never a missed
-  regression — the surfaces report as *new*, and `diveday:visual-summary` prints that count in its
-  own column.
+  "the baseline is named rather than inferred"; issue #909).
 
-  What that makes mandatory, per layer, before you write a word about pixels:
+  Two of the three obligations that replaced the old restriction still stand, because they are about
+  reading rather than about the race:
 
   1. **Read the sticky `diveday:visual-summary` comment on the layer you are triaging.** If it says
      nothing was compared, nothing was compared: that layer's counts mean **unknown**, never "no
-     visual changes" (see the **visual-triage** skill).
-  2. **Do not triage it in that state.** Wait for the layer below's `visual` and `visual-report`
-     jobs to finish, then re-run this layer's (`gh run rerun`, or the run's own control) and read
-     the refreshed comment. The baseline exists after that; it did not before.
-  3. **Never merge a layer whose pixels were never compared** on the grounds that the count was
+     visual changes" (see the **visual-triage** skill). That is now the exception rather than the
+     expectation — it means the wait gave up, so the layer below's own visual jobs are red or were
+     still running twenty minutes on. Fix those, re-run this layer's `visual-report`, read the
+     refreshed comment.
+  2. **Never merge a layer whose pixels were never compared** on the grounds that the count was
      zero. Zero-changed with zero baselines is the failure, not the pass.
-
-  The lever, if this ever costs more than it saves: reg-suit's key generator is a plugin slot, and
-  `reg-simple-keygen-plugin` takes `expectedKey`/`actualKey` outright. It is not enough on its own —
-  an explicit key cannot conjure a snapshot layer 1 has not published yet — so the fix is that
-  plugin *plus* gating layer 2's visual job on layer 1's (issue #909).
 - **Rebase a layer before you read its visual report.** A branch whose parent has fallen behind
   `main` compares against that *parent*, while CI captures the pull request *merged with `main`* —
   so every commit merged in between shows up as your diff. That is not a stack-specific bug, but a

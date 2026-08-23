@@ -100,6 +100,15 @@ export const SUBPROCESS_TIMEOUTS = {
   /** `pnpm db:migrate` inside the production build, while the previous release still serves. */
   migrate: 300_000,
   /**
+   * One `reg-suit run` -- download a few hundred baseline PNGs from S3, compare
+   * them pixel by pixel, then upload this commit's own set back. Minutes on a
+   * CI runner and bounded here at half an hour, far past the slowest honest
+   * run: the ceiling exists so the wrapper rule has no exception, and because a
+   * wedged S3 call in `visual-report` would otherwise hold a runner until the
+   * job's own timeout with nothing on stdout to say why.
+   */
+  regSuitRun: 1_800_000,
+  /**
    * `pnpm build`. Matches Vercel's own 45-minute build ceiling: this exists so
    * the rule has no exception, not because it is expected to fire first.
    */

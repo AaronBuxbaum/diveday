@@ -88,7 +88,9 @@ slice remains the default for everything else. Three parts:
 
    **Amended 2026-08-23 (see "Reversed: a stack may move pixels" below):** measured, then lifted.
    Pixel-moving work stacks like anything else; what replaces the restriction is a rule about not
-   triaging a layer whose baseline never resolved.
+   triaging a layer whose baseline never resolved. **Amended again the same day (issue #909):** the
+   pipeline now names the baseline key and waits for the layer below to publish it, so that rule is
+   a fallback for a wait that gave up rather than the ordinary path.
 
 `.claude/skills/stacked-prs/SKILL.md` holds the procedure; this record holds the reasoning.
 
@@ -131,7 +133,10 @@ under us, the fallback is the same chained-base shape we already produce.
 
 This ADR shipped with a restriction — no stacking work that moves pixels — and an admission that
 nobody had checked. It has now been checked, and **the restriction stays, because the thing it
-guards against is real.**
+guards against is real.** (Superseded twice on 2026-08-23: the restriction was lifted by "Reversed:
+a stack may move pixels" and the race itself was closed by "the baseline is named rather than
+inferred". The mechanism described here is unchanged and still worth reading — it is why the fix has
+the shape it has.)
 
 The measurement did not need the ~9 CI runs this ADR priced it at.
 `reg-keygen-git-hash-plugin` decides the baseline key by walking the **local git graph**
@@ -262,6 +267,88 @@ This is a procedural mitigation and it depends on the reader. The mechanical fix
 `reg-simple-keygen-plugin` plus gating a layer's visual job on the layer below's — is unchanged, is
 still the right shape, and is now filed as issue #909 rather than left as a paragraph nobody owns.
 Both halves are required; an explicit key cannot conjure a snapshot that has not been published.
+**Built the same day; see the section below.** The three obligations above survive as the reading
+for a wait that gave up, which is now the exceptional path rather than the expected one.
 
 Unchanged by this reversal: CI cost per layer (the real argument for short stacks), and the rule
 that independent slices are not stacked merely because they arrived in the same session.
+
+### Measured: the baseline is named rather than inferred (2026-08-23, issue #909)
+
+The 2026-08-22 measurement ends by naming a fix and declining to build it, and the reversal above
+ends by filing it. It is now built, because that reversal is what turns a race the repository could
+previously step around into one it meets on ordinary work.
+
+**Half one: the key is stated.** `regconfig.json` carries `reg-simple-keygen-plugin` with
+`expectedKey`/`actualKey` interpolated from the environment, and `scripts/reg-suit-keys.mjs`
+computes them:
+
+| event | actual key | expected key |
+| --- | --- | --- |
+| pull request | the head commit | `git merge-base origin/<base ref> HEAD` |
+| push to `main` | the pushed commit | `HEAD^` |
+| local `pnpm visual` | `HEAD` | the fork point from `origin/main`, or `HEAD^` on `main` itself |
+
+Both are full 40-character shas, which is not a detail: every baseline in the bucket was published
+under `git rev-parse` output by the old plugin, so a shorter or prettier key would make the whole
+published history unreachable, and the first symptom would be a **push to main** reporting every
+surface as new rather than a stack misbehaving. Measured against the plugin being replaced, in the
+same throwaway two-layer stack the 2026-08-22 measurement used — `CommitExplorer` reads only the
+local git graph, so this needs no CI and no bucket:
+
+| state | `reg-keygen-git-hash-plugin` resolves | this resolves |
+| --- | --- | --- |
+| layer 2, stack as opened | layer 1's head | the same commit |
+| layer 1, base `main` | main's head | the same commit |
+| layer 2, after a cascading rebase | the **rewritten** layer 1 head | the same commit |
+| push to `main` | **null** — no second branch to triangulate against | `HEAD^`, which is what the invented `reg-suit-baseline-parent` branch used to make it say |
+| layer 2 whose base branch was deleted under it | (untestable — the plugin needs the ref) | the event payload's base sha |
+
+So the inference was right and is preserved byte for byte; what changes is that it is now a stated
+fact rather than a property of which refs happen to be in the checkout. Three steps in
+`visual-report` existed only to arrange that property and are deleted with it: the `git checkout -B`
+that un-detached HEAD, the `reg-suit-baseline-parent` branch invented at `HEAD^` on main pushes, and
+the reasoning about detached merge commits in the checkout comment. The checkout keeps
+`ref: <head sha>` and `fetch-depth: 0` for reasons that outlived the plugin — a merge-base and a
+`HEAD^` both need real history, and the SHA pin is what survives an auto-merged branch being deleted
+mid-run. It is now also a **tripwire**: the resolver refuses to run when HEAD disagrees with the
+event's head sha, so a future regression to a default checkout fails loudly instead of publishing a
+snapshot keyed to an ephemeral merge commit.
+
+**Half two: the layer above waits.** An explicit key still cannot conjure a snapshot, so
+`scripts/wait-for-baseline.mjs` polls the bucket for the expected key before the compare runs. Four
+properties, each the answer to a way this could have gone wrong:
+
+- **`needs:` cannot express it.** The layer below's jobs are in a different workflow run on a
+  different pull request; `needs:` is intra-run only. Hence a poll.
+- **Only a stacked layer waits.** The step is gated on the pull request's base ref not being the
+  default branch. Applied unconditionally, every ordinary pull request in the repository would block
+  on a run that will never exist.
+- **It always ends, and never reddens.** A 20-minute deadline inside the job's 35, and every path
+  exits 0 — a wait whose only exit is a success marker is the nine-hour loop AGENTS.md was written
+  around. A layer that gives up falls through to the compare and to the sticky summary, which says
+  "NOTHING WAS COMPARED" in those words. The gate removes the race; it does not become a new way to
+  fail.
+- **It waits for the whole baseline, not for the report.** reg-suit uploads a run's files in
+  sequential chunks and `out.json` sorts near the end of them — near enough that an existence check
+  usually works and occasionally hands the layer above a baseline with a few images still in flight,
+  which reads as a handful of surfaces mysteriously "new". So it reads the report and confirms every
+  surface the layer below captured is actually on S3.
+
+What this does to the three obligations in the reversal above: obligation 1 (read
+`diveday:visual-summary` on every layer) and obligation 3 (never merge on a zero count that compared
+nothing) stand unchanged — they are how a reader tells a real comparison from an empty one, and no
+pipeline change removes the need. Obligation 2, the wait-and-re-run, is now what the pipeline does
+for you; it survives as the reading for the exceptional case where the wait gave up, which the
+sticky comment will say.
+
+Not done, still deliberately: no `matchingThreshold` in `regconfig.json`, and no re-anchoring the
+capture to `main` — that would report every lower layer's changes on every layer above it, which is
+the readable-diff property all of this exists to protect.
+
+What is proven locally and what is not: the key resolution above was measured against a real
+two-layer stack, including a cascading rebase and a deleted base branch. The end-to-end claim — a
+non-zero baseline count in the `diveday:visual-summary` comment on both layers of a rebased stack —
+needs CI and a bucket, so the first pixel-moving stack through this pipeline is where it is
+confirmed. A push to `main` resolving a non-zero baseline is the same claim on the ordinary path,
+and it is the one to watch first, because that is where a key-format mistake would surface.

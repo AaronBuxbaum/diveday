@@ -5,7 +5,7 @@ description: Triage reg-suit visual-regression differences locally or in CI, dec
 
 # Visual triage
 
-reg-suit baselines live in AWS S3 and are mapped to git commits via `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`. A test run captures actual images under `.reg/actual`, compares them against the baselines of the parent git commit downloaded from S3, and uploads the results/reports.
+reg-suit baselines live in AWS S3 under `reg-publish-s3-plugin`, keyed by full commit sha. A test run captures actual images under `.reg/actual`, compares them against the baseline downloaded from S3 for this commit's *base* — the fork point from `main`, or on a stacked pull request the head of the layer below — and uploads the results/reports. Which commit that is, is stated rather than inferred: `scripts/reg-suit-keys.mjs` computes both keys and `pnpm visual:compare` puts them in the environment `regconfig.json` reads (ADR 20260821-stacked-pull-requests). Set `REG_EXPECTED_KEY` yourself to compare against a commit of your choosing.
 
 Baselines are captured on CI's `ubuntu-latest` runners (ADR 20260730-linux-ci-runners). Running
 `pnpm visual` on macOS re-renders every screenshot through a different font stack and reports most

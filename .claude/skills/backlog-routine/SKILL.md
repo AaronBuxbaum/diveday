@@ -133,13 +133,15 @@ new one:
 
 - **Rebase a layer before reading its visual report.** A stale parent makes other people's merged
   work show up as your diff — 39 of 60 surfaces on one measured PR.
-- **A cascading rebase moves a layer's baseline to a commit no CI run has published under**, so
-  `reg` can report your surfaces as *new* rather than *changed*. Read the sticky
-  `diveday:visual-summary` comment on **every** layer: if nothing resolved, that layer's counts mean
-  nothing.
-- **A layer in that state is not triaged, and not merged on a count of zero.** Wait for the layer
-  below's `visual`/`visual-report` jobs, re-run this layer's, and read the refreshed comment. Zero
-  changed with zero baselines is the failure, not the pass.
+- **A cascading rebase moves a layer's baseline to a commit no CI run has published under**, and the
+  pipeline now handles that itself: a stacked layer's `visual-report` waits up to 20 minutes for the
+  layer below to publish before comparing (issue #909). Read the sticky `diveday:visual-summary`
+  comment on **every** layer anyway — if nothing resolved, the wait gave up and that layer's counts
+  mean nothing.
+- **A layer in that state is not triaged, and not merged on a count of zero.** The layer below's
+  `visual`/`visual-report` jobs are red or were still running twenty minutes on: fix those, re-run
+  this layer's, and read the refreshed comment. Zero changed with zero baselines is the failure, not
+  the pass.
 
 ### When a stack is the wrong shape
 
