@@ -1295,6 +1295,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule", scheme);
       });
 
+      // A departure that no longer exists, which is what a link on a flyer or
+      // in last season's Instagram post resolves to. It is a *shop* surface
+      // now rather than DiveDay's app-wide 404 (issue #765), so the thing to
+      // look at is that the shop's header, nav and footer frame it and that
+      // one action leads back to the board.
+      test(`a dead link inside a shop renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "shop-not-found", scheme);
+      });
+
       // The unsupported-language band (I18N-L1). Every other capture in this
       // file runs under the fleet's default locale, so nothing here has ever
       // rendered this surface — and a shop cannot reproduce it on its own

@@ -91,9 +91,12 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
   // overridden, on the request as it continues, never left at whatever a
   // client happened to send: a spoofed value must never survive. Since the
   // public namespace split (ADR 20260803-public-shop-namespace) the embed
-  // header's reader is the /s shell; the pathname header currently has no
-  // production reader — it stays stamped because the overwrite discipline
-  // here is what makes any future reader safe, and src/proxy.test.ts pins it.
+  // header's reader is the /s shell; the pathname header's is that namespace's
+  // `not-found.tsx`, which Next hands no props at all and which would
+  // otherwise have no way to know which shop's schedule to offer a diver whose
+  // link died (issue #765). That reader is only safe because the value is
+  // overwritten here on every proxied request rather than trusted from the
+  // client, and src/proxy.test.ts pins that.
   overrideRequestHeaders(req, res, {
     [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
     [REQUEST_PATH_HEADER]: req.nextUrl.pathname,

@@ -886,6 +886,14 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // conversion on the diver side. The longest is the reef briefing, scanned
       // in its own test below.
       { path: "/s/blue-mantis/courses/discover-scuba-diving", heading: /Discover Scuba Diving/ },
+      // The shop's own 404 (issue #765). A diver reaches it by tapping a link
+      // that has outlived its departure, so it is a first impression rather
+      // than an edge case — and it is the one page in this namespace whose
+      // whole content is a heading and a single link.
+      {
+        path: "/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000",
+        heading: "That page isn’t here any more",
+      },
     ]);
   });
 

@@ -52,7 +52,9 @@ export const EMBED_REQUEST_HEADER = "x-diveday-embed";
  * URL (no `searchParams`, no pathname — only its own `params`), and
  * `ShopLayout` has to tell a *public* shop route (schedule, courses — readable
  * by anyone, including staff of a different shop) apart from a staff one
- * before it decides whether a cross-tenant visit is a 404. Overwritten on
+ * before it decides whether a cross-tenant visit is a 404. Its second reader
+ * is `src/app/s/[shopSlug]/not-found.tsx`, for the same reason one step
+ * further on: Next hands a `not-found.tsx` no props whatsoever. Overwritten on
  * every *proxied* request, exactly like the embed header; because the proxy
  * matcher carries a static-asset escape hatch, `ShopLayout` additionally
  * binds the value to the slug it is rendering and fails closed on anything

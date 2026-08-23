@@ -81,6 +81,26 @@ export function shopSlugFromStaffUrl(candidate: string | null | undefined): stri
 }
 
 /**
+ * The shop a **public** URL names, read from a pathname rather than a full URL.
+ *
+ * `not-found.tsx` is the one surface in this namespace that is handed no
+ * `params` — Next passes that file no props at all — so a 404 under
+ * `/s/<slug>/**` learns which shop the visitor was trying to reach from
+ * `REQUEST_PATH_HEADER`, which `src/proxy.ts` stamps and always overwrites.
+ * Same rule as its staff sibling above: the slug is held to `SHOP_SLUG`, and
+ * anything else — a path outside `/s/`, a bare `/s`, a segment carrying a dot
+ * or a slash — is `null`, which the caller renders as no link at all. The
+ * value is only ever concatenated by `publicSchedulePath`, so a slug that
+ * somehow arrived from a client still cannot address anything but this app.
+ */
+export function shopSlugFromPublicPath(pathname: string | null | undefined): string | null {
+  if (!pathname) return null;
+  const [prefix, slug] = pathname.split("/").filter(Boolean);
+  if (`/${prefix}` !== PUBLIC_SHOP_PREFIX || !slug || !SHOP_SLUG.test(slug)) return null;
+  return slug;
+}
+
+/**
  * The old `/shop/**` URLs these surfaces used to live at, and where each one
  * now points. Consumed by `next.config.ts` to emit permanent (308) redirects —
  * a QR code on a dive-shop counter, a bookmarked booking link, and an embed
