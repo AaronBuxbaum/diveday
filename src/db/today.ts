@@ -90,7 +90,7 @@ import {
 } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
-import { listStaff } from "./trips";
+import { countShopTrips, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -1560,6 +1560,17 @@ export async function getTodayWork(
   // (issue #835; Aaron chose this over a quieter badge in Settings, which only
   // the population least likely to need it would ever see).
   //
+  // **Only once the checklist has gone**, which is the whole point: a shop
+  // still being walked through setup is already being asked this, on the same
+  // screen, as step 3. Asking twice at once would be noise, and the queue's
+  // empty state is deliberately suppressed while the checklist is up (issue
+  // #711), so a row here would drag it back onto a shop with no board.
+  //
+  // `countShopTrips` is the same signal the checklist itself is gated on, so
+  // the two can never disagree about which is showing. It only runs for a shop
+  // that has not answered — a confirmed shop pays nothing, which is every shop
+  // after the first time.
+  //
   // Self-gating like the gear rows below: answering the question empties the
   // row permanently, and a shop that answered it during onboarding never sees
   // one at all.
@@ -1568,7 +1579,7 @@ export async function getTodayWork(
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
-  if (shopUnits && !shopUnits.unitsConfirmedAt) {
+  if (shopUnits && !shopUnits.unitsConfirmedAt && (await countShopTrips(db, shopId)) > 0) {
     actions.push({
       id: "units:unconfirmed",
       kind: "units_unconfirmed",

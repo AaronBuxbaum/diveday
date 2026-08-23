@@ -195,6 +195,17 @@ test("a shop with a departure today is not treated as a shop with no departures"
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Afternoon Two-Tank").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Get your shop ready" })).toHaveCount(0);
-  // And the panel the checklist was suppressing is back.
-  await expect(page.getByRole("heading", { name: "Nothing is waiting on you" })).toBeVisible();
+
+  // **And the queue the checklist was suppressing is back, carrying the one
+  // question the checklist did not get answered before it left.**
+  //
+  // This shop is the exact case issue #835 is about: it put a trip on the
+  // board without opening the Units row, so the checklist that was asking is
+  // gone and the derived currency has never been confirmed. The queue picks the
+  // question up rather than letting it vanish — which is why this asserts a
+  // real row rather than "Nothing is waiting on you", the empty state it used
+  // to reach here.
+  await page.getByText("This week", { exact: true }).click();
+  await expect(page.getByText(/currency and depth unit/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open units/ })).toBeVisible();
 });

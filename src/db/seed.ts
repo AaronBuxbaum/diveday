@@ -422,6 +422,11 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           name: identity.name,
           slug: identity.slug,
           timezone: DEMO_SHOP_TIMEZONE,
+          // Finished onboarding, like the canonical demo above and for the same
+          // reason: a minted playground is a *working* shop, and one asking
+          // which currency it works in reads as a broken fixture rather than a
+          // real question (issue #835).
+          unitsConfirmedAt: nowDate(),
           contactEmail: identity.emailFor("hello"),
           contactPhone: "+1 305 555 0142",
           rentalItems: [
