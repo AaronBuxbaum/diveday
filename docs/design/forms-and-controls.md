@@ -104,6 +104,13 @@ set excludes `<form>`, so such a card cannot take a `title` at all, and its head
 at the `h2` scale as the card's first child (`BookActivity` on the diver record) rather than floated
 above it.
 
+**A tone does not change a heading's volume.** A warning, success or primary-tinted panel spells its
+`h2` at the same `text-lg font-semibold` as an untoned one, keeping whatever tone colour it carries:
+scale carries hierarchy, colour carries state. A heading that grew or shrank because something went
+wrong would move the page's apparent structure as panels change state, and a reader would re-learn
+the hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone,
+and never louder for it either.
+
 ### Section rhythm: `space-y-10`, never `mt-*`
 
 `SectionCard` carries **no outer margin at all**. A page stacks its sections in one `space-y-10`

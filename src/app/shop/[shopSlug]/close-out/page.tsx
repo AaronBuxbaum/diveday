@@ -520,7 +520,7 @@ export default async function CloseOutPage({
           }`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="closeout-record-heading" className="font-semibold">
+            <h2 id="closeout-record-heading" className="text-lg font-semibold">
               {t("closeout.record.heading")}
             </h2>
             {closeCount > 1 ? (
