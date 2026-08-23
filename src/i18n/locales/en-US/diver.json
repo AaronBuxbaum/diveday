@@ -613,7 +613,7 @@
     "certChoose": "Choose one",
     "certSubmit": "Add my certification",
     "certSubmitting": "Adding…",
-    "certSaved": "Certification added. Your shop will verify it against the certification record or other evidence.",
+    "certSaved": "Certification added.",
     "certKnown": "That certification number is already on file here — nothing more to do.",
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
