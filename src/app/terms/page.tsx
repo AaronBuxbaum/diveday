@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import { Suspense } from "react";
+import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { LegalDocument, LegalSection, LegalTermList } from "@/components/LegalDocument";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";

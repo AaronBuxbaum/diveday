@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MarketingNav } from "@/app/_components/MarketingNav";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";

@@ -1,5 +1,5 @@
+import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingNavFallback } from "@/components/MarketingNav";
 import { sectionCardClass } from "@/components/ui/card";
 
 /**

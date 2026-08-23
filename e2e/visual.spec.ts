@@ -2044,23 +2044,22 @@ for (const scheme of ["light", "dark"] as const) {
     /**
      * The marketing header's second face. `MarketingNavView` renders two
      * different bars off one session read: signed out it offers "Sign in" and
-     * "Start a trial"; signed in it drops the sign-in link entirely and turns
-     * the CTA slot into the way back to that staffer's own shop. Every public
-     * capture above is the signed-out bar, so the signed-in one — the header a
-     * shop owner actually sees every time they come back to read the pricing
-     * page — had no baseline at all.
+     * "Try the live demo" (#934); signed in it drops the sign-in link entirely
+     * and turns the CTA slot into the way back to that staffer's own shop.
+     * Every public capture above is the signed-out bar, so the signed-in one —
+     * the header a shop owner actually sees every time they come back to read
+     * the pricing page — had no baseline at all.
      *
      * Its own `test.describe` because `signedInAsOwner()` is a describe-scoped
      * `storageState`; the sibling "public" block must stay anonymous.
      *
      * Shot on `/onboard` rather than the landing page for two reasons. It is
      * the shortest marketing surface (one form), so the duplicated body below
-     * the header costs the least; and it is the one page that sets
-     * `hideTrialCta`, where the signed-in branch has a documented rule with
-     * nothing watching it — the trial *pitch* is suppressed, but the way back
-     * to your own shop is wayfinding and still renders. The header markup is
-     * identical on every marketing route, so this frame is the state, not a
-     * special case of it.
+     * the header costs the least; and it is the one page that sets `hideCta`,
+     * where the signed-in branch has a documented rule with nothing watching
+     * it — the CTA *pitch* is suppressed, but the way back to your own shop is
+     * wayfinding and still renders. The header markup is identical on every
+     * marketing route, so this frame is the state, not a special case of it.
      */
     test.describe("public, signed in", () => {
       signedInAsOwner();

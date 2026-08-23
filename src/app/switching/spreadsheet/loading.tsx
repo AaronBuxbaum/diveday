@@ -1,5 +1,5 @@
+import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingNavFallback } from "@/components/MarketingNav";
 
 /**
  * The `/switching/spreadsheet` segment's `<Suspense>` boundary, and what a

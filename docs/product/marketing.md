@@ -76,10 +76,14 @@ offered in is a property of the funnel, not of any one page.
   and each page still reviews as fine on its own.
 
 The two exceptions are single doors rather than pairs, and stay as they are. The **nav** carries the
-trial alone on every page — it is the persistent low-emphasis door, and one tag across all of it
-would answer no question anyway (see the chrome note under "Measuring which story converts"). The
-**`/onboard` footer** offers the demo alone as a plain link, because the reader is already standing
-in the trial.
+**demo** alone on every page — the same lead door the pair puts first everywhere else, kept as one
+door rather than a pair because the header is a persistent low-emphasis slot, not a closing band, and
+one tag across all of it would answer no question anyway (see the chrome note under "Measuring which
+story converts"). It carried the trial until 2026-08-23 (issue #934): a single door reads as *the*
+funnel's opinion of which one leads, so leaving it on the trial was the pair's own rule contradicted
+in the one place a reader can see from anywhere on the page. The **`/onboard` footer** offers the demo
+alone as a plain link, because the reader is already standing in the trial — and the nav is hidden
+entirely on that page (`hideCta`) for the same reason, so the demo is not pitched twice.
 
 This was recorded because nothing held the funnel's shape and it had already drifted: `/` led with
 the demo, `/pricing` swapped the weights under the same two labels, and `/pricing`'s closing band
