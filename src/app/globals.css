@@ -590,6 +590,40 @@ summary {
   animation: slide-in-right 250ms var(--ease-out-soft) both;
 }
 
+/*
+ * **The quick-add slide is a desktop gesture, and on a phone it moves the box
+ * you are typing into.**
+ *
+ * On the divers roster the first character you type reveals an "Add <name>"
+ * button, and the search input slides left to make room. At `sm` and up the
+ * input is a fixed 20rem sitting beside the button and the slide reads as the
+ * button pushing it aside — which is the layout it was designed for. Below
+ * `sm` the input is full width inside a `max-sm:overflow-x-hidden` row, so the
+ * same 250ms carries the *whole focused search box* across the screen while
+ * somebody is typing into it (issue #781).
+ *
+ * **Duration, not `animation: none`.** The component's state machine advances
+ * `entering -> visible` on the `animationend` DOM event; with no animation
+ * there is no event, and the button renders stranded in `entering` forever.
+ * This is the shape the reduced-motion kill-switch below already uses, for
+ * exactly the same reason — every `animationend` in the app still fires, it
+ * just fires immediately.
+ *
+ * Scoped to these two classes rather than the breakpoint at large: everything
+ * else that animates on a phone was designed for one.
+ *
+ * **After both class rules, not beside the first.** Same specificity, so source
+ * order decides — sitting above `.animate-slide-in-right` it lost to it and the
+ * phone kept the full 250ms, which is what `e2e/divers.spec.ts` reads back out
+ * of the browser rather than trusting.
+ */
+@media (width < 40rem) {
+  .animate-slide-in-right,
+  .animate-slide-out-right {
+    animation-duration: 0.01ms;
+  }
+}
+
 .animate-scale-in {
   animation: scale-in 200ms var(--ease-out-soft) both;
 }

@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
@@ -180,6 +182,48 @@ describe("DiverList empty state", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  /**
+   * **The phone gets no horizontal travel, and still gets the event.**
+   *
+   * The slide was designed for the desktop layout, where the input is a fixed
+   * 20rem beside the button and the motion reads as the button pushing it
+   * aside. Below `sm` the input is full width in a clipped row, so the same
+   * 250ms carried the whole focused search box across the screen while
+   * somebody was typing into it (issue #781).
+   *
+   * The trap is that `animationend` is the *only* thing that advances
+   * `entering -> visible`: drop the animation below `sm` and the button is
+   * stranded mid-state forever. So the rule collapses the *duration* instead —
+   * the shape the reduced-motion kill-switch already uses — and this asserts
+   * exactly that, because a component test cannot see a media query.
+   *
+   * It cannot assert the settle: **jsdom implements no `AnimationEvent`**, so
+   * nothing here can fire the event React is listening for. `e2e/divers.spec.ts`
+   * does it in a real browser at a phone viewport instead.
+   */
+  it("keeps the animation classes, and collapses the motion rather than removing it on a phone", () => {
+    renderList({ query: "" });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search divers" }), {
+      target: { value: "Nora" },
+    });
+    // There has to be an animation for `animationend` to end.
+    expect(screen.getByRole("button", { name: /Add/ }).closest("div")).toHaveClass(
+      "animate-slide-in-right",
+    );
+
+    const css = readFileSync(
+      join(import.meta.dirname, "..", "..", "..", "..", "globals.css"),
+      "utf8",
+    );
+    const phoneRule = css.slice(css.indexOf("@media (width < 40rem)"));
+    const body = phoneRule.slice(0, phoneRule.indexOf("\n}"));
+    expect(body).toContain(".animate-slide-in-right");
+    expect(body).toContain(".animate-slide-out-right");
+    expect(body).toContain("animation-duration: 0.01ms");
+    // Never `animation: none` — see the state machine above.
+    expect(body).not.toContain("animation: none");
   });
 
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {
