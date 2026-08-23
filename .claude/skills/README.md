@@ -24,6 +24,7 @@ under the same sync duties (docs/README.md).
 | `i18n-copy` | Writing or editing any on-screen wording; a red `pnpm check:copy`; extracting a file off the copy baseline |
 | `copy-restraint` | Writing, editing, or reading past any user-facing sentence — the filter that decides whether it deserves to exist at all, and the sweep that removes explanatory, redundant, or apologetic copy |
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
+| `triage` | Triaging the issue queue — giving untriaged GitHub issues one category and one state label, with a verified comment saying why (the model-invocable counterpart of the human-only `/mattpocock-skills:triage`) |
 | `backlog-routine` | Working the `ready-for-agent` queue unattended — one ticket at a time, each built as the next layer of one running stack |
 | `stacked-prs` | One scope whose steps depend on each other (schema → db reader → surface) — chained base branches, GitHub stacks, cascading rebase, bottom-up merge |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
