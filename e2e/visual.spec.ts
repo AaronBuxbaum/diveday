@@ -1926,6 +1926,20 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
         await capture(page, "public-schedule-new-shop", scheme);
 
+        // **The evening of a day with nothing in it.** Close-out has three
+        // sections, each with its own empty state, and the only way to see all
+        // three fire at once is a shop with no departures — which the seeded
+        // demo never is, so the `close-out` baseline (shot against
+        // blue-mantis) has never contained one. Left unphotographed it grew
+        // into three dashed boxes and three copies of the same decorative
+        // glyph under a heading reading "A quiet day at the dock", two of them
+        // beneath captions explaining a mechanism with no content to apply to
+        // (issue 800). This is the collapsed page: heading, one sentence, one
+        // button. Free to take here — the shop and the session already exist.
+        await page.goto(`/shop/${unique}/close-out`);
+        await page.getByRole("heading", { name: "A quiet day at the dock" }).waitFor();
+        await capture(page, "close-out-quiet", scheme);
+
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
         await page.goto(`/shop/${unique}/settings`);

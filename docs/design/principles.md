@@ -135,6 +135,19 @@ ad hoc for either case, and never the bespoke emoji pattern for a section that i
 page — the emoji circle reads as "you've reached the end," which is false when siblings above it
 still have content.
 
+**When every section on a page is empty at once, the page collapses to its own one-line state.**
+The rule above picks the right component for *one* empty section and says nothing about all of
+them firing together, which is a different surface: N dashed boxes and N copies of the same
+decorative glyph, each saying nothing happened, and — above any of them that carries a caption —
+a sentence explaining a mechanism that has no content to apply to. The premise of the section
+rule ("an otherwise-populated page") is simply false there. So render the page's heading, one
+sentence carrying whatever the removed boxes were carrying, and the one act still available;
+drop the sections entirely. Close-out is the worked example: three sections, three empty states,
+a heading reading "A quiet day at the dock" and 900px of boxes disagreeing with it
+(`src/app/shop/[shopSlug]/close-out/page.tsx`'s `quietDay`). Note what makes this catchable —
+the state exists only on a shop with no departures, which a seeded demo never is, so it needs a
+capture of its own against a freshly onboarded shop or nobody will ever look at it.
+
 **A long list gets one pager, not a per-surface invention.** Every paged staff list renders
 `src/components/Pager.tsx` — previous, "Page 3 of 7", next — with its words from the one shared
 `shared.pager.*` key set and its data from `offsetPage` (`src/db/paging.ts`). Both directions
