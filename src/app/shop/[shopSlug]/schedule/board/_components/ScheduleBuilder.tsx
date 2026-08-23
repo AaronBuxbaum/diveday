@@ -149,6 +149,7 @@ export type BuilderCopy = {
   dayCountLabelOther: string;
   crewLabel: string;
   crewNobodyYet: string;
+  crewMostlyAll: string;
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
@@ -1024,6 +1025,40 @@ function AddPanel({
  */
 const MENU_CLOSE_MS = 390;
 
+/**
+ * The crew signature this board mostly runs with, or `null` when it has none.
+ *
+ * A signature is the assignment in the order the row already prints it, so two
+ * departures crewed by the same two people in a different order count as two
+ * different answers — which is the honest reading, since that ordering is the
+ * shop's own (lead first) rather than incidental.
+ *
+ * Returns `null` unless one signature covers at least three departures *and*
+ * more than half the window. Both halves matter: below three, a per-row line
+ * still reads as the exception it is, and without the majority there is no
+ * "usual" to state. Departures with nobody assigned are excluded from the vote
+ * and can never win it.
+ */
+function mostCommonCrew(trips: readonly { crew: string[] }[]): string[] | null {
+  const counts = new Map<string, { crew: string[]; count: number }>();
+  for (const trip of trips) {
+    if (trip.crew.length === 0) continue;
+    const key = trip.crew.join("\u0000");
+    const seen = counts.get(key);
+    if (seen) seen.count += 1;
+    else counts.set(key, { crew: trip.crew, count: 1 });
+  }
+  let best: { crew: string[]; count: number } | null = null;
+  for (const entry of counts.values()) if (!best || entry.count > best.count) best = entry;
+  if (!best || best.count < 3 || best.count * 2 <= trips.length) return null;
+  return best.crew;
+}
+
+/** Does this departure run with the board's usual crew, in the same order? */
+function isUsualCrew(crew: readonly string[], usual: readonly string[] | null): boolean {
+  return usual !== null && crew.length === usual.length && crew.every((n, i) => n === usual[i]);
+}
+
 export function ScheduleBuilder({
   shopSlug,
   days,
@@ -1100,6 +1135,21 @@ export function ScheduleBuilder({
   const windowTrips = days.flatMap((day) => day.trips);
   const unpricedCount = windowTrips.filter((trip) => trip.priceCents === null).length;
   const allUnpriced = unpricedCount >= 3 && unpricedCount === windowTrips.length;
+  // The same principle, one row lower: a shop rosters the same two or three
+  // people onto nearly everything, so "Crew: Keiko Tanaka, Sal Moretti" was
+  // printing on ten of fourteen rows in the same grey — a third of the board's
+  // ink, saying nothing that distinguishes one departure from another (issue
+  // #757). The usual crew is stated once above the list and dropped from the
+  // rows that match it; what is left on the rows is, by construction, the
+  // exception a manager is scanning for.
+  //
+  // **The gate is stricter than the price banner's, and has to be.** Three
+  // rows is the same floor, but this also demands a strict *majority* of the
+  // window: on a board split 7/7 between two crews there is no "usual", and a
+  // header claiming one would be a sentence about who is on which boat that is
+  // wrong half the time. An unstaffed departure can never become the default —
+  // it is not a crew, it is the gap this whole line exists to show.
+  const usualCrew = mostCommonCrew(windowTrips);
   const closeMenu = useCallback((menuKey: string) => {
     setClosingMenu(menuKey);
     if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
@@ -1267,6 +1317,15 @@ export function ScheduleBuilder({
         </p>
       ) : null}
 
+      {/* Not a banner: the usual crew is not a problem to solve, it is the
+          answer the rows below no longer have to repeat. Muted and inline, in
+          the caption voice those rows used to carry. */}
+      {usualCrew ? (
+        <p className="mt-4 text-sm text-muted">
+          {fill(copy.crewMostlyAll, { names: usualCrew.join(", ") })}
+        </p>
+      ) : null}
+
       <div className="mt-4 flex flex-col gap-8">
         {days.map((day) => (
           <div key={day.dateIso}>
@@ -1420,21 +1479,29 @@ export function ScheduleBuilder({
                               .filter(Boolean)
                               .join(" · ") || copy.noSiteSetYet}
                           </p>
-                          {/* Muted end to end: who's crewing is a caption-grade
-                              fact repeated on nearly every row — only the gap
-                              ("Nobody yet") earns row-grade ink (principle 9). */}
-                          <p className="mt-1 text-sm text-muted">
-                            {trip.crew.length > 0 ? (
-                              `${copy.crewLabel} ${trip.crew.join(", ")}`
-                            ) : (
-                              <>
-                                {copy.crewLabel}{" "}
-                                <span className="font-medium text-warning">
-                                  {copy.crewNobodyYet}
-                                </span>
-                              </>
-                            )}
-                          </p>
+                          {/* Dropped entirely when this departure runs with the
+                              board's usual crew, which is stated once above the
+                              list (principle 9). What survives is an exception,
+                              so it sheds the muted class in that case — a line
+                              that is only printed when it differs should not
+                              read like the caption it replaced. With no usual
+                              crew to hoist, every row keeps its line in the old
+                              caption grey. "Nobody yet" is warning ink either
+                              way: that is the gap this line exists to show. */}
+                          {isUsualCrew(trip.crew, usualCrew) ? null : (
+                            <p className={`mt-1 text-sm ${usualCrew ? "" : "text-muted"}`}>
+                              {trip.crew.length > 0 ? (
+                                `${copy.crewLabel} ${trip.crew.join(", ")}`
+                              ) : (
+                                <>
+                                  {copy.crewLabel}{" "}
+                                  <span className="font-medium text-warning">
+                                    {copy.crewNobodyYet}
+                                  </span>
+                                </>
+                              )}
+                            </p>
+                          )}
                           {/* A returned departure is otherwise the only row here
                               that isn't upcoming, so it says why it is still on
                               the board rather than looking like a stale entry. */}

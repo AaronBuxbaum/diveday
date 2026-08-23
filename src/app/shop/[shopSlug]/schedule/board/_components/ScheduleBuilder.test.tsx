@@ -47,6 +47,7 @@ const COPY: BuilderCopy = {
   dayCountLabelOther: "{count} days",
   crewLabel: "Crew:",
   crewNobodyYet: "nobody yet",
+  crewMostlyAll: "Crew: {names} unless a departure says otherwise.",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll:
@@ -206,6 +207,102 @@ afterEach(() => {
   routerReplace.mockClear();
   useSearchParams.mockReturnValue(new URLSearchParams());
   setMockPathname("/shop/blue-mantis/schedule/board");
+});
+
+/**
+ * **The crew line, said once** (issue #757). A shop rosters the same two or
+ * three people onto nearly everything, so this line printed the identical
+ * names on ten of fourteen rows of the seeded board. What is asserted here is
+ * both halves: the usual crew moves up, and the rows that differ — above all
+ * the one with nobody on it — keep theirs.
+ */
+describe("ScheduleBuilder crew line", () => {
+  function board(trips: { id: string; crew: string[] }[]) {
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips: trips.map((trip) => baseTrip(trip)),
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+  }
+
+  const USUAL = ["Keiko Tanaka", "Sal Moretti"];
+
+  it("states the usual crew once and drops it from the rows that run with it", () => {
+    board([
+      { id: "t1", crew: USUAL },
+      { id: "t2", crew: USUAL },
+      { id: "t3", crew: USUAL },
+      { id: "t4", crew: ["Marcus Webb", "Sal Moretti"] },
+    ]);
+
+    expect(
+      screen.getByText("Crew: Keiko Tanaka, Sal Moretti unless a departure says otherwise."),
+    ).toBeInTheDocument();
+    // Once, above the list — and nowhere on the three rows it speaks for.
+    expect(screen.queryByText("Crew: Keiko Tanaka, Sal Moretti")).toBeNull();
+    // The one that differs still says who is on it.
+    expect(screen.getByText("Crew: Marcus Webb, Sal Moretti")).toBeInTheDocument();
+  });
+
+  /**
+   * The case this change must never cause: a departure with nobody on it is
+   * not "the usual crew", and hiding it behind a header would turn a staffing
+   * gap into a silent one.
+   */
+  it("never hides a departure with nobody assigned", () => {
+    board([
+      { id: "t1", crew: USUAL },
+      { id: "t2", crew: USUAL },
+      { id: "t3", crew: USUAL },
+      { id: "t4", crew: [] },
+    ]);
+
+    expect(screen.getByText("nobody yet")).toBeInTheDocument();
+  });
+
+  it("hoists nothing when two crews split the board evenly", () => {
+    // 3/3 is not a majority, so there is no "usual" to state — and a header
+    // claiming one would be wrong on half the rows.
+    board([
+      { id: "t1", crew: USUAL },
+      { id: "t2", crew: USUAL },
+      { id: "t3", crew: USUAL },
+      { id: "t4", crew: ["Marcus Webb", "Sal Moretti"] },
+      { id: "t5", crew: ["Marcus Webb", "Sal Moretti"] },
+      { id: "t6", crew: ["Marcus Webb", "Sal Moretti"] },
+    ]);
+
+    expect(screen.queryByText(/unless a departure says otherwise/)).toBeNull();
+    expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(3);
+  });
+
+  it("leaves a short board alone, where a per-row line is still the exception", () => {
+    board([
+      { id: "t1", crew: USUAL },
+      { id: "t2", crew: USUAL },
+    ]);
+
+    expect(screen.queryByText(/unless a departure says otherwise/)).toBeNull();
+    expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(2);
+  });
 });
 
 describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
