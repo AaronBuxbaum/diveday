@@ -193,9 +193,11 @@ function verdictBody(summary, { commit, bucket }) {
         'compared against anything.** Read this as "unknown", never as "no visual changes" — the',
         "zero in the Changed column below is an artifact of the missing baseline, not evidence.",
         "",
-        "Documented causes (ADR 20260729-reg-suit-visual-regression): a detached-HEAD or shallow",
-        "checkout, a push whose parent snapshot was never published to S3, or the first run",
-        "against a new bucket. The job log will say `Failed to detect the previous snapshot key`.",
+        "Documented causes (ADR 20260729-reg-suit-visual-regression): a commit whose baseline was",
+        "never published to S3 — a push whose parent run failed its captures, a stacked layer whose",
+        "layer below has not finished publishing (the `visual-report` job waits up to 20 minutes and",
+        "then warns), or the first run against a new bucket. The job log will say",
+        "`Failed to detect the previous snapshot key` when no key could be resolved at all.",
       ].join("\n");
     case "changes":
       return [

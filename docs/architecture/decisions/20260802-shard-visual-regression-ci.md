@@ -13,7 +13,10 @@ suite grew, that job became CI's longest-running step and the effective bottlene
 
 `reg-suit run` (the S3 baseline compare, `docs/architecture/decisions/20260729-reg-suit-visual-regression.md`)
 has no shard-aware mode — it needs the complete `e2e/screenshots/` set and the real git history
-(`reg-keygen-git-hash-plugin`) in one place to compute a key and publish one report.
+in one place to compute a key and publish one report. (The key generator named here was
+`reg-keygen-git-hash-plugin` until 2026-08-23; the keys are now stated rather than inferred, but
+they are still computed from git history in this one job — see
+[20260821-stacked-pull-requests](20260821-stacked-pull-requests.md).)
 
 ## Decision
 
