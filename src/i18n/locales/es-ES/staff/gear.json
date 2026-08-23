@@ -186,7 +186,6 @@
     "outLabel": "fuera",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No hay {kindLabel} libre para estas fechas.",
-    "assign": "Asignar",
     "assigning": "Asignando…",
     "ticketDoor": "Boleta de alquiler",
     "notice": {
@@ -194,7 +193,8 @@
       "released": "Asignación liberada.",
       "unitUnavailable": "Alguien tomó esa unidad primero — elige otra.",
       "unitOutOfService": "Esa unidad está fuera de la pared por mantenimiento.",
-      "alreadyCheckedOut": "Esa unidad ya salió del mostrador — márcala como devuelta desde el registro."
+      "alreadyCheckedOut": "Esa unidad ya salió del mostrador — márcala como devuelta desde el registro.",
+      "assignFailed": "Esa elección no se aplicó: prueba con otra unidad."
     },
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
@@ -95,6 +96,69 @@ export async function assignGearUnitAction(formData: FormData) {
     prep,
     noticeUrl(prep, outcome.ok ? "gear-assigned" : RESERVE_GEAR_NOTICE[outcome.reason]),
   );
+}
+
+/**
+ * What a row learns when it commits its own pick — a **code**, never a
+ * sentence; the row picks the words (ADR 20260731-domain-layer-copy-leaks).
+ */
+export type AssignGearUnitResult =
+  | { ok: true }
+  | { ok: false; reason: GearRefusalOf<ReserveGearUnitOutcome> | "invalid" };
+
+/**
+ * **The same assignment, answered rather than redirected.**
+ *
+ * `assignGearUnitAction` above redirects with a `?notice=`, which is right for
+ * a form: one act, one page, one banner. This surface is twenty-one acts in a
+ * row at a counter on the morning of a departure, and a redirect per row means
+ * the page reloads under the staffer twenty-one times and says what happened
+ * in a banner at the top, away from the row that did it.
+ *
+ * So the picker commits on change and this hands the outcome back, letting the
+ * row revert its own select and say why on the spot (issue #802,
+ * docs/design/principles.md §10's "edit in place where safe").
+ *
+ * **Every guard the redirecting twin has, in the same order** — the session,
+ * the same parse, the shop and trip re-read by `session.user.shopId` rather
+ * than by anything the client sent, the window computed here from the trip
+ * row, and `tripId` pinned into the reservation so a stale tab cannot pair
+ * this trip's window with another trip's booking. Availability is still never
+ * pre-checked: the double-booking refusal arrives from the exclusion
+ * constraint inside `reserveGearUnit`, which is the only thing that can be
+ * true at write time.
+ */
+export async function assignGearUnit(input: {
+  tripId: string;
+  bookingId: string;
+  gearItemId: string;
+}): Promise<AssignGearUnitResult> {
+  const session = await requireStaffSession();
+  const parsed = assignSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "invalid" };
+
+  const db = await getDb();
+  const [shop, trip] = await Promise.all([
+    getShopById(db, session.user.shopId),
+    getTripWithBooked(db, session.user.shopId, parsed.data.tripId),
+  ]);
+  if (!shop || !trip) return { ok: false, reason: "invalid" };
+
+  const window = tripReservationWindow(trip, shop.timezone);
+  const outcome = await reserveGearUnit(db, {
+    shopId: shop.id,
+    gearItemId: parsed.data.gearItemId,
+    bookingId: parsed.data.bookingId,
+    tripId: parsed.data.tripId,
+    reservedFrom: window.from,
+    reservedUntil: window.until,
+  });
+  if (!outcome.ok) return { ok: false, reason: outcome.reason };
+  // The rest of the page holds counts and a "still to assign" list that this
+  // pick just changed, so the server tree is refreshed — without the redirect
+  // that would throw the staffer back to the top of a long page.
+  revalidatePath(shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep"));
+  return { ok: true };
 }
 
 const releaseSchema = z.object({ tripId: z.uuid(), reservationId: z.uuid() });

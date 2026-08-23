@@ -82,26 +82,29 @@ test.describe("staff", () => {
       page.getByRole("heading", { name: "Rental assignments", exact: true }),
     ).toBeVisible();
 
-    // The first open picker on the page, whatever kind it offers: choose its
-    // first real unit (a picker with no exact size match opens on a disabled
-    // "Pick a unit…" placeholder, so the choice is explicit) and hold the
-    // page to its word. Anchoring on the form first keeps the select and its
-    // Assign button provably the same row.
-    const firstForm = page
-      .locator("form")
-      .filter({ has: page.locator('select[name="gearItemId"]') })
-      .first();
-    const firstSelect = firstForm.locator('select[name="gearItemId"]');
+    // **The pick is the act.** There is no "Assign" beside the select any more:
+    // one boat was 21 dropdowns and 21 confirming taps, at a counter, on the
+    // morning of a departure (issue #802). Choosing a unit commits it.
+    //
+    // The first open picker on the page, whatever kind it offers, and its
+    // first real unit — a picker with no exact size match opens on a disabled
+    // "Pick a unit…" placeholder, so the choice is explicit.
+    const firstSelect = page.locator("select[id^='assign-']").first();
     await firstSelect.waitFor();
     const firstUnit = firstSelect.locator("option:not([disabled])").first();
     const suggested = (await firstUnit.textContent()) ?? "";
     const suggestedTag = suggested.split(" · ")[0]?.trim() ?? "";
     expect(suggestedTag.length).toBeGreaterThan(0);
     await firstSelect.selectOption({ label: suggested });
-    await firstForm.getByRole("button", { name: "Assign", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Assigned." })).toBeVisible();
+
+    // The settled state is the assignment appearing on the diver's row — no
+    // page banner, because nothing navigated.
     const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     await expect(assignments.getByText(suggestedTag, { exact: true })).toBeVisible();
+    // Named rather than `getByRole("alert")`: Next's route announcer is a
+    // permanently-mounted empty alert, as this file's own note at the tag
+    // refusal above says.
+    await expect(page.getByText("Somebody got that unit first")).toHaveCount(0);
 
     // Undo over confirm: releasing is one tap on the same row. `.last()`
     // picks the innermost matching `<li>` — the assignment chip itself, not

@@ -8,7 +8,6 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
-import { controlClass } from "@/components/ui/form";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getTripPrep } from "@/db/trips-prep";
@@ -31,7 +30,8 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
-import { assignGearUnitAction, releaseGearUnitAction } from "./actions";
+import { RentalUnitPicker } from "./_components/RentalUnitPicker";
+import { assignGearUnit, releaseGearUnitAction } from "./actions";
 
 /** `?notice=` codes the gear-assignment forms redirect back with. Read through
  * `noticeFromParam`, never a bare index — the param is attacker-supplied. */
@@ -702,13 +702,7 @@ export default async function TripPrepPage({
                               {t("gear.prep.noneFree", { kindLabel })}
                             </p>
                           ) : (
-                            <form
-                              key={item.kind}
-                              action={assignGearUnitAction}
-                              className="flex flex-wrap items-center gap-2"
-                            >
-                              <input type="hidden" name="tripId" value={tripId} />
-                              <input type="hidden" name="bookingId" value={diver.bookingId} />
+                            <div key={item.kind} className="flex flex-wrap items-center gap-2">
                               <label htmlFor={selectId} className="text-sm text-muted sm:w-32">
                                 {item.size
                                   ? t("gear.prep.kindWithSize", { kindLabel, size: item.size })
@@ -718,47 +712,49 @@ export default async function TripPrepPage({
                                   carries w-full, and a competing width utility
                                   on the same element loses alphabetically. */}
                               <div className="w-full min-w-44 flex-1 sm:max-w-64">
-                                <select
+                                {/* **No "Assign" beside it.** The pick is the
+                                    act; a second tap to confirm it is an "Edit"
+                                    button once per row, twenty-one times on a
+                                    seeded departure (issue #802). The refusal
+                                    the exclusion constraint can still answer
+                                    with lands on this row, and reverts it. */}
+                                <RentalUnitPicker
                                   id={selectId}
-                                  name="gearItemId"
-                                  required
-                                  defaultValue={preselect ? options[0]?.id : ""}
-                                  className={controlClass}
-                                >
-                                  {preselect ? null : (
-                                    <option value="" disabled>
-                                      {t("gear.prep.pickUnit")}
-                                    </option>
-                                  )}
-                                  {options.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                      {[
-                                        option.size
-                                          ? `${option.label} · ${option.size}`
-                                          : option.label,
-                                        // A lapsed or looming bench clock is
-                                        // said at the moment of the pick —
-                                        // still selectable, never hidden:
-                                        // the dock decides (H-06).
-                                        option.serviceState.state === "overdue"
-                                          ? t("gear.prep.optionServiceOverdue")
-                                          : option.serviceState.state === "due_soon"
-                                            ? t("gear.prep.optionServiceDueSoon")
-                                            : null,
-                                      ]
-                                        .filter(Boolean)
-                                        .join(" · ")}
-                                    </option>
-                                  ))}
-                                </select>
+                                  tripId={tripId}
+                                  bookingId={diver.bookingId}
+                                  defaultValue={preselect ? (options[0]?.id ?? "") : ""}
+                                  assign={assignGearUnit}
+                                  options={options.map((option) => ({
+                                    id: option.id,
+                                    label: [
+                                      option.size
+                                        ? `${option.label} · ${option.size}`
+                                        : option.label,
+                                      // A lapsed or looming bench clock is
+                                      // said at the moment of the pick —
+                                      // still selectable, never hidden:
+                                      // the dock decides (H-06).
+                                      option.serviceState.state === "overdue"
+                                        ? t("gear.prep.optionServiceOverdue")
+                                        : option.serviceState.state === "due_soon"
+                                          ? t("gear.prep.optionServiceDueSoon")
+                                          : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · "),
+                                  }))}
+                                  copy={{
+                                    pickUnit: t("gear.prep.pickUnit"),
+                                    assigning: t("gear.prep.assigning"),
+                                    refusals: {
+                                      unit_unavailable: t("gear.prep.notice.unitUnavailable"),
+                                      unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
+                                    },
+                                    refusalFallback: t("gear.prep.notice.assignFailed"),
+                                  }}
+                                />
                               </div>
-                              <SubmitButton
-                                pendingLabel={t("gear.prep.assigning")}
-                                className={buttonClass({ variant: "ghost", size: "sm" })}
-                              >
-                                {t("gear.prep.assign")}
-                              </SubmitButton>
-                            </form>
+                            </div>
                           );
                         })}
                       </div>
