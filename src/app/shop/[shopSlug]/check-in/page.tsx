@@ -14,7 +14,7 @@ import { CHECK_IN_ROW_TONE } from "@/components/row-tones";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
 import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
@@ -414,7 +414,7 @@ export default async function CheckInPage({
                             manifest. */}
                         <Link
                           href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
-                          className="text-primary hover:underline"
+                          className={`${tapTargetLinkClass} text-primary hover:underline`}
                         >
                           {first.tripTitle}
                         </Link>
@@ -563,7 +563,7 @@ export default async function CheckInPage({
                                   {identityFor(
                                     <Link
                                       href={`/shop/${shopSlug}/divers/${row.personId}`}
-                                      className="font-semibold text-primary hover:underline"
+                                      className={`${tapTargetLinkClass} font-semibold text-primary hover:underline`}
                                     >
                                       {row.personName}
                                     </Link>,
@@ -645,7 +645,7 @@ export default async function CheckInPage({
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/shop/${shopSlug}/divers/${diver.id}`}
-                      className="font-medium text-foreground hover:underline"
+                      className={`${tapTargetLinkClass} font-medium text-foreground hover:underline`}
                     >
                       {diver.fullName}
                     </Link>
