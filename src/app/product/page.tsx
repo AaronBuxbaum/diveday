@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
+import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import {
@@ -14,13 +13,12 @@ import {
   ShopPrepListFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { switchingHref, trialHref } from "@/lib/funnel";
+import { switchingHref } from "@/lib/funnel";
 import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
 import { ProductChapterNav } from "./_components/ProductChapterNav";
 
@@ -192,30 +190,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               on the site; without its own CTA the first offered action was
               the nav's trial link — the wrong ask while a buyer is still
               verifying claims. Same one-primary block as the home hero. */}
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <form action={enterDemoAction} className="w-full sm:w-auto">
-              <FunnelTag source="product" />
-              <SubmitButton
-                pendingLabel={t("marketing.product.gettingDemoReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "w-full cursor-pointer disabled:opacity-70 sm:w-auto",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref("product")}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "w-full border-border-strong sm:w-auto",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
+          <FunnelCtas locale={locale} source="product" className="mt-8 justify-center" />
           <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
         </div>
       </section>
@@ -385,23 +360,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <h3 className="text-xl font-semibold tracking-tight">
               {t("marketing.common.midCtaTitle")}
             </h3>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
-                <FunnelTag source="product-mid" />
-                <SubmitButton
-                  pendingLabel={t("marketing.product.gettingDemoReady")}
-                  className={buttonClass({ className: "cursor-pointer disabled:opacity-70" })}
-                >
-                  {t("marketing.common.tryDemo")}
-                </SubmitButton>
-              </form>
-              <Link
-                href={trialHref("product-mid")}
-                className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
-              >
-                {t("marketing.common.startTrial")}
-              </Link>
-            </div>
+            <FunnelCtas locale={locale} source="product-mid" size="md" />
           </SectionCard>
         </section>
 
@@ -579,30 +538,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           </div>
           {/* `shrink-0` matters: without it the closing text squeezes both
               buttons into ~140px three-line blobs at tablet widths. */}
-          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
-            <form action={enterDemoAction}>
-              <FunnelTag source="product" />
-              <SubmitButton
-                pendingLabel={t("marketing.product.gettingDemoReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref("product")}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
+          <FunnelCtas locale={locale} source="product" className="shrink-0" />
         </div>
       </section>
     </main>

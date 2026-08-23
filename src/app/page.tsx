@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
+import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
@@ -13,13 +12,12 @@ import {
   MarketingMockup,
   marketingMockups,
 } from "@/components/MarketingSections";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { scheduleAttributionHref, switchingHref, trialHref } from "@/lib/funnel";
+import { scheduleAttributionHref, switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -293,35 +291,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
-            {/* `w-full sm:w-auto` on both: without it the primary (inside
-                a form, hugging its label) rendered *narrower* than the
-                stretched secondary link on phones — the demoted action was the
-                biggest target on first paint. Full-width buttons are also the
-                better wet-thumb target. */}
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction} className="w-full sm:w-auto">
-                <FunnelTag source="home-hero" />
-                <SubmitButton
-                  pendingLabel={t("marketing.common.gettingReady")}
-                  className={buttonClass({
-                    size: "cta",
-                    className: "w-full cursor-pointer disabled:opacity-70 sm:w-auto",
-                  })}
-                >
-                  {t("marketing.common.tryDemo")}
-                </SubmitButton>
-              </form>
-              <Link
-                href={trialHref("home-hero")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "cta",
-                  className: "w-full border-border-strong sm:w-auto",
-                })}
-              >
-                {t("marketing.common.startTrial")}
-              </Link>
-            </div>
+            <FunnelCtas locale={locale} source="home-hero" className="mt-8" />
             {/* The demo's cost, stated once on the whole page — at the first
                 door, where the decision is actually made. The closing band
                 repeats the door, not the note. */}
@@ -523,30 +493,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
               {t("marketing.home.tryDescription")}
             </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
-                <FunnelTag source="home-closing" />
-                <SubmitButton
-                  pendingLabel={t("marketing.common.gettingReady")}
-                  className={buttonClass({
-                    size: "cta",
-                    className: "cursor-pointer disabled:opacity-70",
-                  })}
-                >
-                  {t("marketing.common.tryDemo")}
-                </SubmitButton>
-              </form>
-              <Link
-                href={trialHref("home-closing")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "cta",
-                  className: "border-border-strong",
-                })}
-              >
-                {t("marketing.common.startTrial")}
-              </Link>
-            </div>
+            <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
             <p className="mt-6 font-medium">
               {t("marketing.home.priceLine", {
                 price: earlyAccessPrice.price,

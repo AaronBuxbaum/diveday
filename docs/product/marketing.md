@@ -60,6 +60,33 @@ these buys trust our claims can't. See
 [assessments/competitive-strategy.md](assessments/competitive-strategy.md) for why these are the
 chosen battlegrounds — and re-read it before changing the spine.
 
+## The two doors, and which one leads (decided 2026-08-22)
+
+The funnel has two doors — **Try the live demo** and **Start a trial** — and the order they are
+offered in is a property of the funnel, not of any one page.
+
+- **The demo leads, everywhere, at every depth.** It is the primary; the trial follows as
+  `secondary`. The demo is the claim nobody else in this market can make, and it costs the reader
+  nothing.
+- **Both doors appear in every closing band**, `/pricing`'s included.
+- **The pair is one component**: `src/app/_components/FunnelCtas.tsx`. Order, weight, labels, the
+  pending label and the funnel tag are decided there and are not props — a page chooses only where
+  the pair sits and how big it is. This is the same move `src/lib/staff-destinations.ts` made for
+  the staff nav, for the same reason: without it a new page invents a third arrangement, silently,
+  and each page still reviews as fine on its own.
+
+The two exceptions are single doors rather than pairs, and stay as they are. The **nav** carries the
+trial alone on every page — it is the persistent low-emphasis door, and one tag across all of it
+would answer no question anyway (see the chrome note under "Measuring which story converts"). The
+**`/onboard` footer** offers the demo alone as a plain link, because the reader is already standing
+in the trial.
+
+This was recorded because nothing held the funnel's shape and it had already drifted: `/` led with
+the demo, `/pricing` swapped the weights under the same two labels, and `/pricing`'s closing band
+dropped the demo entirely — offering only the door that asks for an account at the moment a reader
+who has just read the whole price page is warmest (issue #785). Each page was written as a page and
+reviewed as a page, which is the right unit for copy and the wrong one for hierarchy.
+
 ## Claims policy (hard rules)
 
 - **Shipped-only.** Every claim describes a workflow that works in the demo today. No roadmap

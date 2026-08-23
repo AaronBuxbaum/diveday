@@ -1,15 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
+import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { FunnelSource } from "@/lib/funnel";
-import { trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { fullShopExport } from "@/lib/marketing";
 import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
@@ -30,37 +26,6 @@ import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
  * comment). Copy is resolved by the caller or through `diverTranslator` —
  * strings never live here.
  */
-
-/** The demo-then-trial CTA pair every switching page repeats at its exits. */
-export function DemoTrialCtas({ locale, source }: { locale: DiverLocale; source: FunnelSource }) {
-  const t = diverTranslator(locale);
-  return (
-    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-      <form action={enterDemoAction} className="contents">
-        <FunnelTag source={source} />
-        <SubmitButton
-          pendingLabel={t("switching.common.gettingDemoReady")}
-          className={buttonClass({
-            size: "cta",
-            className: "cursor-pointer disabled:opacity-70",
-          })}
-        >
-          {t("marketing.common.tryDemo")}
-        </SubmitButton>
-      </form>
-      <Link
-        href={trialHref(source)}
-        className={buttonClass({
-          variant: "secondary",
-          size: "cta",
-          className: "border-border-strong",
-        })}
-      >
-        {t("marketing.common.startTrial")}
-      </Link>
-    </div>
-  );
-}
 
 /**
  * The four questions a shop owner actually arrives on a switching guide with.
@@ -111,7 +76,7 @@ export function GuideHero({
             owner into their own shop's importer and is correct to disappear
             for the signed-out shopper this section is written for. */}
         <div className="mt-8">
-          <DemoTrialCtas locale={locale} source={source} />
+          <FunnelCtas locale={locale} source={source} />
         </div>
         <p className="mt-3 text-sm text-muted">{t("switching.common.heroCtaNote")}</p>
 
@@ -449,7 +414,7 @@ export function MidCta({ locale, source }: { locale: DiverLocale; source: Funnel
           <p className="mt-2 max-w-xl leading-7 text-muted">{t("switching.common.midCtaBody")}</p>
         </div>
         <div className="lg:shrink-0">
-          <DemoTrialCtas locale={locale} source={source} />
+          <FunnelCtas locale={locale} source={source} />
         </div>
       </SectionCard>
     </section>
@@ -485,7 +450,7 @@ export function ClosingCta({
         <p className="mt-2 max-w-xl text-muted">{body}</p>
       </div>
       <div className="flex flex-col items-stretch gap-3 sm:shrink-0 sm:items-end">
-        <DemoTrialCtas locale={locale} source={source} />
+        <FunnelCtas locale={locale} source={source} />
         <Link href="/switching" className="text-sm font-medium text-primary hover:underline">
           {backLabel}
         </Link>

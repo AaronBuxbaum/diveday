@@ -2,18 +2,16 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
+import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { switchingHref, trialHref } from "@/lib/funnel";
+import { switchingHref } from "@/lib/funnel";
 import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
@@ -360,32 +358,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
           {t("marketing.about.closingDescription")}
         </p>
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
-            <form action={enterDemoAction}>
-              <FunnelTag source="about-closing" />
-              <SubmitButton
-                pendingLabel={t("marketing.common.gettingReady")}
-                className={buttonClass({
-                  size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
-                })}
-              >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref("about-closing")}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
-          </div>
-        </div>
+        <FunnelCtas locale={locale} source="about-closing" className="mt-8 justify-center" />
       </section>
     </main>
   );

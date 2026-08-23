@@ -2,18 +2,15 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
-import { enterDemoAction } from "@/app/actions/demo";
-import { FunnelTag } from "@/components/FunnelTag";
+import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { trialHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -243,28 +240,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <p className="mx-auto mt-1 max-w-2xl text-lg leading-8 text-muted">
                 {t("marketing.pricing.heroSafetyNote")}
               </p>
-              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link
-                  href={trialHref("pricing")}
-                  className={buttonClass({ size: "cta", className: "w-full sm:w-auto sm:px-8" })}
-                >
-                  {t("marketing.common.startTrial")}
-                </Link>
-                <form action={enterDemoAction} className="w-full sm:w-auto">
-                  <FunnelTag source="pricing" />
-                  <SubmitButton
-                    pendingLabel={t("marketing.pricing.gettingDemoReady")}
-                    className={buttonClass({
-                      variant: "secondary",
-                      size: "cta",
-                      className:
-                        "w-full border-border-strong disabled:opacity-70 sm:w-auto sm:px-8",
-                    })}
-                  >
-                    {t("marketing.common.tryDemo")}
-                  </SubmitButton>
-                </form>
-              </div>
+              <FunnelCtas locale={locale} source="pricing" className="mt-9 justify-center" />
               {/* What the click costs, at the point of decision — the same
                   shared line `/` and `/product` carry under their own demo
                   doors. On this page the answer used to sit in a FAQ row two
@@ -431,8 +407,8 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             is roughly five thousand pixels of phone scroll in which the only
             door was the header's — the marketing nav does not stick, so a
             reader who scrolled the objections had nothing to act on but the
-            back button. One primary here and one quiet mail door beneath it:
-            the closing restates the price rather than making a new argument,
+            back button. The funnel's pair here and one quiet mail door beneath
+            it: the closing restates the price rather than making a new argument,
             and it is tagged `pricing-close` so it can be shown to have earned
             its place instead of folding into the page's own bucket
             (src/lib/funnel.ts). */}
@@ -447,14 +423,11 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 cadence: t(earlyAccessPrice.cadenceKey),
               })}
             </p>
-            <div className="mt-8">
-              <Link
-                href={trialHref("pricing-close")}
-                className={buttonClass({ size: "cta", className: "w-full sm:w-auto sm:px-8" })}
-              >
-                {t("marketing.common.startTrial")}
-              </Link>
-            </div>
+            {/* Both doors, not just the trial. The demo used to be dropped here
+                — at the one moment a reader who has just read the whole price
+                page is warmest, the only door left asked for an account
+                (issue #785). */}
+            <FunnelCtas locale={locale} source="pricing-close" className="mt-8 justify-center" />
             <p className="mt-10 text-sm leading-6 text-muted">
               {t("marketing.pricing.stillQuestion")}
             </p>
