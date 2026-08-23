@@ -139,6 +139,18 @@ reads as an instant jump, a long dead pause, and then a hard cut. Exits take `--
 slow off the mark, then away — which is why the schedule board's row menu could feel
 simultaneously too fast to see and 450 ms long.
 
+**A disclosure's body arrives rather than appearing.** `<details>` is this app's most-used
+interaction — 70 of them — and its caret rotated over 200 ms while the content it pointed at landed in
+a single frame: the affordance animated and the payload not, which reads as the opposite of what
+happened (issue #831). `details::details-content` in `globals.css` fades and rises it, once, so all 70
+inherit it the way the 21 carets inherit their rotation from `DisclosureCaret`.
+
+**Not its height**, and that is this principle applied rather than an omission: interpolating a
+disclosure's height animates *layout*, costs a reflow per frame on each of the seventy, and needs
+`overflow: hidden` on the content — which on these surfaces means clipping the roll call's controls,
+the board's inline panels, and every menu that opens inside a disclosure. The quarter-rem rise says
+"this came from the summary above" and moves nothing the browser has to lay out again.
+
 **One earned exception to the 250 ms ceiling: a disclosure that unfolds.** A group of controls
 revealed on request (the board's "⋯" row menu) animates per child with a stagger, so the sequence
 runs longer than any one element's motion — 260 ms in and 280 ms out, staggered 50 ms, so the

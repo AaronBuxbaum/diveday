@@ -877,6 +877,51 @@ summary {
   }
 }
 
+/*
+ * **The disclosure's body arrives, instead of appearing.**
+ *
+ * `<details>` is this app's most-used interaction — 70 of them — and
+ * `DisclosureCaret` rotates over 200ms while the thing it points at lands in a
+ * single frame. The affordance was animated and the payload was not, which
+ * reads as the opposite of what happened (issue #831).
+ *
+ * **Opacity and a quarter-rem rise, not height.** The ticket proposes
+ * interpolating the body's height with `interpolate-size: allow-keywords`, and
+ * principle 5 forbids it in as many words: "transform/opacity only". Height is
+ * layout, it costs a reflow per frame on every one of the seventy, and making
+ * it work needs `overflow: hidden` on `::details-content` — which on this app's
+ * disclosures means clipping the roll call's controls, the board's inline
+ * panels and every menu that opens inside one. The rise says "this came from
+ * the summary above" without animating a single layout property.
+ *
+ * `content-visibility … allow-discrete` is what lets the *closing* half run at
+ * all: the pseudo-element is `content-visibility: hidden` when shut, so without
+ * it the content would vanish before it could fade.
+ *
+ * Arrival takes `--ease-out-soft` and the exit `--ease-in-soft`, per §5 — the
+ * closed-state rule carries the exit curve because that is the direction it
+ * describes.
+ *
+ * A browser without `::details-content` matches none of this and opens
+ * instantly, which is the honest fallback. So does one that has it while a row
+ * is deep-linked open (`AutoOpenDetails`): an element rendered already-open
+ * runs no transition on its first paint.
+ */
+details::details-content {
+  opacity: 0;
+  translate: 0 -0.25rem;
+  transition:
+    opacity 200ms var(--ease-in-soft),
+    translate 200ms var(--ease-in-soft),
+    content-visibility 200ms allow-discrete;
+}
+
+details[open]::details-content {
+  opacity: 1;
+  translate: 0 0;
+  transition-timing-function: var(--ease-out-soft);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -894,6 +939,19 @@ summary {
      */
     /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
     animation-delay: 0s !important;
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    transition-duration: 0.01ms !important;
+  }
+
+  /*
+   * `*, *::before, *::after` does not reach `::details-content` — it is not one
+   * of the two pseudo-elements the universal selector names. Without this line
+   * every disclosure in the app would keep its 200ms fade for a reader who
+   * asked for reduced motion, which is the same gap `.progress-wave-fill`
+   * documents below for a different reason.
+   */
+  details::details-content,
+  details[open]::details-content {
     /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }
