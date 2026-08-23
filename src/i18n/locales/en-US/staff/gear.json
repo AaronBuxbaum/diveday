@@ -188,7 +188,6 @@
     "outLabel": "out",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No {kindLabel} free for these dates.",
-    "assign": "Assign",
     "assigning": "Assigning…",
     "ticketDoor": "Rental ticket",
     "notice": {
@@ -196,7 +195,8 @@
       "released": "Assignment released.",
       "unitUnavailable": "Somebody got that unit first — pick another.",
       "unitOutOfService": "That unit is off the wall for service.",
-      "alreadyCheckedOut": "That unit already left the counter — mark it returned from the register instead."
+      "alreadyCheckedOut": "That unit already left the counter — mark it returned from the register instead.",
+      "assignFailed": "That pick didn't take — try another unit."
     },
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",
