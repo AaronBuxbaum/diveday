@@ -173,19 +173,50 @@ export type TripConditionsHoldEmailInput = {
 const BRAND_PRIMARY_COLOR = "#0e7490";
 
 /**
+ * The dark half of the same palette, from `docs/design/brand.md`'s core
+ * identity table: open ocean as the page, deep-sea ink's dark value as the
+ * reading colour, lagoon's dark value as the action colour, and the app's own
+ * dark `--surface` for a lifted panel. Duplicated here for the same reason the
+ * light one above is.
+ */
+const DARK_PAGE_COLOR = "#071720";
+const DARK_INK_COLOR = "#e9f3f4";
+const DARK_PRIMARY_COLOR = "#22d3ee";
+const DARK_PANEL_COLOR = "#0d222d";
+
+/**
+ * **The dark values the `color-scheme` declaration promises.**
+ *
+ * `color-scheme: light dark` is not a hint — it tells Apple Mail and Outlook to
+ * stop applying their own inversion because the message handles both schemes
+ * itself. This document said that and then supplied light colours only, so a
+ * client that believed it left grey-on-grey in a dark inbox, and a partially
+ * inverting one could land `#111827` ink on its own dark chrome (issue #771).
+ *
+ * A media query cannot live in a `style` attribute, so the flipping half has to
+ * be a classed rule in an embedded stylesheet. The inline light values stay
+ * exactly where they were and are still what a client that strips `<style>`
+ * renders — which is why every rule here is `!important`: an inline declaration
+ * outranks any stylesheet rule that is not.
+ */
+const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
+
+/**
  * Wraps a template's inner body fragment in a real HTML document — doctype,
  * `<html lang>`, a viewport meta tag, and a max-width container, none of
  * which any individual template had before (they returned bare `<p>` soup
- * delivered as-is). Kept deliberately plain: inline styles only,
- * no external stylesheet or font, so it stays deliverability-safe. The shop
- * name renders as a small text header — never a logo image, matching the
- * "no image-heavy layouts" rule for transactional mail.
+ * delivered as-is). Kept deliberately plain: inline styles carry the whole
+ * light rendering and the one embedded stylesheet carries nothing but the dark
+ * overrides (see `EMAIL_HEAD_STYLE`) — no external stylesheet or font, so it
+ * stays deliverability-safe. The shop name renders as a small text header —
+ * never a logo image, matching the "no image-heavy layouts" rule for
+ * transactional mail.
  */
 export function wrapEmailHtml(
   bodyHtml: string,
   options: { shopName: string; locale: string },
 ): string {
-  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"></head><body style="margin: 0; padding: 0; background-color: #f3f4f6; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><p style="margin: 0 0 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: #f3f4f6; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><p class="dd-shop" style="margin: 0 0 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></body></html>`;
 }
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
@@ -470,7 +501,7 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     ? `\n\n${packingHeading}\n${packingItems.map((item) => `- ${item}`).join("\n")}\n`
     : "";
   const reminderHtml = packingItems.length
-    ? `<div style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
+    ? `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${packingHeading}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${packingItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`
     : "";
 
   const confirmed = t("notifications.bookingConfirmation.confirmed", {
