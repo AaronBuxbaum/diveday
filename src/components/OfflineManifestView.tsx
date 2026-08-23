@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
+import { HapticsToggle } from "@/components/HapticsToggle";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
@@ -1993,7 +1994,7 @@ export function OfflineManifestView() {
           message: t("shared.subSurfaceRipple.message"),
         }}
       />
-      <div className="mt-8 flex justify-start print:hidden">
+      <div className="mt-8 flex flex-wrap items-start justify-start gap-3 print:hidden">
         <AmbientContrastControl
           copy={{
             modeLabel: t("shared.boatMode.modeLabel"),
@@ -2002,6 +2003,9 @@ export function OfflineManifestView() {
             labelBoat: t("shared.boatMode.labelBoat"),
           }}
         />
+        {/* Renders nothing on a phone with no vibration motor — which is every
+            iPhone (src/components/haptics.ts). */}
+        <HapticsToggle copy={{ label: t("shared.haptics.toggleLabel") }} />
       </div>
     </main>
   );

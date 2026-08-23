@@ -624,6 +624,9 @@
     "labelLand": "Modo tierra",
     "labelBoat": "Modo barco"
   },
+  "haptics": {
+    "toggleLabel": "Vibrar en cada toque"
+  },
   "rentalFit": {
     "itemLabels": {
       "bcd": "Chaleco",

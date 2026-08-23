@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
+import { HapticsToggle } from "@/components/HapticsToggle";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import {
   OfflineManifestManager,
@@ -547,6 +548,9 @@ export default async function TripManifestPage({
             copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
             className="h-full"
           />
+          {/* Renders nothing on a phone with no vibration motor — which is
+              every iPhone (src/components/haptics.ts). */}
+          <HapticsToggle copy={{ label: t("shared.haptics.toggleLabel") }} className="h-full" />
           <AmbientContrastControl
             className="rounded-xl border border-border bg-surface-sunken p-3"
             copy={{

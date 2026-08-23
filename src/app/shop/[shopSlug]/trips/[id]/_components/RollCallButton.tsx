@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useActionState, useEffect, useSyncExternalStore } from "react";
+import { vibrate } from "@/components/haptics";
 import { NOTE_DRAFT_CHANGE_EVENT, pendingNoteDraft } from "@/lib/roll-call-note-draft";
 
 /**
@@ -115,17 +116,10 @@ export function RollCallButton({
 
   useEffect(() => {
     if (result) {
-      if (typeof window !== "undefined" && "vibrate" in navigator) {
-        try {
-          if (result.ok) {
-            navigator.vibrate(10);
-          } else {
-            navigator.vibrate([40, 40, 40]);
-          }
-        } catch {
-          // Ignore vibration exceptions (e.g. from security policies)
-        }
-      }
+      // **Never the only carrier of a refusal.** The buzz is Android-only and
+      // switchable off, so the `role="alert"` text below is what actually
+      // tells a crew member the tap did not land (see @/components/haptics).
+      vibrate(result.ok ? 10 : [40, 40, 40]);
     }
   }, [result]);
   return (
