@@ -170,17 +170,30 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - Do not use branch-local reservation ledgers: other pending branches cannot see them.
 - Split work by vertical slice or non-overlapping paths. Trial-merge the target branch before calling
   work complete.
-- **A chain whose steps depend on each other is a stack, not one fat PR and not a serialized wait.**
-  Where step 2 cannot compile or be read without step 1 (`src/db/schema.ts` + migration → the
-  `src/db` reader → the surface), cut each branch from the one below and open each PR with its
-  `base` set to that branch, bottom one first, every body naming its position and the branch beneath
-  it. **Open each PR as a draft at that layer's first commit and register the chain in the same
-  breath** — `gh stack link <bottom> <next>`, or `gh api --method POST repos/{owner}/{repo}/stacks`
-  with the numbers bottom to top and `-F` (never `-f`, which sends strings and 422s). Registering is
-  what buys the cascading rebase and the bottom-up atomic merge, and registering *early* is what
-  makes GitHub retarget a layer when its base merges instead of leaving you to open a PR against a
-  branch that no longer exists. This is for genuinely dependent work only: every layer pays the full
-  CI gate, and pays it again above every rebase. See the **stacked-prs** skill and ADR
+- **Stack by default: cut every branch from the branch you opened last, not from `main`, whenever
+  that one is still open.** Related or unrelated, a schema migration or a padding change — the shape
+  is the same. A dependent chain (`src/db/schema.ts` + migration → the `src/db` reader → the surface)
+  has no other honest shape, since step 2 cannot compile or be read without step 1; unrelated work
+  stacks for a different reason, which is that a second branch cut from `main` re-edits the same
+  shared files as the first — the `check:repo` row, a `docs/design/*.md` section, a
+  `scripts/*-baseline.json`, a message bundle — and every one of those is a conflict resolved later
+  by hand, without the context that produced it. On a stack each layer already contains the ones
+  below, so those files merge **once, while the change is being written**, and a ratchet banked on
+  layer 4 already counts layer 3. **Pixels are not an exception** (ADR
+  20260821-stacked-pull-requests, "Reversed: a stack may move pixels"): losing the baseline race
+  costs a re-read, not a missed regression, and the pipeline now names each layer's baseline and
+  waits for the layer below to publish it. Cut each branch from the one below and open each PR with
+  its `base` set to that branch, bottom one first, every body naming its position and the branch
+  beneath it. **Open each PR as a draft at that layer's first commit and register the chain in the
+  same breath** — `gh stack link <bottom> <next>`, or `gh api --method POST
+  repos/{owner}/{repo}/stacks` with the numbers bottom to top and `-F` (never `-f`, which sends
+  strings and 422s). Registering is what buys the cascading rebase and the bottom-up atomic merge,
+  and registering *early* is what makes GitHub retarget a layer when its base merges instead of
+  leaving you to open a PR against a branch that no longer exists. Four things still go on their own
+  branch off `main`: nothing of yours is open (`git fetch origin main` first, every time — it decides
+  the shape), a fix that must merge now (a red `main`, a hotfix, a spec race you did not cause), a
+  stack already about six layers deep (every layer pays the full CI gate and pays again above every
+  rebase), and a branch that belongs to another session. See the **stacked-prs** skill and ADR
   20260821-stacked-pull-requests.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same
   spec or test name. Two sessions independently patching the same broken test race each other and
@@ -222,6 +235,38 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   "approving" an intentional change means saying in the PR *why* the pixels moved and merging;
   the merge is what becomes the next baseline. See the **visual-triage** skill. Never end the
   session leaving a visual diff or failure unexplained.
+- **A pushed PR is not done until its review threads are answered.** Every pull request in this
+  repository is reviewed within minutes by bots that read the diff — `sourcery-ai` (a review guide
+  plus inline nitpicks), `coderabbitai` (a summary and inline findings), `github-advanced-security`
+  on scripts — and by Aaron, whose comments arrive whenever he gets to it. **Read them before you
+  call the work done, and again whenever you come back to a branch you pushed earlier:**
+
+  ```bash
+  gh pr view <n> --comments
+  ```
+
+  That shows issue-level comments, review bodies and the inline ones, but not which threads are
+  still **open** — for that, and for the exact thread ids, ask GraphQL:
+
+  ```bash
+  gh api graphql -f query='query{repository(owner:"AaronBuxbaum",name:"diveday"){pullRequest(number:<n>){reviewThreads(first:50){nodes{id isResolved isOutdated path comments(first:5){nodes{author{login} body}}}}}}}'
+  ```
+
+  Every open thread ends in one of three states, never silence: **fixed** — push the change, then
+  reply naming the commit; **declined** — the reason goes in the thread, and a nitpick that
+  contradicts a written rule here is declined by naming the rule rather than by ignoring it; or
+  **filed** — worth doing, out of scope, so it becomes a `needs-triage` issue whose number goes in
+  the thread. Reply on the thread itself, not in the PR description:
+
+  ```bash
+  gh api repos/AaronBuxbaum/diveday/pulls/<n>/comments/<comment-id>/replies -f body='...'
+  ```
+
+  Resolve a thread only when you acted on it (`resolveReviewThread` on the id above), and leave it
+  open when your answer is a question back. **A PR with an unread thread is not done** — say what is
+  outstanding rather than calling it finished — and never treat a bot's comment as automatically
+  right: these tools do not know this repository's rules and confidently propose changes that
+  `pnpm check:repo` refuses.
 - **Screenshots are full-size and unfiltered; bound the *page*, not the capture.** A surface that
   screenshots enormous is telling you the page is unbounded, and the fix is pagination (or a
   default range) in the product, where a real shop benefits from it — never a `?filter=` in the

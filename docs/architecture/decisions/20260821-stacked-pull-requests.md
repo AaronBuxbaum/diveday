@@ -1,4 +1,4 @@
-# 20260821-stacked-pull-requests — Use GitHub stacked pull requests for dependent chains
+# 20260821-stacked-pull-requests — Use GitHub stacked pull requests
 
 - **Status:** Accepted
 - **Date:** 2026-08-21
@@ -64,6 +64,12 @@ of them could have made it a bad fit and one nearly does:
 Stacked pull requests are the tool for a **dependent chain**, and one pull request per independent
 slice remains the default for everything else. Three parts:
 
+**Amended 2026-08-23 (see "Widened: stack by default" below):** the second half of that sentence is
+reversed. A stack is now the default shape for *any* branch cut while another of the session's own
+branches is still open, related or not — the dependent chain is the case that *requires* one, no
+longer the only case that gets one. The three parts below are unchanged; only what they apply to is
+wider.
+
 1. **A session that produces a dependent chain opens ordinary chained-base pull requests** — each
    branch cut from the one below, each pull request opened with `base` set to that branch, each body
    naming its position and the branch beneath it. This needs nothing that is not already available,
@@ -118,8 +124,9 @@ own green CI and its own review thread, and no layer blocked on the previous one
 Makes hard, and worth knowing before opening one: CI cost multiplies per layer — this workflow runs
 lint, typecheck, four unit shards, a build and eight Playwright/visual shards for every pull request
 — and pays again for every layer above a cascading rebase. A three-layer stack rebased twice is
-roughly nine full runs. Stacks are therefore for chains that are genuinely dependent, not for
-splitting an independent change into thirds.
+roughly nine full runs. That cost is what bounds a stack's *depth* (about six layers) rather than
+its *subject* — see the amendment below; it was originally written as an argument for stacking only
+genuinely dependent work.
 
 Commits us to: bottom-up merge order (there is no merging layer 2 alone), per-layer branch
 protection, and keeping the chained-base convention legible in pull request bodies so a reader who
@@ -270,8 +277,9 @@ Both halves are required; an explicit key cannot conjure a snapshot that has not
 **Built the same day; see the section below.** The three obligations above survive as the reading
 for a wait that gave up, which is now the exceptional path rather than the expected one.
 
-Unchanged by this reversal: CI cost per layer (the real argument for short stacks), and the rule
-that independent slices are not stacked merely because they arrived in the same session.
+Unchanged by this reversal: CI cost per layer (the real argument for short stacks). The rule that
+independent slices are not stacked merely because they arrived in the same session survived this
+reversal by a few hours and is itself reversed below.
 
 ### Measured: the baseline is named rather than inferred (2026-08-23, issue #909)
 
@@ -352,3 +360,47 @@ non-zero baseline count in the `diveday:visual-summary` comment on both layers o
 needs CI and a bucket, so the first pixel-moving stack through this pipeline is where it is
 confirmed. A push to `main` resolving a non-zero baseline is the same claim on the ordinary path,
 and it is the one to watch first, because that is where a key-format mistake would surface.
+
+
+### Widened: stack by default, related or not (2026-08-23, Aaron's call)
+
+The Decision above scoped stacks to dependent chains and kept one pull request per independent slice
+as the default. That scope is **lifted**. A stack is now the default shape for any branch cut while
+another of the session's own branches is still open, whatever the two changes have to do with each
+other.
+
+The dependency argument is not what changed — a chain whose second step cannot compile without its
+first still has no other honest shape. What changed is the recognition that a *second*, independent
+argument was already doing most of the work in practice, and that it does not care about dependency
+at all: **shared files**. `.claude/skills/backlog-routine/SKILL.md` (PR #891) had already reached
+that conclusion for the backlog queue and stated the measurement — thirteen branches cut from one
+`main` in a single session, every one of them editing `AGENTS.md`'s `check:repo` row, a
+`docs/design/*.md` section and a `scripts/*-baseline.json`, and every one conflicting with every
+other. Resolving those afterwards is the same merge performed thirteen times, each time without the
+context that produced it. On a stack each layer already contains the layers below, so a shared file
+merges **once, while the change is being written**. The ratchet files are the extreme case: a
+baseline banked on layer 4 already counts layer 3's work, which leaves `--absorb` for genuine
+outside merges rather than for the session's own previous branch.
+
+Leaving that as a backlog-routine rule made the repository say two things at once: the routine
+stacked unrelated tickets while this ADR and AGENTS.md told every other session not to, and a
+session reading both chose silently. The same shape of contradiction as issue #905 (pixels), and it
+gets the same treatment — the general rule moves to where the general rules live.
+
+What bounds a stack now is cost and independence of *merging*, not subject matter. Four cases still
+cut from `main`, and they are the whole of the exception list:
+
+1. **Nothing of the session's own is open** — `git fetch origin main` first, every time; if the
+   branch below merged, the next one cuts from the refreshed `origin/main`.
+2. **A fix that must merge now** — a red `main`, a hotfix, a spec race found while triaging someone
+   else's diff. It must not wait for the layers beneath it.
+3. **About six layers deep** — the per-layer CI cost in *Consequences* is real, and past roughly six
+   layers the wall-clock cost outweighs the conflicts saved. Start a new stack.
+4. **The branch below belongs to another session** — a stack is built on the session's own work;
+   another session's force-push would otherwise be this session's cascading rebase, and its claim
+   covers its own layers only (`docs/agents/issue-tracker.md`, "Claiming an issue").
+
+Consequences unchanged: bottom-up merge order, per-layer CI, per-layer branch protection, and the
+reading discipline for visual reports. The escape hatch is unchanged too — `gh stack unstack` leaves
+ordinary chained-base pull requests behind, so a session that stacked something it should not have
+has one command to undo it.

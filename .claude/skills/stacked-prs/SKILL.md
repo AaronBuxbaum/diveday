@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Split a dependent chain of work into stacked pull requests — chained base branches, GitHub stacks, cascading rebase, bottom-up merge. Use when one scope has steps that cannot compile or review independently (schema → db reader → surface), or when asked to review, rebase, or land an existing stack.
+description: Open work as stacked pull requests — the default shape for any branch cut while another of your own branches is still open, related or not, pixels or not. Chained base branches, GitHub stacks, cascading rebase, bottom-up merge. Use when cutting a branch or opening a pull request, when a scope has steps that cannot compile or review independently (schema → db reader → surface), or when asked to review, rebase, or land an existing stack.
 ---
 
 # Stacked pull requests
@@ -10,18 +10,52 @@ above targets the head branch of the one below. GitHub runs the cascading rebase
 bottom-up and atomically, and retargets what is left onto `main`
 (ADR [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
 
-## When this is the right shape
+## Stack by default
 
-Use a stack only for a **dependent** chain — step 2 cannot compile, test, or be read without step 1:
+**Cut every branch from the branch you opened last, not from `main`, whenever that one is still
+open.** Related or unrelated, a schema migration or a padding change, one file or forty — the shape
+is the same, and it is the default rather than a special case for dependent chains (ADR
+[20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
+"Widened: stack by default"). Two different arguments arrive at that one habit.
+
+**A dependent chain has no other honest shape.** Step 2 cannot compile, test, or be read without
+step 1:
 
 - `src/db/schema.ts` + migration → the `src/db` reader → the surface that renders it
 - a `src/lib` domain rule → the feature module that composes it → the route
 - a refactor that must land before the behaviour change that needs it
 
-Do **not** stack independent slices. Two features that merely arrived in the same session are two
-pull requests, and AGENTS.md's *Parallel work* rules already cover them. The cost is real: every
-layer pays lint, typecheck, four unit shards, a build and eight Playwright/visual shards, and pays
-again after every cascading rebase.
+Anything else prices it as one unreviewable pull request or a session idling until its own earlier
+one merges.
+
+**Unrelated work stacks for a different reason: the conflicts.** A second branch cut from `main`
+re-edits the same shared files as the first — `AGENTS.md`'s `check:repo` row, a `docs/design/*.md`
+section, a `scripts/*-baseline.json`, a message bundle — and each one is a merge resolved later, by
+hand, without the context that produced it. Thirteen branches cut from one `main` in a single
+session is the measured case, and every one of them conflicted with every other. On a stack each
+layer already contains the layers below, so those files merge **once, while the change is being
+written**. The ratchets are the sharpest version: a baseline written on layer 4 already counts layer
+3's work, so `--absorb` is left for genuine merges from outside the stack rather than for your own
+previous branch.
+
+**A layer that moves pixels is a layer like any other.** That restriction was lifted on 2026-08-23
+(Aaron's call, issue #905) once the trade was measured: losing the baseline race costs a **re-read,
+not a missed regression**, and the pipeline now names each layer's baseline key and waits for the
+layer below to publish it (issue #909). What replaces the restriction is the reading discipline
+under *What our pipeline does with it* below — never a reason to cut from `main` instead.
+
+### What still goes on its own branch off `main`
+
+1. **Nothing of yours is open.** `git fetch origin main` first, every time: if the branch below has
+   merged, the next one cuts from the refreshed `origin/main` and there is no stack at all.
+2. **A fix that must merge now** — a red `main`, a hotfix, a race in a spec you did not touch found
+   while triaging someone else's diff. It should be able to merge without waiting for the layers
+   beneath it.
+3. **The stack is about six layers deep.** Every layer pays lint, typecheck, four unit shards, a
+   build and eight Playwright/visual shards, and pays again above every cascading rebase. Past
+   roughly six the wall-clock cost outweighs the conflicts it saves: start a new stack.
+4. **The branch below belongs to another session.** Stack on your own work. Someone else's
+   force-push is your cascading rebase, and their claim is not yours to extend.
 
 ## Building the chain
 
@@ -30,11 +64,13 @@ and then registers that shape as a stack. The shape is the whole substance; regi
 cascading rebase and the group merge on top of it.
 
 ```sh
-# layer 1, cut from main
-git checkout -b claude/<slug>-1-schema main
+git fetch origin main                                  # first, every time — it decides the shape
+
+# layer 1: nothing of yours is open, so cut from the refreshed main
+git checkout -b claude/<slug>-1-schema origin/main
 # ... first commit ...
 
-# layer 2, cut from layer 1 — not from main
+# layer 2, cut from layer 1 — not from main, whether or not it depends on layer 1
 git checkout -b claude/<slug>-2-reader claude/<slug>-1-schema
 # ... first commit ...
 
@@ -169,6 +205,27 @@ commit, then the `POST .../stacks` above.
   so every commit merged in between shows up as your diff. That is not a stack-specific bug, but a
   stack is where a stale parent is most likely: PR #668 reported 60 changed surfaces of which 39
   belonged to other people's merged work, and rebasing cut it to 21.
+
+## Answering review across layers
+
+Every layer is reviewed on its own — `sourcery-ai` and `coderabbitai` comment on each one as it
+opens, so a six-layer stack collects six reviews while you are still building the top of it. Read
+them per layer, on the same pass that reads each layer's CI:
+
+```sh
+gh pr list --author '@me' --state open --json number,title,mergeable,statusCheckRollup
+gh pr view <n> --comments
+```
+
+**Answer a comment on the layer that owns the code, never the layer you are standing on.** The
+rule is the one that governs a red check in a stack, for the same reason: a stack merges bottom-up,
+so a fix committed above the layer being commented on arrives *after* that layer has already merged
+without it. Fix at the owning layer, then cascade — `gh stack sync --prune`, or rebase each layer
+above onto the one below.
+
+Each thread ends in a state: fixed and replied to with the commit, declined with the reason, or
+filed as a `needs-triage` issue whose number is in the thread. Commit whatever you are holding at
+the top of the stack before you go down (never `git stash` — AGENTS.md's *Parallel work*).
 
 ## Landing it
 
