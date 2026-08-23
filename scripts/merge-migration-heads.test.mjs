@@ -126,7 +126,13 @@ const columnsOf = (root, folder, table) =>
     .map((entity) => entity.name);
 
 describe("pnpm db:merge", () => {
-  it("repairs a merge snapshot that lost a head, when the two heads share a parent", () => {
+  // Eight `drizzle-kit` spawns, each loading a TypeScript config and a schema.
+  // Six seconds on a laptop and past vitest's 20s default on a CI runner, so
+  // the ceiling is stated rather than discovered: this is a slow test on
+  // purpose, not a flaky one being papered over.
+  it("repairs a merge snapshot that lost a head, when the two heads share a parent", {
+    timeout: 120_000,
+  }, () => {
     const root = project();
     const held = mkdtempSync(path.join(tmpdir(), "db-merge-held-"));
     dirs.push(held);
