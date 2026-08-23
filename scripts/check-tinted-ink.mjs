@@ -25,20 +25,21 @@ import process from "node:process";
  * the axe scan never visits — `e2e/a11y.spec.ts` covers about thirty routes,
  * and the pill that started this was on none of them.
  *
- * Two deliberate narrowings, because a guard that overreaches gets exempted
+ * One deliberate narrowing, because a guard that overreaches gets exempted
  * into uselessness:
  *
  * - **Same element only.** A parent's tint under a child's ink is the nastier
  *   version of this bug and no grep can see it; what a grep sees reliably is
  *   one class attribute naming both, which is how all but one of the real
  *   instances were written. The rest is the axe scan's job.
- * - **`/10` only.** That is the canonical status tint, the fill every ratio in
- *   docs/design/forms-and-controls.md is computed for, and the one every
- *   measured failure used. The `/5` wash and the `/15` pressed state are
- *   different fills with their own numbers, and most of the `/15` ones are
- *   roll-call targets that render under `.boat-mode`, a skin with a different
- *   palette and its own measurements — which a grep cannot tell from the class
- *   string either.
+ * It was `/10` only when it shipped, on the argument that the `/15` family
+ * mostly rendered under `.boat-mode` and a grep could not tell. Measured
+ * (issue #874), that turned out to be exactly right about the palette and
+ * exactly wrong about the remedy: boat-mode bottoms out at **4.98:1** at a 15%
+ * fill and is compliant, but one app-palette line was sitting at **4.33:1**
+ * and the narrow pattern could not see it. So the pattern is any opacity now,
+ * and the skin is stated once in `BOAT_MODE_FILES` below rather than guessed
+ * at per line.
  *
  * A line that genuinely means the translucent form says
  * `diveday:allow-tinted-ink: <why>`.
@@ -50,8 +51,41 @@ const ROOTS = ["src"];
 const EXTENSIONS = new Set([".ts", ".tsx"]);
 const ALLOW = "diveday:allow-tinted-ink";
 
-/** `bg-success/10` and `hover:bg-success/10` alike — see the narrowing above. */
-const fillPattern = (hue) => new RegExp(`bg-${hue}\\/10\\b`);
+/** `bg-success/10`, `hover:bg-success/15`, `peer-checked:bg-danger/5` — any opacity. */
+const fillPattern = (hue) => new RegExp(`bg-${hue}\\/\\d+\\b`);
+
+/**
+ * **The roll-call surfaces, which render under a different palette.**
+ *
+ * `.boat-mode` retunes every feedback hue for a deck in sunlight, so the
+ * numbers in docs/design/forms-and-controls.md — computed for the app palette
+ * — do not describe these files at all. Measured across all three skins at a
+ * 15% fill: boat light bottoms out at **4.98:1** (warning ink on its own tint
+ * over `--surface-sunken`) and boat dark at **5.50:1**, against the app
+ * palette's 3.90:1 for the same pair. They are compliant where they render.
+ *
+ * A file list rather than fifteen line comments, because the fact is about the
+ * *surface*: `manifest/page.tsx` wraps its whole body in `boat-mode` and
+ * `OfflineManifestView` renders `<main className="boat-mode …">`, so every
+ * component beneath them inherits it. `OFFLINE_CREW_ROW_TONE` is in here for
+ * the same reason — its only consumer is the offline manifest, while the
+ * app-palette `CHECK_IN_ROW_TONE` beside it already uses an opaque token.
+ *
+ * The cost of the coarser grain, stated: a component added to one of these
+ * folders that somehow renders *outside* boat-mode would be exempt without
+ * anybody noticing. That has not been possible so far — the page owns the
+ * wrapper — and the axe scan covers the manifest either way.
+ */
+const BOAT_MODE_FILES = new Set(
+  [
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/RollCallControls.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CrewRollCall.tsx",
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyTeamChip.tsx",
+    "src/components/OfflineManifestView.tsx",
+    "src/components/row-tones.ts",
+  ].map((file) => path.normalize(file)),
+);
 const inkPattern = (hue) => new RegExp(`text-${hue}(-strong)?\\b`);
 
 async function walk(relativeDirectory) {
@@ -69,8 +103,17 @@ const violations = [];
 for (const root of ROOTS) {
   for (const file of await walk(root)) {
     const contents = await readFile(path.join(ROOT, file), "utf8");
-    contents.split("\n").forEach((line, index) => {
-      if (line.includes(ALLOW)) return;
+    if (BOAT_MODE_FILES.has(path.normalize(file))) continue;
+    const lines = contents.split("\n");
+    const allowLines = new Set(
+      lines.map((line, index) => (line.includes(ALLOW) ? index : -1)).filter((index) => index >= 0),
+    );
+    lines.forEach((line, index) => {
+      // On the line, or on the one directly above it. A `className` carrying a
+      // fill is routinely 200 characters long, and an annotation appended to
+      // the end of one is unreadable and unfindable — the same reason
+      // `biome-ignore` sits above what it excuses.
+      if (allowLines.has(index) || allowLines.has(index - 1)) return;
       for (const hue of HUES) {
         if (fillPattern(hue).test(line) && inkPattern(hue).test(line)) {
           violations.push({ file, line: index + 1, hue, text: line.trim() });
