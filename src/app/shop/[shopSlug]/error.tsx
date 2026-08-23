@@ -25,7 +25,13 @@ export default function ShopError({ reset }: { error: Error; reset: () => void }
   return (
     <ErrorPage
       title="That didn’t go through"
-      body="Something went wrong loading this screen. Your last change may not have saved — tap to try again."
+      // **Not "loading".** This boundary catches a failed render *and* whatever
+      // else unwinds through it, and it told the reader the screen failed to
+      // load when what had actually failed might be their tap. Saying "this
+      // screen ran into a problem" covers both without claiming which — and
+      // the sentence after it is the one that matters either way, because the
+      // client genuinely cannot know whether a write landed (issue #819).
+      body="This screen ran into a problem. Your last change may not have saved — tap to try again."
       resetLabel="Try again"
       onReset={reset}
       size="boat"

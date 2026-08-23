@@ -1,20 +1,39 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
 import { QueueRowButton } from "./QueueRowButton";
 
 type CheckInAction = (formData: FormData) => Promise<{ ok: true }>;
+
+/** What the row knows after a tap: it landed, or it did not send. */
+type CheckInFormResult = { ok: true } | { ok: false } | null;
 
 /**
  * Check-in is a high-frequency toggle, so a successful write refreshes the
  * server-rendered row in place. Keeping the action inside a client form lets
  * Next refresh the data without redirecting the document to the top of the
  * queue, while QueueRowButton still gets the shared pending state.
+ *
+ * **A failed tap fails on its row, not on the page.** Take the counter offline
+ * and tap one diver's Check in, and the whole segment used to be replaced by
+ * the error boundary: the 26-diver queue, the four departure groups, the scroll
+ * position and anything typed into the scan field, all gone, in front of a
+ * diver standing at the desk (issue #819). Whole-page recovery is the right
+ * default for a failed *render*; a failed mutation knows which row it was
+ * about, and the page-level boundary cannot say which row.
+ *
+ * **And it never claims the check-in did or did not happen**, because the
+ * client genuinely cannot know: a failed fetch cannot tell a request that never
+ * left from one the server handled and could not answer. So the message is
+ * about the *tap*. The row's own state is left exactly as the server last
+ * rendered it, which is the honest thing on screen while the staffer decides
+ * whether to tap again.
  */
 export function CheckInActionForm({
   action,
   bookingId,
+  sendFailedLabel,
   ariaLabel,
   trailing,
   pendingTrailing,
@@ -23,6 +42,8 @@ export function CheckInActionForm({
 }: {
   action: CheckInAction;
   bookingId: string;
+  /** What the row says when the tap did not send. Words come from the page. */
+  sendFailedLabel: string;
   ariaLabel: string;
   trailing: React.ReactNode;
   pendingTrailing: React.ReactNode;
@@ -31,8 +52,28 @@ export function CheckInActionForm({
 }) {
   const router = useRouter();
   const scrollY = useRef(0);
-  const [result, formAction] = useActionState(
-    async (_previous: { ok: true } | null, formData: FormData) => action(formData),
+  const [result, formAction] = useActionState<CheckInFormResult, FormData>(
+    async (_previous, formData) => {
+      try {
+        return await action(formData);
+      } catch (error) {
+        // **`unstable_rethrow` first, or the refusals lie.** `checkInAction`
+        // ends its refusal paths in `redirect(noticeUrl(…, "not-ready"))`, and
+        // that sentinel reaches this catch on the client too. Without the
+        // rethrow the navigation still happens — Next handles it out of band —
+        // and the reducer *also* returns a failure, so a refused check-in
+        // landed on its `?notice=` banner with "That didn't send" underneath
+        // it: two contradictory answers to one tap. Measured rather than
+        // assumed, after a comment here claimed the opposite.
+        //
+        // This is the client-side face of what
+        // `scripts/check-redirect-in-try.mjs` refuses on the server.
+        unstable_rethrow(error);
+        // What is left is the transport failing, which is the case this exists
+        // for: the tap did not send.
+        return { ok: false };
+      }
+    },
     null,
   );
 
@@ -61,6 +102,14 @@ export function CheckInActionForm({
       >
         {children}
       </QueueRowButton>
+      {result?.ok === false ? (
+        // Inside the form, under the row it belongs to — `role="alert"` because
+        // the staffer's eyes are on the diver, not the screen, and this is the
+        // one thing on the page that just changed.
+        <p role="alert" className="px-4 pb-3 text-sm font-medium text-danger-strong sm:px-5">
+          {sendFailedLabel}
+        </p>
+      ) : null}
     </form>
   );
 }

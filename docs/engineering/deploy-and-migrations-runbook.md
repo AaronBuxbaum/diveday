@@ -14,7 +14,8 @@ this covers what happens to it after you merge.
 ## What actually happens on deploy
 
 `scripts/vercel-build.mjs` in full, in prose: if `VERCEL_ENV === "production"`, run
-`node scripts/check-migrations.mjs` and then `pnpm db:migrate`; then, always, run `pnpm build`.
+`node scripts/check-migrations.mjs`, then `node scripts/check-migration-graph.mjs`, then
+`pnpm db:migrate`; then, always, run `pnpm build`.
 `pnpm db:migrate` is `drizzle-kit migrate --config drizzle.config.prod.ts`, applying committed
 `drizzle/` SQL against `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a
 transaction-mode pooler is unreliable), falling back to `DATABASE_URL`.
@@ -138,6 +139,35 @@ users, so a database that has gone wrong can simply be reset and re-seeded rathe
 (**H-47**). That makes this whole class of hazard a nuisance instead of an incident. It stops being
 true the moment the first pilot shop has real divers in the system — at which point this section is
 the plan, and the escape hatch is gone. Do not let that transition happen silently.
+
+## The other thing that stops a deploy: two open migration heads
+
+The guard below is about what a migration *says*. This one is about where it *sits*.
+
+drizzle-kit 1.0 keeps a full `snapshot.json` in every migration folder, naming its parents in
+`prevIds` — so `drizzle/` is a **directed graph**, not the linear chain the old `journal.json`
+made it. A branch cut from `main` generates a migration whose `prevIds` point at main's head *at
+that moment*. Two sessions each adding a migration, each merging cleanly with no git conflict
+anywhere, therefore leave the graph with **two open heads**.
+
+`drizzle-kit migrate` walks that graph before applying anything, comparing the branches below every
+fork. Two heads touching different tables pass silently. Two heads touching the same object — two
+new columns on `shops`, which happens here most weeks — are refused, *inside the production build*,
+after the change is already on `main`. That is not hypothetical: it is how this section came to
+exist, on 2026-08-22, when a deploy died at 11:58 printing a tree diagram and nothing else.
+
+**The fix is `pnpm db:merge`, and it rewrites nothing.** It writes one migration folder whose SQL is
+empty and whose snapshot names every open head as a parent; a fork whose branches reach a common
+leaf is skipped by the walk entirely. `drizzle/20260822212616_merge-migration-heads` is the worked
+example. The one case where it is the wrong answer is when the two branches genuinely add the same
+column — then the merge folder quiets the check and the second `ADD COLUMN` still fails against a
+real server, which the `real-postgres` job is what catches.
+
+`scripts/check-migration-graph.mjs` runs the identical walk in two earlier places: `pnpm check:repo`
+(so `repo-safeguards`, which checks out the *merge* ref on a pull request, sees the graph the merge
+would produce rather than the one the branch has alone) and `scripts/vercel-build.mjs` immediately
+before `pnpm db:migrate`, where its only job is to print the remedy the bare drizzle failure does
+not. It opens no database connection.
 
 ### The guard that enforces it
 
