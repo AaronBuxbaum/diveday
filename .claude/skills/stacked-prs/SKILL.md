@@ -141,23 +141,38 @@ commit, then the `POST .../stacks` above.
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
   do not "fix" it by re-anchoring to the layer below.
-- **Visual regression is measured now, and the answer is "keep stacks off pixels."**
-  `reg-keygen-git-hash-plugin` resolves layer 2's baseline to **layer 1's head commit** — confirmed
-  by running its `CommitExplorer` over a throwaway two-layer stack, which needs no CI at all because
-  it reads only the local git graph. That half is fine and is what makes a stack's diffs readable.
-  What is not fine: a cascading rebase rewrites layer 1, so layer 2's key moves to a commit **no CI
-  run has published under**. Layer 1's own rebase will publish it — so whether layer 2 finds a
-  baseline is a race with layer 1's four visual shards. Losing it is not silent (the surfaces report
-  as *new*, and `diveday:visual-summary` prints that count) but "60 new" reads as noise exactly when
-  a reviewer can least afford it. So **keep stacks to chains that do not move a rendered surface**,
-  and read the sticky `diveday:visual-summary` comment on **every** layer before triaging pixels: if
-  nothing resolved, nothing was compared and that layer's counts mean nothing (see the
-  **visual-triage** skill). Full measurement in ADR
+- **Visual regression: a stack may move pixels, and the price is that a layer's counts are not
+  always readable yet.** `reg-keygen-git-hash-plugin` resolves layer 2's baseline to **layer 1's head
+  commit** — confirmed by running its `CommitExplorer` over a throwaway two-layer stack, which needs
+  no CI at all because it reads only the local git graph. That half is what makes a stack's diffs
+  readable: each layer shows its own pixels rather than everything below it. The other half is a
+  race. A cascading rebase rewrites layer 1, so layer 2's key moves to a commit **no CI run has
+  published under**; layer 1's own rebase will publish it, so whether layer 2 finds a baseline
+  depends on layer 1's four visual shards finishing first.
+
+  This skill used to answer that by keeping stacks off rendered surfaces. **Aaron lifted that on
+  2026-08-23: stack everything, pixels included** (ADR
   [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
-  including the lever if this is ever lifted: reg-suit's key generator is a plugin slot, and
+  "Reversed: a stack may move pixels"). Backlog work is mostly rendered surfaces, so the restriction
+  was disqualifying the ordinary case, and losing the race costs a **re-read**, never a missed
+  regression — the surfaces report as *new*, and `diveday:visual-summary` prints that count in its
+  own column.
+
+  What that makes mandatory, per layer, before you write a word about pixels:
+
+  1. **Read the sticky `diveday:visual-summary` comment on the layer you are triaging.** If it says
+     nothing was compared, nothing was compared: that layer's counts mean **unknown**, never "no
+     visual changes" (see the **visual-triage** skill).
+  2. **Do not triage it in that state.** Wait for the layer below's `visual` and `visual-report`
+     jobs to finish, then re-run this layer's (`gh run rerun`, or the run's own control) and read
+     the refreshed comment. The baseline exists after that; it did not before.
+  3. **Never merge a layer whose pixels were never compared** on the grounds that the count was
+     zero. Zero-changed with zero baselines is the failure, not the pass.
+
+  The lever, if this ever costs more than it saves: reg-suit's key generator is a plugin slot, and
   `reg-simple-keygen-plugin` takes `expectedKey`/`actualKey` outright. It is not enough on its own —
   an explicit key cannot conjure a snapshot layer 1 has not published yet — so the fix is that
-  plugin *plus* gating layer 2's visual job on layer 1's.
+  plugin *plus* gating layer 2's visual job on layer 1's (issue #909).
 - **Rebase a layer before you read its visual report.** A branch whose parent has fallen behind
   `main` compares against that *parent*, while CI captures the pull request *merged with `main`* —
   so every commit merged in between shows up as your diff. That is not a stack-specific bug, but a

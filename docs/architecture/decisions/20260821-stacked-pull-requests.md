@@ -86,6 +86,10 @@ slice remains the default for everything else. Three parts:
    one that does *not* change a rendered surface, and what its `visual-report` job resolves is
    recorded (issue #644) before a pixel-moving stack is opened.
 
+   **Amended 2026-08-23 (see "Reversed: a stack may move pixels" below):** measured, then lifted.
+   Pixel-moving work stacks like anything else; what replaces the restriction is a rule about not
+   triaging a layer whose baseline never resolved.
+
 `.claude/skills/stacked-prs/SKILL.md` holds the procedure; this record holds the reasoning.
 
 ## Alternatives considered
@@ -225,3 +229,39 @@ Two mechanical findings came out of the same session and matter more than the re
 
 What does **not** change: the CI cost per layer, which is the real argument for keeping stacks short
 and for not stacking independent slices, and the visual-baseline restriction measured on 2026-08-22.
+
+### Reversed: a stack may move pixels (2026-08-23, Aaron's call, issue #905)
+
+The restriction above — no stacking work that moves a rendered surface — is **lifted**. Nothing
+about the measurement that produced it turned out to be wrong; what changed is what it was being
+applied to.
+
+Two facts collided. `.claude/skills/backlog-routine/SKILL.md` (PR #891) makes a stack the shape of
+ordinary backlog work, one ticket per layer, related or not. And ordinary backlog work is mostly
+rendered surfaces: an empty-state shape, a contrast-token sweep, a nav-label reconciliation, a
+departure page's way back to the board — four consecutive merges from that queue, every one of them
+pixels. A restriction that excludes the ordinary case is not a restriction, it is a contradiction
+between two skills, and a session reading both had to choose one silently. That is what issue #905
+asked, and this is the answer to it.
+
+The trade being accepted, stated plainly so nobody has to reconstruct it: **losing the baseline race
+costs a re-read, not a missed regression.** When layer 2's key lands on a commit nothing has
+published under, reg-suit reports its surfaces as *new*, `Changed` reads 0, and the repo's
+`diveday:visual-summary` comment says in its own words that nothing was compared. The danger is
+entirely that a reader takes `Changed: 0` at face value. So the restriction is replaced by three
+obligations, which live in `.claude/skills/stacked-prs/SKILL.md` and are repeated in the backlog
+routine:
+
+1. Read `diveday:visual-summary` on **every** layer before writing anything about pixels.
+2. A layer that resolved no baseline is not triaged in that state — wait for the layer below's
+   `visual`/`visual-report` jobs, re-run this layer's, read the refreshed comment.
+3. Never merge a layer whose pixels were never compared on the strength of a zero count. Zero
+   changed with zero baselines is the failure, not the pass.
+
+This is a procedural mitigation and it depends on the reader. The mechanical fix — a named key via
+`reg-simple-keygen-plugin` plus gating a layer's visual job on the layer below's — is unchanged, is
+still the right shape, and is now filed as issue #909 rather than left as a paragraph nobody owns.
+Both halves are required; an explicit key cannot conjure a snapshot that has not been published.
+
+Unchanged by this reversal: CI cost per layer (the real argument for short stacks), and the rule
+that independent slices are not stacked merely because they arrived in the same session.
