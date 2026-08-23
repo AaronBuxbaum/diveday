@@ -25,9 +25,25 @@ import type { ReactNode } from "react";
  *   weight (`font-semibold`); selection is carried by the raised pill —
  *   fill, ink, and shadow plus `aria-current` — never by a weight change that
  *   would reflow the row, and never by color alone.
- * - **Overflow scrolls, never wraps.** Labels are `whitespace-nowrap` and the
- *   track is a `snap-x` scroller, so a narrow phone slides the row instead of
- *   stacking it.
+ * - **Overflow wraps, never scrolls.** Labels stay `whitespace-nowrap`, and a
+ *   row too wide for its container stacks onto a second line with each row's
+ *   options sharing the width, rather than sliding sideways.
+ *
+ *   It scrolled until 2026-08-22, and that was measured wrong rather than
+ *   decided wrong. At 390px the departure's four tabs came to `scrollWidth 343`
+ *   in a `clientWidth 340` — three pixels, which turns a strip that visually
+ *   fits into one that clips "Prep" by a hair, drags sideways and springs back,
+ *   and jiggles under a thumb that meant to scroll the page. On the surface a
+ *   crew member uses to get from the roster to the roll call, on a boat
+ *   (issue #811).
+ *
+ *   **In Spanish the same strip is 436 against 340.** Ninety-six pixels, so no
+ *   amount of gap or padding closes it and a scroller was always going to hide
+ *   a whole tab from every Spanish-speaking shop. The checkpoint row below is
+ *   `size="boat"` with longer labels still. A wrapped row asks for no gesture
+ *   and hides nothing, which is what the dock test wants; `e2e/` asserts no
+ *   control scrolls at 390px in either locale, because a rendered-pixel diff
+ *   cannot tell a clipped strip from a scrollable one.
  * - **Never on paper.** A way to switch surfaces means nothing printed, so
  *   the track is `print:hidden` unconditionally.
  *
@@ -51,8 +67,17 @@ export type SegmentedControlItem = {
 };
 
 const sizes = {
-  /** The default 44px dock-test target. */
-  md: "min-h-11 px-3 text-sm",
+  /**
+   * The default 44px dock-test target.
+   *
+   * `px-2.5` rather than `px-3`, which is worth the half-step: the departure's
+   * four tabs came to 343px in a 340px container at the narrowest viewport we
+   * design for, and 2px off each side of each tab is 16px — enough that English
+   * stays on one row instead of wrapping for the sake of three pixels. The
+   * target's height is untouched, and its width is set by the label anyway
+   * (issue #811).
+   */
+  md: "min-h-11 px-2.5 text-sm",
   /** Boat surfaces: 56px targets, 16px labels, for wet hands and glare. */
   boat: "min-h-14 px-5 text-base",
 } as const;
@@ -95,14 +120,18 @@ export function SegmentedControl({
   // had. Content width comes from `w-fit`, not from being inline.
   const track = `flex ${
     fill ? "" : "w-fit max-w-full"
-  } snap-x gap-1 overflow-x-auto rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
+  } flex-wrap gap-1 rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
   return (
     <nav aria-label={ariaLabel} className={track}>
       {items.map((item) => {
         const active = item.key === currentKey;
+        // `grow` on the content-width variant too: it does nothing while the
+        // row fits (a `w-fit` track is exactly its content), and once the row
+        // wraps it is what makes each line share its width instead of sitting
+        // ragged — four tabs become a 2x2 block on a phone.
         const cls = `inline-flex ${
-          fill ? "flex-1" : "shrink-0"
-        } snap-start items-center justify-center rounded-xl font-semibold whitespace-nowrap transition-colors duration-200 ${sizes[size]} ${
+          fill ? "flex-1" : "grow"
+        } items-center justify-center rounded-xl font-semibold whitespace-nowrap transition-colors duration-200 ${sizes[size]} ${
           active
             ? "bg-surface text-primary shadow-sm"
             : "text-muted hover:bg-surface hover:text-foreground"
