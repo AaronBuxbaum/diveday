@@ -135,6 +135,19 @@ ad hoc for either case, and never the bespoke emoji pattern for a section that i
 page — the emoji circle reads as "you've reached the end," which is false when siblings above it
 still have content.
 
+**When every section on a page is empty at once, the page collapses to its own one-line state.**
+The rule above picks the right component for *one* empty section and says nothing about all of
+them firing together, which is a different surface: N dashed boxes and N copies of the same
+decorative glyph, each saying nothing happened, and — above any of them that carries a caption —
+a sentence explaining a mechanism that has no content to apply to. The premise of the section
+rule ("an otherwise-populated page") is simply false there. So render the page's heading, one
+sentence carrying whatever the removed boxes were carrying, and the one act still available;
+drop the sections entirely. Close-out is the worked example: three sections, three empty states,
+a heading reading "A quiet day at the dock" and 900px of boxes disagreeing with it
+(`src/app/shop/[shopSlug]/close-out/page.tsx`'s `quietDay`). Note what makes this catchable —
+the state exists only on a shop with no departures, which a seeded demo never is, so it needs a
+capture of its own against a freshly onboarded shop or nobody will ever look at it.
+
 **A long list gets one pager, not a per-surface invention.** Every paged staff list renders
 `src/components/Pager.tsx` — previous, "Page 3 of 7", next — with its words from the one shared
 `shared.pager.*` key set and its data from `offsetPage` (`src/db/paging.ts`). Both directions
@@ -302,6 +315,16 @@ group header, or disappears until it has something to say.
 - **Counts are facts, not alerts.** A per-row count that merely differs (cards on file, seats
   sold) is quiet muted text, not a pill — pills and badges are spent on the rows that need a
   staffer, so that when one appears it means something.
+- **In a progress bar, colour the gap rather than the achievement.** A bar whose *filled* part
+  carries the brand hue makes the finished rows the loudest thing in the column and leaves the
+  ones needing somebody as the faintest — on the owner's monthly report, fifteen of twenty-one
+  waiver rows drew a full teal bar while the two at 0%, booked charters with not one signature,
+  drew an empty grey track. Draw the filled part quiet at every ratio and let the **remainder**
+  carry the attention tone. It needs no threshold to argue about: at 0% the whole bar is the
+  warning, at 100% there is nothing left to warn about, and every value between shades itself.
+  Opt in per column, because not every gap is work — unsigned waivers are something to chase,
+  empty seats on a month being reviewed are a fact, and toning the second would put amber on most
+  rows of a healthy report.
 - **Collapse the settled row.** In a working list where each row can carry open work (the trip
   roster), a row with nothing left to do collapses to its header behind a labeled disclosure —
   detail at the moment it's needed, not on every row — while any open question keeps the row

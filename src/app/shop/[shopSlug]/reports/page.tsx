@@ -54,8 +54,36 @@ function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
  * A slim, labelled share bar — fill or waiver completion as a portion of a
  * whole. A null ratio ("no bookings to measure") renders as a bare em dash, not
  * an empty bar, so "nothing to measure" never reads as a measured zero.
+ *
+ * **The ink is on the gap, not the achievement** (issue 775). This drew its
+ * filled portion in `bg-primary`, which made a healthy row the loudest thing in
+ * its column and left the rows needing an owner as the faintest: on the seeded
+ * month, fifteen of twenty-one waiver rows read 100% in full teal while the two
+ * at 0% — a booked charter with not one signature — drew an empty grey track
+ * and slid past the eye. §9 spends ink on the rows that need a staffer, so the
+ * fill is now quiet at every ratio and the *remainder* is what can carry a
+ * tone. That needs no threshold to argue about: at 0% the whole bar is the
+ * warning, at 100% there is nothing left to warn about, and every value between
+ * shades itself.
+ *
+ * `remainder` is opt-in per column because the two gaps do not mean the same
+ * thing. Unsigned waivers are work somebody has to chase. Empty seats on a
+ * month being reviewed are a fact — a half-full boat is not a task, and toning
+ * one would put amber on most rows of a working shop's report and spend exactly
+ * the currency this change is trying to save.
  */
-function ShareBar({ ratio, label }: { ratio: number | null; label: string }) {
+function ShareBar({
+  ratio,
+  label,
+  value,
+  remainder = "quiet",
+}: {
+  ratio: number | null;
+  label: string;
+  /** Shown beside the bar. Omit where a neighbouring cell already states it. */
+  value?: string;
+  remainder?: "quiet" | "attention";
+}) {
   if (ratio === null) {
     return (
       <span className="text-muted" role="img" aria-label={label}>
@@ -67,13 +95,17 @@ function ShareBar({ ratio, label }: { ratio: number | null; label: string }) {
   return (
     <div className="flex items-center gap-2">
       <div
-        className="h-2 w-20 overflow-hidden rounded-full border border-border bg-surface-sunken"
+        className={`h-2 w-20 overflow-hidden rounded-full border border-border ${
+          remainder === "attention" && pct < 100 ? "bg-warning" : "bg-surface-sunken"
+        }`}
         role="img"
+        // Already the exact counts in words ("8 of 9 waivers signed"), which is
+        // why dropping a numeral below costs a screen reader nothing.
         aria-label={label}
       >
-        <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-muted" style={{ width: `${pct}%` }} />
       </div>
-      <span className="tabular-nums font-medium text-foreground">{formatPercent(ratio)}</span>
+      {value ? <span className="tabular-nums font-medium text-foreground">{value}</span> : null}
     </div>
   );
 }
@@ -450,6 +482,12 @@ export default async function ReportsPage({
                         <Td numeric muted hideBelow="sm">
                           {trip.activeBookings}/{trip.capacity}
                         </Td>
+                        {/* No numeral: "70%" is arithmetic on the `7/12` in the
+                            cell to its left, which the trip cell above repeats
+                            on a phone where that column is hidden. Three
+                            renderings of one number, twenty-one rows to a page
+                            (§9 — cross out what repeats). The bar survives as
+                            the scannable one and the fraction as the exact one. */}
                         <Td>
                           <ShareBar
                             ratio={tripFillRate(trip)}
@@ -459,9 +497,15 @@ export default async function ReportsPage({
                             })}
                           />
                         </Td>
+                        {/* This one keeps its numeral. Nothing else on the row
+                            states how many waivers are in, so dropping it would
+                            not be removing a duplicate — it would be removing
+                            the fact. */}
                         <Td>
                           <ShareBar
                             ratio={waiverRatio}
+                            value={formatPercent(waiverRatio)}
+                            remainder="attention"
                             label={t("reports.waiversRowLabel", {
                               complete: trip.waiverComplete,
                               total: trip.activeBookings,

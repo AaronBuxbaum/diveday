@@ -20,7 +20,8 @@
   "subtitle": {
     "allClear": "Cierra el día y a casa.",
     "outstanding": "Resuelve lo que puedas y decide sobre el resto.",
-    "noDepartures": "Mira con qué abre mañana, cierra el día y a casa."
+    "noDepartures": "Mira con qué abre mañana, cierra el día y a casa.",
+    "quietDay": "Hoy no salió nadie y mañana abre despejado."
   },
   "departures": {
     "heading": "Cómo terminaron los barcos de hoy",

@@ -12,7 +12,7 @@ import {
   type PromoScope,
 } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import { type ShopPromoCode, shopPromoCodes, shopPromoRedemptions } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
@@ -187,7 +187,7 @@ export async function getRedeemableShopPromo(
 export type ShopPromoWithUsage = ShopPromoCode & { timesRedeemed: number };
 
 /** How many codes the Promos page's "Your codes" list shows per page. */
-export const SHOP_PROMO_PAGE_SIZE = 20;
+export const SHOP_PROMO_PAGE_SIZE = PAGE_SIZE.list;
 
 export type ShopPromoPage = {
   promos: ShopPromoWithUsage[];

@@ -633,15 +633,30 @@ export default async function ScheduleBoardPage({
         // "Schedule" while the nav tab called it something else again.
         eyebrow={st("schedule.boardEyebrow")}
         title={st("schedule.boardTitle")}
+        // **The header stands down while the board is empty** (issue 797).
+        // With nothing upcoming, this cluster offered a new owner three doors
+        // and made the impossible one primary: "Add a booking" leads to a
+        // departure picker with no departures in it, so the page's most
+        // emphasised action was a dead end; "+ Add a departure" and the empty
+        // state's own "Schedule a trip" are the same act twelve pixels apart
+        // in the reading order; and "View public page" invited a look at a
+        // page with nothing on it. Two primaries rendered together, which
+        // §8 counts by what is on screen.
+        //
+        // So the one act that can succeed is left where it already was, in
+        // the empty state below. This is the fork the orders index makes for
+        // the same reason a few routes over — its header primary stands down
+        // while its list is empty rather than doubling the empty state's.
         actions={
-          <>
-            <Link
-              href={publicSchedulePath(shopSlug)}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {st("schedule.viewPublicPage")}
-            </Link>
-            {/* A link to `?add=1`, not a button: the open-the-panel state
+          hasUpcoming ? (
+            <>
+              <Link
+                href={publicSchedulePath(shopSlug)}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {st("schedule.viewPublicPage")}
+              </Link>
+              {/* A link to `?add=1`, not a button: the open-the-panel state
                 lives in ScheduleBuilder, and this is the server-rendered side
                 of that boundary. It joins the header's action cluster instead
                 of holding a whole band of its own between header and board —
@@ -649,24 +664,25 @@ export default async function ScheduleBoardPage({
                 `data-board-add` is how the panel's Cancel hands focus back
                 here. Secondary weight: the page's one primary stays "Add a
                 booking". */}
-            {canConfigure ? (
-              <Link
-                href={`/shop/${shopSlug}/schedule/board?add=1`}
-                data-board-add
-                scroll={false}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                <span aria-hidden="true">+</span> {st("schedule.builder.addDeparture")}
-              </Link>
-            ) : null}
-            {/* The board's primary action. Scheduling a departure is the rarer
+              {canConfigure ? (
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board?add=1`}
+                  data-board-add
+                  scroll={false}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  <span aria-hidden="true">+</span> {st("schedule.builder.addDeparture")}
+                </Link>
+              ) : null}
+              {/* The board's primary action. Scheduling a departure is the rarer
                 job — a shop puts a boat on the board once and then seats
                 divers on it all week — and until now "someone just called,
                 put them on Saturday" had no door of its own at all. */}
-            <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
-              {st("schedule.addBooking")}
-            </Link>
-          </>
+              <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
+                {st("schedule.addBooking")}
+              </Link>
+            </>
+          ) : undefined
         }
       />
 
@@ -689,8 +705,15 @@ export default async function ScheduleBoardPage({
         <EmptyState
           title={t("schedule.noUpcomingStaff")}
           body={t("schedule.noTripsStaff")}
+          // Gated on the same live check the header's add link uses. It was
+          // ungated while the header carried a gated twin, which was survivable
+          // — a captain who tapped it got the builder's view-only notice. Now
+          // that the header stands down here it is the page's only control, and
+          // a lone primary that leads to a refusal is a worse empty state than
+          // no button at all. A staffer who cannot schedule sees the sentence
+          // and nothing to press, which is the truth.
           action={
-            <>
+            canConfigure ? (
               <Link
                 href={`/shop/${shopSlug}/schedule/board?add=1`}
                 scroll={false}
@@ -698,7 +721,7 @@ export default async function ScheduleBoardPage({
               >
                 {st("schedule.scheduleTrip")}
               </Link>
-            </>
+            ) : undefined
           }
         />
       ) : null}

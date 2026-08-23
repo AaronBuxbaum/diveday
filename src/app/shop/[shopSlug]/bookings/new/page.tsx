@@ -17,6 +17,7 @@ import {
   listDateRequestsByIds,
   listDateRequestsForCalendarDates,
 } from "@/db/course-inquiries";
+import { PAGE_SIZE } from "@/db/paging";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -54,7 +55,7 @@ export const metadata: Metadata = {
  * in place now; the board link above stays, because the board is still where
  * you go to *change* the schedule rather than book against it.
  */
-const TRIP_PAGE_SIZE = 24;
+const TRIP_PAGE_SIZE = PAGE_SIZE.list;
 
 /**
  * The global "Add a booking" door, step one: which departure?

@@ -13,7 +13,7 @@ import type { CourseContent } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
 import { courses, shops } from "./schema";
 
@@ -195,7 +195,7 @@ export async function activeCourseAgencies(db: AppDb, shopId: string): Promise<s
 }
 
 /** How many courses the staff roster (`/courses`) shows per page. */
-export const COURSE_PAGE_SIZE = 20;
+export const COURSE_PAGE_SIZE = PAGE_SIZE.list;
 
 export type CoursePage = {
   courses: Course[];
