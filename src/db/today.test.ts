@@ -203,6 +203,51 @@ describe("today's work queue (in-memory PGlite)", () => {
    *
    * This is that departure: every diver aboard, the divemaster not yet counted.
    */
+  /**
+   * **The crew line reads the same twice.**
+   *
+   * The assignments query carried no `orderBy`, so the order was whatever the
+   * planner handed back. A visual baseline caught the consequence: the same
+   * departure rendered "Keiko Tanaka, Sal Moretti" on one CI run and "Sal
+   * Moretti, Keiko Tanaka" on the next, from identical seeded data. Nothing
+   * broke; a shop reading its own board twice in a morning simply had to
+   * wonder what had changed.
+   *
+   * **This test does not reproduce that, and cannot.** Which order an
+   * unordered read returns is the planner's choice, and locally it happens to
+   * come back alphabetical whichever order the rows went in — which is exactly
+   * why the bug survived. What it pins is the *contract*: crew comes back
+   * sorted by name. The two are assigned in reverse alphabetical order so the
+   * assertion still has teeth against an implementation that hands back
+   * insertion order, which is the shape the unordered read had on the run that
+   * flapped.
+   */
+  it("lists a departure's crew by name, the same way every time", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const staff = await listStaff(db, shop.id);
+    // Two people, assigned in reverse alphabetical order. Insertion order is
+    // what an unordered read hands back, so this is the shape that tells the
+    // two apart: without the `orderBy` the board reads them Z-then-A.
+    const pair = [...staff]
+      .sort((a, b) => b.person.fullName.localeCompare(a.person.fullName))
+      .slice(0, 2);
+    expect(pair).toHaveLength(2);
+    await db.delete(tripAssignments).where(eq(tripAssignments.tripId, reef.id));
+    for (const member of pair) {
+      await db.insert(tripAssignments).values({ tripId: reef.id, personId: member.person.id });
+    }
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const departure = work.departures.find((candidate) => candidate.tripId === reef.id);
+    if (!departure) throw new Error("the reef departure is not on the board");
+
+    const names = departure.crew.map((member) => member.fullName);
+    expect(names).toEqual([...pair.map((member) => member.person.fullName)].sort());
+  });
+
   it("does not call a departure accounted for while its crew is uncounted", async () => {
     const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
