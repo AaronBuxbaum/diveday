@@ -422,11 +422,12 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           name: identity.name,
           slug: identity.slug,
           timezone: DEMO_SHOP_TIMEZONE,
-          // Finished onboarding, like the canonical demo above and for the same
-          // reason: a minted playground is a *working* shop, and one asking
-          // which currency it works in reads as a broken fixture rather than a
-          // real question (issue #835).
-          unitsConfirmedAt: nowDate(),
+          // **Deliberately left unconfirmed**, unlike the canonical demo above.
+          // A minted shop genuinely has not answered the units question, and
+          // pre-answering it on the shop's behalf would make the one fixture
+          // that can honestly show that state unable to (issue #835). The
+          // visual capture of the queue's units row takes a minted shop for
+          // exactly this reason.
           contactEmail: identity.emailFor("hello"),
           contactPhone: "+1 305 555 0142",
           rentalItems: [
