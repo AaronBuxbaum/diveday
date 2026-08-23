@@ -712,7 +712,7 @@
     "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance — contact {email} to get it set up.",
     "calendarEmbed": {
       "heading": "Calendar embed",
-      "description": "A full booking calendar, sized to fit wherever you place it on your page. Best for a dedicated \"Book now\" page on your site.",
+      "description": "Your next four departures with a link through to the rest, sized so it never scrolls inside your page. Best for a dedicated \"Book now\" page on your site.",
       "attributionNote": "Includes a small \"Powered by DiveDay\" credit link under the calendar, on your own page — not inside the widget.",
       "fieldLabel": "Embed code",
       "attributionLinkText": "Powered by DiveDay"

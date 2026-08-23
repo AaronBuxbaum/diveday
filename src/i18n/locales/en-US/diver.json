@@ -66,6 +66,8 @@
     "eyebrow": "Trips",
     "title": "Schedule",
     "timesInZone": "All times below are local to {shop} ({zone}).",
+    "timesInZoneFooter": "Times are local to {shop} ({zone}).",
+    "embedSeeFullSchedule": "See the full schedule",
     "diverDescription": "Find your next day on the water, see what to expect, and reserve your spot.",
     "noTrips": "No trips on the books yet",
     "noUpcomingStaff": "Nothing upcoming on the board",

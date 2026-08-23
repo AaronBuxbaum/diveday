@@ -421,3 +421,36 @@ async function openIfClosed(details: Locator): Promise<void> {
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
   if (!isOpen) await details.locator("> summary").click();
 }
+
+/**
+ * Open one departure **inside the embed widget**, by the route a visitor takes.
+ *
+ * The widget shows the next four departures and a link to the full schedule
+ * (issue #805), so a spec that wants a specific trip — one it just created, or
+ * a seeded course a few days out — can no longer click it in the frame. It
+ * follows the widget's own way out, finds the trip on the real page, and comes
+ * back into the frame at that trip.
+ *
+ * That is the visitor's path rather than a shortcut around the change, and it
+ * exercises the link while it is there. The full schedule opens in a new tab by
+ * design — a page loaded *inside* a 900px frame is the nested scroll the widget
+ * exists to avoid — so this closes it and returns the caller to the embed.
+ */
+export async function openTripInEmbed(page: Page, title: string | RegExp): Promise<void> {
+  const [fullSchedule] = await Promise.all([
+    page.waitForEvent("popup"),
+    page.getByRole("link", { name: "See the full schedule" }).click(),
+  ]);
+  await fullSchedule
+    .locator("li, a")
+    .filter({ hasText: title })
+    .filter({ visible: true })
+    .first()
+    .click();
+  // The destination's own URL shape, not a duration: the click is a client
+  // navigation, and reading `url()` before it settles hands back the schedule.
+  await fullSchedule.waitForURL(/\/trips\//);
+  const tripPath = new URL(fullSchedule.url()).pathname;
+  await fullSchedule.close();
+  await page.goto(`${tripPath}?embed=1`, { waitUntil: "domcontentloaded" });
+}
