@@ -63,12 +63,10 @@
     "filterKind": "{label} ({count})",
     "columns": {
       "unit": "Unidad",
-      "kind": "Tipo",
       "size": "Talla",
       "service": "Mantenimiento",
       "where": "Dónde está"
     },
-    "inShop": "En el centro",
     "outWith": "Con {name} · vuelve el {dueOn}",
     "overdueWith": "Con {name} · debía volver el {dueOn}",
     "reservedFor": "Reservado para {name} · desde el {from}",

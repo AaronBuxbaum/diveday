@@ -7,7 +7,6 @@ import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -305,14 +304,16 @@ export default async function GearRegisterPage({
                 <Table minWidth="45rem">
                   {/* Th children go straight into THead — it renders the row
                       itself, and a nested <tr> falls out of the column grid.
-                      Kind and Size fold below `sm`: the phone-critical answer
-                      is the tag and where it is, and the tag already says the
-                      kind ("BCD #2"). */}
+                      Size folds below `sm`: the phone-critical answer is the
+                      tag and where it is.
+
+                      **There is no Kind column.** It said "BCD" beside
+                      "BCD #1" and "Regulator" beside "Reg #4" on every row,
+                      while the chip row directly above states each kind with
+                      its count — the same fact three times, and one of them
+                      spending a fifth of the table's width (issue #776). */}
                   <THead>
                     <Th scope="col">{t("gear.fleet.columns.unit")}</Th>
-                    <Th scope="col" hideBelow="sm">
-                      {t("gear.fleet.columns.kind")}
-                    </Th>
                     <Th scope="col" hideBelow="sm">
                       {t("gear.fleet.columns.size")}
                     </Th>
@@ -647,18 +648,30 @@ function FleetRow({
           </p>
         ) : null}
       </Td>
+      {/* No em dash for a unit with no size. A placeholder is the absence of
+          information formatted as information (principles.md §9), and eight of
+          the seeded thirty-four have none. */}
       <Td muted hideBelow="sm">
-        {gearItemKindLabel(t, item.kind)}
-      </Td>
-      <Td muted hideBelow="sm">
-        {item.size ?? "—"}
+        {item.size}
       </Td>
       <Td>
-        {/* "None is not a status": a healthy unit shows nothing here. */}
+        {/* **One grammar, and a healthy unit shows nothing.** This column used
+            to answer one question two ways: an amber pill for a status, plain
+            text for a service date. A pill around "Visual inspection due Sep
+            12, 2026" is a box around a sentence, and the page already has a
+            pill vocabulary in its summary tiles and its filter chips — so the
+            column states its fact in words, toned. The words carry the state,
+            so this is not colour alone (issue #776). */}
         {item.status !== "in_service" ? (
-          <Badge tone={item.status === "needs_service" ? "warning" : "neutral"} size="sm">
+          <span
+            className={
+              item.status === "needs_service"
+                ? "text-sm font-medium text-warning-strong"
+                : "text-sm text-muted"
+            }
+          >
             {gearStatusLabel(t, item.status)}
-          </Badge>
+          </span>
         ) : serviceText ? (
           <span
             className={
@@ -672,9 +685,10 @@ function FleetRow({
         ) : null}
       </Td>
       <Td>
-        {reservation === null || phase === null ? (
-          <span className="text-sm text-muted">{t("gear.fleet.inShop")}</span>
-        ) : phase === "overdue" ? (
+        {/* Blank for a unit on the wall. "In the shop" was the answer on
+            twenty-nine of thirty-four rows, which made the three that were
+            actually out the faintest thing in the column. */}
+        {reservation === null || phase === null ? null : phase === "overdue" ? (
           <span className="text-sm font-medium text-warning-strong">
             {t("gear.fleet.overdueWith", {
               name: reservation.personName,
