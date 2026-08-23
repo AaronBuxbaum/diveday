@@ -27,7 +27,12 @@ export interface FilterChip {
 const chipClass = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
     active
-      ? "border-primary bg-primary/10 text-primary"
+      ? // `-tint` rather than `bg-primary/10`: translucent, the selected pill
+        // contrasts against the page behind it, which on `/divers` and
+        // `/reviews` is `--background` rather than a card — 4.45:1, missing AA
+        // by 0.05 on the one control that says which view you are looking at
+        // (issue #793). The opaque token is 4.67:1 anywhere.
+        "border-primary bg-primary-tint text-primary"
       : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
   }`;
 

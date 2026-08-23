@@ -302,7 +302,7 @@ export function DiverRollCall({
           {sharedAdvisories.map(([text, names]) => (
             <div
               key={text}
-              className="flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong"
+              className="flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong"
             >
               <span aria-hidden="true">▲</span>
               <div>
@@ -483,13 +483,13 @@ export function DiverRollCall({
                         <span className="mt-2 inline-flex print:hidden">
                           <Badge tone="warning">{t("manifest.depthChip")}</Badge>
                         </span>
-                        <p className="mt-2 hidden gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong print:flex">
+                        <p className="mt-2 hidden gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong print:flex">
                           <span aria-hidden="true">▲</span>
                           <span>{depthWarningText(t, diver.depthAdvisory)}</span>
                         </p>
                       </>
                     ) : (
-                      <p className="mt-2 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-base text-warning-strong">
+                      <p className="mt-2 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
                         <span aria-hidden="true">▲</span>
                         <span>{depthWarningText(t, diver.depthAdvisory)}</span>
                       </p>

@@ -635,7 +635,7 @@ function TemplatePreview({
       ) : null}
 
       {briefing.fitNote ? (
-        <section className="mt-6 rounded-2xl bg-primary/10 p-5">
+        <section className="mt-6 rounded-2xl bg-primary-tint p-5">
           <h2 className="font-semibold text-primary">{t("diveSites.catalog.preview_fit")}</h2>
           <p className="mt-1 text-sm text-muted">{briefing.fitNote}</p>
         </section>

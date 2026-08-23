@@ -415,50 +415,64 @@ surface that renders per-field errors gets the focus move for free. `key` it on 
 ### Which tone token: `text-success` or `text-success-strong`
 
 Settled by measurement, so nobody has to re-derive it. Ratios computed from the token values in
-`src/app/globals.css`, sRGB compositing for the `/10` fills, WCAG 2.x relative luminance. AA for
-normal text is **4.5:1**, and contrast is size-independent — a 12px badge and a 16px paragraph face
-the same bar, because none of this is "large text" (18pt / 14pt bold).
+`src/app/globals.css`, sRGB compositing, WCAG 2.x relative luminance. AA for normal text is
+**4.5:1**, and contrast is size-independent — a 12px badge and a 16px paragraph face the same bar,
+because none of this is "large text" (18pt / 14pt bold).
 
-The `-strong` tokens are `color-mix(in srgb, black 6%, var(--success|--warning))`.
+The `-strong` tokens are `color-mix(in srgb, black 6%, var(--success|--warning))`. The `-tint`
+fills are `color-mix(in srgb, var(--<hue>) 10%, var(--surface))` — **opaque**, which is what makes
+"on its own tint" a single number rather than one per parent. See the note under the table.
 
 **Light palette** (`--surface` `#ffffff`, `--background` `#faf9f6`, `--surface-sunken` `#f1efe9`):
 
-| text | on `bg-surface` | on `bg-surface` + own `/10` fill | on `bg-surface-sunken` | on sunken + own `/10` fill |
+| text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
 | --- | --- | --- | --- | --- |
-| `text-success` | 5.02 | **4.39** | **4.36** | **3.84** |
-| `text-success-strong` | 5.54 | 4.84 | 4.82 | **4.24** |
-| `text-warning` | 5.02 | **4.38** | **4.37** | **3.84** |
-| `text-warning-strong` | 5.55 | 4.84 | 4.82 | **4.24** |
-| `text-danger` | 6.47 | 5.46 | 5.63 | 4.78 |
+| `text-success` | 5.02 | **4.38** | 4.76 | **4.36** |
+| `text-success-strong` | 5.56 | 4.86 | 5.28 | 4.84 |
+| `text-warning` | 5.02 | **4.39** | 4.77 | **4.37** |
+| `text-warning-strong` | 5.56 | 4.86 | 5.28 | 4.83 |
+| `text-danger` | 6.47 | 5.45 | 6.15 | 5.63 |
 
-**Dark palette** (`--surface` `#0d222d`, `--surface-sunken` `#051118`):
+**Dark palette** (`--surface` `#0d222d`, `--background` `#071720`, `--surface-sunken` `#051118`):
 
-| text | on `bg-surface` | on `bg-surface` + own `/10` fill | on `bg-surface-sunken` | on sunken + own `/10` fill |
+| text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
 | --- | --- | --- | --- | --- |
-| `text-success` | 9.39 | 7.60 | 10.96 | 9.20 |
-| `text-success-strong` | 8.27 | 6.70 | 9.65 | 8.11 |
-| `text-warning` | 9.80 | 8.04 | 11.44 | 9.66 |
-| `text-warning-strong` | 8.63 | 7.08 | 10.07 | 8.51 |
-| `text-danger` | 5.91 | 5.21 | 6.90 | 6.18 |
+| `text-success` | 9.39 | 7.59 | 10.46 | 10.96 |
+| `text-success-strong` | 8.30 | 6.71 | 9.24 | 9.69 |
+| `text-warning` | 9.80 | 8.01 | 10.92 | 11.44 |
+| `text-warning-strong` | 8.66 | 7.08 | 9.65 | 10.11 |
+| `text-danger` | 5.91 | 5.20 | 6.59 | 6.90 |
 
 Bold is under AA. Read off it:
 
+- **A coloured ink sits on `bg-<hue>-tint`, never on `bg-<hue>/10`.** The `/10` form is
+  translucent, so the real background is the hue mixed over *whatever is behind the element*, and
+  every number in these tables assumed that was `--surface`. It frequently is not: a pill rendered
+  straight onto `--background` measured 4.21:1 where the table says 4.86, and a `bg-primary/10`
+  badge nested inside a `bg-success/10` row on `/check-in` reached 4.09:1 — the worst in the app,
+  and invisible to anyone reading the palette (issue #793). The opaque token is the table's number
+  wherever the element is mounted, including inside a sunken panel, which is why the old "a tinted
+  status fill does not go inside a sunken panel" rule is gone. Reach for `Badge` and this is
+  already handled.
 - **Light is the binding scheme.** Every dark-palette combination clears AA by a wide margin.
   Mixing black into an already-light-on-dark hue *lowers* contrast, so `-strong` is a light-mode fix
   that costs a little in dark and never rescues anything there. It is still safe everywhere, which
   is why one token can serve both schemes.
-- **On a tinted fill of its own hue, success/warning text is `-strong`.** The raw hue lands at
+- **On a tint of its own hue, success/warning text is `-strong`.** The raw hue lands at
   4.38–4.39, just under. `danger` needs no `-strong` and has none.
-- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.36 → 4.82).
+- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.36 → 4.84).
   This is why `StatTile`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
 - **On plain `bg-surface`, the raw hue is fine** (5.02) — which is what `KindChip` relies on, and
   why it names `bg-surface` on the chip itself rather than inheriting whatever it landed in.
-- **A tinted status fill does not go inside a sunken panel.** That is the one combination `-strong`
-  does not save (4.24). If a tinted pill has to live in a sunken container, drop the tint and give
-  it a border instead, the way `KindChip` does.
+- **`opacity-*` dims the ratio too.** A row greyed out with `opacity-60` takes its own status chip
+  down with it — 2.81:1 on the import preview, on a table whose whole job is being read. Quiet ink
+  is `text-muted`, which is a token with a measured ratio; opacity is not.
 - **Boat mode is exempt from all of it.** `.boat-mode` retunes the feedback hues for a deck in
   sun; its worst tinted-fill combination measures 5.40:1 in light and 5.32:1 in dark, so the
   roll-call fills that use the raw token there are compliant and stay as they are.
+
+Since 2026-08-23 this is enforced rather than remembered: `e2e/a11y.spec.ts` runs axe's
+`color-contrast` rule with no exclusion list, over every surface it scans.
 
 `FormStatus` uses `-strong` unconditionally for those two tones. It is mounted in whatever container
 its form is in — a card footer, a disclosed settings row, a sunken inset panel — and it is the

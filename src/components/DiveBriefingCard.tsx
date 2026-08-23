@@ -116,7 +116,7 @@ export function DiveBriefingCard({
           <p className="mt-4 text-muted">{t("trip.siteRouteAtDock")}</p>
         )}
         {site && (difficulty || site.depthRange || site.currentNote || site.fitNote) ? (
-          <div className="mt-5 rounded-lg bg-primary/10 p-4">
+          <div className="mt-5 rounded-lg bg-primary-tint p-4">
             <p className="font-semibold text-primary">{fit ? t(fitLabelKey[fit.tone]) : null}</p>
             {/* The shop's own sentence about who this site suits, when it has
                 written one — DiveDay's canned line only stands in for a site

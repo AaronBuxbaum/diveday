@@ -368,14 +368,19 @@ export function ImportWizard({
             </THead>
             <TBody>
               {previewRows.map((row) => (
-                <tr key={row.rowNumber} className={row.action === "skip" ? "opacity-60" : ""}>
+                // Quiet ink rather than `opacity-60`: dimming the whole row
+                // dimmed its "skipped" chip with it, to 2.81:1 — a row you are
+                // being asked to *check* rendered below the floor for reading
+                // it (issue #793). `text-muted` is the same signal at a ratio
+                // the palette stands behind, and the chip keeps its own colour.
+                <tr key={row.rowNumber} className={row.action === "skip" ? "text-muted" : ""}>
                   <Td numeric muted>
                     {row.rowNumber}
                   </Td>
                   <Td>
                     {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
                     {row.action === "skip" ? (
-                      <span className="ml-2 rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">
+                      <span className="ml-2 rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
                         {copy.table.skippedBadge}
                       </span>
                     ) : null}

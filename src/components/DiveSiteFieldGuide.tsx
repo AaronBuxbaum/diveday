@@ -83,7 +83,7 @@ export function DiveSiteFieldGuide({
       ) : null}
 
       {tips.length ? (
-        <aside className="mt-7 flex gap-3 rounded-xl bg-primary/10 p-4">
+        <aside className="mt-7 flex gap-3 rounded-xl bg-primary-tint p-4">
           <span aria-hidden="true" className="text-xl">
             ◌
           </span>

@@ -32,7 +32,7 @@ export function BuddyTeamChip({
         alert === "separated_after_dive"
           ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
           : alert === "separated_dock"
-            ? "rounded-full bg-warning/10 px-3 py-1 text-sm font-semibold text-warning-strong"
+            ? "rounded-full bg-warning-tint px-3 py-1 text-sm font-semibold text-warning-strong"
             : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
       }
     >

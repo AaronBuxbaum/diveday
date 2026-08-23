@@ -204,7 +204,7 @@ export function BuddyTeamsPanel({
                                     ariaLabel={t("manifest.buddyRemoveMember", {
                                       name: member.fullName,
                                     })}
-                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger/10 hover:text-danger"
+                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
                                   >
                                     <span aria-hidden="true">×</span>
                                   </SubmitButton>

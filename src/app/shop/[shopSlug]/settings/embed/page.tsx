@@ -60,7 +60,7 @@ export default async function EmbedSettingsPage({
           eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
           title={t("settings.embed.title")}
         />
-        <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning-strong">
+        <p className="rounded-lg bg-warning-tint px-4 py-3 text-sm font-medium text-warning-strong">
           {t("settings.embed.notConfigured", { email: SUPPORT_EMAIL })}
         </p>
       </main>

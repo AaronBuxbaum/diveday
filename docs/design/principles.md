@@ -326,14 +326,28 @@ sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the actio
 
 **Where the palette actually stands.** AA is the bar, and the light palette does not clear it
 everywhere yet — so do not describe the app as WCAG AA conformant, in docs, in a page, or in a
-PR description. Two known light-mode gaps are open and deliberately deferred pending a color-guide
-decision: `--success`/`--warning` text on their own 10% tinted fills (4.38:1 and 4.39:1, against
-AA's 4.5:1) and input placeholders (3.07:1 on `--surface-sunken`). Both are tracked in
-[product/features/roadmap.md](../product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision),
-and until they land the axe scan in `e2e/a11y.spec.ts` keeps its `color-contrast` rule excluded —
-so CI will not catch a new contrast regression for you. Everything else measured clears AA, and
-`--focus-ring` clears WCAG 1.4.11's 3:1 in all four palettes (worst case 4.66:1). New surfaces are
-still held to the full bar; the exceptions are a documented backlog, not a lowered standard.
+PR description. One known light-mode gap is open and deliberately deferred pending a color-guide
+decision: input placeholders (3.07:1 on `--surface-sunken`), tracked in
+[product/features/roadmap.md](../product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision).
+Everything else measured clears AA, and `--focus-ring` clears WCAG 1.4.11's 3:1 in all four
+palettes (worst case 4.66:1).
+
+**CI does catch a contrast regression now**, on every surface `e2e/a11y.spec.ts` scans — the axe
+scan's `color-contrast` rule was turned back on 2026-08-23 with no exclusion list at all (issue
+#793). It had been off since 2026-08-01 on the belief that it fired app-wide on the frozen token
+values; measured, it did not. All 24 failing nodes were one mechanism, and none of them was a
+frozen value.
+
+**That mechanism, because it is the one to know:** a `bg-<hue>/10` fill is *translucent*, so text
+above it contrasts against the hue mixed over **whatever is behind the element** — and every ratio
+in this palette assumed that was `--surface`. A status pill rendered straight onto `--background`
+loses 0.65:1; one nested inside a tinted row loses 0.58 more, which is how a `bg-primary/10` badge
+on `/check-in`'s green boarded row reached 4.09:1. So a coloured ink never sits on a `/N` fill:
+it sits on the opaque `--<hue>-tint` token, which resolves against `--surface` once and is the
+number the palette computed wherever the element is mounted. Reach for `Badge` and it is already
+done for you. `text-success`/`text-warning` on `--surface-sunken` want the `-strong` twin for the
+same reason, and dimming a row with `opacity-*` dims its contrast ratio with it — quiet ink is
+`text-muted`, which is a measured token.
 
 ## The holistic pass (run it before any checklist)
 

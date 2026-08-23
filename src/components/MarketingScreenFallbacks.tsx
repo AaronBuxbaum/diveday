@@ -167,7 +167,9 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
             <div
               key={row.row}
               className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0 ${
-                row.skipped ? "opacity-60" : ""
+                // `text-muted`, not `opacity-60` — see `ImportWizard`, the
+                // real surface this is a still of.
+                row.skipped ? "text-muted" : ""
               }`}
             >
               <p className="flex items-center gap-2 text-sm">
@@ -178,7 +180,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
                   <span className="text-danger">{t("fallback.import.noName")}</span>
                 )}
                 {row.skipped ? (
-                  <span className="rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">
+                  <span className="rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
                     {t("fallback.import.skippedBadge")}
                   </span>
                 ) : null}
@@ -304,7 +306,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
                   <h4 className="font-semibold">{trip.title}</h4>
                   <p className="mt-1 text-sm text-muted">{trip.time}</p>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                <span className="rounded-full bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary">
                   {t("fallback.spotsLeft", { count: trip.spots })}
                 </span>
               </div>
@@ -336,7 +338,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
             <h3 className="text-xl font-semibold tracking-tight">{t("fallback.recap.greeting")}</h3>
             <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
           </div>
-          <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+          <span className="rounded-full bg-success-tint px-2.5 py-1 text-xs font-semibold text-success">
             {t("fallback.recap.completed")}
           </span>
         </div>
@@ -424,19 +426,19 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
               [
                 t("fallback.nightBefore.waiver"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
               [
                 t("fallback.nightBefore.cert"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
               [
                 t("fallback.nightBefore.payment"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
             ].map(([label, status, tone, glyph]) => (
@@ -493,25 +495,25 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
               [
                 t("fallback.shopPrep.gearStaged"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
               [
                 t("fallback.shopPrep.tanksReady"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
               [
                 t("fallback.shopPrep.crewAssigned"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
               [
                 t("fallback.shopPrep.manifestReady"),
                 t("fallback.recap.completed"),
-                "text-success bg-success/10",
+                "text-success bg-success-tint",
                 "✓",
               ],
             ].map(([label, status, tone, glyph]) => (

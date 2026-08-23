@@ -5,9 +5,9 @@ import type { OfflineManifestFreshness } from "@/lib/offline-manifests";
 // `danger` clears it plainly (5.46:1). The rule and the full table are in
 // docs/design/forms-and-controls.md.
 const freshnessToneClass: Record<OfflineManifestFreshness, string> = {
-  current: "border-success/30 bg-success/10 text-success-strong",
-  aging: "border-warning/40 bg-warning/10 text-warning-strong",
-  stale: "border-danger/30 bg-danger/10 text-danger",
+  current: "border-success/30 bg-success-tint text-success-strong",
+  aging: "border-warning/40 bg-warning-tint text-warning-strong",
+  stale: "border-danger/30 bg-danger-tint text-danger",
 };
 
 /**

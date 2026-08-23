@@ -352,8 +352,8 @@ export default async function EditDiveSitePage({
           role={notice === "template-update-unavailable" ? "alert" : "status"}
           className={`mt-6 rounded-lg px-3 py-2 text-sm font-medium ${
             notice === "template-update-unavailable"
-              ? "bg-danger/10 text-danger-strong"
-              : "bg-success/10 text-success-strong"
+              ? "bg-danger-tint text-danger-strong"
+              : "bg-success-tint text-success-strong"
           }`}
         >
           {t(noticeKey)}

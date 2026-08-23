@@ -126,19 +126,19 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
   },
   expired: {
     labelKey: "trips.roster.waiverLinkExpired",
-    tone: "border border-danger/40 text-danger hover:bg-danger/10",
+    tone: "border border-danger/40 text-danger hover:bg-danger-tint",
     action: "resend",
     confirm: false,
   },
   complete: {
     labelKey: "trips.roster.waiverSigned",
-    tone: "bg-success/10 text-success-strong",
+    tone: "bg-success-tint text-success-strong",
     action: null,
     confirm: false,
   },
   medical_review: {
     labelKey: "trips.roster.waiverMedicalReview",
-    tone: "bg-warning/10 text-warning-strong",
+    tone: "bg-warning-tint text-warning-strong",
     action: null,
     confirm: false,
   },
@@ -404,7 +404,9 @@ export function RosterSection({
             <p
               key={sentence}
               className={`flex gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
-                tone === "danger" ? "bg-danger/5 text-danger" : "bg-warning/10 text-warning-strong"
+                tone === "danger"
+                  ? "bg-danger/5 text-danger"
+                  : "bg-warning-tint text-warning-strong"
               }`}
             >
               <span aria-hidden="true">{tone === "danger" ? "!" : "▲"}</span>
@@ -805,7 +807,7 @@ export function RosterSection({
                     above already states for much of the boat shrinks to the
                     chip in this card's header instead. */}
                 {depthText !== null && !depthShared ? (
-                  <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
+                  <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
                     <span aria-hidden="true">▲</span>
                     <span>{depthText}</span>
                   </p>
@@ -826,7 +828,7 @@ export function RosterSection({
                     stops the other two being read; the full answer is the diver
                     record's to show. */}
                 {diveRecencyIsNotable(booking.lastDivedBand) ? (
-                  <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
+                  <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
                     <span aria-hidden="true">▲</span>
                     <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
                   </p>
@@ -907,7 +909,7 @@ export function RosterSection({
                     something up without naming the state the diver is in
                     (caught by waivers.spec.ts). */}
                 {waiverStatus === "medical_review" ? (
-                  <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-strong">
+                  <div className="mt-3 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
                     <p className="font-semibold">{waiverControl.label}</p>
                     <p className="mt-0.5 font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
                     {flaggedPrompts.length > 0 ? (

@@ -207,7 +207,10 @@ export function BookingGearFields({
                 }
               />
               {quote.setSavingsCents > 0 ? (
-                <span className="mt-1 block font-medium text-success">
+                <span // `-strong`: this line sits inside the sunken price box, where the
+                  // raw hue measures 4.36:1 (issue #793).
+                  className="mt-1 block font-medium text-success-strong"
+                >
                   {t("rental.fullSetSavings", {
                     price: formatMoneyCents(quote.setSavingsCents, currency, locale),
                   })}

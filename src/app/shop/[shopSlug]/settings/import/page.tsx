@@ -304,7 +304,7 @@ function scopeChip(
   return {
     included: {
       label: t("settings.import.scopeChip.included"),
-      className: "bg-success/10 text-success-strong",
+      className: "bg-success-tint text-success-strong",
     },
     "stays-behind": {
       label: t("settings.import.scopeChip.staysBehind"),

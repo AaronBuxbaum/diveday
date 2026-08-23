@@ -77,7 +77,7 @@ export const ROLL_CALL_ROW_TONE = {
  * not a state demanding attention the way an uncalled name at the rail does.
  */
 export const CHECK_IN_ROW_TONE = {
-  checkedIn: "border-success bg-success/10",
+  checkedIn: "border-success bg-success-tint",
   /** Transparent, not absent: the rule holds the text aligned across states. */
   awaiting: "border-transparent",
   blocked: ROLL_CALL_ROW_TONE.blocked,

@@ -71,8 +71,8 @@ export function ConnectivityStatus({
         // -strong text on the tinted fill.
         `${
           online
-            ? "border-success/30 bg-success/10 text-success-strong"
-            : "border-warning/40 bg-warning/10 text-warning-strong"
+            ? "border-success/30 bg-success-tint text-success-strong"
+            : "border-warning/40 bg-warning-tint text-warning-strong"
         } inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold ${className}`
       }
     >

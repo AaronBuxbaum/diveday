@@ -195,7 +195,7 @@ export function DemoBanner({
                           {role.icon} {role.title}
                         </span>
                         {isActive ? (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          <span className="rounded-full bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
                             {copy.active}
                           </span>
                         ) : null}

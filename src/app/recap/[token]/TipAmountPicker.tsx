@@ -39,7 +39,7 @@ export function TipAmountPicker({
       {presets.map((usd) => (
         <label
           key={usd}
-          className="flex min-h-11 cursor-pointer items-center rounded-lg border border-border px-4 text-sm font-medium has-checked:border-primary has-checked:bg-primary/10 has-checked:text-primary"
+          className="flex min-h-11 cursor-pointer items-center rounded-lg border border-border px-4 text-sm font-medium has-checked:border-primary has-checked:bg-primary-tint has-checked:text-primary"
         >
           <input
             type="radio"

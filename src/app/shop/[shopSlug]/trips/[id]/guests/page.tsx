@@ -295,7 +295,7 @@ async function TripGuestsBody({
       )}
 
       {demand ? (
-        <section className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-5">
+        <section className="mt-6 rounded-xl border border-warning/40 bg-warning-tint p-5">
           <p className="text-xs font-semibold tracking-widest text-warning uppercase">
             {t("trips.guests.demandSignal")}
           </p>

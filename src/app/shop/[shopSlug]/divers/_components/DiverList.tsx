@@ -483,7 +483,7 @@ export function DiverList({
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <span
-                      className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                      className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-tint font-semibold text-primary"
                       aria-hidden="true"
                     >
                       {initials(diver.person.fullName)}
@@ -545,7 +545,7 @@ export function DiverList({
                       className="min-w-0 gap-3"
                     >
                       <span
-                        className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
+                        className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-tint font-semibold text-primary"
                         aria-hidden="true"
                       >
                         {initials(diver.person.fullName)}

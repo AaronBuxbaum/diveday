@@ -60,7 +60,7 @@ export interface ShopNavLinksCopy {
 }
 
 function navClass(active: boolean) {
-  return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
+  return `${linkClass} ${active ? "bg-primary-tint text-primary" : "text-muted"}`;
 }
 
 /**
