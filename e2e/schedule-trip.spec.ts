@@ -198,6 +198,15 @@ test("staff moves a departure to a different boat after it is on the board", asy
 
   await boat.selectOption(other[0]);
   await page.getByRole("button", { name: "Save changes" }).click();
+  // Wait for the save to *land* before navigating away. `saveDetails` ends in
+  // `revalidateAndRedirect(back, noticeUrl(back, "saved"))`, so this banner is
+  // the destination's own proof the write happened — the same wait
+  // `booking.spec.ts` uses on this form. Without it the `goto` below races the
+  // in-flight server action and can preempt it, and because the seeded
+  // departure sails with no hull at all, the read-back then returns the empty
+  // value the select started at: the failure reads as "the boat was never
+  // stored" rather than as the navigation that cancelled the store.
+  await expect(page.getByRole("status")).toContainText("Changes saved");
 
   // Read back off a fresh render: the point is that it *stored*, not that the
   // select kept what was typed into it.
