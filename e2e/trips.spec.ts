@@ -363,3 +363,77 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     await expect(page.getByRole("link", { name: diver })).toHaveCount(0);
   });
 });
+
+/**
+ * **No control on a departure page may need a sideways gesture on a phone.**
+ *
+ * The four-tab strip under the shop header is how a crew member gets from the
+ * roster to the roll call, on a phone, on a boat — `docs/design/principles.md`
+ * §2's conditions exactly. It was three pixels too wide for a 390px viewport in
+ * English, which is enough to clip "Prep" by a hair and to make the whole bar
+ * drag sideways and spring back under a thumb that meant to scroll the page.
+ * In Spanish it was ninety-six pixels too wide, so a whole tab was simply out
+ * of sight for every Spanish-speaking shop (issue #811).
+ *
+ * **Nothing could have caught it.** The visual suite compares rendered pixels,
+ * and a three-pixel scrollable strip is pixel-identical to a three-pixel
+ * clipped one; you only find this by asking the DOM. So this asks the DOM, in
+ * both shipped locales, because the English measurement was the reassuring one
+ * and the Spanish measurement was the real bug.
+ */
+async function overflowingControls(page: import("@playwright/test").Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("nav")]
+      .filter((nav) => nav.className.includes("rounded-2xl") && nav.className.includes("gap-1"))
+      .map((nav) => ({
+        label: nav.getAttribute("aria-label"),
+        overflow: nav.scrollWidth - nav.clientWidth,
+        text: (nav.textContent ?? "").replace(/\s+/g, " ").trim(),
+      }))
+      .filter((row) => row.overflow > 0),
+  );
+}
+
+/** Every departure sub-page, measured at the narrowest viewport we design for. */
+async function assertNoSidewaysScroll(page: import("@playwright/test").Page, tripPath: string) {
+  await page.setViewportSize({ width: 390, height: 900 });
+  for (const suffix of ["", "/guests", "/manifest", "/prep"]) {
+    await page.goto(`${tripPath}${suffix}`);
+    // The segmented track itself, not the first `nav` on the page — that one
+    // is the shop header's, which is hidden at this width. Waiting for the
+    // thing under test is what makes this deterministic rather than timed.
+    await page.locator('nav[class*="rounded-2xl"]').first().waitFor();
+    expect(await overflowingControls(page), `${suffix || "/overview"}`).toEqual([]);
+  }
+}
+
+test.describe("a departure's tab strip on a phone", () => {
+  signedInAsOwner();
+
+  test("never needs a sideways drag, in English", async ({ page }) => {
+    await assertNoSidewaysScroll(page, await seededTripPath(page));
+  });
+});
+
+test.describe("a departure's tab strip on a phone, in Spanish", () => {
+  // The locale that actually overflowed. Negotiated through `Accept-Language`,
+  // which is how `requestLocale` resolves a reader with no cookie set.
+  test.use({ locale: "es-ES" });
+  signedInAsOwner();
+
+  test("never needs a sideways drag either", async ({ page }) => {
+    await assertNoSidewaysScroll(page, await seededTripPath(page));
+  });
+});
+
+/**
+ * A departure to measure, found without reading any staff copy — the Spanish
+ * run cannot look for an English region name, and the trip's own title is shop
+ * data rather than a translated string.
+ */
+async function seededTripPath(page: import("@playwright/test").Page): Promise<string> {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
+  await link.waitFor();
+  return ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, "");
+}
