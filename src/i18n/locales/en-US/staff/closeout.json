@@ -20,7 +20,8 @@
   "subtitle": {
     "allClear": "Close the day and go home.",
     "outstanding": "Settle what you can, decide about the rest.",
-    "noDepartures": "Have a look at what tomorrow opens with, close the day, and go home."
+    "noDepartures": "Have a look at what tomorrow opens with, close the day, and go home.",
+    "quietDay": "Nothing sailed, and tomorrow opens clear."
   },
   "departures": {
     "heading": "How today's boats ended",

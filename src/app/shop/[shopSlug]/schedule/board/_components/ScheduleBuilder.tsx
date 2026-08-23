@@ -1519,27 +1519,31 @@ export function ScheduleBuilder({
                           `z-10` lifts its own links and the "⋯" controls above
                           the title's stretched overlay. */}
                       <div className="relative z-10 flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                        {/* Counts are facts, not alerts (design/principles.md
-                            #9): a routine 5/12 reads as quiet tabular text, the
-                            same register the public schedule gives "7 spots
-                            left". Only the sold-out boat keeps a badge — a win
-                            worth noticing (#3), "success" where "neutral" would
-                            recede, matching the same badge on the trip page. */}
-                        {full ? (
-                          <Badge tone="success" tabularNums>
-                            {trip.booked}/{trip.capacity}
-                          </Badge>
-                        ) : (
-                          <p className="text-sm text-muted tabular-nums">
-                            {trip.booked}/{trip.capacity}
-                          </p>
-                        )}
+                        {/* One slot, one grammar (issue 758). This strip answers
+                            "how is this departure doing", and it used to answer
+                            it in three: muted tabular text on most rows, a green
+                            ✅ Badge on a full one, and an amber ⚠️ Badge sitting
+                            *beside* the count on an unpriced one — so on the
+                            seeded board a sold-out Saturday was the single
+                            loudest mark among seven departures a diver can see
+                            and cannot buy.
+
+                            Now: at most one pill, and it is always the same kind
+                            of thing — a link to work somebody has to do. The
+                            count is a fact on every row, and it comes last, so
+                            the digits line up down the column instead of sliding
+                            left behind a pill of whatever width. */}
                         {/* The loudest thing this board can say (DOM-H3): the
                             boat is back and somebody on its list was never
                             counted. "danger" carries an aria-hidden ✕ of its
                             own, so hue is never the only signal, and the whole
-                            badge is a link straight to the open checkpoint. */}
-                        {/* `min-h-11` on both badge links: the badge stays its
+                            badge is a link straight to the open checkpoint. It
+                            outranks the price flag rather than stacking with it
+                            — a departure that has already sailed cannot be
+                            booked, so its missing price is not this morning's
+                            problem and a second pill only dilutes the first.
+
+                            `min-h-11` on the badge links: the badge stays its
                             size, the hit area clears the 44px dock-test bar —
                             the roll-call one is the most safety-adjacent tap
                             on this board and must not be its smallest. */}
@@ -1556,8 +1560,7 @@ export function ScheduleBuilder({
                               {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
                             </Badge>
                           </Link>
-                        ) : null}
-                        {trip.priceCents === null && !allUnpriced ? (
+                        ) : trip.priceCents === null && !allUnpriced ? (
                           <Link
                             href={`/shop/${shopSlug}/trips/${trip.id}#details`}
                             aria-label={fill(copy.noPriceSetAria, { ref })}
@@ -1566,6 +1569,24 @@ export function ScheduleBuilder({
                             <Badge tone="warning">{copy.noPriceSet}</Badge>
                           </Link>
                         ) : null}
+                        {/* Counts are facts, not alerts (design/principles.md
+                            #9): a routine 5/12 reads as quiet tabular text, the
+                            same register the public schedule gives "7 spots
+                            left" — and so does 10/10, which is the *expected*
+                            good outcome of a departure rather than an exception
+                            needing a staffer. A full boat is still worth seeing,
+                            so it keeps full-strength ink and medium weight; what
+                            it gives up is the success pill, which was spending
+                            the same currency the board's real alerts use. §3
+                            settled the same question for the shop home's queue:
+                            good news is not a row kind. */}
+                        <p
+                          className={`text-sm tabular-nums ${
+                            full ? "font-medium text-foreground" : "text-muted"
+                          }`}
+                        >
+                          {trip.booked}/{trip.capacity}
+                        </p>
                         {/* Move/copy/remove are all refused by `src/db/trips.ts`
                             for a departure that has already sailed, and a
                             returned row is only here to have its head count

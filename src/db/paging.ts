@@ -16,6 +16,49 @@
  * roster or a moderation queue needs.
  */
 
+/**
+ * **How much is on a page**, as a named set rather than a number per list.
+ *
+ * ADR 20260803-one-pagination-model unified the pager *control* and the query
+ * shape, and it worked — every paged staff list wears the same component. What
+ * it never said was how deep a page should be, so nineteen constants accreted
+ * holding seven different values, and the two extremes sat one nav tab apart:
+ * `/divers` served **10** of 139 divers under "Page 1 of 14" while `/orders`
+ * served **50** of 155 under "Page 1 of 4". Same header, same pager, same table
+ * shell, and a roster that took fourteen clicks to walk beside a ledger that
+ * took four. No list looks wrong on its own; you only feel it moving between
+ * them, which is why nothing caught it (issue 763).
+ *
+ * The tiers are named for **what the list is to its page**, not for how it is
+ * drawn, because that is the thing that actually decides the number:
+ *
+ * - `list` — the list *is* the page. A roster, a ledger, a catalogue, a
+ *   moderation queue. Already the modal value: eight of the nineteen picked 20
+ *   independently, which is the closest thing to evidence available here.
+ * - `section` — one paged section of a page that is about something else, where
+ *   the surrounding content still has to be reachable by scrolling past it.
+ * - `preview` — a strip whose full list lives elsewhere, sized to be seen
+ *   rather than read.
+ *
+ * **There is deliberately no card-grid tier.** The obvious fourth — "24, so it
+ * divides across two, three and four columns" — has no members: all three lists
+ * that had picked 24 (the dive-site library, the published site catalogue, the
+ * add-booking departure picker) render single-column tables or stacked rows.
+ * The library was explicitly converted from a card grid to a table in issue
+ * #608 and kept the grid's number. A tier with nothing in it is a guess about a
+ * surface nobody has built; add it with its first real member.
+ *
+ * A list may still keep a local number, but only with the reason written at the
+ * constant. Two do, and both are units other than "a record": the schedule
+ * board pages a keyset *stream over days*, and the by-departure view's unit is a
+ * departure with its whole roster underneath it.
+ */
+export const PAGE_SIZE = {
+  list: 20,
+  section: 10,
+  preview: 4,
+} as const;
+
 export type OffsetPage<T> = {
   rows: T[];
   /** The page actually served — clamped into `[1, pageCount]`. */

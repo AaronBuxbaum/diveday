@@ -4,7 +4,7 @@ import { majorToMinor } from "@/lib/money";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import { canPersonManageOrders } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
@@ -375,7 +375,7 @@ function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
  * (Reports revenue rows, the roster's payment cells, and the command palette
  * all link here) never had before.
  */
-export const ORDER_PAGE_SIZE = 50;
+export const ORDER_PAGE_SIZE = PAGE_SIZE.list;
 
 /**
  * One page of the order index, newest first, plus the unfiltered-by-page total.

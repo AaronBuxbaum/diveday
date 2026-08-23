@@ -62,12 +62,11 @@ test.describe("schedule builder", () => {
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
     await expect(row.getByText("0/8")).toBeVisible();
-    // No price was typed, so the board still says so. Every departure on the
-    // demo board is unpriced, so the flag is the one group-level notice (the
-    // per-row pill collapses when the whole window shares the fact —
-    // design/principles.md #9); the unit suite covers the per-row pill for a
-    // mixed board. Either way, adding the price box did not quietly retire
-    // the flag.
+    // No price was typed, so the board still says so, as the row's own amber
+    // pill: the seeded board is a mixed one — seven of its fourteen departures
+    // carry a price — so `allUnpriced` is false and the flag stays per-row
+    // rather than collapsing into the group-level notice (design/principles.md
+    // #9). Adding the price box did not quietly retire the flag.
     await expect(row.getByText("No price set")).toBeVisible();
 
     // Move — the departure slides to another day, keeping its length.

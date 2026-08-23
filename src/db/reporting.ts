@@ -20,7 +20,7 @@ import { canViewShopReports, type Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { DbExecutor } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -391,7 +391,7 @@ export async function earliestImportedFinancialHistoryDate(
 }
 
 /** How many trips the "Trips this month" table shows per page. */
-export const REPORT_TRIPS_PAGE_SIZE = 20;
+export const REPORT_TRIPS_PAGE_SIZE = PAGE_SIZE.list;
 
 export type MonthlyReportTripPage = {
   trips: ReportTrip[];

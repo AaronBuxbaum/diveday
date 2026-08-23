@@ -91,6 +91,12 @@ export const OPERATIONAL_MAX_TRIPS = 60;
  * Departure groups per page on the Not ready queue. Blocker lists never
  * silently truncate (persona "Chloe"), so the horizon's tail is paged, never
  * dropped: 26 departures once rendered as one unbroken ~10,700px scroll.
+ *
+ * **Deliberately not a `PAGE_SIZE` tier** (`src/db/paging.ts`, issue 763). The
+ * unit here is a departure *group* carrying its whole blocked roster beneath
+ * it, not a row — ten of those is already the ~10,700px problem above at a
+ * quarter scale, and twenty would put it straight back. A tier set is only
+ * honest between lists whose unit is the same size.
  */
 export const BLOCKERS_TRIPS_PER_PAGE = 10;
 

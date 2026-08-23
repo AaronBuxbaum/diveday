@@ -19,7 +19,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   people,
@@ -309,7 +309,7 @@ export type OutstandingLastMinutePromo = TripLastMinutePromo & {
 };
 
 /** How many deals the Promos page's "Trip deals" list shows per page. */
-export const TRIP_DEAL_PAGE_SIZE = 20;
+export const TRIP_DEAL_PAGE_SIZE = PAGE_SIZE.list;
 
 export type OutstandingLastMinutePromoPage = {
   deals: OutstandingLastMinutePromo[];

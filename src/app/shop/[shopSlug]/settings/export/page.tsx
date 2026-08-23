@@ -3,6 +3,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
+import { PAGE_SIZE } from "@/db/paging";
 import { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -22,7 +23,7 @@ export const instant = true;
 /** Static metadata resolves before locale negotiation, so it stays English (ADR 20260729-diver-copy-localization). */
 export const metadata: Metadata = { title: "Data export — DiveDay" };
 
-const PAGE_SIZE = 10;
+const DELIVERY_PAGE_SIZE = PAGE_SIZE.section;
 
 // Every key here is also a `backup.notice.<code>` key in the staff bundle —
 // the banner below looks the words up by the code itself — so the two are
@@ -112,7 +113,7 @@ export default async function DataOutSettingsPage({
     getShopBackupDestination(db, session.user.shopId),
     listBackupDeliveries(db, session.user.shopId, {
       page: Number(page) || 1,
-      pageSize: PAGE_SIZE,
+      pageSize: DELIVERY_PAGE_SIZE,
     }),
   ]);
 

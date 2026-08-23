@@ -197,7 +197,7 @@
   },
   "/shop/[shopSlug]/close-out": {
     "e2e": ["a11y.spec.ts", "closeout.spec.ts"],
-    "visual": ["close-out"]
+    "visual": ["close-out", "close-out-quiet"]
   },
   "/shop/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
@@ -324,7 +324,12 @@
       "trips.spec.ts",
       "waivers.spec.ts"
     ],
-    "visual": ["schedule-builder", "schedule-builder-add", "schedule-builder-add-full"]
+    "visual": [
+      "schedule-builder",
+      "schedule-builder-add",
+      "schedule-builder-add-full",
+      "schedule-builder-empty"
+    ]
   },
   "/shop/[shopSlug]/settings": {
     "e2e": [

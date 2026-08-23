@@ -113,3 +113,42 @@ The offset scan is O(offset) on a large table. For the roster (name-ordered, pag
 the moderation queue this is not close to mattering; if a shop's orders index ever gets deep enough
 that it does, the fix is a tie-broken keyset *behind* the same `OffsetPage` shape, not a fifth
 grammar on screen.
+
+## Amendment, 2026-08-23 — how deep a page is (issue 763)
+
+This decision unified the pager *control* and the query shape and said nothing about **how much is
+on a page**, which is the half a user actually feels. Nineteen constants accreted holding seven
+values, and the two extremes sat one nav tab apart: `/divers` served **10** of 139 divers under
+"Page 1 of 14" while `/orders` served **50** of 155 under "Page 1 of 4" — same header, same pager,
+same table shell, and a roster that took fourteen clicks to walk beside a ledger that took four. No
+list looks wrong alone; the defect only exists in the movement between them, which is why the
+original conversion never surfaced it.
+
+`PAGE_SIZE` in `src/db/paging.ts` now names three tiers, and a list picks one instead of a number.
+They are named for **what the list is to its page**, not how it is drawn, because that is what
+actually decides the count:
+
+| Tier | Value | The list is… |
+| --- | --- | --- |
+| `list` | 20 | the page's subject — a roster, a ledger, a catalogue, a moderation queue |
+| `section` | 10 | one paged section of a page about something else, with content still to scroll past |
+| `preview` | 4 | a strip whose full list lives elsewhere, sized to be seen rather than read |
+
+20 was already the modal value — eight of the nineteen picked it independently, which is the closest
+thing to evidence available.
+
+**There is deliberately no card-grid tier.** The obvious fourth — 24, dividing across two, three and
+four columns — has no members: all three lists that had picked 24 (the dive-site library, the
+published site catalogue, the add-booking departure picker) render single-column tables or stacked
+rows. The library was converted from a card grid to a table in issue #608 and kept the grid's number
+behind. A tier with nothing in it is a guess about a surface nobody has built; it gets added with its
+first real member.
+
+**Two lists keep a local number**, both because their unit is not "a record", and both say so at the
+constant. `SCHEDULE_PAGE_SIZE = 14` counts *days* in the keyset stream this ADR already carves out.
+`BLOCKERS_TRIPS_PER_PAGE = 10` counts departure *groups*, each carrying a whole blocked roster
+beneath it. A tier set is only honest between lists whose unit is the same size, and that is the bar
+for keeping a local number: write down which unit, at the constant.
+
+Baselines move on the two surfaces whose depth changed most — the orders ledger gets shorter and the
+divers roster longer.

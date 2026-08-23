@@ -22,7 +22,7 @@ import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
 import {
   bookings,
@@ -240,7 +240,7 @@ export async function isDiverRemoved(db: AppDb, shopId: string, personId: string
   return Boolean(row?.deletedAt);
 }
 
-export const DIVER_PAGE_SIZE = 10;
+export const DIVER_PAGE_SIZE = PAGE_SIZE.list;
 
 /**
  * The diver roster stays server-fed: search is indexed `ilike` over the

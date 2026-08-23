@@ -152,6 +152,12 @@ export async function listTripIdsInOfflineManifestWindow(
  * pages read in a couple of screens and the "Show later departures" pager
  * does its job, instead of a 20-row window tall enough that the pager was
  * nearly decorative (the pages screenshotted at ~5,000px).
+ *
+ * **Deliberately not a `PAGE_SIZE` tier** (`./paging.ts`, issue 763). Those
+ * count *records* in an offset list that can say "page 4 of 7"; this counts
+ * **days** in a keyset stream with no end to number, which is the one earned
+ * exception ADR 20260803-one-pagination-model already carves out. Fourteen is
+ * two weeks, not twenty of anything.
  */
 export const SCHEDULE_PAGE_SIZE = 14;
 

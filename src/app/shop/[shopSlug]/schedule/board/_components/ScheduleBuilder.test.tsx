@@ -525,8 +525,8 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
   });
 });
 
-describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
-  it("renders the success tone once the boat is full, matching the trip page", () => {
+describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
+  it("states a full boat in the same tabular text as every other count, not a success pill", () => {
     const days: BuilderDay[] = [
       {
         dateIso: "2026-08-01",
@@ -551,9 +551,96 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
       />,
     );
 
-    const capacityBadge = screen.getByText("6/6");
-    expect(capacityBadge.className).toContain("bg-success-tint");
-    expect(capacityBadge.className).not.toContain("bg-surface-sunken");
+    // A sold-out boat is the *expected* good outcome of a departure, not an
+    // exception needing a staffer — so it keeps full-strength ink and weight
+    // and gives up the pill, which was spending the currency the board's real
+    // alerts use (design/principles.md #9, and #3's settled "good news is not
+    // a row kind"). It used to be the single loudest mark on a board carrying
+    // seven amber warnings.
+    const count = screen.getByText("6/6");
+    expect(count.className).not.toContain("bg-success-tint");
+    expect(count.className).toContain("font-medium");
+    expect(count.className).toContain("text-foreground");
+    expect(count.className).toContain("tabular-nums");
+  });
+
+  it("keeps the count on a flagged row, and renders one pill rather than two", () => {
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips: [
+          baseTrip({ id: "trip-unpriced", capacity: 12, booked: 5, priceCents: null }),
+          // A second priced row keeps `allUnpriced` false, so the per-row pill
+          // is the thing under test rather than the group-level notice.
+          baseTrip({ id: "trip-priced", capacity: 8, booked: 2 }),
+        ],
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+
+    // The flag names work to do; the count is still the row's own fact, so a
+    // flagged row is not the one row on the board that cannot say how full it
+    // is. One pill, one count — the same two-part shape every row wears.
+    expect(screen.getByRole("link", { name: /set a price for/i })).toBeInTheDocument();
+    expect(screen.getByText("5/12").className).toContain("text-muted");
+  });
+
+  it("lets an open roll call outrank the price flag instead of stacking two pills", () => {
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips: [
+          baseTrip({
+            id: "trip-back",
+            capacity: 10,
+            booked: 9,
+            priceCents: null,
+            rollCallOpen: { diveNumber: 2, uncounted: 3 },
+          }),
+          baseTrip({ id: "trip-priced", capacity: 8, booked: 2 }),
+        ],
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+
+    // The boat is back with somebody uncounted. A departure that has already
+    // sailed cannot be booked, so its missing price is not this morning's
+    // problem — a second pill beside the loudest thing the board can say only
+    // dilutes it.
+    expect(screen.getByRole("link", { name: /finish the dive 2 roll call/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /set a price for/i })).toBeNull();
   });
 
   it("renders the count as quiet muted text — not a badge — while seats remain", () => {
@@ -582,7 +669,7 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
     );
 
     // Counts are facts, not alerts (design/principles.md #9): a routine 3/6
-    // reads in the muted register, and only the sold-out boat earns a badge.
+    // reads in the muted register, and no count on this board wears a pill.
     const count = screen.getByText("3/6");
     expect(count.className).toContain("text-muted");
     expect(count.className).not.toContain("bg-primary-tint");

@@ -8,11 +8,11 @@
 import { and, count, desc, eq, gte, ilike, lte } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { DbExecutor } from "./client";
-import { offsetPage } from "./paging";
+import { offsetPage, PAGE_SIZE } from "./paging";
 import { importedPaymentHistory, people } from "./schema";
 
 /** A second bounded list inside Orders; source history can span decades. */
-export const IMPORTED_PAYMENT_HISTORY_PAGE_SIZE = 25;
+export const IMPORTED_PAYMENT_HISTORY_PAGE_SIZE = PAGE_SIZE.list;
 
 export type ImportedPaymentHistoryFilter = {
   personId?: string;

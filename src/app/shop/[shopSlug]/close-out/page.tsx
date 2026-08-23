@@ -362,6 +362,32 @@ export default async function CloseOutPage({
       latest.outstanding.adminTasks.length > 0
     : false;
 
+  /**
+   * Every section on this page is empty at once — a brand-new shop, or any
+   * real shop on a blown-out Tuesday.
+   *
+   * Each section's own empty state is individually correct, and each was
+   * reviewed one at a time (design/principles.md §4's terminal-vs-section rule
+   * picks the right component). What nobody had looked at is all of them
+   * firing together: a page whose heading says "A quiet day at the dock" and
+   * then spends 900px of dashed boxes and repeated bubble glyphs disagreeing
+   * with it, two of them under captions explaining a mechanism that has no
+   * content to apply to. §11: a stack of bordered cards is the fallback
+   * composition, never the target. §10's remove-until-it-breaks: take the
+   * boxes away and the page still works.
+   *
+   * So the page collapses to its own one-line state. `no_departures` already
+   * means the day had no departures, left nothing over, and carries no open
+   * admin task — the shape the domain layer computes for exactly this
+   * (`src/lib/closeout.ts`). Two more conditions join it here rather than
+   * there: a complete admin task is real content in a section of its own, and
+   * so is anything waiting tomorrow. Closing is still a recorded act, so the
+   * button stays; the record of an earlier close stays too, since that is
+   * content rather than a placeholder.
+   */
+  const quietDay =
+    state.shape === "no_departures" && state.adminTasks.length === 0 && state.tomorrow.total === 0;
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["closed", "noted", "notice"]} />
@@ -371,7 +397,14 @@ export default async function CloseOutPage({
         // one edit apart from disagreeing (issue #824).
         eyebrow={`${t(STAFF_DESTINATION_LABEL_KEYS.closeOut)} · ${formatShortDate(now, locale, shop.timezone)}`}
         title={t(CLOSEOUT_HEADLINE_KEYS[state.shape])}
-        description={t(CLOSEOUT_SUBTITLE_KEYS[state.shape])}
+        // The `no_departures` sentence sends the reader to look at what
+        // tomorrow opens with, which is the right instruction while the
+        // Tomorrow card is on the page and a dead end once it collapses. On a
+        // quiet day the sentence carries the two facts the removed boxes were
+        // carrying instead — nothing sailed, nothing is waiting.
+        description={t(
+          quietDay ? "closeout.subtitle.quietDay" : CLOSEOUT_SUBTITLE_KEYS[state.shape],
+        )}
       />
 
       {closed ? (
@@ -540,75 +573,76 @@ export default async function CloseOutPage({
         </section>
       ) : null}
 
-      <section aria-labelledby="closeout-departures-heading" className="mb-10">
-        <h2 id="closeout-departures-heading" className="text-lg font-semibold">
-          {t("closeout.departures.heading")}
-        </h2>
-        <p className="mt-1 text-sm text-muted">{t("closeout.departures.subtitle")}</p>
-        {state.departures.length === 0 ? (
-          <EmptyState title={t("closeout.departures.empty")} className="mt-4" />
-        ) : (
-          <ul className="mt-4 flex flex-col gap-3">
-            {state.departures.map((departure) => {
-              const tone = CLOSEOUT_STATUS_TONES[departure.status];
-              const checkpoint =
-                departure.diveNumber >= 1 ? `after_dive_${departure.diveNumber}` : "departure";
-              const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
-              const recapStatusSummary = departure.recapSentAt
-                ? t("closeout.recap.summarySent", {
-                    duration: recapDurationText(now.getTime() - departure.recapSentAt.getTime()),
-                  })
-                : departure.recapFailed
-                  ? t("closeout.recap.summaryFailed")
-                  : departure.recapAutoSendPaused
-                    ? t("closeout.recap.summaryPaused")
-                    : autoSendAt && autoSendAt.getTime() <= now.getTime()
-                      ? t("closeout.recap.summaryDue")
-                      : autoSendAt
-                        ? t("closeout.recap.summaryWaiting", {
-                            duration: recapDurationText(autoSendAt.getTime() - now.getTime()),
-                          })
-                        : t("closeout.recap.summaryNoScheduled");
-              return (
-                // The departure row carries a live close-out status tone (the
-                // danger border is meaningful), so it stays hand-typed rather
-                // than losing that operational signal in neutral SectionCard
-                // chrome.
-                <li
-                  key={departure.tripId}
-                  className={`rounded-2xl border bg-surface p-4 shadow-sm sm:p-5 ${
-                    tone === "danger" ? "border-danger/40" : "border-border"
-                  }`}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <Badge tone={STATUS_BADGE_TONES[tone]}>
-                          {t(CLOSEOUT_STATUS_KEYS[departure.status])}
-                        </Badge>
-                        <p className="font-semibold">{departure.title}</p>
-                        <p className="text-sm text-muted">
-                          {formatTime(departure.startsAt, locale, shop.timezone)}
+      {quietDay ? null : (
+        <section aria-labelledby="closeout-departures-heading" className="mb-10">
+          <h2 id="closeout-departures-heading" className="text-lg font-semibold">
+            {t("closeout.departures.heading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{t("closeout.departures.subtitle")}</p>
+          {state.departures.length === 0 ? (
+            <EmptyState title={t("closeout.departures.empty")} className="mt-4" />
+          ) : (
+            <ul className="mt-4 flex flex-col gap-3">
+              {state.departures.map((departure) => {
+                const tone = CLOSEOUT_STATUS_TONES[departure.status];
+                const checkpoint =
+                  departure.diveNumber >= 1 ? `after_dive_${departure.diveNumber}` : "departure";
+                const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
+                const recapStatusSummary = departure.recapSentAt
+                  ? t("closeout.recap.summarySent", {
+                      duration: recapDurationText(now.getTime() - departure.recapSentAt.getTime()),
+                    })
+                  : departure.recapFailed
+                    ? t("closeout.recap.summaryFailed")
+                    : departure.recapAutoSendPaused
+                      ? t("closeout.recap.summaryPaused")
+                      : autoSendAt && autoSendAt.getTime() <= now.getTime()
+                        ? t("closeout.recap.summaryDue")
+                        : autoSendAt
+                          ? t("closeout.recap.summaryWaiting", {
+                              duration: recapDurationText(autoSendAt.getTime() - now.getTime()),
+                            })
+                          : t("closeout.recap.summaryNoScheduled");
+                return (
+                  // The departure row carries a live close-out status tone (the
+                  // danger border is meaningful), so it stays hand-typed rather
+                  // than losing that operational signal in neutral SectionCard
+                  // chrome.
+                  <li
+                    key={departure.tripId}
+                    className={`rounded-2xl border bg-surface p-4 shadow-sm sm:p-5 ${
+                      tone === "danger" ? "border-danger/40" : "border-border"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <Badge tone={STATUS_BADGE_TONES[tone]}>
+                            {t(CLOSEOUT_STATUS_KEYS[departure.status])}
+                          </Badge>
+                          <p className="font-semibold">{departure.title}</p>
+                          <p className="text-sm text-muted">
+                            {formatTime(departure.startsAt, locale, shop.timezone)}
+                          </p>
+                        </div>
+                        <p className="mt-1.5 text-muted">
+                          {closeoutDepartureDetailText(t, departure, detailTime(departure))}
                         </p>
                       </div>
-                      <p className="mt-1.5 text-muted">
-                        {closeoutDepartureDetailText(t, departure, detailTime(departure))}
-                      </p>
-                    </div>
-                    {/* A boat still out is exactly the row you'd chase — it
+                      {/* A boat still out is exactly the row you'd chase — it
                         gets the manifest door too, not only the rows with a
                         recorded gap (principle 10: no dead ends on the row
                         that matters most). */}
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      {departure.gapReason || departure.status === "still_out" ? (
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=${checkpoint}`}
-                          className={buttonClass({ variant: "secondary" })}
-                        >
-                          {openRollCallActionText(t)}
-                        </Link>
-                      ) : null}
-                      {/* Writing the day up belongs to the evening, so the
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        {departure.gapReason || departure.status === "still_out" ? (
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=${checkpoint}`}
+                            className={buttonClass({ variant: "secondary" })}
+                          >
+                            {openRollCallActionText(t)}
+                          </Link>
+                        ) : null}
+                        {/* Writing the day up belongs to the evening, so the
                           departure log is generated from here rather than from
                           the manifest a crew works at the rail. On every row,
                           not only the boats that are back: the moment a shop
@@ -616,58 +650,61 @@ export default async function CloseOutPage({
                           departure is still happening, and the document has
                           always reported what is on record *so far* rather
                           than claiming a day is finished. */}
-                      {canGenerateLog ? (
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${departure.tripId}/log`}
-                          className={buttonClass({ variant: "secondary" })}
-                        >
-                          {t("incidentExport.openLink")}
-                        </Link>
-                      ) : null}
+                        {canGenerateLog ? (
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${departure.tripId}/log`}
+                            className={buttonClass({ variant: "secondary" })}
+                          >
+                            {t("incidentExport.openLink")}
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  {/* The one thing this evening can still add to a departure
+                    {/* The one thing this evening can still add to a departure
                       that is behind the shop. Only on an ended boat: a trip
                       still out has no day to write about yet, and one that
                       never left has no recap coming. */}
-                  {departure.ended ? (
-                    <RecapNoteEditor
-                      action={saveRecapNoteAction.bind(null, departure.tripId)}
-                      shoutout={departure.recapShoutout}
-                      saved={noted === departure.tripId}
-                      t={t}
-                      photos={departure.photos}
-                      deletePhotoAction={deleteRecapPhotoAction.bind(null, departure.tripId)}
-                      crewPhotos={departure.crewPhotos}
-                      crewPhotoInputId={`crew-recap-photo-${departure.tripId}`}
-                      uploadCrewPhotoAction={uploadCrewRecapPhotoAction.bind(
-                        null,
-                        departure.tripId,
-                      )}
-                      deleteCrewPhotoAction={deleteCrewRecapPhotoAction.bind(
-                        null,
-                        departure.tripId,
-                      )}
-                      tripId={departure.tripId}
-                      recapSendAction={sendRecapAction.bind(null, departure.tripId)}
-                      toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
-                      recapAutoSendAt={autoSendAt}
-                      recapAutoSendAtLabel={
-                        autoSendAt ? formatDateTimeTz(autoSendAt, locale, shop.timezone) : undefined
-                      }
-                      recapAutoSendPaused={departure.recapAutoSendPaused}
-                      recapFailed={departure.recapFailed}
-                      recapNowMs={now.getTime()}
-                      recapSentAt={departure.recapSentAt}
-                      recapStatusSummary={recapStatusSummary}
-                    />
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                    {departure.ended ? (
+                      <RecapNoteEditor
+                        action={saveRecapNoteAction.bind(null, departure.tripId)}
+                        shoutout={departure.recapShoutout}
+                        saved={noted === departure.tripId}
+                        t={t}
+                        photos={departure.photos}
+                        deletePhotoAction={deleteRecapPhotoAction.bind(null, departure.tripId)}
+                        crewPhotos={departure.crewPhotos}
+                        crewPhotoInputId={`crew-recap-photo-${departure.tripId}`}
+                        uploadCrewPhotoAction={uploadCrewRecapPhotoAction.bind(
+                          null,
+                          departure.tripId,
+                        )}
+                        deleteCrewPhotoAction={deleteCrewRecapPhotoAction.bind(
+                          null,
+                          departure.tripId,
+                        )}
+                        tripId={departure.tripId}
+                        recapSendAction={sendRecapAction.bind(null, departure.tripId)}
+                        toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
+                        recapAutoSendAt={autoSendAt}
+                        recapAutoSendAtLabel={
+                          autoSendAt
+                            ? formatDateTimeTz(autoSendAt, locale, shop.timezone)
+                            : undefined
+                        }
+                        recapAutoSendPaused={departure.recapAutoSendPaused}
+                        recapFailed={departure.recapFailed}
+                        recapNowMs={now.getTime()}
+                        recapSentAt={departure.recapSentAt}
+                        recapStatusSummary={recapStatusSummary}
+                      />
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       {state.adminTasks.length > 0 ? (
         <section aria-labelledby="closeout-admin-heading" className="mb-10">
@@ -737,88 +774,104 @@ export default async function CloseOutPage({
       ) : null}
 
       <form action={closeDayAction}>
-        <section aria-labelledby="closeout-leftovers-heading" className="mb-10">
-          <h2 id="closeout-leftovers-heading" className="text-lg font-semibold">
-            {t("closeout.leftovers.heading")}
-          </h2>
-          <p className="mt-1 text-sm text-muted">{t("closeout.leftovers.subtitle")}</p>
-          {state.leftovers.length === 0 ? (
-            <EmptyState title={t("closeout.leftovers.empty")} className="mt-4" />
-          ) : (
-            <ul className="mt-4 flex flex-col gap-3">
-              {state.leftovers.map((action) => (
-                <SectionCard as="li" key={action.id} className="list-none">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <KindChip kind={action.kind} t={t} />
-                        <Link href={action.href} className="font-semibold hover:underline">
-                          {action.subject}
-                        </Link>
-                        {action.context ? (
-                          <p className="text-sm text-muted">{action.context}</p>
-                        ) : null}
+        {quietDay ? null : (
+          <section aria-labelledby="closeout-leftovers-heading" className="mb-10">
+            <h2 id="closeout-leftovers-heading" className="text-lg font-semibold">
+              {t("closeout.leftovers.heading")}
+            </h2>
+            <p className="mt-1 text-sm text-muted">{t("closeout.leftovers.subtitle")}</p>
+            {state.leftovers.length === 0 ? (
+              <EmptyState title={t("closeout.leftovers.empty")} className="mt-4" />
+            ) : (
+              <ul className="mt-4 flex flex-col gap-3">
+                {state.leftovers.map((action) => (
+                  <SectionCard as="li" key={action.id} className="list-none">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <KindChip kind={action.kind} t={t} />
+                          <Link href={action.href} className="font-semibold hover:underline">
+                            {action.subject}
+                          </Link>
+                          {action.context ? (
+                            <p className="text-sm text-muted">{action.context}</p>
+                          ) : null}
+                        </div>
+                        <p className="mt-1.5 text-muted">{action.detail}</p>
                       </div>
-                      <p className="mt-1.5 text-muted">{action.detail}</p>
+                      <fieldset
+                        className="flex shrink-0 items-center gap-4"
+                        aria-label={t("closeout.leftovers.decisionLabel", {
+                          subject: action.subject,
+                        })}
+                      >
+                        <label className="flex min-h-11 items-center gap-2 text-sm">
+                          <input
+                            type="radio"
+                            name={`decision:${action.id}`}
+                            value="carry"
+                            defaultChecked
+                            className="size-4 shrink-0"
+                          />
+                          {t("closeout.leftovers.carry")}
+                        </label>
+                        <label className="flex min-h-11 items-center gap-2 text-sm">
+                          <input
+                            type="radio"
+                            name={`decision:${action.id}`}
+                            value="dismiss"
+                            className="size-4 shrink-0"
+                          />
+                          {t("closeout.leftovers.dismiss")}
+                        </label>
+                      </fieldset>
                     </div>
-                    <fieldset
-                      className="flex shrink-0 items-center gap-4"
-                      aria-label={t("closeout.leftovers.decisionLabel", {
-                        subject: action.subject,
-                      })}
-                    >
-                      <label className="flex min-h-11 items-center gap-2 text-sm">
-                        <input
-                          type="radio"
-                          name={`decision:${action.id}`}
-                          value="carry"
-                          defaultChecked
-                          className="size-4 shrink-0"
-                        />
-                        {t("closeout.leftovers.carry")}
-                      </label>
-                      <label className="flex min-h-11 items-center gap-2 text-sm">
-                        <input
-                          type="radio"
-                          name={`decision:${action.id}`}
-                          value="dismiss"
-                          className="size-4 shrink-0"
-                        />
-                        {t("closeout.leftovers.dismiss")}
-                      </label>
-                    </fieldset>
-                  </div>
-                </SectionCard>
-              ))}
-            </ul>
-          )}
-        </section>
+                  </SectionCard>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
-        <SectionCard
-          className="mb-10"
-          padding="lg"
-          title={t("closeout.close.heading")}
-          description={t("closeout.close.note")}
-        >
-          {state.mustAcknowledge.length > 0 ? (
-            <label className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/5 p-4 text-sm">
-              <input
-                type="checkbox"
-                name="acknowledge"
-                required
-                className="mt-0.5 size-4 shrink-0"
-              />
-              <span>
-                {t("closeout.close.acknowledge", { count: state.mustAcknowledge.length })}
-              </span>
-            </label>
-          ) : null}
-          <div className="mt-4">
+        {/* On a quiet day the button stands on its own. A card titled "Close
+            the day" wrapping a button labelled "Close the day" is §9's "don't
+            say what the control already says" — tolerable as one panel among
+            several on a working page, and the whole page when it is the only
+            thing left. `mustAcknowledge` is empty by construction here: the
+            shape this branch tests means the day had no departures at all. */}
+        {quietDay ? (
+          <div className="mb-10">
             <SubmitButton pendingLabel={t("closeout.close.button")} className={buttonClass()}>
               {latest ? t("closeout.close.buttonAgain") : t("closeout.close.button")}
             </SubmitButton>
           </div>
-        </SectionCard>
+        ) : (
+          <SectionCard
+            className="mb-10"
+            padding="lg"
+            title={t("closeout.close.heading")}
+            description={t("closeout.close.note")}
+          >
+            {state.mustAcknowledge.length > 0 ? (
+              <label className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/5 p-4 text-sm">
+                <input
+                  type="checkbox"
+                  name="acknowledge"
+                  required
+                  className="mt-0.5 size-4 shrink-0"
+                />
+                <span>
+                  {t("closeout.close.acknowledge", { count: state.mustAcknowledge.length })}
+                </span>
+              </label>
+            ) : null}
+            <div className="mt-4">
+              <SubmitButton pendingLabel={t("closeout.close.button")} className={buttonClass()}>
+                {latest ? t("closeout.close.buttonAgain") : t("closeout.close.button")}
+              </SubmitButton>
+            </div>
+          </SectionCard>
+        )}
       </form>
 
       {/* Tomorrow is a *handoff*, not a second queue. This section used to
@@ -830,38 +883,40 @@ export default async function CloseOutPage({
           20260803-not-ready-is-a-view), and the same reasoning applies to a
           section: state how much is waiting, name it in the queue's own chips,
           and hand the work to the surface that owns it. */}
-      <section aria-labelledby="closeout-tomorrow-heading" className="mb-6">
-        <h2 id="closeout-tomorrow-heading" className="text-lg font-semibold">
-          {t("closeout.tomorrow.heading")}
-        </h2>
-        {state.tomorrow.total === 0 ? (
-          <EmptyState title={t("closeout.tomorrow.empty")} className="mt-4" />
-        ) : (
-          <SectionCard as="div" className="mt-4">
-            <p className="font-semibold">
-              {t("closeout.tomorrow.count", { count: state.tomorrow.total })}
-            </p>
-            {/* The tally rides *inside* each chip. Set beside one it was bound
+      {quietDay ? null : (
+        <section aria-labelledby="closeout-tomorrow-heading" className="mb-6">
+          <h2 id="closeout-tomorrow-heading" className="text-lg font-semibold">
+            {t("closeout.tomorrow.heading")}
+          </h2>
+          {state.tomorrow.total === 0 ? (
+            <EmptyState title={t("closeout.tomorrow.empty")} className="mt-4" />
+          ) : (
+            <SectionCard as="div" className="mt-4">
+              <p className="font-semibold">
+                {t("closeout.tomorrow.count", { count: state.tomorrow.total })}
+              </p>
+              {/* The tally rides *inside* each chip. Set beside one it was bound
                 to its label by a 2px gap difference, and a row of them wrapping
                 at 390px read as loose digits. The gap between chips must
                 stay visibly wider than the gap around the interpunct inside
                 one, or proximity regroups "PREP · 2  FILL SEATS" into
                 "2 FILL SEATS" on a narrow screen. */}
-            <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-              {state.tomorrow.byKind.map((entry) => (
-                <li key={entry.kind}>
-                  <KindChip kind={entry.kind} count={entry.count} t={t} />
-                </li>
-              ))}
-            </ul>
-            {/* No "Open Today" button. This card is a heads-up about the
+              <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                {state.tomorrow.byKind.map((entry) => (
+                  <li key={entry.kind}>
+                    <KindChip kind={entry.kind} count={entry.count} t={t} />
+                  </li>
+                ))}
+              </ul>
+              {/* No "Open Today" button. This card is a heads-up about the
                 morning, not a hand-off — and Today is a permanent tab in the
                 header and a permanent slot in the phone dock, one tap from
                 here and from everywhere else. A button that only repeats
                 standing chrome adds a control without adding a destination. */}
-          </SectionCard>
-        )}
-      </section>
+            </SectionCard>
+          )}
+        </section>
+      )}
     </main>
   );
 }
