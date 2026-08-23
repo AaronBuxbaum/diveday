@@ -86,7 +86,23 @@ export default async function EmbedSettingsPage({
   // same reasoning as the button snippet below: this renders on the shop's
   // own site, outside DiveDay's CSS, so it inlines the real color rather than
   // referencing the custom property. Kept small and unobtrusive on purpose.
-  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — ${escapeHtml(bookButtonText)}" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>
+  // **1250px, measured, not guessed.** The widget shows the next four
+  // departures and a link to the full schedule, which renders 989px tall at
+  // this snippet's 720px max-width and 1217px on a phone — so this clears the
+  // taller of the two and the frame never scrolls inside the shop's page.
+  //
+  // It was 900px against a full month of departures, which measured **2,734px**
+  // — about a third of the schedule visible and the rest behind a scrollbar
+  // nested in the shop's own site, worst on a phone where a visitor swiping
+  // cannot tell which thing they are scrolling (issue #805). A frame cannot
+  // guess this number while the content is a whole month, because the height
+  // *is* however many departures a shop runs. Bounding the content is what
+  // makes a fixed height honest.
+  //
+  // Sized for the narrow case deliberately: a desktop frame carries some slack
+  // at the bottom, which is white space on the host page, and that is a far
+  // smaller sin than a nested scroll on a phone.
+  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — ${escapeHtml(bookButtonText)}" style="width:100%;max-width:720px;height:1250px;border:0;border-radius:12px" loading="lazy"></iframe>
 <a href="${attributionUrl}" target="_blank" rel="noopener" style="display:block;margin-top:6px;font:12px/1.4 system-ui,sans-serif;color:#5b6f77;text-decoration:none">${escapeHtml(attributionLinkText)}</a>`;
   // Deliberately the plain schedule URL, not the embed one: this is a link a
   // browser navigates to directly, never a frame, so it should land on the

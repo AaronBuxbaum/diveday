@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signOut } from "./helpers";
+import { daysFromNow, e2eNow, openTripInEmbed, signOut } from "./helpers";
 
 /**
  * The embed widget (docs ADR 20260726-schedule-embed): a shop pastes the
@@ -57,13 +57,11 @@ test.describe("as owner", () => {
     await expect(page.getByRole("status")).toBeVisible();
     await signOut(page);
 
+    // **Through the widget's own way out.** The embed shows the next four
+    // departures (issue #805), and this trip is six days out — past the window
+    // on a seeded shop that runs a boat a day.
     await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
-    await page
-      .locator("li, a")
-      .filter({ hasText: title })
-      .filter({ visible: true })
-      .first()
-      .click();
+    await openTripInEmbed(page, title);
     await expect(page).toHaveURL(/embed=1/);
     await expect(page.getByRole("link", { name: "← All trips" })).toHaveCount(0);
 
