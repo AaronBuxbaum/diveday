@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
@@ -474,7 +475,7 @@ describe("who may run each action on the trip page", () => {
   const TRIP_CONFIG = [
     "saveDetails",
     "saveRequirementsAction",
-    "updateTripCrewAction",
+    "reinstateTripAction",
     "applySeriesDetailsAction",
     "cancelSeriesAction",
     "setSeriesRepeatAction",
@@ -497,7 +498,14 @@ describe("who may run each action on the trip page", () => {
     "saveConditionsAction",
     "clearConditionsAction",
     "cancelTripAction",
-    "reinstateTripAction",
+    // Cancelling one departure for weather is the crew's, and putting it back
+    // is not — an asymmetry that reads like an oversight and is H-14's own
+    // decision: its 2026-07-24 `dive-domain-expert` review lists reinstate
+    // among trip *definition* and one departure's weather cancellation among
+    // the day-of operating actions. So `cancelTripAction` takes the ordinary
+    // preamble and `reinstateTripAction` calls `requireTripConfig`, and this
+    // roster listed reinstate here anyway until issue #788 — precisely the
+    // failure a name-only check cannot see.
     "addInternalNoteAction",
     "deleteInternalNoteAction",
     "restoreInternalNoteAction",
@@ -510,23 +518,91 @@ describe("who may run each action on the trip page", () => {
     "confirmDiverIdentityAction",
     "markWaiverInPersonAction",
     "saveRosterEmergencyContactAction",
+    // **Who is running the boat is the crew's own answer.** H-14's record
+    // already said so — "day-of crew assignment (manifest accuracy)" is named
+    // there among the actions that stay open — but `canConfigureTrips`'s
+    // docstring claimed the opposite, and this roster wrote down the docstring.
+    // Re-confirmed with Aaron on 2026-08-22 before correcting it (issue #788):
+    // a captain swapping a divemaster at the dock does not wait for an owner.
+    "updateTripCrewAction",
   ];
 
-  it("has an answer recorded for every exported action, and no stale ones", async () => {
-    const source = await import("node:fs").then(({ readFileSync }) =>
-      readFileSync(
-        new URL("./actions.ts", import.meta.url).pathname.replace(/%5B/g, "[").replace(/%5D/g, "]"),
-        "utf8",
-      ),
+  /** Every exported action's source, sliced from its `export` to its closing brace. */
+  function actionBodies(): Map<string, string> {
+    const source = readFileSync(
+      new URL("./actions.ts", import.meta.url).pathname.replace(/%5B/g, "[").replace(/%5D/g, "]"),
+      "utf8",
     );
-    const exported = [...source.matchAll(/^export async function (\w+)/gm)].map((m) => m[1]);
-    const recorded = [...TRIP_CONFIG, ...MONEY, ...OPEN_TO_ALL_STAFF];
+    const bodies = new Map<string, string>();
+    for (const match of source.matchAll(/^export async function (\w+)/gm)) {
+      const name = match[1];
+      if (!name || match.index === undefined) continue;
+      // A top-level function's closing brace is the only `}` at column zero
+      // after it, because everything nested is indented. Brace-counting from
+      // the signature is the obvious alternative and it is wrong here: a return
+      // type of `Promise<{ ok: boolean }>` opens a brace before the body does,
+      // and counting from that one ends the "body" at `}>`. That is not
+      // hypothetical — `updateTripCrewAction` is written exactly that way, and
+      // it is the action whose gate this file got wrong.
+      const end = source.indexOf("\n}\n", match.index);
+      bodies.set(name, source.slice(match.index, end === -1 ? undefined : end));
+    }
+    return bodies;
+  }
+
+  /**
+   * Which list an action's *body* puts it in, read from the source.
+   *
+   * The three answers are distinguished by how the action refuses somebody,
+   * which is the only thing that makes them different:
+   *
+   * - **`TRIP_CONFIG`** — the preamble is `requireTripConfig`, which re-reads
+   *   live roles and bounces anyone `canPersonConfigureTrips` refuses.
+   * - **`MONEY`** — somebody is refused on a money predicate. Sometimes in the
+   *   preamble (`sendLastMinuteDealAction` passes `canPersonManagePaymentSettings`
+   *   as `allow`), and sometimes further down: `markPaymentAction` takes the
+   *   ordinary preamble and then refuses on `canPersonRefund`, because its gate
+   *   is on the *transition* — recording cash at the dock is crew work, marking
+   *   a booking written off is not. A check that only read preambles would call
+   *   that entry wrong.
+   * - **`OPEN_TO_ALL_STAFF`** — the ordinary preamble, and **nobody is refused
+   *   at all**. `removeBookingAction` is the case that makes this the right
+   *   test rather than "mentions no money predicate": it calls
+   *   `canPersonRefund` and never refuses on it — a captain may free a seat,
+   *   and the refund that would otherwise fire is handed up to an owner.
+   */
+  function gateInBody(body: string): string {
+    if (/await requireTripConfig\(/.test(body)) return "TRIP_CONFIG";
+    const refuses = body.includes('"not-authorized"');
+    const weighsMoney = /canPerson(?:Refund|ManagePaymentSettings)\b/.test(body);
+    if (refuses && weighsMoney) return "MONEY";
+    if (refuses) return "REFUSES_SOMEBODY_UNACCOUNTED_FOR";
+    return "OPEN_TO_ALL_STAFF";
+  }
+
+  it("files every exported action under the gate its own body carries", () => {
+    const recorded = new Map<string, string>([
+      ...TRIP_CONFIG.map((name) => [name, "TRIP_CONFIG"] as const),
+      ...MONEY.map((name) => [name, "MONEY"] as const),
+      ...OPEN_TO_ALL_STAFF.map((name) => [name, "OPEN_TO_ALL_STAFF"] as const),
+    ]);
+    const bodies = actionBodies();
 
     // Read off the file rather than off the module's exports: a `const` arrow
     // export would slip past the latter, and the point is that *nothing* new
     // lands here without an answer.
-    expect(exported.filter((name) => !recorded.includes(name))).toEqual([]);
-    expect(recorded.filter((name) => !exported.includes(name))).toEqual([]);
+    expect([...bodies.keys()].filter((name) => !recorded.has(name))).toEqual([]);
+    expect([...recorded.keys()].filter((name) => !bodies.has(name))).toEqual([]);
+
+    // **The half the name-only version could not see.** Both of these were
+    // already wrong when it was written (issue #788): `reinstateTripAction` was
+    // filed open and calls `requireTripConfig`, and `updateTripCrewAction` was
+    // filed as trip configuration and gates nobody. The first is harmless as
+    // shipped and dangerous as documentation — a reader reconciling the code to
+    // the roster removes a working gate. The second was two sources of truth
+    // disagreeing with nothing to notice.
+    const actual = Object.fromEntries([...bodies].map(([name, body]) => [name, gateInBody(body)]));
+    expect(actual).toEqual(Object.fromEntries(recorded));
   });
 
   it("keeps the money actions apart from the trip-config ones", () => {

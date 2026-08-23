@@ -194,12 +194,6 @@ export function canErasePersonalData(roles: readonly Role[] | undefined): boolea
 }
 
 /**
- * Create, edit, cancel a trip, or set its requirements/crew — defining what the
- * dive *is* and who it admits. Opens to instructors as well, since course
- * sessions and their admission rules are instructor-owned, but stays closed to
- * captains, crew, and divemasters, who operate the trips owners/managers set up.
- */
-/**
  * Open a departure's incident-ready export — the single document a shop hands
  * to authorities or an insurer after something goes wrong. Owner only, the same
  * strictness as `canErasePersonalData` and deliberately tighter than the
@@ -219,6 +213,28 @@ export function canExportIncidentRecord(roles: readonly Role[] | undefined): boo
   return (roles ?? []).some((role) => role === "owner");
 }
 
+/**
+ * Create, edit, or set a trip's admission requirements — defining what the dive
+ * *is* and who it admits. Opens to instructors as well, since course sessions
+ * and their admission rules are instructor-owned, but stays closed to captains,
+ * crew, and divemasters, who operate the trips owners/managers set up.
+ *
+ * **Not the crew, and not cancelling a single departure for weather.** H-14's
+ * own record says so — a `dive-domain-expert` review on 2026-07-24 narrowed
+ * this gate to trip *definition* (details, requirements, whole-series
+ * operations, creation, reinstate) and left the day-of operating actions the
+ * glossary assigns to crew open: predicted conditions, day-of crew assignment
+ * for manifest accuracy, and one departure's weather cancellation.
+ *
+ * This sentence said "requirements/crew" anyway, for thirteen months, while
+ * `updateTripCrewAction` gated nobody. The roster in `actions.authz.test.ts`
+ * then wrote down *this sentence's* answer rather than the code's, and nothing
+ * could notice, because it compared action names and never read a gate (issue
+ * #788). Confirmed with Aaron on 2026-08-22 before correcting it: a captain
+ * swapping a divemaster at the dock does not wait for an owner, and Today's
+ * board offers the same one-tap assign. That roster reads each action's body
+ * now, so this docstring cannot drift away from the code in silence again.
+ */
 export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some(
     (role) => role === "owner" || role === "manager" || role === "instructor",
