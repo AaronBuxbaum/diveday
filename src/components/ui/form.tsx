@@ -216,22 +216,39 @@ export function Field({
   ) : null;
 
   if (!isControl) {
-    // No single control element to clone an id/aria-describedby onto — fall
-    // back to implicit label-wraps-everything association.
-    return (
-      <label
-        htmlFor={htmlFor}
-        className={`row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
-      >
+    // No single control element to clone an id/aria-describedby onto. An
+    // explicit `htmlFor` says the caller has already named the control, so the
+    // caption is a plain sibling `<label>`; without one, fall back to implicit
+    // label-wraps-everything association.
+    //
+    // The split matters for a child that renders a `<label>` of its own —
+    // `ImageFileInput`, whose button *is* a label wrapping the file input.
+    // Nesting one label inside another is invalid HTML, and a click in the
+    // overlap has two controls to forward to.
+    const rows = `row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`;
+    const body = (
+      <span className="grid content-start gap-1">
+        {children}
+        {descriptionSpan}
+        {errorSpan}
+      </span>
+    );
+    return htmlFor ? (
+      <div className={rows}>
+        <span className="self-end">
+          <label htmlFor={htmlFor}>{captionContent}</label>
+          {aside}
+        </span>
+        {body}
+      </div>
+    ) : (
+      // biome-ignore lint/a11y/noLabelWithoutControl: the wrapping branch — the control is `children`, which the rule cannot see through
+      <label className={rows}>
         <span className="self-end">
           {captionContent}
           {aside}
         </span>
-        <span className="grid content-start gap-1">
-          {children}
-          {descriptionSpan}
-          {errorSpan}
-        </span>
+        {body}
       </label>
     );
   }

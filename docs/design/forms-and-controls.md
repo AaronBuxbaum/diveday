@@ -246,7 +246,27 @@ plumbing at the call site is no longer needed for the common case:
 
 This only applies when `children` is a single control element (`<input>`/`<select>`/`<textarea>`)
 — the documented contract. A `Field` wrapping something else (rare) falls back to the original
-label-wraps-everything shape.
+label-wraps-everything shape, **unless the caller passes `htmlFor`**, which says the control is
+already named and leaves the caption a plain sibling. Pass it whenever the child renders a
+`<label>` of its own: nested labels are invalid HTML, and a click in the overlap has two controls
+to forward to.
+
+### Picking a file: `ImageFileInput`
+
+A bare `<input type="file">` paints the operating system's grey "Choose Files / No file chosen" —
+in the *device's* language, whatever the reader's is. Every photo picker in the app goes through
+`src/components/ImageFileInput.tsx` instead, and the CSV picker in `ImportWizard` is the same
+shape by hand:
+
+- the input is `sr-only` **inside** a `<label>` wearing `buttonClass()`, so what looks like a
+  button *is* the label — one control, one tap target, one focus stop (the ring is drawn with
+  `focus-within`);
+- `sr-only` and never `hidden`: a `display:none` control carrying `required` makes Chrome refuse
+  the whole submit as "not focusable" instead of reporting the field;
+- what was picked is named beside it, and the button switches to its `chooseAnother` word;
+- there is **no `className` escape hatch** — a prop letting each call site keep the appearance it
+  happens to have preserves the drift behind an abstraction, the same reason `SectionCard` has no
+  `radius`.
 
 ## Saying what happened: `Field error` + `FormStatus`
 

@@ -89,6 +89,43 @@ describe("Field error", () => {
   });
 });
 
+/**
+ * A child that is not a native control has no id to clone onto, so `Field`
+ * associates its caption by *wrapping* — except when the caller names the
+ * control with `htmlFor`, where wrapping would put one `<label>` inside
+ * another. `ImageFileInput` is that caller: its button *is* a label around the
+ * file input, and nested labels are invalid HTML whose click forwarding has two
+ * candidates to choose between (issue #807).
+ */
+describe("Field around a child that labels itself", () => {
+  it("wraps a plain composite child, so the caption still names it", () => {
+    const { container } = render(
+      <Field label="Party">
+        <div>
+          <input name="party" className={controlClass} />
+        </div>
+      </Field>,
+    );
+    expect(container.querySelector("label")?.tagName).toBe("LABEL");
+    expect(screen.getByLabelText("Party")).toHaveAttribute("name", "party");
+  });
+
+  it("stops wrapping once the caller names the control, leaving one label to nest inside", () => {
+    const { container } = render(
+      <Field label="Map image" htmlFor="map-image">
+        <label>
+          Choose a photo
+          <input id="map-image" type="file" name="mapImage" className="sr-only" />
+        </label>
+      </Field>,
+    );
+    // No label with a label inside it: the caption is a sibling of the child.
+    expect(container.querySelector("label label")).toBeNull();
+    // And it still names the control — both labels do, caption first.
+    expect(screen.getByLabelText(/Map image/)).toHaveAttribute("name", "mapImage");
+  });
+});
+
 describe("FormStatus", () => {
   it("renders nothing at rest, so an action row keeps its layout", () => {
     const { container } = render(

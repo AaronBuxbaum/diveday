@@ -10,7 +10,9 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "tooBigSuffix": ": that's over {maxMb} MB — try a smaller photo."
+    "tooBigSuffix": ": that's over {maxMb} MB — try a smaller photo.",
+    "choose": "Choose a photo",
+    "chooseAnother": "Choose a different photo"
   },
   "paperWaiver": {
     "markSignedOnPaper": "Mark signed on paper",
