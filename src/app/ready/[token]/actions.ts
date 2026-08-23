@@ -9,6 +9,11 @@ import { getDb } from "@/db/client";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { recordDiverOwnLocale } from "@/db/people";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
+import {
+  planReadinessLinkRescue,
+  type ReadinessLinkRescue,
+  sendPlannedReadinessLink,
+} from "@/db/readiness-link-rescue";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
@@ -444,4 +449,61 @@ export async function saveNitroxCertificationFromReady(token: string, formData: 
     selfDeclaredAt: nowDate(),
   });
   revalidateAndRedirect(base(token), `${base(token)}?saved=${created ? "cert" : "cert-known"}`);
+}
+
+/**
+ * **The one transactional thing a dead trip-prep link still offers: send its
+ * owner a fresh one.**
+ *
+ * Nothing here hands the caller new access. The replacement goes to the address
+ * already on the booking, and only an outcome code comes back to the page — so
+ * a leaked stale URL can trigger a delivery to its owner and nothing more. The
+ * rules live with `planReadinessLinkRescue`; this is the two rate-limit nets
+ * around it, and it is the waiver page's action with the nouns changed (issue
+ * #850).
+ */
+const RESCUE_PARAM: Record<ReadinessLinkRescue, string> = {
+  sent: "ok",
+  no_email: "none",
+  current_link_live: "live",
+  unavailable: "unavailable",
+  failed: "failed",
+};
+
+export async function emailFreshReadinessLinkAction(token: string) {
+  const ip = await clientIp();
+  // Two nets, because they bound different abuses: the shared per-IP bucket —
+  // the same one every other action on this page spends from — stops one client
+  // hammering many tokens, and the narrow bucket below stops many clients
+  // hammering one diver's inbox.
+  if (
+    !(await checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction))
+      .allowed
+  ) {
+    redirect(`${base(token)}?sent=rate`);
+  }
+
+  const db = await getDb();
+  // **Decide first, spend second.** Every refusal is reached from reads alone,
+  // and none of them costs the diver anything. Spending the per-inbox budget
+  // before deciding meant a leaked dead URL could burn it on answers that sent
+  // nothing — five taps at a booking holding a live link returned
+  // `current_link_live` five times and left the real diver rate-limited for the
+  // hour (`security-reviewer`, issue #850).
+  const plan = await planReadinessLinkRescue(db, token);
+  if (!plan.ok) redirect(`${base(token)}?sent=${RESCUE_PARAM[plan.reason]}`);
+
+  // The narrow bucket belongs to the **inbox**, so it is keyed by the booking
+  // the stale link resolves to — not by the URL. A booking accumulates a dead
+  // capability every time one is issued, and keying by token would hand each of
+  // those leaked URLs its own full budget: one holder with a handful of old
+  // links could spray the same mailbox N times over. Keyed by booking, every
+  // link ever issued for it spends from one budget. `rateLimitKey` hashes it,
+  // so a booking id is never held as a literal key.
+  const inboxKey = rateLimitKey("readiness-link-resend", "booking", plan.bookingId);
+  if (!(await checkRateLimit(inboxKey, RATE_LIMITS.readinessLinkResendByBooking)).allowed) {
+    redirect(`${base(token)}?sent=rate`);
+  }
+
+  redirect(`${base(token)}?sent=${RESCUE_PARAM[await sendPlannedReadinessLink(db, plan)]}`);
 }

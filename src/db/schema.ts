@@ -2621,6 +2621,11 @@ export const bookingPaymentEvents = pgTable(
 export const notificationKind = pgEnum("notification_kind", [
   "booking_confirmation",
   "waiver_request",
+  // The diver's own rescue for a trip-prep link that aged out: they ask from
+  // the dead page, and a replacement goes to the address already on the
+  // booking (issue #850). Tracked like every other per-booking message so a
+  // shop can see that one was sent and whether it landed.
+  "readiness_link",
   // Scheduled pre-trip reminders; one delivery row per booking per cadence
   // (src/lib/reminders.ts) means each cadence sends at most once.
   "trip_reminder_7d",

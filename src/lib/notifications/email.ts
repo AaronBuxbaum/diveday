@@ -44,6 +44,16 @@ type WaiverRequestEmailInput = {
   timezone: string;
 };
 
+type ReadinessLinkEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  readinessUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
 type WaitlistInviteEmailInput = {
   locale: DiverLocale;
   diverName: string;
@@ -1039,6 +1049,42 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
     subject,
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${completeLink}</a></p><p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
+/**
+ * **The diver's replacement trip-prep link**, asked for from the dead page
+ * their old one now shows (issue #850).
+ *
+ * Short on purpose: this email exists to carry a link somebody has just asked
+ * for and is waiting on, so it says which departure it is about, why it
+ * arrived, and when it dies. The "what's left before you sail" content is the
+ * page's job, one tap away — restating it here would be a second surface to
+ * keep in step with readiness and it would go stale in the diver's inbox.
+ */
+export function readinessLinkEmail(input: ReadinessLinkEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
+  const body = t("notifications.readinessLink.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+  });
+  const bodyHtml = t("notifications.readinessLink.body", {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+  });
+  const openLink = t("notifications.readinessLink.openLink");
+
+  return {
+    subject: t("notifications.readinessLink.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.readinessUrl}\n\n${t(
+      "notifications.readinessLink.expiry",
+      { expiresAt },
+    )}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${escapeHtml(
+      input.readinessUrl,
+    )}">${openLink}</a></p><p>${t("notifications.readinessLink.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 

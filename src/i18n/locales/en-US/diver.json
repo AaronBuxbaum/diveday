@@ -526,6 +526,15 @@
     "cancelledHeading": "This booking was cancelled",
     "unavailableHeading": "This readiness link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
+    "expiredBody": "Trip-prep links don’t stay open for long, and this one has run out. We can email you a fresh one.",
+    "emailFreshLink": "Email me a fresh link",
+    "sendingFreshLink": "Sending…",
+    "freshLinkSent": "On its way — check the email address you have on file with the shop. It should land in a minute or two.",
+    "freshLinkCurrentLive": "You already have a newer link, and it still works — have a look for our most recent email.",
+    "freshLinkNoEmail": "There’s no email address on file, so we can’t send it. Reach out to the shop and they’ll hand you a new link.",
+    "freshLinkUnavailable": "We can’t send a new link for this booking. Reach out to the shop and they’ll sort it out.",
+    "freshLinkFailed": "That didn’t go through. Try again in a moment, or reach out to the shop.",
+    "rateLimited": "Give it a few seconds and try again — nothing was lost.",
     "paymentReceived": "Payment received — we’re confirming it with your shop. Nothing more to do.",
     "waiverUnavailable": "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe — try again, or pay at the shop.",
@@ -590,7 +599,6 @@
     "shopMapTitle": "Map of {shop}",
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time} — {dock} before we sail.",
-    "rateLimited": "Give it a few seconds and try again — nothing was lost.",
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
     "certHeading": "Add your certification",
     "certBody": "Enter your certification details for the shop's records.",
@@ -3100,6 +3108,12 @@
       "genericBody": "{shopName} needs your waiver.",
       "completeText": "Complete it here",
       "completeLink": "Complete your waiver",
+      "expiry": "This private link expires {expiresAt}."
+    },
+    "readinessLink": {
+      "subject": "Your trip-prep link for {tripTitle}",
+      "body": "Here is a fresh link to what's left before you sail with {shopName} on {tripTitle}. The one you had has expired.",
+      "openLink": "Open your trip prep",
       "expiry": "This private link expires {expiresAt}."
     },
     "sms": {

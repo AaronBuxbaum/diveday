@@ -107,6 +107,32 @@ const waiverRequestSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * **A replacement trip-prep link, asked for by the diver whose link died.**
+ *
+ * Its own kind rather than a reuse, on both available candidates.
+ * `booking_confirmation` would tell somebody their seat was just booked days
+ * after it was, and `trip_reminder_*` dedups once per booking per cadence
+ * (`src/lib/reminders.ts`), so a rescue sent after that cadence had run would
+ * be silently swallowed — the one failure this feature cannot have.
+ *
+ * See `notificationIdempotencyKey` below for how a rescue is keyed in the send
+ * queue, and why per-booking is the right granularity (issue #850).
+ */
+const readinessLinkSchema = z.object({
+  kind: z.literal("readiness_link"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  readinessUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const waitlistInviteSchema = z.object({
   kind: z.literal("waitlist_invite"),
   waitlistEntryId: z.uuid(),
@@ -525,6 +551,7 @@ const passwordChangedSchema = z.object({
 export const notificationSchema = z.discriminatedUnion("kind", [
   bookingConfirmationSchema,
   waiverRequestSchema,
+  readinessLinkSchema,
   waitlistInviteSchema,
   tripInvitationSchema,
   tripReminder7dSchema,
@@ -556,6 +583,19 @@ export function notificationIdempotencyKey(notification: Notification): string {
         : `booking-confirmation/${notification.bookingId}`;
     case "waiver_request":
       return `waiver-request/${notification.waiverRecordId}`;
+    // **Per booking, in effect** — and the expiry is in it for honesty rather
+    // than variety. `capabilityExpiryFor` is `tripEndsAt + 30d` for any booking
+    // inside its useful window, independent of `now`, so this key does *not*
+    // vary between two rescues on the same seat; an earlier version of this
+    // comment claimed it did (`security-reviewer`, issue #850).
+    //
+    // That is fine here, and only here: this key is the
+    // `notification_send_queue` conflict target and nothing else, so it can
+    // never suppress a live send — the most it costs is that two rescues which
+    // both fail *retryably* leave one queued retry rather than two, which is
+    // the correct number for one diver waiting on one link.
+    case "readiness_link":
+      return `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
     // fresh send, while a double-submit of the same tap still dedups at the
     // notification_send_queue level.
