@@ -169,6 +169,23 @@ const sizes = {
   icon: { x: "px-0", rest: "w-11 text-base" },
 } as const;
 
+/**
+ * **A text link that is also a tap target**, for the one case a button is not:
+ * the link that opens the record a row or a card is about.
+ *
+ * Not a button variant — it stays a link, keeps its own ink, and carries no
+ * chrome. What it borrows from the button vocabulary is the *floor*, because
+ * that is the thing this file already owns: `min-h-11` is the same 44px
+ * `sizes.icon` exists to guarantee, and for the same reason
+ * (`docs/design/principles.md` §2, one hand in glare with wet fingers).
+ *
+ * Three staff tables and the check-in queue were shipping this as an 18px word
+ * — 34 of them on the gear register, tapped standing at the wall (issue #786).
+ * `inline-flex items-center` is what lets the floor apply to an inline link at
+ * all: `min-height` does nothing to a non-replaced inline box.
+ */
+export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
+
 export type ButtonVariant = keyof typeof variants;
 export type ButtonSize = keyof typeof sizes;
 

@@ -13,7 +13,7 @@ import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import {
   countCheckedOutGear,
   countGearItemsByKind,
@@ -633,14 +633,14 @@ function FleetRow({
   const phase = reservation ? reservationPhase(reservation, todayLocal) : null;
 
   return (
-    <tr id={`unit-${item.id}`}>
+    <Tr id={`unit-${item.id}`}>
       <Td>
-        <Link
+        <RowLink
           href={`/shop/${shopSlug}/gear/${item.id}`}
           className="font-mono text-sm font-medium text-primary hover:underline"
         >
           {item.label}
-        </Link>
+        </RowLink>
         {item.brandModel || item.serialNumber ? (
           <p className="mt-0.5 text-xs text-muted">
             {[item.brandModel, item.serialNumber].filter(Boolean).join(" · ")}
@@ -703,6 +703,6 @@ function FleetRow({
           </span>
         )}
       </Td>
-    </tr>
+    </Tr>
   );
 }
