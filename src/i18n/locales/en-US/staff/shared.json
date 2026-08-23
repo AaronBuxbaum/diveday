@@ -244,7 +244,7 @@
       "aboardReasonPayment": "payment still owed. It is in the list below.",
       "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
       "everyoneAboard": "Everyone’s aboard.",
-      "crewRollCallOpen": "Every diver is aboard \u2014 the crew roll call is still open.",
+      "crewRollCallOpen": "Every diver is aboard — the crew roll call is still open.",
       "clearToBoard": "Everyone booked on this trip is clear to board.",
       "sailingToday": "Sailing today"
     },
@@ -320,7 +320,8 @@
       "reviewsPending": "Reviews",
       "gearOverdue": "Gear overdue",
       "gearDueBack": "Gear due back",
-      "gearServiceDue": "Gear service"
+      "gearServiceDue": "Gear service",
+      "unitsUnconfirmed": "Setup"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -421,7 +422,8 @@
       "openDataSettings": "Review in Settings",
       "openReviews": "Open reviews",
       "openGearRegister": "Open gear register",
-      "openGearUnit": "Open unit record"
+      "openGearUnit": "Open unit record",
+      "openUnits": "Open units"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
@@ -465,6 +467,10 @@
     "reviewsPending": {
       "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you",
       "detail": "Divers wrote about their trips — publish the good words or quietly hide the rest."
+    },
+    "unitsUnconfirmed": {
+      "subject": "Which currency and depth unit does this shop work in?",
+      "detail": "We guessed {currency} from your timezone when you signed up, and nobody has confirmed it. It is what a diver's card gets charged in."
     },
     "gear": {
       "overdueDetail": "{unitLabel} was due back {dueOn} and is still out.",

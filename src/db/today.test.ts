@@ -26,11 +26,13 @@ import {
   people,
   rollCallCrewEvents as rollCallCrewEventsTable,
   rollCallEvents as rollCallEventsTable,
+  shops as shopsTable,
   tripAssignments,
   tripReviews,
   trips as tripsTable,
   tripWaitlistEntries,
 } from "./schema";
+import { markShopUnitsConfirmed } from "./shops";
 import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
@@ -155,6 +157,38 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(work.departures[0]?.boarded).toBe(1);
+  });
+
+  /**
+   * **The one first-run question a trading shop can still have open.**
+   *
+   * `units_confirmed_at` had exactly one reader — the first-run checklist —
+   * and that checklist leaves the page at the shop's first departure, which is
+   * step 4 of the same checklist. A shop that scheduled a trip before opening
+   * the Units row was therefore never asked again, while trading on a currency
+   * derived from its timezone at sign-up: a Cozumel shop could be charging
+   * cards in dollars having never been asked (issue #835).
+   */
+  it("keeps asking which currency a shop works in until somebody answers", async () => {
+    const { db, shop } = await seededShopContext();
+    await db.update(shopsTable).set({ unitsConfirmedAt: null }).where(eq(shopsTable.id, shop.id));
+
+    const asking = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = asking.actions.find((action) => action.kind === "units_unconfirmed");
+    expect(row).toBeDefined();
+    // Bottom of the queue and neutral in tone: nothing has gone wrong, and it
+    // blocks no departure.
+    expect(row?.urgency).toBe("later");
+    expect(row?.href).toBe(`/shop/${shop.slug}/settings#units`);
+    // It names the money, because that is what makes it worth a row — the
+    // currency a diver's card is charged in, not "confirm your units".
+    expect(row?.detail).toContain(shop.currency.toUpperCase());
+
+    // **Answering it empties the row for good.** The row is derived from the
+    // column, not from a dismissal, so there is no state to get stuck.
+    await markShopUnitsConfirmed(db, shop.id);
+    const answered = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(answered.actions.find((action) => action.kind === "units_unconfirmed")).toBeUndefined();
   });
 
   /**

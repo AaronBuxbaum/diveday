@@ -218,6 +218,14 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       name: "Blue Mantis Divers",
       slug: DEMO_SHOP_SLUG,
       timezone: DEMO_SHOP_TIMEZONE,
+      // **Blue Mantis finished its own onboarding**, like the trading shop it
+      // is meant to portray. Without this the queue asks it which currency it
+      // works in on every screenshot ever taken of Today, which is the same
+      // "a demo shouting about its own broken setup is a worse demo" the
+      // trouble-state seeds already avoid (issue #835). A shop that genuinely
+      // has not answered is photographed through
+      // `/api/test/seed-trouble-states?unitsUnconfirmed=1`.
+      unitsConfirmedAt: nowDate(),
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@demo.invalid",
@@ -414,6 +422,11 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           name: identity.name,
           slug: identity.slug,
           timezone: DEMO_SHOP_TIMEZONE,
+          // Finished onboarding, like the canonical demo above and for the same
+          // reason: a minted playground is a *working* shop, and one asking
+          // which currency it works in reads as a broken fixture rather than a
+          // real question (issue #835).
+          unitsConfirmedAt: nowDate(),
           contactEmail: identity.emailFor("hello"),
           contactPhone: "+1 305 555 0142",
           rentalItems: [

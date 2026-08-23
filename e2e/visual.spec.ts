@@ -2002,6 +2002,30 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-crew-uncounted", scheme);
       });
 
+      /**
+       * **The one first-run question a trading shop can still have open.**
+       *
+       * The units row only exists for a shop that never answered it, and the
+       * seed answers it for Blue Mantis — a demo asking a shop that has been
+       * running for months which currency it works in would be on every Today
+       * capture ever taken. So the state is arranged, and photographed once
+       * (issue #835).
+       */
+      test(`the queue still asks an unanswered setup question (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states?unitsUnconfirmed=1");
+        await page.goto("/shop/blue-mantis?view=urgency");
+        // The row sits in the "This week" band, which arrives folded to its
+        // heading and count on any queue with earlier work in it — so the
+        // capture opens it, which is what a reader looking for it does.
+        await page.getByText("This week", { exact: true }).click();
+        // The destination's own words, not a timing guess.
+        await page.getByText(/currency and depth unit/).waitFor();
+        await capture(page, "today-units-unconfirmed", scheme);
+      });
+
       // The nav's other door (ADR 20260813-more-is-the-shops-other-door):
       // the header's More menu holding the "Run the shop" / "Set up" groups.
       // The menu only exists from `lg` up, so this capture's 390 image is
