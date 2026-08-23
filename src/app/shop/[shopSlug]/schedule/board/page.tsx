@@ -292,6 +292,10 @@ export default async function ScheduleBoardPage({
     dayCountLabelOther: st.raw("schedule.builder.dayCountLabelOther"),
     crewLabel: st("schedule.builder.crewLabel"),
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
+    // `.raw`, like `noPriceSetAria` below: the {names} are the client
+    // component's to interpolate, and `st()` would format the ICU here and
+    // throw on the missing variable.
+    crewMostlyAll: st.raw("schedule.builder.crewMostlyAll"),
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st.raw("schedule.builder.noPriceSetAria"),
     noPriceSetAll: st("schedule.builder.noPriceSetAll"),
