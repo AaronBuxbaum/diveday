@@ -166,6 +166,16 @@ reads as an instant jump, a long dead pause, and then a hard cut. Exits take `--
 slow off the mark, then away — which is why the schedule board's row menu could feel
 simultaneously too fast to see and 450 ms long.
 
+**An exit says so in its name.** This rule was written here the day the row menu was fixed, and
+three exits stayed on the arrival curve for weeks anyway — the undo toast, which fires on every
+reversible mutation in the app; the diver row leaving the roster, which is the one exit doing real
+explanatory work; and the scaled-out overlay (issue #756). Nothing swept for them because nothing
+could tell an entrance keyframe from a departing one. So the convention carries weight now: a
+keyframe that animates something *away* carries `out` or `dismiss` as a hyphen-separated word, and
+`scripts/check-exit-curves.mjs` holds every utility that runs one to `--ease-in-soft`. It reads
+names, not travel — an exit called `fade-away` is invisible to it — which is the cost of a rule a
+grep can check at all.
+
 **A disclosure's body arrives rather than appearing.** `<details>` is this app's most-used
 interaction — 70 of them — and its caret rotated over 200 ms while the content it pointed at landed in
 a single frame: the affordance animated and the payload not, which reads as the opposite of what
