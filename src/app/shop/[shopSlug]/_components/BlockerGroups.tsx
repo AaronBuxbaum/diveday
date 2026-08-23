@@ -219,14 +219,12 @@ export function BlockerGroups({
           titleAs="h3"
           title={t("blockers.emptyTitle")}
           action={
-            <>
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-              >
-                {t("blockers.viewSchedule")}
-              </Link>
-            </>
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("blockers.viewSchedule")}
+            </Link>
           }
           className="mt-5"
         />

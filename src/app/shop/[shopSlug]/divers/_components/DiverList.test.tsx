@@ -546,6 +546,29 @@ describe("DiverList level cell", () => {
     expect(screen.getAllByText("No current certification").length).toBeGreaterThan(0);
   });
 
+  /**
+   * **The exception reads louder than the repetition** (issue #764). A shop
+   * scanning this column is looking for the diver who has no card, and until
+   * this the two rendered in the same muted grey — so the one row that matters
+   * looked exactly like the "Open Water" repeated above and below it. Asserted
+   * on the class rather than through a screenshot because it is a *relative*
+   * claim: what matters is that the two differ, in both layouts.
+   */
+  it("renders a missing certification in fuller ink than a level a diver holds", () => {
+    renderList({ page: rosterPage({ certificationLevel: null }) });
+    for (const cell of screen.getAllByText("No current certification")) {
+      expect(cell).toHaveClass("font-medium");
+      expect(cell).not.toHaveClass("text-muted");
+    }
+
+    cleanup();
+    renderList({ page: rosterPage({ certificationLevel: "open_water" }) });
+    for (const cell of screen.getAllByText("Open Water")) {
+      expect(cell).toHaveClass("text-muted");
+      expect(cell).not.toHaveClass("font-medium");
+    }
+  });
+
   it("keeps the pending and to-confirm badges beside the level", () => {
     renderList({
       page: rosterPage({

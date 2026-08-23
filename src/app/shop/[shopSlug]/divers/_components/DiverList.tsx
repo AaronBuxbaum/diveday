@@ -112,6 +112,23 @@ function levelText(diver: DiverSummary, copy: DiverListCopy): string {
 }
 
 /**
+ * The level a diver *has* is roster fact and reads quiet; **having none reads
+ * louder**, because that is the row a front-desk staffer is scanning for.
+ *
+ * Both used to render in the same muted grey, which made "No current
+ * certification" the same weight as the "Open Water" repeated on seven rows
+ * around it (issue #764). Still no badge: this is ordinary ink at medium
+ * weight against muted, not an alert — the alerts are the attention column's,
+ * and inventing a second one here would put two tones on the same row for two
+ * different questions.
+ */
+function levelClass(diver: DiverSummary): string {
+  return diver.certificationLevel
+    ? "whitespace-nowrap text-muted"
+    : "whitespace-nowrap font-medium";
+}
+
+/**
  * The divers list filters live as you type — the input drives the URL's `?q=`
  * (debounced) and the server answers with the matching page, so the roster
  * scales to thousands of records without shipping them all to the browser.
@@ -491,10 +508,10 @@ export function DiverList({
                     </span>
                   </span>
                   <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    {/* The level is roster fact, not an alert — muted ink, not
-                        a pill. Badges below appear only when a row actually
-                        needs a staffer (design principle 9). */}
-                    <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
+                    {/* The level is roster fact, not an alert — ink, not a
+                        pill (`levelClass`). Badges below appear only when a row
+                        actually needs a staffer (design principle 9). */}
+                    <span className={levelClass(diver)}>{levelText(diver, copy)}</span>
                     {pendingCount(diver) > 0 ? (
                       <Badge tone="warning">
                         {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -522,8 +539,13 @@ export function DiverList({
           <Table shellClassName="relative mt-4 hidden sm:block">
             <THead>
               <Th>{copy.tableHeaderPerson}</Th>
-              <Th>{copy.tableHeaderLevel}</Th>
-              <Th>{copy.tableHeaderAttention}</Th>
+              {/* Both describing columns are pinned narrow, so the person cell
+                  — the only one that tells two rows apart — keeps the rest.
+                  Unpinned, `table-layout: fixed` splits the row in exact
+                  thirds and hands a column that is usually empty as much room
+                  as a name and an email (issue #764). */}
+              <Th width="12rem">{copy.tableHeaderLevel}</Th>
+              <Th width="14rem">{copy.tableHeaderAttention}</Th>
             </THead>
             <TBody>
               {divers.map((diver) => (
@@ -565,7 +587,7 @@ export function DiverList({
                       and always present, so searching never redraws the table
                       shape when a result happens to have no pending work. */}
                   <Td className="align-middle">
-                    <span className="whitespace-nowrap text-muted">{levelText(diver, copy)}</span>
+                    <span className={levelClass(diver)}>{levelText(diver, copy)}</span>
                   </Td>
                   <Td className="align-middle">
                     <div className="flex flex-wrap items-center gap-2">
