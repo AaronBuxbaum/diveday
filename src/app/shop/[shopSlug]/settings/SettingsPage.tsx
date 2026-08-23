@@ -50,7 +50,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
-import { formatHourOfDay, formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatHourOfDay, formatMoneyScanned, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
@@ -579,7 +579,7 @@ export default async function SettingsPage({
   const rentalPricingValue =
     shop.rentalPricing.setCents !== null
       ? t("settings.main.rentalPricing.value", {
-          price: formatMoneyCents(shop.rentalPricing.setCents, shopCurrency, locale),
+          price: formatMoneyScanned(shop.rentalPricing.setCents, shopCurrency, locale),
         })
       : notSet;
 
@@ -1619,7 +1619,7 @@ export default async function SettingsPage({
                             <span className="text-sm text-muted">
                               {t("settings.main.divePackages.summary", {
                                 dives: pkg.diveCount,
-                                price: formatMoneyCents(pkg.priceCents, shop.currency, locale),
+                                price: formatMoneyScanned(pkg.priceCents, shop.currency, locale),
                                 scope: t(
                                   pkg.scope === "fun_dives"
                                     ? "settings.main.divePackages.scopeFunDives"

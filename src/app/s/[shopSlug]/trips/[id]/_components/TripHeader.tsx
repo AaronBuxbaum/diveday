@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { diverTranslator } from "@/i18n/messages";
 import { perDiverBookingPriceCents } from "@/lib/courses";
-import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import type { Shop, Trip, TripMeetingDay } from "./types";
@@ -128,7 +128,7 @@ export function TripHeader({
             {perDiverPriceCents !== null ? (
               <p className="mt-4 flex items-baseline gap-2">
                 <span className="text-3xl font-semibold tracking-tight tabular-nums">
-                  {formatMoneyCents(perDiverPriceCents, currency, locale)}
+                  {formatMoneyScanned(perDiverPriceCents, currency, locale)}
                 </span>
                 <span className="text-sm text-muted">{t("common.perDiver")}</span>
               </p>

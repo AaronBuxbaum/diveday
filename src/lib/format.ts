@@ -50,6 +50,36 @@ export function formatMoneyCents(cents: number, currency = "usd", locale = "en-U
 }
 
 /**
+ * The same amount for a reader who is **scanning** rather than reconciling:
+ * 9500 usd → "$95", 6250 usd → "$62.50", 5000 jpy → "¥5,000".
+ *
+ * Dive-shop prices are whole numbers almost always, so `formatMoneyCents`
+ * renders the same two characters down every row of a list — twelve `.00`s in
+ * one scroll of a shop's public schedule, which is exactly what principle 9's
+ * cross-out test removes. The minor units are dropped **only when there are
+ * none to lose**: an amount that is not a whole major unit formats identically
+ * to `formatMoneyCents`, so a $62.50 half-day never reads "$62.5" or "$63".
+ *
+ * That conditional is the whole reason this is a second function rather than an
+ * option on the first. Money being *reconciled* — an order's rows and total, a
+ * refund, an invoice, the monthly report, the export — keeps
+ * `formatMoneyCents`, because a column of figures only aligns on its decimal
+ * point if every figure has one, and because an exact amount in a ledger should
+ * look exact (principle 6).
+ */
+export function formatMoneyScanned(cents: number, currency = "usd", locale = "en-US"): string {
+  const major = minorToMajor(cents, currency);
+  return cachedFormatter("num", Intl.NumberFormat, locale, {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    // Zero-decimal currencies need no help here: `minorToMajor` already made
+    // ¥5000 the integer 5000, so this branch is taken and `Intl` renders the
+    // yen it would have rendered anyway.
+    ...(Number.isInteger(major) ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}),
+  }).format(major);
+}
+
+/**
  * `timeZone` is **required** on every date/time formatter in this file, and
  * that is the whole point rather than an inconvenience.
  *

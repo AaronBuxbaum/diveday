@@ -193,6 +193,15 @@ This app handles safety documents. Manifests and cert checks look exact: tabular
 counts, unambiguous states (never color alone — icon + label), timestamps with timezone, print
 output as considered as screen output.
 
+**Money that is reconciled looks exact; money that is scanned does not have to.** An order's rows
+and total, a refund, an invoice, the monthly report and the export carry their minor units always
+(`formatMoneyCents`) — a column only aligns on a decimal point every figure has, and a ledger figure
+should look like one. A price being *scanned* down a list — the public schedule, the trip hero, the
+course catalog, a settings summary row — uses `formatMoneyScanned`, which drops the minor units only
+when the amount is a whole major unit, so "$95" and "$62.50" both stay honest. Twelve `.00`s in one
+scroll of a shop's schedule was principle 9's cross-out test failing on the largest text in the row
+(issue #769).
+
 ## 7. Undo over confirm — one model everywhere it's safe
 
 A reversible mutation gets an **undo**, never a blocking `confirm()` dialog. Two shapes:
