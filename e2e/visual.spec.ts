@@ -827,16 +827,24 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
  * has no baseline at all.
  */
 async function captureStickyFoot(page: Page, name: string, scheme: "light" | "dark") {
-  await paintWholeDocument(page);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  // The scroll is a layout change like any other; let it commit before the shot.
-  await page.evaluate(
-    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-  );
-  await page.screenshot({
-    path: `e2e/screenshots/${name}-${scheme}-vw-${page.viewportSize()?.width ?? 0}.png`,
-    animations: "disabled",
-  });
+  const baseViewport = page.viewportSize();
+  // Both viewports, like `capture()` — the phone is where a bar pinned to the
+  // bottom edge earns its place, so photographing only the desktop would leave
+  // the case that motivated it unbaselined.
+  for (const viewport of VIEWPORTS) {
+    await page.setViewportSize(viewport);
+    await paintWholeDocument(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    // The scroll is a layout change like any other; let it commit before the shot.
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+    await page.screenshot({
+      path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
+      animations: "disabled",
+    });
+  }
+  if (baseViewport) await page.setViewportSize(baseViewport);
 }
 
 async function capturePrint(page: Page, name: string) {
