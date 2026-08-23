@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
 import { Suspense } from "react";
+import { THEME_COLORS } from "./_brand/colors";
 import "./globals.css";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { SkipLink } from "@/components/SkipLink";
@@ -57,6 +58,35 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  /**
+   * **What an installed DiveDay looks like on iOS**, which is most of this
+   * market. There was none of this until issue #794, so a crew member who added
+   * DiveDay to their home screen got Safari's default chrome and no say in the
+   * title under the icon.
+   *
+   * `statusBarStyle: "default"` rather than `black-translucent`: the latter
+   * puts the page *under* the clock and battery, which needs the layout to
+   * reserve that height, and a manifest read at the rail with the clock sitting
+   * on top of the first diver's name is a worse trade than a plain bar.
+   */
+  appleWebApp: {
+    capable: true,
+    title: "DiveDay",
+    statusBarStyle: "default",
+  },
+};
+
+/**
+ * **Safari reads a `<meta name="theme-color">` and not the manifest**, so
+ * `manifest.ts`'s `theme_color` never reached iOS at all — the document carried
+ * no such tag. Two media-qualified values, because the tag is the one thing
+ * that colours the browser chrome above the page and the page has two skins.
+ *
+ * The two values, and why they are `--surface` rather than `--primary`, are in
+ * `./_brand/colors`.
+ */
+export const viewport: Viewport = {
+  themeColor: [...THEME_COLORS],
 };
 
 /**
