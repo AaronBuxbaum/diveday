@@ -3,6 +3,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
+  disclosureSettled,
   e2eNow,
   findTripOnBoard,
   openTripActivity,
@@ -29,6 +30,10 @@ async function openPrivateNotes(page: Page) {
   // rather than moving to helpers.ts because the spec seats exactly one diver
   // and reads the notes box without first locating a row.
   if (!isOpen) await details.locator("> summary").click();
+  // The body animates in, and the frame where `open` flips is not the frame
+  // where it is laid out — see `disclosureSettled`. This spec measures a scroll
+  // position immediately after opening, so it is the one that noticed.
+  await disclosureSettled(details);
   return details;
 }
 

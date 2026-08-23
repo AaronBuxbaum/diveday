@@ -420,6 +420,32 @@ export async function openTripActivity(page: Page): Promise<void> {
 async function openIfClosed(details: Locator): Promise<void> {
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
   if (!isOpen) await details.locator("> summary").click();
+  await disclosureSettled(details);
+}
+
+/**
+ * **Wait for a disclosure's body to finish arriving, not merely to be open.**
+ *
+ * Since the body animates in (`details::details-content` in globals.css), the
+ * frame where `open` flips is *not* the frame where the content is laid out:
+ * `content-visibility` transitions discretely, so for one frame the panel still
+ * occupies no height. A spec that opens a disclosure and immediately measures
+ * anything positional reads the page as it was a frame ago — which is how
+ * `add-diver.spec.ts` came to record a scroll position 235px above where the
+ * notes box actually settled, and then fail its own "the page did not jump"
+ * assertion by that margin.
+ *
+ * Waiting on the animation's end state rather than on a duration: opacity is
+ * `1` only once the arrival has run, and Playwright polls it. A reader with
+ * `prefers-reduced-motion` gets `1` on the first poll, which is the same
+ * answer one frame earlier.
+ */
+export async function disclosureSettled(details: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      details.evaluate((el) => getComputedStyle(el, "::details-content").opacity).catch(() => "1"),
+    )
+    .toBe("1");
 }
 
 /**
