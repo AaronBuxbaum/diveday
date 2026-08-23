@@ -127,6 +127,10 @@
     "divesNeedADate": "A dive count needs a due date beside it — the unit is due at whichever comes first."
   },
   "unit": {
+    "deleted": {
+      "badge": "Deleted",
+      "restore": "Restore unit"
+    },
     "backToRegister": "← Gear register",
     "where": {
       "title": "Where it is",

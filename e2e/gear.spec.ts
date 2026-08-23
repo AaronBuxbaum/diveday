@@ -195,6 +195,62 @@ test.describe("staff", () => {
     await expect(page.getByText(clock, { exact: false })).toBeVisible();
   });
 
+  /**
+   * The counter case behind issue #614: a customer asks when a deleted
+   * regulator was last serviced. The unit's record still reads, so answering
+   * costs no restore-onto-the-live-register-and-delete-it-again round trip —
+   * and it is read-only, because every writer in `src/db/gear.ts` refuses a
+   * deleted row and a rendered form would be a control that cannot work.
+   */
+  test("a deleted unit's record still reads its history, with nothing on it that writes", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: "Reg #5", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Reg #5" })).toBeVisible();
+    const record = page.url();
+    // The seeded annual service, worded exactly as the live record words it.
+    const clock = (
+      (await page.getByText("last ", { exact: false }).first().textContent()) ?? ""
+    ).trim();
+    expect(clock.length).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Delete unit" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Unit deleted." })).toBeVisible();
+
+    // Reached the way a staffer would, from the register's Deleted view.
+    await page.goto("/shop/blue-mantis/gear?view=deleted");
+    await page
+      .getByRole("region", { name: "Deleted" })
+      .getByRole("link", { name: "Reg #5", exact: true })
+      .click();
+    await expect(page).toHaveURL(record);
+    await expect(page.getByRole("heading", { level: 1, name: "Reg #5" })).toBeVisible();
+    await expect(page.getByText("Deleted", { exact: true }).first()).toBeVisible();
+
+    // The service clock is still on the page — it is the whole reason this
+    // record is reachable — and the paper trail beneath it is unfolded.
+    await expect(page.getByText(clock, { exact: false })).toBeVisible();
+    await expect(
+      page.locator("details[open] summary").filter({ hasText: "History" }),
+    ).toBeVisible();
+
+    // Nothing that writes.
+    for (const control of [
+      "Log it",
+      "Save changes",
+      "Delete unit",
+      "Pull for service",
+      "Return to service",
+    ]) {
+      await expect(page.getByRole("button", { name: control })).toHaveCount(0);
+    }
+
+    // One act, and it lands back on the register with the unit on it.
+    await page.getByRole("button", { name: "Restore unit" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Unit restored." })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Reg #5", exact: true })).toBeVisible();
+  });
+
   test("refuses to delete a unit a diver still has, and says who is holding it", async ({
     page,
   }) => {

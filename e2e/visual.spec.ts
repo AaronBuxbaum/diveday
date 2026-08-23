@@ -3952,6 +3952,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "gear-register-deleted", scheme);
       });
 
+      // The same unit's own record while it is deleted (issue #614): the
+      // Deleted badge in the header, the service clocks and the unfolded
+      // paper trail that are the reason the row survived the delete, and a
+      // page carrying no control but Restore. The read-only shape is what
+      // this watches — a write form creeping back in is invisible in a diff
+      // of the page, which branches in five places.
+      test(`a deleted unit's record renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/gear");
+        await page.getByRole("link", { name: "Reg #5", exact: true }).click();
+        await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
+        const record = page.url();
+        await page.getByRole("button", { name: "Delete unit" }).click();
+        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+
+        await page.goto(record);
+        await page.getByRole("button", { name: "Restore unit" }).waitFor();
+        await capture(page, "gear-unit-deleted", scheme);
+      });
+
       // The register on its worst day, through /api/test/seed-trouble-states
       // (never seeded into blue-mantis): a checked-out unit gone overdue puts
       // the returns panel into its amber "was due" state, and a lapsed tank

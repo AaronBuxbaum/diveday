@@ -261,7 +261,7 @@
   },
   "/shop/[shopSlug]/gear/[id]": {
     "e2e": ["gear.spec.ts"],
-    "visual": ["gear-unit"]
+    "visual": ["gear-unit", "gear-unit-deleted"]
   },
   "/shop/[shopSlug]/orders": {
     "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],

@@ -270,3 +270,39 @@ the unit, worded from the page's own read so no diver's name rides in a URL.
 The way back is the register's **Deleted** view, whose action is **Restore** —
 without it the undo would last as long as a toast, and the unit's own URL is a
 404 the moment it is deleted.
+
+
+## Amendment 2026-08-23 — a deleted unit's record stays readable, and that is the rule
+
+The line above — "the unit's own URL is a 404 the moment it is deleted" — was
+never a decision, only a consequence of `getGearItemDetail` carrying the
+register's live-rows filter. It is now decided the other way, on the product
+owner's call (issue #614): **a deleted record stays readable.**
+
+The case is ordinary counter work. A shop deletes "Reg #4"; six months later a
+customer asks when that regulator was last serviced. The service events and the
+rental windows are still attached — that is the entire reason the delete is
+soft — but with the record 404ing, the only way to read them was to restore the
+unit onto the live register, where it immediately re-enters every picker, and
+delete it again. Two writes and a window of wrong state to answer a question.
+
+`getGearItemDetail` therefore drops `liveGearItem()` and reports `deleted_at`
+instead, and the record branches on it: a Deleted badge in the header, the
+clocks and the unfolded service history, the rental record without its
+actions, and **no write form at all** — every writer in `src/db/gear.ts`
+refuses a deleted row, so a rendered form would be a control that cannot work.
+The Status card becomes the one act left, Restore, where Delete was.
+
+**The general rule, which is why this is in an ADR and not a comment:** a
+soft-deleted entity's own record page stays readable, read-only, with the way
+back on it. Every *other* read stays live-rows-only — the deleted unit is
+un-assignable, un-searchable and un-countable, and nothing about this touches
+what a delete does to the rows. The diver roster has worked this way since its
+Deleted view landed; gear was the outlier, and the two pillars disagreeing is
+what made the next entity a coin flip rather than a choice. A new entity copies
+this shape.
+
+The word on screen is still **Delete** and **Restore**
+([20260820-every-delete-is-soft](20260820-every-delete-is-soft.md)), and the
+page carries no sentence reassuring the reader which history survived: the
+history is on the page, which is a better answer than a caption about it.
