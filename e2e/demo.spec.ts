@@ -11,10 +11,20 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 
-  // A minted demo shows the visitor how to sign back in if their session
-  // expires — the shop is throwaway, so plain-text credentials are fine.
+  // **The first frame is not a credential pair.** This used to print a
+  // plaintext email and password on every page of the demo from the first
+  // millisecond, so the first sentence a prospective buyer read inside the
+  // product was recovery instructions for a failure that had not happened
+  // (issue #806). The warning that earns its place stays.
+  await expect(page.getByText(/don't enter real customer details/)).toBeVisible();
+  await expect(page.getByText(/Session expired\? Sign back in at/)).toBeHidden();
+
+  // It is one tap away, behind the control the banner already had — a minted
+  // demo is throwaway data, so the way back in is a courtesy rather than a
+  // secret; it just is not the greeting.
+  await page.getByRole("button", { name: /^Switch role/ }).click();
   await expect(page.getByText(/Session expired\? Sign back in at/)).toBeVisible();
-  await expect(page.getByText("password")).toBeVisible();
+  await expect(page.getByText("password").first()).toBeVisible();
 });
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {

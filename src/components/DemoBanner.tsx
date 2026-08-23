@@ -141,10 +141,29 @@ export function DemoBanner({
         ) : null}
 
         {isMintedDemo ? (
-          <div className="mt-2 space-y-1 text-xs text-muted">
+          <div className="mt-2 text-xs text-muted">
             <p>{copy.sharedWarning}</p>
+          </div>
+        ) : null}
+
+        {/* Expandable Role Switched Panel */}
+        {isExpanded ? (
+          <div className="mt-4 border-t border-border/60 pt-4">
+            {/* **The way back in, one tap off the first frame.**
+                This credential pair used to sit in the banner itself, on every
+                page of the demo, from the first millisecond — so the first
+                sentence a prospective buyer read inside the product was
+                recovery instructions for a failure that had not happened, in
+                monospace, about a session expiring (issue #806). It is also
+                the scaffolding principle 4 says never to surface.
+                It cannot be shown *when* the session expires, which would be
+                the ideal: this banner renders only for a signed-in demo
+                visitor, so by the time the session is gone the reader is at
+                /sign-in and this component is not on the page. So it lives
+                here — behind the one control the banner already has, where
+                somebody looking for a way back will look. */}
             {currentEmail && demoPassword ? (
-              <p>
+              <p className="mb-4 text-xs text-muted">
                 {copy.sessionExpired}{" "}
                 <Link href="/sign-in" className="font-medium text-primary hover:underline">
                   /sign-in
@@ -157,12 +176,6 @@ export function DemoBanner({
                 <span className="font-mono break-all">{demoPassword}</span>.
               </p>
             ) : null}
-          </div>
-        ) : null}
-
-        {/* Expandable Role Switched Panel */}
-        {isExpanded ? (
-          <div className="mt-4 border-t border-border/60 pt-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {roles.map((role) => {
                 const isActive = role.id === currentRole;

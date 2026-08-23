@@ -256,6 +256,13 @@ async function TodayBody({
   // So `!nextDeparture` stays only as the cheap prefilter it can honestly be —
   // a shop with no trips has none upcoming, so a first-run shop always has a
   // null one — and the count is what decides.
+  // **A demo shop is excluded, and that is the right call rather than an
+  // oversight** (the second question in issue #806). This checklist is about
+  // *setting a shop up* — schedule your first departure, add a dive site,
+  // connect Stripe — and a minted demo arrives with all three already done, so
+  // it would open on three ticked boxes and a call to action nobody needs. A
+  // demo visitor's orientation is the banner above: the role they are viewing
+  // as, and a "try this" line per role behind its switcher.
   const totalTrips = !shop.isDemo && !nextDeparture ? await countShopTrips(db, shop.id) : null;
   const showFirstRunChecklist = totalTrips === 0;
   const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
