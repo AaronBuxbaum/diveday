@@ -54,7 +54,6 @@ const rosterPage: DiverPage = {
 
 const copy = {
   addDiverLabel: t("divers.list.addDiverAction"),
-  addDiverWithName: t.raw("divers.list.addDiverWithName"),
   viewAllDivers: t("divers.list.viewAllDivers"),
   viewDivingToday: t("divers.list.viewDivingToday"),
   viewNeedsAttention: t("divers.list.viewNeedsAttention"),
@@ -131,10 +130,31 @@ describe("DiverList search", () => {
 });
 
 describe("DiverList empty state", () => {
-  it("does not offer a separate add diver button before typing", () => {
+  /**
+   * **Day one is the state with no other door.** The empty card offers a bulk
+   * import and nothing else, and the page header carries no action — so before
+   * this the roster of a shop with no divers had no way to add one, because
+   * the only "Add diver" in the page mounted on the first keystroke of a
+   * search over an empty roster.
+   */
+  it("offers the full add-a-diver form while the search box is empty", () => {
     renderList();
     expect(screen.getByText("No divers on file yet.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new",
+    );
+  });
+
+  /**
+   * The caller that passes no quick-add action gets no button at all — the
+   * empty-box door is the same offer through a different mechanism, not a
+   * second one that outlives it.
+   */
+  it("offers neither door when the caller withholds the quick-add action", () => {
+    renderList({ quickAddAction: null });
     expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
   });
 
   it("offers a bulk import to whoever may run one", () => {
@@ -166,64 +186,64 @@ describe("DiverList empty state", () => {
     expect(screen.getByText("Search by name, email, or phone.")).toBeInTheDocument();
   });
 
-  it("slides the add diver action away when the search is cleared", () => {
-    vi.useFakeTimers();
-    try {
-      renderList({ query: "nobody" });
-      const search = screen.getByRole("searchbox", { name: "Search divers" });
-      fireEvent.change(search, { target: { value: "" } });
-      const button = screen.getByRole("button", { name: "Add diver" });
-      const animationShell = button.closest("div");
-      expect(animationShell).toHaveClass("animate-slide-out-right");
+  /**
+   * **Clearing the box swaps the door, and moves nothing.**
+   *
+   * The button used to unmount on an exit animation while the search box slid
+   * back across the row to reclaim the space (issue #782, and on a phone
+   * #781). Both doors carry the same words at the same size, so the only way
+   * to see the swap is to read the element — which is what this does, in both
+   * directions.
+   */
+  it("swaps the quick-add for the full form when the search is cleared, without moving either", () => {
+    renderList({ query: "nobody" });
+    const search = screen.getByRole("searchbox", { name: "Search divers" });
+    expect(screen.getByRole("button", { name: "Add diver" })).toBeInTheDocument();
 
-      fireEvent.animationEnd(animationShell as HTMLElement, { animationName: "slide-out-right" });
-      act(() => vi.advanceTimersByTime(250));
-      expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
+    fireEvent.change(search, { target: { value: "" } });
+    expect(screen.queryByRole("button", { name: "Add diver" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new",
+    );
+
+    fireEvent.change(search, { target: { value: "Nora" } });
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add diver" })).toBeInTheDocument();
   });
 
   /**
-   * **The phone gets no horizontal travel, and still gets the event.**
+   * **The motion is gone from the row, not merely quiet on a phone.**
    *
-   * The slide was designed for the desktop layout, where the input is a fixed
-   * 20rem beside the button and the motion reads as the button pushing it
-   * aside. Below `sm` the input is full width in a clipped row, so the same
-   * 250ms carried the whole focused search box across the screen while
-   * somebody was typing into it (issue #781).
+   * `.animate-slide-in-right` / `.animate-slide-out-right` slid the search box
+   * sideways to make room for a button that mounted on the first keystroke.
+   * The phone half was answered by an `@media (width < 40rem)` block that cut
+   * the duration to `0.01ms` — necessarily a duration rather than
+   * `animation: none`, because the component's state machine only advanced on
+   * `animationend`. With the button rendered from first paint there is no
+   * reveal to animate, no state machine to strand, and no reason to keep a
+   * breakpoint that made one layout behave unlike the other.
    *
-   * The trap is that `animationend` is the *only* thing that advances
-   * `entering -> visible`: drop the animation below `sm` and the button is
-   * stranded mid-state forever. So the rule collapses the *duration* instead —
-   * the shape the reduced-motion kill-switch already uses — and this asserts
-   * exactly that, because a component test cannot see a media query.
-   *
-   * It cannot assert the settle: **jsdom implements no `AnimationEvent`**, so
-   * nothing here can fire the event React is listening for. `e2e/divers.spec.ts`
-   * does it in a real browser at a phone viewport instead.
+   * Read out of the stylesheet as well as the DOM: a class left behind in
+   * `globals.css` is what a later edit reaches for and re-applies.
    */
-  it("keeps the animation classes, and collapses the motion rather than removing it on a phone", () => {
-    renderList({ query: "" });
+  it("leaves no horizontal travel on the search row, in the markup or the stylesheet", () => {
+    const { container } = renderList({ query: "" });
     fireEvent.change(screen.getByRole("searchbox", { name: "Search divers" }), {
       target: { value: "Nora" },
     });
-    // There has to be an animation for `animationend` to end.
-    expect(screen.getByRole("button", { name: /Add/ }).closest("div")).toHaveClass(
-      "animate-slide-in-right",
-    );
+    expect(container.querySelectorAll("[class*='animate-slide']")).toHaveLength(0);
 
+    // Comments stripped first: the block left where these rules stood names
+    // every one of them, which is the point of leaving it there.
     const css = readFileSync(
       join(import.meta.dirname, "..", "..", "..", "..", "globals.css"),
       "utf8",
-    );
-    const phoneRule = css.slice(css.indexOf("@media (width < 40rem)"));
-    const body = phoneRule.slice(0, phoneRule.indexOf("\n}"));
-    expect(body).toContain(".animate-slide-in-right");
-    expect(body).toContain(".animate-slide-out-right");
-    expect(body).toContain("animation-duration: 0.01ms");
-    // Never `animation: none` — see the state machine above.
-    expect(body).not.toContain("animation: none");
+    ).replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).not.toContain("animate-slide-in-right");
+    expect(css).not.toContain("animate-slide-out-right");
+    expect(css).not.toContain("--quick-add-shift");
+    expect(css).not.toContain("@media (width < 40rem)");
   });
 
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {

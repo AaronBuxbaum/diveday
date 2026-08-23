@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  type CSSProperties,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +17,6 @@ import type { CertificationLevel } from "@/lib/readiness";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
-type QuickAddMode = "hidden" | "entering" | "visible" | "exiting";
 
 /**
  * Every value is a plain string — never a function. This is a client
@@ -35,8 +27,14 @@ type QuickAddMode = "hidden" | "entering" | "visible" | "exiting";
  * at render time via `pluralForm()`/`fill()` (`@/i18n/fill`).
  */
 export interface DiverListCopy {
+  /**
+   * The quick-add button, in both of its states — beside a search that has
+   * text in it, and beside an empty one, where the same words open the full
+   * add-a-diver form instead. One string, because it is one offer either way;
+   * it never carried the typed name (`addDiverWithName` was the literal "Add
+   * diver" in both bundles by the time issue #782 was written).
+   */
   addDiverLabel: string;
-  addDiverWithName: string;
   viewAllDivers: string;
   viewDivingToday: string;
   viewNeedsAttention: string;
@@ -199,18 +197,13 @@ export function DiverList({
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
-  const [quickAddMode, setQuickAddMode] = useState<QuickAddMode>(
-    query.trim() ? "entering" : "hidden",
-  );
   // **The roster opens ready to be typed into**, the way check-in does
   // (`check-in/CheckInSearch.tsx`): a staffer arrives here holding a name, and
   // searching is the first thing they do. Focused through a ref rather than the
   // `autoFocus` attribute because biome's `noAutofocus` rule forbids that JSX
   // prop outright — every focus-on-mount in this repo goes the same way.
   const searchRef = useRef<HTMLInputElement>(null);
-  const quickAddRef = useRef<HTMLDivElement>(null);
   const quickAddFormRef = useRef<HTMLFormElement>(null);
-  const [quickAddShift, setQuickAddShift] = useState(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce: the
@@ -221,30 +214,10 @@ export function DiverList({
   useEffect(() => {
     if (debounce.current) return;
     setTyped(query);
-    setQuickAddMode(query.trim() ? "visible" : "hidden");
   }, [query]);
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
-  useEffect(() => {
-    if (quickAddMode !== "exiting") return;
-    const timer = setTimeout(() => setQuickAddMode("hidden"), 250);
-    return () => clearTimeout(timer);
-  }, [quickAddMode]);
-  useLayoutEffect(() => {
-    const quickAdd = quickAddRef.current;
-    if (quickAddMode === "hidden" || !quickAdd) {
-      setQuickAddShift(0);
-      return;
-    }
-    const updateShift = () =>
-      setQuickAddShift(Math.ceil(quickAdd.getBoundingClientRect().width + 8));
-    updateShift();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(updateShift);
-    observer.observe(quickAdd);
-    return () => observer.disconnect();
-  }, [quickAddMode]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
@@ -278,15 +251,6 @@ export function DiverList({
 
   const search = (value: string) => {
     setTyped(value);
-    setQuickAddMode((mode) =>
-      value.trim()
-        ? mode === "hidden" || mode === "exiting"
-          ? "entering"
-          : "visible"
-        : mode === "hidden"
-          ? "hidden"
-          : "exiting",
-    );
     cancelPendingSearch();
     debounce.current = setTimeout(() => {
       // Cleared before the replace so the navigation this triggers is free to
@@ -319,9 +283,7 @@ export function DiverList({
       router.push(`/shop/${shopSlug}/divers/${page.divers[0].person.id}`);
       return;
     }
-    if (quickAddMode !== "hidden" && quickAddAction) {
-      quickAddFormRef.current?.requestSubmit();
-    }
+    quickAddFormRef.current?.requestSubmit();
   };
 
   const { divers } = page;
@@ -386,10 +348,13 @@ export function DiverList({
             <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
           )}
         </div>
-        <div
-          className="flex w-full max-w-full flex-wrap items-center gap-2 max-sm:overflow-x-hidden sm:w-auto"
-          style={{ "--quick-add-shift": `${quickAddShift}px` } as CSSProperties}
-        >
+        {/* Phone: the button wraps to its own row under a full-width box and
+            stays there. Desktop: it sits beside a 20rem box. Either way it is
+            on screen from first paint — it used to mount on the first
+            keystroke and slide the search box aside to make room, which on a
+            phone moved the box under the thumb typing into it (#781) and read
+            as something popping in beside it (#782). */}
+        <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
           <div className="w-full min-w-0 sm:w-80">
             <label className="sr-only" htmlFor="diver-search">
               {copy.searchDiversLabel}
@@ -402,30 +367,18 @@ export function DiverList({
               onChange={(event) => search(event.target.value)}
               onKeyDown={submitSearch}
               placeholder={copy.searchPlaceholder}
-              className={`${controlClass} min-w-0 ${
-                quickAddMode === "exiting"
-                  ? "animate-slide-out-right"
-                  : quickAddMode === "entering"
-                    ? "animate-slide-in-right"
-                    : ""
-              }`}
+              className={`${controlClass} min-w-0`}
             />
           </div>
-          {quickAddMode !== "hidden" && quickAddAction ? (
-            <div
-              ref={quickAddRef}
-              className={
-                quickAddMode === "exiting"
-                  ? "animate-slide-out-right"
-                  : quickAddMode === "entering"
-                    ? "animate-slide-in-right"
-                    : undefined
-              }
-              onAnimationEnd={() => {
-                if (quickAddMode === "exiting") setQuickAddMode("hidden");
-                if (quickAddMode === "entering") setQuickAddMode("visible");
-              }}
-            >
+          {/* One offer, two doors, and deliberately the same words on both so
+              the swap on the first keystroke is invisible. With something
+              typed, one tap creates that person and lands on their record.
+              With an empty box there is nothing to create from — submitting
+              the quick-add would bounce off `?notice=invalid` — so the same
+              button opens the full form instead, which is also the roster's
+              only add-a-diver door on day one. */}
+          {quickAddAction ? (
+            typed.trim() ? (
               <form ref={quickAddFormRef} action={quickAddAction} onSubmit={cancelPendingSearch}>
                 <input type="hidden" name="query" value={typed.trim()} />
                 <SubmitButton
@@ -435,10 +388,22 @@ export function DiverList({
                     className: "whitespace-nowrap",
                   })}
                 >
-                  {fill(copy.addDiverWithName, { name: typed.trim() })}
+                  {copy.addDiverLabel}
                 </SubmitButton>
               </form>
-            </div>
+            ) : (
+              <Link
+                href={`/shop/${shopSlug}/divers/new`}
+                // Nothing is pending — the box is empty — but a timer from the
+                // text the staffer just cleared could still be, and landing
+                // after this tap would put that search back in the URL behind
+                // them (same reasoning as the view chips above).
+                onClick={cancelPendingSearch}
+                className={buttonClass({ variant: "primary", className: "whitespace-nowrap" })}
+              >
+                {copy.addDiverLabel}
+              </Link>
+            )
           ) : null}
         </div>
       </div>

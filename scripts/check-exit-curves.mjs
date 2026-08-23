@@ -17,8 +17,9 @@ import { fileURLToPath } from "node:url";
  * the other three exits in the same stylesheet sat on the arrival curve for
  * weeks afterwards (issue #756): `.toast-dismiss`, which fires on every
  * reversible mutation in the app and is the most-seen exit in the product;
- * `.animate-slide-out-right`, the diver row leaving the roster after a delete,
- * which is the one exit doing real explanatory work; and `.animate-scale-out`.
+ * `.animate-slide-out-right`, which slid the divers roster's search box back
+ * across its row (deleted since, with the reveal it made room for — issue
+ * #782); and `.animate-scale-out`.
  * Nothing swept for them because nothing could tell an entrance keyframe from a
  * departing one — a written rule with no check is exactly the shape of debt
  * that drifts back.

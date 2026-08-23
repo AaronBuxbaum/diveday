@@ -203,7 +203,6 @@ export default async function DiversPage({
         }
         copy={{
           addDiverLabel: t("divers.list.addDiverAction"),
-          addDiverWithName: t.raw("divers.list.addDiverWithName"),
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewDivingToday: t("divers.list.viewDivingToday"),
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),
