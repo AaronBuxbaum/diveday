@@ -54,6 +54,32 @@ const MIN_WIDTH = {
 export type TableMinWidth = keyof typeof MIN_WIDTH;
 
 /**
+ * Column widths, for the table that has one column carrying the row's subject
+ * and one or two narrow ones describing it.
+ *
+ * Every table here is `table-layout: fixed`, which without any stated width
+ * splits the row into **equal** columns — so a three-column table gives a
+ * column reserved for an exception exactly as much room as the person's name
+ * and email. The divers roster was that: "Open Water" repeated down a third of
+ * the width and an empty third beside it, with the email truncating in the
+ * narrow first cell (issue #764).
+ *
+ * Naming a width on the narrow columns is the whole fix: under fixed layout the
+ * columns that state none share whatever is left, so the subject cell grows by
+ * itself. Static strings for the same reason as `MIN_WIDTH` — Tailwind cannot
+ * see an interpolated arbitrary value — and deliberately few: this is a hint
+ * about a column's *role*, not a layout escape hatch.
+ */
+const COLUMN_WIDTH = {
+  "8rem": "w-32",
+  "10rem": "w-40",
+  "12rem": "w-48",
+  "14rem": "w-56",
+} as const;
+
+export type TableColumnWidth = keyof typeof COLUMN_WIDTH;
+
+/**
  * The table plus its shell, as one piece so neither can be forgotten or
  * hand-rolled. The outer shell clips rounded corners; its inner scroll region
  * keeps wide tables usable on a phone. Separating those two responsibilities
@@ -124,6 +150,7 @@ export function THead({
 export function Th({
   numeric = false,
   hideBelow,
+  width,
   scope = "col",
   className = "",
   children,
@@ -132,6 +159,11 @@ export function Th({
   numeric?: boolean;
   /** Fold this column away below the breakpoint (its content moves under the first cell). */
   hideBelow?: keyof typeof HIDE_BELOW;
+  /**
+   * Pin this column narrow so the unnamed ones keep the rest. Set it on the
+   * *describing* columns, never on the one carrying the row's subject.
+   */
+  width?: TableColumnWidth;
   /**
    * `row` for the first cell of a body row when that cell *names* the row and
    * the other cells describe it — the public site-comparison table, where each
@@ -149,7 +181,7 @@ export function Th({
       scope={scope}
       className={`overflow-hidden bg-clip-padding px-4 py-3 font-semibold ${numeric ? "text-right" : ""} ${
         hideBelow ? HIDE_BELOW[hideBelow] : ""
-      } ${className}`.trim()}
+      } ${width ? COLUMN_WIDTH[width] : ""} ${className}`.trim()}
     >
       {children}
     </th>
