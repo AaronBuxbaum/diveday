@@ -52,6 +52,9 @@ describe("bookingConfirmationEmail", () => {
     expect(email.text).toContain("digital certification record");
     expect(email.html).toContain("Pre-Trip Checklist Reminder:");
     expect(email.html).toContain("Reef-safe sunscreen");
+    // The one tinted panel in any template: without the class the wrapper's
+    // dark rules cannot reach it, and its light fill stays put in a dark inbox.
+    expect(email.html).toContain('class="dd-panel"');
   });
 
   it("omits the checklist entirely when the shop has no packing list (no empty box)", () => {
@@ -642,5 +645,48 @@ describe("wrapEmailHtml", () => {
     });
     expect(html).toContain("Sal &amp; Sons &lt;Diving&gt;");
     expect(html).not.toContain("<img");
+  });
+
+  // The invariant, not the palette: `color-scheme: light dark` tells a client
+  // to stop inverting because the message handles both schemes, so a document
+  // that declares it and ships no dark block is the dark-on-dark of issue #771.
+  it("never claims both colour schemes without supplying dark values", () => {
+    const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
+    if (html.includes('name="color-scheme"')) {
+      expect(html).toContain("@media (prefers-color-scheme:dark)");
+    }
+  });
+
+  it("flips page, ink, and action colours in dark mode", () => {
+    const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
+    const dark = html.slice(html.indexOf("@media (prefers-color-scheme:dark)"));
+    // docs/design/brand.md: open ocean, deep-sea ink's dark value, dark lagoon.
+    expect(dark).toContain("#071720");
+    expect(dark).toContain("#e9f3f4");
+    expect(dark).toContain("#22d3ee");
+  });
+
+  // Inline declarations outrank any stylesheet rule that is not `!important`,
+  // so a dark rule without it renders as light in every client that reads it.
+  it("marks every dark override important, since inline styles carry the light values", () => {
+    const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
+    const dark = html.slice(
+      html.indexOf("@media (prefers-color-scheme:dark)"),
+      html.indexOf("</style>"),
+    );
+    for (const declaration of dark.matchAll(
+      /(background-color|color|border-left-color)\s*:[^;}]+/g,
+    ))
+      expect(declaration[0]).toContain("!important");
+  });
+
+  // A client that strips <style> gets the light document it got before, which
+  // is the whole reason the light half stays inline rather than moving too.
+  it("keeps the light values inline, so a client that strips the stylesheet still reads", () => {
+    const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
+    const body = html.slice(html.indexOf("<body"));
+    expect(body).toContain("background-color: #f3f4f6");
+    expect(body).toContain("color: #111827");
+    expect(body).toContain("#0e7490");
   });
 });

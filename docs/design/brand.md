@@ -112,6 +112,13 @@ Color rules:
   ink, thread, vinyl, or textile swatch because substrates change color.
 - A vendor's “close enough” teal is not automatically DiveDay teal. Ask for a proof on the actual
   garment or material.
+- **Outbound email carries both columns literally.** A message cannot reach the tokens, so
+  `wrapEmailHtml` (`src/lib/notifications/email.ts`) writes the light values inline and the dark ones
+  — open ocean, deep-sea ink's dark value, dark lagoon — in the single `@media
+  (prefers-color-scheme: dark)` block in its `<head>`. Both halves move together: the document
+  declares `color-scheme: light dark`, which is a promise that it renders correctly in both and stops
+  Apple Mail and Outlook inverting it themselves, so a colour added to an email in light only lands
+  as unread dark-on-dark in somebody's inbox rather than merely off-brand (issue #771).
 
 ## Typography
 
