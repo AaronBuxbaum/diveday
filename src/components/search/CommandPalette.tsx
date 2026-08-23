@@ -10,6 +10,7 @@ import type { GearItemStatus } from "@/lib/gear";
 import {
   type StaffDestinationGates,
   type StaffDestinationLabels,
+  type StaffDestinationTitles,
   staffDestinationHref,
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
@@ -72,6 +73,15 @@ export type CommandPaletteCopy = {
    * become two different words for the same page.
    */
   destinationLabels: StaffDestinationLabels;
+  /**
+   * What a destination calls *itself* once you are on it, where that differs
+   * from its label. Searched but never shown: a staffer who thinks of Reports
+   * as "How's your month" and types that got nothing back, because the rows
+   * are built from the nav's vocabulary and the page is written in the
+   * product's (issue #824). The label stays the row's word — two names on one
+   * row is a list you have to read twice.
+   */
+  destinationTitles: StaffDestinationTitles;
   /** Today's departure — a live href, not a fixed destination. */
   goToBoarding: string;
   /** The per-device offline snapshot, which is not shop-scoped. */
@@ -203,7 +213,8 @@ export function CommandPalette({
     // this viewer's permissions.
     for (const destination of staffPaletteDestinations(gates)) {
       const label = copy.destinationLabels[destination.id];
-      if (q === "" || label.toLowerCase().includes(q)) {
+      const title = copy.destinationTitles[destination.id];
+      if (q === "" || label.toLowerCase().includes(q) || title?.toLowerCase().includes(q)) {
         goto.push({
           key: `goto:${destination.id}`,
           label,

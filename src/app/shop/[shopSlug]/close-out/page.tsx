@@ -48,6 +48,7 @@ import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 import { RecapNoteEditor } from "./_components/RecapNoteEditor";
@@ -365,7 +366,10 @@ export default async function CloseOutPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["closed", "noted", "notice"]} />
       <ShopPageHeader
-        eyebrow={`${t("closeout.title")} · ${formatShortDate(now, locale, shop.timezone)}`}
+        // The nav's own word, not a second copy of it — `closeout.title` said
+        // "Close-out" beside `shared.shopNavLinks.closeOut` saying "Close-out",
+        // one edit apart from disagreeing (issue #824).
+        eyebrow={`${t(STAFF_DESTINATION_LABEL_KEYS.closeOut)} · ${formatShortDate(now, locale, shop.timezone)}`}
         title={t(CLOSEOUT_HEADLINE_KEYS[state.shape])}
         description={t(CLOSEOUT_SUBTITLE_KEYS[state.shape])}
       />

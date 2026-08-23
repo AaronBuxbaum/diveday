@@ -30,6 +30,7 @@ import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -240,7 +241,7 @@ export default async function ReportsPage({
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("reports.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reports)}
         title={t("reports.title")}
         description={description}
       />

@@ -16,6 +16,7 @@ import { type DateRequestMatch, groupDateRequests } from "@/lib/date-requests";
 import { formatShortDate } from "@/lib/format";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — it is this segment's `loading.tsx` that stands in while the
@@ -248,7 +249,7 @@ export default async function RequestsPage({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("requests.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.requests)}
         title={t("requests.title")}
         description={t("requests.description")}
       />

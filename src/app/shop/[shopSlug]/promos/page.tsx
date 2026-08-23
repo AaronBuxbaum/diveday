@@ -25,6 +25,7 @@ import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import {
   createPromoAction,
@@ -199,7 +200,7 @@ export default async function PromosPage({
         ]}
       />
       <ShopPageHeader
-        eyebrow={t("promos.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.promoCodes)}
         title={t("promos.title")}
         description={t("promos.description")}
       />

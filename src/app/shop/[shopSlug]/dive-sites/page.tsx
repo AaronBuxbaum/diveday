@@ -34,6 +34,7 @@ import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
@@ -125,7 +126,7 @@ export default async function DiveSitesPage({
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("diveSites.catalogEyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
         title={t("diveSites.list.title")}
         description={t("diveSites.list.description")}
         // An empty library gets no header actions: the empty card below is
@@ -441,7 +442,7 @@ async function CatalogView({
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          eyebrow={t("diveSites.catalogEyebrow")}
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
           title={t("diveSites.catalog.title")}
           description={t("diveSites.catalog.description")}
         />

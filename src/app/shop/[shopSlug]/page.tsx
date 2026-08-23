@@ -41,6 +41,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   anyBoatIsIn,
@@ -348,7 +349,12 @@ async function TodayBody({
   return (
     <>
       <ShopPageHeader
-        eyebrow={formatShortDate(now, locale, shop.timezone)}
+        // The destination first, then the day. The date alone was the one
+        // thing on this page that could confirm you had arrived, and it named
+        // a *when* rather than a *where* — so a staffer who tapped "Today"
+        // read "Tue, Jul 21" and a greeting, and nothing said Today (issue
+        // #824). Same shape Close-out already used.
+        eyebrow={`${t(STAFF_DESTINATION_LABEL_KEYS.today)} · ${formatShortDate(now, locale, shop.timezone)}`}
         title={t(GREETING_KEYS[getTimeOfDayGreeting(now, shop.timezone)], { name: firstName })}
         meta={
           <>
