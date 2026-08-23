@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { signInAs } from "./helpers";
@@ -109,8 +109,16 @@ export type PrivateShop = {
  * *schedule* before every test; a test that writes the shop's **settings**
  * takes a whole shop of its own through `privateShop` below.
  */
+/** How many lines of browser activity a failure carries. See `browserActivity`. */
+const ACTIVITY_LIMIT = 400;
+
 export const test = base.extend<
-  { demoReset: undefined; privateShop: PrivateShop; privateShopSlug: string | null },
+  {
+    demoReset: undefined;
+    browserActivity: undefined;
+    privateShop: PrivateShop;
+    privateShopSlug: string | null;
+  },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
   // Reset this worker's demo shop to the seeded fixture before every test so
@@ -152,6 +160,92 @@ export const test = base.extend<
         );
       }
       await use(undefined);
+    },
+    { auto: true },
+  ],
+
+  /**
+   * **What the browser was doing, attached only when the test failed.**
+   *
+   * A pager's `Next` click succeeded on CI and the URL never changed for eight
+   * seconds — on a runner where that navigation takes 70ms (issue #860). The
+   * call log said the click landed and the URL did not move, and that is all
+   * it could say. Three different bugs produce exactly that report:
+   *
+   * 1. the client router never issued a request at all,
+   * 2. it issued one and the response never came,
+   * 3. it issued one, the request failed, and the router swallowed the error.
+   *
+   * So this records the evidence that tells them apart — client-side errors,
+   * and the lifecycle of every navigation and RSC fetch — and attaches it to
+   * the failure. **Nothing is attached when a test passes**, so a green run is
+   * byte-for-byte what it was.
+   *
+   * Deliberately *not* a widened timeout or a retry. `playwright.config.ts`
+   * argues its budgets ("keep them tight so a broken test fails in seconds
+   * instead of stalling the run") and the suite runs `retries: 0` precisely so
+   * a failure of this shape gets looked at. `page.waitForURL` is not an escape
+   * hatch from that either — it borrows the 15s test budget instead of the 8s
+   * expect budget, which against a real 70ms is a blindfold rather than
+   * headroom.
+   *
+   * The buffer is bounded: a long spec issues thousands of requests and an
+   * unbounded transcript would be both useless to read and a memory leak
+   * across a worker's tests.
+   */
+  browserActivity: [
+    async ({ page }, use, testInfo) => {
+      const entries: string[] = [];
+      const record = (line: string) => {
+        // Keep the *tail*: whatever happened around the failure is at the end,
+        // and the first thousand lines of a long spec are the setup nobody is
+        // asking about.
+        if (entries.length >= ACTIVITY_LIMIT) entries.shift();
+        entries.push(`${String(Date.now() - started).padStart(6)}ms  ${line}`);
+      };
+      const started = Date.now();
+      // Errors only. A page's ordinary `console.log` is the app talking to its
+      // own developers and would bury the one line that matters.
+      page.on("console", (message) => {
+        if (message.type() === "error") record(`console.error  ${message.text()}`);
+      });
+      // An uncaught exception in the client router is the leading candidate for
+      // the failure above, and it is currently invisible to the report.
+      page.on("pageerror", (error) => record(`pageerror      ${error.message}`));
+      const interesting = (request: Request) =>
+        request.isNavigationRequest() ||
+        request.url().includes("_rsc=") ||
+        !request.url().includes("/_next/");
+      // **Prefetches are marked, not dropped.** Next prefetches every link in
+      // the viewport, so an unmarked transcript is forty lines of prefetch with
+      // the one navigation that matters buried among them — which is what the
+      // first version of this produced. They stay because a prefetch storm
+      // could itself be the mechanism; they are just skimmable, and only their
+      // *start* is recorded, since a prefetch aborting is ordinary (the real
+      // navigation supersedes it) and would otherwise double the noise.
+      const isPrefetch = (request: Request) =>
+        request.headers()["next-router-prefetch"] !== undefined;
+      page.on("request", (request) => {
+        if (!interesting(request)) return;
+        record(`${isPrefetch(request) ? "⋯" : "→"} ${request.method()} ${request.url()}`);
+      });
+      page.on("requestfinished", (request) => {
+        if (!interesting(request) || isPrefetch(request)) return;
+        record(`← ${request.method()} ${request.url()}`);
+      });
+      // The third of the three cases, and the only one that says so out loud.
+      page.on("requestfailed", (request) => {
+        record(`✗ ${request.method()} ${request.url()} — ${request.failure()?.errorText ?? "?"}`);
+      });
+
+      await use(undefined);
+
+      if (testInfo.status !== testInfo.expectedStatus && entries.length > 0) {
+        await testInfo.attach("browser-activity", {
+          body: entries.join("\n"),
+          contentType: "text/plain",
+        });
+      }
     },
     { auto: true },
   ],
