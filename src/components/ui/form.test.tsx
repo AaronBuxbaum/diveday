@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "./form";
@@ -213,5 +215,96 @@ describe("Field's required marker", () => {
       </Field>,
     );
     expect(screen.getByTestId("member")).toBeRequired();
+  });
+});
+
+/**
+ * **`hint` is a short qualifier, and the type cannot say so.**
+ *
+ * It takes a `ReactNode` and renders whatever it is given, so a sentence and
+ * "(optional)" are the same thing to the compiler — and the two props read as
+ * interchangeable from a call site. `/onboard` passed a **31-word** sentence as
+ * `hint`, which pushed the caption row to five lines, left a ~100px hole beside
+ * it in the two-column grid, floated the required `*` at the end of a
+ * paragraph, and — because `hint` renders *inside* the `<label>* — folded all
+ * thirty-one words into the control's accessible name, so a screen reader read
+ * them out every time the field was announced (issue #784).
+ *
+ * Nothing failed. The layout hole only appears at one breakpoint with that
+ * particular string length, and `/onboard` had no capture.
+ *
+ * So the ceiling is stated here instead. The bound is deliberately generous —
+ * it is not a style rule about brevity, it is the line past which `hint` is
+ * the wrong prop and `description` is the right one, which is a question of
+ * *where the text renders*, not of taste.
+ */
+const HINT_WORD_CEILING = 15;
+
+/** Every `hint={t("…")}` in the app, with the words it resolves to. */
+function hintsWithText(): { file: string; key: string; words: number; text: string }[] {
+  const messages = new Map<string, string>();
+  const flatten = (node: unknown, path: string) => {
+    if (typeof node === "string") messages.set(path, node);
+    else if (node && typeof node === "object")
+      for (const [key, value] of Object.entries(node))
+        flatten(value, path ? `${path}.${key}` : key);
+  };
+  // Both vocabularies, keyed the way a translator call spells them. `diver.json`
+  // is namespaced by its own top-level keys; a staff bundle is one file per
+  // area and the **filename** is the namespace (`staff/boats.json` →
+  // `boats.…`), which is the composition `staff/index.ts` performs.
+  const localeRoot = path.join(process.cwd(), "src/i18n/locales/en-US");
+  flatten(JSON.parse(readFileSync(path.join(localeRoot, "diver.json"), "utf8")), "");
+  const staffRoot = path.join(localeRoot, "staff");
+  for (const entry of readdirSync(staffRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    flatten(
+      JSON.parse(readFileSync(path.join(staffRoot, entry.name), "utf8")),
+      entry.name.replace(/\.json$/, ""),
+    );
+  }
+
+  const found: { file: string; key: string; words: number; text: string }[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
+        const source = readFileSync(full, "utf8");
+        for (const match of source.matchAll(/\bhint=\{t\(\s*"([^"]+)"/g)) {
+          const key = match[1];
+          if (!key) continue;
+          const text = messages.get(key);
+          // A key this scan cannot resolve is not a finding: staff bundles are
+          // composed under their own namespace and a few hints are computed.
+          if (!text) continue;
+          found.push({
+            file: path.relative(process.cwd(), full),
+            key,
+            words: text.trim().split(/\s+/).length,
+            text,
+          });
+        }
+      }
+    }
+  };
+  for (const root of ["src/app", "src/components"]) walk(path.join(process.cwd(), root));
+  return found;
+}
+
+describe("Field's hint stays a qualifier", () => {
+  it("finds enough hints to be worth asserting on", () => {
+    // A scan that silently resolves nothing would pass forever.
+    expect(hintsWithText().length).toBeGreaterThan(20);
+  });
+
+  it("refuses a hint long enough to belong in `description`", () => {
+    const overlong = hintsWithText()
+      .filter((hint) => hint.words > HINT_WORD_CEILING)
+      // Named, not counted: the fix is per call site and needs the key.
+      .map(
+        (hint) => `${hint.file} — ${hint.key} (${hint.words} words): ${hint.text.slice(0, 60)}…`,
+      );
+    expect(overlong).toEqual([]);
   });
 });
