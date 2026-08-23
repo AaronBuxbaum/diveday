@@ -63,12 +63,10 @@
     "filterKind": "{label} ({count})",
     "columns": {
       "unit": "Unit",
-      "kind": "Kind",
       "size": "Size",
       "service": "Service",
       "where": "Where it is"
     },
-    "inShop": "In the shop",
     "outWith": "Out with {name} · due back {dueOn}",
     "overdueWith": "Out with {name} · was due {dueOn}",
     "reservedFor": "Reserved for {name} · from {from}",
