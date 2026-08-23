@@ -535,7 +535,11 @@
       "headingEmpty": "Todavía no hay nada guardado en este dispositivo",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
-      "emptyHint": "Mientras aún tengas señal, abre cualquier página del centro: DiveDay mantiene al día la copia de los próximos dos días en este dispositivo."
+      "emptyHint": "Mientras aún tengas señal, abre cualquier página del centro: DiveDay mantiene al día la copia de los próximos dos días en este dispositivo.",
+      "freshnessAllCurrent": "Todas al día.",
+      "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
+      "savedAgo": "Guardada {ago}",
+      "refreshBeforeRelying": "Actualízala antes de confiar en ella"
     },
     "single": {
       "eyebrow": "Manifiesto sin conexión",

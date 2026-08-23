@@ -7,7 +7,7 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
-import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
+import { freshnessInkClass, OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { OFFLINE_CREW_ROW_TONE, ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -56,6 +56,7 @@ import {
   type OfflineManifestEnvelope,
   type OfflineRollCallEvent,
   type OfflineRollCallResult,
+  offlineManifestAge,
   offlineManifestFreshness,
 } from "@/lib/offline-manifests";
 
@@ -88,6 +89,20 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
 
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
+}
+
+/**
+ * "16 minutes ago" / "4 hours ago", in the device's own language. `numeric:
+ * "always"` rather than `"auto"` on purpose: "auto" would render this as
+ * "last hour", and a copy whose age is the reason not to trust it has to say a
+ * number. Nothing calls this on a copy young enough to floor to zero — only a
+ * row past the 15-minute "current" threshold shows an age at all.
+ */
+function relativeAge(savedAt: Date): string {
+  const { unit, value } = offlineManifestAge(savedAt);
+  return cachedFormatter("rel", Intl.RelativeTimeFormat, deviceLocale(), {
+    numeric: "always",
+  }).format(-value, unit);
 }
 
 /**
@@ -701,6 +716,39 @@ export function OfflineManifestView() {
 
   if (!tripId) {
     const savedTrips = list ?? [];
+    // Derived once, for the header's count, the header's shop name and the rows
+    // alike: all three must be answers about the same set of copies. A record
+    // carrying no manifest renders no row, so it is dropped here rather than
+    // downstream — counted, it would have the header report a copy needing a
+    // refresh that a reader can find nowhere on the page.
+    const savedRows = savedTrips.flatMap((saved) => {
+      const tripManifest = saved.snapshot.manifests[0];
+      if (!tripManifest) return [];
+      return [
+        {
+          saved,
+          tripManifest,
+          freshness: offlineManifestFreshness(new Date(saved.snapshot.savedAt)),
+          // An expired-but-kept-alive record (see loadOfflineManifest) is not a
+          // boarding source even though it's still readable, so it keeps its
+          // own distinct label rather than an age (the per-trip view already
+          // says this plainly once opened).
+          expired: isOfflineManifestExpired(saved.snapshot),
+        },
+      ];
+    });
+    const needRefreshCount = savedRows.filter(
+      (row) => row.expired || row.freshness !== "current",
+    ).length;
+    // The shop belongs to the page, not to the row: this viewer is single-shop
+    // by construction, because the shell purges the store when a different
+    // shop signs in on the device. `null` is the window where that has not run
+    // yet — genuinely offline, two shops' records side by side — and there the
+    // boundary between them is the most important thing on screen, so the name
+    // stays on each row and out of the header. Never a header naming one shop
+    // over records belonging to another.
+    const shopNames = new Set(savedRows.map((row) => row.saved.snapshot.shop.name));
+    const oneShopName = shopNames.size === 1 ? [...shopNames][0] : null;
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <OfflineShellVersionBanner copy={shellVersionCopy} />
@@ -712,10 +760,27 @@ export function OfflineManifestView() {
               ? t("shared.offlineManifest.list.headingWithTrips")
               : t("shared.offlineManifest.list.headingEmpty")
           }
+          description={oneShopName ?? undefined}
           meta={
-            <p className="text-muted" role="status" aria-live="polite">
-              {message}
-            </p>
+            <>
+              <p className="text-muted" role="status" aria-live="polite">
+                {message}
+              </p>
+              {/* Principle 2 wants a freshness state visible on a boat surface;
+                  principle 9 refuses to spend a badge on the state every row is
+                  normally in. Said once here, for the group, it is both: the
+                  reader is still told, and a pill below now only ever appears on
+                  a copy that needs them. */}
+              {savedRows.length > 0 ? (
+                <p className="mt-1 text-sm font-semibold">
+                  {needRefreshCount > 0
+                    ? t("shared.offlineManifest.list.freshnessNeedRefresh", {
+                        count: needRefreshCount,
+                      })
+                    : t("shared.offlineManifest.list.freshnessAllCurrent")}
+                </p>
+              ) : null}
+            </>
           }
         />
         {savedTrips.length > 0 ? (
@@ -725,51 +790,56 @@ export function OfflineManifestView() {
               className: "mt-6 divide-y divide-border overflow-hidden",
             })}
           >
-            {savedTrips.map((saved) => {
-              const tripManifest = saved.snapshot.manifests[0];
-              if (!tripManifest) return null;
-              const savedFreshness = offlineManifestFreshness(new Date(saved.snapshot.savedAt));
-              // An expired-but-kept-alive record (see loadOfflineManifest) is
-              // not a boarding source even though it's still readable — the
-              // freshness pill alone would read identically to an ordinary
-              // "Stale copy" that's still perfectly usable, so it needs its
-              // own distinct label here (the per-trip view already says this
-              // plainly once opened).
-              const savedExpired = isOfflineManifestExpired(saved.snapshot);
-              const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
-                dateStyle: "medium",
-                timeStyle: "short",
-                timeZone: saved.snapshot.shop.timezone,
-              });
-              return (
-                <li key={tripManifest.trip.id}>
-                  <a
-                    href={`/offline-manifest?trip=${tripManifest.trip.id}`}
-                    className="flex min-h-14 flex-col gap-2 p-4 hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:p-5"
-                  >
-                    <div>
-                      <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
-                      <p className="mt-0.5 text-sm text-muted">
-                        {saved.snapshot.shop.name} ·{" "}
-                        {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
-                        {t("shared.offlineManifest.list.diverCount", {
-                          count: tripManifest.summary.totalDivers,
-                        })}
-                      </p>
-                    </div>
-                    {savedExpired ? (
-                      <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger">
-                        {t("shared.offlineManifest.list.expiredViewOnly")}
-                      </span>
-                    ) : (
-                      <OfflineFreshnessPill freshness={savedFreshness} className="self-start">
-                        {t(`shared.offlineManifest.freshnessPill.${savedFreshness}`)}
-                      </OfflineFreshnessPill>
-                    )}
-                  </a>
-                </li>
-              );
-            })}
+            {savedRows.map(
+              ({ saved, tripManifest, freshness: savedFreshness, expired: savedExpired }) => {
+                const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone: saved.snapshot.shop.timezone,
+                });
+                return (
+                  <li key={tripManifest.trip.id}>
+                    <a
+                      href={`/offline-manifest?trip=${tripManifest.trip.id}`}
+                      className="flex min-h-14 flex-col gap-2 p-4 hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                    >
+                      <div>
+                        <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
+                        <p className="mt-0.5 text-sm text-muted">
+                          {oneShopName ? null : `${saved.snapshot.shop.name} · `}
+                          {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
+                          {t("shared.offlineManifest.list.diverCount", {
+                            count: tripManifest.summary.totalDivers,
+                          })}
+                        </p>
+                      </div>
+                      {savedExpired ? (
+                        <span className="inline-flex min-h-9 items-center self-start rounded-full border border-danger/30 bg-danger/10 px-3 py-1.5 text-sm font-bold text-danger">
+                          {t("shared.offlineManifest.list.expiredViewOnly")}
+                        </span>
+                      ) : savedFreshness === "current" ? null : (
+                        // Principle 4's carve-out: a copy that is no longer
+                        // current names its age and what to do about it, never a
+                        // tier word. Only these rows carry a pill at all now, so
+                        // the one that appears is the one to look at.
+                        <div className="flex shrink-0 flex-col items-start gap-1 self-start">
+                          <OfflineFreshnessPill freshness={savedFreshness}>
+                            {t("shared.offlineManifest.list.savedAgo", {
+                              ago: relativeAge(new Date(saved.snapshot.savedAt)),
+                            })}
+                          </OfflineFreshnessPill>
+                          <span
+                            className={`text-sm font-semibold ${freshnessInkClass[savedFreshness]}`}
+                          >
+                            {t("shared.offlineManifest.list.refreshBeforeRelying")}
+                          </span>
+                        </div>
+                      )}
+                    </a>
+                  </li>
+                );
+              },
+            )}
           </ul>
         ) : (
           <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">

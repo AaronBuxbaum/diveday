@@ -1,7 +1,10 @@
 import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
-import { OFFLINE_MANIFEST_RECORD_VERSION } from "../src/lib/offline-manifests";
+import {
+  OFFLINE_MANIFEST_AGING_MS,
+  OFFLINE_MANIFEST_RECORD_VERSION,
+} from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
@@ -940,6 +943,17 @@ const PAST_PENDING_GRACE = new Date(
   Date.parse(E2E_FROZEN_CLOCK) - OFFLINE_MANIFEST_PENDING_GRACE_MS - 24 * 60 * 60 * 1000,
 ).toISOString();
 
+/**
+ * A `savedAt` that lands a copy squarely in the "aging" tier — past the
+ * 15-minute current threshold, inside the 4-hour stale one — so the list's row
+ * reads "Saved 2 hours ago" against the frozen clock. Derived from the same
+ * constant the product classifies with, so moving the tier moves this with it
+ * rather than leaving the seed on the wrong side of it.
+ */
+const AGING_SAVED_AT = new Date(
+  Date.parse(E2E_FROZEN_CLOCK) - OFFLINE_MANIFEST_AGING_MS / 2,
+).toISOString();
+
 /** A shop that is not the seeded one, for the cross-shop purge. */
 const OTHER_SHOP = { slug: "reef-runners", name: "Reef Runners" };
 
@@ -973,6 +987,13 @@ async function rewriteSavedOfflineRecord(
   change: {
     shop?: { slug: string; name: string };
     expiresAt?: string;
+    /**
+     * When this device last took a copy. The app always writes "just now", so
+     * this is the only way to photograph a copy old enough to have stopped
+     * being current while still being perfectly readable — which is the state
+     * the list's pill exists for.
+     */
+    savedAt?: string;
     /** Roll-call events to queue as never-sent, one per diver on the roster. */
     pendingRollCalls?: number;
   },
@@ -1020,6 +1041,11 @@ async function rewriteSavedOfflineRecord(
 
         if (change.shop) envelope.snapshot.shop = { ...envelope.snapshot.shop, ...change.shop };
         if (change.expiresAt) envelope.snapshot.expiresAt = change.expiresAt;
+        // Ahead of the event loop below, which stamps each queued roll call
+        // with the snapshot's own `savedAt`: a record whose events disagreed
+        // with the snapshot they were recorded against is not a state the app
+        // can produce, and the reconciler reads that field.
+        if (change.savedAt) envelope.snapshot.savedAt = change.savedAt;
         for (let index = 0; index < (change.pendingRollCalls ?? 0); index += 1) {
           const bookingId = envelope.snapshot.manifests[0]?.divers[index]?.bookingId;
           if (!bookingId) throw new Error("the saved roster has too few divers to record against");
@@ -2755,6 +2781,34 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/offline-manifest");
         await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
         await capture(page, "offline-manifest-list", scheme);
+      });
+
+      /**
+       * The same list with one copy no longer current — the only state on it
+       * that carries a pill at all.
+       *
+       * The baseline above photographs the calm case, where every row is
+       * current and nothing is badged; before 2026-08-23 that case badged all
+       * four rows green and this one was indistinguishable from it at a glance
+       * (issue #816). That is the whole reason this frame exists separately:
+       * the change is only worth anything if the exceptional row is louder than
+       * the ordinary ones, and no capture could show that while they looked the
+       * same. Both the row's pill and the group line at the top move here and
+       * nowhere else.
+       */
+      test(`an offline copy needing a refresh renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest → the shell, plus the store rewrite.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await savedOfflineRecordFor(page);
+        await rewriteSavedOfflineRecord(page, tripId, { savedAt: AGING_SAVED_AT });
+        // The tenant lookup is still refused from `savedOfflineRecordFor`, so
+        // no cross-shop purge re-reads the record underneath this reload and
+        // the row paints from exactly what was just written.
+        await page.reload();
+        await page.getByText("Saved 2 hours ago").waitFor();
+        await capture(page, "offline-manifest-list-needs-refresh", scheme);
       });
 
       /**

@@ -9,6 +9,7 @@ import {
   latestOfflineRollCall,
   OFFLINE_MANIFEST_RECORD_VERSION,
   type OfflineManifestSnapshot,
+  offlineManifestAge,
   offlineManifestExpiresAt,
   offlineManifestFreshness,
   offlineRollCallSubject,
@@ -108,6 +109,22 @@ describe("offline manifest policy", () => {
     expect(offlineManifestFreshness(saved, new Date("2026-07-20T11:10:00.000Z"))).toBe("current");
     expect(offlineManifestFreshness(saved, new Date("2026-07-20T13:00:00.000Z"))).toBe("aging");
     expect(offlineManifestFreshness(saved, new Date("2026-07-20T20:00:00.000Z"))).toBe("stale");
+  });
+
+  it("reports an age as a unit and a magnitude, floored the way an '… ago' reads", () => {
+    const saved = new Date("2026-07-20T11:00:00.000Z");
+    const at = (iso: string) => offlineManifestAge(saved, new Date(iso));
+
+    expect(at("2026-07-20T11:16:00.000Z")).toEqual({ unit: "minute", value: 16 });
+    // 59m59s is still "59 minutes", not an hour that has not happened yet.
+    expect(at("2026-07-20T11:59:59.000Z")).toEqual({ unit: "minute", value: 59 });
+    expect(at("2026-07-20T15:00:00.000Z")).toEqual({ unit: "hour", value: 4 });
+    // 1h59m floors down to one hour, never up to two.
+    expect(at("2026-07-20T12:59:00.000Z")).toEqual({ unit: "hour", value: 1 });
+    expect(at("2026-07-23T11:00:00.000Z")).toEqual({ unit: "day", value: 3 });
+    // A clock that has gone backwards on the device reports no age at all
+    // rather than a negative one the formatter would render as the future.
+    expect(at("2026-07-20T10:00:00.000Z")).toEqual({ unit: "minute", value: 0 });
   });
 
   it("expires at the earlier privacy boundary", () => {

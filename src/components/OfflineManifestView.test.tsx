@@ -353,9 +353,12 @@ afterEach(() => {
 });
 
 describe("OfflineManifestView — list mode (no ?trip=)", () => {
-  it("lists every saved trip with its shop, diver count, and freshness pill", async () => {
+  it("lists every saved trip with its shop and diver count, and badges none of them while all are current", async () => {
     vi.mocked(listOfflineManifests).mockResolvedValue([
       envelope("trip-1", "Two-Tank Reef — Molasses & French", {
+        savedAt: new Date(FROZEN_MS).toISOString(),
+      }),
+      envelope("trip-2", "Deep Wreck Charter", {
         savedAt: new Date(FROZEN_MS).toISOString(),
       }),
     ]);
@@ -363,14 +366,61 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     expect(await screen.findByText("Two-Tank Reef — Molasses & French")).toBeInTheDocument();
-    expect(screen.getByText(/2 divers/)).toBeInTheDocument();
-    expect(screen.getByText("Fresh copy")).toBeInTheDocument();
-    // Always shown, not only when a foreign shop's record is also present —
-    // this view has no reliable way to know "the current shop" while
-    // genuinely offline, so the boundary has to be visible unconditionally
-    // rather than only when the code happens to be able to tell the two
-    // apart (see the cross-shop test below for why this matters).
-    expect(screen.getByText(/Blue Mantis Divers/)).toBeInTheDocument();
+    expect(screen.getAllByText(/2 divers/)).toHaveLength(2);
+    // The state every row is normally in gets no pill at all — principle 9's
+    // badge rule — so that a pill appearing anywhere on this list means one
+    // copy needs a look. Freshness is still stated, once, for the group.
+    expect(screen.queryByText("Fresh copy")).not.toBeInTheDocument();
+    expect(screen.getByText("All up to date.")).toBeInTheDocument();
+    // Still shown, and still unconditionally — this view has no reliable way
+    // to know "the current shop" while genuinely offline, so the boundary has
+    // to be visible rather than inferred (see the cross-shop test below for
+    // why this matters). It has moved to the header, which is where the
+    // question a crew member on a shared device actually has gets answered.
+    expect(screen.getByText("Blue Mantis Divers")).toBeInTheDocument();
+  });
+
+  it("names the age and the action on a copy that is no longer current, and only on that copy", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([
+      envelope("trip-1", "Fresh Trip", { savedAt: new Date(FROZEN_MS).toISOString() }),
+      envelope("trip-2", "Old Trip", {
+        savedAt: new Date(FROZEN_MS - 4 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(FROZEN_MS + 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    ]);
+
+    render(<OfflineManifestView />);
+
+    // Principle 4's carve-out, verbatim: the age in human words and what to do
+    // about it — never a tier name like "Stale copy".
+    expect(await screen.findByText("Saved 4 hours ago")).toBeInTheDocument();
+    expect(screen.getByText("Refresh before you rely on it")).toBeInTheDocument();
+    expect(screen.queryByText("Stale copy")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aging copy")).not.toBeInTheDocument();
+    // The header stops claiming everything is fine the moment one copy isn't,
+    // and counts only the copies that need a look.
+    expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+    expect(screen.getByText("1 copy needs refreshing.")).toBeInTheDocument();
+  });
+
+  it("keeps the shop on each row, and out of the header, while two shops' records sit side by side", async () => {
+    vi.mocked(listOfflineManifests).mockResolvedValue([
+      envelope("trip-1", "Ours", { savedAt: new Date(FROZEN_MS).toISOString() }),
+      envelope("trip-2", "Theirs", {
+        savedAt: new Date(FROZEN_MS).toISOString(),
+        shopSlug: "coral-cay",
+        shopName: "Coral Cay Divers",
+      }),
+    ]);
+
+    render(<OfflineManifestView />);
+
+    await screen.findByText("Ours");
+    // A single header name over records belonging to two shops would be a lie
+    // about half the list, so in the window before the cross-shop purge runs
+    // the name stays where it distinguishes them.
+    expect(screen.getByText(/Blue Mantis Divers ·/)).toBeInTheDocument();
+    expect(screen.getByText(/Coral Cay Divers ·/)).toBeInTheDocument();
   });
 
   it("labels a record kept alive only for a pending event as expired, not as an ordinary stale copy", async () => {
@@ -745,17 +795,21 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
       ]);
 
       render(<OfflineManifestView />);
-      expect(await screen.findByText("Fresh copy")).toBeInTheDocument();
+      expect(await screen.findByText("All up to date.")).toBeInTheDocument();
 
       // 20 minutes later — past the 15-minute "current" threshold — but
-      // nothing has re-rendered yet, so the pill should still read stale info.
+      // nothing has re-rendered yet, so the row should still read stale info.
       process.env.DIVEDAY_CLOCK = new Date(FROZEN_MS + 20 * 60 * 1000).toISOString();
-      expect(screen.getByText("Fresh copy")).toBeInTheDocument();
+      expect(screen.getByText("All up to date.")).toBeInTheDocument();
 
       expect(tick).toBeDefined();
       act(() => tick?.());
 
-      expect(await screen.findByText("Aging copy")).toBeInTheDocument();
+      // The pill appears at the moment the copy stops being current, carrying
+      // its age — and the group line stops saying everything is fine.
+      expect(await screen.findByText("Saved 20 minutes ago")).toBeInTheDocument();
+      expect(screen.getByText("1 copy needs refreshing.")).toBeInTheDocument();
+      expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
     } finally {
       process.env.DIVEDAY_CLOCK = originalClock;
     }

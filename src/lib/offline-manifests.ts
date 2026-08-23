@@ -587,6 +587,32 @@ export function offlineManifestFreshness(
 }
 
 /**
+ * How old a saved copy is, as a magnitude and a unit rather than a sentence.
+ * `docs/design/principles.md` §4 lets a safety surface keep its precision only
+ * in human words — a copy that is no longer current has to say "Saved 4 hours
+ * ago — refresh before you rely on it", never a tier name — and the words are
+ * the UI's to pick per locale, so this returns the two numbers
+ * `Intl.RelativeTimeFormat` needs and no English at all.
+ *
+ * Floors rather than rounds, the way every "… ago" reads: a copy saved 119
+ * minutes ago is "1 hour", not "2 hours". Rounding is safe to leave loose here
+ * only because it decides nothing — `offlineManifestFreshness` above is the
+ * exact classification, and a floored age is never shown at all on a copy that
+ * is still current, so it can round a copy's age down but never round a copy
+ * into looking trustworthy.
+ */
+export function offlineManifestAge(
+  savedAt: Date,
+  now: Date = nowDate(),
+): { unit: "minute" | "hour" | "day"; value: number } {
+  const minutes = Math.floor(Math.max(0, now.getTime() - savedAt.getTime()) / MINUTE_MS);
+  if (minutes < 60) return { unit: "minute", value: minutes };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { unit: "hour", value: hours };
+  return { unit: "day", value: Math.floor(hours / 24) };
+}
+
+/**
  * A record kept past its retention window (because it still holds an
  * unsynced roll-call event — see loadOfflineManifest) is not the same as a
  * current one: the H-05 stop rule treats an expired copy as not a boarding
