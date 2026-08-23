@@ -4047,7 +4047,11 @@ test.describe("print", () => {
     await capturePrint(page, "prep");
   });
 
-  test("the complete trip packet prints every staff tab", async ({ page }) => {
+  // **Not "every staff tab" any more, and that is the point.** The packet used
+  // to compose all four, which is how 42 buttons — "Cancel trip" among them —
+  // came to be printed beside a roster (issue #814). It composes the dive plan
+  // it renders itself, plus the two tabs that were already documents.
+  test("the trip packet prints the dive plan, the manifest and the prep list", async ({ page }) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
     await page.goto(`${tripPath}/print`);

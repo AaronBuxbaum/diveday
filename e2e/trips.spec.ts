@@ -458,8 +458,12 @@ async function seededTripPath(page: import("@playwright/test").Page): Promise<st
  * head count and an unrecorded one is the whole product.
  *
  * **This is invisible on screen**, which is why it survived: the page looks
- * like what it is, four live sections stacked, and the visual suite captures
- * screen media only. Nothing in `e2e/` asserted print media before this.
+ * like what it is, four live sections stacked. The visual suite does capture
+ * this route under print media (`capturePrint(page, "trip-packet")`) and does
+ * assert one thing about it — that the trip nav is hidden — so the claim that
+ * nothing checked print media is not quite right. What nothing checked is
+ * whether anything on the sheet is *interactive*, which a monochrome
+ * screenshot cannot answer and a reviewer will not count by eye.
  */
 test.describe("the printed trip packet", () => {
   signedInAsOwner();
