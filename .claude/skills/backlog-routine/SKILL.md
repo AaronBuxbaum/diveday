@@ -1,6 +1,6 @@
 ---
 name: backlog-routine
-description: Work the ready-for-agent issue backlog continuously — ticket after ticket, never stopping at one, refetching main between each. Use when asked to run the backlog, implement ready tickets, or keep building unattended.
+description: Work the ready-for-agent issue backlog continuously — ticket after ticket, never stopping at one, refetching main and re-reading CI between each. Use when asked to run the backlog, implement ready tickets, or keep building unattended.
 ---
 
 # Work the backlog, ticket after ticket
@@ -10,8 +10,9 @@ that one has not merged yet.
 
 ## This does not stop after one ticket
 
-The loop below is a loop. Finishing a ticket is step 8, and step 8 goes back to step 1 — with a
-fresh `git fetch`, a re-read of the queue, and the next ticket claimed. **A turn that builds one
+The loop below is a loop. Finishing a ticket is step 9, and step 9 goes back to step 1 — with a
+fresh `git fetch`, a look at what CI made of the pull requests already open, a re-read of the queue,
+and the next ticket claimed. **A turn that builds one
 ticket and then reports has not run this routine**, and the queue it was pointed at is not
 measurably shorter: it grows by roughly one issue per session as agents file what they noticed.
 
@@ -34,28 +35,45 @@ either build it or say why you are not.
    being registered — so a branch cut from the `origin/main` you fetched an hour ago starts life
    behind, conflicts with work that is already in, and reads its own merged changes as somebody
    else's diff. Fetching costs a second; not fetching costs a rebase.
-2. **Pick.** `gh issue list --label ready-for-agent --state open`, skipping anything already
+2. **Read what GitHub says about the pull requests you already opened**, in the same breath:
+
+   ```sh
+   gh pr list --author '@me' --state open --json number,title,mergeable,statusCheckRollup
+   gh pr checks <n>          # for any that reports a failure
+   ```
+
+   CI takes about ten minutes and you opened that pull request before you started the last ticket,
+   so **its answer arrives while you are not looking.** A red check on your own branch is your work
+   — the same rule as any failing test — and it does not become someone else's by being one ticket
+   behind you. Two of one session's pull requests went red this way: a spec asserting the old 404
+   wording, and a spec measuring a scroll position one frame early. Both were the change working;
+   both would have shipped as somebody else's mystery if nothing had circled back.
+
+   Fix it now, before the next ticket, on that branch. The exception is a `reg` failure, which is
+   the visual report and belongs to the human — read every diff image, explain each one in the pull
+   request, and carry on ([visual-triage](../visual-triage/SKILL.md)).
+3. **Pick.** `gh issue list --label ready-for-agent --state open`, skipping anything already
    labelled `in-progress`. Read `pnpm gates`' "Claimed — in flight" section first: a claim it
    reports **stale** is a dead session, not a reservation, so that work is free to take.
-3. **Refuse the ones that are not yours.** If the body carries a *Blocked by* section naming a
+4. **Refuse the ones that are not yours.** If the body carries a *Blocked by* section naming a
    human decision — what a waiver version number asserts, which unit a package sells in — do not
    build it. Relabel `ready-for-human`, say why in a comment, pick another. Three of the queue's
    issues were in that state and each said so in its own words.
-4. **Claim.** Add `in-progress`, post the `## Claim` comment
+5. **Claim.** Add `in-progress`, post the `## Claim` comment
    ([issue-tracker.md](../../../docs/agents/issue-tracker.md)). **One claim covers the whole
    stack**, not one per layer.
-5. **Check the premise before building it.** Roughly half of these tickets describe something that
+6. **Check the premise before building it.** Roughly half of these tickets describe something that
    is no longer true, or true for a different reason. Reproduce it first — render the page, read the
    *compiled* CSS, run the query, count the call sites. Recent examples: "turning the contrast rule
    on would paint CI red" (it found 23 nodes and one mechanism), "any nav tap discards the form"
    (Activity keeps three routes; the real loss is invisible eviction), "eight surfaces disagree with
    their nav label" (four already agreed, through a duplicate message key). When the premise does
    not survive, say so in the PR **and** the issue, and build what the evidence supports.
-6. **Cut the branch, commit once, open the draft PR and extend the stack** (below), then build it.
-7. **Verify.** `pnpm check` green, e2e for any flow you touched, and *look at* every surface you
+7. **Cut the branch, commit once, open the draft PR and extend the stack** (below), then build it.
+8. **Verify.** `pnpm check` green, e2e for any flow you touched, and *look at* every surface you
    changed in both schemes. Read each visual diff against the actual image before writing a word
    about it — `pnpm visual:report --commit <sha>` writes the PNGs.
-8. **Finish the PR you already opened** at step 6 — body, position line, diff explanation — and
+9. **Finish the PR you already opened** at step 7 — body, position line, diff explanation — and
    `gh pr ready` it. **Then go back to step 1** — fetch, re-read the queue, take the next one. Do
    not summarise, do not ask whether to continue, and do not wait for the pull request you just
    opened to merge: it is the human's to merge, and the next ticket does not depend on it.
@@ -155,6 +173,11 @@ message).
 
 - **You cannot merge.** `gh pr merge` is blocked by the permission classifier. Name the PRs that are
   ready and stop; do not work around it.
+- **Ask GitHub what is open at the moment you write it down, never your own memory of opening it.**
+  These merge fast: one session's closing message listed seven pull requests as awaiting review and
+  every one of them had already merged — the human went looking for them and found nothing. One
+  `gh pr list --author '@me' --state open` immediately before writing the summary is the whole fix,
+  and the same command tells you whether anything of yours is red.
 - **Anything you notice and do not do** becomes a `needs-triage` issue written for a reader with
   none of your context — not a line in the closing message.
 - **A failing or flaky test is part of the work**, even when it is not yours and even when it is
