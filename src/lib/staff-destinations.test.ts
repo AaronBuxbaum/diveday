@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   currentStaffNavDestinationId,
+  STAFF_DESTINATION_LABEL_KEYS,
+  STAFF_DESTINATION_TITLE_KEYS,
   STAFF_DESTINATIONS,
   type StaffDestinationGates,
   type StaffDestinationId,
@@ -68,6 +72,64 @@ describe("the staff destination registry", () => {
     if (!today || !orders) throw new Error("registry lost a destination");
     expect(staffDestinationHref(root, today)).toBe("/shop/blue-mantis");
     expect(staffDestinationHref(root, orders)).toBe("/shop/blue-mantis/orders");
+  });
+});
+
+/**
+ * **The eyebrow a page wears and the tab that led to it are one string.**
+ *
+ * Eight staff surfaces greeted a staffer with a name other than the one they
+ * tapped, and four of them were doing the right thing through a *second copy*
+ * of the word — `reviews.eyebrow` "Reviews" beside `shared.shopNavLinks.reviews`
+ * "Reviews" (issue #824). These pin the join rather than the words: what
+ * matters is that there is exactly one key per destination and that every page
+ * reads it rather than a twin of it.
+ */
+describe("the one word per destination", () => {
+  const bundle = (name: string) =>
+    JSON.parse(
+      readFileSync(
+        path.join(import.meta.dirname, "..", "i18n", "locales", "en-US", "staff", `${name}.json`),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+
+  function resolve(key: string): unknown {
+    const [namespace, ...rest] = key.split(".");
+    if (!namespace) return undefined;
+    let current: unknown = bundle(namespace);
+    for (const step of rest) {
+      if (typeof current !== "object" || current === null) return undefined;
+      current = (current as Record<string, unknown>)[step];
+    }
+    return current;
+  }
+
+  it("has a label key for every destination, and no others", () => {
+    expect(Object.keys(STAFF_DESTINATION_LABEL_KEYS).sort()).toEqual(
+      STAFF_DESTINATIONS.map((destination) => destination.id).sort(),
+    );
+  });
+
+  it("points every key at a real string in the staff bundle", () => {
+    for (const key of Object.values(STAFF_DESTINATION_LABEL_KEYS)) {
+      expect(typeof resolve(key), key).toBe("string");
+    }
+    for (const key of Object.values(STAFF_DESTINATION_TITLE_KEYS)) {
+      expect(typeof resolve(key), key).toBe("string");
+    }
+  });
+
+  /**
+   * The whole point of the title record: a destination whose page calls itself
+   * what the tab calls it does not belong in it, because the palette would
+   * then match the same row twice for no gain.
+   */
+  it("only lists a title where the page genuinely calls itself something else", () => {
+    for (const [id, titleKey] of Object.entries(STAFF_DESTINATION_TITLE_KEYS)) {
+      const label = resolve(STAFF_DESTINATION_LABEL_KEYS[id as StaffDestinationId]);
+      expect(resolve(titleKey), id).not.toBe(label);
+    }
   });
 });
 

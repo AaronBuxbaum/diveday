@@ -36,6 +36,7 @@ import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/li
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
@@ -323,7 +324,7 @@ export default async function EditDiveSitePage({
       </Link>
       <div className="mt-4">
         <ShopPageHeader
-          eyebrow={t("diveSites.catalogEyebrow")}
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
           title={site.name}
           description={t("diveSites.edit.description")}
           align="start"

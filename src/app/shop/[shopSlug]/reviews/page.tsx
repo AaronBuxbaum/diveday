@@ -27,6 +27,7 @@ import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
@@ -170,7 +171,7 @@ export default async function ReviewsPage({
           it, so a reload never re-reads a count whose banner has already gone. */}
       <FlashParams params={["notice", "undo", "published"]} />
       <ShopPageHeader
-        eyebrow={t("reviews.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reviews)}
         title={t("reviews.title")}
         description={t("reviews.description")}
         actions={

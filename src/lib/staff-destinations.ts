@@ -1,3 +1,5 @@
+import type { StaffMessageKey } from "@/i18n/staff-messages";
+
 /**
  * Every place a staff member can go inside `/shop/<shopSlug>`, in one list.
  *
@@ -111,6 +113,76 @@ export type StaffDestinationId =
  * every destination has exactly one, shared by all three consumers.
  */
 export type StaffDestinationLabels = Record<StaffDestinationId, string>;
+
+/**
+ * What a destination calls itself once you are on it, where that differs from
+ * its label — resolved the same way, by whoever renders. Partial by design:
+ * most pages agree with their tab, and one that does not is the exception
+ * worth naming (see `STAFF_DESTINATION_TITLE_KEYS`).
+ */
+export type StaffDestinationTitles = Partial<Record<StaffDestinationId, string>>;
+
+/**
+ * **Where each destination's one word lives in the staff bundle.**
+ *
+ * Keys, never words — `src/lib` picks neither (ADR
+ * 20260731-domain-layer-copy-leaks), the same key-registry shape
+ * `src/lib/marketing.ts` uses. What it buys is that a page's *own* eyebrow can
+ * read the identical key the nav tab reads, so the two cannot come to call one
+ * place two things.
+ *
+ * They had. Eight staff surfaces greeted a staffer with a name other than the
+ * one they tapped (issue #824), and four of the eight were doing the right
+ * thing through a *second copy* of the word — `reviews.eyebrow` "Reviews"
+ * beside `shared.shopNavLinks.reviews` "Reviews", two strings one edit apart
+ * from disagreeing. Those duplicates are gone; this is the join.
+ *
+ * The `<h1>` is deliberately not in here. "How's your month" is the product's
+ * voice and better writing than "Reports" (docs/design/brand.md); the eyebrow
+ * is what confirms you arrived where you meant to, and a page gets to say both.
+ */
+export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessageKey> = {
+  today: "shared.shopNavLinks.today",
+  checkIn: "shared.shopNavLinks.checkIn",
+  closeOut: "shared.shopNavLinks.closeOut",
+  walkIn: "shared.shopNavLinks.walkIn",
+  blockers: "shared.shopNavLinks.blockers",
+  divers: "shared.shopNavLinks.divers",
+  board: "shared.shopNavLinks.board",
+  addBooking: "shared.shopNavLinks.addBooking",
+  staffing: "shared.shopNavLinks.staffing",
+  diveSites: "shared.shopNavLinks.diveSites",
+  gear: "shared.shopNavLinks.gear",
+  courses: "shared.shopNavLinks.courses",
+  reviews: "shared.shopNavLinks.reviews",
+  requests: "shared.shopNavLinks.requests",
+  orders: "shared.shopNavLinks.orders",
+  waivers: "shared.shopNavLinks.waivers",
+  reports: "shared.shopNavLinks.reports",
+  promoCodes: "shared.shopNavLinks.promoCodes",
+  settings: "shared.shopNavLinks.settings",
+  team: "shared.shopNavLinks.team",
+  calendarFeed: "shared.shopNavLinks.calendarFeed",
+};
+
+/**
+ * The headline a destination renders once you are on it, where that differs
+ * from its label — so the palette can find a page by the name its own reader
+ * calls it. A staffer who thinks of Reports as "How's your month" and types
+ * that used to get nothing back.
+ *
+ * Only the ones that differ, and only the *stable* ones: Today's headline is a
+ * greeting with the reader's name in it and Close-out's changes with the state
+ * of the day, so neither is a name anybody could search for.
+ */
+export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, StaffMessageKey>> = {
+  checkIn: "checkIn.title",
+  reports: "reports.title",
+  reviews: "reviews.title",
+  requests: "requests.title",
+  diveSites: "diveSites.list.title",
+  promoCodes: "promos.title",
+};
 
 export type StaffDestination = {
   readonly id: StaffDestinationId;

@@ -5,7 +5,14 @@ import { localeEndonym } from "@/i18n/language-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
-import { type StaffDestinationLabels, staffShopRoot } from "@/lib/staff-destinations";
+import {
+  STAFF_DESTINATION_LABEL_KEYS,
+  STAFF_DESTINATION_TITLE_KEYS,
+  type StaffDestinationId,
+  type StaffDestinationLabels,
+  type StaffDestinationTitles,
+  staffShopRoot,
+} from "@/lib/staff-destinations";
 import {
   type ShopNavCounts,
   type ShopNavGates,
@@ -21,35 +28,33 @@ async function signOutAction() {
 }
 
 /**
- * The one word each staff destination goes by. The nav tabs and the palette's
- * "Go to" rows both read this record, so the two can no longer call the same
- * page different things — or, as before, know about different pages entirely. Typed against `StaffDestinationId`, so
- * adding a destination to the registry is a type error here until it has a word.
+ * The one word each staff destination goes by, and the headline the page it
+ * leads to wears.
+ *
+ * Both are read straight off the registry's key records, so the nav tab, the
+ * palette's "Go to" row and the page's own eyebrow are the same string by
+ * construction rather than by three people typing it. Adding a destination
+ * without a word is a type error in `STAFF_DESTINATION_LABEL_KEYS`.
  */
 function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestinationLabels {
-  return {
-    today: t("shared.shopNavLinks.today"),
-    checkIn: t("shared.shopNavLinks.checkIn"),
-    closeOut: t("shared.shopNavLinks.closeOut"),
-    walkIn: t("shared.shopNavLinks.walkIn"),
-    blockers: t("shared.shopNavLinks.blockers"),
-    divers: t("shared.shopNavLinks.divers"),
-    board: t("shared.shopNavLinks.board"),
-    addBooking: t("shared.shopNavLinks.addBooking"),
-    staffing: t("shared.shopNavLinks.staffing"),
-    diveSites: t("shared.shopNavLinks.diveSites"),
-    gear: t("shared.shopNavLinks.gear"),
-    courses: t("shared.shopNavLinks.courses"),
-    reviews: t("shared.shopNavLinks.reviews"),
-    requests: t("shared.shopNavLinks.requests"),
-    orders: t("shared.shopNavLinks.orders"),
-    waivers: t("shared.shopNavLinks.waivers"),
-    reports: t("shared.shopNavLinks.reports"),
-    promoCodes: t("shared.shopNavLinks.promoCodes"),
-    settings: t("shared.shopNavLinks.settings"),
-    team: t("shared.shopNavLinks.team"),
-    calendarFeed: t("shared.shopNavLinks.calendarFeed"),
-  };
+  const entries = Object.entries(STAFF_DESTINATION_LABEL_KEYS) as [
+    StaffDestinationId,
+    StaffMessageKey,
+  ][];
+  return Object.fromEntries(entries.map(([id, key]) => [id, t(key)])) as StaffDestinationLabels;
+}
+
+/**
+ * What each destination calls itself once you are on it, where that differs
+ * from its label — so ⌘K finds Reports for somebody who types "how's my
+ * month". Only the stable headlines; see `STAFF_DESTINATION_TITLE_KEYS`.
+ */
+function destinationTitlesFor(t: (key: StaffMessageKey) => string): StaffDestinationTitles {
+  const entries = Object.entries(STAFF_DESTINATION_TITLE_KEYS) as [
+    StaffDestinationId,
+    StaffMessageKey,
+  ][];
+  return Object.fromEntries(entries.map(([id, key]) => [id, t(key)]));
 }
 
 export function ShopNav({
@@ -90,6 +95,7 @@ export function ShopNav({
     label: localeEndonym(value),
   }));
   const destinationLabels = destinationLabelsFor(t);
+  const destinationTitles = destinationTitlesFor(t);
   // Shared by the header tabs and the phone dock, so a badge can never say
   // different things in the two places the same destination renders.
   const badgeLabels = {
@@ -177,6 +183,7 @@ export function ShopNav({
                 gearStatuses: gearStatusLabels(t),
                 groupGoTo: t("shared.commandPalette.groupGoTo"),
                 destinationLabels,
+                destinationTitles,
                 goToBoarding: t("shared.commandPalette.goToBoarding"),
                 goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
               }}

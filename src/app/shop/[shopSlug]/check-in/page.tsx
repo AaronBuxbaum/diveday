@@ -30,6 +30,7 @@ import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
 import { CheckInActionForm } from "./CheckInActionForm";
@@ -259,7 +260,7 @@ export default async function CheckInPage({
           counter is working in, not a message. */}
       <FlashParams params={["notice", "bid", "tid"]} />
       <ShopPageHeader
-        eyebrow={t("checkIn.eyebrow")}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
         title={t("checkIn.title")}
         // What this queue *is* — how far either side of now it reaches — which
         // is a fact about the rows below it and nothing a reader can find
