@@ -49,6 +49,27 @@ concentrated where the user finishes something — booking confirmed, waiver sig
 complete — as a small, fast, coral-accented moment (≤ 400 ms). Delight loses meaning if it's
 everywhere; `--accent` is rationed on purpose.
 
+**The shop home's good news is not a row kind, and that is settled.** Today's queue has twenty-two
+action kinds and every one is a problem — its tone map resolves only to danger, warning or neutral,
+because a work queue that surfaces work has nothing else to say. The right reading of that is not
+that the surface is joyless (issue #808): the warmth lives *outside* the rows, in two places that
+render **nothing at all** when they are not true.
+
+- **"Today's boats are all clear 🤙"** — an accent-toned line above the queue, shown once the
+  imminent and next-24-hour bands are empty while later work remains. The last blocker of the
+  morning clearing is a finish, which is exactly what §3 rations joy to.
+- **"Nothing is waiting on you"** — the queue's own empty state, for when the whole week is in order.
+
+Both are already built, both are tested, and neither fires on a shop with a full queue — which is
+the discipline §9 applies to a column with nothing to say, applied to a compliment.
+
+So a *standing* good-news line, below the queue and present whether or not the day earned one, is
+declined rather than un-built. Brand's own row says it: warmth is for "real moments of progress …
+avoid turning every screen into a celebration". On a bad morning a line announcing yesterday's
+sold-out charter, sitting under a diver who cannot board, is the software pleased with itself; on a
+good morning the two moments above already say so. If a shop ever asks for its own scoreboard, that
+is a surface of its own and not a consolation attached to the work queue.
+
 ## 4. Words sound like a good dive briefing
 
 Microcopy is warm, plain, and brief — a competent divemaster, not a lawyer or a mascot. Empty
