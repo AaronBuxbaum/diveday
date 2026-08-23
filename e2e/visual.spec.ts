@@ -1609,6 +1609,50 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The card a diver meets on their worst day**, which nothing had ever
+       * photographed — in either language or either scheme (issue #859).
+       *
+       * `ExpiredLinkCard` is what a dead bearer link renders, and it has two
+       * shapes worth a baseline. This is the attributed one: the shop named,
+       * its contact link, and — since issue #850 — a button that mails a fresh
+       * link to the address already on the booking. `e2e/readiness.spec.ts`
+       * drives it and asserts every string on it; what nothing looked at is
+       * the notice band's tone against the card and how the button sits above
+       * the "Need help?" line.
+       *
+       * Reached the only way it can be: book a seat, release it, and open the
+       * bare URL. Cancelling revokes this very token, which is what makes the
+       * link dead — no fixture hands you one.
+       */
+      test(`a dead readiness link renders true to the design (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        await page.goto(new URL(page.url()).pathname);
+        await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
+        await page.getByRole("button", { name: "Cancel my spot" }).click();
+        await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+        await page.getByRole("heading", { name: "This booking was cancelled" }).waitFor();
+        // Without `?cancelled=1` — the bookmarked URL, or the link out of an
+        // old reminder email, which is how a diver actually arrives here.
+        await page.goto(new URL(page.url()).pathname);
+        await page.getByRole("heading", { name: /readiness link isn.t available/ }).waitFor();
+        await capture(page, "expired-link-readiness", scheme);
+      });
+
+      /**
+       * The same component's other shape: **no shop to attribute it to.** A
+       * token that resolves to no record at all reveals nothing about why,
+       * which is the bearer-token model's own guarantee — so the card is the
+       * heading, the sentence, and nothing else. Worth its own baseline
+       * precisely because it is the one with no content to hold it up.
+       */
+      test(`an unknown bearer link renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/waivers/not-a-real-token");
+        await page.getByRole("heading", { level: 1 }).first().waitFor();
+        await capture(page, "expired-link-unknown", scheme);
+      });
+
+      /**
        * The group-organizer surfaces (docs ADR 20260804-seat-claim-links),
        * both sides of one flow: the organizer's confirmation with the
        * "Your group's seats" claim panel, then the claim page an invited
