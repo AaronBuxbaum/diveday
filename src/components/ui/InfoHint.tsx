@@ -129,11 +129,18 @@ export function InfoHint({
         // looked like a control that had lost its label rather than a marker.
         // Colour alone carries the affordance now; `focus-visible` keeps the
         // keyboard ring, which is the one border that was ever doing work.
-        className="inline-flex size-5 items-center justify-center rounded-full text-muted transition-colors hover:text-primary focus-visible:text-primary"
+        // **The glyph stays 20px; the target is 44.** `size-5` was the whole
+        // control, so the one "why are you asking me this?" affordance on the
+        // public booking form was a 20px dot for a thumb (issue #786,
+        // principles.md §2). The mark keeps its size — a bigger dot would
+        // shout beside the label it hangs off — and the box around it grows to
+        // the floor instead, with `-m-3` so the extra reach costs the line no
+        // height and nothing beside it moves.
+        className="-m-3 inline-flex size-11 items-center justify-center rounded-full p-3 text-muted transition-colors hover:text-primary focus-visible:text-primary"
       >
         {/* An icon rather than a "?" glyph: a text marker is copy, and copy
             belongs in a message bundle. This one carries no language at all. */}
-        <svg viewBox="0 0 16 16" aria-hidden="true" className="size-3 fill-current">
+        <svg viewBox="0 0 16 16" aria-hidden="true" className="size-3 shrink-0 fill-current">
           <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm0 3.4a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM9.2 12H6.8a.7.7 0 0 1 0-1.4h.5V8.2h-.4a.7.7 0 0 1 0-1.4h1.8v3.8h.5a.7.7 0 0 1 0 1.4Z" />
         </svg>
       </button>

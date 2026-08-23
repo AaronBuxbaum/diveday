@@ -932,3 +932,78 @@ test.describe("automated accessibility scans for an unsupported-language visitor
     await expectNoA11yViolations(page);
   });
 });
+
+/**
+ * **The 44px floor, measured rather than eyeballed.**
+ *
+ * `docs/design/principles.md` §2 sets it: "Primary flows work one-handed on a
+ * phone, in glare, with wet fingers: touch targets ≥ 44 px". Nothing enforced
+ * it. Axe's `target-size` is not among the rules this file enables, and a
+ * screenshot cannot tell 18px from 44px — so three staff tables shipped their
+ * row-opening links as an 18px word, 34 of them on the gear register, which a
+ * shop owner taps standing at the wall tagging cylinders (issue #786).
+ *
+ * **What this measures is the element's own box**, which is the same thing axe
+ * measures and the same thing a thumb meets — and it is deliberately not the
+ * hit area a pseudo-element might extend. That distinction is the whole reason
+ * the defect survived: `DiverList` was believed to stretch its row link across
+ * the `<tr>` with `after:inset-0`, and `Td`'s `overflow-hidden` clips that to
+ * the cell, so the "fix" everyone pointed at was never doing what its comment
+ * said. A rule that trusted the overlay would have gone on passing.
+ *
+ * Two exemptions, both genuine, and neither a class of control:
+ *
+ * - **The skip links**, which report 1x1 because they are positioned offscreen
+ *   until focused. They are a keyboard affordance and never a tap target.
+ * - **An `<input>` inside a `<label>` that meets the floor itself** — a
+ *   checkbox is 16px by convention and its label is the target; the public
+ *   schedule's "Has space" filter is 91x44 with a 16px box inside it.
+ *
+ * Inline prose links are not exempted here because none of these surfaces has
+ * one. If a page grows one, exempt it by name with a sentence, the way
+ * `color-contrast` is excluded above — never by widening the rule.
+ */
+const TAP_TARGET_PAGES = [
+  "/shop/blue-mantis/gear",
+  "/shop/blue-mantis/orders",
+  "/shop/blue-mantis/check-in",
+];
+
+test.describe("tap targets on a phone", () => {
+  signedInAsOwner();
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  for (const path of TAP_TARGET_PAGES) {
+    test(`every control on ${path} clears the 44px floor`, async ({ page }) => {
+      await page.goto(path);
+      // The page's own first control, so this waits on the thing under test
+      // rather than on a duration.
+      await page.locator("main a, main button").first().waitFor();
+
+      const undersized = await page.evaluate(() => {
+        const isSkipLink = (element: Element) =>
+          element.tagName === "A" && (element.textContent ?? "").startsWith("Skip to");
+        const labelCoversIt = (element: Element) => {
+          if (element.tagName !== "INPUT") return false;
+          const label = element.closest("label");
+          return Boolean(label && label.getBoundingClientRect().height >= 44);
+        };
+        return [...document.querySelectorAll("a, button, input, summary")]
+          .filter((element) => {
+            const style = getComputedStyle(element);
+            const box = element.getBoundingClientRect();
+            if (style.display === "none" || style.visibility === "hidden") return false;
+            if (box.width === 0 || box.height >= 44) return false;
+            return !isSkipLink(element) && !labelCoversIt(element);
+          })
+          .map((element) => {
+            const box = element.getBoundingClientRect();
+            // Named, not counted: "34" sends the next reader hunting.
+            return `${element.tagName.toLowerCase()} ${Math.round(box.width)}x${Math.round(box.height)} "${(element.textContent ?? "").trim().slice(0, 24)}"`;
+          });
+      });
+
+      expect(undersized).toEqual([]);
+    });
+  }
+});

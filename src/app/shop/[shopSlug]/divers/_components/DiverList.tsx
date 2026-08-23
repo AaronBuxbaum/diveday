@@ -17,7 +17,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass } from "@/components/ui/form";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill } from "@/i18n/fill";
 import type { CertificationLevel } from "@/lib/readiness";
@@ -532,20 +532,17 @@ export function DiverList({
             </THead>
             <TBody>
               {divers.map((diver) => (
-                <tr
-                  key={diver.person.id}
-                  className="group relative transition-colors duration-200 hover:bg-surface-sunken"
-                >
+                <Tr key={diver.person.id}>
                   {/* `text-base` because the person's name is the row's own
                       voice, not table small print — a directly-applied size
                       beats the shell's inherited `text-sm`. `align-middle`
                       centres this cell's avatar against the taller of the two,
                       as it did before the conversion. */}
                   <Td className="align-middle text-base">
-                    <Link
+                    <RowLink
                       href={`/shop/${shopSlug}/divers/${diver.person.id}`}
                       onClick={cancelPendingSearch}
-                      className="flex min-w-0 items-center gap-3 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
+                      className="min-w-0 gap-3"
                     >
                       <span
                         className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 font-semibold text-primary"
@@ -567,7 +564,7 @@ export function DiverList({
                           {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
                         </p>
                       </div>
-                    </Link>
+                    </RowLink>
                   </Td>
                   {/* The level is a stable fact column. Attention is separate
                       and always present, so searching never redraws the table
@@ -589,7 +586,7 @@ export function DiverList({
                       ) : null}
                     </div>
                   </Td>
-                </tr>
+                </Tr>
               ))}
             </TBody>
           </Table>

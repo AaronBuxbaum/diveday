@@ -11,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
@@ -596,14 +596,14 @@ export default async function OrdersIndexPage({
                   </Badge>
                 );
               return (
-                <tr key={row.order.id}>
+                <Tr key={row.order.id}>
                   <Td align="middle">
-                    <Link
+                    <RowLink
                       href={`/shop/${shopSlug}/orders/${row.order.id}`}
                       className="font-medium text-foreground hover:text-primary hover:underline"
                     >
                       {row.person.fullName}
-                    </Link>
+                    </RowLink>
                     <div className="text-xs text-muted sm:hidden">
                       {row.trip?.title ?? row.order.description ?? ""}
                     </div>
@@ -624,7 +624,7 @@ export default async function OrdersIndexPage({
                   <Td numeric align="middle">
                     {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
                   </Td>
-                </tr>
+                </Tr>
               );
             })}
           </TBody>
@@ -663,14 +663,14 @@ export default async function OrdersIndexPage({
               {importedHistoryPage.rows.map(({ history, person }) => {
                 const receiptDocumentUrl = safeImportedDocumentUrl(history.receiptDocumentUrl);
                 return (
-                  <tr key={history.id}>
+                  <Tr key={history.id}>
                     <Td align="middle">
-                      <Link
+                      <RowLink
                         href={`/shop/${shopSlug}/divers/${person.id}`}
                         className="font-medium text-foreground hover:text-primary hover:underline"
                       >
                         {person.fullName}
-                      </Link>
+                      </RowLink>
                       <div className="mt-1 sm:hidden">
                         <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
                       </div>
@@ -721,7 +721,7 @@ export default async function OrdersIndexPage({
                     <Td numeric align="middle">
                       {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
                     </Td>
-                  </tr>
+                  </Tr>
                 );
               })}
             </TBody>
