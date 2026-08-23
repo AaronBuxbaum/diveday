@@ -26,12 +26,12 @@ One ticket at a time, each built on the branch of the one before it — related 
    (Activity keeps three routes; the real loss is invisible eviction), "eight surfaces disagree with
    their nav label" (four already agreed, through a duplicate message key). When the premise does
    not survive, say so in the PR **and** the issue, and build what the evidence supports.
-5. **Build it as the next layer** (below).
+5. **Cut the branch, commit once, open the draft PR and extend the stack** (below), then build it.
 6. **Verify.** `pnpm check` green, e2e for any flow you touched, and *look at* every surface you
    changed in both schemes. Read each visual diff against the actual image before writing a word
    about it — `pnpm visual:report --commit <sha>` writes the PNGs.
-7. **Open the PR** with `--base` set to the layer beneath, extend the stack, post the diff
-   explanation. Back to 1.
+7. **Finish the PR you already opened** at step 5 — body, position line, diff explanation — and
+   `gh pr ready` it. Back to 1.
 
 ## One stack, not one branch per ticket
 
@@ -43,13 +43,22 @@ is unrelated:
 git checkout -b claude/<slug-1> origin/main
 # every layer after it
 git checkout -b claude/<slug-2> claude/<slug-1>
-gh pr create --base claude/<slug-1> --title … --body …
 
-# register bottom-to-top once there are two, then extend
+# at the layer's FIRST commit, not when the ticket is finished:
+# pushes, opens the missing pull request as a draft, chains the base, registers the stack
+gh stack link claude/<slug-1> claude/<slug-2>
+gh stack link <stack-number> claude/<slug-3>          # every layer after that
+
+# no extension (a cloud session): the same two steps by hand — note -F, never -f
+gh pr create --base claude/<slug-1> --draft --title … --body …
 gh api --method POST repos/{owner}/{repo}/stacks \
-  -f 'pull_requests[]=<bottom>' -f 'pull_requests[]=<next>'
-gh api --method POST repos/{owner}/{repo}/stacks/{n}/add -f 'pull_requests[]=<new>'
+  -F 'pull_requests[]=<bottom>' -F 'pull_requests[]=<next>'
+gh api --method POST repos/{owner}/{repo}/stacks/{n}/add -F 'pull_requests[]=<new>'
 ```
+
+**Open the pull request when you cut the branch.** A draft with one commit and a placeholder body is
+the point; the body catches up at step 7. Every failure this routine has hit with stacks lived in the
+gap between cutting a branch and opening its pull request.
 
 **Why, concretely.** Thirteen branches cut from one `main` in a single session all edited
 `AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a `scripts/*-baseline.json`. Every
@@ -77,19 +86,19 @@ Read [stacked-prs](../stacked-prs/SKILL.md) before the first one. Two things fro
 
 ### When a stack is the wrong shape
 
-**Measure the merge cadence before committing to one.** A stack pays for itself when review is slow
-and layers sit for hours; it costs when they do not. Twice in one session a base branch was merged
-*and deleted* while its next layer's PR body was still being written, and `gh pr create --base` then
-fails with "No commits between … Base ref must be a branch" — the base is gone. The fix each time
-was `git fetch && git rebase origin/main` and a PR against `main`, which is where the work wanted to
-be all along.
+**Not because the base can vanish.** This section used to say to measure the merge cadence first,
+because twice in one session a base branch merged and was deleted while its next layer's PR body was
+still being written, and `gh pr create --base` then failed with "No commits between … Base ref must
+be a branch". Measured on 2026-08-23 (ADR
+[20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)):
+that is an artifact of opening the pull request at the *end* of a layer's work. A layer registered at
+its first commit is retargeted by GitHub the moment its base merges, and even a branch orphaned that
+way attaches with one `gh stack link`. Register early and fast merges cost nothing.
 
-So: if the last few PRs merged within minutes, cut from `main` and rebase before every push. The
-conflicts a stack prevents only accumulate while branches *wait*.
-
-**Start a new stack** when the current one merges, or at about six layers. Past that, every layer
-re-pays the full CI gate on every cascading rebase, and the wall-clock cost outweighs the conflicts
-it saves.
+**What still argues against a stack is CI.** Every layer pays lint, typecheck, four unit shards, a
+build and eight Playwright/visual shards, and pays again above every cascading rebase. So **start a
+new stack** when the current one merges, or at about six layers — past that the wall-clock cost
+outweighs the conflicts it saves.
 
 **A fix that is not the ticket goes on its own branch off `main`**, not into the stack — an
 unordered crew query found while triaging a diff, a race in a spec you did not touch. It should be

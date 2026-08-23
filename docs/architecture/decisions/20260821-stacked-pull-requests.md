@@ -68,6 +68,11 @@ slice remains the default for everything else. Three parts:
    branch cut from the one below, each pull request opened with `base` set to that branch, each body
    naming its position and the branch beneath it. This needs nothing that is not already available,
    and it is byte-for-byte the branch shape a stack requires.
+
+   **Amended 2026-08-23 (see "Measured: register at the first commit" below):** open that pull
+   request, as a draft, at the layer's **first commit** rather than when its work is done, and
+   register it then. Steps 1 and 2 are one step. Deferring either is what produced the only failure
+   stacking has caused in this repository.
 2. **The session that built the chain registers it**, with one REST call — `POST
    /repos/{owner}/{repo}/stacks` carrying the ordered pull request numbers bottom to top, reached as
    `gh api --method POST`. Registering is what buys the cascading rebase, the bottom-up atomic merge,
@@ -181,3 +186,42 @@ below, not a cleverer walk of the graph.
 
 Still not done, deliberately: no `matchingThreshold` in `regconfig.json`, and no re-anchoring the
 capture to `main` — that would report every lower layer's own changes on every layer above it.
+
+### Measured: register at the first commit, not at the end (2026-08-23)
+
+PR #891 made a stack the default shape for backlog work. PR #893 walked that back a day later on
+evidence: twice in one session a base branch merged and was deleted while its next layer's pull
+request body was still being written, and `gh pr create --base` then failed with `No commits between
+… Base ref must be a branch`. The conclusion drawn there was to measure the merge cadence and cut
+from `main` when review is fast.
+
+That conclusion was wrong about the cause, and the cause is fixable. Measured in a throwaway
+four-layer stack rooted on a sandbox branch — no CI, `[skip ci]` commits, torn down afterwards:
+
+| act | result |
+| --- | --- |
+| merge the bottom layer (`gh stack merge <pr> --yes`) | its branch is deleted, and the layer above **retargets itself** onto the new base, silently — no `base_ref_changed` timeline event, pull request stays open, diff stays its own |
+| `gh pr create --base <the deleted branch>` | `No commits between … Base ref must be a branch` — PR #893's failure, reproduced verbatim |
+| `gh stack link <stack> <the orphaned branch>` | creates the pull request as a draft based on the stack's top and adds it to the stack |
+| `gh pr merge` on any stacked pull request | refused: *"must be merged using the asynchronous merge REST API"* |
+| `gh pr edit --base` on any stacked pull request | refused: *"Cannot change the base branch because the pull request is part of a stack"* |
+
+So the vanished base is not a property of stacks; it is a property of opening the pull request hours
+after cutting the branch. GitHub owns a stacked pull request's base ref — it will not let anyone else
+set it, and it moves it when the layer below merges.
+
+Two mechanical findings came out of the same session and matter more than the reasoning:
+
+- **The registration command this ADR and the skill both carried did not work.** `gh api -f` sends
+  strings; `pull_requests` is typed as integers, so `POST .../stacks -f 'pull_requests[]=641'`
+  returns `422 Invalid property /pull_requests/0: "641" is not of type integer`. `-F` works. A
+  session that tried the documented form saw the write path fail, fell back to hand-chained
+  `gh pr create --base`, and met the failure above — which is very likely the whole causal chain
+  behind PR #893.
+- **One caveat survives.** A branch cut from a layer before it merged and attached after carries the
+  pre-merge parent commit, so its diff duplicates the merged layer's files until it is rebased onto
+  the new top. `gh stack merge` cascade-rebases the branches that were *in* the stack; it cannot
+  rebase one it has never seen.
+
+What does **not** change: the CI cost per layer, which is the real argument for keeping stacks short
+and for not stacking independent slices, and the visual-baseline restriction measured on 2026-08-22.
