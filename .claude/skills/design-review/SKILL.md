@@ -12,6 +12,12 @@ or an action the screen could have carried.
 ## Procedure
 
 1. Read `docs/design/principles.md` (the principles **and** the checklist).
+1. Read [`docs/design/settled-questions.md`](../../../docs/design/settled-questions.md) — the register
+   of things that look like a defect and are right, each pointing at the file whose comment carries
+   the reasoning. It exists because every sweep re-derived the same dozen false positives before it
+   did, and two of its rows are issues that were drafted and then killed by measuring. Reading it
+   first is the cheapest part of this review. **Add to it** whenever this sweep investigates
+   something that looks wrong and turns out not to be — that is part of the sweep, not a follow-up.
 2. Capture every changed route. The visual spec asserts nothing — it writes PNGs — so a filtered
    run of it is the fastest way to get review images:
    ```bash

@@ -395,6 +395,13 @@ looked at this app in one. The honest statement is the one above: the layout is 
 direction-agnostic and is untested in an RTL locale — the same care the WCAG AA wording takes in
 [product/features/roadmap.md](../product/features/roadmap.md).
 
+**Something that looks wrong and is right goes in the register.**
+[settled-questions.md](settled-questions.md) is the index of those — a roll call showing two
+buttons, an orders column blank on most rows, a staff surface that turns out to be *less* dense than
+the diver's when you actually measure it. Each row points at the file whose comment carries the
+reasoning, so the register can never become a second source of truth. Read it before a sweep and add
+to it during one; it exists because every sweep re-derived the same dozen false positives.
+
 ## The holistic pass (run it before any checklist)
 
 Every design review starts holistic, before the itemized criteria — a surface can pass every
