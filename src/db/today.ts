@@ -1111,6 +1111,17 @@ export async function getTodayWork(
           .innerJoin(people, eq(people.id, tripAssignments.personId))
           .leftJoin(personRoles, eq(personRoles.personId, people.id))
           .where(inArray(tripAssignments.tripId, tripIds))
+          // **By name, because otherwise there is no order at all.** Without
+          // this the crew line renders in whatever order the database hands
+          // back, which is not stable: the same departure read "Keiko Tanaka,
+          // Sal Moretti" on one render and "Sal Moretti, Keiko Tanaka" on the
+          // next, and a visual baseline caught it flapping between two runs of
+          // identical seeded data. A shop reading its own board twice in a
+          // morning should not have to wonder what changed. `personId` breaks
+          // a tie between two people with the same name, so the order is total
+          // rather than merely usually-stable. Matches `listTripCrew`
+          // (src/db/trips-crew.ts), which already sorted by name.
+          .orderBy(asc(people.fullName), asc(people.id))
       : [];
 
   // What each person is doing on *this* boat when the roster says so, otherwise
