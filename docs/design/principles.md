@@ -385,13 +385,19 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   two-level app does not need one.
 - **Remove until it breaks.** The test for every control and border on a finished surface: take
   it away — if the screen still works, it was noise. What survives is what the screen is.
-- **Page width says what kind of surface this is.** Staff work surfaces (the shop home, orders,
-  reports, close-out) default to `max-w-5xl`; a wide board or dense table (the schedule board, the
-  divers roster, staffing) earns `max-w-6xl`; a reading or settings surface (Settings, the course
-  catalog and editor) stays at `max-w-3xl`, a comfortable line length. Don't pick a width per
-  page from scratch; a page still sitting between tiers (check-in's `max-w-4xl`) is legacy —
-  move it to a tier when redesigning that page, never in passing. And a route's `loading.tsx`
-  wears the **exact same width** as its page,
+- **Page width says what kind of surface this is — four tiers.** A reading or settings surface
+  (Settings, the course catalog and editor) stays at `max-w-3xl`, a comfortable line length. A
+  single record's own page, or a focused list rather than a dense table — the check-in queue, a
+  diver's own record, promos, requests, staff reviews, and every page under one departure (the
+  trip layout, so Overview/Guests/Manifest/Prep share it) — takes `max-w-4xl`: narrower than a
+  work surface with several sections, wider than a single reading column. Staff work surfaces
+  with more than one section (the shop home, orders, reports, close-out) default to `max-w-5xl`;
+  a wide board or dense table (the schedule board, the divers roster, staffing) earns `max-w-6xl`.
+  Don't pick a width per page from scratch — pick the tier that matches the surface's shape.
+  A handful of diver-facing pages (a course's own page, a shop's public reviews) and every
+  marketing page already sit at `max-w-4xl` too; that is a coincidence of this tier fitting their
+  shape as well, not a claim this system reaches outside staff surfaces. And a route's
+  `loading.tsx` wears the **exact same width** as its page,
   because a skeleton narrower or wider than what replaces it is a sideways layout jump on every
   navigation into the route. `pnpm check:loading-skeletons` (in `pnpm check:repo`) enforces both
   halves — that a page *has* a sibling skeleton, and that the two containers match — because a
