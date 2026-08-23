@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
@@ -14,6 +15,7 @@ import {
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
   pullDiveSiteTemplateUpdates,
+  SITE_EDIT_CONFLICT,
   SITE_NAME_TAKEN,
   shopSearchAnchor,
   undoDiveSiteTemplateUpdate,
@@ -87,6 +89,7 @@ describe("dive-site library", () => {
     expect(pending?.latestVersion).toBe(3);
     expect(pending?.diff.some((change) => change.field === "description")).toBe(true);
 
+    const [beforePull] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
     const result = await pullDiveSiteTemplateUpdates(
       db,
       shop.id,
@@ -97,10 +100,28 @@ describe("dive-site library", () => {
     const [updated] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
     expect(updated?.sourceTemplateVersion).toBe(3);
     expect(updated?.description).toBe("Our local briefing for this boat.");
+    // **A pull is a second writer of the prose the editor owns**, so it moves
+    // the edit generation like any other. If it did not, a briefing opened
+    // before the pull would silently revert it on its next save — issue #820
+    // again with the template pull as the second tab. Named by a
+    // `security-reviewer` pass, not by a test.
+    expect(updated?.rowVersion).toBe((beforePull?.rowVersion ?? 0) + 1);
+    expect(
+      await updateDiveSiteForForm(
+        db,
+        shop.id,
+        imported.id,
+        { shopId: shop.id, name: updated?.name ?? "" },
+        { expectedVersion: beforePull?.rowVersion ?? 0 },
+      ),
+    ).toBe(SITE_EDIT_CONFLICT);
 
     const undone = await undoDiveSiteTemplateUpdate(db, shop.id, imported.id);
     expect(undone.status).toBe("undone");
     const [restored] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
+    // Undo is a writer of the same prose too, so it moves the generation on
+    // rather than back — a tab opened mid-pull must not be able to save over it.
+    expect(restored?.rowVersion).toBeGreaterThan(updated?.rowVersion ?? 0);
     expect(restored?.sourceTemplateVersion).toBe(catalogEntry.version.version);
     expect(restored?.description).toBe("Our local briefing for this boat.");
     expect(restored?.templateUpdateUndo).toBeNull();
@@ -548,5 +569,135 @@ describe("published dive-site catalog paging", () => {
     // An empty ask never reaches the database and never invents an entry.
     expect(await currentGlobalDiveSiteVersions(db, [])).toEqual(new Map());
     expect((await currentGlobalDiveSiteVersions(db, [late.id, late.id])).size).toBe(1);
+  });
+});
+
+/**
+ * **Two staffers with the same briefing open.**
+ *
+ * A site posts its *whole* page — twenty-odd fields, the landmark list, the
+ * field guide, the route — so the second save does not overwrite one field
+ * between them: it reverts every section to whatever the row held when that tab
+ * opened. It used to do that silently (issue #820).
+ */
+describe("a dive-site briefing saved from two tabs", () => {
+  it("refuses the second save rather than reverting the first", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Two Tabs Reef" });
+    const opened = site.rowVersion;
+
+    const first = await updateDiveSiteForForm(
+      db,
+      shop.id,
+      site.id,
+      { shopId: shop.id, name: "Two Tabs Reef", currentNote: "Ripping on the flood." },
+      { expectedVersion: opened },
+    );
+    expect(first).not.toBe(SITE_EDIT_CONFLICT);
+
+    // The second tab still holds the generation it opened with.
+    expect(
+      await updateDiveSiteForForm(
+        db,
+        shop.id,
+        site.id,
+        { shopId: shop.id, name: "Two Tabs Reef" },
+        { expectedVersion: opened },
+      ),
+    ).toBe(SITE_EDIT_CONFLICT);
+    // Refused, not half-applied: the first writer's note is still on the row.
+    const [after] = await db.select().from(diveSites).where(eq(diveSites.id, site.id));
+    expect(after?.currentNote).toBe("Ripping on the flood.");
+  });
+
+  /**
+   * **A row nobody has ever saved still has a generation, and it is zero.**
+   * The first cut of this compared `updated_at` and fell back to `created_at`
+   * for exactly this case — which is how it acquired a comparison that cannot
+   * succeed on real Postgres, because `now()` keeps microseconds a JS `Date`
+   * cannot hold and PGlite does not emit them. `NOT NULL DEFAULT 0` makes the
+   * case ordinary and takes the clock out of it.
+   */
+  it("protects a site that has never been saved", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Never Saved Reef" });
+    expect(site.rowVersion).toBe(0);
+
+    await updateDiveSiteForForm(
+      db,
+      shop.id,
+      site.id,
+      { shopId: shop.id, name: "Never Saved Reef" },
+      { expectedVersion: 0 },
+    );
+    expect(
+      await updateDiveSiteForForm(
+        db,
+        shop.id,
+        site.id,
+        { shopId: shop.id, name: "Never Saved Reef" },
+        { expectedVersion: 0 },
+      ),
+    ).toBe(SITE_EDIT_CONFLICT);
+  });
+
+  /**
+   * A page rendered by the previous release sends no hidden field at all, and
+   * the migration runs while that release is still serving (AGENTS.md's
+   * expand/contract rule). Refusing those would break saves for as long as the
+   * two overlap, so no information means allow.
+   */
+  it("allows a save that carries no generation at all", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Old Release Reef" });
+    await updateDiveSiteForForm(
+      db,
+      shop.id,
+      site.id,
+      { shopId: shop.id, name: "Old Release Reef", currentNote: "first" },
+      { expectedVersion: 0 },
+    );
+    const written = await updateDiveSiteForForm(db, shop.id, site.id, {
+      shopId: shop.id,
+      name: "Old Release Reef",
+      currentNote: "second",
+    });
+    expect(written).not.toBe(SITE_EDIT_CONFLICT);
+    expect(written).not.toBeNull();
+  });
+
+  /**
+   * Another shop's site is *missing*, never a conflict. A conflict would be an
+   * answer about a row the caller may not read, which is how a tenant boundary
+   * turns into an existence oracle.
+   */
+  it("says missing rather than conflict for another shop's site", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Other Shop Reef" });
+    expect(
+      await updateDiveSiteForForm(
+        db,
+        randomUUID(),
+        site.id,
+        { shopId: shop.id, name: "Other Shop Reef" },
+        { expectedVersion: site.rowVersion },
+      ),
+    ).toBeNull();
+  });
+
+  /** A deleted site is gone to the editor, whatever generation the tab holds. */
+  it("says missing rather than conflict for a deleted site", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Deleted Reef" });
+    await deleteDiveSite(db, shop.id, site.id);
+    expect(
+      await updateDiveSiteForForm(
+        db,
+        shop.id,
+        site.id,
+        { shopId: shop.id, name: "Deleted Reef" },
+        { expectedVersion: site.rowVersion },
+      ),
+    ).toBeNull();
   });
 });

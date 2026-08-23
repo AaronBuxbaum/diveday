@@ -387,6 +387,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // DiveDay's temporary UI bookkeeping, not part of the site's portable
     // briefing and must never be restored by an import.
     "template_update_undo",
+    // The row's edit generation for the two-tab guard. It counts saves made in
+    // *this* installation's editor and means nothing to another one — a shop
+    // restoring a bundle wants its briefing back, not the number of times
+    // somebody pressed Save. Restoring it would also hand an importing row a
+    // generation no rendered page has ever carried.
+    "row_version",
   ],
   dive_site_creatures: ["shop_id"],
   dive_site_moments: ["shop_id"],
@@ -398,7 +404,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",
   ],
-  courses: ["shop_id"],
+  // `row_version` for the same reason as `dive_sites` above: it counts saves
+  // in this installation's editor and is meaningless in another.
+  courses: ["shop_id", "row_version"],
 };
 
 function table(

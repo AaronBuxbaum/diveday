@@ -40,7 +40,8 @@ export type DiveSiteFormError =
   | "depthTooDeep"
   | "images"
   | "imagesUnconfigured"
-  | "nameTaken";
+  | "nameTaken"
+  | "conflict";
 
 /**
  * Everything a staffer had typed when a submission was refused, keyed by field

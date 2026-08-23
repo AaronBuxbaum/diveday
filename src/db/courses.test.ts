@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 // @vitest-environment node
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
@@ -1157,13 +1158,114 @@ describe("course content and public pages (in-memory PGlite)", () => {
       ],
       faqs: [{ question: "Do I need a computer?", answer: "We rent one." }],
     });
-    expect(saved).toMatchObject({
+    expect(saved.ok).toBe(true);
+    expect(saved.ok && saved.course).toMatchObject({
       summary: "Plan and make dives to 40 metres",
       minimumAge: 15,
       priceCents: 32500,
       minimumCertificationLevel: "open_water",
     });
-    expect(saved?.faqs).toEqual([{ question: "Do I need a computer?", answer: "We rent one." }]);
+    expect(saved.ok && saved.course.faqs).toEqual([
+      { question: "Do I need a computer?", answer: "We rent one." },
+    ]);
+  });
+
+  /**
+   * **Two writers, one page, and the second must not silently revert the
+   * first.** `updateCourseContent` writes every field it is given, so the loss
+   * is the whole page — nine sections, pricing, photos, the day-by-day plan and
+   * the FAQ — not one field (issue #820).
+   */
+  it("refuses a save whose generation has moved on", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    const asBothTabsSawIt = course.rowVersion;
+
+    const first = await updateCourseContent(
+      db,
+      shop.id,
+      course.id,
+      { ...emptyContent, summary: "Saved by the first tab" },
+      { expectedVersion: asBothTabsSawIt },
+    );
+    expect(first.ok).toBe(true);
+
+    // The second tab still holds the generation it loaded.
+    const second = await updateCourseContent(
+      db,
+      shop.id,
+      course.id,
+      { ...emptyContent, summary: "Saved by the second tab" },
+      { expectedVersion: asBothTabsSawIt },
+    );
+    expect(second).toEqual({ ok: false, reason: "conflict" });
+
+    // And the refusal wrote nothing — the first tab's page is intact.
+    const [after] = await listCourses(db, shop.id);
+    expect(after?.summary).toBe("Saved by the first tab");
+  });
+
+  /**
+   * **A row nobody has ever saved still has a generation, and it is zero.**
+   * The first cut of this compared timestamps and fell back to `created_at` for
+   * exactly this case — which is how it acquired a comparison that cannot
+   * succeed on real Postgres. `NOT NULL DEFAULT 0` makes the case ordinary.
+   */
+  it("protects a course that has never been saved", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    expect(course.rowVersion).toBe(0);
+
+    const first = await updateCourseContent(
+      db,
+      shop.id,
+      course.id,
+      { ...emptyContent, summary: "First" },
+      { expectedVersion: 0 },
+    );
+    expect(first.ok).toBe(true);
+    expect(
+      await updateCourseContent(
+        db,
+        shop.id,
+        course.id,
+        { ...emptyContent, summary: "Second" },
+        { expectedVersion: 0 },
+      ),
+    ).toEqual({ ok: false, reason: "conflict" });
+  });
+
+  /**
+   * **The expand/contract half.** The migration runs while the previous release
+   * is still serving, and a page rendered by that release sends no hidden field
+   * at all. Refusing those would break every save for as long as the two
+   * releases overlap.
+   */
+  it("allows a save that carries no generation, because the page may predate the column", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    await updateCourseContent(db, shop.id, course.id, { ...emptyContent, summary: "First" });
+    const second = await updateCourseContent(db, shop.id, course.id, {
+      ...emptyContent,
+      summary: "Second",
+    });
+    expect(second.ok).toBe(true);
+  });
+
+  it("says `missing` rather than `conflict` for another shop's course", async () => {
+    // Different words for different situations: a generation that moved is
+    // somebody else's edit; a row that is not there is not this shop's.
+    const { db, shop } = await seededShopContext();
+    const [course] = await listCourses(db, shop.id);
+    if (!course) throw new Error("expected a seeded course");
+    expect(
+      await updateCourseContent(db, randomUUID(), course.id, emptyContent, {
+        expectedVersion: course.rowVersion,
+      }),
+    ).toEqual({ ok: false, reason: "missing" });
   });
 
   it("stores each gallery caption on the photo it belongs to, and reads it back paired", async () => {
@@ -1426,6 +1528,7 @@ describe("course template updates", () => {
       expect.objectContaining({ field: "overview", shopChanged: true }),
     ]);
 
+    const [beforePull] = await db.select().from(courses).where(eq(courses.id, course.id));
     const result = await pullCourseTemplateUpdates(db, shop.id, course.id, "preserve-shop-edits");
     expect(result.status).toBe("updated");
     const [updated] = await db.select().from(courses).where(eq(courses.id, course.id));
@@ -1436,6 +1539,18 @@ describe("course template updates", () => {
       priceCents: course.priceCents,
       heroImageUrl: course.heroImageUrl,
     });
+
+    // **A pull is a second writer of the prose the editor owns**, so it moves
+    // the edit generation like any other. If it did not, an editor opened
+    // before the pull would silently revert it on its next save — issue #820
+    // again, with the template pull as the second tab. It did not until a
+    // `security-reviewer` pass named it.
+    expect(updated?.rowVersion).toBe((beforePull?.rowVersion ?? 0) + 1);
+    expect(
+      await updateCourseContent(db, shop.id, course.id, emptyContent, {
+        expectedVersion: beforePull?.rowVersion ?? 0,
+      }),
+    ).toEqual({ ok: false, reason: "conflict" });
   });
 
   it("cannot pull a course through another shop's tenant scope", async () => {

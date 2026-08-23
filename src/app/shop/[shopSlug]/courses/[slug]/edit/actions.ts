@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
@@ -184,20 +184,47 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const broken = depthChecked.find(([, text]) => courseDepthPlaceholderIssues(text).length > 0);
   if (broken) redirect(`${base}?error=depth-placeholder&field=${broken[0]}`);
 
-  const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
-    summary: value.summary,
-    overview: value.overview,
-    heroImageUrl,
-    heroImageAlt,
-    galleryPhotos,
-    durationText: value.durationText,
-    groupSizeText: value.groupSizeText,
-    prerequisiteNote: value.prerequisiteNote,
-    includes: parseLines(value.includes),
-    excludes: parseLines(value.excludes),
-    scheduleDays,
-    faqs: parseFaqs(value.faqs),
-  });
+  // The row's edit generation as this page last saw it. Absent means the page
+  // was rendered by a release that did not send one — see `updateCourseContent`.
+  // A non-numeric value is treated as absent rather than thrown: this page is
+  // the only thing that writes the field, so a bad one means an old release or
+  // a hand-crafted post, and neither is worth a 500 over an input that can only
+  // ever tighten the write.
+  const expectedVersion = Number.parseInt(String(formData.get("expectedVersion") ?? ""), 10);
+
+  const saved = await updateCourseContent(
+    db,
+    staff.user.shopId,
+    course.id,
+    {
+      summary: value.summary,
+      overview: value.overview,
+      heroImageUrl,
+      heroImageAlt,
+      galleryPhotos,
+      durationText: value.durationText,
+      groupSizeText: value.groupSizeText,
+      prerequisiteNote: value.prerequisiteNote,
+      includes: parseLines(value.includes),
+      excludes: parseLines(value.excludes),
+      scheduleDays,
+      faqs: parseFaqs(value.faqs),
+    },
+    { expectedVersion: Number.isNaN(expectedVersion) ? null : expectedVersion },
+  );
+  // **Refused, and the page keeps what you typed.** Returning rather than
+  // redirecting is the whole point: a redirect re-renders the form from the
+  // database, which would throw away the very work this refusal exists to
+  // protect (issue #820). Nothing else has been written at this point — the
+  // pricing update below and the photo cleanup both come after.
+  if (!saved.ok && saved.reason === "conflict") {
+    return { ok: false as const, reason: "conflict" as const };
+  }
+  // The course is gone — deleted from another tab, or never this shop's. There
+  // is nothing to price and nothing to revalidate, and carrying on would tell
+  // the staffer their edit saved. `notFound()` is what the page itself does
+  // when the row disappears out from under it.
+  if (!saved.ok) notFound();
   // Pricing and the nitrox answer are the shop's own decisions rather than
   // marketing copy, but the editor saves everything in one submit, so they land
   // together with the page.
@@ -211,7 +238,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // Once the content row is durably saved, any photo it no longer references
   // (replaced hero, removed gallery photo) is queued for provider deletion —
   // never blocked on storage, retried/owner-visible if it fails (CR-012).
-  if (saved) {
+  {
     const supersededUrls = [
       ...(course.heroImageUrl && course.heroImageUrl !== heroImageUrl ? [course.heroImageUrl] : []),
       ...course.galleryPhotos.map((photo) => photo.url).filter((url) => !imageUrls.includes(url)),
@@ -228,7 +255,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // The page the diver reads is a different route from the one staff just
   // saved; both have to go stale or the edit looks like it did not take.
   revalidatePath(base);
-  revalidateAndRedirect(base, noticeUrl(base, saved ? "saved" : "invalid"));
+  revalidateAndRedirect(base, noticeUrl(base, "saved"));
 }
 
 /**

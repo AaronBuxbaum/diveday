@@ -17,6 +17,7 @@ import {
   listDiveSiteCreatures,
   listUpcomingTripsForSite,
   pullDiveSiteTemplateUpdates,
+  SITE_EDIT_CONFLICT,
   SITE_NAME_TAKEN,
   undoDiveSiteTemplateUpdate,
   updateDiveSiteForForm,
@@ -170,6 +171,22 @@ export default async function EditDiveSitePage({
     const activeDb = await getDb();
     const stored = await getDiveSite(activeDb, activeSession.user.shopId, id);
     if (!stored) notFound();
+    // The generation this page was rendered from, as the staffer's tab last saw
+    // it. A non-numeric value is treated as absent rather than thrown: this page
+    // is the only thing that writes the field, so a bad one means an old release
+    // or a hand-crafted post, and neither is worth a 500 over an input that can
+    // only ever tighten the write.
+    const sentVersion = Number.parseInt(String(formData.get("expectedVersion") ?? ""), 10);
+    const expectedVersion = Number.isNaN(sentVersion) ? null : sentVersion;
+    // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
+    // why in its own words — refusing after storing four photos leaves objects
+    // nothing references, and a refusal never gets far enough to persist their
+    // URLs, so they are invisible to the unfinished-deletions panel too. The
+    // authoritative check is still the one in the `where` below, which is
+    // atomic with the write; this only stops the wasted upload.
+    if (expectedVersion !== null && stored.rowVersion !== expectedVersion) {
+      return refuse("conflict");
+    }
     // Uploaded from the staffer's own device straight into first-party
     // storage — there is no pasted URL for a public page to fetch (CR-020).
     const photos = await uploadDiveSitePhotos(formData, stored);
@@ -184,35 +201,46 @@ export default async function EditDiveSitePage({
       expectedBottomTime: _expectedBottomTime,
       ...siteFields
     } = parsed.fields;
-    const updated = await updateDiveSiteForForm(activeDb, activeSession.user.shopId, id, {
-      shopId: activeSession.user.shopId,
-      ...siteFields,
-      forecastLatitude:
-        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
-      forecastLongitude:
-        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
-      satelliteImageUrl: photos.photos.satelliteImageUrl,
-      routeImageUrl: photos.photos.routeImageUrl,
-      imageUrls: photos.photos.imageUrls,
-      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-      requiredSpecialties: specialties.data,
-      requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficultyLevel: parsed.difficultyLevel,
-      depthRange: parsed.fields.depthRange,
-      maxDepthMeters: parsed.maxDepthMeters,
-      expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
-      currentNote: parsed.fields.currentNote,
-      divePlan: parsed.fields.divePlan,
-      fitTone: parsed.fields.fitTone,
-      fitNote: parsed.fields.fitNote,
-      fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
-      landmarks: parsed.landmarks,
-      creatures: parsed.creatures,
-      routePoints: parsed.route.points,
-      routeLabel: parsed.route.label,
-      routeNote: parsed.route.note,
-      routeZoom: parsed.route.zoom,
-    });
+    const updated = await updateDiveSiteForForm(
+      activeDb,
+      activeSession.user.shopId,
+      id,
+      {
+        shopId: activeSession.user.shopId,
+        ...siteFields,
+        forecastLatitude:
+          parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
+        forecastLongitude:
+          parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
+        satelliteImageUrl: photos.photos.satelliteImageUrl,
+        routeImageUrl: photos.photos.routeImageUrl,
+        imageUrls: photos.photos.imageUrls,
+        minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
+        requiredSpecialties: specialties.data,
+        requiresNitrox: formData.get("requiresNitrox") === "on",
+        difficultyLevel: parsed.difficultyLevel,
+        depthRange: parsed.fields.depthRange,
+        maxDepthMeters: parsed.maxDepthMeters,
+        expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
+        currentNote: parsed.fields.currentNote,
+        divePlan: parsed.fields.divePlan,
+        fitTone: parsed.fields.fitTone,
+        fitNote: parsed.fields.fitNote,
+        fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
+        landmarks: parsed.landmarks,
+        creatures: parsed.creatures,
+        routePoints: parsed.route.points,
+        routeLabel: parsed.route.label,
+        routeNote: parsed.route.note,
+        routeZoom: parsed.route.zoom,
+      },
+      { expectedVersion },
+    );
+    // Somebody else saved the briefing between this page rendering and this
+    // post. Refused rather than merged, and `refuse` hands back everything that
+    // was typed, so the message announcing that nothing was lost is not itself
+    // what loses it (issue #820).
+    if (updated === SITE_EDIT_CONFLICT) return refuse("conflict");
     // The name is the one rule the parse above could not check — it takes the
     // whole shop's library to know — so the database refuses it and the
     // briefing comes back to the form like any other refusal.
@@ -412,6 +440,12 @@ export default async function EditDiveSitePage({
         errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
         savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
       >
+        {/* The row's edit generation as this render saw it, posted back so the
+            save can refuse rather than quietly overwrite a colleague's briefing
+            (issue #820). A site nobody has saved since the column arrived has a
+            null `updated_at`, and `created_at` stands in for it — those are the
+            rows two people are most likely to open at once. */}
+        <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
         <SiteFields
           t={t}
           depthUnit={depthUnit}

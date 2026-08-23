@@ -368,6 +368,11 @@ export async function pullCourseTemplateUpdates(
     const [course] = await tx
       .update(courses)
       .set({
+        // Bumps the editor's generation like any other writer of this prose: a
+        // template pull that left the number alone would hand the next save
+        // from an editor opened before it the silent revert `rowVersion` exists
+        // to refuse (issue #820).
+        rowVersion: sql`${courses.rowVersion} + 1`,
         ...courseTemplateDatabaseFields(merged),
         sourceTemplateSlug: update.sourceTemplateSlug,
         sourceTemplateVersion: update.latestVersion,
@@ -403,20 +408,58 @@ export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
   return course ?? null;
 }
 
+/** What a save can come back as: it landed, or somebody else got there first. */
+export type CourseContentSave =
+  | { ok: true; course: typeof courses.$inferSelect }
+  | { ok: false; reason: "conflict" }
+  | { ok: false; reason: "missing" };
+
 /**
  * Saves the whole marketing page at once. Pricing, the cert gate, the agency's
  * minimum age, and the taster flag are untouched — none of those are marketing
  * prose, and the last one is a safety cap (see {@link CourseContentPatch}).
+ *
+ * **Refuses a save that would silently revert somebody else's**, which is what
+ * "the whole page at once" costs when two people have it open. Two tabs, both
+ * loaded, both saving: the second did not overwrite one field, it reverted
+ * every section — nine of them, plus pricing, photos, the day-by-day plan and
+ * the FAQ — to whatever the row held when that tab opened, with no warning and
+ * no record that the first writer's work had existed (issue #820). An owner and
+ * a manager tidying the catalogue in one afternoon is enough to hit it.
+ *
+ * `expectedVersion` is the row's edit generation as the writer's page last saw
+ * it, carried back as a hidden field and compared here in the `where`, so the
+ * check and the write are one statement and nothing can slip between them.
+ *
+ * **Refused, never merged.** Resolution is a merge UI and this does not need
+ * one: the caller keeps every value the writer typed and offers a reload.
+ *
+ * **A null `expectedVersion` means "no information, allow."** That is about the
+ * *page*, not the row: the migration runs while the previous release is still
+ * serving (AGENTS.md's expand/contract rule), and a page rendered by that
+ * release sends no hidden field at all. Refusing those would break saves for as
+ * long as the two releases overlap.
+ *
+ * See `courses.rowVersion` in `src/db/schema.ts` for why the generation is a
+ * counter rather than the `updated_at` timestamp this started as — the short
+ * version is that Postgres keeps microseconds a JS `Date` cannot hold, and
+ * PGlite does not, so every test in this repository was blind to it.
  */
 export async function updateCourseContent(
   db: AppDb,
   shopId: string,
   courseId: string,
   input: CourseContentPatch,
-) {
+  options: { expectedVersion?: number | null } = {},
+): Promise<CourseContentSave> {
+  const expected = options.expectedVersion;
   const [course] = await db
     .update(courses)
     .set({
+      // Every writer that rewrites this row's prose bumps it, not only this
+      // one — a template pull that leaves the number alone hands the editor's
+      // next save the same silent revert this exists to refuse.
+      rowVersion: sql`${courses.rowVersion} + 1`,
       summary: input.summary?.trim() || null,
       overview: input.overview?.trim() || null,
       heroImageUrl: input.heroImageUrl?.trim() || null,
@@ -430,7 +473,24 @@ export async function updateCourseContent(
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
     })
-    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .where(
+      and(
+        eq(courses.id, courseId),
+        eq(courses.shopId, shopId),
+        // A null *input* means allow — that is the expand/contract half, and it
+        // is about the page, not the row: a page rendered by the previous
+        // release sends no hidden field at all.
+        expected === null || expected === undefined ? undefined : eq(courses.rowVersion, expected),
+      ),
+    )
     .returning();
-  return course ?? null;
+  if (course) return { ok: true, course };
+  // The write matched nothing. Either the row is gone (or another shop's), or
+  // the generation moved — and those want different words, so ask which.
+  const [current] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .limit(1);
+  return current ? { ok: false, reason: "conflict" } : { ok: false, reason: "missing" };
 }

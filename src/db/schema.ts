@@ -855,6 +855,45 @@ export const courses = pgTable(
      * course cannot deliver.
      */
     nitroxCompatible: boolean("nitrox_compatible").notNull().default(true),
+    /**
+     * **The row's edit generation, for the "somebody else changed this" refusal.**
+     *
+     * Both editors post their *whole* form — nine sections, pricing, photos,
+     * the day-by-day plan — so a second writer does not overwrite one field,
+     * they revert every section to whatever it held when their tab opened. Two
+     * tabs, no warning, and the first writer's work gone with no record that it
+     * existed (issue #820).
+     *
+     * The page carries this number back as a hidden field and the save compares
+     * it. A mismatch is **refused, never merged**: resolution is a merge UI and
+     * this does not need one — the refusal keeps every value the writer typed.
+     *
+     * **A counter rather than a timestamp, and that is not a style choice.**
+     * The first cut of this compared `updated_at`, falling back to `created_at`
+     * for a row nobody had saved. Postgres `now()` has microsecond resolution
+     * and a JS `Date` has millisecond, so the value a page reads out and posts
+     * back is already truncated and `timestamptz '…12.123' = '…12.123456'` is
+     * false — every save refused, forever, for a lone writer with one tab open.
+     * **PGlite's `now()` returns whole milliseconds**, so dev, every unit test
+     * and the whole e2e fleet round-trip it losslessly and saw nothing. An
+     * integer takes the clock out of the comparison entirely; `NOT NULL
+     * DEFAULT 0` takes the null out of it too.
+     *
+     * **Every writer that rewrites this row's prose must bump it**, not only
+     * the editor — a template pull that leaves the number alone hands the same
+     * silent revert back to the editor's next save. See
+     * `src/db/editor-row-versions.postgres.test.ts`, which is where this is
+     * held to real Postgres rather than to PGlite.
+     *
+     * A save carrying no version at all is allowed: the migration runs inside
+     * the production build while the previous release is still serving
+     * (AGENTS.md's expand/contract rule), and a page that release rendered
+     * posts no hidden field. That fail-open makes this an **anti-accident
+     * control, not a tamper-proof one** — a staffer who strips the field can
+     * still clobber a colleague, and they were already authorised to save the
+     * form.
+     */
+    rowVersion: integer("row_version").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1164,6 +1203,45 @@ export const diveSites = pgTable(
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     /** Archived briefings remain attached to historical trips but leave active pickers. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * **The row's edit generation, for the "somebody else changed this" refusal.**
+     *
+     * A briefing posts its *whole* form — twenty-odd fields, the landmark list,
+     * the field guide, the drawn route — so a second writer does not overwrite
+     * one field, they revert every section to whatever it held when their tab
+     * opened. Two tabs, no warning, and the first writer's afternoon gone with
+     * no record that it existed (issue #820).
+     *
+     * The page carries this number back as a hidden field and the save compares
+     * it. A mismatch is **refused, never merged**: resolution is a merge UI and
+     * this does not need one — the refusal keeps every value the writer typed.
+     *
+     * **A counter rather than a timestamp, and that is not a style choice.**
+     * The first cut of this compared `updated_at`, falling back to `created_at`
+     * for a row nobody had saved. Postgres `now()` has microsecond resolution
+     * and a JS `Date` has millisecond, so the value a page reads out and posts
+     * back is already truncated and `timestamptz '…12.123' = '…12.123456'` is
+     * false — every save refused, forever, for a lone writer with one tab open.
+     * **PGlite's `now()` returns whole milliseconds**, so dev, every unit test
+     * and the whole e2e fleet round-trip it losslessly and saw nothing. An
+     * integer takes the clock out of the comparison entirely; `NOT NULL
+     * DEFAULT 0` takes the null out of it too.
+     *
+     * **Every writer that rewrites this row's prose must bump it**, not only
+     * the editor — a template pull that leaves the number alone hands the same
+     * silent revert back to the editor's next save. See
+     * `src/db/editor-row-versions.postgres.test.ts`, which is where this is
+     * held to real Postgres rather than to PGlite.
+     *
+     * A save carrying no version at all is allowed: the migration runs inside
+     * the production build while the previous release is still serving
+     * (AGENTS.md's expand/contract rule), and a page that release rendered
+     * posts no hidden field. That fail-open makes this an **anti-accident
+     * control, not a tamper-proof one** — a staffer who strips the field can
+     * still clobber a colleague, and they were already authorised to save the
+     * form.
+     */
+    rowVersion: integer("row_version").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

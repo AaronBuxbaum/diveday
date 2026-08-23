@@ -1,4 +1,4 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   createTrip,
@@ -663,4 +663,55 @@ test("the course editor exposes private-session pricing alongside standard prici
   // keeps private-group pricing as an optional second price instead.
   await page.goto(`/shop/${privateShop.slug}/courses/rescue-diver/edit`);
   await expect(page.getByLabel("Private session price")).toBeVisible();
+});
+
+/**
+ * **Two tabs, and the second one does not silently revert the first.**
+ *
+ * The editor posts its *whole* page, so a second writer did not overwrite one
+ * field — they reverted every section, pricing, photos, the day-by-day plan and
+ * the FAQ, to whatever the row held when their tab opened. No warning, and the
+ * first writer's work gone with no record it had existed (issue #820). An owner
+ * and a manager tidying the catalogue in one afternoon is enough.
+ *
+ * No test could see it because a test opens one page. This one opens two.
+ */
+test.describe("the course editor with two tabs open", () => {
+  signedInAsOwner();
+
+  test("a second tab's save is refused rather than reverting the first", async ({
+    page,
+    context,
+  }) => {
+    const url = "/shop/blue-mantis/courses/discover-scuba-diving/edit";
+    const first = page;
+    await first.goto(url);
+    const summary = first.locator('[name="summary"]');
+    await expect(summary).toBeVisible();
+
+    // Both tabs load *before* either saves — the whole premise.
+    const second = makeActivitySafe(await context.newPage());
+    await second.goto(url);
+    await expect(second.locator('[name="summary"]')).toBeVisible();
+
+    await summary.fill("Saved by the first tab");
+    await first.getByRole("button", { name: "Save course page" }).click();
+    await expect(first.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+
+    // The second tab is holding the page as it was before that save.
+    await second.locator('[name="summary"]').fill("Saved by the second tab");
+    await second.getByRole("button", { name: "Save course page" }).click();
+
+    // Refused, and it says so.
+    await expect(
+      second.getByRole("alert").filter({ hasText: "Somebody else changed this page" }),
+    ).toBeVisible();
+    // **And what they typed is still in the box** — the point of refusing rather
+    // than redirecting, which would re-render the form from the database.
+    await expect(second.locator('[name="summary"]')).toHaveValue("Saved by the second tab");
+
+    // The first tab's work survives.
+    await first.reload();
+    await expect(first.locator('[name="summary"]')).toHaveValue("Saved by the first tab");
+  });
 });

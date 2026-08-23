@@ -35,6 +35,8 @@
     "errorDepthPlaceholder": "Una de tus marcas de profundidad está mal escrita, así que no se guardó nada. Escríbela exactamente como '{depth18}': las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'. Si prefieres escribir la profundidad con tus propias palabras, borra la marca.",
     "pitchLegend": "La propuesta",
     "subheadLabel": "Subtítulo",
+    "conflictMessage": "Alguien más cambió esta página mientras la tenías abierta, así que no se guardó nada. Lo que escribiste sigue aquí: copia lo que necesites y recarga.",
+    "conflictReload": "Recargar la página",
     "subheadDescription": "Una línea bajo el título, p. ej. “Cómo hacerse Open Water Diver de PADI”.",
     "overviewLabel": "Resumen",
     "overviewDescription": "Unos párrafos con las palabras del buceador, no las de la agencia.",
