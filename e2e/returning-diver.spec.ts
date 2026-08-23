@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { acceptAgeAttestation } from "./helpers";
+import { acceptAgeAttestation, openTripInEmbed } from "./helpers";
 
 test("a device that just booked prefills the next booking form, with a one-tap way out", async ({
   page,
@@ -40,11 +40,11 @@ test("a device that just booked prefills the next booking form, with a one-tap w
 
 test("the embed widget never prefills or remembers a booker", async ({ page }) => {
   await page.goto("/s/blue-mantis?embed=1");
-  await page
-    .locator("li")
-    .filter({ hasText: "Discover Scuba — Pool & Reef" })
-    .getByRole("link", { name: "Discover Scuba — Pool & Reef" })
-    .click();
+  // The widget shows the next four departures now (issue #805), and this course
+  // sits past that window — so the trip is reached the way a visitor reaches
+  // it, through the widget's own link to the full schedule and back into the
+  // frame. The subject is still what the *embed's* booking form remembers.
+  await openTripInEmbed(page, "Discover Scuba — Pool & Reef");
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Sal Moretti");
   await page.getByLabel("Email").fill("sal@example.com");
