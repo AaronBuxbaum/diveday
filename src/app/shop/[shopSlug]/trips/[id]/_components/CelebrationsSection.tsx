@@ -55,7 +55,7 @@ export function CelebrationsSection({
 
   return (
     <section className="mt-6 rounded-lg border border-primary/30 bg-primary/5 p-6">
-      <h2 className="font-medium">
+      <h2 className="text-lg font-semibold">
         <span aria-hidden="true">🎂</span> {t("trips.celebrations.heading")}
       </h2>
       <p className="mt-1 text-sm text-muted">{description}</p>

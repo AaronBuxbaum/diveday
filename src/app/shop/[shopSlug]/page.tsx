@@ -706,7 +706,7 @@ async function TodayBody({
           aria-labelledby="close-out-handoff-heading"
           className="mt-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
         >
-          <h2 id="close-out-handoff-heading" className="font-semibold">
+          <h2 id="close-out-handoff-heading" className="text-lg font-semibold">
             {lastBoatIsIn(departures, now)
               ? t("shopHome.closeOut.heading")
               : t("shopHome.closeOut.headingBoatStillOut")}
