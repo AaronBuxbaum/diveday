@@ -18,6 +18,25 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
  * `<Suspense>`-wrapped child instead of the top-level component — the shell
  * (layout, copy structure) prerenders, and only the localized text streams
  * in at request time.
+ *
+ * **The bearer-token routes deliberately have no boundary of their own.**
+ * Issue #765 gave `/s/**` one because DiveDay's homepage is a *software
+ * sales* page and a diver on a stale shop link deserves that shop's board
+ * instead; it left the same question open for `/waivers/[token]`,
+ * `/ready/[token]` and `/recap/[token]`, and #914 answered it: no. The
+ * mechanism cannot transfer — a capability URL names no shop, and resolving
+ * a token that has already been refused in order to brand its refusal is the
+ * widening `docs/engineering/capability-telemetry-runbook.md` exists to
+ * prevent. It also turns out not to be needed: every dead, expired, revoked
+ * or forged token in those routes already ends in that route's own
+ * expired-link card, in the reader's own language, and two of the three
+ * offer a button that mails a fresh link; each has its own `error.tsx`
+ * besides. Nothing carrying a token arrives here. What does arrive is URL
+ * *shapes* that never matched `[token]` at all — the bare prefix, and a path
+ * with an extra segment — and those name neither a shop nor a booking, which
+ * leaves "back to the homepage" as the only destination anyone can honestly
+ * offer them. `capability-refusals.test.ts` holds the first half of that to
+ * the filesystem, so a capability route added later cannot quietly opt out.
  */
 export default function NotFound() {
   return (
