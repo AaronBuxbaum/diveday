@@ -575,6 +575,7 @@ async function TodayBody({
           blockedWarningOther: t.raw("shared.today.departureBoard.blockedWarningOther"),
           noneBooked: t("shared.today.departureBoard.noneBooked"),
           everyoneAboard: t("shared.today.departureBoard.everyoneAboard"),
+          crewRollCallOpen: t("shared.today.departureBoard.crewRollCallOpen"),
           clearToBoard: t("shared.today.departureBoard.clearToBoard"),
           blockedWarningNamed: t.raw("shared.today.departureBoard.blockedWarningNamed"),
           blockedAboardNamed: t.raw("shared.today.departureBoard.blockedAboardNamed"),

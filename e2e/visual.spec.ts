@@ -1982,6 +1982,26 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-blocked-aboard", scheme);
       });
 
+      /**
+       * **A full boat nobody has counted the crew on.**
+       *
+       * Every diver-shaped signal on this page says the day is going
+       * perfectly, and a named crew member has no result — so somebody may be
+       * on the dock, or in the water. The card used to celebrate here (issue
+       * #789); the line it shows instead is warning-toned, and a warning
+       * nothing has photographed is one nobody has looked at.
+       */
+      test(`the departure card holds back the confetti for an uncounted crew (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-trouble-states?crewUncounted=1");
+        await page.goto("/shop/blue-mantis");
+        // The destination's own words, not a timing guess.
+        await page.getByText(/crew roll call is still open/).waitFor();
+        await capture(page, "today-crew-uncounted", scheme);
+      });
+
       // The nav's other door (ADR 20260813-more-is-the-shops-other-door):
       // the header's More menu holding the "Run the shop" / "Set up" groups.
       // The menu only exists from `lg` up, so this capture's 390 image is

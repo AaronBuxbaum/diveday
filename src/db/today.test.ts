@@ -158,6 +158,88 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   /**
+   * **Divers alone were never the whole boat** (`docs/product/glossary.md`'s
+   * roll-call checkpoint entry).
+   *
+   * Today's card celebrated on `boarded === booked`, and `boarded` counts
+   * bookings — so it threw confetti while the manifest, reading the same
+   * departure through `rollCallCompleteness`, correctly refused to close the
+   * checkpoint with a named crew member unaccounted for. Two surfaces, one
+   * fact, two answers (issue #789).
+   *
+   * This is that departure: every diver aboard, the divemaster not yet counted.
+   */
+  it("does not call a departure accounted for while its crew is uncounted", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    const [staff] = await listStaff(db, shop.id);
+    if (roster.length === 0 || !staff) throw new Error("demo fixture missing");
+
+    // Every diver signed, then aboard. The waivers are not decoration:
+    // `recordRollCall` refuses a diver who is not ready, and the seeded boat
+    // has one unsigned — so without them this is a boat with eight of nine
+    // aboard, which is not the state under test.
+    for (const entry of roster) {
+      const issued = await issueWaiverRequest(db, {
+        shopId: shop.id,
+        bookingId: entry.booking.id,
+      });
+      // Not every seat needs one — a diver the seed already has signed is
+      // refused a second link, and that is the state we want anyway.
+      if (!issued.ok) continue;
+      await completeWaiver(db, issued.token, {
+        signerName: entry.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+      });
+    }
+    for (const entry of roster) {
+      const recorded = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: entry.booking.id,
+        recordedByPersonId: staff.person.id,
+        status: "boarded",
+      });
+      expect(recorded).toMatchObject({ ok: true });
+    }
+
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const uncounted = before.departures.find((row) => row.tripId === reef.id);
+    if (!uncounted) throw new Error("reef departure missing from today's board");
+    // The condition the card used to celebrate on, still true — which is the
+    // point: nothing about the diver half changed, and it was never enough.
+    expect(uncounted.boarded).toBe(uncounted.booked);
+    expect(uncounted.blocked).toBe(0);
+    expect(uncounted.crew.length).toBeGreaterThan(0);
+    expect(uncounted.crewAccountedFor).toBe(false);
+    expect(uncounted.crewReason).toBe("crew_awaiting");
+    // And it is the manifest's own verdict, not a second rule: the manifest
+    // reading the same departure refuses to close the checkpoint too.
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    expect(manifest?.completeness.complete).toBe(false);
+
+    for (const member of uncounted.crew) {
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.person.id,
+        status: "boarded",
+      });
+    }
+
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const counted = after.departures.find((row) => row.tripId === reef.id);
+    expect(counted?.crewAccountedFor).toBe(true);
+    expect(counted?.crewReason).toBeNull();
+    expect((await getTripManifest(db, shop.id, reef.id))?.completeness.complete).toBe(true);
+  });
+
+  /**
    * **The counts line is right; the sentence was not.** `blocked` is readiness
    * over the whole roster and stays that. What was missing is which of those
    * divers the card's sentence can still be about, so it stopped claiming a

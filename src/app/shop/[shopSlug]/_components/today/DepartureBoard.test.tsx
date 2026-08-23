@@ -46,6 +46,7 @@ const COPY: DepartureBoardCopy = {
   blockedAboardOther: "{count} divers are aboard — {reason}",
   noneBooked: "No one’s booked yet — share the trip page and they’ll show up here.",
   everyoneAboard: "Everyone’s aboard.",
+  crewRollCallOpen: "Every diver is aboard — the crew roll call is still open.",
   clearToBoard: "Everyone booked on this trip is clear to board.",
   sailingToday: "Sailing today",
 };
@@ -78,6 +79,11 @@ function departure(overrides: Partial<DepartureSummary> = {}): DepartureSummary 
     blockedAshore: Math.max(0, blocked - blockedAboard),
     courseTitle: null,
     crew: [{ id: "staff-1", fullName: "Keiko Tanaka", roles: ["divemaster"] }],
+    // The crew half accounted for, so a case that is not about crew reads the
+    // same as it did before the card learned to ask (issue #789). A case that
+    // *is* about crew sets this and `crewReason` explicitly.
+    crewAccountedFor: true,
+    crewReason: null,
     ...overrides,
   };
 }
@@ -177,6 +183,67 @@ describe("DepartureBoard readiness caption (one bar, one caption, one count line
   it("celebrates the full boat", () => {
     renderBoard([departure({ blocked: 0, ready: 0, boarded: 4 })]);
     expect(screen.getByText(COPY.everyoneAboard)).toBeInTheDocument();
+  });
+
+  /**
+   * **Divers alone were never the whole boat** (`docs/product/glossary.md`).
+   *
+   * This card celebrated on `boarded === booked`, which counts bookings — so
+   * Today threw confetti while the manifest, reading the very same departure,
+   * correctly refused to close the checkpoint because a named crew member had
+   * no result. Two surfaces, one fact, two answers (issue #789), and the one
+   * state where somebody may still be in the water is exactly the state it got
+   * wrong.
+   */
+  it("does not celebrate a full boat whose crew has not been counted", () => {
+    renderBoard([
+      departure({
+        blocked: 0,
+        ready: 0,
+        boarded: 4,
+        crewAccountedFor: false,
+        crewReason: "crew_awaiting",
+      }),
+    ]);
+    expect(screen.queryByText(COPY.everyoneAboard)).toBeNull();
+    // And it says so, rather than falling back to "clear to board" — nothing
+    // else on this card would tell a crew the roll call is still open.
+    expect(screen.getByText(COPY.crewRollCallOpen)).toBeInTheDocument();
+    expect(screen.queryByText(COPY.clearToBoard)).toBeNull();
+  });
+
+  it("says the same for a crew member recorded as not back aboard", () => {
+    renderBoard([
+      departure({
+        blocked: 0,
+        ready: 0,
+        boarded: 4,
+        crewAccountedFor: false,
+        crewReason: "crew_not_back_aboard",
+      }),
+    ]);
+    expect(screen.getByText(COPY.crewRollCallOpen)).toBeInTheDocument();
+  });
+
+  /**
+   * A departure with nobody rostered is a coverage gap the page already raises
+   * as its own row. Saying it a second time here buys nothing, so this one
+   * state falls through — it still does not celebrate.
+   */
+  it("stays quiet about the crew when none is assigned, and still does not celebrate", () => {
+    renderBoard([
+      departure({
+        blocked: 0,
+        ready: 0,
+        boarded: 4,
+        crew: [],
+        crewAccountedFor: false,
+        crewReason: "crew_none_assigned",
+      }),
+    ]);
+    expect(screen.queryByText(COPY.everyoneAboard)).toBeNull();
+    expect(screen.queryByText(COPY.crewRollCallOpen)).toBeNull();
+    expect(screen.getByText(COPY.clearToBoard)).toBeInTheDocument();
   });
 
   /**

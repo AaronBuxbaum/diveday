@@ -381,6 +381,73 @@ export async function listDepartureRollCallByTrip(
 }
 
 /**
+ * **The crew half of the same question**, for a caller that has to answer
+ * "is this checkpoint closed" without opening the manifest.
+ *
+ * The diver reader above was the whole of what Today knew, which is why Today's
+ * departure card could throw confetti at `boarded === booked` while the
+ * manifest, reading the same departure, correctly refused: a checkpoint closes
+ * only when every booked diver *and* every assigned crew member is accounted
+ * for. "Divers alone were never the whole boat" (`docs/product/glossary.md`,
+ * issue #789).
+ *
+ * Deliberately the same shape and the same guards as its diver twin, one
+ * function above, so the two can never drift into disagreeing about what a
+ * latest result is. The `tripAssignments` join is the crew counterpart of that
+ * one's cancelled-booking guard: somebody taken off the roster keeps their
+ * event rows and must not answer for a crew list they are no longer on.
+ */
+export async function listDepartureCrewRollCallByTrip(
+  db: AppDb,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, Map<string, "boarded" | "not_boarded">>> {
+  const byTrip = new Map<string, Map<string, "boarded" | "not_boarded">>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallCrewEvents.tripId,
+      personId: rollCallCrewEvents.personId,
+      status: rollCallCrewEvents.status,
+    })
+    .from(rollCallCrewEvents)
+    .innerJoin(
+      tripAssignments,
+      and(
+        eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
+        eq(tripAssignments.personId, rollCallCrewEvents.personId),
+      ),
+    )
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        inArray(rollCallCrewEvents.tripId, tripIds),
+        eq(rollCallCrewEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(
+      desc(rollCallCrewEvents.occurredAt),
+      desc(rollCallCrewEvents.createdAt),
+      desc(rollCallCrewEvents.seq),
+    );
+  // Newest first, so the first row seen per person is their latest event.
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const key = `${row.tripId}\0${row.personId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // A `cleared` row is staff undoing a mistake: the person has a latest event
+    // and it is neither result, so they drop out entirely rather than being
+    // remembered as their previous one.
+    if (row.status !== "boarded" && row.status !== "not_boarded") continue;
+    const states = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "not_boarded">();
+    states.set(row.personId, row.status);
+    byTrip.set(row.tripId, states);
+  }
+  return byTrip;
+}
+
+/**
  * The flat view of {@link listDepartureBoardedByTrip}: every booking aboard
  * across the given trips. This is the manifest's half of the coupling task 149
  * closes from the other side (`checkedIn` on `ManifestDiverInput`) —
