@@ -71,7 +71,12 @@
       "seat-claim.spec.ts",
       "trip-admission.spec.ts"
     ],
-    "visual": ["booking-confirmed", "party-organizer-confirmation", "readiness"]
+    "visual": [
+      "booking-confirmed",
+      "expired-link-readiness",
+      "party-organizer-confirmation",
+      "readiness"
+    ]
   },
   "/recap/[token]": {
     "e2e": ["a11y.spec.ts", "recap.spec.ts", "reviews.spec.ts"],
@@ -495,6 +500,6 @@
   },
   "/waivers/[token]": {
     "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
-    "visual": ["waiver-active"]
+    "visual": ["expired-link-unknown", "waiver-active"]
   }
 }
