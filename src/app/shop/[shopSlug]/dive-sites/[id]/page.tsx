@@ -171,6 +171,22 @@ export default async function EditDiveSitePage({
     const activeDb = await getDb();
     const stored = await getDiveSite(activeDb, activeSession.user.shopId, id);
     if (!stored) notFound();
+    // The generation this page was rendered from, as the staffer's tab last saw
+    // it. A non-numeric value is treated as absent rather than thrown: this page
+    // is the only thing that writes the field, so a bad one means an old release
+    // or a hand-crafted post, and neither is worth a 500 over an input that can
+    // only ever tighten the write.
+    const sentVersion = Number.parseInt(String(formData.get("expectedVersion") ?? ""), 10);
+    const expectedVersion = Number.isNaN(sentVersion) ? null : sentVersion;
+    // **Checked before a single byte is uploaded.** `dive-site-photos.ts` says
+    // why in its own words — refusing after storing four photos leaves objects
+    // nothing references, and a refusal never gets far enough to persist their
+    // URLs, so they are invisible to the unfinished-deletions panel too. The
+    // authoritative check is still the one in the `where` below, which is
+    // atomic with the write; this only stops the wasted upload.
+    if (expectedVersion !== null && stored.rowVersion !== expectedVersion) {
+      return refuse("conflict");
+    }
     // Uploaded from the staffer's own device straight into first-party
     // storage — there is no pasted URL for a public page to fetch (CR-020).
     const photos = await uploadDiveSitePhotos(formData, stored);
@@ -185,13 +201,6 @@ export default async function EditDiveSitePage({
       expectedBottomTime: _expectedBottomTime,
       ...siteFields
     } = parsed.fields;
-    // The generation this page was rendered from, as the staffer's tab last saw
-    // it. Unparseable is treated as absent rather than thrown: the page that
-    // sent it is the only thing that writes it, so a bad value means an old
-    // release or a hand-crafted post, and neither is worth a 500 over a field
-    // that only ever tightens the write.
-    const sentGeneration = new Date(String(formData.get("expectedUpdatedAt") ?? ""));
-    const expectedUpdatedAt = Number.isNaN(sentGeneration.getTime()) ? null : sentGeneration;
     const updated = await updateDiveSiteForForm(
       activeDb,
       activeSession.user.shopId,
@@ -225,7 +234,7 @@ export default async function EditDiveSitePage({
         routeNote: parsed.route.note,
         routeZoom: parsed.route.zoom,
       },
-      { expectedUpdatedAt },
+      { expectedVersion },
     );
     // Somebody else saved the briefing between this page rendering and this
     // post. Refused rather than merged, and `refuse` hands back everything that
@@ -436,11 +445,7 @@ export default async function EditDiveSitePage({
             (issue #820). A site nobody has saved since the column arrived has a
             null `updated_at`, and `created_at` stands in for it — those are the
             rows two people are most likely to open at once. */}
-        <input
-          type="hidden"
-          name="expectedUpdatedAt"
-          value={(site.updatedAt ?? site.createdAt).toISOString()}
-        />
+        <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
         <SiteFields
           t={t}
           depthUnit={depthUnit}

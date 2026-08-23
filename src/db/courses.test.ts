@@ -1180,14 +1180,14 @@ describe("course content and public pages (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
-    const asBothTabsSawIt = course.updatedAt ?? course.createdAt;
+    const asBothTabsSawIt = course.rowVersion;
 
     const first = await updateCourseContent(
       db,
       shop.id,
       course.id,
       { ...emptyContent, summary: "Saved by the first tab" },
-      { expectedUpdatedAt: asBothTabsSawIt },
+      { expectedVersion: asBothTabsSawIt },
     );
     expect(first.ok).toBe(true);
 
@@ -1197,7 +1197,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
       shop.id,
       course.id,
       { ...emptyContent, summary: "Saved by the second tab" },
-      { expectedUpdatedAt: asBothTabsSawIt },
+      { expectedVersion: asBothTabsSawIt },
     );
     expect(second).toEqual({ ok: false, reason: "conflict" });
 
@@ -1207,24 +1207,23 @@ describe("course content and public pages (in-memory PGlite)", () => {
   });
 
   /**
-   * **A row nobody has saved since the column arrived still has a generation.**
-   * Without the `coalesce(updated_at, created_at)` the protection switched
-   * itself off for exactly those rows: `updated_at` was null, both tabs sent
-   * nothing, and both saves went through. Found by the two-tab e2e, which is
-   * the only thing that could see it.
+   * **A row nobody has ever saved still has a generation, and it is zero.**
+   * The first cut of this compared timestamps and fell back to `created_at` for
+   * exactly this case — which is how it acquired a comparison that cannot
+   * succeed on real Postgres. `NOT NULL DEFAULT 0` makes the case ordinary.
    */
   it("protects a course that has never been saved", async () => {
     const { db, shop } = await seededShopContext();
     const [course] = await listCourses(db, shop.id);
     if (!course) throw new Error("expected a seeded course");
-    expect(course.updatedAt).toBeNull();
+    expect(course.rowVersion).toBe(0);
 
     const first = await updateCourseContent(
       db,
       shop.id,
       course.id,
       { ...emptyContent, summary: "First" },
-      { expectedUpdatedAt: course.createdAt },
+      { expectedVersion: 0 },
     );
     expect(first.ok).toBe(true);
     expect(
@@ -1233,7 +1232,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
         shop.id,
         course.id,
         { ...emptyContent, summary: "Second" },
-        { expectedUpdatedAt: course.createdAt },
+        { expectedVersion: 0 },
       ),
     ).toEqual({ ok: false, reason: "conflict" });
   });
@@ -1264,7 +1263,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     if (!course) throw new Error("expected a seeded course");
     expect(
       await updateCourseContent(db, randomUUID(), course.id, emptyContent, {
-        expectedUpdatedAt: course.createdAt,
+        expectedVersion: course.rowVersion,
       }),
     ).toEqual({ ok: false, reason: "missing" });
   });
@@ -1529,6 +1528,7 @@ describe("course template updates", () => {
       expect.objectContaining({ field: "overview", shopChanged: true }),
     ]);
 
+    const [beforePull] = await db.select().from(courses).where(eq(courses.id, course.id));
     const result = await pullCourseTemplateUpdates(db, shop.id, course.id, "preserve-shop-edits");
     expect(result.status).toBe("updated");
     const [updated] = await db.select().from(courses).where(eq(courses.id, course.id));
@@ -1539,6 +1539,18 @@ describe("course template updates", () => {
       priceCents: course.priceCents,
       heroImageUrl: course.heroImageUrl,
     });
+
+    // **A pull is a second writer of the prose the editor owns**, so it moves
+    // the edit generation like any other. If it did not, an editor opened
+    // before the pull would silently revert it on its next save — issue #820
+    // again, with the template pull as the second tab. It did not until a
+    // `security-reviewer` pass named it.
+    expect(updated?.rowVersion).toBe((beforePull?.rowVersion ?? 0) + 1);
+    expect(
+      await updateCourseContent(db, shop.id, course.id, emptyContent, {
+        expectedVersion: beforePull?.rowVersion ?? 0,
+      }),
+    ).toEqual({ ok: false, reason: "conflict" });
   });
 
   it("cannot pull a course through another shop's tenant scope", async () => {

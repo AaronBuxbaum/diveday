@@ -338,13 +338,16 @@ export async function updateDiveSite(
   shopId: string,
   siteId: string,
   input: DiveSiteInput,
-  options: { expectedUpdatedAt?: Date | null; now?: Date } = {},
+  options: { expectedVersion?: number | null } = {},
 ) {
-  const expected = options.expectedUpdatedAt;
+  const expected = options.expectedVersion;
   const [site] = await db
     .update(diveSites)
     .set({
-      updatedAt: options.now ?? nowDate(),
+      // Every writer that rewrites this row's prose bumps it, not only this
+      // one — a template pull that leaves the number alone hands the editor's
+      // next save the same silent revert this exists to refuse.
+      rowVersion: sql`${diveSites.rowVersion} + 1`,
       name: input.name,
       description: input.description || null,
       locationName: input.locationName || null,
@@ -388,21 +391,15 @@ export async function updateDiveSite(
         isNull(diveSites.deletedAt),
         // **The row's edit generation, as the writer's page last saw it.** The
         // check and the write are one statement, so nothing can slip between
-        // them. `updated_at` is null on a site nobody has saved since the
-        // column arrived, and those are the rows most likely to be edited by
-        // two people at once, so a null falls back to `created_at` rather than
-        // silently matching nothing.
+        // them.
         //
         // A null *input* means allow, which is about the page and not the row:
         // the migration runs while the previous release is still serving
         // (AGENTS.md's expand/contract rule), and a page that release rendered
         // sends no hidden field at all.
-        expected
-          ? or(
-              eq(diveSites.updatedAt, expected),
-              and(isNull(diveSites.updatedAt), eq(diveSites.createdAt, expected)),
-            )
-          : undefined,
+        expected === null || expected === undefined
+          ? undefined
+          : eq(diveSites.rowVersion, expected),
       ),
     )
     .returning();
@@ -448,7 +445,7 @@ export async function updateDiveSiteForForm(
   shopId: string,
   siteId: string,
   input: DiveSiteInput,
-  options: { expectedUpdatedAt?: Date | null; now?: Date } = {},
+  options: { expectedVersion?: number | null } = {},
 ) {
   const written = await refusingNameClash(() => updateDiveSite(db, shopId, siteId, input, options));
   if (written !== null) return written;
@@ -461,7 +458,9 @@ export async function updateDiveSiteForForm(
     .from(diveSites)
     .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .limit(1);
-  return current && options.expectedUpdatedAt ? SITE_EDIT_CONFLICT : null;
+  return current && options.expectedVersion !== null && options.expectedVersion !== undefined
+    ? SITE_EDIT_CONFLICT
+    : null;
 }
 
 /** Keep historical trip briefings intact while removing a site from new-trip pickers. */
@@ -903,6 +902,11 @@ export async function pullDiveSiteTemplateUpdates(
     const [updated] = await tx
       .update(diveSites)
       .set({
+        // Bumps the editor's generation like any other writer of this prose:
+        // a template pull that left the number alone would hand the next save
+        // from an editor opened before it the silent revert `rowVersion`
+        // exists to refuse (issue #820).
+        rowVersion: sql`${diveSites.rowVersion} + 1`,
         description: merged.description,
         locationName: merged.locationName,
         forecastLatitude: merged.forecastLatitude,
@@ -952,6 +956,11 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
     const [restored] = await tx
       .update(diveSites)
       .set({
+        // Bumps the editor's generation like any other writer of this prose:
+        // a template pull that left the number alone would hand the next save
+        // from an editor opened before it the silent revert `rowVersion`
+        // exists to refuse (issue #820).
+        rowVersion: sql`${diveSites.rowVersion} + 1`,
         description: undo.snapshot.description,
         locationName: undo.snapshot.locationName,
         forecastLatitude: undo.snapshot.forecastLatitude,

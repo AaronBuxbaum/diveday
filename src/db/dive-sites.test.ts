@@ -89,6 +89,7 @@ describe("dive-site library", () => {
     expect(pending?.latestVersion).toBe(3);
     expect(pending?.diff.some((change) => change.field === "description")).toBe(true);
 
+    const [beforePull] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
     const result = await pullDiveSiteTemplateUpdates(
       db,
       shop.id,
@@ -99,10 +100,28 @@ describe("dive-site library", () => {
     const [updated] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
     expect(updated?.sourceTemplateVersion).toBe(3);
     expect(updated?.description).toBe("Our local briefing for this boat.");
+    // **A pull is a second writer of the prose the editor owns**, so it moves
+    // the edit generation like any other. If it did not, a briefing opened
+    // before the pull would silently revert it on its next save — issue #820
+    // again with the template pull as the second tab. Named by a
+    // `security-reviewer` pass, not by a test.
+    expect(updated?.rowVersion).toBe((beforePull?.rowVersion ?? 0) + 1);
+    expect(
+      await updateDiveSiteForForm(
+        db,
+        shop.id,
+        imported.id,
+        { shopId: shop.id, name: updated?.name ?? "" },
+        { expectedVersion: beforePull?.rowVersion ?? 0 },
+      ),
+    ).toBe(SITE_EDIT_CONFLICT);
 
     const undone = await undoDiveSiteTemplateUpdate(db, shop.id, imported.id);
     expect(undone.status).toBe("undone");
     const [restored] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
+    // Undo is a writer of the same prose too, so it moves the generation on
+    // rather than back — a tab opened mid-pull must not be able to save over it.
+    expect(restored?.rowVersion).toBeGreaterThan(updated?.rowVersion ?? 0);
     expect(restored?.sourceTemplateVersion).toBe(catalogEntry.version.version);
     expect(restored?.description).toBe("Our local briefing for this boat.");
     expect(restored?.templateUpdateUndo).toBeNull();
@@ -562,21 +581,17 @@ describe("published dive-site catalog paging", () => {
  * opened. It used to do that silently (issue #820).
  */
 describe("a dive-site briefing saved from two tabs", () => {
-  /** The generation a rendered page would carry in its hidden field. */
-  const generationOf = (site: { updatedAt: Date | null; createdAt: Date }) =>
-    site.updatedAt ?? site.createdAt;
-
   it("refuses the second save rather than reverting the first", async () => {
     const { db, shop } = await seededShopContext();
     const site = await createDiveSite(db, { shopId: shop.id, name: "Two Tabs Reef" });
-    const opened = generationOf(site);
+    const opened = site.rowVersion;
 
     const first = await updateDiveSiteForForm(
       db,
       shop.id,
       site.id,
       { shopId: shop.id, name: "Two Tabs Reef", currentNote: "Ripping on the flood." },
-      { expectedUpdatedAt: opened, now: new Date(site.createdAt.getTime() + 60_000) },
+      { expectedVersion: opened },
     );
     expect(first).not.toBe(SITE_EDIT_CONFLICT);
 
@@ -587,7 +602,7 @@ describe("a dive-site briefing saved from two tabs", () => {
         shop.id,
         site.id,
         { shopId: shop.id, name: "Two Tabs Reef" },
-        { expectedUpdatedAt: opened },
+        { expectedVersion: opened },
       ),
     ).toBe(SITE_EDIT_CONFLICT);
     // Refused, not half-applied: the first writer's note is still on the row.
@@ -596,21 +611,24 @@ describe("a dive-site briefing saved from two tabs", () => {
   });
 
   /**
-   * The rows most likely to be edited by two people are the ones nobody has
-   * saved since the column arrived, and their `updated_at` is null. Comparing
-   * that column alone would leave protection switched off for exactly those.
+   * **A row nobody has ever saved still has a generation, and it is zero.**
+   * The first cut of this compared `updated_at` and fell back to `created_at`
+   * for exactly this case — which is how it acquired a comparison that cannot
+   * succeed on real Postgres, because `now()` keeps microseconds a JS `Date`
+   * cannot hold and PGlite does not emit them. `NOT NULL DEFAULT 0` makes the
+   * case ordinary and takes the clock out of it.
    */
-  it("protects a site that has never been saved, whose updated_at is null", async () => {
+  it("protects a site that has never been saved", async () => {
     const { db, shop } = await seededShopContext();
     const site = await createDiveSite(db, { shopId: shop.id, name: "Never Saved Reef" });
-    expect(site.updatedAt).toBeNull();
+    expect(site.rowVersion).toBe(0);
 
     await updateDiveSiteForForm(
       db,
       shop.id,
       site.id,
       { shopId: shop.id, name: "Never Saved Reef" },
-      { expectedUpdatedAt: site.createdAt },
+      { expectedVersion: 0 },
     );
     expect(
       await updateDiveSiteForForm(
@@ -618,7 +636,7 @@ describe("a dive-site briefing saved from two tabs", () => {
         shop.id,
         site.id,
         { shopId: shop.id, name: "Never Saved Reef" },
-        { expectedUpdatedAt: site.createdAt },
+        { expectedVersion: 0 },
       ),
     ).toBe(SITE_EDIT_CONFLICT);
   });
@@ -637,7 +655,7 @@ describe("a dive-site briefing saved from two tabs", () => {
       shop.id,
       site.id,
       { shopId: shop.id, name: "Old Release Reef", currentNote: "first" },
-      { expectedUpdatedAt: site.createdAt },
+      { expectedVersion: 0 },
     );
     const written = await updateDiveSiteForForm(db, shop.id, site.id, {
       shopId: shop.id,
@@ -662,7 +680,7 @@ describe("a dive-site briefing saved from two tabs", () => {
         randomUUID(),
         site.id,
         { shopId: shop.id, name: "Other Shop Reef" },
-        { expectedUpdatedAt: site.createdAt },
+        { expectedVersion: site.rowVersion },
       ),
     ).toBeNull();
   });
@@ -678,7 +696,7 @@ describe("a dive-site briefing saved from two tabs", () => {
         shop.id,
         site.id,
         { shopId: shop.id, name: "Deleted Reef" },
-        { expectedUpdatedAt: site.createdAt },
+        { expectedVersion: site.rowVersion },
       ),
     ).toBeNull();
   });

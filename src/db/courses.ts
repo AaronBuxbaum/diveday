@@ -1,5 +1,4 @@
-import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -369,6 +368,11 @@ export async function pullCourseTemplateUpdates(
     const [course] = await tx
       .update(courses)
       .set({
+        // Bumps the editor's generation like any other writer of this prose: a
+        // template pull that left the number alone would hand the next save
+        // from an editor opened before it the silent revert `rowVersion` exists
+        // to refuse (issue #820).
+        rowVersion: sql`${courses.rowVersion} + 1`,
         ...courseTemplateDatabaseFields(merged),
         sourceTemplateSlug: update.sourceTemplateSlug,
         sourceTemplateVersion: update.latestVersion,
@@ -423,38 +427,39 @@ export type CourseContentSave =
  * no record that the first writer's work had existed (issue #820). An owner and
  * a manager tidying the catalogue in one afternoon is enough to hit it.
  *
- * `expectedUpdatedAt` is the row's edit generation as the writer's page last
- * saw it, carried back as a hidden field and compared here in the `where`, so
- * the check and the write are one statement and nothing can slip between them.
+ * `expectedVersion` is the row's edit generation as the writer's page last saw
+ * it, carried back as a hidden field and compared here in the `where`, so the
+ * check and the write are one statement and nothing can slip between them.
  *
  * **Refused, never merged.** Resolution is a merge UI and this does not need
  * one: the caller keeps every value the writer typed and offers a reload.
  *
- * **A null `expectedUpdatedAt` means "no information, allow."** That is about
- * the *page*, not the row: the migration runs while the previous release is
- * still serving (AGENTS.md's expand/contract rule), and a page rendered by that
+ * **A null `expectedVersion` means "no information, allow."** That is about the
+ * *page*, not the row: the migration runs while the previous release is still
+ * serving (AGENTS.md's expand/contract rule), and a page rendered by that
  * release sends no hidden field at all. Refusing those would break saves for as
  * long as the two releases overlap.
  *
- * The *row* always has a generation, because a null `updated_at` compares
- * against `created_at` instead. Without that, protection switched itself
- * off for the rows most likely to be edited by two people — a course nobody had
- * saved since the column arrived had a null `updated_at`, so both tabs sent
- * nothing and both saves went through.
+ * See `courses.rowVersion` in `src/db/schema.ts` for why the generation is a
+ * counter rather than the `updated_at` timestamp this started as — the short
+ * version is that Postgres keeps microseconds a JS `Date` cannot hold, and
+ * PGlite does not, so every test in this repository was blind to it.
  */
 export async function updateCourseContent(
   db: AppDb,
   shopId: string,
   courseId: string,
   input: CourseContentPatch,
-  options: { expectedUpdatedAt?: Date | null; now?: Date } = {},
+  options: { expectedVersion?: number | null } = {},
 ): Promise<CourseContentSave> {
-  const now = options.now ?? nowDate();
-  const expected = options.expectedUpdatedAt;
+  const expected = options.expectedVersion;
   const [course] = await db
     .update(courses)
     .set({
-      updatedAt: now,
+      // Every writer that rewrites this row's prose bumps it, not only this
+      // one — a template pull that leaves the number alone hands the editor's
+      // next save the same silent revert this exists to refuse.
+      rowVersion: sql`${courses.rowVersion} + 1`,
       summary: input.summary?.trim() || null,
       overview: input.overview?.trim() || null,
       heroImageUrl: input.heroImageUrl?.trim() || null,
@@ -472,22 +477,10 @@ export async function updateCourseContent(
       and(
         eq(courses.id, courseId),
         eq(courses.shopId, shopId),
-        // **The generation is `updated_at`, falling back to `created_at` for a
-        // row that has never been saved.** Without that fallback the protection switched
-        // itself off for exactly the rows most likely to be edited by two
-        // people: a course nobody had touched since the column arrived had
-        // `updated_at` null, both tabs sent nothing, and both saves were
-        // allowed. Every row has a `created_at`.
-        //
-        // A null *input* still means allow — that is the expand/contract half,
-        // and it is about the page, not the row: a page rendered by the
-        // previous release sends no hidden field at all.
-        expected
-          ? or(
-              eq(courses.updatedAt, expected),
-              and(isNull(courses.updatedAt), eq(courses.createdAt, expected)),
-            )
-          : undefined,
+        // A null *input* means allow — that is the expand/contract half, and it
+        // is about the page, not the row: a page rendered by the previous
+        // release sends no hidden field at all.
+        expected === null || expected === undefined ? undefined : eq(courses.rowVersion, expected),
       ),
     )
     .returning();

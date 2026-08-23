@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9cc781d8-eb22-42c7-8ac8-3856c98234d3",
+  "id": "9949f14d-61f3-4643-9454-6fb03b1e57e9",
   "prevIds": [
     "ca7d8ef7-c3ad-44ea-b04a-6c17f30e4e60"
   ],
@@ -3489,14 +3489,14 @@
       "table": "courses"
     },
     {
-      "type": "timestamp with time zone",
+      "type": "integer",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
-      "default": null,
+      "default": "0",
       "generated": null,
       "identity": null,
-      "name": "updated_at",
+      "name": "row_version",
       "entityType": "columns",
       "schema": "public",
       "table": "courses"
@@ -4438,14 +4438,14 @@
       "table": "dive_sites"
     },
     {
-      "type": "timestamp with time zone",
+      "type": "integer",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
-      "default": null,
+      "default": "0",
       "generated": null,
       "identity": null,
-      "name": "updated_at",
+      "name": "row_version",
       "entityType": "columns",
       "schema": "public",
       "table": "dive_sites"

@@ -247,11 +247,7 @@ export default async function EditCoursePage({
               since the column arrived, which is what stops the protection
               switching itself off for a course nobody has edited yet — the
               comparison coalesces the same way. */}
-          <input
-            type="hidden"
-            name="expectedUpdatedAt"
-            value={(course.updatedAt ?? course.createdAt).toISOString()}
-          />
+          <input type="hidden" name="expectedVersion" value={String(course.rowVersion)} />
           {/* These panels are fieldsets, not SectionCards: each legend is the
               accessible name of a control group, and SectionCard deliberately
               has no `fieldset` element. */}
