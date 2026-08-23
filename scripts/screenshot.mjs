@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { chromium } from "@playwright/test";
+import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
 
 /**
  * Look at a page you just changed, without writing a throwaway driver.
@@ -130,7 +131,6 @@ const SKELETON_TIMEOUT_MS = 20_000;
  * a bare `.animate-pulse` wait can never be satisfied on those pages. Both
  * carry `data-live-pulse`, and this excludes them.
  */
-const SKELETON_SELECTOR = "main .animate-pulse:not([data-live-pulse])";
 
 /**
  * Wait until the page itself is on screen, not the shell standing in for it.
@@ -172,6 +172,29 @@ async function waitPastTheSkeleton(page, target) {
       `screenshot: ${target} still showed its loading skeleton after ${SKELETON_TIMEOUT_MS / 1000}s, ` +
         "so nothing was captured. The page never finished streaming — check the dev server's " +
         "output for the error it is sitting on, rather than re-running for a luckier result.",
+    );
+  }
+  // **The second hole: a skeleton the class rule cannot see at all.**
+  //
+  // Six more `loading.tsx` files carry no `animate-pulse` — the whole
+  // account-lifecycle flow — so the wait above is satisfied instantly whatever
+  // is on screen, exactly as it was for the marketing pages. A class is a
+  // convention, and a convention is the thing a new route forgets.
+  //
+  // So this asks what a skeleton *is* instead: a main region with no words in
+  // it. Real pages have prose; a page of grey bars has none, whatever classes
+  // it wears. The bar is deliberately low — 40 characters of visible text —
+  // because the job is to catch an empty frame, not to grade a page's content,
+  // and a legitimately terse `<main>` should not fail a screenshot.
+  const mainText = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    return (main?.innerText ?? "").replace(/\s+/g, " ").trim().length;
+  });
+  if (mainText < MIN_MAIN_TEXT) {
+    throw new Error(
+      `screenshot: ${target} rendered a <main> with ${mainText} characters of text in it, ` +
+        "which is a loading skeleton rather than the page — so nothing was captured. If this " +
+        "page really is that sparse, it needs an exemption here rather than a silent pass.",
     );
   }
   // A route with no skeleton satisfies the wait above instantly, so hold for one
