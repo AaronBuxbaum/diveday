@@ -75,8 +75,15 @@ const metadataFileNames = new Set([
  * *same satori bitmap*, where CSS custom properties cannot reach. Deliberately
  * an exact path and not a glob — `src/app/_og/**` would let an ordinary module
  * opt out by moving house.
+ *
+ * `src/app/_brand/colors.ts` is the same arrangement for two things a token
+ * genuinely cannot reach: the bubble-trail mark's fills, which `icon.tsx`,
+ * `apple-icon.tsx` and `pwa-icon-maskable/route.tsx` now render through at five
+ * sizes rather than each hand-placing them at one, and the `<meta
+ * name="theme-color">` pair — an HTML attribute, where a custom property has
+ * nothing to resolve against (issue #794).
  */
-const exemptPaths = new Set(["src/app/_og/card.tsx"]);
+const exemptPaths = new Set(["src/app/_og/card.tsx", "src/app/_brand/colors.ts"]);
 
 /**
  * A hex color: 3/4/6/8 hex digits, not continuing into an identifier — so

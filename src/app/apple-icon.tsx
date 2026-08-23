@@ -1,7 +1,13 @@
 import { ImageResponse } from "next/og";
+import { BubbleMark } from "@/app/_brand/mark";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
-/** Same bubble-trail mark as icon.tsx, scaled up for the iOS home screen. */
+/**
+ * Same bubble-trail mark as `icon.tsx`, at the size iOS asks for.
+ *
+ * Not maskable: iOS applies its own corner radius to a square that bleeds to
+ * the edge, which is what `BubbleMark`'s default already draws.
+ */
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
@@ -11,52 +17,5 @@ export default async function AppleIcon() {
   // See src/lib/og-rasterizer.ts.
   await allowSvgRasterization();
 
-  return new ImageResponse(
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        position: "relative",
-        background: "linear-gradient(135deg, #0e7490, #155e75)",
-        borderRadius: 39,
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          left: 17,
-          top: 84,
-          width: 68,
-          height: 68,
-          borderRadius: 999,
-          background: "#eafcff",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 73,
-          top: 45,
-          width: 45,
-          height: 45,
-          borderRadius: 999,
-          background: "#eafcff",
-          opacity: 0.85,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 118,
-          top: 22,
-          width: 28,
-          height: 28,
-          borderRadius: 999,
-          background: "#ff6f61",
-        }}
-      />
-    </div>,
-    { ...size },
-  );
+  return new ImageResponse(<BubbleMark size={size.width} />, { ...size });
 }
