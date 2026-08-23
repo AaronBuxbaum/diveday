@@ -75,6 +75,18 @@ Read [stacked-prs](../stacked-prs/SKILL.md) before the first one. Two things fro
   `diveday:visual-summary` comment on **every** layer: if nothing resolved, that layer's counts mean
   nothing.
 
+### When a stack is the wrong shape
+
+**Measure the merge cadence before committing to one.** A stack pays for itself when review is slow
+and layers sit for hours; it costs when they do not. Twice in one session a base branch was merged
+*and deleted* while its next layer's PR body was still being written, and `gh pr create --base` then
+fails with "No commits between … Base ref must be a branch" — the base is gone. The fix each time
+was `git fetch && git rebase origin/main` and a PR against `main`, which is where the work wanted to
+be all along.
+
+So: if the last few PRs merged within minutes, cut from `main` and rebase before every push. The
+conflicts a stack prevents only accumulate while branches *wait*.
+
 **Start a new stack** when the current one merges, or at about six layers. Past that, every layer
 re-pays the full CI gate on every cascading rebase, and the wall-clock cost outweighs the conflicts
 it saves.
