@@ -315,6 +315,16 @@ group header, or disappears until it has something to say.
 - **Counts are facts, not alerts.** A per-row count that merely differs (cards on file, seats
   sold) is quiet muted text, not a pill — pills and badges are spent on the rows that need a
   staffer, so that when one appears it means something.
+- **In a progress bar, colour the gap rather than the achievement.** A bar whose *filled* part
+  carries the brand hue makes the finished rows the loudest thing in the column and leaves the
+  ones needing somebody as the faintest — on the owner's monthly report, fifteen of twenty-one
+  waiver rows drew a full teal bar while the two at 0%, booked charters with not one signature,
+  drew an empty grey track. Draw the filled part quiet at every ratio and let the **remainder**
+  carry the attention tone. It needs no threshold to argue about: at 0% the whole bar is the
+  warning, at 100% there is nothing left to warn about, and every value between shades itself.
+  Opt in per column, because not every gap is work — unsigned waivers are something to chase,
+  empty seats on a month being reviewed are a fact, and toning the second would put amber on most
+  rows of a healthy report.
 - **Collapse the settled row.** In a working list where each row can carry open work (the trip
   roster), a row with nothing left to do collapses to its header behind a labeled disclosure —
   detail at the moment it's needed, not on every row — while any open question keeps the row
