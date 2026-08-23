@@ -54,6 +54,21 @@ either build it or say why you are not.
    exception is a `reg` failure, which is the visual report and belongs to the human — read every
    diff image, explain each one in the pull request, and carry on
    ([visual-triage](../visual-triage/SKILL.md)).
+
+   **Read the review comments in the same pass, not only the checks.** `sourcery-ai` and
+   `coderabbitai` review every pull request here within minutes of it opening, and Aaron's comments
+   land whenever he gets to them — all of it arrives while you are building the next ticket, which
+   is exactly why this step exists:
+
+   ```sh
+   gh pr view <n> --comments
+   ```
+
+   Answer each open thread before the next ticket: fix and reply with the commit, decline with the
+   reason, or file a `needs-triage` issue and put the number in the thread. A bot does not know this
+   repository's rules and will confidently propose changes `pnpm check:repo` refuses — check before
+   acting (AGENTS.md's Hard rules). A thread you never read is a pull request that is not done, and
+   under this routine nobody else is coming back for it.
 3. **Pick.** `gh issue list --label ready-for-agent --state open`, skipping anything already
    labelled `in-progress`. Read `pnpm gates`' "Claimed — in flight" section first: a claim it
    reports **stale** is a dead session, not a reservation, so that work is free to take.
@@ -62,8 +77,9 @@ either build it or say why you are not.
    build it. Relabel `ready-for-human`, say why in a comment, pick another. Three of the queue's
    issues were in that state and each said so in its own words.
 5. **Claim.** Add `in-progress`, post the `## Claim` comment
-   ([issue-tracker.md](../../../docs/agents/issue-tracker.md)). **One claim covers the whole
-   stack**, not one per layer.
+   ([issue-tracker.md](../../../docs/agents/issue-tracker.md)) naming **this ticket's own layer**
+   as `Branch:`. A stack here spans several unrelated tickets, so each carries its own claim; one
+   claim covering several layers is only for a chain built for a single issue.
 6. **Check the premise before building it.** Roughly half of these tickets describe something that
    is no longer true, or true for a different reason. Reproduce it first — render the page, read the
    *compiled* CSS, run the query, count the call sites. Recent examples: "turning the contrast rule
@@ -129,6 +145,11 @@ surfaces; Aaron lifted that on 2026-08-23, because backlog tickets are mostly re
 the restriction was disqualifying the ordinary case. What it costs is a re-read, never a missed
 regression — see [stacked-prs](../stacked-prs/SKILL.md) and ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md).
+
+None of this is particular to the backlog any more: **stack by default** is the repository-wide shape
+as of 2026-08-23 (AGENTS.md's *Parallel work*, the `stacked-prs` skill). This routine states it in
+its own terms because it is where the habit is most load-bearing, not because it is the only place
+it applies.
 
 Read that skill before the first stack. Three things from it that bite here, and the third is the
 new one:

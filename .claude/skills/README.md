@@ -26,7 +26,7 @@ under the same sync duties (docs/README.md).
 | `adr` | Recording or superseding a significant, hard-to-reverse decision |
 | `triage` | Triaging the issue queue — giving untriaged GitHub issues one category and one state label, with a verified comment saying why (the model-invocable counterpart of the human-only `/mattpocock-skills:triage`) |
 | `backlog-routine` | Working the `ready-for-agent` queue unattended — one ticket at a time, each built as the next layer of one running stack |
-| `stacked-prs` | One scope whose steps depend on each other (schema → db reader → surface) — chained base branches, GitHub stacks, cascading rebase, bottom-up merge |
+| `stacked-prs` | Cutting a branch or opening a PR while another of yours is still open — the default shape, related work or not — plus dependent chains (schema → db reader → surface), cascading rebase, bottom-up merge |
 | `marketing-page` | Writing or editing public marketing pages (`/`, `/product`, `/pricing`, `/onboard`, `/switching/*`) — copy, positioning, SEO metadata, claims, pricing display |
 | `switching-pages` | Adding or editing a competitive switching guide (`/switching`, `/switching/[competitor]`, `/switching/spreadsheet`) — new incumbent, coexist-led channel guide, or edits to `src/lib/migration-guides.ts` |
 | `commercial-outreach` | Drafting go-to-market collateral for a stakeholder conversation — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material referenced by `docs/product/rollout.md` and `docs/product/stakeholders/commercial-and-industry.md` |

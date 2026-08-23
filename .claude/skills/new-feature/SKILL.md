@@ -37,12 +37,24 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    section), each ending in a prompt a fresh session could run. A vertical slice *should* generate
    these; that is what makes it a slice. List them by number in the PR description.
 9. **Ship** — commit with an imperative subject and a why-body, push, open/refresh the draft
-   PR with a summary and screenshots. Keep draft until CI is green.
+   PR with a summary and screenshots. Keep draft until CI is green. **The branch was cut from the
+   branch you opened last if that one is still open**, related or not, so this is a layer of a stack
+   unless one of the four exceptions applies — open it as a draft at its first commit and register it
+   then, never at the end (the `stacked-prs` skill).
 10. **Close the visual loop** — pushing is not the end of the turn. A UI change that shifts pixels
    makes the serialized visual job commit regenerated baselines as a separate
    `ci: capture visual baseline diffs` commit when CI can push to the branch. Watch that commit and
    the follow-up visual-only check; run the `visual-triage` skill for any red visual job, forked
    PR, or diff the generated baseline commit does not explain. The PR is not done while a visual
    diff or failure is unexplained.
+11. **Answer the review.** `gh pr view <n> --comments` — `sourcery-ai` and `coderabbitai` review
+   every pull request here within minutes, and Aaron's comments arrive later. Each open thread gets
+   an action and a reply: fixed (push, then say which commit), declined with the reason (a nitpick
+   that contradicts a rule in AGENTS.md is declined by naming it), or filed as a `needs-triage`
+   issue whose number goes in the thread. A bot is often wrong about this repository's conventions —
+   check its claim against `pnpm check:repo` before you act on it. Unread threads mean the PR is not
+   done; see AGENTS.md's Hard rules for reading the open ones via GraphQL. **Read them once more
+   after the draft flips to ready** — `coderabbitai` skips drafts, so a quiet draft has had one
+   review, not two.
 
 Definition of done: the checklist in `docs/engineering/workflow.md`. All boxes, no exceptions.
