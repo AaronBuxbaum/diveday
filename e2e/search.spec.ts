@@ -1,4 +1,5 @@
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+import { e2eNow } from "./helpers";
 
 /**
  * READ_ONLY holds here: the command palette navigates, and the divers list filters from
@@ -148,6 +149,40 @@ test("the command palette keeps Add diver last, under every real match", {
   await box.fill("Priya");
   await expect(options.first()).toHaveAccessibleName(/Priya Sharma/);
   await expect(options.last()).toHaveAccessibleName("Add diver");
+});
+
+/**
+ * **Today's boat, not October's.** `trips` is a forward-looking table, so the
+ * trips group's old `desc(startsAt)` sort spent all eight of its slots on the
+ * furthest-future matches: the departure sailing this afternoon — the single
+ * most likely reason anyone opens the palette and types a trip name — was
+ * truncated out of the results entirely (issue #772). The shop runs the same
+ * charter over and over, so the title alone cannot tell the departures apart;
+ * the date on the row is what says which one the ordering picked.
+ */
+test("the palette's trip results lead with the departure nearest to now", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("button", { name: "Search" }).click();
+  const box = page.getByRole("combobox", { name: /Search divers/ });
+  const options = page.getByRole("dialog").getByRole("option");
+
+  // A title the demo shop reuses across a run of past departures and one that
+  // sails today, so this asserts which of them the eight slots go to.
+  await box.fill("Molasses & French");
+  await expect(options.first()).toHaveAccessibleName("Two-Tank Reef — Molasses & French");
+
+  // Composed from the frozen clock rather than written out, so the spec keeps
+  // meaning the same thing when that instant moves — the shop's own zone,
+  // because that is the zone the row renders in.
+  const today = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
+  }).format(e2eNow());
+  await expect(options.first()).toContainText(today);
 });
 
 test("the divers list filters live as you type, no submit", { tag: READ_ONLY }, async ({

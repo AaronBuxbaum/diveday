@@ -1,5 +1,6 @@
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { HOUR_MS } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { courses, diveSites, gearItems, orders, people, shops, trips } from "./schema";
 import { searchShop } from "./search";
@@ -151,6 +152,65 @@ describe("searchShop", () => {
 
     const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York", "en-US");
     expect(result.trips.map((t) => t.id)).toContain(trip.id);
+  });
+
+  /**
+   * **The eight slots go to the nearest departures, not the furthest.** `trips`
+   * is a forward-looking table, so ordering the search's trips group by
+   * `desc(startsAt)` returned the eight furthest-future matches and truncated
+   * everything nearer — today's boat, the single most likely thing a staffer
+   * opening the palette is looking for, was never in the results at all
+   * (issue #772). It also hid the past, so nobody could reach last Tuesday's
+   * departure to write up its log.
+   *
+   * Its own shop with **more than `PER_GROUP`** matching trips on both sides of
+   * `now`: this is the case the existing fixtures cannot express, because with a
+   * handful of trips the limit never truncates and the ordering never bites.
+   */
+  it("orders the trips group by nearness to now, in either direction", async () => {
+    const { db } = await seededShopContext();
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Nearness Divers", slug: "nearness-divers", timezone: "America/New_York" })
+      .returning();
+    if (!shop) throw new Error("shop insert returned no row");
+
+    const now = new Date("2026-08-22T16:00:00.000Z");
+    // Hours from `now`, deliberately unsorted so nothing passes by insertion order.
+    const offsetHours = [720, -3, 168, 2, -720, 24, -48, 336, -120, 72, -240, -480];
+    const inserted = await db
+      .insert(trips)
+      .values(
+        offsetHours.map((hours) => ({
+          shopId: shop.id,
+          title: `Nearness Charter ${hours}h`,
+          startsAt: new Date(now.getTime() + hours * HOUR_MS),
+          endsAt: new Date(now.getTime() + (hours + 3) * HOUR_MS),
+          capacity: 8,
+        })),
+      )
+      .returning();
+    expect(inserted).toHaveLength(12);
+    const titleById = new Map(inserted.map((trip) => [trip.id, trip.title]));
+
+    const result = await searchShop(db, shop.id, "Nearness Charter", "UTC", "en-US", now);
+
+    const titles = result.trips.map((trip) => titleById.get(trip.id));
+    expect(titles).toHaveLength(8);
+    // Nearest first, then outwards — the +2h departure leads, and the boat that
+    // sailed three hours ago is reachable rather than crowded out by October.
+    expect(titles).toEqual([
+      "Nearness Charter 2h",
+      "Nearness Charter -3h",
+      "Nearness Charter 24h",
+      "Nearness Charter -48h",
+      "Nearness Charter 72h",
+      "Nearness Charter -120h",
+      "Nearness Charter 168h",
+      "Nearness Charter -240h",
+    ]);
+    // The rows the old ordering spent every slot on are the ones truncated now.
+    expect(titles).not.toContain("Nearness Charter 720h");
   });
 
   it("never returns another shop's people, even when both have a same-named diver", async () => {

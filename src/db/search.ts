@@ -1,4 +1,5 @@
 import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import type { AppDb } from "./client";
@@ -80,6 +81,14 @@ export async function searchShop(
    * person, and a hard-coded default here is invisible from the palette.
    */
   locale: string,
+  /**
+   * The instant the trips group measures nearness from. Defaulted through the
+   * application clock rather than read from the wall clock here, so the e2e
+   * fleet's frozen instant reaches the ordering — an ordering that moved with
+   * real time would make both the palette's captures and its tests the flaky
+   * kind.
+   */
+  now: Date = nowDate(),
 ): Promise<SearchResults> {
   const query = rawQuery.trim();
   if (query.length < MIN_QUERY) return EMPTY_RESULTS;
@@ -100,6 +109,18 @@ export async function searchShop(
           sql`regexp_replace(coalesce(${people.phone}, ''), '[^0-9]', '', 'g') like ${`%${digits}%`}`,
         )
       : ilike(people.phone, like);
+
+  // **Nearest to now, in either direction.** `desc(startsAt)` is the right
+  // default nearly everywhere else `trips` is read, because those surfaces page
+  // a stream forward from now — but `trips` is forward-looking, so in a *search*
+  // that idiom spends all eight slots on the furthest-future matches and
+  // truncates today's boat out of the results entirely (issue #772). A staffer
+  // typing a trip name wants the boat they are working on now, and is as likely
+  // to want yesterday's manifest as next week's departure, so the sort key is
+  // distance from `now` and past departures stay eligible. It has to be the
+  // database's `ORDER BY`, not a re-sort in JavaScript: the `LIMIT` is what
+  // truncates, and sorting eight already-wrong rows changes nothing.
+  const nearestToNow = sql`abs(extract(epoch from ${trips.startsAt} - ${now}::timestamptz))`;
 
   const [diverRows, tripRows, diveSiteRows, courseRows, orderRows, gearRows] = await Promise.all([
     db
@@ -135,7 +156,9 @@ export async function searchShop(
           or(ilike(trips.title, like), ilike(diveSites.name, like)),
         ),
       )
-      .orderBy(desc(trips.startsAt))
+      // The tie-break: a departure the same distance either side of now reads
+      // as the upcoming one first, which is the old idiom kept where it is right.
+      .orderBy(nearestToNow, desc(trips.startsAt))
       .limit(PER_GROUP),
     db
       .select({ id: diveSites.id, name: diveSites.name })
