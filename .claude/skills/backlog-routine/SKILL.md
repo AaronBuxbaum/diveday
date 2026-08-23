@@ -75,7 +75,14 @@ to find the bottom:
 > Layer 4 of 6 — based on `claude/<slug-3>` (#883). Above: `claude/<slug-5>` (#886).
 > Review and merge bottom-up.
 
-Read [stacked-prs](../stacked-prs/SKILL.md) before the first one. Two things from it that bite here:
+**A ticket that moves pixels is a layer like any other.** Stacking used to stop at rendered
+surfaces; Aaron lifted that on 2026-08-23, because backlog tickets are mostly rendered surfaces and
+the restriction was disqualifying the ordinary case. What it costs is a re-read, never a missed
+regression — see [stacked-prs](../stacked-prs/SKILL.md) and ADR
+[20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md).
+
+Read that skill before the first stack. Three things from it that bite here, and the third is the
+new one:
 
 - **Rebase a layer before reading its visual report.** A stale parent makes other people's merged
   work show up as your diff — 39 of 60 surfaces on one measured PR.
@@ -83,6 +90,9 @@ Read [stacked-prs](../stacked-prs/SKILL.md) before the first one. Two things fro
   `reg` can report your surfaces as *new* rather than *changed*. Read the sticky
   `diveday:visual-summary` comment on **every** layer: if nothing resolved, that layer's counts mean
   nothing.
+- **A layer in that state is not triaged, and not merged on a count of zero.** Wait for the layer
+  below's `visual`/`visual-report` jobs, re-run this layer's, and read the refreshed comment. Zero
+  changed with zero baselines is the failure, not the pass.
 
 ### When a stack is the wrong shape
 
