@@ -1935,7 +1935,7 @@ for (const scheme of ["light", "dark"] as const) {
         // down here and the empty state holds the one door. Free to take —
         // the shop and the session already exist.
         await page.goto(`/shop/${unique}/schedule/board`);
-        await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
+        await page.getByRole("heading", { name: "Nothing upcoming on the board" }).waitFor();
         await capture(page, "schedule-builder-empty", scheme);
 
         // **The evening of a day with nothing in it.** Close-out has three
