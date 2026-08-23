@@ -246,7 +246,14 @@ test.describe("staff", () => {
     // One textarea, one item per line — the same shape as Included / Not
     // included above it, not a row of inputs with their own Add/Remove pair.
     await page.getByLabel("Day 4 — what happens").fill("Scenario retest\nDebrief and paperwork");
-    await page.getByLabel("FAQ").fill("Do I need my own gear?\nNo — we provide everything.");
+    // Two boxes per pair now, not one textarea carrying a blank-line format
+    // (issue #815). The seeded course already has questions; this adds one.
+    await page.getByRole("button", { name: "Add a question" }).click();
+    await page
+      .getByLabel(/^Question \d+$/)
+      .last()
+      .fill("Do I need my own gear?");
+    await page.getByLabel("Answer").last().fill("No — we provide everything.");
     // No "this is a taster session" box to tick. Which courses are tasters is
     // DiveDay's own catalogue fact, not a shop's claim, and the flag picks the
     // tighter 2:1 in-water ratio — a checkbox on the marketing form was a way
@@ -714,4 +721,84 @@ test.describe("the course editor with two tabs open", () => {
     await first.reload();
     await expect(first.locator('[name="summary"]')).toHaveValue("Saved by the first tab");
   });
+});
+
+/**
+ * **Four hops away, and the afternoon is still there.**
+ *
+ * The editor is one long page with no autosave. Under Cache Components a
+ * navigated-away page is *hidden* rather than unmounted, so one hop away and
+ * back keeps the form on its own — but React's Activity holds three routes,
+ * and past that the draft is evicted with nothing to say so. Which trip
+ * crosses that line is invisible from the outside; that is the whole defect
+ * (issue #815). The session draft is what covers it, so this walks the
+ * distance rather than trusting the unit test's jsdom.
+ */
+test.describe("the course editor over a wander through the app", () => {
+  signedInAsOwner();
+
+  test("keeps an unsaved edit through four other pages, and says it put it back", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    const url = "/shop/blue-mantis/courses/discover-scuba-diving/edit";
+    await page.goto(url);
+    const summary = page.locator('[name="summary"]');
+    await expect(summary).toBeVisible();
+    await summary.fill("Half a thought, never saved");
+    // The bar says so, pinned to the bottom edge rather than four thousand
+    // pixels down where Save used to be the only sign this was a form.
+    await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+
+    for (const tab of ["Divers", "Board", "Close-out", "Check-in"]) {
+      await page.getByRole("link", { name: tab, exact: true }).first().click();
+      await page.waitForURL((candidate) => !candidate.pathname.endsWith("/edit"));
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    }
+
+    // Back the way a person would come back: through the nav, not history.
+    await page.locator("header summary").filter({ hasText: "More" }).click();
+    await page.getByRole("link", { name: "Courses" }).first().click();
+    await page.waitForURL(/\/courses$/);
+    await page.getByRole("link", { name: "Discover Scuba Diving" }).first().click();
+    await page.waitForURL(/\/edit/);
+
+    await expect(page.locator('[name="summary"]')).toHaveValue("Half a thought, never saved");
+    await expect(page.getByText("put back", { exact: false })).toBeVisible();
+  });
+});
+
+/**
+ * The FAQ used to be one textarea holding a format — blank lines between
+ * pairs, first line the question — and a shop that forgot the blank line
+ * published one enormous question. Two boxes per pair now, and the save
+ * round-trips them.
+ */
+test("writes a FAQ pair through two boxes and shows it to a diver", async ({
+  privateShop,
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.goto(`/shop/${privateShop.slug}/courses/rescue-diver/edit`);
+  await page.getByRole("button", { name: "Add a question" }).click();
+  await page
+    .getByLabel(/^Question \d+$/)
+    .last()
+    .fill("Do I need my own gear?");
+
+  // Half a pair is refused, and says which half — the old textarea dropped an
+  // unanswered question silently, so the writer saved, saw it gone, and had no
+  // way to tell whether it had ever been there.
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByText("Every question needs an answer")).toBeVisible();
+  await expect(page.getByLabel(/^Question \d+$/).last()).toHaveValue("Do I need my own gear?");
+
+  await page.getByLabel("Answer").last().fill("No — every rental is part of the fee.");
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByRole("status")).toContainText("Course page saved");
+
+  await page.goto(`/s/${privateShop.slug}/courses/rescue-diver`);
+  // The answer is behind its own disclosure, the way a diver meets it.
+  await page.getByText("Do I need my own gear?").click();
+  await expect(page.getByText("No — every rental is part of the fee.")).toBeVisible();
 });

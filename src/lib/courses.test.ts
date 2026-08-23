@@ -8,12 +8,12 @@ import {
   courseDepthPlaceholderIssues,
   courseSlug,
   courseTotalCents,
-  formatFaqs,
   formatScheduleDayTime,
-  parseFaqs,
+  MAX_FAQS,
   parseLines,
   resolveCourseContentDepths,
   resolveCourseDepths,
+  sanitizeFaqs,
   splitCourseImageUrls,
 } from "./courses";
 import { depthInUnit, feetToMeters, metersToFeet } from "./depth-units";
@@ -208,29 +208,48 @@ describe("formatScheduleDayTime", () => {
   });
 });
 
-describe("parseFaqs", () => {
-  it("reads question-then-answer blocks", () => {
+describe("sanitizeFaqs", () => {
+  it("keeps a question and its answer, trimmed", () => {
     expect(
-      parseFaqs("Is gear included?\nYes — full rental kit.\n\nHow long is it?\nThree days."),
+      sanitizeFaqs([
+        { question: "  Is gear included? ", answer: " Yes — full rental kit. " },
+        { question: "How long is it?", answer: "Three days." },
+      ]),
     ).toEqual([
       { question: "Is gear included?", answer: "Yes — full rental kit." },
       { question: "How long is it?", answer: "Three days." },
     ]);
   });
 
-  it("joins a multi-line answer into one paragraph", () => {
-    expect(parseFaqs("What will I learn?\nBuoyancy.\nNavigation.")).toEqual([
-      { question: "What will I learn?", answer: "Buoyancy. Navigation." },
-    ]);
+  /**
+   * A pair the writer added and never filled in is not a mistake — it is the
+   * row they tapped "Add a question" for and then thought better of. Same
+   * contract as a blank day in `sanitizeScheduleDays`.
+   */
+  it("drops a pair with nothing in it", () => {
+    expect(sanitizeFaqs([{ question: "  ", answer: "" }])).toEqual([]);
   });
 
-  it("drops a question nobody answered rather than rendering an empty accordion", () => {
-    expect(parseFaqs("What about nitrox?")).toEqual([]);
+  /**
+   * A *half*-filled pair is refused, and the whole save with it. The old
+   * textarea silently dropped a question nobody had answered, so the writer
+   * saved, saw it gone, and had no way to tell whether it had ever been there.
+   */
+  it("refuses a question with no answer, and an answer with no question", () => {
+    expect(sanitizeFaqs([{ question: "What about nitrox?", answer: "" }])).toBeNull();
+    expect(sanitizeFaqs([{ question: "", answer: "Yes, on every boat." }])).toBeNull();
   });
 
-  it("round-trips through the textarea encoding", () => {
-    const faqs = [{ question: "Is gear included?", answer: "Yes." }];
-    expect(parseFaqs(formatFaqs(faqs))).toEqual(faqs);
+  it("refuses anything that is not a list of pairs", () => {
+    expect(sanitizeFaqs("Is gear included?")).toBeNull();
+    expect(sanitizeFaqs([{ question: 7, answer: "Yes." }])).toBeNull();
+    expect(sanitizeFaqs(null)).toBeNull();
+  });
+
+  it("refuses more questions than a course page holds", () => {
+    const one = { question: "Q", answer: "A" };
+    expect(sanitizeFaqs(Array.from({ length: MAX_FAQS }, () => one))).toHaveLength(MAX_FAQS);
+    expect(sanitizeFaqs(Array.from({ length: MAX_FAQS + 1 }, () => one))).toBeNull();
   });
 });
 

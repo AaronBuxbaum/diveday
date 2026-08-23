@@ -53,6 +53,14 @@ export function formatScheduleDayTime(
 export const MAX_SCHEDULE_DAYS = 30;
 export const MAX_SCHEDULE_DAY_ITEMS = 20;
 
+/** Caps enforced both here and by `FaqEditor`'s "Add question" button. */
+export const MAX_FAQS = 20;
+
+const faqInputSchema = z.object({
+  question: z.string().max(200).optional().default(""),
+  answer: z.string().max(1200).optional().default(""),
+});
+
 const scheduleDayInputSchema = z.object({
   title: z.string().max(160).optional().default(""),
   startTime: z.string().max(5).optional().default(""),
@@ -128,7 +136,7 @@ export const COURSE_CONTENT_LIMITS = {
   includes: 2_000,
   excludes: 2_000,
   scheduleDaysJson: 20_000,
-  faqs: 12_000,
+  faqsJson: 30_000,
 } as const;
 
 /**
@@ -373,19 +381,6 @@ export function courseSlug(title: string): string {
   return RESERVED_COURSE_SEGMENTS.has(slug) ? `${slug}-course` : slug;
 }
 
-/** Split a textarea into blocks on blank lines, dropping empty ones. */
-function blocks(value: string): string[][] {
-  return value
-    .split(/\r?\n\s*\r?\n/)
-    .map((block) =>
-      block
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean),
-    )
-    .filter((lines) => lines.length > 0);
-}
-
 /** One trimmed item per line; blank lines dropped. */
 export function parseLines(value: string): string[] {
   return value
@@ -394,15 +389,30 @@ export function parseLines(value: string): string[] {
     .filter(Boolean);
 }
 
-/** Blank-line-separated blocks: first line the question, the rest the answer. */
-export function parseFaqs(value: string): CourseFaq[] {
-  return blocks(value)
-    .map(([question, ...answer]) => ({ question, answer: answer.join(" ") }))
-    .filter((faq) => faq.answer.length > 0);
-}
+/**
+ * Normalizes the FAQ editor's serialized state (`FaqEditor` posts one
+ * JSON-encoded array) into `CourseFaq[]`.
+ *
+ * The same contract as `sanitizeScheduleDays` above, for the same reason: a
+ * pair added and then never filled in is dropped rather than refused, and a
+ * half-filled one fails the save outright. Which half is missing does not
+ * matter here — a question with no answer is the thing a diver would read and
+ * get nothing from, and an answer with no question has nowhere to render.
+ * Returns null on malformed input or a half-filled pair.
+ */
+export function sanitizeFaqs(raw: unknown): CourseFaq[] | null {
+  const parsed = z.array(faqInputSchema).max(MAX_FAQS).safeParse(raw);
+  if (!parsed.success) return null;
 
-export function formatFaqs(faqs: CourseFaq[]): string {
-  return faqs.map((faq) => `${faq.question}\n${faq.answer}`).join("\n\n");
+  const faqs: CourseFaq[] = [];
+  for (const entry of parsed.data) {
+    const question = entry.question.trim();
+    const answer = entry.answer.trim();
+    if (!question && !answer) continue;
+    if (!question || !answer) return null;
+    faqs.push({ question, answer });
+  }
+  return faqs;
 }
 
 /**

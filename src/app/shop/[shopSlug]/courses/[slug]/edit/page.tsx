@@ -12,17 +12,16 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   controlClass,
   Field,
-  FieldActions,
   FieldGrid,
   FormStatus,
   PriceField,
+  StickyFormActions,
 } from "@/components/ui/form";
 import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CourseTemplateField } from "@/lib/course-template-sync";
-import { formatFaqs } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
@@ -30,7 +29,8 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
-import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
+import { FaqEditor } from "./_components/FaqEditor";
+import { UnsavedChangesGuard, UnsavedChangesNote } from "./_components/UnsavedChangesGuard";
 import { pullCourseTemplateUpdatesAction, saveCourseContentAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -86,6 +86,10 @@ export default async function EditCoursePage({
   };
   const errors: Record<string, string> = {
     invalid: t("courses.edit.errorInvalid"),
+    // Specific, because "something was invalid" on a nine-section form is a
+    // scavenger hunt — and a half-filled pair is the one thing this editor
+    // refuses that the writer cannot see from the boxes.
+    "faq-incomplete": t("courses.edit.errorFaqIncomplete"),
     images: t("courses.edit.errorImages"),
     upload: t("courses.edit.errorUpload"),
     "too-many-photos": t("courses.edit.errorTooManyPhotos", {
@@ -234,7 +238,7 @@ export default async function EditCoursePage({
         })}
       </p>
 
-      <UnsavedChangesGuard>
+      <UnsavedChangesGuard storageKey={`course-draft:${course.id}`}>
         <ConflictGuardedForm
           action={saveAction}
           conflictMessage={t("courses.edit.conflictMessage")}
@@ -568,6 +572,7 @@ export default async function EditCoursePage({
             <div className="mt-4">
               <DayByDayEditor
                 initialDays={course.scheduleDays}
+                storageKey={`course-draft:${course.id}`}
                 copy={{
                   dayLabel: t.raw("courses.dayByDay.dayLabel"),
                   removeDay: t("courses.dayByDay.removeDay"),
@@ -594,20 +599,23 @@ export default async function EditCoursePage({
 
           <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
             <legend className="px-1 text-sm font-semibold">{t("courses.edit.faqLegend")}</legend>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.faqDescription")}</p>
-            <FieldGrid columns={1} className="mt-4">
-              <Field label={t("courses.edit.faqLabel")}>
-                <textarea
-                  id="faqs"
-                  name="faqs"
-                  rows={10}
-                  maxLength={12000}
-                  defaultValue={formatFaqs(course.faqs)}
-                  placeholder={t("courses.edit.faqPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
+            <div className="mt-4">
+              <FaqEditor
+                initialFaqs={course.faqs}
+                storageKey={`course-draft:${course.id}`}
+                copy={{
+                  questionLabel: t.raw("courses.faq.questionLabel"),
+                  questionPlaceholder: t("courses.faq.questionPlaceholder"),
+                  answerLabel: t("courses.faq.answerLabel"),
+                  answerPlaceholder: t("courses.faq.answerPlaceholder"),
+                  removeFaq: t.raw("courses.faq.removeFaq"),
+                  addFaq: t("courses.faq.addFaq"),
+                  faqsMaxOne: t.raw("courses.faq.faqsMaxOne"),
+                  faqsMaxOther: t.raw("courses.faq.faqsMaxOther"),
+                  empty: t("courses.faq.empty"),
+                }}
+              />
+            </div>
           </fieldset>
 
           {/* One control, not two. "Preview" opened the same page the "Live
@@ -619,12 +627,18 @@ export default async function EditCoursePage({
               five fieldsets, so a staffer who pressed Save at the bottom saw
               nothing happen at all. `FieldErrorFocus` above still carries them
               on to the offending box when the server named one. */}
-          <FieldActions>
+          {/* Sticky, because this form is nine sections and four thousand
+              pixels tall and Save used to live only at the far end of it. */}
+          <StickyFormActions>
             <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
               {t("courses.edit.savePage")}
             </SubmitButton>
+            <UnsavedChangesNote
+              unsavedLabel={t("courses.edit.unsavedChanges")}
+              restoredLabel={t("courses.edit.draftRestored")}
+            />
             <FormStatus tone="danger">{errorText}</FormStatus>
-          </FieldActions>
+          </StickyFormActions>
         </ConflictGuardedForm>
       </UnsavedChangesGuard>
     </main>

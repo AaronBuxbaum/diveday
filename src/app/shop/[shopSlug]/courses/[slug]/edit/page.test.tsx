@@ -16,8 +16,10 @@ vi.mock("@/components/ShopPageHeader", () => ({
 }));
 vi.mock("@/components/ui/FieldErrorFocus", () => ({ FieldErrorFocus: () => null }));
 vi.mock("./_components/DayByDayEditor", () => ({ DayByDayEditor: () => null }));
+vi.mock("./_components/FaqEditor", () => ({ FaqEditor: () => null }));
 vi.mock("./_components/UnsavedChangesGuard", () => ({
   UnsavedChangesGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  UnsavedChangesNote: () => null,
 }));
 vi.mock("./actions", () => ({
   pullCourseTemplateUpdatesAction: vi.fn(),

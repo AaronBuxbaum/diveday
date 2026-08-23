@@ -268,6 +268,32 @@ shape by hand:
   happens to have preserves the drift behind an abstraction, the same reason `SectionCard` has no
   `radius`.
 
+### A form taller than a screen: `StickyFormActions`
+
+`FieldActions` is the submit row for a form you can see all of. For the ones you cannot, use
+`StickyFormActions` — the same row, `sticky bottom-0`, riding the bottom edge while the form is on
+screen and settling into place at the end of it.
+
+The course editor is why it exists: nine sections, **4,002 px** at desktop width, and one "Save
+course page" at the very bottom, so fixing a typo in the subhead at y≈300 meant scrolling 3,700 px
+to commit it (issue #815). `sticky`, not `fixed`, because the bar belongs to the form rather than
+to the window.
+
+Reach for it when a form is taller than a phone screen with content still below the fold. A
+two-field panel wearing one is a bar hovering over nothing.
+
+**Say what the form is holding, not what it did.** "Unsaved changes" beside the button is a state
+the surface cannot show on its own; a confirmation that the save worked belongs in `FormStatus` or
+the control's own face (see the ephemeral-acknowledgement section below).
+
+**A sticky bar needs its own visual capture.** Chromium's full-page screenshot stitches the document
+at scroll 0 and does not paint a *currently stuck* element at all — measured on the course editor,
+where `Save course page` reports a bounding box at y=744 and the 8,531 px capture contains no pixel
+of it anywhere. So a surface that adopts `StickyFormActions` also takes a `captureStickyFoot`
+capture in `e2e/visual.spec.ts` (it scrolls to the foot first, where the sticky offset is zero and
+the element paints normally). Without it the page's primary action has no baseline, which is the
+opposite of what a capture is for.
+
 ## Saying what happened: `Field error` + `FormStatus`
 
 **A form's answer belongs where the form is.** Not under the `<h1>`, not in a banner the length of

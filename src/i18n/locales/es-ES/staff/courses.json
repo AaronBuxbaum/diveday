@@ -29,6 +29,7 @@
     "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
     "noticeSaved": "Página del curso guardada.",
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
+    "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
     "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5 MB.",
     "errorTooManyPhotos": "Añade hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y añade más después.",
@@ -81,9 +82,6 @@
     "notIncludedPlaceholder": "Tasa del parque marino\nTraslados de hotel",
     "dayByDayLegend": "Día a día",
     "faqLegend": "Preguntas de los buceadores",
-    "faqDescription": "Un bloque por pregunta, separados por una línea en blanco. La primera línea es la pregunta, el resto es la respuesta.",
-    "faqLabel": "Preguntas frecuentes",
-    "faqPlaceholder": "¿Está incluido el equipo?\nSí — máscara, aletas, traje, BCD, regulador y botellas.\n\n¿Necesito ser buen nadador?\nNecesitas sentirte cómodo en el agua.",
     "savePage": "Guardar página del curso",
     "saving": "Guardando…",
     "templateUpdates": {
@@ -120,7 +118,9 @@
         "scheduleDays": "Plan día a día",
         "faqs": "Preguntas frecuentes"
       }
-    }
+    },
+    "unsavedChanges": "Cambios sin guardar",
+    "draftRestored": "Cambios sin guardar, recuperados de tu última visita"
   },
   "dayByDay": {
     "dayLabel": "Día {number}",
@@ -140,5 +140,16 @@
     "daysMaxOne": "Máximo {max} día",
     "daysMaxOther": "Máximo {max} días",
     "addDay": "Añadir día"
+  },
+  "faq": {
+    "questionLabel": "Pregunta {number}",
+    "questionPlaceholder": "¿El equipo está incluido?",
+    "answerLabel": "Respuesta",
+    "answerPlaceholder": "Sí: máscara, aletas, traje y botellas entran en el precio del curso.",
+    "removeFaq": "Eliminar la pregunta {number}",
+    "addFaq": "Añadir una pregunta",
+    "faqsMaxOne": "{max} pregunta es el máximo que admite una página de curso.",
+    "faqsMaxOther": "{max} preguntas es el máximo que admite una página de curso.",
+    "empty": "Aún no hay preguntas. Añade las que te hacen los buceadores en el mostrador."
   }
 }

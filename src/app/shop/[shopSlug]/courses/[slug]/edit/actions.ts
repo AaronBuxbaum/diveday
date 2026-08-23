@@ -15,8 +15,8 @@ import { getShopById } from "@/db/shops";
 import {
   COURSE_CONTENT_LIMITS,
   courseDepthPlaceholderIssues,
-  parseFaqs,
   parseLines,
+  sanitizeFaqs,
   sanitizeScheduleDays,
   splitCourseImageUrls,
 } from "@/lib/courses";
@@ -62,7 +62,7 @@ const contentSchemaFor = (currency: string) =>
     includes: z.string().max(COURSE_CONTENT_LIMITS.includes),
     excludes: z.string().max(COURSE_CONTENT_LIMITS.excludes),
     scheduleDaysJson: z.string().max(COURSE_CONTENT_LIMITS.scheduleDaysJson),
-    faqs: z.string().max(COURSE_CONTENT_LIMITS.faqs),
+    faqsJson: z.string().max(COURSE_CONTENT_LIMITS.faqsJson),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
     privatePrice: moneyFor(currency),
@@ -158,6 +158,14 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   }
   if (scheduleDays === null) redirect(`${base}?error=invalid&field=scheduleDaysJson`);
 
+  let faqs: ReturnType<typeof sanitizeFaqs>;
+  try {
+    faqs = sanitizeFaqs(JSON.parse(value.faqsJson));
+  } catch {
+    faqs = null;
+  }
+  if (faqs === null) redirect(`${base}?error=faq-incomplete&field=faqsJson`);
+
   // Depth markers, checked before anything is written.
   //
   // This is the one place shop-editable prose is also a small message format,
@@ -176,7 +184,9 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     ["prerequisiteNote", value.prerequisiteNote],
     ["includes", value.includes],
     ["excludes", value.excludes],
-    ["faqs", value.faqs],
+    ...faqs.flatMap<[string, string]>((faq) =>
+      [faq.question, faq.answer].map((text) => ["faqsJson", text] as [string, string]),
+    ),
     ...scheduleDays.flatMap<[string, string]>((day) =>
       [day.title, ...day.items].map((text) => ["scheduleDaysJson", text] as [string, string]),
     ),
@@ -208,7 +218,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
       includes: parseLines(value.includes),
       excludes: parseLines(value.excludes),
       scheduleDays,
-      faqs: parseFaqs(value.faqs),
+      faqs,
     },
     { expectedVersion: Number.isNaN(expectedVersion) ? null : expectedVersion },
   );

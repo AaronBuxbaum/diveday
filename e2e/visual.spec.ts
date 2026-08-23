@@ -807,6 +807,46 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
  * scoped to this capture with `addStyleTag`, not to `globals.css`, so real
  * printing keeps its real Letter pagination.
  */
+/**
+ * **A sticky footer, photographed — because `capture()` above cannot see one.**
+ *
+ * Chromium's full-page screenshot stitches the document at scroll 0, and a
+ * `position: sticky` element that is *currently stuck* — offset from its
+ * static position — is simply not painted into that image. Measured on the
+ * course editor: the page is 8,531 px tall, `Save course page` reports a
+ * bounding box at y=744 (pinned to the viewport foot), and the resulting
+ * 8,531 px capture contains **no pixel of it anywhere**. The baseline for the
+ * app's longest form had lost its only primary action, silently.
+ *
+ * Scrolled to the foot the sticky offset is zero, so the element is at its
+ * static position and paints normally — which is what this does. Viewport-
+ * sized rather than full-page: the bar in its own context is the whole
+ * subject, and a second 8,000 px image of the same form is not.
+ *
+ * Any surface that adopts `StickyFormActions` needs one of these, or its bar
+ * has no baseline at all.
+ */
+async function captureStickyFoot(page: Page, name: string, scheme: "light" | "dark") {
+  const baseViewport = page.viewportSize();
+  // Both viewports, like `capture()` — the phone is where a bar pinned to the
+  // bottom edge earns its place, so photographing only the desktop would leave
+  // the case that motivated it unbaselined.
+  for (const viewport of VIEWPORTS) {
+    await page.setViewportSize(viewport);
+    await paintWholeDocument(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    // The scroll is a layout change like any other; let it commit before the shot.
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+    await page.screenshot({
+      path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
+      animations: "disabled",
+    });
+  }
+  if (baseViewport) await page.setViewportSize(baseViewport);
+}
+
 async function capturePrint(page: Page, name: string) {
   await page.emulateMedia({ media: "print" });
   await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
@@ -3317,6 +3357,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Day by day").waitFor();
         await page.getByLabel("Day 1 — what happens").waitFor();
         await capture(page, "course-edit", scheme);
+      });
+
+      /**
+       * The save bar, which `capture()` above cannot photograph: it is sticky,
+       * and a full-page screenshot taken at scroll 0 does not paint a stuck
+       * element at all (see `captureStickyFoot`). This form is four thousand
+       * pixels of fields with one primary action, so a baseline that omits it
+       * is a baseline of the wrong page.
+       */
+      test(`the course editor's save bar renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+        await page.getByLabel("Day 1 — what happens").waitFor();
+        await captureStickyFoot(page, "course-edit-save-bar", scheme);
       });
 
       // Owner reporting: "how's my month" over the seeded back-fill — the KPI
