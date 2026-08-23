@@ -88,6 +88,23 @@ parent, closing the diamond — a fork whose branches reach a common leaf is ski
 entirely. Commit it alongside whatever provoked it. `drizzle/20260822212616_merge-migration-heads`
 is the worked example, and its SQL comment explains itself to whoever opens it next.
 
+`pnpm db:merge` also **repairs its own snapshot**, and that is not decoration.
+`drizzle-kit generate --custom` writes the merge folder's snapshot as *one head's
+state whole* — losing the other's — whenever the two open heads **share a
+parent**, which is the ordinary shape once a repository has merged a few times.
+This repository shipped one: the merge closing `shop-units-confirmed` and
+`dive-package-line-item` kept `dive_packages` and dropped
+`shops.units_confirmed_at`, so the next `pnpm db:generate` re-emitted that column
+as a fresh `ADD COLUMN` against a database that already had it (issue #852).
+
+That failure is invisible where it is cheap to find — the merge folder's SQL is
+empty either way, a fresh database applies the chain in order and is fine, and
+every test passes. It fails against a database that already ran the original,
+which is the `real-postgres` job or production. So the script now probes with a
+plain `generate` afterwards, adopts that snapshot's state if anything was lost,
+and says so on stdout. If it reports a repair, nothing is wrong with your change;
+read the SQL it prints to see what had gone missing.
+
 Two things to hold on to:
 
 - **Read the diagram before running it.** If two branches genuinely add the *same* column, a merge
