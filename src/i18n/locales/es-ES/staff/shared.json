@@ -73,7 +73,10 @@
     "popupBlocked": "El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes y vuelve a intentarlo."
   },
   "printPacket": {
-    "title": "Paquete de salida"
+    "title": "Paquete de salida",
+    "diveNumber": "Inmersión {number}",
+    "travelMinutes": "{minutes} min de trayecto",
+    "conditionsHeading": "Condiciones"
   },
   "rollCallNote": {
     "optionalNote": "Nota",

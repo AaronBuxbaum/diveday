@@ -254,10 +254,18 @@ test.describe("trip print packet", () => {
     await popup.waitForLoadState("domcontentloaded");
     await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/print$`));
     await expect(popup.getByRole("heading", { name: "Trip packet" })).toBeVisible();
-    await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(1);
-    await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(1);
+    // **Three sections, not four.** The packet stopped composing the two tabs
+    // that are working pages rather than documents (issue #814): Overview *is*
+    // the trip's edit form, and Guests is all actions — send a waiver, remove a
+    // booking — none of which can happen on paper. Their facts are not lost:
+    // the dive plan that only ever lived inside Overview's form is rendered as
+    // words in "Dives", and the roster Guests showed is the manifest's, already
+    // read-only and already carrying each diver's emergency contact.
+    await expect(popup.getByRole("heading", { name: "Dives", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Manifest", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
+    await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);
+    await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(0);
     await popup.close();
 
     // Printing is intentionally owned by Overall. The packet is the one
@@ -437,3 +445,67 @@ async function seededTripPath(page: import("@playwright/test").Page): Promise<st
   await link.waitFor();
   return ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, "");
 }
+
+/**
+ * **The trip packet is a document, and nothing on it may look fillable.**
+ *
+ * `/shop/<slug>/trips/<id>/print` is the sheet a captain prints and carries.
+ * It composes whole pages, so it inherits whatever controls those pages have —
+ * and under print media it carried **42 buttons, 9 selects, 48 inputs and 13
+ * textareas**, including "Cancel trip", "Remove booking" nine times, and a bare
+ * "×" (issue #814). A control printed beside a diver's name looks fillable and
+ * records nothing, on the one surface where the difference between a recorded
+ * head count and an unrecorded one is the whole product.
+ *
+ * **This is invisible on screen**, which is why it survived: the page looks
+ * like what it is, four live sections stacked, and the visual suite captures
+ * screen media only. Nothing in `e2e/` asserted print media before this.
+ */
+test.describe("the printed trip packet", () => {
+  signedInAsOwner();
+
+  test("carries no control a crew member could try to fill in", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
+    await link.waitFor();
+    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
+      /\/(guests|manifest|prep|log)$/,
+      "",
+    );
+    await page.goto(`${tripPath}/print`);
+    // The packet's own heading — the destination's render, not a timing guess.
+    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+
+    // What the printer sees, which is not what the screen shows.
+    await page.emulateMedia({ media: "print" });
+    const controls = await page.evaluate(() => {
+      const visible = (element: Element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          box.width > 0 &&
+          box.height > 0
+        );
+      };
+      const found = [...document.querySelectorAll("button, select, textarea, input")].filter(
+        visible,
+      );
+      // Named, not counted: a failure that says "3" sends the next reader
+      // hunting, and one that says "Cancel trip" sends them to the section.
+      return found.map(
+        (element) =>
+          `${element.tagName.toLowerCase()}: ${(element.textContent ?? "").trim().slice(0, 30) || (element as HTMLInputElement).name || "(unnamed)"}`,
+      );
+    });
+    expect(controls).toEqual([]);
+
+    // And the facts it exists for are still on it: the departure it is about,
+    // the dive plan that only ever lived inside the Overview tab's form, and
+    // the roster with the head count.
+    await expect(page.getByRole("heading", { name: /Two-Tank Reef/ }).first()).toBeVisible();
+    await expect(page.getByText(/Dive 1 ·/)).toBeVisible();
+    await expect(page.getByText(/Souls on board/)).toBeVisible();
+  });
+});

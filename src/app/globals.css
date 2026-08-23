@@ -379,6 +379,27 @@ summary {
 }
 
 @media print {
+  /**
+   * **Nothing interactive reaches the trip packet's paper, by construction.**
+   *
+   * `/shop/<slug>/trips/<id>/print` composes whole pages, so a section that
+   * grows a button next month would inherit it onto the sheet a captain carries
+   * — which is how 42 buttons, 9 selects, 48 inputs and 13 textareas came to be
+   * printed beside a roster, "Cancel trip" among them (issue #814). The 47
+   * hand-placed `print:hidden` classes elsewhere in the app each solve one
+   * page's own printing; this solves the one route that renders four at once,
+   * and cannot rot the way another class would.
+   *
+   * A backstop, not the fix. It is only safe because the packet no longer
+   * composes the two tabs that *are* forms: with those gone nothing
+   * value-bearing lives inside a control here, so hiding one loses no fact. The
+   * same rule applied to the old packet would have silently dropped the trip's
+   * title, date and dive plan off the sheet.
+   */
+  .trip-print-bundle :is(button, select, textarea, input) {
+    display: none !important;
+  }
+
   :root,
   .boat-mode {
     --background: #ffffff;
