@@ -2953,7 +2953,11 @@
   "notFound": {
     "heading": "We couldn’t find that page",
     "body": "The link may be old, or the page may have moved. Check the address.",
-    "backHome": "Back to the homepage"
+    "backHome": "Back to the homepage",
+    "shop": {
+      "heading": "That page isn’t here any more",
+      "action": "See what’s coming up"
+    }
   },
   "notifications": {
     "brief": {

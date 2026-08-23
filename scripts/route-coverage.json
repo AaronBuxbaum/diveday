@@ -143,7 +143,12 @@
       "seat-claim.spec.ts",
       "trip-admission.spec.ts"
     ],
-    "visual": ["booking-confirmed-embed", "site-briefing", "site-briefing-requirements"]
+    "visual": [
+      "booking-confirmed-embed",
+      "shop-not-found",
+      "site-briefing",
+      "site-briefing-requirements"
+    ]
   },
   "/shop/[shopSlug]": {
     "e2e": [

@@ -2953,7 +2953,11 @@
   "notFound": {
     "heading": "No pudimos encontrar esa página",
     "body": "El enlace puede ser antiguo, o la página puede haberse movido. Revisa la dirección.",
-    "backHome": "Volver a la página de inicio"
+    "backHome": "Volver a la página de inicio",
+    "shop": {
+      "heading": "Esa página ya no está aquí",
+      "action": "Ver las próximas salidas"
+    }
   },
   "notifications": {
     "brief": {
