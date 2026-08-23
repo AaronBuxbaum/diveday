@@ -4024,6 +4024,26 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(box).toBeHidden();
       });
 
+      // The same panel with results in it, which is the half no baseline had:
+      // searched groups draw their own glyph in the same rail as the "Go to"
+      // rows (issue #773), and only a query shows them. Waits for a real
+      // option rather than for the request — the input is debounced, so the
+      // rendered row is the only honest signal that the answer landed.
+      test(`the command palette with results renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
+        await page.keyboard.press("ControlOrMeta+k");
+        const box = page.getByRole("combobox", { name: /Search divers/ });
+        await expect(box).toBeFocused();
+        await box.fill("reef");
+        await expect(page.getByRole("option", { name: /Reef/ }).first()).toBeVisible();
+        await capture(page, "command-palette-results", scheme);
+        await page.keyboard.press("Escape");
+        await expect(box).toBeHidden();
+      });
+
       // The app-wide `notFound()` backstop (src/app/not-found.tsx) — a stale
       // email link or a typo'd URL. Captured under a staff session because
       // that is who reaches it on a `/shop` URL; signed out the same address

@@ -186,6 +186,9 @@ export function ShopNav({
                 destinationTitles,
                 goToBoarding: t("shared.commandPalette.goToBoarding"),
                 goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+                hintMove: t("shared.commandPalette.hintMove"),
+                hintOpen: t("shared.commandPalette.hintOpen"),
+                hintClose: t("shared.commandPalette.hintClose"),
               }}
             />
           </div>

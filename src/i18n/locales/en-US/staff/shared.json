@@ -109,7 +109,10 @@
     "groupSession": "Session",
     "groupGoTo": "Go to",
     "goToBoarding": "Boarding — today's boat",
-    "goToOfflineRollCall": "Open offline roll call"
+    "goToOfflineRollCall": "Open offline roll call",
+    "hintMove": "to move",
+    "hintOpen": "to open",
+    "hintClose": "to close"
   },
   "tripAdmission": {
     "level": "This charter requires {level}. This diver's highest certification on file is {held}. If they hold a {level} certification, add it to their record — otherwise book them onto a trip at their level, or into the {level} course.",
