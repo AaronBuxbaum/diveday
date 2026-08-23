@@ -32,6 +32,7 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:tinted-ink": "node scripts/check-tinted-ink.mjs",
+    "check:logical-properties": "node scripts/check-logical-properties.mjs",
     "check:clock": "node scripts/check-clock.mjs",
     "check:db-concurrency": "node scripts/check-db-concurrency.mjs",
     "check:intl-cache": "node scripts/check-intl-cache.mjs",
