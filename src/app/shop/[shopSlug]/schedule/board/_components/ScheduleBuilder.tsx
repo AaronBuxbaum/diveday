@@ -1519,7 +1519,7 @@ export function ScheduleBuilder({
                           `z-10` lifts its own links and the "⋯" controls above
                           the title's stretched overlay. */}
                       <div className="relative z-10 flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                        {/* One slot, one grammar (issue #758). This strip answers
+                        {/* One slot, one grammar (issue 758). This strip answers
                             "how is this departure doing", and it used to answer
                             it in three: muted tabular text on most rows, a green
                             ✅ Badge on a full one, and an amber ⚠️ Badge sitting

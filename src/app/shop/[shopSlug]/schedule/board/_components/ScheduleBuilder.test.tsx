@@ -525,7 +525,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
   });
 });
 
-describe("ScheduleBuilder row status slot — one grammar (issue #758)", () => {
+describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
   it("states a full boat in the same tabular text as every other count, not a success pill", () => {
     const days: BuilderDay[] = [
       {
