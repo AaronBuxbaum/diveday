@@ -613,7 +613,7 @@
     "certChoose": "Elige una opción",
     "certSubmit": "Añadir mi certificación",
     "certSubmitting": "Añadiendo…",
-    "certSaved": "Certificación añadida. Tu centro la verificará con el registro de certificación u otra evidencia.",
+    "certSaved": "Certificación añadida.",
     "certKnown": "Ese número de certificación ya está registrado aquí: no hace falta nada más.",
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
     "certOptional": "Opcional",
