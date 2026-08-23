@@ -109,7 +109,10 @@
     "groupSession": "Sesión",
     "groupGoTo": "Ir a",
     "goToBoarding": "Embarque — el barco de hoy",
-    "goToOfflineRollCall": "Abrir pase de lista sin conexión"
+    "goToOfflineRollCall": "Abrir pase de lista sin conexión",
+    "hintMove": "para moverte",
+    "hintOpen": "para abrir",
+    "hintClose": "para cerrar"
   },
   "tripAdmission": {
     "level": "Esta salida exige {level}. La titulación más alta registrada de este buceador es {held}. Si tiene la certificación de {level}, añádela a su ficha; si no, resérvale una salida acorde a su nivel o el curso de {level}.",

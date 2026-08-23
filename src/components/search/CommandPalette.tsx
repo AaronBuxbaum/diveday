@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
@@ -14,6 +15,7 @@ import {
   staffDestinationHref,
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
+import { PaletteGlyph } from "./PaletteGlyph";
 
 /**
  * A row in the palette. Most are destinations (`href`); a few *do* something
@@ -27,6 +29,12 @@ type PaletteItem = {
   detail?: string;
   href?: string;
   run?: () => void;
+  /**
+   * The row's left rail. Always decorative — every row's accessible name is
+   * its `aria-label` — and always present, because a rail that appears on some
+   * rows and not others is worse than no rail (issue #773).
+   */
+  icon?: React.ReactNode;
 };
 /**
  * `heading` is optional: the trailing "Add diver" row is a group of one whose
@@ -34,6 +42,10 @@ type PaletteItem = {
  * repeating the only row under it.
  */
 type PaletteGroup = { id: string; heading?: string; items: PaletteItem[] };
+
+/** The palette's own key cap — smaller than the header button's ⌘K badge. */
+const hintKeyClass =
+  "rounded border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-[0.65rem] leading-none font-semibold";
 
 const EMPTY: SearchResults = {
   divers: [],
@@ -67,6 +79,10 @@ export type CommandPaletteCopy = {
   groupSession: string;
   /** The same word the shop-name menu signs out under — one act, one label. */
   signOut: string;
+  /** The legend along the panel's bottom edge: which keys actually work. */
+  hintMove: string;
+  hintOpen: string;
+  hintClose: string;
   /**
    * The same destination labels the nav renders (src/lib/staff-destinations.ts).
    * One record, so "Go to Board" here and "Board" in the header can never
@@ -195,7 +211,12 @@ export function CommandPalette({
     const q = rawQuery.toLowerCase();
     const goto: PaletteItem[] = [];
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
-      goto.push({ key: "goto:boarding", label: copy.goToBoarding, href: boatBoardingHref });
+      goto.push({
+        key: "goto:boarding",
+        label: copy.goToBoarding,
+        href: boatBoardingHref,
+        icon: <PaletteGlyph name="boarding" />,
+      });
     }
     // Not shop-scoped (the offline snapshot lives per-device, not per-shop
     // route) so this doesn't need a `boatBoardingHref`-style prop — it's
@@ -207,6 +228,7 @@ export function CommandPalette({
         key: "goto:offline-roll-call",
         label: copy.goToOfflineRollCall,
         href: "/offline-manifest",
+        icon: <PaletteGlyph name="offline" />,
       });
     }
     // One list with the nav and the keyboard shortcuts, already filtered for
@@ -219,6 +241,9 @@ export function CommandPalette({
           key: `goto:${destination.id}`,
           label,
           href: staffDestinationHref(root, destination),
+          // The registry's own artwork, so the palette and the phone dock can
+          // never draw one destination two ways.
+          icon: <StaffDestinationIcon id={destination.id} className="size-5" />,
         });
       }
     }
@@ -228,6 +253,7 @@ export function CommandPalette({
       label: diver.fullName,
       detail: diver.detail ?? undefined,
       href: `${root}/divers/${diver.id}`,
+      icon: <PaletteGlyph name="diver" />,
     }));
     // "Add a diver called <whatever you typed>" matches *every* query by
     // construction, so it is the one row that can never lose a ranking contest
@@ -245,6 +271,7 @@ export function CommandPalette({
               key: "diver:add",
               label: copy.addDiver,
               detail: rawQuery,
+              icon: <PaletteGlyph name="diver" />,
               run: () => startTransition(() => createDiverAction(formData)),
             };
           })()
@@ -266,6 +293,7 @@ export function CommandPalette({
           label: trip.title,
           detail: trip.detail,
           href: `${root}/trips/${trip.id}`,
+          icon: <PaletteGlyph name="trip" />,
         })),
       });
     }
@@ -277,6 +305,7 @@ export function CommandPalette({
           key: `dive-site:${site.id}`,
           label: site.name,
           href: `${root}/dive-sites/${site.id}`,
+          icon: <PaletteGlyph name="diveSite" />,
         })),
       });
     }
@@ -288,6 +317,7 @@ export function CommandPalette({
           key: `course:${course.id}`,
           label: course.title,
           href: `${root}/courses/${course.slug}/edit`,
+          icon: <PaletteGlyph name="course" />,
         })),
       });
     }
@@ -307,6 +337,7 @@ export function CommandPalette({
             ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
             : copy.gearStatuses[unit.status],
           href: `${root}/gear/${unit.id}`,
+          icon: <PaletteGlyph name="gear" />,
         })),
       });
     }
@@ -319,6 +350,7 @@ export function CommandPalette({
           label: order.personName,
           detail: order.detail,
           href: `${root}/orders/${order.id}`,
+          icon: <PaletteGlyph name="order" />,
         })),
       });
     }
@@ -344,6 +376,7 @@ export function CommandPalette({
           key: `language:${choice.locale}`,
           label: choice.label,
           run: () => startTransition(() => setLocaleAction(choice.locale)),
+          icon: <PaletteGlyph name="language" />,
         })),
       });
     }
@@ -377,6 +410,7 @@ export function CommandPalette({
             key: "session:sign-out",
             label: copy.signOut,
             run: () => startTransition(() => signOutAction()),
+            icon: <PaletteGlyph name="signOut" />,
           },
         ],
       });
@@ -489,7 +523,10 @@ export function CommandPalette({
             // Click-away backdrop; Escape and the toggle button also close it.
             // biome-ignore lint/a11y/noStaticElementInteractions: presentational backdrop
             <div
-              className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/30 px-4 pt-[12vh] backdrop-blur-sm"
+              // A wash, not a curtain: `backdrop-blur-sm` over a 30% scrim
+              // left the page behind unreadable, which takes away the sense of
+              // the palette floating over your own work (issue #773).
+              className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/25 px-4 pt-[12vh] backdrop-blur-[2px]"
               role="presentation"
               onClick={(event) => {
                 if (event.target === event.currentTarget) setOpen(false);
@@ -527,7 +564,14 @@ export function CommandPalette({
                   onKeyDown={onKeyDown}
                   className="w-full border-b border-border bg-transparent px-5 py-4 text-base outline-none placeholder:text-muted"
                 />
-                <div id={listId} role="listbox" className="max-h-[60vh] overflow-y-auto py-2">
+                {/* `pb-2` inside the scroll box, not on the panel: the last
+                    row now ends on its own padding rather than being sliced
+                    through its text by the scroll edge (issue #773). */}
+                <div
+                  id={listId}
+                  role="listbox"
+                  className="max-h-[58vh] overflow-y-auto py-2 [mask-image:linear-gradient(to_bottom,black_calc(100%-1.25rem),transparent)]"
+                >
                   {flat.length === 0 ? (
                     <p className="px-5 py-6 text-center text-sm text-muted">
                       {query.trim().length < 2 ? copy.emptyShort : copy.emptyNoMatches}
@@ -562,11 +606,25 @@ export function CommandPalette({
                                 setActive(flat.findIndex((entry) => entry.key === item.key))
                               }
                               onClick={() => go(item)}
-                              className={`flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left ${
+                              className={`flex w-full items-center gap-3 px-5 py-2.5 text-left ${
                                 isActive ? "bg-primary/10" : ""
                               }`}
                             >
-                              <span className="min-w-0 truncate font-medium">{item.label}</span>
+                              {/* Decorative and fixed-width: the rail only
+                                  works as a rail if every label starts at the
+                                  same x, so the slot holds its space even for
+                                  a row whose glyph is missing. */}
+                              <span
+                                aria-hidden="true"
+                                className={`flex size-5 shrink-0 items-center justify-center ${
+                                  isActive ? "text-primary" : "text-muted"
+                                }`}
+                              >
+                                {item.icon}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate font-medium">
+                                {item.label}
+                              </span>
                               {item.detail ? (
                                 <span className="shrink-0 truncate text-sm text-muted">
                                   {item.detail}
@@ -579,6 +637,34 @@ export function CommandPalette({
                     ))
                   )}
                 </div>
+                {/* **What the palette has always done, said out loud.** It
+                    opens on ⌘K, moves on arrows, commits on Enter and closes
+                    on Escape, and said none of it — so a staffer who reached
+                    it by clicking "Search ⌘K" in the header reached back for
+                    the mouse, which is the whole advantage gone. Muted and
+                    small: a legend, never a row you could mistake for a
+                    result. `aria-hidden` because every key it names is already
+                    announced by the combobox pattern, and a screen-reader
+                    user hearing "arrow keys to move" inside a listbox is
+                    being told what they are already doing. */}
+                <p
+                  aria-hidden="true"
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-5 py-2.5 text-xs text-muted"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <kbd className={hintKeyClass}>↑</kbd>
+                    <kbd className={hintKeyClass}>↓</kbd>
+                    {copy.hintMove}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <kbd className={hintKeyClass}>↵</kbd>
+                    {copy.hintOpen}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <kbd className={hintKeyClass}>esc</kbd>
+                    {copy.hintClose}
+                  </span>
+                </p>
               </div>
             </div>,
             document.body,
