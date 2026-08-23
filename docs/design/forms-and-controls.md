@@ -482,6 +482,21 @@ hard-coded one, so this is a manual review point: if a control's only visible co
 glyph, or `aria-hidden` SVG, it must carry `aria-label` (or, for a toggle whose pressed state
 matters, `aria-pressed` too).
 
+## Empty states: `EmptyState`
+
+`title` (required), `body`, `action`. **No `children`** — the component owned the box and left the
+inside to the call site, so 46 of them invented 46 anatomies and twenty were a single muted sentence
+with no heading at all: `brand.md`'s "No records found" wearing a nicer border, on a surface whose
+own principle says empty states *teach* (issue #774).
+
+- **`title`** is the teaching line — what is not here, and usually why. "No trips yet — schedule
+  your first charter", not "No records found".
+- **`body`** only where the title alone leaves the reader guessing.
+- **`action`** where there is a next step. It is optional on purpose: some of these are states the
+  reader cannot do anything about — no reviews written yet, no waivers signed yet — and a required
+  action prop would manufacture a button for them.
+- **`titleAs`** picks `h2` or `h3`, exactly as `SectionCard` does. The look is the component's; the
+  *level* is document structure and depends on how deeply the card is nested.
 ## Motion: write a bare `transition-*`
 
 The app has three curves, declared in `@theme` in `globals.css` and argued for there:

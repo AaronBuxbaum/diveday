@@ -21,15 +21,21 @@ export function HandEntryPrompt({
   className?: string;
 }) {
   return (
-    <EmptyState className={className}>
-      <h3 className="font-medium">{heading}</h3>
-      <p className="mx-auto mt-1 max-w-md text-sm text-muted">{body}</p>
-      <Link
-        href={href}
-        className={buttonClass({ variant: "primary", size: "sm", className: "mt-4" })}
-      >
-        {actionLabel}
-      </Link>
-    </EmptyState>
+    <EmptyState
+      titleAs="h3"
+      title={heading}
+      body={body}
+      action={
+        <>
+          <Link
+            href={href}
+            className={buttonClass({ variant: "primary", size: "sm", className: "mt-4" })}
+          >
+            {actionLabel}
+          </Link>
+        </>
+      }
+      className={className}
+    />
   );
 }

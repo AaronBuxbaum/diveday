@@ -120,9 +120,7 @@ export function SpecialtyCards({
         ) : null}
       </div>
       {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
-        <EmptyState className="mt-4">
-          <p className="text-sm text-muted">{t("divers.specialty.emptyState")}</p>
-        </EmptyState>
+        <EmptyState title={t("divers.specialty.emptyState")} className="mt-4" />
       ) : (
         <ul
           className={sectionCardClass({

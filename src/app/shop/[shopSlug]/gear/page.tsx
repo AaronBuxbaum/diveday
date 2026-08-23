@@ -238,14 +238,19 @@ export default async function GearRegisterPage({
         ) : null}
 
         {fleetTotal === 0 && !showDeleted ? (
-          <EmptyState className="mt-4">
-            <h2 className="font-semibold">{t("gear.empty.heading")}</h2>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <AddUnitLink className={buttonClass()}>
-                <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
-              </AddUnitLink>
-            </div>
-          </EmptyState>
+          <EmptyState
+            title={t("gear.empty.heading")}
+            action={
+              <>
+                <div className="mt-4 flex flex-wrap justify-center gap-3">
+                  <AddUnitLink className={buttonClass()}>
+                    <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
+                  </AddUnitLink>
+                </div>
+              </>
+            }
+            className="mt-4"
+          />
         ) : (
           <section aria-label={showDeleted ? t("gear.deleted.title") : t("gear.fleet.ariaLabel")}>
             <nav aria-label={t("gear.fleet.filterAriaLabel")} className="flex flex-wrap gap-2">

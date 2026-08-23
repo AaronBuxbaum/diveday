@@ -139,9 +139,7 @@ export default async function BlowoutPage({
           <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
           {roster.length === 0 ? (
             // Nested inside the confirm card, so no icon.
-            <EmptyState icon={false} className="mt-5">
-              <p className="text-sm text-muted">{t("blowout.confirm.noDivers")}</p>
-            </EmptyState>
+            <EmptyState title={t("blowout.confirm.noDivers")} icon={false} className="mt-5" />
           ) : (
             <div className="mt-5">
               <h2 className="text-sm font-semibold">
@@ -223,9 +221,7 @@ export default async function BlowoutPage({
       </div>
 
       {divers.length === 0 ? (
-        <EmptyState className="mt-6">
-          <p className="mx-auto max-w-md text-sm text-muted">{t("blowout.record.empty")}</p>
-        </EmptyState>
+        <EmptyState title={t("blowout.record.empty")} className="mt-6" />
       ) : (
         <Table shellClassName="mt-6">
           <THead>

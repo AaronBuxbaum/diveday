@@ -426,15 +426,14 @@ export function DiverList({
         </div>
       </div>
       {divers.length === 0 ? (
-        <EmptyState className="mt-4">
-          <p className="font-medium">{narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}</p>
-          {narrowed ? null : (
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">{copy.addOneHere}</p>
-          )}
-          {/* Narrowed to nothing and empty on day one are different problems,
-              so they get different doors: widen the view, or start the roster. */}
-          {narrowed ? (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <EmptyState
+          className="mt-4"
+          title={narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}
+          body={narrowed ? null : copy.addOneHere}
+          /* Narrowed to nothing and empty on day one are different problems,
+             so they get different doors: widen the view, or start the roster. */
+          action={
+            narrowed ? (
               <Link
                 href={hrefFor("", "all")}
                 scroll={false}
@@ -446,23 +445,19 @@ export function DiverList({
               >
                 {copy.emptyShowAll}
               </Link>
-            </div>
-          ) : importHref ? (
-            <>
-              <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
-              <Link
-                href={importHref}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "mt-2",
-                })}
-              >
-                {copy.emptyImportAction}
-              </Link>
-            </>
-          ) : null}
-        </EmptyState>
+            ) : importHref ? (
+              <div className="flex flex-col items-center gap-2">
+                <p className="max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+                <Link
+                  href={importHref}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {copy.emptyImportAction}
+                </Link>
+              </div>
+            ) : null
+          }
+        />
       ) : (
         <>
           {/* Phone: stacked cards, so nothing hides behind a sideways scroll. */}

@@ -210,39 +210,43 @@ export function LastMinuteDealSection({
         // door that helps from here: a cancelled boat sends you back to the
         // schedule, a full boat to the wait list this trip already keeps, and
         // an empty last-minute list to seating someone by hand.
-        <EmptyState className="mt-4">
-          <h3 className="font-medium">
-            {cancelled
+        <EmptyState
+          titleAs="h3"
+          className="mt-4"
+          title={
+            cancelled
               ? t("trips.lastMinute.cancelledHeading")
               : openSeats <= 0
                 ? t("trips.lastMinute.fullHeading")
-                : t("trips.lastMinute.noneAroundHeading")}
-          </h3>
-          {cancelled ? null : (
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {openSeats <= 0
+                : t("trips.lastMinute.noneAroundHeading")
+          }
+          body={
+            cancelled
+              ? null
+              : openSeats <= 0
                 ? t("trips.lastMinute.fullNotice")
-                : t("trips.lastMinute.noneAroundNotice")}
-            </p>
-          )}
-          {cancelled ? (
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {t("trips.lastMinute.cancelledAction")}
-            </Link>
-          ) : (
-            <a
-              href={openSeats <= 0 ? "#waitlist" : "#add-diver"}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {openSeats <= 0
-                ? t("trips.lastMinute.fullAction")
-                : t("trips.lastMinute.noneAroundAction")}
-            </a>
-          )}
-        </EmptyState>
+                : t("trips.lastMinute.noneAroundNotice")
+          }
+          action={
+            cancelled ? (
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("trips.lastMinute.cancelledAction")}
+              </Link>
+            ) : (
+              <a
+                href={openSeats <= 0 ? "#waitlist" : "#add-diver"}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {openSeats <= 0
+                  ? t("trips.lastMinute.fullAction")
+                  : t("trips.lastMinute.noneAroundAction")}
+              </a>
+            )
+          }
+        />
       )}
 
       {promos.length > 0 ? (

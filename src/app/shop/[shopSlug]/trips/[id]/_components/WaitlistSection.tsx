@@ -77,9 +77,7 @@ export function WaitlistSection({
       </h2>
       <p className="mt-1 text-sm text-muted">{t("trips.waitlist.description")}</p>
       {waitlist.length === 0 ? (
-        <EmptyState className="mt-4">
-          <p className="text-sm text-muted">{t("trips.waitlist.empty")}</p>
-        </EmptyState>
+        <EmptyState title={t("trips.waitlist.empty")} className="mt-4" />
       ) : (
         // A plain list, not a numbered one: a rank badge here read as a
         // standing the diver was never promised, and it nudged staff to work

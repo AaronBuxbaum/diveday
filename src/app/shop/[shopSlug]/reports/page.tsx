@@ -329,11 +329,7 @@ export default async function ReportsPage({
         // it: `ShopNotice` is the vocabulary for something that *happened*
         // (a save, a refusal, a permission bounce), and wearing it here made an
         // ordinary quiet January read as a warning.
-        <EmptyState>
-          <p className="mx-auto max-w-md text-sm text-muted">
-            {isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
-          </p>
-        </EmptyState>
+        <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
       ) : (
         <>
           <section
@@ -491,11 +487,7 @@ export default async function ReportsPage({
               />
             </section>
           ) : (
-            <EmptyState className="mt-8">
-              <p className="mx-auto max-w-md text-sm text-muted">
-                {t("reports.noTripsWithImportedHistory")}
-              </p>
-            </EmptyState>
+            <EmptyState title={t("reports.noTripsWithImportedHistory")} className="mt-8" />
           )}
         </>
       )}

@@ -223,16 +223,20 @@ export default async function TripPrepPage({
         // The whole page's content region, so this one wears an h2 — and the
         // packing list can only become real once someone is on the boat, which
         // happens on the Guests tab.
-        <EmptyState>
-          <h2 className="font-medium">{t("trips.prep.emptyHeading")}</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("trips.prep.noDivers")}</p>
-          <Link
-            href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-            className={buttonClass({ className: "mt-4" })}
-          >
-            {t("trips.prep.emptyAction")}
-          </Link>
-        </EmptyState>
+        <EmptyState
+          title={t("trips.prep.emptyHeading")}
+          body={t("trips.prep.noDivers")}
+          action={
+            <>
+              <Link
+                href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {t("trips.prep.emptyAction")}
+              </Link>
+            </>
+          }
+        />
       ) : (
         <>
           <section aria-labelledby="tanks-heading">
@@ -441,28 +445,34 @@ export default async function TripPrepPage({
               // the same empty table — a genuine nothing-to-do, or fits that
               // were never recorded — and the Guests tab is where a fit gets
               // put on file either way.
-              <EmptyState className="mt-3">
-                <h3 className="font-medium">
-                  {needsSorting
+              <EmptyState
+                titleAs="h3"
+                title={
+                  needsSorting
                     ? t("trips.prep.rentalKitEmptyNeedsSortingHeading")
-                    : t("trips.prep.rentalKitEmptyOwnKitHeading")}
-                </h3>
-                <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-                  {needsSorting
+                    : t("trips.prep.rentalKitEmptyOwnKitHeading")
+                }
+                body={
+                  needsSorting
                     ? t("trips.prep.nothingToPullNeedsSorting")
-                    : t("trips.prep.nothingToPullOwnKit")}
-                </p>
-                <Link
-                  href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-                  className={buttonClass({
-                    variant: "secondary",
-                    size: "sm",
-                    className: "mt-4",
-                  })}
-                >
-                  {t("trips.prep.rentalKitEmptyAction")}
-                </Link>
-              </EmptyState>
+                    : t("trips.prep.nothingToPullOwnKit")
+                }
+                action={
+                  <>
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                      className={buttonClass({
+                        variant: "secondary",
+                        size: "sm",
+                        className: "mt-4",
+                      })}
+                    >
+                      {t("trips.prep.rentalKitEmptyAction")}
+                    </Link>
+                  </>
+                }
+                className="mt-3"
+              />
             ) : grouping === "item" ? (
               <>
                 {/* Phone: stacked cards. Four columns at 390px put a

@@ -353,9 +353,7 @@ export function BuddyTeamsPanel({
           // `icon={false}` — this sits nested under the teams list, where the
           // bubbles read as a second, larger empty state than the one line of
           // text warrants.
-          <EmptyState icon={false} className="mt-3">
-            <p className="text-sm text-muted">{t("manifest.buddyEveryoneTeamed")}</p>
-          </EmptyState>
+          <EmptyState title={t("manifest.buddyEveryoneTeamed")} icon={false} className="mt-3" />
         ) : null}
       </details>
     </section>

@@ -283,23 +283,26 @@ export function TodayQueue({
     if (firstRun) return null;
     return (
       <section aria-labelledby="queue-heading">
-        <EmptyState>
-          <h2 id="queue-heading" className="font-medium">
-            {t("shared.today.todayQueue.emptyHeading")}
-          </h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {t("shared.today.todayQueue.emptyBody")}{" "}
-            {seasonalBriefingText(t, getSeasonalBriefing(nowDate(), timezone), shopName)}
-          </p>
-          {/* The by-departure view's empty state offers exactly this link, and
-              the two views are meant to rest alike (BlockerGroups). */}
-          <Link
-            href={`/shop/${shopSlug}/schedule/board`}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-          >
-            {t("shared.today.todayQueue.emptyAction")}
-          </Link>
-        </EmptyState>
+        <EmptyState
+          titleId="queue-heading"
+          title={t("shared.today.todayQueue.emptyHeading")}
+          body={
+            <>
+              {t("shared.today.todayQueue.emptyBody")}{" "}
+              {seasonalBriefingText(t, getSeasonalBriefing(nowDate(), timezone), shopName)}
+            </>
+          }
+          action={
+            // The by-departure view's empty state offers exactly this link, and
+            // the two views are meant to rest alike (BlockerGroups).
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("shared.today.todayQueue.emptyAction")}
+            </Link>
+          }
+        />
       </section>
     );
   }

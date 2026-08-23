@@ -537,37 +537,42 @@ export default async function OrdersIndexPage({
         // one thing that moves a shop forward is either sending the first one
         // or connecting the account that can. Filtered-to-nothing is a
         // different problem and gets the way back out instead.
-        <EmptyState className="mt-8">
-          <p className="text-sm text-muted">
-            {hasFilters
+        <EmptyState
+          title={
+            hasFilters
               ? t("orders.index.emptyFiltered")
               : paymentsConnected
                 ? t("orders.index.emptyAll")
-                : t("orders.index.emptyNoPayments")}
-          </p>
-          {hasFilters ? (
-            <Link
-              href={`/shop/${shopSlug}/orders`}
-              scroll={false}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {t("orders.index.filters.clear")}
-            </Link>
-          ) : paymentsConnected ? (
-            <Link
-              href={`/shop/${shopSlug}/orders/new`}
-              className={buttonClass({ className: "mt-4" })}
-            >
-              {t("orders.index.newOrder")}
-            </Link>
-          ) : (
-            <PaymentsConnectCta
-              shopSlug={shopSlug}
-              label={t("shared.payments.connect")}
-              className="mt-4"
-            />
-          )}
-        </EmptyState>
+                : t("orders.index.emptyNoPayments")
+          }
+          action={
+            <>
+              {hasFilters ? (
+                <Link
+                  href={`/shop/${shopSlug}/orders`}
+                  scroll={false}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                >
+                  {t("orders.index.filters.clear")}
+                </Link>
+              ) : paymentsConnected ? (
+                <Link
+                  href={`/shop/${shopSlug}/orders/new`}
+                  className={buttonClass({ className: "mt-4" })}
+                >
+                  {t("orders.index.newOrder")}
+                </Link>
+              ) : (
+                <PaymentsConnectCta
+                  shopSlug={shopSlug}
+                  label={t("shared.payments.connect")}
+                  className="mt-4"
+                />
+              )}
+            </>
+          }
+          className="mt-8"
+        />
       ) : rows.length > 0 ? (
         <Table shellClassName="mt-6">
           <THead>

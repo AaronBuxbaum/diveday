@@ -198,22 +198,28 @@ export default async function StaffingPage({
             failed to load. Who can fix it decides what it says: a manager gets
             the door to Team, everyone else gets the honest "ask an owner". */}
         {view.staff.length === 0 ? (
-          <EmptyState className="mt-4">
-            <h3 className="font-medium">{t("staffing.working.rosterEmptyHeading")}</h3>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {canManage
+          <EmptyState
+            titleAs="h3"
+            title={t("staffing.working.rosterEmptyHeading")}
+            body={
+              canManage
                 ? t("staffing.working.rosterEmptyManagerBody")
-                : t("staffing.working.rosterEmptyBody")}
-            </p>
-            {canManage ? (
-              <Link
-                href={`/shop/${shopSlug}/settings/team`}
-                className={buttonClass({ className: "mt-4" })}
-              >
-                {t("staffing.working.rosterEmptyAction")}
-              </Link>
-            ) : null}
-          </EmptyState>
+                : t("staffing.working.rosterEmptyBody")
+            }
+            action={
+              <>
+                {canManage ? (
+                  <Link
+                    href={`/shop/${shopSlug}/settings/team`}
+                    className={buttonClass({ className: "mt-4" })}
+                  >
+                    {t("staffing.working.rosterEmptyAction")}
+                  </Link>
+                ) : null}
+              </>
+            }
+            className="mt-4"
+          />
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {view.staff.map((member) => (
@@ -271,9 +277,7 @@ export default async function StaffingPage({
                     {t("staffing.working.crewingHeading")}
                   </p>
                   {member.crewingTrips.length === 0 ? (
-                    <EmptyState className="mt-1">
-                      <p className="text-sm text-muted">{t("staffing.working.crewingEmpty")}</p>
-                    </EmptyState>
+                    <EmptyState title={t("staffing.working.crewingEmpty")} className="mt-1" />
                   ) : (
                     <ul className="mt-1 space-y-1 text-sm">
                       {member.crewingTrips.map((trip) => (

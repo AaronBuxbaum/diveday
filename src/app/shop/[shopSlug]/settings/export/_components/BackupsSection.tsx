@@ -255,9 +255,7 @@ export function BackupsSection({
             // `icon={false}`: this sits inside the history card, under its own
             // `<h3>` — the bubbles belong to a page-level rest state, not to a
             // panel nested two boxes deep.
-            <EmptyState icon={false}>
-              <p className="text-sm text-muted">{t("backup.history.empty")}</p>
-            </EmptyState>
+            <EmptyState title={t("backup.history.empty")} icon={false} />
           ) : (
             <>
               {/* Five columns at `sm` and up; one stacked block below it.

@@ -238,9 +238,7 @@ export default async function WaiverSignaturesPage({
           {t("waiversStaff.signatures.heading")}
         </h2>
         {auditPage.total === 0 ? (
-          <EmptyState className="mt-4">
-            <p className="text-sm text-muted">{t("waiversStaff.signatures.noSignedRecords")}</p>
-          </EmptyState>
+          <EmptyState title={t("waiversStaff.signatures.noSignedRecords")} className="mt-4" />
         ) : (
           <>
             <SectionCard as="div" padding="none" className="mt-4 overflow-hidden">

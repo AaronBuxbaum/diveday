@@ -264,9 +264,7 @@ export function RouteEditor({
       ) : (
         // Nested inside the fieldset, so no icon — same shared panel the field
         // guide and the landmark editor wear for the same state.
-        <EmptyState icon={false} className="mt-4">
-          <p className="text-sm text-muted">{copy.needsCoordinates}</p>
-        </EmptyState>
+        <EmptyState title={copy.needsCoordinates} icon={false} className="mt-4" />
       )}
 
       <FieldGrid columns={2} className="mt-4">

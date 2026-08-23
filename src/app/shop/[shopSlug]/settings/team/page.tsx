@@ -456,16 +456,17 @@ export default async function TeamSettingsPage({
             {t("settings.team.current.description")}
           </p>
           {staff.length === 0 ? (
-            <EmptyState className="mt-4">
-              <p className="mx-auto max-w-md text-sm text-muted">
-                {t("settings.team.current.empty")}
-              </p>
-              {/* Reaching this page at all took the manage-staff gate, so anyone
-                reading this may send the invite — no second check needed. */}
-              <a href="#invite" className={buttonClass({ size: "sm", className: "mt-4" })}>
-                {t("settings.team.current.emptyAction")}
-              </a>
-            </EmptyState>
+            <EmptyState
+              title={t("settings.team.current.empty")}
+              action={
+                <>
+                  <a href="#invite" className={buttonClass({ size: "sm", className: "mt-4" })}>
+                    {t("settings.team.current.emptyAction")}
+                  </a>
+                </>
+              }
+              className="mt-4"
+            />
           ) : (
             <>
               <ul className="mt-4 flex flex-col gap-3">
