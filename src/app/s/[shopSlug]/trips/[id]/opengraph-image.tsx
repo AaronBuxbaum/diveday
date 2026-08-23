@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { CARD_STYLE, OG_COLORS, OG_TAGLINE, OG_WORDMARK, ogFooter } from "@/app/_og/card";
+import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogCredit, ogFooter } from "@/app/_og/card";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
@@ -70,11 +70,16 @@ export default async function TripOpenGraphImage({
   // rather than a stale seat count (mirrors `tripJsonLd`'s SoldOut handling).
   const remaining = trip.conditionsHold ? 0 : spotsRemaining(trip);
 
+  // **The shop's card, not ours** (issue #810). The wordmark used to be the
+  // largest, topmost element and the footer spliced the shop's own scarcity
+  // line onto DiveDay's tagline with a middot — "3 spots left · A calmer way
+  // to run a dive day" reads as one claim about the same thing. The shop leads
+  // now, the seats line stands alone, and the tagline is gone: it is DiveDay's
+  // sentence, and this card is posted by a dive shop to its own audience.
   return new ImageResponse(
     <div style={CARD_STYLE}>
-      {OG_WORDMARK}
+      <div style={{ display: "flex", fontSize: 34, fontWeight: 600 }}>{shop.name}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ display: "flex", fontSize: 30, color: OG_COLORS.muted }}>{shop.name}</div>
         <div
           style={{
             display: "flex",
@@ -92,11 +97,16 @@ export default async function TripOpenGraphImage({
           {priceLine ? <div style={{ display: "flex" }}>· {priceLine}</div> : null}
         </div>
       </div>
-      {ogFooter(
-        remaining > 0
-          ? `${remaining} ${remaining === 1 ? "spot" : "spots"} left · ${OG_TAGLINE}`
-          : OG_TAGLINE,
-      )}
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}
+      >
+        {remaining > 0 ? (
+          ogFooter(`${remaining} ${remaining === 1 ? "spot" : "spots"} left`)
+        ) : (
+          <div style={{ display: "flex" }} />
+        )}
+        {ogCredit()}
+      </div>
     </div>,
     size,
   );

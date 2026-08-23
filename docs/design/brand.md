@@ -57,6 +57,20 @@ Use the mark as a simple, recognizable signal:
   use more space when the mark is next to a wordmark.
 - Do not use the mark to imply certification, safety approval, or an agency relationship.
 
+**On a surface that belongs to a shop, the mark is a credit, not a headline.** A shop's public
+schedule and its departure pages are the shop's own work, and so are the link-preview cards they
+unfurl to when the shop posts one. Those cards led with the DiveDay wordmark at display scale and
+closed with DiveDay's tagline — on the departure card, spliced onto the shop's own "3 spots left"
+with a middot, so the two read as one claim (issue #810). The shop's name leads now; DiveDay is a
+half-size mark and a 22px muted name at the foot, the way a venue's name sits on a ticket
+(`ogCredit` in `src/app/_og/card.tsx`).
+
+The tagline stays on DiveDay's *own* cards — the marketing root and anything else where DiveDay is
+the subject. It never rides along inside a customer's social post, where the reader has no idea
+what DiveDay is and no reason to care. The general rule is the one in **Voice** below: the product
+may be the actor when it acts on someone's behalf, and otherwise the shop's work stays in the
+foreground.
+
 There is currently no separate production-ready wordmark asset in `public/`. For a vendor proof,
 use the mark with the word `DiveDay` set in Geist Semibold, or request a vector lockup derived from
 the implementation. Do not send a screenshot of the website as the artwork.

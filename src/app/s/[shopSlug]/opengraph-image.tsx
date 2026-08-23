@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogFooter } from "@/app/_og/card";
+import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogCredit, ogFooter } from "@/app/_og/card";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
@@ -49,11 +49,18 @@ export default async function ScheduleOpenGraphImage({
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return genericCard();
 
+  // **The shop's card, not ours.** The wordmark used to lead at 40px and the
+  // tagline used to close; both are DiveDay talking on a link a shop posts to
+  // its own audience (issue #810, docs/design/brand.md's "let the shop and the
+  // user's work stay in the foreground"). The name leads now and the credit
+  // sits at the foot.
   return new ImageResponse(
     <div style={CARD_STYLE}>
-      {OG_WORDMARK}
+      {/* The same three-zone rhythm as the departure card — a small line at
+          the top, the subject in the middle, the credit at the foot — so the
+          two read as one family rather than as two layouts. */}
+      <div style={{ display: "flex", fontSize: 30, color: OG_COLORS.muted }}>Dive schedule</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ display: "flex", fontSize: 30, color: OG_COLORS.muted }}>Dive schedule</div>
         <div
           style={{
             display: "flex",
@@ -67,7 +74,7 @@ export default async function ScheduleOpenGraphImage({
           {shop.name}
         </div>
       </div>
-      {ogFooter()}
+      {ogCredit()}
     </div>,
     size,
   );

@@ -128,10 +128,56 @@ export const OG_WORDMARK = (
   </div>
 );
 
-/** The promise every card closes on, when it has nothing more specific to say. */
+/** The promise DiveDay's *own* cards close on. Never a shop's. */
 export const OG_TAGLINE = "A calmer way to run a dive day";
 
 /** A card's bottom line: the tagline, or the one fact that earns the slot. */
 export function ogFooter(text: string = OG_TAGLINE) {
   return <div style={{ display: "flex", fontSize: 28, color: OG_COLORS.primary }}>{text}</div>;
+}
+
+/**
+ * **DiveDay's credit on a card that belongs to somebody else.**
+ *
+ * The two shop-scoped cards led with the wordmark at 40px and closed with the
+ * tagline — so a dive shop posting its own departure to its own audience got a
+ * card whose loudest element was its software vendor's logo, and whose last
+ * line was that vendor's marketing sentence spliced onto the shop's own "3
+ * spots left" with a middot, reading as one claim (issue #810).
+ *
+ * `docs/design/brand.md` already had the answer: the product may be the actor
+ * when it acts on someone's behalf, and "otherwise, let the shop and the
+ * user's work stay in the foreground". A shop advertising a boat trip is the
+ * clearest case of the shop's own work there is.
+ *
+ * So the credit stays — the page is hosted here and attribution is honest —
+ * but at 22px in muted ink at the foot of the card, the way a venue's name
+ * sits on a ticket. Half the mark's size, since it is a credit rather than a
+ * lockup, and the bubbles keep their proportions.
+ */
+export function ogCredit() {
+  const box = OG_MARK_SIZE / 2;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: 0.75 }}>
+      <div style={{ display: "flex", position: "relative", width: box, height: box }}>
+        {ogMarkCircles(box).map((circle) => (
+          <div
+            key={`${circle.left},${circle.top}`}
+            style={{
+              position: "absolute",
+              left: circle.left,
+              top: circle.top,
+              width: circle.size,
+              height: circle.size,
+              borderRadius: 9999,
+              backgroundColor: circle.color,
+              opacity: circle.opacity,
+              display: "flex",
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: "flex", fontSize: 22, color: OG_COLORS.muted }}>DiveDay</div>
+    </div>
+  );
 }

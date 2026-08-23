@@ -107,6 +107,43 @@ describe("every link-preview card wears the shared chrome", () => {
     ]);
   });
 
+  /**
+   * **Whose card is it?** The two shop-scoped cards led with the wordmark at
+   * display scale and closed with DiveDay's tagline, on links a dive shop
+   * posts to its own audience — and on the departure card the tagline shared a
+   * line with the shop's own "3 spots left", so the two read as one claim
+   * (issue #810). `brand.md` already had the answer: the product may be the
+   * actor when it acts on someone's behalf, and otherwise the shop's work
+   * stays in the foreground.
+   *
+   * This is a text check on the source rather than on a rendered bitmap
+   * because the bitmap is what nobody ever looks at — which is how the cards
+   * got this way. It fails the moment somebody puts the lockup back.
+   */
+  it("keeps DiveDay's lockup and tagline off the cards that belong to a shop", async () => {
+    for (const file of await cardFiles()) {
+      const relative = path.relative(APP, file);
+      const isShopCard = relative.startsWith(`s${path.sep}`);
+      const source = stripComments(await readFile(file, "utf8"));
+      if (isShopCard) {
+        expect(source, `${relative} closes with DiveDay's tagline`).not.toMatch(/OG_TAGLINE/);
+        expect(source, `${relative} should credit DiveDay at the foot`).toMatch(/ogCredit\(\)/);
+        // Exactly one lockup survives on each: the unknown-slug fallback, which
+        // names no shop and is therefore DiveDay's own card rather than
+        // somebody's. A second one is the headline creeping back.
+        expect(
+          source.match(/\{OG_WORDMARK\}/g)?.length ?? 0,
+          `${relative} draws the lockup outside its generic fallback`,
+        ).toBeLessThanOrEqual(1);
+      } else {
+        // DiveDay's own cards keep both: there, DiveDay *is* the subject.
+        expect(source, `${relative} is DiveDay's own card and should wear the lockup`).toMatch(
+          /\{OG_WORDMARK\}/,
+        );
+      }
+    }
+  });
+
   it("draws none of its own — no local wordmark, card style, or bubble", async () => {
     for (const file of await cardFiles()) {
       const source = stripComments(await readFile(file, "utf8"));
