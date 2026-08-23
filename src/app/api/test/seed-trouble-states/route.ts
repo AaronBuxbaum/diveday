@@ -20,7 +20,6 @@ import {
   people,
   personRoles,
   processorErasureObligations,
-  shops,
   specialtyCertifications,
   tripReviews,
   trips,
@@ -303,16 +302,6 @@ export async function POST(request: Request) {
   // aboard count on the page.
   if (new URL(request.url).searchParams.get("crewUncounted") === "1") {
     await boardEveryDiverAndNoCrew(db, shop.id, now);
-  }
-
-  // **A shop that never answered the first-run units question.** The seed
-  // confirms it for Blue Mantis, because a demo asking a trading shop which
-  // currency it works in on every screenshot is a worse demo — so the state
-  // that actually raises the row has to be arranged here, and opt-in like the
-  // rest, since it adds a row to the queue every other Today capture counts
-  // (issue #835).
-  if (new URL(request.url).searchParams.get("unitsUnconfirmed") === "1") {
-    await db.update(shops).set({ unitsConfirmedAt: null }).where(eq(shops.id, shop.id));
   }
 
   return NextResponse.json({ ok: true });
