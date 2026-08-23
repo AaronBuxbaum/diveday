@@ -405,7 +405,8 @@ export function RosterSection({
               key={sentence}
               className={`flex gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
                 tone === "danger"
-                  ? "bg-danger/5 text-danger"
+                  ? // diveday:allow-tinted-ink: a 5% wash, not the status tint — `text-danger` on `danger/5` measures 5.66:1 over `--background` in the app palette (issue #874)
+                    "bg-danger/5 text-danger"
                   : "bg-warning-tint text-warning-strong"
               }`}
             >
@@ -766,6 +767,7 @@ export function RosterSection({
 
                 {blockerTexts.length > 0 ? (
                   <>
+                    {/* diveday:allow-tinted-ink: same 5% wash, 5.66:1 — see the row tone above */}
                     <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
                       {uniqueBlockers.map(({ text }) => (
                         <li key={text} className="flex gap-2">

@@ -60,7 +60,11 @@ function ChecklistStep({
           aria-hidden="true"
           className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
             done
-              ? "bg-success/15 text-success-strong"
+              ? // `-tint`, not `/15`: this tick renders on the shop home, in the
+                // app palette, where `-strong` on a 15% fill measures 4.33:1
+                // over `--background` (issue #874). The opaque token is 4.86:1
+                // wherever it is mounted, which is the whole argument for it.
+                "bg-success-tint text-success-strong"
               : "border-2 border-dashed border-border-strong"
           }`}
         >

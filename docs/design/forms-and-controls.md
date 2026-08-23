@@ -467,6 +467,12 @@ Bold is under AA. Read off it:
 - **`opacity-*` dims the ratio too.** A row greyed out with `opacity-60` takes its own status chip
   down with it — 2.81:1 on the import preview, on a table whose whole job is being read. Quiet ink
   is `text-muted`, which is a token with a measured ratio; opacity is not.
+- **A `/15` fill is a different question, and the answer is the skin.** Measured across all three
+  palettes at a 15% fill of the ink's own hue: **boat light bottoms out at 4.98:1** and boat dark at
+  5.50:1, against the **app palette's 3.90:1** for the same pair. So the roll-call surfaces that use
+  one are compliant where they render and the app-palette ones are not — the shop home's first-run
+  tick was at 4.33:1 until it moved to `bg-success-tint` (issue #874). `scripts/check-tinted-ink.mjs`
+  knows which files render under boat mode; everywhere else, use the opaque token.
 - **Boat mode is exempt from all of it.** `.boat-mode` retunes the feedback hues for a deck in
   sun; its worst tinted-fill combination measures 5.40:1 in light and 5.32:1 in dark, so the
   roll-call fills that use the raw token there are compliant and stay as they are.
