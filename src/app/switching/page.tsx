@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
+import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
@@ -13,7 +14,6 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { DemoTrialCtas } from "./_components/guide";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -221,7 +221,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
             </p>
           </div>
           <div className="lg:shrink-0">
-            <DemoTrialCtas locale={locale} source="switching-hub" />
+            <FunnelCtas locale={locale} source="switching-hub" />
           </div>
         </div>
       </section>

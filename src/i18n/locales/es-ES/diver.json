@@ -1791,7 +1791,6 @@
     "common": {
       "backToGuides": "← Todas las guías de cambio",
       "contextEyebrow": "Dónde estás hoy",
-      "gettingDemoReady": "Preparando la demo…",
       "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
       "facts": {
         "moves": {
@@ -2735,15 +2734,13 @@
       },
       "closingTitle": "Pruébalo como la persona que hace el trabajo.",
       "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — luego empieza tu propio centro de prueba.",
-      "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →",
-      "gettingDemoReady": "Preparando la demo…"
+      "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →"
     },
     "pricing": {
       "heroTitle": "Un precio fijo para todo el centro.",
       "heroDescription": "Sin cuota de alta. Sin cálculos por plaza. Sin niveles de funciones. Sin comisión sobre tus reservas.",
       "heroSafetyNote": "El flujo de seguridad nunca es un extra.",
       "earlyAccessBadge": "Acceso anticipado",
-      "gettingDemoReady": "Preparando la demo…",
       "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración tiene coste adicional, lo diremos antes de activarla.",
       "includedLead": "Qué cubre el precio",
       "feeAnchor": {

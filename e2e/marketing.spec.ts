@@ -234,8 +234,20 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByRole("heading", { name: "What happens to my records if I leave?" }),
   ).toBeVisible();
   // Same shared label as everywhere else — "Try the live demo first" was the
-  // exact per-page synonym drift the one-label rule exists to catch.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  // exact per-page synonym drift the one-label rule exists to catch. Two of
+  // them: the hero and the close, which is the funnel's own rule that both
+  // doors appear in every closing band (docs/product/marketing.md, "The two
+  // doors, and which one leads").
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
+
+  // And the demo *leads*: first in the DOM, primary weight, with the trial
+  // behind it. This page carried them the other way round under the same two
+  // labels, so a visitor told on the homepage that the demo was the thing to
+  // do found the emphasis reversed one tap later. The order is now decided in
+  // one component (src/app/_components/FunnelCtas.tsx), not per page.
+  const priceHeroDoors = page.getByRole("main").locator("section").first().locator("a, button");
+  await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
+  await expect(priceHeroDoors.nth(1)).toHaveText("Start a trial");
 
   // The page closes on the number it opened with, and that closing door is
   // tagged apart from the hero's. Without it the only trial door below the
@@ -251,6 +263,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(pricingMain.getByRole("link", { name: "Start a trial" }).last()).toBeVisible();
   await expect(pricingMain.locator('a[href="/onboard?from=pricing-close"]')).toHaveCount(1);
   await expect(pricingMain.locator('a[href="/onboard?from=pricing"]')).toHaveCount(1);
+  // The demo is offered at the close too, and tagged for that position. It
+  // used to be dropped here, leaving the higher-friction door alone at the
+  // moment the reader is warmest (issue #785).
+  const closingBand = pricingMain.locator("section").last();
+  await expect(closingBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
+  await expect(closingBand.locator('input[name="source"]')).toHaveValue("pricing-close");
 
   // The switching guides' door out of the FAQ. Without it the footer is the
   // only path to /switching from this page, and the row's href and label are

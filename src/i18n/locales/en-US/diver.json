@@ -1791,7 +1791,6 @@
     "common": {
       "backToGuides": "← All switching guides",
       "contextEyebrow": "Where you are today",
-      "gettingDemoReady": "Getting the demo ready…",
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
       "facts": {
         "moves": {
@@ -2735,15 +2734,13 @@
       },
       "closingTitle": "Try it as the person doing the work.",
       "closingDescription": "Walk the live demo as the owner, the captain, or a diver — then start a trial shop of your own.",
-      "spreadsheetLink": "See how DiveDay reads your spreadsheet →",
-      "gettingDemoReady": "Getting the demo ready…"
+      "spreadsheetLink": "See how DiveDay reads your spreadsheet →"
     },
     "pricing": {
       "heroTitle": "One flat price for the whole shop.",
       "heroDescription": "No setup fee. No per-seat math. No feature tiers. No cut of your bookings.",
       "heroSafetyNote": "The safety workflow is never an add-on.",
       "earlyAccessBadge": "Early access",
-      "gettingDemoReady": "Getting the demo ready…",
       "feesNote": "Payment-processing fees stay between you and your payment provider. If an integration ever costs extra, we'll say so before you turn it on.",
       "includedLead": "What the price covers",
       "feeAnchor": {
