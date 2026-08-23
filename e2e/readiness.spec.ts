@@ -126,6 +126,27 @@ test.describe("staff-prepared trip", () => {
       "mailto:hello@demo.invalid",
     );
 
+    // **And the card can now do something about it** — issue #850's half of the
+    // same complaint. The button is offered to whoever holds the dead URL,
+    // because the fresh link goes to the address already on the booking and
+    // only an outcome code comes back here.
+    //
+    // This particular seat was cancelled a moment ago, so the honest answer is
+    // a refusal: `issueBookingCapability` owns that rule, and a diver who
+    // released their seat must not be mailed a working link back into it — nor
+    // may anyone holding their old URL trigger one. That refusal is the half
+    // worth driving through a real browser; the successful send is covered in
+    // `src/db/readiness-link-rescue.test.ts`, where the mail can be inspected.
+    await page.getByRole("button", { name: "Email me a fresh link" }).click();
+    await expect(page.getByText(/can.t send a new link for this booking/)).toBeVisible();
+    // **Nothing about the diver came back with it.** The refusal names no
+    // address, so the one place the page could have leaked one — the diver's
+    // own, which the rescue reads server-side to decide — is not on it.
+    await expect(page.locator("body")).not.toContainText("nemo-");
+    // And the button is gone: a cancelled seat is the one refusal that tapping
+    // again can never change, so the card stops offering it.
+    await expect(page.getByRole("button", { name: "Email me a fresh link" })).toHaveCount(0);
+
     // And the seat is genuinely back on the boat, not merely hidden from the
     // diver: the six-seat departure reads as six again, not five.
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });

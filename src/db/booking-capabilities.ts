@@ -1,11 +1,11 @@
-import { and, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import {
   capabilityExpiryFor,
   createCapabilityToken,
   hashCapabilityToken,
 } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import type { AppDb, DbExecutor } from "./client";
+import type { DbExecutor } from "./client";
 import { bookingCapabilities, bookings, trips } from "./schema";
 
 export type CapabilityPurpose = "readiness" | "confirm" | "claim";
@@ -48,7 +48,10 @@ export const MAX_LIVE_CAPABILITIES_PER_PURPOSE = 20;
  * likely to have been forwarded, screenshotted, or left in a shared inbox.
  */
 export async function issueBookingCapability(
-  db: AppDb,
+  // `DbExecutor`, so a caller that must decide and write atomically can hand in
+  // its transaction — the readiness rescue re-checks its live-link guard under
+  // a row lock and issues inside the same one (issue #850).
+  db: DbExecutor,
   input: { shopId: string; bookingId: string; purpose: CapabilityPurpose; now?: Date },
 ): Promise<IssuedCapability | null> {
   const now = input.now ?? nowDate();
@@ -96,7 +99,7 @@ export async function issueBookingCapability(
  * anything already expired or revoked is inert and needs no retiring.
  */
 async function retireOldestLiveCapabilities(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   purpose: CapabilityPurpose,
@@ -272,6 +275,93 @@ export async function staleBookingCapabilityForToken(
     )
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * **The booking behind a dead readiness link — for the rescue, and nothing
+ * else.**
+ *
+ * `staleBookingCapabilityForToken` above returns `{ shopId }` alone on purpose,
+ * and its comment says why: a `bookingId` there would sit one line from
+ * `resolveRevokedBookingCapability`'s, which callers *do* use to key booking
+ * reads, and this token is expired. That guard is not weakened — this is a
+ * second, differently-named door with one caller, rather than a widening of the
+ * first.
+ *
+ * What the caller may do with it is bounded by what it is for (issue #850):
+ * key the resend's inbox rate-limit bucket, and hand the booking to
+ * `issueBookingCapability`, which re-validates it and refuses a cancelled one.
+ * **Nothing read through this may reach a rendered page.** The rescue answers
+ * the caller with a bare outcome code — no address, no token, no booking
+ * detail — so a bearer of a dead URL can trigger a delivery to its owner and
+ * learn nothing.
+ *
+ * **Dead links only** — expired or revoked, never a live one. That narrowing is
+ * `staleWaiverRecordForToken`'s and it is load-bearing rather than tidy: the
+ * booking this resolves to keys the resend's per-inbox rate-limit budget, so a
+ * resolver that also answered for *live* tokens would let anyone holding any
+ * readiness URL for a booking — including one that still works — spend the
+ * budget its owner needs to rescue themselves (`security-reviewer`, issue
+ * #850). A live token never reaches this page anyway; it renders the diver's
+ * actual checklist.
+ */
+export async function staleReadinessBookingForResend(
+  db: DbExecutor,
+  token: string,
+  now: Date = nowDate(),
+): Promise<{ shopId: string; bookingId: string } | null> {
+  const [row] = await db
+    .select({
+      shopId: bookingCapabilities.shopId,
+      bookingId: bookingCapabilities.bookingId,
+    })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.tokenHash, hashCapabilityToken(token)),
+        eq(bookingCapabilities.purpose, "readiness"),
+        or(isNotNull(bookingCapabilities.revokedAt), lte(bookingCapabilities.expiresAt, now)),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Does this booking already hold a readiness link somebody could be using?
+ *
+ * The guard that stops a *dead* URL driving a delivery on the live one. Same
+ * shape and same argument as `hasLiveWaiverRequest` on the waiver side.
+ *
+ * **"Live" here means the row, not the answer `verifyBookingCapability` would
+ * give.** Those differ: verification also fails closed on a cancelled booking
+ * and a cancelled trip, so on a called-off departure every capability is an
+ * unrevoked, unexpired row that does not work. Answering `current_link_live`
+ * there told a diver "you already have a link and it still works" about a
+ * departure that no longer runs, in success tone, forever — the caller must
+ * therefore establish that the booking and its trip are good *before* asking
+ * this (`security-reviewer`, issue #850). `emailFreshReadinessLink` does, and
+ * is the only caller.
+ */
+export async function hasLiveReadinessCapability(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const [row] = await db
+    .select({ id: bookingCapabilities.id })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        eq(bookingCapabilities.bookingId, input.bookingId),
+        eq(bookingCapabilities.purpose, "readiness"),
+        isNull(bookingCapabilities.revokedAt),
+        gt(bookingCapabilities.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 /**

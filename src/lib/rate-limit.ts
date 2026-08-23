@@ -465,6 +465,15 @@ export const RATE_LIMITS = {
    */
   waiverLinkResendByBooking: perHour(5),
   /**
+   * The same net, for the same reason, on the trip-prep link (issue #850). A
+   * separate bucket rather than a shared one so that a diver who has lost both
+   * their waiver link and their prep link can rescue each once without one
+   * spending the other's budget — they are two different inboxes' worth of mail
+   * only in the sense that they are two different asks, and refusing the second
+   * because the first was made would read as the feature being broken.
+   */
+  readinessLinkResendByBooking: perHour(5),
+  /**
    * Writing a self-declared certification onto a **named person's** record from
    * the public booking form, per that person rather than per IP.
    *
