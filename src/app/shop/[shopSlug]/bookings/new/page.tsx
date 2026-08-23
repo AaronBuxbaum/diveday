@@ -222,15 +222,20 @@ export default async function NewBookingPage({
             about it. Says both, and names the board as the place to do it. */}
           {trips.length === 0 ? (
             // "Put a departure on the board first" now goes to the board.
-            <EmptyState className="mt-2">
-              <p className="mx-auto max-w-md text-sm text-muted">{t("bookings.new.tripEmpty")}</p>
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ className: "mt-4" })}
-              >
-                {t("bookings.new.tripEmptyAction")}
-              </Link>
-            </EmptyState>
+            <EmptyState
+              title={t("bookings.new.tripEmpty")}
+              action={
+                <>
+                  <Link
+                    href={`/shop/${shopSlug}/schedule/board`}
+                    className={buttonClass({ className: "mt-4" })}
+                  >
+                    {t("bookings.new.tripEmptyAction")}
+                  </Link>
+                </>
+              }
+              className="mt-2"
+            />
           ) : (
             <>
               {/* The shared picker row, also worn by the counter walk-in. Seats

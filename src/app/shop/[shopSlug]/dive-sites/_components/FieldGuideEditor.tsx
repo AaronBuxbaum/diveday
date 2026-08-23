@@ -218,9 +218,7 @@ export function FieldGuideEditor({
         // Nested inside the editor's own box, so no icon — the shared dashed
         // panel is what makes "nothing picked yet" read the same here as it
         // does on a page-level list.
-        <EmptyState icon={false} className="mt-4">
-          <p className="text-sm text-muted">{copy.empty}</p>
-        </EmptyState>
+        <EmptyState title={copy.empty} icon={false} className="mt-4" />
       ) : (
         <ul className="mt-4 space-y-3">
           {chosen.map((slug, index) => {

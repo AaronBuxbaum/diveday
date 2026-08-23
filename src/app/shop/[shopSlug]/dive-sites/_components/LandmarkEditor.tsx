@@ -79,9 +79,7 @@ export function LandmarkEditor({
       {landmarks.length === 0 ? (
         // Nested inside the fieldset, so no icon — same shared panel the field
         // guide and the route editor wear for the same state.
-        <EmptyState icon={false} className="mt-4">
-          <p className="text-sm text-muted">{copy.empty}</p>
-        </EmptyState>
+        <EmptyState title={copy.empty} icon={false} className="mt-4" />
       ) : (
         <ul className="mt-4 space-y-3">
           {landmarks.map((landmark, index) => (

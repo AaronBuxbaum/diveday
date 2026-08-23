@@ -113,10 +113,10 @@ export default async function PublicCoursesPage({
       />
 
       {courseList.length === 0 ? (
-        <EmptyState>
-          <h2 className="font-medium">{t("courses.index.noCoursesHeading")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("courses.index.noCoursesBody")}</p>
-        </EmptyState>
+        <EmptyState
+          title={t("courses.index.noCoursesHeading")}
+          body={t("courses.index.noCoursesBody")}
+        />
       ) : (
         // The ladder, not a card pile: one agency's courses in progression
         // order read as a single hairline ledger, and row ink is spent only on

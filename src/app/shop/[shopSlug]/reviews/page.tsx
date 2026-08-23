@@ -311,33 +311,29 @@ export default async function ReviewsPage({
         </div>
 
         {total === 0 ? (
-          <EmptyState>
-            <h2 className="font-medium">
-              {onlyWaiting ? t("reviews.emptyWaitingHeading") : t("reviews.emptyHeading")}
-            </h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {onlyWaiting ? t("reviews.emptyWaitingDetail") : t("reviews.emptyDetail")}
-            </p>
-            {/* Nothing here yet is not something staff can fix by clicking — a
-                review arrives when a diver opens the recap after a trip sails,
-                and no setting turns that on. What *is* theirs to set is where a
-                happy diver goes next, so that is the door: the review link the
-                recap offers after a strong rating. The "waiting" filter's own
-                empty state already has its way out (the All chip above it). */}
-            {onlyWaiting ? null : (
-              <>
-                <p className="mx-auto mt-4 max-w-md text-sm text-muted">
-                  {t("reviews.emptyReviewLinkBody")}
-                </p>
-                <Link
-                  href={`/shop/${shopSlug}/settings#review-link`}
-                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
-                >
-                  {t("reviews.emptyReviewLinkAction")}
-                </Link>
-              </>
-            )}
-          </EmptyState>
+          <EmptyState
+            title={onlyWaiting ? t("reviews.emptyWaitingHeading") : t("reviews.emptyHeading")}
+            body={onlyWaiting ? t("reviews.emptyWaitingDetail") : t("reviews.emptyDetail")}
+            /* Nothing here yet is not something staff can fix by clicking — a
+               review arrives when a diver opens the recap after a trip sails,
+               and no setting turns that on. What *is* theirs to set is where a
+               happy diver goes next, so that is the door: the review link the
+               recap offers after a strong rating. The "waiting" filter's own
+               empty state already has its way out (the All chip above it). */
+            action={
+              onlyWaiting ? null : (
+                <div className="flex flex-col items-center gap-2">
+                  <p className="max-w-md text-sm text-muted">{t("reviews.emptyReviewLinkBody")}</p>
+                  <Link
+                    href={`/shop/${shopSlug}/settings#review-link`}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("reviews.emptyReviewLinkAction")}
+                  </Link>
+                </div>
+              )
+            }
+          />
         ) : (
           <ul className="flex flex-col gap-3">
             {reviews.map((review) => {

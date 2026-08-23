@@ -546,9 +546,7 @@ export default async function CloseOutPage({
         </h2>
         <p className="mt-1 text-sm text-muted">{t("closeout.departures.subtitle")}</p>
         {state.departures.length === 0 ? (
-          <EmptyState className="mt-4">
-            <p className="text-sm text-muted">{t("closeout.departures.empty")}</p>
-          </EmptyState>
+          <EmptyState title={t("closeout.departures.empty")} className="mt-4" />
         ) : (
           <ul className="mt-4 flex flex-col gap-3">
             {state.departures.map((departure) => {
@@ -745,9 +743,7 @@ export default async function CloseOutPage({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("closeout.leftovers.subtitle")}</p>
           {state.leftovers.length === 0 ? (
-            <EmptyState className="mt-4">
-              <p className="text-sm text-muted">{t("closeout.leftovers.empty")}</p>
-            </EmptyState>
+            <EmptyState title={t("closeout.leftovers.empty")} className="mt-4" />
           ) : (
             <ul className="mt-4 flex flex-col gap-3">
               {state.leftovers.map((action) => (
@@ -839,9 +835,7 @@ export default async function CloseOutPage({
           {t("closeout.tomorrow.heading")}
         </h2>
         {state.tomorrow.total === 0 ? (
-          <EmptyState className="mt-4">
-            <p className="text-sm text-muted">{t("closeout.tomorrow.empty")}</p>
-          </EmptyState>
+          <EmptyState title={t("closeout.tomorrow.empty")} className="mt-4" />
         ) : (
           <SectionCard as="div" className="mt-4">
             <p className="font-semibold">

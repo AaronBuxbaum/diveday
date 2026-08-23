@@ -204,9 +204,7 @@ export async function CertificationCards({
         </p>
       ) : null}
       {diver.certifications.length === 0 ? (
-        <EmptyState className="mt-4">
-          <p className="text-sm text-muted">{t("divers.certifications.empty")}</p>
-        </EmptyState>
+        <EmptyState title={t("divers.certifications.empty")} className="mt-4" />
       ) : (
         <ul
           className={sectionCardClass({

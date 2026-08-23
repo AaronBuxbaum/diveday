@@ -136,15 +136,20 @@ export default async function WalkInPage({
           {trips.length === 0 ? (
             // The copy already names the schedule as where to look; this is
             // the link that sentence was describing.
-            <EmptyState className="mt-2">
-              <p className="mx-auto max-w-md text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-              >
-                {t("checkIn.walkIn.tripEmptyAction")}
-              </Link>
-            </EmptyState>
+            <EmptyState
+              title={t("checkIn.walkIn.tripEmpty")}
+              action={
+                <>
+                  <Link
+                    href={`/shop/${shopSlug}/schedule/board`}
+                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                  >
+                    {t("checkIn.walkIn.tripEmptyAction")}
+                  </Link>
+                </>
+              }
+              className="mt-2"
+            />
           ) : (
             <TripPickerList
               className="mt-3"

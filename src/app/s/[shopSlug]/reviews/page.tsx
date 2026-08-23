@@ -101,9 +101,7 @@ export default async function PublicReviewsPage({
         <p className="mt-1 text-sm text-muted">{t("reviews.verifiedNote")}</p>
 
         {reviewPage.total === 0 ? (
-          <EmptyState>
-            <h2 className="font-medium">{t("reviews.allEmptyHeading")}</h2>
-          </EmptyState>
+          <EmptyState title={t("reviews.allEmptyHeading")} />
         ) : (
           <ReviewCards
             reviews={reviewPage.reviews}

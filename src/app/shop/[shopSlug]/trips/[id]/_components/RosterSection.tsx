@@ -421,31 +421,41 @@ export function RosterSection({
         // languages for "nothing here" on one screen (docs/design/principles.md
         // #4). The door is the add-a-diver section on this same page — dropped
         // when the departure is cancelled, where there is nothing to seat.
-        <EmptyState className="mt-4">
-          <h3 className="font-medium">{t("trips.roster.emptyHeading")}</h3>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("trips.roster.noBookings")}</p>
-          {canAddDivers ? (
-            <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
-              {t("trips.roster.emptyAction")}
-            </a>
-          ) : null}
-        </EmptyState>
+        <EmptyState
+          titleAs="h3"
+          title={t("trips.roster.emptyHeading")}
+          body={t("trips.roster.noBookings")}
+          action={
+            <>
+              {canAddDivers ? (
+                <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
+                  {t("trips.roster.emptyAction")}
+                </a>
+              ) : null}
+            </>
+          }
+          className="mt-4"
+        />
       ) : filteredRoster.length === 0 ? (
         // A filter that hides everyone is a dead end unless the way back out is
         // in the box with the bad news.
-        <EmptyState className="mt-4">
-          <h3 className="font-medium">{t("trips.roster.filterEmptyHeading")}</h3>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {t("trips.roster.noneMatchFilter")}
-          </p>
-          <Link
-            href={filterChipHref("all")}
-            scroll={false}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-          >
-            {t("trips.roster.filterEmptyAction", { count: filterCounts.all })}
-          </Link>
-        </EmptyState>
+        <EmptyState
+          titleAs="h3"
+          title={t("trips.roster.filterEmptyHeading")}
+          body={t("trips.roster.noneMatchFilter")}
+          action={
+            <>
+              <Link
+                href={filterChipHref("all")}
+                scroll={false}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("trips.roster.filterEmptyAction", { count: filterCounts.all })}
+              </Link>
+            </>
+          }
+          className="mt-4"
+        />
       ) : (
         // One ledger, not a stack of cards: the roster is a single list card
         // with hairline-ruled rows — the same object grammar as the manifest's

@@ -455,26 +455,18 @@ export default async function SchedulePage({
       ) : null}
 
       {!hasUpcoming ? (
-        <EmptyState>
-          <h2 className="font-medium">{t("schedule.noTrips")}</h2>
-          {/* "or call the shop" only where there is a number to call. A shop
-              that has not filled in its contact details yet — the state its own
-              setup checklist leaves it in while it shares this link — was
-              offering an affordance the page withholds, so it points at the
-              date-request form below instead, which is now always there
-              (issue #710). */}
-          <p className="mt-1 text-sm text-muted">
-            {t(shop.contactPhone ? "schedule.noTripsPublic" : "schedule.noTripsPublicNoPhone")}
-          </p>
-        </EmptyState>
+        <EmptyState
+          title={t("schedule.noTrips")}
+          body={t(shop.contactPhone ? "schedule.noTripsPublic" : "schedule.noTripsPublicNoPhone")}
+        />
       ) : upcoming.length === 0 ? (
-        <EmptyState>
-          <p className="text-sm text-muted">
-            {hasSpaceFilter || tripTypeFilter
+        <EmptyState
+          title={
+            hasSpaceFilter || tripTypeFilter
               ? t("schedule.filters.noMatches")
-              : t("schedule.noTripsMonth")}
-          </p>
-        </EmptyState>
+              : t("schedule.noTripsMonth")
+          }
+        />
       ) : (
         <ul className="flex flex-col" aria-label={t("schedule.tripListLabel")}>
           {(() => {

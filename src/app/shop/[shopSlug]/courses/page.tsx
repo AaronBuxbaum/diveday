@@ -168,18 +168,23 @@ export default async function CoursesPage({
         // sentence — the one paged staff list with no empty branch. The door is
         // the same act every row carries: a catalog exists to be taught, and a
         // shop with nothing in it can still put a departure on the board.
-        <EmptyState className="mt-6">
-          <h2 className="font-medium">{st("courses.list.emptyTitle")}</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{st("courses.list.emptyBody")}</p>
-          {canSchedule ? (
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {st("courses.list.emptyAction")}
-            </Link>
-          ) : null}
-        </EmptyState>
+        <EmptyState
+          title={st("courses.list.emptyTitle")}
+          body={st("courses.list.emptyBody")}
+          action={
+            <>
+              {canSchedule ? (
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board`}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                >
+                  {st("courses.list.emptyAction")}
+                </Link>
+              ) : null}
+            </>
+          }
+          className="mt-6"
+        />
       ) : (
         <SectionCard as="div" padding="none" className="mt-6 overflow-hidden">
           <ul className="divide-y divide-border">

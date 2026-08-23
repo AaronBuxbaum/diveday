@@ -345,40 +345,43 @@ export default async function CheckInPage({
           // blamed the staffer's typing for an empty schedule. Three states,
           // each with the door that actually helps: widen the search, wait for
           // the boat, or put a departure on the board.
-          <EmptyState>
-            <h3 className="font-semibold">
-              {query
+          <EmptyState
+            titleAs="h3"
+            title={
+              query
                 ? t("checkIn.emptyTitle")
                 : upcomingDepartures > 0
                   ? t("checkIn.emptyQuietTitle")
-                  : t("checkIn.emptyNoTripsTitle")}
-            </h3>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              {query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
-            </p>
-            {query ? (
-              <Link
-                href={`/shop/${shopSlug}/check-in`}
-                scroll={false}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-              >
-                {t("checkIn.emptyClearSearch")}
-              </Link>
-            ) : (
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({
-                  variant: upcomingDepartures > 0 ? "secondary" : "primary",
-                  size: "sm",
-                  className: "mt-4",
-                })}
-              >
-                {upcomingDepartures > 0
-                  ? t("checkIn.emptyViewSchedule")
-                  : t("checkIn.emptyScheduleDeparture")}
-              </Link>
-            )}
-          </EmptyState>
+                  : t("checkIn.emptyNoTripsTitle")
+            }
+            body={query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
+            action={
+              <>
+                {query ? (
+                  <Link
+                    href={`/shop/${shopSlug}/check-in`}
+                    scroll={false}
+                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                  >
+                    {t("checkIn.emptyClearSearch")}
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/shop/${shopSlug}/schedule/board`}
+                    className={buttonClass({
+                      variant: upcomingDepartures > 0 ? "secondary" : "primary",
+                      size: "sm",
+                      className: "mt-4",
+                    })}
+                  >
+                    {upcomingDepartures > 0
+                      ? t("checkIn.emptyViewSchedule")
+                      : t("checkIn.emptyScheduleDeparture")}
+                  </Link>
+                )}
+              </>
+            }
+          />
         ) : cleared ? (
           // The counter's finish line is an earned moment (design principle 3):
           // the `rise-in` entrance is the confirmation-panel motion, and the

@@ -255,10 +255,7 @@ export default async function RequestsPage({
       />
 
       {requestPage.total === 0 ? (
-        <EmptyState>
-          <h2 className="font-medium">{t("requests.emptyHeading")}</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("requests.emptyDetail")}</p>
-        </EmptyState>
+        <EmptyState title={t("requests.emptyHeading")} body={t("requests.emptyDetail")} />
       ) : (
         <div className="flex flex-col gap-8">
           {groups.map((group) => (

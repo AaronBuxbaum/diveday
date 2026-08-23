@@ -232,9 +232,7 @@ export function CrewSection({
       {staff.length === 0 ? (
         // The shared empty-section grammar, not a bare paragraph
         // (design/principles.md #4).
-        <EmptyState>
-          <p className="text-sm text-muted">{copy.noStaff}</p>
-        </EmptyState>
+        <EmptyState title={copy.noStaff} />
       ) : (
         <div className="flex flex-col gap-3">
           {hasUnassignedStaff ? (
@@ -279,9 +277,7 @@ export function CrewSection({
             // said "nothing here" two ways. `icon={false}`: this one sits under
             // the assign picker rather than standing alone, so the bubbles
             // would outweigh the line of text.
-            <EmptyState icon={false}>
-              <p className="text-sm text-muted">{copy.notAssignedYet}</p>
-            </EmptyState>
+            <EmptyState title={copy.notAssignedYet} icon={false} />
           ) : (
             // A sunken inset, not a card in a card — the roster is carved into
             // the Crew card the way ShopStat's `inset` variant is (see

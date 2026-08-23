@@ -204,38 +204,36 @@ export default async function DiveSitesPage({
       ) : null}
 
       {sites.length === 0 ? (
-        <EmptyState className="mt-4">
-          <h2 className="font-semibold">
-            {query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
-          </h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            {t("diveSites.list.emptyBody")}
-          </p>
-          {/* No second "Clear search" here: the search band right above this
-              card already carries one whenever a query is active, and two
-              identical controls is exactly what principle 8 forbids. */}
-          {query || librarySize > 0 ? null : (
-            // The only place these two doors exist on an empty library: the
-            // header drops its actions when the library is empty precisely so
-            // this card owns them, and a shop reading "start with a site your
-            // crew knows well" can start from that sentence.
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Link
-                href={`/shop/${shopSlug}/dive-sites/new`}
-                className={buttonClass({ className: "rounded-xl" })}
-              >
-                <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
-              </Link>
-              <Link
-                href={catalogHref}
-                scroll={false}
-                className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
-              >
-                {t("diveSites.list.browseTemplates")}
-              </Link>
-            </div>
-          )}
-        </EmptyState>
+        <EmptyState
+          title={query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
+          body={t("diveSites.list.emptyBody")}
+          action={
+            <>
+              {query || librarySize > 0 ? null : (
+                // The only place these two doors exist on an empty library: the
+                // header drops its actions when the library is empty precisely so
+                // this card owns them, and a shop reading "start with a site your
+                // crew knows well" can start from that sentence.
+                <div className="mt-4 flex flex-wrap justify-center gap-3">
+                  <Link
+                    href={`/shop/${shopSlug}/dive-sites/new`}
+                    className={buttonClass({ className: "rounded-xl" })}
+                  >
+                    <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+                  </Link>
+                  <Link
+                    href={catalogHref}
+                    scroll={false}
+                    className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+                  >
+                    {t("diveSites.list.browseTemplates")}
+                  </Link>
+                </div>
+              )}
+            </>
+          }
+          className="mt-4"
+        />
       ) : (
         // A table, not a grid of cards (issue #608). A library is a list of
         // like things a staffer scans down one column of — name, then where it

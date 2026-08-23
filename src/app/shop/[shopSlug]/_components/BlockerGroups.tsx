@@ -215,20 +215,21 @@ export function BlockerGroups({
         // circle reads as "you've reached the end" when siblings above it
         // still have content (design/principles.md #4). The urgency view's own
         // empty state is the same component, so the two views rest alike.
-        <EmptyState className="mt-5">
-          {/* Heading and the way out, nothing between them. The sentence that
-              used to sit here listed the three things nobody is waiting on and
-              then explained when rows appear — the first half restates
-              "Every boat is boarding-ready", the second is our refresh rule
-              rather than anything the reader now has. */}
-          <h3 className="font-medium">{t("blockers.emptyTitle")}</h3>
-          <Link
-            href={`/shop/${shopSlug}/schedule/board`}
-            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-          >
-            {t("blockers.viewSchedule")}
-          </Link>
-        </EmptyState>
+        <EmptyState
+          titleAs="h3"
+          title={t("blockers.emptyTitle")}
+          action={
+            <>
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("blockers.viewSchedule")}
+              </Link>
+            </>
+          }
+          className="mt-5"
+        />
       ) : (
         <div className="mt-5 flex flex-col gap-8">
           {/* Grouped by the same four urgency bands, in the same words
