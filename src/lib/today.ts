@@ -87,7 +87,8 @@ export type TodayActionKind =
   | "reviews_pending"
   | "gear_overdue"
   | "gear_due_back"
-  | "gear_service_due";
+  | "gear_service_due"
+  | "units_unconfirmed";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -155,6 +156,13 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 24,
   gear_due_back: 25,
   gear_service_due: 26,
+  // Bottom of the queue, and rightly: this is a question nobody has answered
+  // rather than anything that has gone wrong. It is here at all because the
+  // first-run checklist that asked it stops rendering at the shop's first
+  // departure — step 4 of that same checklist — so a shop that scheduled a
+  // trip before opening the Units row would never be asked again, and currency
+  // decides what a diver's card is charged in (issue #835).
+  units_unconfirmed: 27,
 };
 
 /**
@@ -196,6 +204,9 @@ export const ACTION_KIND_META = {
   gear_overdue: { tone: "warning" },
   gear_due_back: { tone: "neutral" },
   gear_service_due: { tone: "neutral" },
+  // Neutral, not warning: the shop is trading on a derived default that is
+  // probably right. It wants confirming, not alarming about.
+  units_unconfirmed: { tone: "neutral" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 /**

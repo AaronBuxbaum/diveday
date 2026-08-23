@@ -48,6 +48,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_overdue: "shared.today.actionKind.gearOverdue",
   gear_due_back: "shared.today.actionKind.gearDueBack",
   gear_service_due: "shared.today.actionKind.gearServiceDue",
+  units_unconfirmed: "shared.today.actionKind.unitsUnconfirmed",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -447,6 +448,25 @@ export function reviewsPendingDetailText(t: StaffTranslator): string {
 
 export function openReviewsActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openReviews");
+}
+
+/**
+ * The units row: the one first-run question a trading shop can still have open.
+ *
+ * Worded as a question about *money and depth*, not about a settings page —
+ * "confirm your units" says nothing a reader could act on, while the currency a
+ * card is charged in is the fact that makes this worth a row at all (#835).
+ */
+export function unitsUnconfirmedSubjectText(t: StaffTranslator): string {
+  return t("shared.today.unitsUnconfirmed.subject");
+}
+
+export function unitsUnconfirmedDetailText(t: StaffTranslator, currency: string): string {
+  return t("shared.today.unitsUnconfirmed.detail", { currency });
+}
+
+export function openUnitsActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openUnits");
 }
 
 export function openOrdersActionText(t: StaffTranslator): string {

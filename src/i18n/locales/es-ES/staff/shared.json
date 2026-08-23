@@ -244,7 +244,7 @@
       "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
       "noneBooked": "Todavía nadie ha reservado — comparte la página de la salida y aparecerán aquí.",
       "everyoneAboard": "Todos a bordo.",
-      "crewRollCallOpen": "Todos los buceadores est\u00e1n a bordo: falta pasar lista a la tripulaci\u00f3n.",
+      "crewRollCallOpen": "Todos los buceadores están a bordo: falta pasar lista a la tripulación.",
       "clearToBoard": "Todos los de esta salida están listos para embarcar.",
       "sailingToday": "Sale hoy"
     },
@@ -320,7 +320,8 @@
       "reviewsPending": "Reseñas",
       "gearOverdue": "Equipo atrasado",
       "gearDueBack": "Devolución hoy",
-      "gearServiceDue": "Mantenimiento"
+      "gearServiceDue": "Mantenimiento",
+      "unitsUnconfirmed": "Configuración"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -421,7 +422,8 @@
       "openDataSettings": "Revisar en Ajustes",
       "openReviews": "Ver reseñas",
       "openGearRegister": "Abrir registro de equipo",
-      "openGearUnit": "Abrir ficha de la unidad"
+      "openGearUnit": "Abrir ficha de la unidad",
+      "openUnits": "Abrir unidades"
     },
     "summary": {
       "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
@@ -465,6 +467,10 @@
     "reviewsPending": {
       "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
       "detail": "Los buceadores escribieron sobre sus salidas — publica las buenas palabras u oculta el resto con discreción."
+    },
+    "unitsUnconfirmed": {
+      "subject": "¿En qué moneda y unidad de profundidad trabaja este centro?",
+      "detail": "Supusimos {currency} por tu zona horaria al crear la cuenta y nadie lo ha confirmado. Es lo que se le cobra a la tarjeta de un buceador."
     },
     "gear": {
       "overdueDetail": "{unitLabel} debía devolverse el {dueOn} y sigue fuera.",
