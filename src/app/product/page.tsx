@@ -3,8 +3,8 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,

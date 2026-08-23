@@ -1,3 +1,4 @@
+import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingNavView } from "@/components/MarketingNavView";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -12,14 +13,15 @@ import { auth } from "@/lib/auth";
  * nesting it inside the cached scope — see the marketing pages under
  * `src/app`.
  */
-export async function MarketingNav({ hideTrialCta = false }: { hideTrialCta?: boolean } = {}) {
+export async function MarketingNav({ hideCta = false }: { hideCta?: boolean } = {}) {
   const session = await auth();
   const locale = await requestLocale();
   return (
     <MarketingNavView
       shopSlug={session?.user?.shopSlug ?? null}
       locale={locale}
-      hideTrialCta={hideTrialCta}
+      hideCta={hideCta}
+      demoAction={enterDemoAction}
     />
   );
 }
@@ -30,8 +32,13 @@ export async function MarketingNav({ hideTrialCta = false }: { hideTrialCta?: bo
  * the overwhelming majority of marketing-page visitors (anonymous, no
  * session), and what actually renders for them with zero streaming delay.
  */
-export function MarketingNavFallback({ hideTrialCta = false }: { hideTrialCta?: boolean } = {}) {
+export function MarketingNavFallback({ hideCta = false }: { hideCta?: boolean } = {}) {
   return (
-    <MarketingNavView shopSlug={null} locale={DEFAULT_DIVER_LOCALE} hideTrialCta={hideTrialCta} />
+    <MarketingNavView
+      shopSlug={null}
+      locale={DEFAULT_DIVER_LOCALE}
+      hideCta={hideCta}
+      demoAction={enterDemoAction}
+    />
   );
 }
