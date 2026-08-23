@@ -209,7 +209,7 @@ export function RollCallNote({
           // Live save state, not a loading skeleton — see RecapMap for why the
           // marker matters to screenshot tooling.
           data-live-pulse=""
-          className={`size-2 shrink-0 rounded-full transition-colors duration-300 ${
+          className={`size-2 shrink-0 rounded-full transition-colors ${
             status === "saving"
               ? "animate-pulse bg-warning"
               : status === "saved"

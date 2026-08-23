@@ -100,10 +100,10 @@ function ActionRow({
   // as a form; a tappable row reads as a list.
   const rowIsLink = !action.waiver && !action.resend && !action.invite && !action.payment?.orderId;
   const rowClass = grouped
-    ? `group/row relative px-4 py-3.5 transition-colors duration-200 sm:px-5${
+    ? `group/row relative px-4 py-3.5 transition-colors sm:px-5${
         rowIsLink ? " hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""
       }`
-    : `group/row relative transition-colors duration-200${
+    : `group/row relative transition-colors${
         // Pressable chrome only on a card that is actually pressable — a
         // Send-waiver card that scaled and tinted on hover while only its
         // button did anything was a false affordance.
@@ -168,7 +168,7 @@ function ActionRow({
             className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
           >
             {action.actionLabel}
-            <span className="inline-block transition-transform duration-200 group-hover/row:translate-x-0.5">
+            <span className="inline-block transition-transform group-hover/row:translate-x-0.5">
               ›
             </span>
           </span>

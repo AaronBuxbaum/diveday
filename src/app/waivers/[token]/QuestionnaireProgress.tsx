@@ -129,7 +129,7 @@ export function QuestionnaireProgress({
         </p>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-200 ease-[var(--ease-out-soft)]"
+            className="h-full rounded-full bg-primary transition-[width] ease-out-soft"
             style={{ width: `${percent}%` }}
           />
         </div>

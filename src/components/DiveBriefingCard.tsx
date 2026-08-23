@@ -169,7 +169,7 @@ export function DiveBriefingCard({
                 {extrasHint ? <span className="tabular-nums">{extrasHint}</span> : null}
                 <span
                   aria-hidden="true"
-                  className="transition-transform duration-200 ease-out group-open:rotate-180"
+                  className="transition-transform ease-out group-open:rotate-180"
                 >
                   ▾
                 </span>

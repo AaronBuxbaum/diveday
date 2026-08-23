@@ -881,7 +881,7 @@ export function RosterSection({
                           ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
                           : undefined
                       }
-                      className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
+                      className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors ${waiverControl.tone}`}
                       wrapperClassName=""
                       copy={waiverSendCopy(t)}
                     />

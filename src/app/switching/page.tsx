@@ -190,7 +190,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
             <li key={guide.href}>
               <Link
                 href={guide.href}
-                className="group flex items-start gap-6 border-b border-border py-6 transition-colors duration-200 hover:bg-surface"
+                className="group flex items-start gap-6 border-b border-border py-6 transition-colors hover:bg-surface"
               >
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-semibold tracking-tight group-hover:text-primary">
@@ -200,7 +200,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
                 </div>
                 <span
                   aria-hidden
-                  className="mt-1 shrink-0 text-lg text-muted transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
+                  className="mt-1 shrink-0 text-lg text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
                 >
                   →
                 </span>

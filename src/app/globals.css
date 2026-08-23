@@ -71,24 +71,8 @@
   --success-strong: color-mix(in srgb, black 6%, var(--success));
   --warning-strong: color-mix(in srgb, black 6%, var(--warning));
 
-  /* Shape & motion */
+  /* Shape */
   --radius: 0.75rem;
-  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  /*
-   * The mirror of `--ease-out-soft`, for motion that *leaves*. An exit on an
-   * ease-out curve spends three quarters of its duration barely moving, so the
-   * eye reads the whole thing as an instant jump followed by a pause and then a
-   * hard cut — which is how the board's row menu managed to feel simultaneously
-   * too fast to see and 450ms long. Slow off the mark, then away.
-   */
-  --ease-in-soft: cubic-bezier(0.55, 0, 0.85, 0.3);
-  /*
-   * A curve that overshoots its target and settles back (the y > 1 control
-   * point). Rationed like `--accent`: a spring says "this thing has weight",
-   * which is a claim worth making when something unfolds on request and a lie
-   * on anything that merely appears.
-   */
-  --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
 
   /*
    * Tell the browser which way our palette runs, so the parts of a form we do
@@ -134,6 +118,59 @@
     --danger: #f87171;
     --info: #818cf8;
   }
+}
+
+/*
+ * **Motion, in the one place Tailwind reads.**
+ *
+ * These three curves lived in `:root` and were argued for at length there, and
+ * almost nothing used them. Tailwind only generates utilities from `@theme`,
+ * so there was no `ease-out-soft` class to reach for — and
+ * `--default-transition-timing-function` was left at Tailwind's own
+ * `cubic-bezier(0.4, 0, 0.2, 1)`, which is not one of the three. So an author
+ * writing the obvious thing, `transition-colors duration-200`, silently got a
+ * fourth curve nobody chose: **31 of the app's 35 transitions** were on it,
+ * against 2 using the canonical utility (issue #833).
+ *
+ * The two authors who noticed each worked around it differently — `button.ts`
+ * wrote the cubic-bezier out as a literal, `QuestionnaireProgress` reached for
+ * `ease-[var(--ease-out-soft)]` — which is what a missing utility looks like
+ * from the inside.
+ *
+ * Declaring them here emits `.ease-out-soft` / `.ease-in-soft` /
+ * `.ease-spring` **and** publishes the variables to `:root`, so the
+ * hand-written keyframes below keep resolving `var(--ease-out-soft)`
+ * unchanged. Overriding the two `--default-transition-*` values is what
+ * corrects every bare `transition-*` in the app without touching a component —
+ * the right shape of fix for a problem caused by a default. A bare
+ * `transition-colors` is now the *correct* thing to write.
+ */
+@theme {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  /*
+   * The mirror of `--ease-out-soft`, for motion that *leaves*. An exit on an
+   * ease-out curve spends three quarters of its duration barely moving, so the
+   * eye reads the whole thing as an instant jump followed by a pause and then a
+   * hard cut — which is how the board's row menu managed to feel simultaneously
+   * too fast to see and 450ms long. Slow off the mark, then away.
+   */
+  --ease-in-soft: cubic-bezier(0.55, 0, 0.85, 0.3);
+  /*
+   * A curve that overshoots its target and settles back (the y > 1 control
+   * point). Rationed like `--accent`: a spring says "this thing has weight",
+   * which is a claim worth making when something unfolds on request and a lie
+   * on anything that merely appears.
+   */
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
+
+  /*
+   * An arrival, and the app's one unmarked duration. 200ms is what
+   * `transition-brand`, every button and both progress bars already chose
+   * independently; making it the default retires `duration-200` from every
+   * class string that only ever said "the usual".
+   */
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: var(--ease-out-soft);
 }
 
 @theme inline {
@@ -649,13 +686,18 @@ summary {
   animation: scale-out 180ms var(--ease-out-soft) both;
 }
 
-/* Reusable class for standard UI transitions (opacity, transform, background-color, border-color, etc.) */
+/*
+ * A wide property list for a surface whose hover changes several things at
+ * once. The curve and the duration now read the same defaults every bare
+ * `transition-*` does, so this cannot drift away from the rest of the app the
+ * way a second hard-coded `200ms` eventually would.
+ */
 .transition-brand {
   transition-property:
     color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow,
     transform, filter, backdrop-filter;
-  transition-timing-function: var(--ease-out-soft);
-  transition-duration: 200ms;
+  transition-timing-function: var(--default-transition-timing-function);
+  transition-duration: var(--default-transition-duration);
 }
 
 /*
@@ -855,15 +897,31 @@ summary {
 }
 
 /* Card Expansion Scale Hint */
+/*
+ * **The hover cue on a whole-card link.** Three things were wrong with it and
+ * each is worth naming, because they are the failure modes the motion tokens
+ * exist to prevent (issue #833):
+ *
+ * - It hard-coded `cubic-bezier(0.4, 0, 0.2, 1)` twice and `ease` once — three
+ *   curves in one rule, none of them ours, written before there was a utility
+ *   to reach for.
+ * - It animated **`box-shadow`**, which paints every frame, against principle
+ *   5's transform-and-opacity rule. And the shadow was a literal
+ *   `rgba(0, 0, 0, 0.05)`, which is invisible on the dark palette — so half the
+ *   readers got the paint cost and none of the effect.
+ * - It scaled by 0.5%, which nobody can see.
+ *
+ * What is left is a border that warms on hover, on the app's own arrival curve
+ * and its own token. `transition-property` is named rather than `all` so this
+ * cannot start animating a layout property somebody adds later.
+ */
 .card-scale-hint {
-  transition:
-    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.2s ease;
+  transition-property: border-color, transform;
+  transition-duration: var(--default-transition-duration);
+  transition-timing-function: var(--ease-out-soft);
 }
 .card-scale-hint:hover {
-  transform: scale(1.005);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: scale(1.01);
 }
 
 /* Fluid Progress Wave Fill */

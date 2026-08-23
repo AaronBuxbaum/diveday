@@ -237,7 +237,7 @@ export function SummaryPanel({
           aria-valuenow={summary.totalDivers - summary.awaiting}
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-200"
+            className="h-full rounded-full bg-primary transition-[width]"
             style={{
               width: `${
                 summary.totalDivers === 0

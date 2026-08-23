@@ -192,7 +192,7 @@ export function TBody({
 export function Tr({ className = "", children, ...rest }: React.ComponentPropsWithoutRef<"tr">) {
   return (
     <tr
-      className={`group relative transition-colors duration-200 hover:bg-surface-sunken ${className}`.trim()}
+      className={`group relative transition-colors hover:bg-surface-sunken ${className}`.trim()}
       {...rest}
     >
       {children}

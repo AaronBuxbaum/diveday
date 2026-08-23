@@ -7,7 +7,7 @@ import { trialHref } from "@/lib/funnel";
 import { staffShopRoot } from "@/lib/staff-destinations";
 
 const navLinkClassName =
-  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors duration-200 hover:text-foreground sm:px-3";
+  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:text-foreground sm:px-3";
 
 /**
  * The marketing header's markup, with the session already resolved to one

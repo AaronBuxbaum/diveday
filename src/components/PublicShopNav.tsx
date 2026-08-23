@@ -40,7 +40,7 @@ export function activeNavIndex(pathname: string, items: readonly PublicShopNavIt
 }
 
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-3 text-base font-medium transition-colors duration-200";
+  "inline-flex min-h-11 items-center rounded-xl px-3 text-base font-medium transition-colors";
 
 /**
  * The spine of a shop's public pages — the schedule, and the course catalog

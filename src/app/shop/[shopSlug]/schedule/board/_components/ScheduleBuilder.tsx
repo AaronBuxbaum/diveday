@@ -1351,7 +1351,7 @@ export function ScheduleBuilder({
                     // tint says "this row is a thing" without a box saying it
                     // permanently (design/principles.md #10). The open panels
                     // below keep their own bordered boxes — a form is a form.
-                    className="group/trip -mx-3 rounded-xl px-3 py-4 transition-colors duration-200 hover:bg-surface has-[a:focus-visible]:bg-surface sm:-mx-4 sm:px-4"
+                    className="group/trip -mx-3 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:-mx-4 sm:px-4"
                   >
                     {/* Two columns, not six loose flex children. The time, the
                         title block, the badges and the buttons all used to sit
@@ -1601,7 +1601,7 @@ export function ScheduleBuilder({
                             title link is the navigation. */}
                         <span
                           aria-hidden="true"
-                          className="text-muted transition-transform duration-200 group-hover/trip:translate-x-0.5"
+                          className="text-muted transition-transform group-hover/trip:translate-x-0.5"
                         >
                           ›
                         </span>

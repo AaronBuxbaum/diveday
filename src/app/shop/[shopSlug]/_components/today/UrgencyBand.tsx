@@ -48,7 +48,7 @@ export function UrgencyBand({
   }
   return (
     <details className="group/fold">
-      <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors duration-200 select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+      <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
         {/* Which way this goes, before you press it — decorative, the native
             disclosure semantics carry the state. */}
         <DisclosureCaret className="self-center text-muted group-open/fold:rotate-90" />

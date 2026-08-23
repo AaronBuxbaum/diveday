@@ -56,7 +56,7 @@ export function DisclosureCaret({
       strokeWidth={2.5}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`size-3 shrink-0 transition-transform duration-200 ${className}`}
+      className={`size-3 shrink-0 transition-transform ${className}`}
     >
       <path d={CARET_PATHS[direction]} />
     </svg>

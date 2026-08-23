@@ -352,7 +352,7 @@ export default async function SchedulePage({
       {nextDeparture ? (
         <Link
           href={`${publicTripPath(shopSlug, nextDeparture.id)}${isEmbed ? "?embed=1" : ""}#book`}
-          className="group card-scale-hint mb-10 flex flex-col gap-4 rounded-3xl border border-primary/25 bg-primary/5 p-6 shadow-sm transition-all duration-200 hover:border-primary/50 sm:flex-row sm:items-center sm:justify-between"
+          className="group card-scale-hint mb-10 flex flex-col gap-4 rounded-3xl border border-primary/25 bg-primary/5 p-6 shadow-sm hover:border-primary/50 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0">
             <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
@@ -527,7 +527,7 @@ export default async function SchedulePage({
                     carried by the day blocks, type, and whitespace, and the
                     hover/focus surface tint is the tap affordance (design
                     principle 10: type and space before boxes). */}
-                  <div className="group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors duration-200 hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
+                  <div className="group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
                     <Link
                       href={tripHref}
                       className="absolute inset-0 z-0 rounded-xl"
@@ -649,7 +649,7 @@ export default async function SchedulePage({
                       )}
                       <span
                         aria-hidden="true"
-                        className="text-muted transition-transform duration-200 group-hover:translate-x-0.5"
+                        className="text-muted transition-transform group-hover:translate-x-0.5"
                       >
                         ›
                       </span>

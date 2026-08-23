@@ -185,7 +185,7 @@ export function RentalFitForm({
         data-testid="gear-status-indicator"
         role="status"
         aria-live="polite"
-        className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
+        className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
           isConfirmed
             ? "border-success/30 bg-success/5 shadow-sm"
             : "border-border bg-surface-sunken/40"
@@ -197,7 +197,7 @@ export function RentalFitForm({
         </div>
         <div>
           <p
-            className={`text-sm font-semibold transition-colors duration-300 ${
+            className={`text-sm font-semibold transition-colors ${
               isConfirmed ? "text-success" : "text-muted"
             }`}
           >
@@ -476,7 +476,7 @@ function BcdIcon({ active, label }: { active: boolean; label: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={`w-9 h-9 transition-all duration-300 ${
+      className={`w-9 h-9 transition-all ${
         active ? "text-success drop-shadow-[0_0_8px_rgba(21,128,61,0.4)]" : "text-muted opacity-30"
       }`}
       viewBox="0 0 24 24"
@@ -501,7 +501,7 @@ function FinIcon({ active, label }: { active: boolean; label: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={`w-9 h-9 transition-all duration-300 ${
+      className={`w-9 h-9 transition-all ${
         active ? "text-success drop-shadow-[0_0_8px_rgba(21,128,61,0.4)]" : "text-muted opacity-30"
       }`}
       viewBox="0 0 24 24"

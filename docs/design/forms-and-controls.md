@@ -436,6 +436,34 @@ hard-coded one, so this is a manual review point: if a control's only visible co
 glyph, or `aria-hidden` SVG, it must carry `aria-label` (or, for a toggle whose pressed state
 matters, `aria-pressed` too).
 
+## Motion: write a bare `transition-*`
+
+The app has three curves, declared in `@theme` in `globals.css` and argued for there:
+`--ease-out-soft` for arrivals, `--ease-in-soft` for exits (its mirror — an exit on an ease-*out*
+curve reads as a jump then a pause then a hard cut), and `--ease-spring`, rationed like `--accent`.
+
+**The default is one of them, so the obvious thing is now the right thing.** `transition-colors`
+with no easing and no duration gets `--ease-out-soft` at 200 ms. That is deliberate and there is no
+lint rule against it: the curve used to default to Tailwind's `cubic-bezier(0.4, 0, 0.2, 1)`, so 31
+of the app's 35 transitions were on a fourth curve nobody chose while the two authors who noticed
+each wrote their own workaround — a cubic-bezier literal in `button.ts`, `ease-[var(--ease-out-soft)]`
+in the waiver's progress bar (issue #833).
+
+- **Arrival** — nothing. Omit both; the default is the arrival.
+- **Exit** — `ease-in-soft`, and say the duration if it differs.
+- **Weight** — `ease-spring`, for something that *unfolds on request*. A lie on anything that
+  merely appears.
+- **A duration that is not 200 ms** — write it, and it should be because the motion means something
+  different, not because 260 ms was what got typed. The only two left in the app are the hold-to-
+  unlock gauge's 75 ms and 100 ms, which are a gauge rather than an arrival.
+- **`transition-brand`** stays for a surface whose hover changes several things at once; it reads
+  the same defaults.
+
+Transform and opacity only ([principle 5](principles.md)). Animating `box-shadow` or a colour on a
+large surface paints every frame — `.card-scale-hint` did exactly that, with a literal
+`rgba(0, 0, 0, 0.05)` shadow invisible on the dark palette, so half the readers paid for an effect
+none of them saw.
+
 ## Buttons: `buttonClass()`
 
 Every touch target sets a `min-h-11` floor for the dock test (principle 2). A box with a height

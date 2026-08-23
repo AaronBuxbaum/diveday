@@ -106,7 +106,7 @@ export function LanguagePicker({
         <span lang={current}>{currentLabel}</span>
         <span
           aria-hidden="true"
-          className={`text-xs transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`text-xs transition-transform ${open ? "rotate-180" : ""}`}
         >
           ▾
         </span>
