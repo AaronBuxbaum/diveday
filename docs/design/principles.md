@@ -133,6 +133,12 @@ Animation exists to explain (where did it go, what changed), 150–250 ms, ease-
 kill-switch in `globals.css` stays, and it kills `animation-delay` as well as duration, so a
 stagger cannot survive it.
 
+**A bar that fills scales, it does not resize.** All three of this app's progress bars animated (or
+failed to animate) their `width`, which is layout — the browser reflows every frame of the
+transition. `ProgressBar` in `src/components/ui/` is the one primitive: each fill is a sheet scaled
+with `transform: scaleX()` from the left, on `--ease-out-soft`, and stacked bands are cumulative
+sheets rather than sized boxes. The output is identical and nothing is laid out twice (issue #834).
+
 **Motion that leaves does not use an ease-out curve.** `--ease-out-soft` front-loads almost all of
 its travel, which is right for something arriving and wrong for something departing: an exit on it
 reads as an instant jump, a long dead pause, and then a hard cut. Exits take `--ease-in-soft` —

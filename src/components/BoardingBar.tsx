@@ -1,3 +1,4 @@
+import { ProgressBar } from "@/components/ui/ProgressBar";
 /**
  * The glance: one bar for "can this boat sail?". Boarded fills from the left,
  * then divers who are clear to board, then anyone blocked; the unfilled track
@@ -21,12 +22,21 @@ export function BoardingBar({
   capacity: number;
 }) {
   const total = Math.max(capacity, boarded + ready + blocked, 1);
-  const width = (count: number) => ({ width: `${(count / total) * 100}%` });
   return (
-    <div aria-hidden="true" className="flex h-2 overflow-hidden rounded-full bg-surface-sunken">
-      {boarded > 0 ? <div style={width(boarded)} className="bg-primary" /> : null}
-      {ready > 0 ? <div style={width(ready)} className="bg-success/70" /> : null}
-      {blocked > 0 ? <div style={width(blocked)} className="bg-danger" /> : null}
-    </div>
+    <ProgressBar
+      // Decorative: the caption beside it carries every fact in words and
+      // numbers, so the bar is glanced at and never read (principle 6).
+      aria-hidden="true"
+      className="h-2"
+      // Left to right as a staffer reads it; `ProgressBar` works out the
+      // stacking. It also owns the motion — this bar used to jump while the
+      // manifest's roll-call bar next door animated, on two surfaces somebody
+      // moves between all morning (issue #834).
+      segments={[
+        { key: "boarded", fraction: boarded / total, className: "bg-primary" },
+        { key: "ready", fraction: ready / total, className: "bg-success/70" },
+        { key: "blocked", fraction: blocked / total, className: "bg-danger" },
+      ]}
+    />
   );
 }
