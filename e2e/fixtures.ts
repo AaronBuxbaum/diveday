@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { signInAs } from "./helpers";
+import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 
 type StaffRole = keyof typeof DEV_STAFF_LOGINS;
@@ -471,7 +471,13 @@ export const test = base.extend<
   staffStorageState: [
     async ({ workerBaseURL, browser }, use, workerInfo) => {
       const cache = new Map<StaffRole, Promise<string>>();
+      let cacheGeneration = currentStaffStorageStateGeneration();
       const resolve = (role: StaffRole): Promise<string> => {
+        const generation = currentStaffStorageStateGeneration();
+        if (generation !== cacheGeneration) {
+          cache.clear();
+          cacheGeneration = generation;
+        }
         let cached = cache.get(role);
         if (!cached) {
           cached = (async () => {
