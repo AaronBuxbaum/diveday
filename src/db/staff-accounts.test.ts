@@ -9,10 +9,12 @@ import { savePushSubscription } from "./push-subscriptions";
 import { people, personRoles, pushSubscriptions, shops, userAccounts } from "./schema";
 import {
   inviteStaffMember,
+  listShopSpokenLanguages,
   listShopStaff,
   removeStaffMember,
   setStaffAccountStatus,
   setStaffEmergencyContact,
+  setStaffLanguages,
   setStaffRoles,
 } from "./staff-accounts";
 
@@ -637,5 +639,106 @@ describe("setStaffEmergencyContact", () => {
         phone: "+1-305-555-0114",
       }),
     ).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+/** Issue #708. */
+describe("setStaffLanguages", () => {
+  it("records a staff member's languages, deduplicated", async () => {
+    const { db, shop } = await seededShopContext();
+    const { personId } = await makeStaff(db, shop.id, ["captain"]);
+
+    expect(
+      await setStaffLanguages(db, { shopId: shop.id, personId, languages: ["de", "de", "ja"] }),
+    ).toBe(true);
+
+    const [row] = await db.select().from(people).where(eq(people.id, personId));
+    expect([...(row?.spokenLanguages ?? [])].sort()).toEqual(["de", "ja"]);
+  });
+
+  it("clears languages back to empty rather than refusing an empty list", async () => {
+    const { db, shop } = await seededShopContext();
+    const { personId } = await makeStaff(db, shop.id, ["captain"]);
+    await setStaffLanguages(db, { shopId: shop.id, personId, languages: ["de"] });
+
+    expect(await setStaffLanguages(db, { shopId: shop.id, personId, languages: [] })).toBe(true);
+
+    const [row] = await db.select().from(people).where(eq(people.id, personId));
+    expect(row?.spokenLanguages).toEqual([]);
+  });
+
+  it("drops any tag outside the common set rather than storing it", async () => {
+    const { db, shop } = await seededShopContext();
+    const { personId } = await makeStaff(db, shop.id, ["captain"]);
+
+    await setStaffLanguages(db, {
+      shopId: shop.id,
+      personId,
+      languages: ["de", "not-a-real-tag"],
+    });
+
+    const [row] = await db.select().from(people).where(eq(people.id, personId));
+    expect(row?.spokenLanguages).toEqual(["de"]);
+  });
+
+  it("refuses a person who holds no staff role", async () => {
+    const { db, shop } = await seededShopContext();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Priya Shah" })
+      .returning();
+    if (!diver) throw new Error("failed to insert diver");
+
+    expect(
+      await setStaffLanguages(db, { shopId: shop.id, personId: diver.id, languages: ["de"] }),
+    ).toBe(false);
+    const [row] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(row?.spokenLanguages).toEqual([]);
+  });
+
+  it("refuses a person in another shop", async () => {
+    // `people` is the only table here carrying a shop_id, and the action takes
+    // a raw personId — same tenant boundary `setStaffEmergencyContact`'s own
+    // cross-shop test above pins for the identical write shape.
+    const { db, shop } = await seededShopContext();
+    seq += 1;
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: `other-shop-${seq}`, timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("failed to insert shop");
+    const { personId } = await makeStaff(db, other.id, ["captain"]);
+
+    expect(await setStaffLanguages(db, { shopId: shop.id, personId, languages: ["de"] })).toBe(
+      false,
+    );
+    const [row] = await db.select().from(people).where(eq(people.id, personId));
+    expect(row?.spokenLanguages).toEqual([]);
+  });
+});
+
+describe("listShopSpokenLanguages", () => {
+  it("returns the union of every active staff member's languages, deduplicated", async () => {
+    const { db, shop } = await seededShopContext();
+    const a = await makeStaff(db, shop.id, ["captain"]);
+    const b = await makeStaff(db, shop.id, ["divemaster"]);
+    await setStaffLanguages(db, { shopId: shop.id, personId: a.personId, languages: ["de", "fr"] });
+    await setStaffLanguages(db, { shopId: shop.id, personId: b.personId, languages: ["fr", "ja"] });
+
+    expect([...(await listShopSpokenLanguages(db, shop.id))].sort()).toEqual(["de", "fr", "ja"]);
+  });
+
+  it("returns nothing when no active staff member has recorded a language", async () => {
+    const { db, shop } = await seededShopContext();
+    await makeStaff(db, shop.id, ["captain"]);
+    expect(await listShopSpokenLanguages(db, shop.id)).toEqual([]);
+  });
+
+  it("excludes a disabled account's recorded languages", async () => {
+    const { db, shop } = await seededShopContext();
+    const { personId } = await makeStaff(db, shop.id, ["captain"], { status: "disabled" });
+    await setStaffLanguages(db, { shopId: shop.id, personId, languages: ["de"] });
+
+    expect(await listShopSpokenLanguages(db, shop.id)).toEqual([]);
   });
 });
