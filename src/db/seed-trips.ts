@@ -86,7 +86,7 @@ export async function seedTrips(
         title: "Two-Tank Reef — Molasses & French",
         // Time-neutral copy: this trip sails at whatever hour keeps it on
         // today's board, so "morning" would read as a bug after lunch.
-        description: "Double dip on the outer reef. All levels, OW required.",
+        description: "Double dip on the outer reef.",
         startsAt: todaySailStart, // sails today, so Today always has a board
         endsAt: new Date(todaySailStart.getTime() + 3.5 * 60 * 60 * 1000),
         capacity: 12,
@@ -95,7 +95,7 @@ export async function seedTrips(
       {
         shopId,
         title: "Night Dive — City of Washington",
-        description: "Torches, tarpon, and bioluminescence. Night specialty required.",
+        description: "Torches, tarpon, and bioluminescence.",
         // A twilight double: depart ~7:30 PM Eastern, dive 1 at dusk (matching
         // its "Wreck site at dusk" plan), dive 2 in full dark, 3.5 h dock to
         // dock — two night dives plus a surface interval don't fit in less.
@@ -108,7 +108,7 @@ export async function seedTrips(
         shopId,
         diveSiteId: siteByName.get("Spiegel Grove")?.id,
         title: "Wreck Trip — Spiegel Grove",
-        description: "The big one. AOW + Deep + nitrox required.",
+        description: "The big one.",
         startsAt: at(5, 12, 0),
         endsAt: at(5, 16, 0),
         capacity: 10,
@@ -373,6 +373,11 @@ export async function seedTrips(
   });
   if (tripDiveRows.length > 0) await db.insert(tripDives).values(tripDiveRows);
 
+  // These rows are also what the seeded *descriptions* used to say in prose —
+  // "All levels, OW required", "Night specialty required", "AOW + Deep + nitrox
+  // required" — which made the demo shop model the duplication as normal
+  // practice. The public schedule card composes and renders this gate now
+  // (issue #695), so the sentences are gone; do not put them back.
   await db.insert(tripRequirements).values(
     tripRows.map((trip) => {
       // The night dive has no site of its own, so its Night gate is trip-level;

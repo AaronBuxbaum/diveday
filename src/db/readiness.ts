@@ -7,6 +7,7 @@ import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
+  combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
   unavailableReadiness,
@@ -141,6 +142,103 @@ export async function getTripSiteRequirement(
 ): Promise<SiteCertRequirement | null> {
   const rows = await tripVisitedSites(db, shopId, tripId);
   return combineSiteRequirements(rows);
+}
+
+/**
+ * **The gate every departure on a page imposes**, composed the same way
+ * `getTripRequirements` + `getTripSiteRequirement` compose it for one trip —
+ * the trip's own requirement folded with every site it visits — but in two
+ * reads for the whole page instead of two per card.
+ *
+ * A trip appears in the returned map only when it demands *something*. That is
+ * the contract the caller needs, because the rule on the public schedule is
+ * that a departure asking nothing of anybody renders nothing at all: "no card
+ * needed" on every ordinary reef charter is the absence of a rule dressed up as
+ * a rule, which is what got "Payment: not required" deleted from the staff
+ * summary (issue #695, docs/design/principles.md).
+ *
+ * The site half reaches through both paths a trip can name a site by — the
+ * `trips.dive_site_id` pointer and its ordered dives — for the reason
+ * `combineSiteRequirements` exists at all: reading only the primary site goes
+ * quiet on exactly the two-tank day where dive two is the one that needs the
+ * card. Shop ownership is proven on the query rather than inherited from the
+ * trip's pointer (the CR-007 house rule), and `dive_sites.deleted_at` is
+ * deliberately not filtered, inherited from the depth advisory — change all
+ * three together or none.
+ */
+export async function tripRequirementSummaries(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, SiteCertRequirement>> {
+  if (tripIds.length === 0) return new Map();
+  // `queryAll`, not `Promise.all`: this takes a `DbExecutor`, so it may be
+  // handed a transaction — one pinned client, where a fan-out is queued rather
+  // than parallel (src/db/client.ts).
+  const [ownRows, siteRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          tripId: tripRequirements.tripId,
+          minimumCertificationLevel: tripRequirements.minimumCertificationLevel,
+          requiredSpecialties: tripRequirements.requiredSpecialties,
+          requiresNitrox: tripRequirements.requiresNitrox,
+        })
+        .from(tripRequirements)
+        .where(and(eq(tripRequirements.shopId, shopId), inArray(tripRequirements.tripId, tripIds))),
+    () =>
+      db
+        .select({
+          tripId: trips.id,
+          minimumCertificationLevel: diveSites.minimumCertificationLevel,
+          requiredSpecialties: diveSites.requiredSpecialties,
+          requiresNitrox: diveSites.requiresNitrox,
+        })
+        .from(trips)
+        .innerJoin(
+          diveSites,
+          sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+            select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
+          )`,
+        )
+        .where(
+          and(
+            inArray(trips.id, tripIds),
+            eq(trips.shopId, shopId),
+            eq(diveSites.shopId, shopId),
+            liveTrip(),
+          ),
+        ),
+  ]);
+
+  const byTrip = new Map<string, SiteCertRequirement>();
+  const fold = (tripId: string, part: SiteCertRequirement) => {
+    const soFar = byTrip.get(tripId) ?? {
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    };
+    byTrip.set(tripId, combineCertRequirements(soFar, part));
+  };
+  for (const row of [...ownRows, ...siteRows]) {
+    fold(row.tripId, {
+      minimumCertificationLevel: row.minimumCertificationLevel,
+      requiredSpecialties: row.requiredSpecialties ?? [],
+      requiresNitrox: Boolean(row.requiresNitrox),
+    });
+  }
+
+  const demanding = new Map<string, SiteCertRequirement>();
+  for (const [tripId, requirement] of byTrip) {
+    if (
+      requirement.minimumCertificationLevel ||
+      requirement.requiredSpecialties.length > 0 ||
+      requirement.requiresNitrox
+    ) {
+      demanding.set(tripId, requirement);
+    }
+  }
+  return demanding;
 }
 
 /**

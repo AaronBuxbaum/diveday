@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { diverTranslator } from "./messages";
-import { tripAdmissionRefusalText, tripRequirementList } from "./readiness-labels";
+import {
+  tripAdmissionRefusalText,
+  tripRequirementList,
+  tripRequirementMarkers,
+} from "./readiness-labels";
 import { staffTranslator } from "./staff-messages";
 
 /**
@@ -149,5 +153,67 @@ describe("tripRequirementList — what the trip asks of anybody", () => {
         "es-ES",
       ),
     ).toBe("Open Water o superior y certificación de Nocturno");
+  });
+});
+
+/**
+ * The list-row form of the same gate (issue #695). Its whole job is to be
+ * shorter than its sibling above while saying the same thing, so the two are
+ * asserted against each other rather than against a hand-copied string.
+ */
+describe("tripRequirementMarkers — the same gate, sized for a list row", () => {
+  const td = diverTranslator("en-US");
+  const tEsDiver = diverTranslator("es-ES");
+
+  it("is empty when the trip demands nothing, so the card renders no line", () => {
+    expect(
+      tripRequirementMarkers(td, {
+        minimumCertificationLevel: null,
+        requiredSpecialties: [],
+        requiresNitrox: false,
+      }),
+    ).toEqual([]);
+  });
+
+  it("keeps 'or higher' on the level, the one word that changes the meaning", () => {
+    expect(
+      tripRequirementMarkers(td, {
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+      }),
+    ).toEqual(["Advanced Open Water or higher"]);
+  });
+
+  it("names each specialty and nitrox as a card, without the connective prose", () => {
+    expect(
+      tripRequirementMarkers(td, {
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: ["deep"],
+        requiresNitrox: true,
+      }),
+    ).toEqual(["Advanced Open Water or higher", "Deep", "Nitrox"]);
+  });
+
+  it("is shorter than the sentence it stands in for", () => {
+    const requirement = {
+      minimumCertificationLevel: "advanced_open_water" as const,
+      requiredSpecialties: ["deep"] as const,
+      requiresNitrox: true,
+    };
+    const markers = tripRequirementMarkers(td, requirement).join(" · ");
+    const sentence = tripRequirementList(td, requirement, "en-US");
+    expect(sentence).not.toBeNull();
+    expect(markers.length).toBeLessThan((sentence ?? "").length);
+  });
+
+  it("reads in the reader's own language", () => {
+    expect(
+      tripRequirementMarkers(tEsDiver, {
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: ["night"],
+        requiresNitrox: true,
+      }),
+    ).toEqual(["Advanced Open Water o superior", "Nocturno", "Nitrox"]);
   });
 });
