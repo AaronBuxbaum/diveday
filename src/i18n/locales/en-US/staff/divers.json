@@ -36,6 +36,7 @@
       "depositPaid": "Deposit paid",
       "paid": "Paid",
       "waived": "Waived",
+      "partlyRefunded": "Partly refunded",
       "refunded": "Refunded"
     },
     "orderStatus": {
@@ -43,6 +44,7 @@
       "paid": "Paid",
       "void": "Void",
       "uncollectible": "Uncollectible",
+      "partlyRefunded": "Partly refunded",
       "refunded": "Refunded"
     },
     "cardStatus": {

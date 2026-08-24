@@ -36,6 +36,7 @@
       "depositPaid": "Depósito pagado",
       "paid": "Pagado",
       "waived": "Exonerado",
+      "partlyRefunded": "Reembolsado en parte",
       "refunded": "Reembolsado"
     },
     "orderStatus": {
@@ -43,6 +44,7 @@
       "paid": "Pagado",
       "void": "Anulado",
       "uncollectible": "Incobrable",
+      "partlyRefunded": "Reembolsado en parte",
       "refunded": "Reembolsado"
     },
     "cardStatus": {

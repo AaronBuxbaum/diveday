@@ -65,6 +65,14 @@ export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed"
 export type RefundInvoiceResult = {
   status: "refunded" | "not_configured" | "not_refundable" | "failed";
   refundId?: string;
+  /**
+   * What Stripe says it actually reversed, in minor units — read back off the
+   * refund object rather than echoed from the request. A caller must record
+   * *this*, not the amount it asked for: Stripe is the authority on what
+   * moved, and it is the only party that can see refunds this app did not
+   * make (a dispute, a reversal from the Stripe dashboard).
+   */
+  amountCents?: number;
 };
 
 export interface InvoicingProvider {
@@ -77,11 +85,22 @@ export interface InvoicingProvider {
    * never creates a second one.
    */
   resendInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<ResendInvoiceResult>;
-  /** `idempotencyKey` — see CreateInvoiceRequest; a retry converges on one Stripe refund. */
+  /**
+   * `idempotencyKey` — see CreateInvoiceRequest; a retry converges on one
+   * Stripe refund.
+   *
+   * `amountCents` omitted reverses the whole captured amount, exactly as
+   * before. Given, it reverses that much and leaves the rest — the same
+   * optional-amount contract `refundCheckoutSession` already has, and the
+   * reason the two now read alike (issue #699). The key is never derived
+   * from the amount: two genuine part-refunds of the same size are two
+   * refunds, not one retried (PAY-C1).
+   */
   refundInvoice(
     stripeAccountId: string,
     stripeInvoiceId: string,
     idempotencyKey: string,
+    amountCents?: number,
   ): Promise<RefundInvoiceResult>;
   retrieveInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<InvoiceLookupResult>;
 }
@@ -158,7 +177,7 @@ function paidPaymentIntentId(invoice: z.infer<typeof invoiceResponseSchema>): st
   return legacy?.id ?? null;
 }
 
-const refundResponseSchema = z.object({ id: z.string().min(1) });
+const refundResponseSchema = z.object({ id: z.string().min(1), amount: z.number().optional() });
 
 function headersFor(secretKey: string, stripeAccountId: string): Record<string, string> {
   return {
@@ -295,7 +314,7 @@ export function stripeInvoicingProvider(
       }
     },
 
-    async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey) {
+    async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey, amountCents) {
       try {
         // No `expand[]=payment_intent`. That parameter is not merely
         // redundant on a current account — Stripe rejects the whole request
@@ -314,15 +333,18 @@ export function stripeInvoicingProvider(
         const paymentIntentId = paidPaymentIntentId(invoiceBody.data);
         if (!paymentIntentId) return { status: "not_refundable" };
 
-        const response = await post(
-          stripeAccountId,
-          "/refunds",
-          new URLSearchParams({ payment_intent: paymentIntentId }),
-          idempotencyKey,
-        );
+        const form = new URLSearchParams({ payment_intent: paymentIntentId });
+        // Only when asked. Stripe reads an absent `amount` as "all of it",
+        // and sending the full figure explicitly would be a different
+        // request that Stripe could reject on a rounding disagreement —
+        // the same reason `refundCheckoutSession` omits it too.
+        if (amountCents !== undefined) form.set("amount", String(amountCents));
+        const response = await post(stripeAccountId, "/refunds", form, idempotencyKey);
         if (!response.ok) return { status: "failed" };
         const body = refundResponseSchema.safeParse(await response.json());
-        return body.success ? { status: "refunded", refundId: body.data.id } : { status: "failed" };
+        return body.success
+          ? { status: "refunded", refundId: body.data.id, amountCents: body.data.amount }
+          : { status: "failed" };
       } catch {
         return { status: "failed" };
       }

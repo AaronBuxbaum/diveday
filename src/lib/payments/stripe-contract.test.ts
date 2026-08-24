@@ -392,6 +392,39 @@ describe("invoicing provider against real Invoice payloads", () => {
       );
     });
 
+    it("sends an `amount` only when one is asked for, and reads Stripe's own figure back", async () => {
+      // The partial-refund contract (issue #699), the same shape
+      // `refundCheckoutSession` has had all along. An omitted amount must
+      // refund in FULL, not zero — Stripe reads an absent `amount` as "all of
+      // it", and spelling the full figure out instead would be a different
+      // request it can reject on a rounding disagreement.
+      const invoice = stripeObjectFixture("invoice.paid");
+      const refund = stripeObjectFixture("refund");
+
+      const partial = fetchReturning({ body: invoice }, { body: { ...refund, amount: 5_000 } });
+      expect(
+        await invoicingProviderFromEnvironment(ENV, partial).refundInvoice(
+          "acct_1Nv0FGQ9RKHgCVdK",
+          "in_1QsAVe",
+          "intent-refund-partial",
+          5_000,
+        ),
+      ).toEqual({ status: "refunded", refundId: refund.id, amountCents: 5_000 });
+      const partialCall = vi.mocked(partial).mock.calls[1]?.[1] as { body: string };
+      const partialForm = new URLSearchParams(partialCall.body);
+      expect(partialForm.get("amount")).toBe("5000");
+
+      const full = fetchReturning({ body: invoice }, { body: refund });
+      await invoicingProviderFromEnvironment(ENV, full).refundInvoice(
+        "acct_1Nv0FGQ9RKHgCVdK",
+        "in_1QsAVe",
+        "intent-refund-full",
+      );
+      const fullCall = vi.mocked(full).mock.calls[1]?.[1] as { body: string };
+      const fullForm = new URLSearchParams(fullCall.body);
+      expect(fullForm.get("amount")).toBeNull();
+    });
+
     it("never asks Stripe to expand the field it no longer has", async () => {
       // Stripe answers 400 `parameter_unknown` for `expand[]=payment_intent`
       // rather than ignoring it, so sending that parameter did not merely

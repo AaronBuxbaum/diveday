@@ -323,6 +323,7 @@
     "paymentDepositPaid": "Deposit paid",
     "paymentPaid": "Paid",
     "paymentWaived": "Waived",
+    "paymentPartlyRefunded": "Partly refunded",
     "paymentRefunded": "Refunded",
     "paymentUpdate": "Update",
     "paymentUpdating": "Updating…",

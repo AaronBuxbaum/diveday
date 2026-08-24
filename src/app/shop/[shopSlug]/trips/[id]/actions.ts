@@ -22,6 +22,7 @@ import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/op
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import type { PaymentStatus } from "@/db/schema";
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
@@ -173,15 +174,21 @@ const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", 
  * the one direction this classification must never fail. Here it is a compile
  * error instead.
  */
-const PAYMENT_STATUS_CLASS: Record<z.infer<typeof paymentStatusSchema>, "record" | "write_off"> = {
+const PAYMENT_STATUS_CLASS: Record<PaymentStatus, "record" | "write_off"> = {
   unpaid: "record",
   deposit_paid: "record",
   paid: "record",
   waived: "write_off",
+  // Money went back out, so changing away from it is a decision about money
+  // even though some is still held. Note it is absent from
+  // `paymentStatusSchema` above on purpose: `partly_refunded` is only ever
+  // reached by an actual Stripe partial refund, never set by hand from the
+  // roster select (issue #699).
+  partly_refunded: "write_off",
   refunded: "write_off",
 };
 
-function paymentStatusClass(status: z.infer<typeof paymentStatusSchema>): "record" | "write_off" {
+function paymentStatusClass(status: PaymentStatus): "record" | "write_off" {
   return PAYMENT_STATUS_CLASS[status];
 }
 const requirementsSchema = z.object({

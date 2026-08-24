@@ -792,3 +792,40 @@ describe("canPersonViewShopReports", () => {
     );
   });
 });
+
+/**
+ * **A partial refund has to leave the retained money in the report** (issue
+ * #699).
+ *
+ * The base-revenue query used to filter on `paid`/`deposit_paid` alone, and
+ * its own comment claimed it covered "refunds (excluded)" — true only while
+ * every refund was total. A seat left `partly_refunded` and outside the list
+ * would have reported the *whole* charge as nothing; left in the list at the
+ * pre-refund figure it would have reported money the shop no longer has.
+ * Neither is a rounding error: they are the two ways this number can lie to
+ * the person deciding whether the season worked.
+ */
+describe("monthly revenue after a partial refund", () => {
+  it("counts what the shop kept, not the whole charge and not zero", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Partly Paula");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+    // $200 taken, $30 handed back after the second dive was called off.
+    await pay(db, shop.id, booking, "partly_refunded", 17_000);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.revenueCents).toBe(17_000);
+  });
+
+  it("still drops a fully refunded seat to nothing", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Refunded Rafa");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+    await pay(db, shop.id, booking, "refunded", 0);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.revenueCents).toBe(0);
+  });
+});

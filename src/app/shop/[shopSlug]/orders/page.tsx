@@ -18,6 +18,7 @@ import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
+import type { OrderStatus } from "@/db/schema";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
@@ -44,11 +45,19 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Orders — DiveDay" };
 
-const STATUS_KEYS: Record<string, StaffMessageKey> = {
+/**
+ * Keyed by the enum, not by `string`: the filter below maps over
+ * `orderStatus.enumValues`, so a missing entry renders the raw database value
+ * as a dropdown option. That is exactly what happened when `partly_refunded`
+ * arrived (issue #699) — a compile error is the only thing that catches it,
+ * since the lookup has a fallback and the fallback looks like a word.
+ */
+const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
   open: "orders.detail.status.open",
   paid: "orders.detail.status.paid",
   void: "orders.detail.status.void",
   uncollectible: "orders.detail.status.uncollectible",
+  partly_refunded: "orders.detail.status.partlyRefunded",
   refunded: "orders.detail.status.refunded",
 };
 

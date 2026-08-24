@@ -543,9 +543,13 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
  */
 const ALLOWED_ORDER_TRANSITIONS: Record<OrderStatus, ReadonlySet<OrderStatus>> = {
   open: new Set<OrderStatus>(["open", "paid", "void", "uncollectible"]),
-  paid: new Set<OrderStatus>(["paid", "refunded"]),
+  paid: new Set<OrderStatus>(["paid", "partly_refunded", "refunded"]),
   void: new Set<OrderStatus>(["void"]),
   uncollectible: new Set<OrderStatus>(["uncollectible", "paid", "void"]),
+  // A part-refunded order still holds money, so it can be refunded again —
+  // down to zero (`refunded`) or by another slice (`partly_refunded`). It can
+  // never go back to plain `paid`: money left the account (issue #699).
+  partly_refunded: new Set<OrderStatus>(["partly_refunded", "refunded"]),
   refunded: new Set<OrderStatus>(["refunded"]),
 };
 
@@ -573,6 +577,8 @@ async function applyOrderUpdate(
   patch: {
     status: OrderStatus;
     amountPaidCents?: number;
+    /** Absolute new running total, not a delta — see `orders.refunded_cents`. */
+    refundedCents?: number;
     hostedInvoiceUrl?: string | null;
     invoicePdfUrl?: string | null;
   },
@@ -597,11 +603,19 @@ async function applyOrderUpdate(
       .set({
         status: patch.status,
         amountPaidCents: patch.amountPaidCents ?? current.amountPaidCents,
+        refundedCents: patch.refundedCents ?? current.refundedCents,
         hostedInvoiceUrl: patch.hostedInvoiceUrl ?? current.hostedInvoiceUrl,
         invoicePdfUrl: patch.invoicePdfUrl ?? current.invoicePdfUrl,
         paidAt: patch.status === "paid" ? (current.paidAt ?? now) : current.paidAt,
         voidedAt: patch.status === "void" ? (current.voidedAt ?? now) : current.voidedAt,
-        refundedAt: patch.status === "refunded" ? (current.refundedAt ?? now) : current.refundedAt,
+        // Stamped on the *first* money to come back, whether or not it was all
+        // of it — the question this column answers is "when did this order
+        // start being reversed", and a partly-refunded order with a null
+        // `refunded_at` would read as untouched.
+        refundedAt:
+          patch.status === "refunded" || patch.status === "partly_refunded"
+            ? (current.refundedAt ?? now)
+            : current.refundedAt,
         updatedAt: now,
       })
       .where(eq(orders.id, current.id))
@@ -619,12 +633,21 @@ async function applyOrderUpdate(
         providerRef: updated.stripeInvoiceId,
         operation: "order_settled",
       });
-    } else if (updated.status === "refunded" && updated.bookingId) {
+    } else if (
+      (updated.status === "refunded" || updated.status === "partly_refunded") &&
+      updated.bookingId
+    ) {
+      // `amountCents` is what the shop still holds, which is the basis a full
+      // refund already wrote (zero) and the basis the revenue query sums. A
+      // partial leaves the remainder there and marks the seat
+      // `partly_refunded` — a state that still clears the boarding gate
+      // (`PAYMENT_CLEARED`, src/lib/readiness.ts), because a diver who got
+      // half their money back has still paid (issue #699).
       await setBookingPayment(tx, {
         shopId: updated.shopId,
         bookingId: updated.bookingId,
-        status: "refunded",
-        amountCents: 0,
+        status: updated.status === "refunded" ? "refunded" : "partly_refunded",
+        amountCents: updated.amountPaidCents,
         currency: updated.currency,
         provider: "stripe",
         providerRef: updated.stripeInvoiceId,
@@ -724,15 +747,34 @@ export async function voidOrder(
  * - `not_paid` — nothing captured to reverse (open, void, already refunded).
  * - `in_progress` — another refund of this same order is already at Stripe;
  *   refused *locally* rather than sent as a second reversal (PAY-L3).
+ * - `invalid_amount` — a partial refund was asked for that is not a positive
+ *   whole number of minor units, or is more than this order still holds. Its
+ *   own code rather than `failed` because nothing was attempted and nothing
+ *   is wrong at Stripe: the staffer typed a number and needs to see which
+ *   number is wrong (ADR 20260806 — new failure modes get new codes).
  * - `failed` — Stripe refused the reversal, or the local write after it did.
  */
 export type RefundOrderOutcome =
   | { status: "refunded"; order: Order }
-  | { status: "not_found" | "not_paid" | "in_progress" | "failed" };
+  | { status: "not_found" | "not_paid" | "in_progress" | "invalid_amount" | "failed" };
 
 type OrderRefundClaim =
   | { status: "claimed"; order: Order; intent: PaymentOperationIntent }
-  | { status: "not_found" | "not_paid" | "in_progress" };
+  | { status: "not_found" | "not_paid" | "in_progress" | "invalid_amount" };
+
+/**
+ * Whether a requested partial refund is a real amount of money this order can
+ * still give back.
+ *
+ * Three refusals in one predicate, and each is a thing a form can produce: a
+ * non-integer (`12.5` cents does not exist), a non-positive number (a refund
+ * of zero moves nothing and a negative one is a *charge*), and more than the
+ * order still holds. `Number.isSafeInteger` covers `NaN` and `Infinity` at the
+ * same time, which is what an unparseable field arrives as.
+ */
+function isRefundableAmount(amountCents: number, remainingCents: number): boolean {
+  return Number.isSafeInteger(amountCents) && amountCents > 0 && amountCents <= remainingCents;
+}
 
 /**
  * Claim the sole in-flight refund of one order, under that order row's own
@@ -789,6 +831,7 @@ async function claimOrderRefund(
   shopId: string,
   orderId: string,
   staleBefore: Date = new Date(nowDate().getTime() - STALE_AFTER_MS),
+  amountCents?: number,
 ): Promise<OrderRefundClaim> {
   return db.transaction(async (tx): Promise<OrderRefundClaim> => {
     const [order] = await tx
@@ -797,7 +840,20 @@ async function claimOrderRefund(
       .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
       .for("update");
     if (!order) return { status: "not_found" };
-    if (order.status !== "paid") return { status: "not_paid" };
+    // A part-refunded order still holds money, so it is still refundable.
+    if (order.status !== "paid" && order.status !== "partly_refunded") {
+      return { status: "not_paid" };
+    }
+    if (order.amountPaidCents <= 0) return { status: "not_paid" };
+    // The bound is read *inside* the lock and against the row, never against
+    // anything the caller sent, so two part-refunds that would together
+    // overdraw the order cannot both pass: the second serializes behind the
+    // first and sees the reduced figure. Stripe's own over-refund rejection
+    // is still the authority behind this (ADR 20260806); this is the gate in
+    // front of it, so the common typo never costs a network round trip.
+    if (amountCents !== undefined && !isRefundableAmount(amountCents, order.amountPaidCents)) {
+      return { status: "invalid_amount" };
+    }
 
     const [live] = await tx
       .select({ id: paymentOperationIntents.id })
@@ -823,21 +879,48 @@ async function claimOrderRefund(
   });
 }
 
-/** Refund a paid Stripe invoice and reopen its booking payment gate. */
+/**
+ * Refund a paid Stripe invoice — all of it, or part — and reopen its booking
+ * payment gate.
+ *
+ * `options.amountCents` omitted reverses everything the order still holds, the
+ * only behaviour there used to be. Given, it reverses that much and leaves the
+ * rest: the four things a dive shop routinely does with money it is holding —
+ * a policy step rather than a cliff, returning the fare and keeping the
+ * non-refundable fee, releasing one diver out of a party that booked on one
+ * shared checkout, and the goodwill half-refund when weather cuts a boat short
+ * — were each impossible while every refund was total (issue #699).
+ *
+ * **What is recorded is what Stripe says it reversed**, never what was asked
+ * for. `refunded_cents` rises by `result.amountCents` and `amount_paid_cents`
+ * falls by the same figure, so a Stripe-side disagreement (a rounding rule, a
+ * reversal somebody made in the dashboard) lands in the ledger as the truth
+ * rather than as a silent drift between two systems.
+ */
 export async function refundOrder(
   db: AppDb,
   shopId: string,
   orderId: string,
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
-  /** See {@link claimOrderRefund} — the abandoned-attempt horizon, for tests. */
-  options: { staleBefore?: Date } = {},
+  options: {
+    /** Part of the held amount, in minor units. Omitted refunds all of it. */
+    amountCents?: number;
+    /** See {@link claimOrderRefund} — the abandoned-attempt horizon, for tests. */
+    staleBefore?: Date;
+  } = {},
 ): Promise<RefundOrderOutcome> {
   // Durable evidence before calling Stripe, and a deterministic idempotency
   // key so a retry of this same refund attempt converges on the one Stripe
   // refund already issued rather than refunding the diver twice (CR-005) —
   // now written under the order row's lock, so a *second* attempt is refused
   // locally instead of racing this one to Stripe (PAY-L3).
-  const claim = await claimOrderRefund(db, shopId, orderId, options.staleBefore);
+  const claim = await claimOrderRefund(
+    db,
+    shopId,
+    orderId,
+    options.staleBefore,
+    options.amountCents,
+  );
   if (claim.status !== "claimed") return { status: claim.status };
   const { order, intent } = claim;
 
@@ -845,6 +928,7 @@ export async function refundOrder(
     order.stripeAccountId,
     order.stripeInvoiceId,
     idempotencyKeyFor(intent.id),
+    options.amountCents,
   );
   if (result.status !== "refunded") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
@@ -853,7 +937,21 @@ export async function refundOrder(
   // Durable the moment Stripe confirms the refund exists — before the local
   // update below that could still fail (CR-005).
   if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
-  const updated = await applyOrderUpdate(db, order, { status: "refunded", amountPaidCents: 0 });
+  // Stripe's figure first, the requested one only as a fallback for a provider
+  // that reports no amount, and the whole held balance when neither says
+  // otherwise — which is the pre-existing full-refund case, unchanged. Clamped
+  // so a provider answering with more than the order holds cannot drive
+  // `amount_paid_cents` negative through the check constraint.
+  const reversedCents = Math.min(
+    result.amountCents ?? options.amountCents ?? order.amountPaidCents,
+    order.amountPaidCents,
+  );
+  const remainingCents = order.amountPaidCents - reversedCents;
+  const updated = await applyOrderUpdate(db, order, {
+    status: remainingCents > 0 ? "partly_refunded" : "refunded",
+    amountPaidCents: remainingCents,
+    refundedCents: order.refundedCents + reversedCents,
+  });
   await resolvePaymentOperation(db, intent.id, {
     status: "succeeded",
   });

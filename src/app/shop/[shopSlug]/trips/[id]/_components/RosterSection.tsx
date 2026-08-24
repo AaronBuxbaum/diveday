@@ -264,6 +264,11 @@ export function RosterSection({
       deposit_paid: t("trips.roster.paymentDepositPaid"),
       paid: t("trips.roster.paymentPaid"),
       waived: t("trips.roster.paymentWaived"),
+      // Between `waived` and `refunded` because this object's key order is the
+      // select's option order (`PaymentStatusControl`), and the money states
+      // read low-to-high. It is never *selectable* — no entry in
+      // `PAYMENT_STATUSES_ALL` — only shown when the seat is already in it.
+      partly_refunded: t("trips.roster.paymentPartlyRefunded"),
       refunded: t("trips.roster.paymentRefunded"),
     },
     update: t("trips.roster.paymentUpdate"),

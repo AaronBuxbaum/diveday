@@ -8,15 +8,17 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
+import type { OrderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { currencySymbol, majorToMinor, minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -33,11 +35,22 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Order — DiveDay" };
 
-const STATUS_KEYS: Record<string, StaffMessageKey> = {
+/**
+ * Keyed by the enum rather than by `string`, so a status added to the column
+ * is a compile error here instead of a page rendering the raw value.
+ *
+ * It was `Record<string, …>` until `partly_refunded` arrived and this heading
+ * read literally "partly_refunded" to the shop (issue #699) — the lookup falls
+ * through to the enum value, which looks like data and reads like a bug. The
+ * sibling map on the Orders index and `ORDER_STATUS_KEYS` in
+ * `src/i18n/order-labels.ts` are the same shape for the same reason.
+ */
+const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
   open: "orders.detail.status.open",
   paid: "orders.detail.status.paid",
   void: "orders.detail.status.void",
   uncollectible: "orders.detail.status.uncollectible",
+  partly_refunded: "orders.detail.status.partlyRefunded",
   refunded: "orders.detail.status.refunded",
 };
 
@@ -108,20 +121,53 @@ async function refundAction(formData: FormData) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
+  // **What to send back.** The field carries major units because that is what
+  // a staffer types; the domain works in minor ones. An empty field means the
+  // whole remaining balance, which is what this button did before it could do
+  // anything else — so a shop that never touches the amount sees no change at
+  // all (issue #699).
+  //
+  // **The currency comes off the order, never off the form.** `majorToMinor`
+  // scales by that currency's own minor units — two digits for USD, none for
+  // JPY, three for BHD — so a hand-posted `currency` would silently multiply
+  // or divide what the staffer typed by a thousand. The order row is the only
+  // thing that knows what it was charged in, and it is read here under the
+  // session's own `shopId` rather than accepted from the request.
+  //
+  // The typed figure is a *request*, never a bound: `refundOrder` re-reads the
+  // order under its own `FOR UPDATE` lock and refuses anything above what that
+  // row still holds, so the `max` on the input below is a convenience for the
+  // person and nothing more. A hand-posted form gets `invalid_amount`.
+  const typedAmount = String(formData.get("amountMajor") ?? "").trim();
+  const existing = orderId ? await getOrder(db, session.user.shopId, orderId) : null;
+  if (typedAmount && (!existing || !Number.isFinite(Number(typedAmount)))) {
+    revalidateAndRedirect(back, noticeUrl(back, "refund-invalid-amount"));
+    return;
+  }
+  const requestedCents =
+    typedAmount && existing
+      ? majorToMinor(Number(typedAmount), existing.order.currency)
+      : undefined;
   // A code, never a sentence — `refundOrder` says *why* it did not move money
   // and this picks the words (docs ADR 20260731-domain-layer-copy-leaks).
   // `in_progress` is its own notice on purpose: the honest answer to a
   // double-tapped button is "the first one is still running", not "it failed",
   // which would send staff back to press it again (PAY-L3).
   const outcome = orderId
-    ? await refundOrder(db, session.user.shopId, orderId)
+    ? await refundOrder(db, session.user.shopId, orderId, undefined, {
+        amountCents: requestedCents,
+      })
     : ({ status: "not_found" } as const);
   const notice =
     outcome.status === "refunded"
-      ? "refunded"
+      ? outcome.order.status === "partly_refunded"
+        ? "partly-refunded"
+        : "refunded"
       : outcome.status === "in_progress"
         ? "refund-in-progress"
-        : "refund-failed";
+        : outcome.status === "invalid_amount"
+          ? "refund-invalid-amount"
+          : "refund-failed";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
@@ -133,6 +179,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   voided: { tone: "success", key: "orders.detail.notice.voided" },
   "void-failed": { tone: "danger", key: "orders.detail.notice.voidFailed" },
   refunded: { tone: "success", key: "orders.detail.notice.refunded" },
+  "partly-refunded": { tone: "success", key: "orders.detail.notice.partlyRefunded" },
+  "refund-invalid-amount": { tone: "danger", key: "orders.detail.notice.refundInvalidAmount" },
   "refund-failed": { tone: "danger", key: "orders.detail.notice.refundFailed" },
   "refund-in-progress": { tone: "warning", key: "orders.detail.notice.refundInProgress" },
   "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
@@ -189,6 +237,17 @@ export default async function OrderDetailPage({
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
   const canRefund = await canPersonRefund(db, shop.id, session.user.personId);
+  // What is left to give back, as a number a person types. Read off the order
+  // rather than its total, so a second partial refund offers the remainder
+  // instead of re-offering the whole charge (issue #699).
+  const refundableMajor = minorToMajor(order.order.amountPaidCents, order.order.currency);
+  // Built above the JSX rather than nested in it: `check:copy` reads a ternary
+  // chain inside an element as prose, and with the demo branch this one is
+  // three deep (same reason `PublicShopChrome`'s address node is hoisted).
+  const canOfferRefund =
+    canRefund &&
+    (order.order.status === "paid" || order.order.status === "partly_refunded") &&
+    order.order.amountPaidCents > 0;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const demoActionHint = t("orders.detail.demoActionHint");
@@ -335,7 +394,7 @@ export default async function OrderDetailPage({
               </>
             )
           ) : null}
-          {canRefund && order.order.status === "paid" ? (
+          {canOfferRefund ? (
             demo ? (
               <DisabledDemoButton
                 label={t("orders.detail.refundPayment")}
@@ -343,8 +402,38 @@ export default async function OrderDetailPage({
                 variant="danger"
               />
             ) : (
-              <form action={refundAction}>
+              /* **The amount is a field, not a decision made for the shop.**
+                 It arrives holding the whole remaining balance, so the old
+                 one-tap full refund is still one tap; the four things a shop
+                 actually does with money it is holding — a policy step rather
+                 than a cliff, keeping a non-refundable fee, releasing one
+                 diver out of a party on a shared checkout, and the goodwill
+                 half-refund after weather cuts a boat short — are the reason
+                 it can be edited at all (issue #699).
+
+                 `max` is the balance and `step` the currency's own minor unit,
+                 so the browser catches the ordinary slip. It is a courtesy,
+                 never the gate: `refundOrder` re-reads the row under its own
+                 lock and Stripe refuses an over-refund behind that. */
+              <form action={refundAction} className="flex flex-wrap items-end gap-2">
                 <input type="hidden" name="orderId" value={order.order.id} />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">
+                    {t("orders.detail.refundAmountLabel", {
+                      currency: currencySymbol(order.order.currency, locale),
+                    })}
+                  </span>
+                  <input
+                    type="number"
+                    name="amountMajor"
+                    inputMode="decimal"
+                    min={minorToMajor(1, order.order.currency)}
+                    max={refundableMajor}
+                    step={minorToMajor(1, order.order.currency)}
+                    defaultValue={refundableMajor}
+                    className={`${controlClass} w-32 text-sm tabular-nums`}
+                  />
+                </label>
                 <SubmitButton
                   pendingLabel={t("orders.detail.refunding")}
                   className={buttonClass({ variant: "danger" })}

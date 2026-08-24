@@ -22,6 +22,7 @@ export const ORDER_STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
   paid: "divers.shared.orderStatus.paid",
   void: "divers.shared.orderStatus.void",
   uncollectible: "divers.shared.orderStatus.uncollectible",
+  partly_refunded: "divers.shared.orderStatus.partlyRefunded",
   refunded: "divers.shared.orderStatus.refunded",
 };
 
@@ -41,6 +42,10 @@ export const ORDER_STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
  *   will not receive. It is the one status in this enum that is a loss, and
  *   until now it rendered the same grey as `void` on every surface — the
  *   written-off invoice and the one that never mattered looked identical.
+ * - `partly_refunded` — **warning**, the same as `refunded`. The two differ in
+ *   what is left, not in what a staffer reconciling the day must notice:
+ *   money went back out. Splitting the tone would make the smaller event
+ *   louder or the larger one quieter, and neither is true (issue #699).
  * - `refunded` — **warning.** Deliberate, not broken, but money went back out
  *   and a staffer reconciling the day needs to see it. This is the Orders
  *   index's existing call, kept because it was the considered one.
@@ -66,5 +71,6 @@ export const ORDER_STATUS_TONES = {
   paid: "success",
   void: "neutral",
   uncollectible: "danger",
+  partly_refunded: "warning",
   refunded: "warning",
 } as const satisfies Record<OrderStatus, string>;
