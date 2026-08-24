@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { GEAR_KIND_ORDER } from "@/lib/gear";
 import { gearItemKindLabel } from "./gear-labels";
 import { staffTranslator } from "./staff-messages";
-import { GEAR_KIND_ORDER } from "@/lib/gear";
 
 describe("gear item kind labels", () => {
   it.each(["en-US", "es-ES"])("words every register kind in %s", (locale) => {

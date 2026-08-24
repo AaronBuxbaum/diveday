@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { shiftCalendarDateMonths } from "./calendar-date";
 import {
   GEAR_KIND_ORDER,
-  GEAR_SERVICE_KINDS_FOR,
   GEAR_SERVICE_DUE_SOON_DAYS,
   GEAR_SERVICE_DUE_SOON_DIVES,
+  GEAR_SERVICE_KINDS_FOR,
   gearKindRank,
   gearServiceState,
   pickDisplayReservation,
