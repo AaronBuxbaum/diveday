@@ -557,7 +557,7 @@ export const IMPORT_HONESTY_TABLE: {
   { id: "cardOnFile", scope: "stays-behind" },
   { id: "pastVisits", scope: "included" },
   { id: "paymentHistory", scope: "included" },
-  { id: "serviceHistory", scope: "stays-behind" },
+  { id: "serviceHistory", scope: "included" },
   { id: "diverNotes", scope: "included" },
 ];
 

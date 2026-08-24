@@ -159,6 +159,11 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  // Historical assignments are source evidence attached to the gear-history
+  // import, not a live reservation or booking record. They remain in the
+  // shop database and are intentionally not part of the current full-shop
+  // export contract until that export has a matching assignment file.
+  "prior_gear_assignments",
   // The close-out ritual's append-only trail. The one in-product operational
   // record that stayed out after DATA-A10's sweep, and on a narrower argument
   // than the ones that moved: a close-out is an attestation *about* a day whose

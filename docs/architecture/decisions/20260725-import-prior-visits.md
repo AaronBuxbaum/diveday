@@ -8,6 +8,8 @@
 - **Amended in part by:** [20260816-imported-payment-history-is-evidence](20260816-imported-payment-history-is-evidence.md),
   which adds separately labelled, unverified payment/refund/receipt evidence. This ADR's prior
   visits remain inert booking-history records and their amount labels remain display-only.
+- **Amended in part by:** [20260824-gear-history-import](20260824-gear-history-import.md),
+  which supersedes the service-history conclusion below. The prior-visit rules remain unchanged.
 
 ## Context
 

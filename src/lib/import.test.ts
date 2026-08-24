@@ -897,11 +897,11 @@ describe("IMPORT_HONESTY_TABLE", () => {
     }
   });
 
-  it("keeps payment credentials and service history behind, while importing payment evidence separately", () => {
+  it("keeps payment credentials behind while importing payment evidence separately", () => {
     const behind = IMPORT_HONESTY_TABLE.filter((entry) => entry.scope === "stays-behind").map(
       (entry) => entry.id,
     );
-    expect(behind).toEqual(expect.arrayContaining(["cardOnFile", "serviceHistory"]));
+    expect(behind).toEqual(expect.arrayContaining(["cardOnFile"]));
     expect(row("cardOnFile").what).toBe("Credit card details");
     expect(row("cardOnFile").detail).toMatch(/never imports card numbers/i);
     expect(row("serviceHistory").what).toBe("Gear service history");
