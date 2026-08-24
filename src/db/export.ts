@@ -1616,7 +1616,14 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "booking_checkout_bookings.csv",
-          header: ["checkout_id", "booking_id", "person_id", "person_name", "gear_cents"],
+          header: [
+            "checkout_id",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "trip_cents",
+            "gear_cents",
+          ],
           rows: checkoutBookingRows.map((row) => {
             const personId = bookingPerson.get(row.bookingId) ?? null;
             return [
@@ -1624,6 +1631,7 @@ export async function loadShopExportBundleInput(
               row.bookingId,
               personId,
               personId ? personName.get(personId) : null,
+              row.tripCents,
               row.gearCents,
             ];
           }),
@@ -3439,8 +3447,13 @@ export async function loadDiverExportBundleInput(
         },
         {
           file: "booking_checkout_bookings.csv",
-          header: ["checkout_id", "booking_id", "gear_cents"],
-          rows: checkoutBookingRows.map((row) => [row.checkoutId, row.bookingId, row.gearCents]),
+          header: ["checkout_id", "booking_id", "trip_cents", "gear_cents"],
+          rows: checkoutBookingRows.map((row) => [
+            row.checkoutId,
+            row.bookingId,
+            row.tripCents,
+            row.gearCents,
+          ]),
           // The checkout attempt itself (booking_checkouts.csv in the shop
           // bundle) is not included: one attempt can cover a whole party
           // sharing a single Stripe session, so its customer_email and totals

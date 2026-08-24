@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {

@@ -16,18 +16,15 @@ import {
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
-import {
-  consumeEntitlementsForBooking,
-  releaseEntitlementsForBooking,
-} from "./dive-packages";
+import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
-  bookings,
   bookingPayments,
+  bookings,
   certifications,
   courses,
   nitroxCertifications,

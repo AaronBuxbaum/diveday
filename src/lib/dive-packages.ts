@@ -98,9 +98,7 @@ export function validateDivePackage(input: {
  * so a later edit to the product cannot retroactively shorten a package somebody
  * already bought — the shape of surprise this whole feature has to avoid.
  */
-export function entitlementExpiry(
-  validUntil: string | null,
-): Date | null {
+export function entitlementExpiry(validUntil: string | null): Date | null {
   if (validUntil === null) return null;
   if (!isCalendarDate(validUntil)) throw new Error("invalid package validUntil");
   return new Date(`${validUntil}T23:59:59.999Z`);

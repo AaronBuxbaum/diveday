@@ -84,9 +84,7 @@ describe("defining a package", () => {
 
 describe("when a dive stops being usable", () => {
   it("uses the whole fixed end date rather than purchase-time arithmetic", () => {
-    expect(entitlementExpiry("2026-08-31")).toEqual(
-      new Date("2026-08-31T23:59:59.999Z"),
-    );
+    expect(entitlementExpiry("2026-08-31")).toEqual(new Date("2026-08-31T23:59:59.999Z"));
     expect(entitlementExpiry(null)).toBeNull();
   });
 });

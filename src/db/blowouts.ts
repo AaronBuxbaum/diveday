@@ -13,9 +13,9 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { releasePackageCoverageForBooking } from "./bookings";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { publishManifestEvent } from "./manifest-events";
-import { releasePackageCoverageForBooking } from "./bookings";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";

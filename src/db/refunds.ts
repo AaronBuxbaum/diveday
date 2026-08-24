@@ -16,8 +16,8 @@ import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
-import type { AppDb, AppTransaction } from "./client";
 import { releasePackageCoverageForBooking } from "./bookings";
+import type { AppDb, AppTransaction } from "./client";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,

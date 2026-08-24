@@ -68,9 +68,13 @@ describe("the dive package tables", () => {
   it("refuses an invalid fixed end date", async () => {
     const { db, shop } = await context();
     await expect(
-      db
-        .insert(divePackages)
-        .values({ shopId: shop.id, name: "Invalid", diveCount: 1, priceCents: 1, validUntil: "not-a-date" }),
+      db.insert(divePackages).values({
+        shopId: shop.id,
+        name: "Invalid",
+        diveCount: 1,
+        priceCents: 1,
+        validUntil: "not-a-date",
+      }),
     ).rejects.toThrow();
   });
 

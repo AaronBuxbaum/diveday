@@ -854,10 +854,12 @@ export async function markCheckoutPaidBySessionId(
         // that column existed and completed only now — no snapshot exists to
         // read, so it keeps the conservative pre-column answer rather than a
         // guessed one; see `attributableTotalCents`.
-        amountCents: allocation.get(bookingId) ?? askedCentsFor(
-          linked.find((row) => row.bookingId === bookingId)?.tripCents ?? null,
-          gearCents,
-        ),
+        amountCents:
+          allocation.get(bookingId) ??
+          askedCentsFor(
+            linked.find((row) => row.bookingId === bookingId)?.tripCents ?? null,
+            gearCents,
+          ),
         currency: checkout.currency,
         provider: "stripe",
         providerRef: checkout.stripeSessionId,
