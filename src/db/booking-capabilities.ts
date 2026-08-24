@@ -340,8 +340,10 @@ export async function staleReadinessBookingForResend(
  * there told a diver "you already have a link and it still works" about a
  * departure that no longer runs, in success tone, forever — the caller must
  * therefore establish that the booking and its trip are good *before* asking
- * this (`security-reviewer`, issue #850). `emailFreshReadinessLink` does, and
- * is the only caller.
+ * this (`security-reviewer`, issue #850). `emailFreshReadinessLink` does.
+ * `sendFindMyBookingLinks` (`find-my-booking.ts`, issue #723) is the other
+ * caller — its own query already filters to non-cancelled bookings on
+ * scheduled, not-yet-departed trips before this is ever asked.
  */
 export async function hasLiveReadinessCapability(
   db: DbExecutor,
