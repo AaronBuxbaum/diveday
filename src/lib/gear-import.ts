@@ -72,7 +72,7 @@ function text(value: string | undefined) {
 
 function kind(value: string | null): GearItemKind {
   const normalized = normalize(value ?? "");
-  const aliasesByKind: Record<GearItemKind, string[]> = {
+  const aliasesByKind: Partial<Record<GearItemKind, string[]>> = {
     bcd: ["bcd", "buoyancy_compensator"],
     regulator: ["regulator", "regs"],
     wetsuit: ["wetsuit", "exposure_suit"],
@@ -85,7 +85,7 @@ function kind(value: string | null): GearItemKind {
     other: ["other", "misc"],
   };
   return (
-    GEAR_KIND_ORDER.find((candidate) => aliasesByKind[candidate].includes(normalized)) ?? "other"
+    GEAR_KIND_ORDER.find((candidate) => aliasesByKind[candidate]?.includes(normalized)) ?? "other"
   );
 }
 
