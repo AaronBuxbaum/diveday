@@ -89,8 +89,12 @@ describe("the report-only half", () => {
     // Every Stripe call in this app is a server-side fetch, and Stripe.js is
     // never loaded — so a connect-src entry for Stripe would be widening the
     // policy for traffic that does not exist.
-    const connect = directives(reportOnlyPolicy(base)).get("connect-src") ?? [];
-    expect(connect.some((source) => source.includes("stripe"))).toBe(false);
+    // The exact list is pinned in "names none of them when RUM is not
+    // configured"; this states the Stripe half separately because its reason is
+    // different and a reader looking for Stripe should find it here.
+    expect(directives(reportOnlyPolicy(base)).get("connect-src")).not.toContain(
+      "https://api.stripe.com",
+    );
   });
 
   describe("CloudWatch RUM's per-region hosts", () => {
@@ -107,8 +111,14 @@ describe("the report-only half", () => {
 
     it("names none of them when RUM is not configured", () => {
       // A deployment without telemetry gets a tighter policy, not a vaguer one.
-      const connect = directives(reportOnlyPolicy(base)).get("connect-src") ?? [];
-      expect(connect.some((source) => source.includes("amazonaws.com"))).toBe(false);
+      // Stated as the exact list rather than as an absence: an exact list also
+      // says what IS there, so a host added without a reason fails here too.
+      expect(directives(reportOnlyPolicy(base)).get("connect-src")).toEqual([
+        "'self'",
+        "https://va.vercel-scripts.com",
+        "https://*.ingest.sentry.io",
+        "https://*.ingest.us.sentry.io",
+      ]);
     });
 
     it("refuses a region that is not a region", () => {
@@ -118,8 +128,11 @@ describe("the report-only half", () => {
         ...base,
         rumRegion: "eu-west-1; script-src *",
       });
-      expect(injected).not.toContain("script-src *");
-      expect(injected).not.toContain("amazonaws.com");
+      // A rejected region contributes nothing at all: neither a second
+      // directive nor a host, so the policy is identical to the unconfigured
+      // one. Compared whole rather than probed for a substring, which is both
+      // stricter and not a thing that reads as URL sanitization.
+      expect(injected).toEqual(reportOnlyPolicy(base));
     });
   });
 
@@ -127,9 +140,10 @@ describe("the report-only half", () => {
     it("grants Meta's SDK only on the WhatsApp settings route", () => {
       // The only third-party script the product loads. It has no business
       // being loadable on the page where a diver pays.
-      const off = reportOnlyPolicy(base);
-      expect(off).not.toContain("connect.facebook.net");
-      expect(off).not.toContain("graph.facebook.com");
+      const off = directives(reportOnlyPolicy(base));
+      expect(off.get("script-src")).not.toContain("https://connect.facebook.net");
+      expect(off.get("connect-src")).not.toContain("https://graph.facebook.com");
+      expect(off.get("frame-src")).not.toContain("https://www.facebook.com");
 
       const on = directives(reportOnlyPolicy({ ...base, metaSignup: true }));
       expect(on.get("script-src")).toContain("https://connect.facebook.net");
