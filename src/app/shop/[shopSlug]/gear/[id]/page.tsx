@@ -91,7 +91,7 @@ export default async function GearUnitPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
-  const { item, clocks, history, reservations } = detail;
+  const { item, clocks, history, reservations, priorAssignments } = detail;
   const state = gearServiceState(clocks, todayLocal);
   const banner = noticeFromParam(notice, NOTICES);
   /**
@@ -275,7 +275,7 @@ export default async function GearUnitPage({
           />
         )}
 
-        {settled.length > 0 ? (
+        {settled.length > 0 || priorAssignments.length > 0 ? (
           <SectionCard padding="none" title={t("gear.unit.rentals.title")}>
             <ul className="divide-y divide-border">
               {settled.map((reservation) => (
@@ -295,6 +295,9 @@ export default async function GearUnitPage({
                     })}
                   </p>
                 </li>
+              ))}
+              {priorAssignments.map((assignment) => (
+                <li key={assignment.id} className="px-4 py-3 sm:px-5"><p className="text-sm font-medium">{t("gear.unit.rentals.importedAssignment", { name: assignment.personName })}</p><p className="mt-0.5 text-sm text-muted">{t("gear.unit.where.window", { from: formatCalendarDate(assignment.assignedFrom, locale), until: formatCalendarDate(assignment.assignedUntil, locale) })}{assignment.statusLabel ? ` · ${assignment.statusLabel}` : ""}</p>{assignment.note ? <p className="mt-0.5 text-xs text-muted">{assignment.note}</p> : null}</li>
               ))}
             </ul>
           </SectionCard>

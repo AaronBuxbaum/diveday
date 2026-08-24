@@ -15,6 +15,13 @@ export type PreparedGearImportRow = {
   nextDueOn: string | null;
   nextDueDives: number | null;
   note: string | null;
+  personEmail: string | null;
+  personName: string | null;
+  assignedFrom: string | null;
+  assignedUntil: string | null;
+  assignmentStatus: string | null;
+  assignmentReference: string | null;
+  assignmentNote: string | null;
   issues: string[];
 };
 
@@ -36,6 +43,13 @@ const aliases = {
   nextDueOn: ["next_due_on", "due_date", "next_service_date", "expires_on"],
   nextDueDives: ["next_due_dives", "service_due_dives", "dive_interval"],
   note: ["service_note", "service_notes", "note", "notes", "comments"],
+  personEmail: ["person_email", "diver_email", "customer_email", "renter_email"],
+  personName: ["person_name", "diver_name", "customer_name", "renter_name", "customer"],
+  assignedFrom: ["assigned_from", "rental_start", "checkout_date", "from_date", "rented_from"],
+  assignedUntil: ["assigned_until", "rental_end", "return_date", "to_date", "rented_until"],
+  assignmentStatus: ["assignment_status", "rental_status", "status"],
+  assignmentReference: ["assignment_reference", "rental_reference", "booking_reference", "order_reference"],
+  assignmentNote: ["assignment_note", "rental_note", "rental_notes"],
 } as const;
 
 function normalize(value: string) {
@@ -92,6 +106,16 @@ export function prepareGearImport(csv: string): PreparedGearImport {
     const servicedOn = value(cells, "servicedOn");
     const nextDueOn = value(cells, "nextDueOn");
     const purchasedOn = value(cells, "purchasedOn");
+    const personEmail = value(cells, "personEmail");
+    const personName = value(cells, "personName");
+    const assignedFrom = value(cells, "assignedFrom");
+    const assignedUntil = value(cells, "assignedUntil");
+    const hasAssignment = Boolean(personEmail || personName || assignedFrom || assignedUntil);
+    if (hasAssignment && !(personEmail || personName)) issues.push("assignment_missing_person");
+    if (hasAssignment && (!assignedFrom || !assignedUntil)) issues.push("assignment_missing_dates");
+    if (assignedFrom && !isValidCalendarDate(assignedFrom)) issues.push("invalid_assignment_start");
+    if (assignedUntil && !isValidCalendarDate(assignedUntil)) issues.push("invalid_assignment_end");
+    if (assignedFrom && assignedUntil && assignedUntil < assignedFrom) issues.push("assignment_end_before_start");
     if (!label) issues.push("missing_label");
     if (purchasedOn && !isValidCalendarDate(purchasedOn)) issues.push("invalid_purchase_date");
     if (servicedOn && !isValidCalendarDate(servicedOn)) issues.push("invalid_service_date");
@@ -104,7 +128,10 @@ export function prepareGearImport(csv: string): PreparedGearImport {
       rowNumber: index + 2, label, kind: kind(value(cells, "kind")), size: value(cells, "size"),
       serialNumber: value(cells, "serialNumber"), brandModel: value(cells, "brandModel"),
       purchasedOn, serviceKind: servicedOn ? serviceKind(value(cells, "serviceKind")) : null,
-      servicedOn, nextDueOn, nextDueDives, note: value(cells, "note"), issues,
+      servicedOn, nextDueOn, nextDueDives, note: value(cells, "note"),
+      personEmail: personEmail?.toLowerCase() ?? null, personName, assignedFrom, assignedUntil,
+      assignmentStatus: value(cells, "assignmentStatus"), assignmentReference: value(cells, "assignmentReference"),
+      assignmentNote: value(cells, "assignmentNote"), issues,
     };
   });
   return { rows, unmappedColumns, fatal: null };

@@ -51,7 +51,7 @@ export async function importGearServiceHistoryAction(formData: FormData) {
   const prepared = prepareGearImport(await file.text());
   if (prepared.fatal) revalidateAndRedirect(gear, noticeUrl(gear, `import-${prepared.fatal}`));
   const summary = await commitGearImport(await getDb(), session.user.shopId, prepared, session.user.personId);
-  revalidateAndRedirect(gear, noticeUrl(gear, `imported-${summary.eventsAdded}-${summary.unitsCreated}-${summary.eventsSkipped}`));
+  revalidateAndRedirect(gear, noticeUrl(gear, `imported-${summary.eventsAdded}-${summary.unitsCreated}-${summary.eventsSkipped}-${summary.assignmentsAdded}-${summary.assignmentsSkipped + summary.assignmentsUnmatched}`));
 }
 
 /**

@@ -23,4 +23,9 @@ describe("prepareGearImport", () => {
     const prepared = prepareGearImport("tag,service_date,next_due_dives\nBCD #1,2026-01-01,100");
     expect(prepared.rows[0]?.issues).toContain("dives_need_date");
   });
+  it("recognizes historical assignments", () => {
+    const prepared = prepareGearImport("gear_label,person_email,assigned_from,assigned_until,assignment_status\nBCD #14,alex@example.com,2026-06-01,2026-06-05,returned");
+    expect(prepared.rows[0]).toMatchObject({ personEmail: "alex@example.com", assignedFrom: "2026-06-01", assignedUntil: "2026-06-05", assignmentStatus: "returned" });
+    expect(prepared.rows[0]?.issues).toEqual([]);
+  });
 });

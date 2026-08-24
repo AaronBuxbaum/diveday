@@ -127,12 +127,12 @@
     "divesNeedADate": "A dive count needs a due date beside it — the unit is due at whichever comes first.",
     "importEmpty": "Choose a gear CSV to import.",
     "importNoGearColumn": "That file has no gear tag column. Use the template below.",
-    "imported": "Imported {events} service events across {units} new units. {skipped} duplicate events were left alone."
+    "imported": "Imported {events} service events across {units} new units, plus {assignments} historical assignments. {skipped} duplicate service events and {assignmentSkipped} unmatched or duplicate assignments were left alone."
   },
   "import": {
     "title": "Import gear history",
     "description": "Bring your fleet and its dated service records across from another system.",
-    "help": "One row per unit or service event. Units match by tag first, then serial number; service dates are kept as history and re-imports are deduplicated.",
+    "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
     "downloadTemplate": "Download gear CSV template",
     "file": "CSV file",
     "submit": "Import gear history",
@@ -175,7 +175,8 @@
       "recordedBy": "Logged by {name}"
     },
     "rentals": {
-      "title": "Rental history"
+      "title": "Rental history",
+      "importedAssignment": "Historical assignment to {name}"
     },
     "details": {
       "title": "Details",

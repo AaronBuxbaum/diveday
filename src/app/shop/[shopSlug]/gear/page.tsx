@@ -148,7 +148,7 @@ export default async function GearRegisterPage({
   const showDeleted = deletedPage.total > 0 && (deletedView || fleetTotal === 0);
 
   const banner = noticeFromParam(notice, NOTICES);
-  const importedMatch = notice?.match(/^imported-(\d+)-(\d+)-(\d+)$/);
+  const importedMatch = notice?.match(/^imported-(\d+)-(\d+)-(\d+)-(\d+)-(\d+)$/);
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const addStatus = notice && ADD_FORM_NOTICES.has(notice) ? NOTICES[notice] : undefined;
   const pageBanner = noticeField || addStatus ? undefined : banner;
@@ -198,7 +198,7 @@ export default async function GearRegisterPage({
         <EarnedMomentLine className="mt-6">{t("gear.notice.allHome")}</EarnedMomentLine>
       ) : importedMatch ? (
         <StaffNoticeBanner tone="success">
-          {t("gear.notice.imported", { events: importedMatch[1], units: importedMatch[2], skipped: importedMatch[3] })}
+          {t("gear.notice.imported", { events: importedMatch[1], units: importedMatch[2], skipped: importedMatch[3], assignments: importedMatch[4], assignmentSkipped: importedMatch[5] })}
         </StaffNoticeBanner>
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
