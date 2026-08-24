@@ -2,6 +2,21 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
+// Better Auth sign-out revokes a database session. The staff storage-state
+// fixture caches one session per worker/role for speed, so a test that signs
+// out must invalidate that cache before the next test tries to reuse it. This
+// generation is process-local, matching Playwright's worker-local fixture
+// lifetime; a changed value tells the fixture to sign in again.
+let staffStorageStateGeneration = 0;
+
+export function currentStaffStorageStateGeneration(): number {
+  return staffStorageStateGeneration;
+}
+
+function invalidateStaffStorageState(): void {
+  staffStorageStateGeneration += 1;
+}
+
 /** Sign in through the dev credential form as the seeded owner. */
 export async function signInAsOwner(page: Page) {
   await page.goto("/sign-in");
@@ -25,6 +40,7 @@ export async function signOut(page: Page) {
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("button", { name: "Sign out? Confirm" }).click();
   await expect(page).toHaveURL(/\/$/);
+  invalidateStaffStorageState();
 }
 
 /**

@@ -212,6 +212,12 @@ const EXCLUDED_TABLES = [
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_tokens", // bearer credentials (email verify / password reset), never exported
+  "account_sessions", // a live sign-in session — more sensitive than a bearer token, never exported
+  // better-auth adapter scaffolding, functionally unused (no OAuth, no
+  // built-in email/password flow — src/lib/auth.ts) but still credential-
+  // shaped by name, same reasoning as user_accounts.
+  "auth_provider_accounts",
+  "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities

@@ -16,6 +16,11 @@
     "go": "Go"
   },
   "numbersLabel": "This month's numbers",
+  "comparison": {
+    "yearAgo": "{trend}vs {baseline} in {month}",
+    "previousMonthFallback": "{trend}vs {baseline} in {month} (no year-ago data yet)"
+  },
+  "downloadCsv": "Download CSV",
   "metrics": {
     "revenueLabel": "Net revenue",
     "revenueDetail": "Payments and deposits taken on this month's trips",
@@ -46,6 +51,7 @@
     "trip": "Trip",
     "seats": "Seats",
     "fill": "Fill",
+    "crew": "Crew",
     "waivers": "Waivers"
   },
   "seatsMobile": "{booked}/{capacity, plural, one {# seat} other {# seats}}",

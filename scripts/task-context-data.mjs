@@ -380,13 +380,14 @@ export const areas = {
   auth: {
     goal: "Change authentication or authorization without creating edge/server divergence or tenant leakage.",
     docs: [
-      "docs/architecture/decisions/0006-auth.md",
+      "docs/architecture/decisions/20260824-migrate-staff-auth-to-better-auth.md",
       "docs/architecture/overview.md",
       "docs/engineering/testing.md",
     ],
     code: [
-      "src/lib/auth.config.ts",
       "src/lib/auth.ts",
+      "src/lib/auth-secret.ts",
+      "src/lib/embed-routes.ts",
       "src/lib/authz.ts",
       "src/lib/session.ts",
       "src/lib/public-routes.ts",
@@ -394,7 +395,7 @@ export const areas = {
     ],
     tests: ["src/lib", "e2e"],
     invariants: [
-      "Edge configuration remains edge-safe.",
+      "The edge proxy stays DB-free (cookie-cache reads only).",
       "Server actions and queries enforce authorization independently of route gating.",
       "Dev credentials never become production behavior.",
     ],

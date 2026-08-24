@@ -3645,6 +3645,30 @@ export const userAccounts = pgTable(
      */
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     /**
+     * A plain boolean mirror of `emailVerifiedAt`, kept in sync by the same
+     * writers (`markEmailVerified`/`activateStaffAccount`,
+     * src/db/user-accounts.ts). better-auth's `user` model (this table,
+     * mapped onto it via the Drizzle adapter's schema option) wants a real
+     * boolean column by this name; `emailVerifiedAt` stays the field our own
+     * domain code reads, since it also carries *when*.
+     */
+    emailVerified: boolean("email_verified").notNull().default(false),
+    /**
+     * Two more better-auth `user`-model core fields with nowhere honest to
+     * live: a staff member's display name is `people.full_name`, never
+     * duplicated here, and no avatar upload exists for a staff account.
+     * `image` is optional in better-auth's own schema and stays null; `name`
+     * is NOT — its cookie-cache validation (`userSchema`) requires a real
+     * string, so this is an empty string forever rather than a value that
+     * looks synced but silently drifts from `people.full_name`. Nothing in
+     * this app reads it; better-auth's own user-creation/update endpoints
+     * (the only writers that would ever set it meaningfully) are never
+     * called — this table's rows are inserted directly by our own code
+     * (staff-accounts.ts, onboard/actions.ts).
+     */
+    name: text("name").notNull().default(""),
+    image: text("image"),
+    /**
      * Null until this account dismisses its first-visit role orientation card
      * on Today (UX-persona task 79 — Kai, the day-one seasonal hire).
      * Per-account, not per-browser/device, so dismissing on the shop's shared
@@ -3652,6 +3676,14 @@ export const userAccounts = pgTable(
      */
     orientationDismissedAt: timestamp("orientation_dismissed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * better-auth's core `user` model requires an `updatedAt`; nothing in
+     * this app reads it (our own writers below don't set it, and we never
+     * go through better-auth's own update-user endpoint), so it is exactly
+     * as stale as `createdAt` unless a future better-auth-owned write path
+     * starts touching it.
+     */
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("user_accounts_email_unique").on(table.email),
@@ -3692,6 +3724,84 @@ export const accountTokens = pgTable(
   },
   (table) => [index("account_tokens_account_purpose_idx").on(table.userAccountId, table.purpose)],
 );
+
+/**
+ * A signed-in session — better-auth's `session` model, mapped here by name
+ * for consistency with `account_tokens` rather than better-auth's default
+ * `session`. Unlike the JWT next-auth used (ADR-0006), this row is the
+ * session: `token` is what the cookie carries, and revoking sign-in means
+ * deleting or expiring this row rather than waiting out a JWT's lifetime.
+ *
+ * `personId`/`shopId`/`shopSlug`/`roles` are a snapshot taken once, at
+ * sign-in, by the credentials plugin (src/lib/auth.ts) — exactly what
+ * next-auth's `jwt()` callback used to snapshot onto the token. A role change
+ * takes effect on next sign-in, not instantly; ADR-0006 already accepted this
+ * and this migration does not change it. `roles` only ever backs the edge
+ * proxy's coarse UI redirect — every privileged mutation re-reads live roles
+ * from `person_roles` via `loadActiveStaffRoles` (src/db/authz.ts), which
+ * never trusts this snapshot.
+ */
+export const accountSessions = pgTable(
+  "account_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userAccountId: uuid("user_account_id")
+      .notNull()
+      .references(() => userAccounts.id),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    shopSlug: text("shop_slug").notNull(),
+    roles: jsonb("roles").notNull().$type<string[]>(),
+    /** `people.full_name` at sign-in — the "Hi, {name}" greeting and invite emails read this off the session rather than a fresh join. */
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("account_sessions_user_account_idx").on(table.userAccountId)],
+);
+
+/**
+ * better-auth's `account` model — one row per login provider linked to a
+ * user. Required adapter scaffolding, functionally unused here: sign-in goes
+ * through a custom credentials plugin that verifies against
+ * `user_accounts.hashed_password` directly (src/lib/credentials.ts) and never
+ * writes a provider row, and no OAuth provider is configured. Named away from
+ * "account" since that word already means a shop's connected Stripe/WhatsApp
+ * account elsewhere in this schema.
+ */
+export const authProviderAccounts = pgTable("auth_provider_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userAccountId: uuid("user_account_id")
+    .notNull()
+    .references(() => userAccounts.id),
+  providerId: text("provider_id").notNull(),
+  accountId: text("account_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * better-auth's `verification` model — required adapter scaffolding,
+ * functionally unused here: email verification, password reset, and staff
+ * invites all run through the existing, unrelated `account_tokens` system
+ * (src/db/account-tokens.ts), not better-auth's own flows.
+ */
+export const authVerifications = pgTable("auth_verifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /**
  * A template is versioned by insertion, never by mutation. A record captures

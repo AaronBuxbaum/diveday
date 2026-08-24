@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import type { AppDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 
 /**
@@ -72,7 +72,8 @@ export function staffSession(input: {
   personId: string;
   roles?: Role[];
   name?: string;
-}): Session {
+  email?: string;
+}): DiveDaySession {
   return {
     user: {
       personId: input.personId,
@@ -80,9 +81,9 @@ export function staffSession(input: {
       shopSlug: input.shopSlug,
       roles: input.roles ?? ["captain"],
       name: input.name ?? "Seeded staff",
+      email: input.email ?? "seeded-staff@demo.invalid",
     },
-    expires: "2099-01-01T00:00:00.000Z",
-  } as Session;
+  };
 }
 
 /** The prefix the `next/navigation` mock in each authz test throws with. */

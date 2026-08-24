@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import {
@@ -10,6 +9,7 @@ import {
 } from "@/db/manifest-events";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -19,12 +19,12 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 // Same reasoning as src/app/api/offline-manifests/sync/route.test.ts: a bare
-// mock avoids ever loading the real next-auth module outside Next's bundler.
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+// mock avoids ever loading the real better-auth module outside Next's bundler.
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const { GET, maxDuration } = await import("./route");
@@ -55,16 +55,16 @@ async function seededContext() {
 const staffSession = (
   shopId: string,
   personId: string,
-  roles: Session["user"]["roles"] = ["owner"],
-): Session => ({
+  roles: DiveDaySession["user"]["roles"] = ["owner"],
+): DiveDaySession => ({
   user: {
     personId,
     shopId,
     shopSlug: "blue-mantis",
     name: "Dana Reyes",
+    email: "staff@demo.invalid",
     roles,
   },
-  expires: new Date(Date.now() + 60_000).toISOString(),
 });
 
 let seq = 0;

@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -13,9 +13,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 // Same reasoning as src/app/api/trips/[id]/manifest-events/route.test.ts: a
-// bare mock avoids ever loading the real next-auth module outside Next's
+// bare mock avoids ever loading the real better-auth module outside Next's
 // bundler.
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 // `requestLocale` reads `next/headers`' `headers()`, which only resolves
 // inside a real Next request scope — absent here since the route is invoked
 // directly. An empty header set negotiates down to the shop's default
@@ -25,7 +25,7 @@ vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const { GET } = await import("./route");
@@ -37,16 +37,16 @@ function searchRequest(query: string) {
 const staffSession = (
   shopId: string,
   personId: string,
-  roles: Session["user"]["roles"] = ["owner"],
-): Session => ({
+  roles: DiveDaySession["user"]["roles"] = ["owner"],
+): DiveDaySession => ({
   user: {
     personId,
     shopId,
     shopSlug: "blue-mantis",
     name: "Dana Reyes",
+    email: "staff@demo.invalid",
     roles,
   },
-  expires: new Date(Date.now() + 60_000).toISOString(),
 });
 
 /**
@@ -158,7 +158,7 @@ describe("GET /api/search", () => {
     if (!otherPriya) throw new Error("insert failed");
 
     vi.mocked(getDb).mockResolvedValue(db);
-    // Session is scoped to the seeded shop, not the newly-created one — the
+    // DiveDaySession is scoped to the seeded shop, not the newly-created one — the
     // route must never let a query parameter widen the search beyond the
     // session's own shopId, no matter what the caller sends in `q`.
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));

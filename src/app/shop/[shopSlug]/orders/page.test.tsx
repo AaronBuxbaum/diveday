@@ -1,5 +1,4 @@
 import { and, eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
 import type { AppDb } from "@/db/client";
@@ -13,6 +12,7 @@ import {
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
@@ -22,18 +22,18 @@ import { demoteOwnerToManager } from "@/test/staff-session";
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
 // directly, outside Next's request scope, so the three things that only exist
-// inside one (the db handle, next-auth, and request headers) are stubbed and
+// inside one (the db handle, better-auth, and request headers) are stubbed and
 // nothing else.
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const OrdersIndexPage = (await import("./page")).default;
@@ -41,7 +41,7 @@ const OrdersIndexPage = (await import("./page")).default;
 const SHOP_SLUG = "blue-mantis";
 
 /** A session for the seeded staff member who really holds `role`, roles and all. */
-async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> {
+async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySession }> {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
@@ -55,9 +55,9 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> 
         shopId: shop.id,
         shopSlug: SHOP_SLUG,
         name: member.fullName,
+        email: "staff@demo.invalid",
         roles: member.roles,
       },
-      expires: new Date(Date.now() + 60_000).toISOString(),
     },
   };
 }
@@ -70,7 +70,10 @@ function renderWith(searchParams: Record<string, string> = {}) {
   });
 }
 
-async function renderOrders(role: Role, seed?: (db: AppDb, session: Session) => Promise<void>) {
+async function renderOrders(
+  role: Role,
+  seed?: (db: AppDb, session: DiveDaySession) => Promise<void>,
+) {
   const { db, session } = await sessionFor(role);
   if (seed) await seed(db, session);
   vi.mocked(getDb).mockResolvedValue(db);
@@ -85,7 +88,7 @@ async function renderOrders(role: Role, seed?: (db: AppDb, session: Session) => 
  * that frozen instant — a real `Date.now()` here is a full fortnight in its
  * future and reads as an operation that started moments ago.
  */
-async function stickAnOperation(db: AppDb, session: Session) {
+async function stickAnOperation(db: AppDb, session: DiveDaySession) {
   await db.insert(paymentOperationIntents).values({
     shopId: session.user.shopId,
     kind: "invoice",
@@ -138,7 +141,7 @@ describe("the stuck-payment-operations panel", () => {
 describe("imported payment history", () => {
   const PANEL = "Imported payment history";
 
-  async function addImportedHistory(db: AppDb, session: Session) {
+  async function addImportedHistory(db: AppDb, session: DiveDaySession) {
     const [person] = await db
       .select({ id: people.id })
       .from(people)

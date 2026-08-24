@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { nextHeadersStub } from "@/test/next-headers";
 
 /**
  * **The reserved demo namespace is an invariant of the write path**
@@ -21,16 +22,15 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
+vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-// next-auth's own module graph reaches for `next/server` in a way that does
-// not resolve under Vitest's node environment (see src/proxy.test.ts, which
-// stubs it the same way). Neither the sign-in nor the error class matters to
-// this file — the refusal lands long before either.
-vi.mock("next-auth", () => ({ AuthError: class AuthError extends Error {} }));
-vi.mock("@/lib/auth", () => ({ signIn: vi.fn() }));
+// Neither the sign-in call nor its result matters to this file — the refusal
+// lands long before either, and stubbing avoids standing up the real
+// better-auth instance (which wants a resolved database handle).
+vi.mock("@/lib/auth", () => ({ getAuth: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
