@@ -348,6 +348,48 @@ export function tripRequirementList(
   return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(parts);
 }
 
+/**
+ * **The same gate, sized for a list row** — the parts of `tripRequirementList`
+ * with the connective prose taken out, for the caller to set between separators.
+ *
+ * The public schedule shows fifteen departures at once, and until issue #695 it
+ * showed none of their requirements: a diver had to open every card to learn
+ * which they could book, and shops worked around it by typing the requirement
+ * into the free-text description by hand — where it cannot be translated, and
+ * where nothing reconciles it with the gate the booking form actually enforces.
+ * The demo shop's own seed data did this on three cards.
+ *
+ * A sentence is the wrong shape there. *"This charter is for divers with
+ * Advanced Open Water or higher, a Deep certification, and a nitrox
+ * certification"* is right on the trip page, where a diver is deciding, and is
+ * four lines of a card they are scanning. So the level keeps its "or higher"
+ * — the one word here that changes the meaning rather than smoothing it — and
+ * everything else is reduced to the name of the card being asked for.
+ *
+ * Empty when the trip demands nothing, and callers render nothing at all in
+ * that case. There is no "no certification needed" marker, deliberately: it
+ * would appear on almost every reef charter in the product and is the absence
+ * of a rule dressed as a rule (the same deletion as "Payment: not required").
+ */
+export function tripRequirementMarkers(
+  t: DiverTranslator,
+  requirement: {
+    minimumCertificationLevel: CertificationLevel | null;
+    requiredSpecialties: readonly DiveSpecialty[];
+    requiresNitrox: boolean;
+  },
+): string[] {
+  return [
+    requirement.minimumCertificationLevel
+      ? t("trip.requirementLevel", {
+          level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
+        })
+      : null,
+    ...requirement.requiredSpecialties.map((specialty) => t(DIVER_SPECIALTY_KEYS[specialty])),
+    requirement.requiresNitrox ? t("trip.requirementMarkerNitrox") : null,
+  ].filter((part): part is string => Boolean(part));
+}
+
 /** Every `ReadinessBlockerCode` the engine can raise, to its staff-facing sentence. */
 const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "shared.readiness.blockers.requirementsNotConfigured",

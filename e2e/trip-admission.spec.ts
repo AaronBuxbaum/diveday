@@ -1,4 +1,4 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripTab, seededTripId } from "./helpers";
 
 /**
@@ -382,5 +382,86 @@ test.describe("with Accept-Language: es", () => {
     await expect(page.getByRole("heading", { name: /¡Estás a bordo, Nora/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tu lista antes de la salida" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Firmar tu exención" })).toBeVisible();
+  });
+});
+
+/**
+ * **The same gate, one level up — on the list a diver actually scans**
+ * (issue #695).
+ *
+ * Until this, the schedule showed a departure's requirement nowhere, so a
+ * diver had to open all fifteen cards to learn which they could book, and
+ * shops worked around it by typing the requirement into the free-text
+ * description by hand — where it cannot be translated and where nothing
+ * reconciles it with the gate the form above actually enforces. The demo
+ * shop's own seed data did exactly that on three cards.
+ *
+ * Anonymous and READ_ONLY: the public schedule takes no session and writes
+ * nothing. The assertions use the demo shop's own page-one departures rather
+ * than `seed-cert-gates.ts`'s fixtures, which sail 29-32 days out and are
+ * therefore several keyset pages down.
+ */
+test.describe("what the public schedule card says a departure requires", () => {
+  test("a composed gate reaches the card, and a course session still shows none", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/s/blue-mantis");
+    // The filter <form> is immediately followed by the trip <ul> — the same
+    // scoping schedule-filters.spec.ts uses to stay off any other list.
+    const list = page.locator("form + ul");
+    const row = (title: string) => list.getByRole("listitem").filter({ hasText: title });
+
+    // The wreck charter asks only for Open Water in its own row; Spiegel Grove
+    // is what demands Advanced Open Water and a Deep card, and the trip adds
+    // nitrox. All three have to be on the card, or the composition is not what
+    // reached it.
+    await expect(
+      row("Wreck Trip — Spiegel Grove").getByText(
+        /Certifications · Advanced Open Water or higher · Deep · Nitrox/,
+      ),
+    ).toBeVisible();
+
+    // A plain level gate, singular label.
+    await expect(
+      row("Two-Tank Reef — Molasses & French").getByText(/Certification · Open Water or higher/),
+    ).toBeVisible();
+
+    // And the requirement is no longer *also* typed into the description — the
+    // duplication the seed used to model.
+    await expect(list.getByText(/AOW \+ Deep \+ nitrox required/)).toHaveCount(0);
+    await expect(list.getByText(/All levels, OW required/)).toHaveCount(0);
+  });
+
+  test("a course session states no gate, the same carve-out the trip page makes", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    // Continuing education is taught at the sites it certifies people for, so
+    // an AOW session's deep site must never read as a bar on the very students
+    // the course exists to create (ADR 20260803-trip-admission-at-booking).
+    // The trip page has always made this carve-out; the card has to make the
+    // same one or it contradicts the page one tap below it.
+    await page.goto("/s/blue-mantis?tripType=course");
+    const list = page.locator("form + ul");
+    const rows = list.getByRole("listitem");
+    await expect(rows).not.toHaveCount(0);
+    await expect(list.getByText(/^Certifications? ·/)).toHaveCount(0);
+  });
+
+  test("the embed carries the gate too", { tag: READ_ONLY }, async ({ page }) => {
+    // `?embed=1` drops the shop chrome and is the surface a shop pastes into
+    // its own site — the one most likely to be the only schedule a diver ever
+    // sees (ADR 20260726-schedule-embed).
+    //
+    // A different departure from the test above, because the embed shows a
+    // shorter list and Spiegel Grove sails past the end of it. This one is the
+    // better witness anyway: its Advanced Open Water and Deep come from the
+    // Duane, and its nitrox from the trip row.
+    await page.goto("/s/blue-mantis?embed=1");
+    await expect(
+      page
+        .getByRole("listitem")
+        .filter({ hasText: "Deep Wreck Charter — the Duane on EANx" })
+        .getByText(/Certifications · Advanced Open Water or higher · Deep · Nitrox/),
+    ).toBeVisible();
   });
 });

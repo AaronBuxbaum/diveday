@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { type AppDb, getDb } from "@/db/client";
+import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
@@ -23,6 +24,7 @@ import {
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
 import type { DiverTranslator } from "@/i18n/messages";
+import { tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
@@ -246,6 +248,16 @@ export default async function SchedulePage({
   // (dive one's site, copied onto the trip row), so a two-site day names both
   // and a day whose open tank is the first one still names the site it visits.
   const diveSitesByTrip = await tripDiveSiteSummaries(
+    db,
+    shop.id,
+    upcoming.map((trip) => trip.id),
+  );
+
+  // What each departure asks of anybody — the trip's own gate folded with every
+  // site it visits, one read for the page. A property of the *trip*, so it is
+  // safe on an anonymous page: it says nothing about any reader, and the map
+  // holds only the departures that demand something (issue #695).
+  const requirementsByTrip = await tripRequirementSummaries(
     db,
     shop.id,
     upcoming.map((trip) => trip.id),
@@ -506,6 +518,14 @@ export default async function SchedulePage({
                 sites: [],
                 undecidedDives: 0,
               };
+              // Course sessions are left out for the same reason the trip page
+              // leaves them out: a course states its own admission rule on its
+              // own page, and its itinerary's gate is deliberately not a
+              // booking gate (src/lib/trip-admission.ts), so repeating the
+              // site's demand here would read as a bar on the very students
+              // the course exists to create.
+              const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
+              const requirementMarkers = requirement ? tripRequirementMarkers(t, requirement) : [];
               const tripHref = `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`;
               return (
                 <li key={trip.id}>
@@ -599,6 +619,31 @@ export default async function SchedulePage({
                               })}
                             </span>
                           ) : null}
+                        </p>
+                      ) : null}
+                      {/* **What this departure asks of anybody.** The gate was
+                          modelled, enforced at booking, and rendered as prose on
+                          the trip page — and the list showed none of it, so a
+                          diver had to open all fifteen cards to learn which they
+                          could book, and shops typed the requirement into the
+                          free-text description by hand instead. That copy cannot
+                          be translated, and nothing reconciled it with the gate
+                          the form actually enforces (issue #695).
+
+                          Same label-then-values shape as the sites line above,
+                          because without a lead "Night · Deep" reads as a
+                          description of the diving rather than a bar on it. A
+                          departure that demands nothing renders nothing: "no
+                          card needed" would appear on almost every reef charter
+                          in the product, and is the absence of a rule dressed as
+                          a rule. */}
+                      {requirementMarkers.length > 0 ? (
+                        <p className="mt-2 text-sm text-muted">
+                          {requirementMarkers.length === 1
+                            ? t("schedule.certification")
+                            : t("schedule.certifications")}
+                          {" · "}
+                          {requirementMarkers.join(" · ")}
                         </p>
                       ) : null}
                       {/* The dive plan in words only when the sites line above

@@ -22,6 +22,7 @@ import {
   restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
+  tripRequirementSummaries,
   upsertTripRequirements,
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
@@ -974,5 +975,84 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
     expect(
       (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
     ).toContainEqual(expect.objectContaining({ code: "certification_insufficient" }));
+  });
+});
+
+/**
+ * The public schedule's own read (issue #695). Asserted against the demo shop
+ * rather than a hand-built fixture on purpose: these three departures are the
+ * ones whose *descriptions* used to carry the requirement in prose, so this is
+ * also the proof that deleting those sentences lost nothing.
+ */
+describe("tripRequirementSummaries — the gate every card on a page shows", () => {
+  async function scheduleContext() {
+    const { db, shop } = await seededShopContext();
+    const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const find = (prefix: string) => {
+      const trip = upcoming.find((entry) => entry.title.startsWith(prefix));
+      if (!trip) throw new Error(`demo trip missing: ${prefix}`);
+      return trip;
+    };
+    const summaries = await tripRequirementSummaries(
+      db,
+      shop.id,
+      upcoming.map((trip) => trip.id),
+    );
+    return { db, shop, find, summaries };
+  }
+
+  it("folds a site's gate into the trip's own, taking the stricter level", async () => {
+    const { find, summaries } = await scheduleContext();
+    // The wreck charter asks only for Open Water itself; Spiegel Grove is what
+    // demands Advanced Open Water and a Deep card, and the trip adds nitrox.
+    // Reading the trip row alone would under-report all three.
+    expect(summaries.get(find("Wreck Trip — Spiegel Grove").id)).toEqual({
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      requiresNitrox: true,
+    });
+  });
+
+  it("carries a trip-level specialty with no site behind it", async () => {
+    const { find, summaries } = await scheduleContext();
+    expect(summaries.get(find("Night Dive").id)).toEqual({
+      minimumCertificationLevel: "open_water",
+      requiredSpecialties: ["night"],
+      requiresNitrox: false,
+    });
+  });
+
+  it("still reports a plain level gate on an ordinary reef charter", async () => {
+    const { find, summaries } = await scheduleContext();
+    expect(summaries.get(find("Two-Tank Reef — Molasses").id)).toEqual({
+      minimumCertificationLevel: "open_water",
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    });
+  });
+
+  it("omits a departure that demands nothing, so the card renders no line", async () => {
+    const { db, shop, find, summaries } = await scheduleContext();
+    const reef = find("Two-Tank Reef — Molasses");
+    expect(summaries.has(reef.id)).toBe(true);
+
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: true,
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    // Molasses Reef itself demands nothing, so with the trip's own gate cleared
+    // there is no requirement left anywhere on the itinerary.
+    const after = await tripRequirementSummaries(db, shop.id, [reef.id]);
+    expect(after.has(reef.id)).toBe(false);
+  });
+
+  it("answers with an empty map for no trips, without touching the database", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(await tripRequirementSummaries(db, shop.id, [])).toEqual(new Map());
   });
 });
