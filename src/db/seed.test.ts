@@ -5,6 +5,7 @@ import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import {
+  accountSessions,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -476,11 +477,25 @@ describe("resetDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.email, "logan@example.com")));
     if (!logan) throw new Error("expected booked diver row");
-    await db.insert(userAccounts).values({
+    const [loganAccount] = await db
+      .insert(userAccounts)
+      .values({
+        personId: logan.id,
+        email: "logan@example.com",
+        hashedPassword: "x",
+        status: "active",
+      })
+      .returning({ id: userAccounts.id });
+    if (!loganAccount) throw new Error("expected diver account row");
+    await db.insert(accountSessions).values({
+      userAccountId: loganAccount.id,
       personId: logan.id,
-      email: "logan@example.com",
-      hashedPassword: "x",
-      status: "active",
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      roles: [],
+      name: "Login Logan",
+      token: "logan-session",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
     });
 
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
@@ -495,6 +510,9 @@ describe("resetDemoSchedule", () => {
     ).toHaveLength(0);
     expect(
       await db.select().from(userAccounts).where(eq(userAccounts.email, "logan@example.com")),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(accountSessions).where(eq(accountSessions.personId, logan.id)),
     ).toHaveLength(0);
   });
 

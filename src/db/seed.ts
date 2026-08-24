@@ -7,6 +7,7 @@ import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  accountSessions,
   accountTokens,
   activityEvents,
   boats,
@@ -1075,6 +1076,12 @@ export async function resetDemoSchedule(
     ).map((row) => row.id);
     if (purgeAccountIds.length > 0) {
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
+      // Better Auth sessions reference the login row, so they must be cleared
+      // before user_accounts for the same purged people. Stable staff sessions
+      // stay intact because purgeAccountIds contains only non-staff people.
+      await db
+        .delete(accountSessions)
+        .where(inArray(accountSessions.userAccountId, purgeAccountIds));
     }
     await db.delete(userAccounts).where(inArray(userAccounts.personId, purgeIds));
     // A processor-erasure obligation names the erased person and the staff
