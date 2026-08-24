@@ -63,6 +63,67 @@ test.describe("owner", () => {
     await expect(page.getByRole("link", { name: "Previous month" })).toHaveCount(0);
   });
 
+  /**
+   * Issue #700 — a baseline beside each headline, not five numbers with
+   * nothing to compare them to. blue-mantis's seeded back-fill spans several
+   * months, so the current month always has *some* prior month behind it
+   * (the "pages back to a fully-realized prior month" test above already
+   * relies on the same fact) — which month it resolves to (year-ago or the
+   * labelled previous-month fallback) is not pinned here, only that a real
+   * comparison renders.
+   */
+  test("a headline card compares against a baseline month, not just this one", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reports");
+    const metrics = page.getByRole("region", { name: "This month's numbers" });
+    // "vs $X in <Month> <Year>", with or without a leading percent/points
+    // trend — see reports.comparison.yearAgo / previousMonthFallback.
+    await expect(metrics.getByText(/vs .+ in \w+ \d{4}/).first()).toBeVisible();
+  });
+
+  test("the shop's very first reportable month has no baseline to compare against", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    // The same floor the month picker itself clamps to (see the "clamped, not
+    // rendered as the year 1" test) — nothing precedes it, so nothing can back
+    // a comparison, and the absence must stay absent rather than a manufactured
+    // "0%" or "—".
+    await page.goto("/shop/blue-mantis/reports?month=0001-01");
+    await expect(page.getByRole("link", { name: "Previous month" })).toHaveCount(0);
+    const metrics = page.getByRole("region", { name: "This month's numbers" });
+    await expect(metrics.getByText(/vs .+ in \w+ \d{4}/)).toHaveCount(0);
+  });
+
+  test("the trip table names how much crew each departure carried", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    // Never a cost — DiveDay does not know wages — just the headcount beside
+    // the fill a bare percentage alone cannot show (issue #700).
+    await page.goto("/shop/blue-mantis/reports");
+    const table = page.getByRole("region", { name: "Trips this month" });
+    await expect(table.getByRole("columnheader", { name: "Crew" })).toBeVisible();
+  });
+
+  test("downloads this month's report as a CSV, distinct from the full-shop export", {
+    tag: READ_ONLY,
+  }, async ({ page, request }) => {
+    await page.goto("/shop/blue-mantis/reports");
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Download CSV" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^diveday-report-blue-mantis-\d{4}-\d{2}-\d{4}-\d{2}-\d{2}\.csv$/,
+    );
+
+    const response = await request.get("/shop/blue-mantis/reports/download");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toMatch(/^text\/csv/);
+    const body = await response.text();
+    expect(body).toContain("Net revenue");
+    expect(body).toContain("Crew assigned");
+  });
+
   test("the month and its numbers lead the page, above the per-trip table", {
     tag: READ_ONLY,
   }, async ({ page }) => {

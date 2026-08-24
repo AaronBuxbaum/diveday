@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareMetric,
+  compareMonthlyReports,
+  compareRatio,
   formatPercent,
+  formatPercentChange,
+  formatPointsChange,
   formatReportMoney,
+  type MonthlyReport,
   type MonthlyReportInput,
   type ReportTrip,
   summarizeMonth,
@@ -193,5 +199,135 @@ describe("formatReportMoney", () => {
 
   it("still reads as dollars when no currency is passed", () => {
     expect(formatReportMoney(578_900)).toBe("$5,789");
+  });
+});
+
+function report(overrides: Partial<MonthlyReport> = {}): MonthlyReport {
+  return {
+    tripCount: 20,
+    seatsOffered: 200,
+    seatsBooked: 122,
+    fillRate: 0.61,
+    atCapacityTrips: 3,
+    revenueCents: 747_900,
+    importedPaymentCents: 0,
+    importedRefundCents: 0,
+    importedFinancialRecordCount: 0,
+    tipsCents: 67_500,
+    tipCount: 40,
+    waiverComplete: 113,
+    waiverOutstanding: 9,
+    waiverCompletion: 113 / 122,
+    ...overrides,
+  };
+}
+
+describe("compareMetric — issue #700", () => {
+  it("computes a percent change when the baseline clears the small-base threshold", () => {
+    expect(compareMetric(122, 98, 10)).toEqual({ current: 122, baseline: 98, percentChange: 24 });
+  });
+
+  it("never says '+50%' for 2 bookings becoming 3 — the issue's own example", () => {
+    expect(compareMetric(3, 2, 10).percentChange).toBeNull();
+  });
+
+  it("says nothing (not '+Infinity%') when the baseline is genuinely zero", () => {
+    expect(compareMetric(5, 0, 10).percentChange).toBeNull();
+  });
+
+  it("still carries the raw current/baseline numbers even without a percent", () => {
+    const cmp = compareMetric(3, 2, 10);
+    expect(cmp.current).toBe(3);
+    expect(cmp.baseline).toBe(2);
+  });
+});
+
+describe("compareRatio", () => {
+  it("reports a percentage-point delta, not a relative percent of a percent", () => {
+    // 56% to 62% is +6 points — never "+11%", which is what a relative
+    // reading of two percentages would say and is exactly the misleading
+    // shape compareMetric's threshold exists to avoid at every base.
+    expect(compareRatio(0.62, 0.56).pointsChange).toBe(6);
+  });
+
+  it("is null when either side has nothing to measure", () => {
+    expect(compareRatio(null, 0.5).pointsChange).toBeNull();
+    expect(compareRatio(0.5, null).pointsChange).toBeNull();
+    expect(compareRatio(null, null).pointsChange).toBeNull();
+  });
+});
+
+describe("compareMonthlyReports", () => {
+  it("compares every headline card against the baseline month at once", () => {
+    const current = report();
+    const baseline = report({
+      seatsBooked: 98,
+      fillRate: 0.56,
+      revenueCents: 669_000,
+      tipsCents: 60_000,
+      waiverComplete: 90,
+      waiverCompletion: 90 / 98,
+    });
+    const cmp = compareMonthlyReports("yearAgo", current, baseline, "usd");
+    expect(cmp.kind).toBe("yearAgo");
+    expect(cmp.seatsBooked).toEqual({ current: 122, baseline: 98, percentChange: 24 });
+    expect(cmp.revenueCents.percentChange).toBe(12);
+    expect(cmp.fillRate.pointsChange).toBe(5);
+  });
+
+  it("suppresses a thin-baseline-month's revenue percent even on a real dollar figure", () => {
+    // A shop's founding month: $165 in revenue a year ago against $7,479 now
+    // is arithmetically "+4433%", the exact number that makes an owner stop
+    // trusting the report (issue #700's own worry) — the honest tell is not
+    // the dollar figure, it's that almost nothing was booked yet.
+    const current = report({ seatsBooked: 122, revenueCents: 747_900 });
+    const baseline = report({ seatsBooked: 0, revenueCents: 16_500 });
+    const cmp = compareMonthlyReports("yearAgo", current, baseline, "usd");
+    expect(cmp.revenueCents.percentChange).toBeNull();
+    expect(cmp.revenueCents.current).toBeCloseTo(7479);
+    expect(cmp.revenueCents.baseline).toBeCloseTo(165);
+  });
+
+  it("suppresses tips the same way, off the same booking-activity signal as revenue", () => {
+    const current = report({ seatsBooked: 122, tipsCents: 6_000 });
+    const baseline = report({ seatsBooked: 2, tipsCents: 800 });
+    const cmp = compareMonthlyReports("previousMonth", current, baseline, "usd");
+    expect(cmp.tipsCents.percentChange).toBeNull();
+  });
+
+  it("still shows a genuine seasonal swing once the baseline month had real bookings", () => {
+    // The whole point of the feature: peak season against a real slow month
+    // can legitimately be a very large percent, and suppressing it would
+    // hide the exact seasonality comparison this report exists to answer.
+    const current = report({ seatsBooked: 122, revenueCents: 747_900 });
+    const baseline = report({ seatsBooked: 15, revenueCents: 74_790 });
+    const cmp = compareMonthlyReports("yearAgo", current, baseline, "usd");
+    expect(cmp.revenueCents.percentChange).toBe(900);
+  });
+
+  it("still runs the underlying money math in the shop's own currency, not raw minor units", () => {
+    // ¥15,000 vs ¥12,000 is a real +25% in JPY's own (zero-decimal) major
+    // unit — not divided by 100 as a dollar-shaped currency would be.
+    const current = report({ seatsBooked: 20, revenueCents: 15_000 });
+    const baseline = report({ seatsBooked: 15, revenueCents: 12_000 });
+    const cmp = compareMonthlyReports("yearAgo", current, baseline, "jpy");
+    expect(cmp.revenueCents.percentChange).toBe(25);
+  });
+});
+
+describe("formatPercentChange / formatPointsChange", () => {
+  it("signs a positive change with a leading plus", () => {
+    expect(formatPercentChange(24)).toBe("+24%");
+    expect(formatPointsChange(6)).toBe("+6pp");
+  });
+
+  it("carries the minus sign a negative number already has, unforced", () => {
+    expect(formatPercentChange(-8)).toBe("-8%");
+    expect(formatPointsChange(-3)).toBe("-3pp");
+  });
+
+  it("does not sign a flat zero as a gain", () => {
+    expect(formatPercentChange(0)).toBe("0%");
+    expect(formatPointsChange(0)).toBe("0pp");
   });
 });
