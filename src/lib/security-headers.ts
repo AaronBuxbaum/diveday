@@ -85,12 +85,17 @@ export const TOKEN_ROUTE_PREFIXES = [
 export function securityHeaderRules(): ConfigHeaderRule[] {
   return [
     { source: "/:path*", headers: BASELINE_SECURITY_HEADERS },
-    // Two sources per prefix. The bare one covers the page itself; the
-    // `:rest*` one covers anything nested beneath the token segment, which is
-    // where the one-click unsubscribe endpoint was hiding (issue #946). A
-    // single `:rest*` source is not enough on its own — an optional-repeat
-    // segment is easy to read as covering the bare path and the cost of being
-    // wrong is silent, so both are stated.
+    // Two sources per prefix. The `:rest*` one covers anything nested beneath
+    // the token segment, which is where the one-click unsubscribe endpoint was
+    // hiding (issue #946).
+    //
+    // `*` is zero-or-more, so that source alone would in fact also match the
+    // bare `/<prefix>/<token>` page; the explicit one beside it is redundant
+    // rather than required, and is kept because a reader checking whether the
+    // *page* is covered should not have to know that to answer yes. Redundant
+    // in the safe direction — it can only ever add `no-referrer` to a path the
+    // other source already matches (CodeRabbit review on PR #951 corrected an
+    // earlier claim here that a single source was insufficient).
     ...TOKEN_ROUTE_PREFIXES.flatMap((prefix) => [
       `/${prefix}/:token`,
       `/${prefix}/:token/:rest*`,
