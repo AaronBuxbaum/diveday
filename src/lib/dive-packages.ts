@@ -11,9 +11,6 @@ import { nowDate } from "./clock";
  * departures have different prices.
  */
 
-/** How long a purchased package stays usable, at the outer end of reasonable. */
-export const MAX_PACKAGE_VALIDITY_DAYS = 3 * 365;
-
 /** The most dives one package may sell — a guard against a typo, not a policy. */
 export const MAX_PACKAGE_DIVE_COUNT = 100;
 
@@ -21,8 +18,8 @@ export type DivePackageDefinition = {
   diveCount: number;
   priceCents: number;
   scope: DivePackageScope;
-  /** Null never lapses — the behaviour that cannot surprise anyone. */
-  validityDays: number | null;
+  /** Inclusive calendar date in ISO form; null never lapses. */
+  validUntil: string | null;
 };
 
 /** Why a package definition was refused. The UI picks the words. */
@@ -30,7 +27,7 @@ export type DivePackageRefusal =
   | "name_required"
   | "dive_count_out_of_range"
   | "price_required"
-  | "validity_out_of_range";
+  | "valid_until_invalid";
 
 /**
  * A submitted package, or the reason it is not one. Refused rather than
@@ -42,7 +39,7 @@ export function validateDivePackage(input: {
   diveCount: number;
   priceCents: number;
   scope: DivePackageScope;
-  validityDays: number | null;
+  validUntil: string | null;
   /**
    * The ceiling a line item on this shop's currency may carry
    * (`maxLineItemUnitAmountCents`). Passed in rather than imported: this module
@@ -77,13 +74,8 @@ export function validateDivePackage(input: {
   ) {
     return { ok: false, reason: "price_required" };
   }
-  if (
-    input.validityDays !== null &&
-    (!Number.isInteger(input.validityDays) ||
-      input.validityDays < 1 ||
-      input.validityDays > MAX_PACKAGE_VALIDITY_DAYS)
-  ) {
-    return { ok: false, reason: "validity_out_of_range" };
+  if (input.validUntil !== null && !isCalendarDate(input.validUntil)) {
+    return { ok: false, reason: "valid_until_invalid" };
   }
   return {
     ok: true,
@@ -92,24 +84,30 @@ export function validateDivePackage(input: {
       diveCount: input.diveCount,
       priceCents: input.priceCents,
       scope: input.scope,
-      validityDays: input.validityDays,
+      validUntil: input.validUntil,
     },
   };
 }
 
 /**
- * When a dive bought today stops being usable, or null if it never does.
+ * Resolve an inclusive calendar end date to the final instant of that UTC
+ * date. The package policy is date-based, not purchase-time arithmetic, so a
+ * purchase at 14:32 remains usable for the whole stated date.
  *
  * Stamped per entitlement at purchase rather than read back through the package,
  * so a later edit to the product cannot retroactively shorten a package somebody
  * already bought — the shape of surprise this whole feature has to avoid.
  */
-export function entitlementExpiry(
-  validityDays: number | null,
-  purchasedAt = nowDate(),
-): Date | null {
-  if (validityDays === null) return null;
-  return new Date(purchasedAt.getTime() + validityDays * 24 * 60 * 60 * 1000);
+export function entitlementExpiry(validUntil: string | null): Date | null {
+  if (validUntil === null) return null;
+  if (!isCalendarDate(validUntil)) throw new Error("invalid package validUntil");
+  return new Date(`${validUntil}T23:59:59.999Z`);
+}
+
+export function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 /**

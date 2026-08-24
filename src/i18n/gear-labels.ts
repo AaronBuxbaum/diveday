@@ -14,10 +14,10 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * The gear register's word maps (ADR 20260815-minimal-gear-register). The
  * eight kinds a unit shares with the packing list resolve through
  * `rental-labels.ts`'s existing `shared.rentalFit.itemLabels.*` words — one
- * code, one wording, on every screen — and only the two register-only kinds
- * (`tank`, `other`) carry words of their own under `gear.itemKinds.*`. The
- * record is total on purpose: a kind added to the enum without a wording
- * decision is a compile error here, never a raw code on a staff screen.
+ * code, one wording, on every screen — and register-only kinds carry words of
+ * their own under `gear.itemKinds.*`. The record is total on purpose: a kind
+ * added to the enum without a wording decision is a compile error here, never
+ * a raw code on a staff screen.
  */
 const KIND_SOURCES: Record<GearItemKind, { rental: RentalItemKind } | { key: StaffMessageKey }> = {
   bcd: { rental: "bcd" },
@@ -29,6 +29,16 @@ const KIND_SOURCES: Record<GearItemKind, { rental: RentalItemKind } | { key: Sta
   dive_computer: { rental: "dive_computer" },
   gopro: { rental: "gopro" },
   tank: { key: "gear.itemKinds.tank" },
+  drysuit: { key: "gear.itemKinds.drysuit" },
+  hood: { key: "gear.itemKinds.hood" },
+  gloves: { key: "gear.itemKinds.gloves" },
+  torch: { key: "gear.itemKinds.torch" },
+  dpv: { key: "gear.itemKinds.dpv" },
+  smb: { key: "gear.itemKinds.smb" },
+  reel: { key: "gear.itemKinds.reel" },
+  camera: { key: "gear.itemKinds.camera" },
+  nitrox_analyzer: { key: "gear.itemKinds.nitroxAnalyzer" },
+  o2_kit: { key: "gear.itemKinds.o2Kit" },
   other: { key: "gear.itemKinds.other" },
 };
 

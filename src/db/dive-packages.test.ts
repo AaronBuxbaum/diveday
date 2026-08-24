@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {
@@ -14,7 +13,14 @@ import {
   releaseEntitlementForBooking,
   shopSellsPackages,
 } from "./dive-packages";
-import { bookingPayments, bookings, divePackageEntitlements, orders, people } from "./schema";
+import {
+  bookingPaymentEvents,
+  bookingPayments,
+  bookings,
+  divePackageEntitlements,
+  orders,
+  people,
+} from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -64,7 +70,7 @@ describe("a shop's package price list", () => {
       diveCount: 10,
       priceCents: 90_000,
       scope: "all",
-      validityDays: null,
+      validUntil: null,
     });
 
     expect(await shopSellsPackages(db, shop.id)).toBe(true);
@@ -81,7 +87,7 @@ describe("a shop's package price list", () => {
       diveCount: 5,
       priceCents: 45_000,
       scope: "all",
-      validityDays: null,
+      validUntil: null,
     });
     if (!pkg) throw new Error("package insert returned no row");
     await grantPackageEntitlements(db, {
@@ -90,7 +96,7 @@ describe("a shop's package price list", () => {
       personId: person.id,
       orderId: order.id,
       diveCount: 5,
-      validityDays: null,
+      validUntil: null,
     });
 
     await deleteDivePackage(db, shop.id, pkg.id);
@@ -109,7 +115,7 @@ describe("selling and spending a package", () => {
       diveCount: over.diveCount ?? 10,
       priceCents: 90_000,
       scope: over.scope ?? "all",
-      validityDays: null,
+      validUntil: null,
     });
     if (!pkg) throw new Error("package insert returned no row");
     await grantPackageEntitlements(ctx.db, {
@@ -118,7 +124,7 @@ describe("selling and spending a package", () => {
       personId: ctx.person.id,
       orderId: ctx.order.id,
       diveCount: over.diveCount ?? 10,
-      validityDays: null,
+      validUntil: null,
     });
     return { ...ctx, pkg };
   }
@@ -172,10 +178,9 @@ describe("selling and spending a package", () => {
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(10);
   });
 
-  it("never lets one seat eat two dives", async () => {
-    // The guard that matters most: `bookSpot` runs concurrently, and the
-    // partial unique index on `booking_id` is the backstop however a race
-    // resolves.
+  it("never lets one booking eat more than its planned tanks", async () => {
+    // Repeated booking-path calls must not spend a second tank after the
+    // booking already has its planned coverage.
     const { db, shop, person, booking } = await sold();
     await consumeEntitlementForBooking(db, {
       shopId: shop.id,
@@ -191,7 +196,7 @@ describe("selling and spending a package", () => {
         bookingId: booking.id,
         trip: { courseId: null },
       }),
-    ).rejects.toThrow();
+    ).resolves.toBeNull();
 
     expect(await countSpendableDives(db, shop.id, person.id)).toBe(9);
   });
@@ -209,22 +214,22 @@ describe("selling and spending a package", () => {
       diveCount: 3,
       priceCents: 30_000,
       scope: "all",
-      validityDays: 7,
+      validUntil: "2026-08-31",
     });
     if (!pkg) throw new Error("package insert returned no row");
-    const purchasedAt = nowDate();
+    const purchasedAt = new Date("2026-08-24T14:32:00.000Z");
     await grantPackageEntitlements(db, {
       shopId: shop.id,
       packageId: pkg.id,
       personId: person.id,
       orderId: order.id,
       diveCount: 3,
-      validityDays: 7,
+      validUntil: "2026-08-31",
       purchasedAt,
     });
 
     expect(await countSpendableDives(db, shop.id, person.id, purchasedAt)).toBe(3);
-    const afterLapse = new Date(purchasedAt.getTime() + 8 * 24 * 60 * 60 * 1000);
+    const afterLapse = new Date("2026-09-01T00:00:00.000Z");
     expect(await countSpendableDives(db, shop.id, person.id, afterLapse)).toBe(0);
   });
 });
@@ -250,7 +255,7 @@ describe("booking a departure with a package", () => {
       diveCount: 10,
       priceCents: 90_000,
       scope,
-      validityDays: null,
+      validUntil: null,
     });
     if (!pkg) throw new Error("package insert returned no row");
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
@@ -287,7 +292,7 @@ describe("booking a departure with a package", () => {
       personId,
       orderId: order.id,
       diveCount: 10,
-      validityDays: null,
+      validUntil: null,
     });
   }
 
@@ -336,7 +341,13 @@ describe("booking a departure with a package", () => {
       .where(eq(bookingPayments.bookingId, bookingId));
     expect(payment?.status).toBe("paid");
     expect(payment?.provider).toBe("dive_package");
-    expect(await countSpendableDives(db, shop.id, personId)).toBe(9);
+    const [event] = await db
+      .select({ operation: bookingPaymentEvents.operation })
+      .from(bookingPaymentEvents)
+      .where(eq(bookingPaymentEvents.bookingId, bookingId))
+      .orderBy(bookingPaymentEvents.createdAt);
+    expect(event?.operation).toBe("package_consumed");
+    expect(await countSpendableDives(db, shop.id, personId)).toBe(8);
 
     // ...and cancelling hands it back.
     await cancelBooking(db, shop.id, bookingId);
@@ -395,7 +406,7 @@ describe("a booking made under an unconfirmed identity", () => {
       diveCount: 10,
       priceCents: 90_000,
       scope: "all",
-      validityDays: null,
+      validUntil: null,
     });
     if (!pkg) throw new Error("package insert returned no row");
     const trips = await upcomingTripsWithCounts(db, shop.id);
@@ -436,7 +447,7 @@ describe("a booking made under an unconfirmed identity", () => {
       personId,
       orderId: order.id,
       diveCount: 10,
-      validityDays: null,
+      validUntil: null,
     });
 
     // Someone else, on the public form, using the regular's email under a

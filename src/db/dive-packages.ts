@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type DivePackageDefinition,
@@ -8,8 +8,7 @@ import {
   spendableCount,
 } from "@/lib/dive-packages";
 import type { AppDb, DbExecutor } from "./client";
-import { createOrder } from "./orders";
-import { divePackageEntitlements, divePackages } from "./schema";
+import { divePackageEntitlements, divePackages, orderLineItems, orders } from "./schema";
 
 /**
  * Reading and writing the shop's prepaid packages
@@ -55,7 +54,7 @@ export async function createDivePackage(
       diveCount: input.diveCount,
       priceCents: input.priceCents,
       scope: input.scope,
-      validityDays: input.validityDays,
+      validUntil: input.validUntil,
       createdByPersonId: input.createdByPersonId,
     })
     .returning();
@@ -93,12 +92,11 @@ export async function grantPackageEntitlements(
     personId: string;
     orderId: string;
     diveCount: number;
-    validityDays: number | null;
+    validUntil: string | null;
     purchasedAt?: Date;
   },
 ) {
-  const purchasedAt = input.purchasedAt ?? nowDate();
-  const expiresAt = entitlementExpiry(input.validityDays, purchasedAt);
+  const expiresAt = entitlementExpiry(input.validUntil);
   return db
     .insert(divePackageEntitlements)
     .values(
@@ -128,7 +126,13 @@ export async function listSpendableEntitlements(
       consumedAt: divePackageEntitlements.consumedAt,
     })
     .from(divePackageEntitlements)
-    .innerJoin(divePackages, eq(divePackages.id, divePackageEntitlements.packageId))
+    .innerJoin(
+      divePackages,
+      and(
+        eq(divePackages.id, divePackageEntitlements.packageId),
+        eq(divePackages.shopId, divePackageEntitlements.shopId),
+      ),
+    )
     .where(
       and(
         eq(divePackageEntitlements.shopId, shopId),
@@ -156,10 +160,8 @@ export async function countSpendableDives(
  * **Takes the executor it is given**, because the caller is `bookSpot`'s
  * capacity transaction: the claim has to happen inside the same transaction as
  * the seat, or two concurrent bookings can read the same unused dive and both
- * try to take it. The partial unique index on `booking_id` is the backstop —
- * one seat can never hold two dives however the race resolves — and the
- * `consumed_at is null` predicate on the update is what makes the claim itself
- * atomic.
+ * try to take it. The booking transaction is the concurrency boundary, and
+ * the `consumed_at is null` predicate on each update makes each claim atomic.
  *
  * Returns the entitlement it consumed, or null. Null is not a failure: it is a
  * diver with no covering dive left, and the booking pays the ordinary way.
@@ -170,29 +172,61 @@ export async function consumeEntitlementForBooking(
     shopId: string;
     personId: string;
     bookingId: string;
-    trip: { courseId: string | null };
+    trip: { courseId: string | null; plannedDives?: number };
+    now?: Date;
+  },
+) {
+  const rows = await consumeEntitlementsForBooking(tx, {
+    ...input,
+    trip: { ...input.trip, plannedDives: input.trip.plannedDives ?? 1 },
+  });
+  return rows[0] ?? null;
+}
+
+/** Spend up to one entitlement per planned tank, returning only what existed. */
+export async function consumeEntitlementsForBooking(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    personId: string;
+    bookingId: string;
+    trip: { courseId: string | null; plannedDives: number };
     now?: Date;
   },
 ) {
   const now = input.now ?? nowDate();
-  const held = await listSpendableEntitlements(tx, input.shopId, input.personId);
-  const chosen = entitlementToSpend(held, input.trip, now);
-  if (!chosen) return null;
-  const [claimed] = await tx
-    .update(divePackageEntitlements)
-    .set({ bookingId: input.bookingId, consumedAt: now })
+  const claimed: Array<typeof divePackageEntitlements.$inferSelect> = [];
+  const [already] = await tx
+    .select({ total: count() })
+    .from(divePackageEntitlements)
     .where(
       and(
-        eq(divePackageEntitlements.id, chosen.id),
         eq(divePackageEntitlements.shopId, input.shopId),
-        // The claim's own atomicity: a row another transaction has already
-        // taken no longer matches, so this update touches nothing and the
-        // caller learns the dive was not spent.
-        isNull(divePackageEntitlements.consumedAt),
+        eq(divePackageEntitlements.bookingId, input.bookingId),
       ),
-    )
-    .returning();
-  return claimed ?? null;
+    );
+  const countToConsume = Math.max(
+    0,
+    Math.trunc(input.trip.plannedDives) - Number(already?.total ?? 0),
+  );
+  for (let index = 0; index < countToConsume; index += 1) {
+    const held = await listSpendableEntitlements(tx, input.shopId, input.personId);
+    const chosen = entitlementToSpend(held, input.trip, now);
+    if (!chosen) break;
+    const [row] = await tx
+      .update(divePackageEntitlements)
+      .set({ bookingId: input.bookingId, consumedAt: now })
+      .where(
+        and(
+          eq(divePackageEntitlements.id, chosen.id),
+          eq(divePackageEntitlements.shopId, input.shopId),
+          isNull(divePackageEntitlements.consumedAt),
+        ),
+      )
+      .returning();
+    if (row) claimed.push(row);
+  }
+  return claimed;
 }
 
 /**
@@ -207,7 +241,17 @@ export async function releaseEntitlementForBooking(
   shopId: string,
   bookingId: string,
 ) {
-  const [released] = await tx
+  const released = await releaseEntitlementsForBooking(tx, shopId, bookingId);
+  return released[0] ?? null;
+}
+
+/** Return every tank a booking consumed, preserving the exact rows. */
+export async function releaseEntitlementsForBooking(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+) {
+  return tx
     .update(divePackageEntitlements)
     .set({ bookingId: null, consumedAt: null })
     .where(
@@ -217,7 +261,87 @@ export async function releaseEntitlementForBooking(
       ),
     )
     .returning();
-  return released ?? null;
+}
+
+/** Number of package tanks already attached to each booking. */
+export async function countConsumedEntitlementsForBookings(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: string[],
+) {
+  const result = new Map<string, number>();
+  if (bookingIds.length === 0) return result;
+  const consumed = await db
+    .select({ bookingId: divePackageEntitlements.bookingId, total: count() })
+    .from(divePackageEntitlements)
+    .where(
+      and(
+        eq(divePackageEntitlements.shopId, shopId),
+        inArray(divePackageEntitlements.bookingId, bookingIds),
+      ),
+    )
+    .groupBy(divePackageEntitlements.bookingId);
+  for (const row of consumed) {
+    if (row.bookingId) result.set(row.bookingId, Number(row.total));
+  }
+  return result;
+}
+
+/** Grant package lines only after their order is paid; safe to replay. */
+export async function grantPackageEntitlementsForPaidOrder(
+  db: DbExecutor,
+  input: { shopId: string; orderId: string; purchasedAt?: Date },
+) {
+  const [order] = await db
+    .select({ personId: orders.personId, status: orders.status })
+    .from(orders)
+    .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+    .limit(1);
+  if (order?.status !== "paid") return [];
+  const lines = await db
+    .select({ packageId: orderLineItems.packageId, quantity: orderLineItems.quantity })
+    .from(orderLineItems)
+    .where(
+      and(
+        eq(orderLineItems.shopId, input.shopId),
+        eq(orderLineItems.orderId, input.orderId),
+        eq(orderLineItems.kind, "dive_package"),
+      ),
+    );
+  const granted = [];
+  for (const line of lines) {
+    if (!line.packageId) continue;
+    const [pkg] = await db
+      .select()
+      .from(divePackages)
+      .where(and(eq(divePackages.id, line.packageId), eq(divePackages.shopId, input.shopId)))
+      .limit(1);
+    if (!pkg) continue;
+    const [existing] = await db
+      .select({ id: divePackageEntitlements.id })
+      .from(divePackageEntitlements)
+      .where(
+        and(
+          eq(divePackageEntitlements.shopId, input.shopId),
+          eq(divePackageEntitlements.orderId, input.orderId),
+          eq(divePackageEntitlements.packageId, pkg.id),
+        ),
+      )
+      .limit(1);
+    if (existing) continue;
+    granted.push(
+      ...(await grantPackageEntitlements(db, {
+        shopId: input.shopId,
+        packageId: pkg.id,
+        personId: order.personId,
+        orderId: input.orderId,
+        diveCount: pkg.diveCount * line.quantity,
+        validUntil: pkg.validUntil,
+        purchasedAt: input.purchasedAt,
+      })),
+    );
+  }
+  return granted;
 }
 
 /**
@@ -256,7 +380,8 @@ export async function sellDivePackage(
         | "not_authorized"
         | "not_connected"
         | "invalid"
-        | "stripe_failed";
+        | "stripe_failed"
+        | "payment_pending";
     }
 > {
   const [pkg] = await db
@@ -272,6 +397,7 @@ export async function sellDivePackage(
     .limit(1);
   if (!pkg) return { ok: false, reason: "package_not_found" };
 
+  const { createOrder } = await import("./orders");
   const order = await createOrder(db, {
     shopId: input.shopId,
     personId: input.personId,
@@ -283,18 +409,16 @@ export async function sellDivePackage(
         description: input.description,
         quantity: 1,
         unitAmountCents: pkg.priceCents,
+        packageId: pkg.id,
       },
     ],
   });
   if (!order.ok) return { ok: false, reason: order.reason };
 
-  await grantPackageEntitlements(db, {
+  if (order.order.status !== "paid") return { ok: false, reason: "payment_pending" };
+  await grantPackageEntitlementsForPaidOrder(db, {
     shopId: input.shopId,
-    packageId: pkg.id,
-    personId: input.personId,
     orderId: order.order.id,
-    diveCount: pkg.diveCount,
-    validityDays: pkg.validityDays,
     purchasedAt: input.now,
   });
   return { ok: true, orderId: order.order.id, dives: pkg.diveCount };

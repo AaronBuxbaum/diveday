@@ -494,10 +494,20 @@ export function RosterSection({
           {filteredRoster.map(({ booking, person }) => {
             const readiness = readinessByBooking.get(booking.id)?.readiness;
             const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
-            const paymentSource = paymentSourceLine(
+            const paymentSourceCode = paymentSourceLine(
               paymentStatus,
               readinessByBooking.get(booking.id)?.paymentProvider,
             );
+            const paymentSource =
+              paymentSourceCode === "online"
+                ? t("trips.roster.paymentSourceOnline")
+                : paymentSourceCode === "package"
+                  ? t("trips.roster.paymentSourcePackage")
+                  : paymentSourceCode === "counter"
+                    ? t("trips.roster.paymentSourceCounter")
+                    : paymentSourceCode === "waived"
+                      ? t("trips.roster.paymentSourceWaived")
+                      : null;
             const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
             const waiverStatus = waiverState(currentWaiver);
             const waiverControl = WAIVER_CONTROLS[waiverStatus];

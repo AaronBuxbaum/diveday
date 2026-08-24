@@ -1204,11 +1204,12 @@ new domain concept, define it here in the same PR.
   ([20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)).
   Staff surface at `/shop/[shopSlug]/gear`; sits strictly *beneath* rental fit, never replacing it.
 - **Gear unit** — one physical tracked thing on the register: the shop's own **tag** ("BCD #14",
-  unique per shop — it's how a wet hand finds the row), kind (the prep list's eight plus **tank**
-  and **other**), optional size/serial/brand. Its status is `in_service`, `needs_service` (pulled to
-  the bench, out of the assignable pool), or `retired` — the history-preserving end of life; the
-  register's escape hatch is retiring everything, which returns the shop to sizes-only prep with no
-  data loss.
+  unique per shop — it's how a wet hand finds the row), kind (the prep list's eight plus **tank**,
+  **drysuit**, **hood**, **gloves**, **torch**, **DPV**, **SMB**, **reel**, **camera**,
+  **nitrox analyzer**, **O2 kit**, and the **other** catch-all), optional size/serial/brand. Its
+  status is `in_service` or `needs_service` (pulled to the bench, out of the assignable pool).
+  Register-only kinds do not enter rental fit or trip prep: they are inventory a shop counts and
+  services, not gear the app assigns to a diver.
 - **Gear reservation** — one unit assigned to one booking for an inclusive shop-local date range;
   the fulfillment record behind "who has what and when is it due back", never a billing record
   (rental money stays in checkout gear lines and staff invoices). The double-booking guard is the

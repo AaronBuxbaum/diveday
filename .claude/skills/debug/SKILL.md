@@ -116,7 +116,8 @@ specs happen to sort last (`visual`, `waivers`, `whatsapp-settings`), several of
 That looks *exactly* like a loaded machine, which is why it has been written off as one more than
 once. It is not: run resets against a bare server in a loop and time them
 (`curl -w "%{time_total}" -X POST -H "authorization: Bearer $DIVEDAY_E2E_SECRET"
-127.0.0.1:3100/api/test/reset`) — a flat curve exonerates the server and sends you back to the
+127.0.0.1:$E2E_BASE_PORT/api/test/reset`, after setting `E2E_BASE_PORT` to the running fleet's
+derived base or an explicit override) — a flat curve exonerates the server and sends you back to the
 test, a rising one is a real defect with a row count behind it. `/api/test/reset` vacuums for this
 reason (PGlite ships no autovacuum, so ~4,400 dead tuples and ~2MB of heap per reset used to
 accumulate forever); `src/app/api/test/reset/reclaim.test.ts` is the guard. Before blaming the

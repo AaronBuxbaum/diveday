@@ -83,7 +83,7 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   and a backwards investigation. `visual-report` now fails on a push whose shards did not all succeed,
   with an error naming the consequence and the fix (re-run the failed shard; a green re-run publishes
   the snapshot). Pull requests are deliberately exempt — a PR's missed snapshot is never anyone else's
-  baseline, and its `reg` status and sticky comment already say what happened.
+  baseline, and its visual report and sticky comment already say what happened.
 - **Both keys are now named outright, and the two entries above are history** (changed 2026-08-23,
   issue #909). `reg-keygen-git-hash-plugin` took no options at all, so the only way to steer it was
   to arrange the local git graph the way its merge-base triangulation wanted to read it — which is

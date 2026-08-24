@@ -4,6 +4,7 @@ import { majorToMinor } from "@/lib/money";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import { canPersonManageOrders } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   idempotencyKeyFor,
@@ -44,6 +45,8 @@ export type NewOrderLineItem = {
   quantity: number;
   /** An integer count of the shop currency's minor unit — never a major-unit float. */
   unitAmountCents: number;
+  /** Required for a `dive_package` line so a paid webhook can grant it. */
+  packageId?: string;
 };
 
 export type NewOrderInput = {
@@ -243,6 +246,7 @@ export async function createOrder(
         description: item.description,
         quantity: item.quantity,
         unitAmountCents: item.unitAmountCents,
+        packageId: item.packageId ?? null,
       })),
     );
 
@@ -259,6 +263,13 @@ export async function createOrder(
         provider: "stripe",
         providerRef: created.stripeInvoiceId,
         operation: "order_settled",
+      });
+    }
+    if (created.status === "paid") {
+      await grantPackageEntitlementsForPaidOrder(tx, {
+        shopId: input.shopId,
+        orderId: created.id,
+        purchasedAt: created.paidAt ?? undefined,
       });
     }
 
@@ -687,6 +698,13 @@ async function applyOrderUpdate(
         provider: "stripe",
         providerRef: updated.stripeInvoiceId,
         operation: "order_refunded",
+      });
+    }
+    if (updated.status === "paid") {
+      await grantPackageEntitlementsForPaidOrder(tx, {
+        shopId: updated.shopId,
+        orderId: updated.id,
+        purchasedAt: updated.paidAt ?? undefined,
       });
     }
     return updated;

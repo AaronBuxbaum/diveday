@@ -4,6 +4,16 @@
   "description": "Tu propia flota de alquiler — quién tiene qué, cuándo vuelve y qué mantenimiento toca.",
   "itemKinds": {
     "tank": "Tanque",
+    "drysuit": "Traje seco",
+    "hood": "Capucha",
+    "gloves": "Guantes",
+    "torch": "Linterna",
+    "dpv": "DPV",
+    "smb": "Boya de señalización",
+    "reel": "Carrete",
+    "camera": "Cámara",
+    "nitroxAnalyzer": "Analizador de nitrox",
+    "o2Kit": "Kit de O2",
     "other": "Otro"
   },
   "status": {

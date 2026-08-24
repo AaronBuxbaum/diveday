@@ -355,16 +355,16 @@ export async function createDivePackageAction(formData: FormData) {
   // The shop's own currency decides the multiplier, the same way every other
   // price box on this page is read — 5000 in a JPY shop is ¥5,000.
   const currency = toShopCurrency(await getShopCurrency(db, session.user.shopId));
-  const validityRaw = String(formData.get("validityDays") ?? "").trim();
+  const validUntilRaw = String(formData.get("validUntil") ?? "").trim();
   const validated = validateDivePackage({
     name: String(formData.get("name") ?? ""),
     diveCount: Number(formData.get("diveCount")),
     priceCents: majorToMinor(Number(formData.get("priceDollars")), currency),
     scope: formData.get("scope") === "fun_dives" ? "fun_dives" : "all",
     maxPriceCents: maxLineItemUnitAmountCents(currency),
-    // Blank means "never lapses", which is the behaviour that cannot surprise
-    // anyone — not zero, which the domain rule refuses.
-    validityDays: validityRaw === "" ? null : Number(validityRaw),
+    // Blank means "never lapses"; otherwise the shop chooses an inclusive
+    // calendar date rather than a purchase-time duration.
+    validUntil: validUntilRaw === "" ? null : validUntilRaw,
   });
   if (!validated.ok) {
     redirect(noticeUrl(settings, "package-invalid", { saved: "divePackages" }));

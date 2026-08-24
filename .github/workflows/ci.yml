@@ -508,8 +508,9 @@ jobs:
       # sticky comment, updated in place on each push. It warns; it never blocks
       # (ADR 20260802-visual-diff-pr-comment).
       #
-      # reg-suit's own GitHub App still posts its counts comment and the `reg`
-      # commit status, and this does not replace either. It says the two things
+      # reg-suit's own GitHub App still posts its counts comment. Its `reg`
+      # commit status is disabled in regconfig.json so visual changes do not
+      # make a stack unmergeable. This summary still says the two things
       # that payload structurally cannot: which surfaces moved, and whether a
       # baseline resolved at all — the documented failure where every screenshot
       # reports as `new` and the changed count is a reassuring zero while
@@ -549,7 +550,7 @@ jobs:
       # one flaky screenshot rather than as a safety net going down; this job
       # stayed green because the publish steps were *skipped*, not failed, and
       # the summary step is `continue-on-error`. On a pull request that is fine —
-      # the sticky comment and the `reg` status both say it plainly — but a push
+      # the sticky comment and the visual report both say it plainly — but a push
       # has no pull request to comment on, so the warning goes to a job summary
       # nobody opens. It cost two full investigations on 2026-08-06, days apart,
       # each starting from an unrelated branch's red `reg` and working backwards.

@@ -1,4 +1,5 @@
 import { cpus } from "node:os";
+import { resolveE2EBasePort } from "@/lib/e2e-port";
 
 /**
  * Shared topology for the e2e server fleet, imported by playwright.config.ts,
@@ -31,7 +32,7 @@ export const E2E_WORKER_COUNT =
   Number.isFinite(envWorkers) && envWorkers > 0 ? Math.floor(envWorkers) : defaultWorkers;
 
 /** First port; worker i listens on E2E_BASE_PORT + i. */
-export const E2E_BASE_PORT = Number(process.env.E2E_BASE_PORT ?? 3100) || 3100;
+export const E2E_BASE_PORT = resolveE2EBasePort(process.env.E2E_BASE_PORT, process.cwd());
 
 export function e2ePort(workerIndex: number): number {
   return E2E_BASE_PORT + workerIndex;

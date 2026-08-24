@@ -13,6 +13,7 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { releasePackageCoverageForBooking } from "./bookings";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
@@ -153,6 +154,9 @@ export async function callTripBlowout(
         ),
       );
     if (active.length > 0) {
+      for (const row of active) {
+        await releasePackageCoverageForBooking(tx, input.shopId, row.bookingId);
+      }
       await tx
         .insert(tripBlowoutDivers)
         .values(

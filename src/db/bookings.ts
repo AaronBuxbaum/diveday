@@ -16,13 +16,14 @@ import {
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
-import { consumeEntitlementForBooking, releaseEntitlementForBooking } from "./dive-packages";
+import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
+  bookingPayments,
   bookings,
   certifications,
   courses,
@@ -461,6 +462,66 @@ async function readCertificationEvidence(tx: DbExecutor, shopId: string, personI
   };
 }
 
+async function settlePackageCoverage(
+  tx: DbExecutor,
+  input: {
+    shopId: string;
+    personId: string;
+    bookingId: string;
+    identityUnconfirmed: boolean;
+    trip: { courseId: string | null; plannedDives: number };
+  },
+) {
+  if (input.identityUnconfirmed) return [];
+  const spent = await consumeEntitlementsForBooking(tx, {
+    shopId: input.shopId,
+    personId: input.personId,
+    bookingId: input.bookingId,
+    trip: input.trip,
+  });
+  if (spent.length === input.trip.plannedDives) {
+    await setBookingPayment(tx, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      status: "paid",
+      amountCents: 0,
+      currency: await getShopCurrency(tx, input.shopId),
+      provider: "dive_package",
+      providerRef: spent[0]?.id ?? null,
+      operation: "package_consumed",
+    });
+  }
+  return spent;
+}
+
+/** Shared cancellation/blow-out release; package-only payment is reset too. */
+export async function releasePackageCoverageForBooking(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+) {
+  const released = await releaseEntitlementsForBooking(tx, shopId, bookingId);
+  if (released.length === 0) return released;
+  const [payment] = await tx
+    .select()
+    .from(bookingPayments)
+    .where(and(eq(bookingPayments.shopId, shopId), eq(bookingPayments.bookingId, bookingId)))
+    .limit(1);
+  if (payment?.provider === "dive_package") {
+    await setBookingPayment(tx, {
+      shopId,
+      bookingId,
+      status: "unpaid",
+      amountCents: null,
+      currency: payment.currency,
+      provider: null,
+      providerRef: null,
+      operation: "package_released",
+    });
+  }
+  return released;
+}
+
 async function createBookingRecord(
   db: DbExecutor,
   req: BookingRequest,
@@ -736,6 +797,13 @@ async function createBookingRecord(
         claimedAt: null,
       })
       .where(eq(bookings.id, existing.id));
+    await settlePackageCoverage(tx, {
+      shopId: req.shopId,
+      personId: person.id,
+      bookingId: existing.id,
+      identityUnconfirmed,
+      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+    });
     pending.push({ req, personId: person.id, identityUnconfirmed });
     return {
       ok: true,
@@ -765,9 +833,9 @@ async function createBookingRecord(
   //
   // Inside this transaction on purpose: the claim has to be serialised with the
   // seat itself, or two concurrent bookings read the same unused dive and both
-  // take it. `consumeEntitlementForBooking` takes the executor it is given for
-  // exactly that reason, and the partial unique index on `booking_id` is the
-  // backstop however a race resolves.
+  // take it. `consumeEntitlementsForBooking` takes the executor it is given
+  // for exactly that reason, and each update's `consumed_at is null` predicate
+  // makes the individual claim atomic.
   //
   // Settled through `setBookingPayment` like every other paid seat — there is
   // deliberately **no second path to "paid"**, because `PAYMENT_CLEARED` is
@@ -786,24 +854,13 @@ async function createBookingRecord(
   // regular's email could book seats in their name on the public form and drain
   // their package, and the victim's only notice would be a balance nothing
   // renders (`dive-domain-expert`, issue #706).
-  const spent = identityUnconfirmed
-    ? null
-    : await consumeEntitlementForBooking(tx, {
-        shopId: req.shopId,
-        personId: person.id,
-        bookingId: created.id,
-        trip: { courseId: trip.courseId },
-      });
-  if (spent) {
-    await setBookingPayment(tx, {
-      shopId: req.shopId,
-      bookingId: created.id,
-      status: "paid",
-      currency: await getShopCurrency(tx, req.shopId),
-      provider: "dive_package",
-      providerRef: spent.id,
-    });
-  }
+  await settlePackageCoverage(tx, {
+    shopId: req.shopId,
+    personId: person.id,
+    bookingId: created.id,
+    identityUnconfirmed,
+    trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+  });
 
   return {
     ok: true,
@@ -1064,6 +1121,13 @@ export async function restoreBooking(
       .update(bookings)
       .set({ status: "booked" })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
+    await settlePackageCoverage(tx, {
+      shopId,
+      personId: booking.personId,
+      bookingId,
+      identityUnconfirmed: booking.identityUnconfirmedAt !== null,
+      trip: { courseId: trip.courseId, plannedDives: trip.plannedDives },
+    });
     return "restored";
   });
 }
@@ -1105,7 +1169,7 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
     // than it took (ADR 20260822-a-package-is-entitlements-not-money). Inside
     // this transaction for the same reason the revoke above is: a diver whose
     // booking cancelled but whose dive stayed spent has silently lost it.
-    await releaseEntitlementForBooking(tx, shopId, bookingId);
+    await releasePackageCoverageForBooking(tx, shopId, bookingId);
     return booking;
   });
 }
@@ -1192,6 +1256,7 @@ export async function selfCancelBooking(
       shopId: input.shopId,
       bookingId: input.bookingId,
     });
+    await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
     return { ok: true };
   });
 }
