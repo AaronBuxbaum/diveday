@@ -29,36 +29,42 @@ async function checklistContext() {
 
 describe("pre-departure checklist items (in-memory PGlite)", () => {
   it("adds an item, one past the current tail, and lists it in reading order", async () => {
+    // The demo shop ships its own seeded lines (seedPreDepartureChecklist) —
+    // this asserts the new pair lands after them, not that the list starts
+    // empty.
     const { db, shop, owner } = await checklistContext();
+    const before = await listChecklistItems(db, shop.id);
     const first = await createChecklistItem(db, {
       shopId: shop.id,
       personId: owner.id,
-      label: "Emergency oxygen aboard",
+      label: "Test: emergency oxygen aboard",
     });
     expect(first.ok).toBe(true);
     const second = await createChecklistItem(db, {
       shopId: shop.id,
       personId: owner.id,
-      label: "Life jackets counted",
+      label: "Test: life jackets counted",
     });
     expect(second.ok).toBe(true);
 
     const items = await listChecklistItems(db, shop.id);
     expect(items.map((item) => item.label)).toEqual([
-      "Emergency oxygen aboard",
-      "Life jackets counted",
+      ...before.map((item) => item.label),
+      "Test: emergency oxygen aboard",
+      "Test: life jackets counted",
     ]);
   });
 
   it("refuses a non-owner/manager from adding an item", async () => {
     const { db, shop, nonManager } = await checklistContext();
+    const before = await listChecklistItems(db, shop.id);
     const outcome = await createChecklistItem(db, {
       shopId: shop.id,
       personId: nonManager.id,
-      label: "Emergency oxygen aboard",
+      label: "Test: emergency oxygen aboard",
     });
     expect(outcome).toEqual({ ok: false, reason: "not_authorized" });
-    expect(await listChecklistItems(db, shop.id)).toEqual([]);
+    expect(await listChecklistItems(db, shop.id)).toEqual(before);
   });
 
   it("refuses a duplicate label, live items only", async () => {
@@ -77,26 +83,49 @@ describe("pre-departure checklist items (in-memory PGlite)", () => {
   });
 
   it("reorders the shop's own list", async () => {
+    // A real reorder rewrites the *whole* order, the way moveChecklistItemAction
+    // (settings/safety-checklist/actions.ts) does — reading the current list and
+    // writing the whole id sequence back, not just the two rows that moved.
     const { db, shop, owner } = await checklistContext();
-    const a = await createChecklistItem(db, { shopId: shop.id, personId: owner.id, label: "A" });
-    const b = await createChecklistItem(db, { shopId: shop.id, personId: owner.id, label: "B" });
+    const a = await createChecklistItem(db, {
+      shopId: shop.id,
+      personId: owner.id,
+      label: "Test: A",
+    });
+    const b = await createChecklistItem(db, {
+      shopId: shop.id,
+      personId: owner.id,
+      label: "Test: B",
+    });
     if (!a.ok || !b.ok) throw new Error("setup: expected both items to be created");
+    const before = await listChecklistItems(db, shop.id);
+    // Swap the last two entries (the pair just created, appended at the tail).
+    const swapped = [...before];
+    [swapped[swapped.length - 2], swapped[swapped.length - 1]] = [
+      swapped[swapped.length - 1],
+      swapped[swapped.length - 2],
+    ];
 
     const outcome = await reorderChecklistItems(db, {
       shopId: shop.id,
       personId: owner.id,
-      orderedIds: [b.id, a.id],
+      orderedIds: swapped.map((item) => item.id),
     });
     expect(outcome).toEqual({ ok: true });
-    expect((await listChecklistItems(db, shop.id)).map((item) => item.label)).toEqual(["B", "A"]);
+    expect((await listChecklistItems(db, shop.id)).map((item) => item.label)).toEqual([
+      ...before.slice(0, -2).map((item) => item.label),
+      "Test: B",
+      "Test: A",
+    ]);
   });
 
   it("soft-deletes an item, which drops it from the live list but keeps its history readable", async () => {
     const { db, shop, reef, owner } = await checklistContext();
+    const before = await listChecklistItems(db, shop.id);
     const created = await createChecklistItem(db, {
       shopId: shop.id,
       personId: owner.id,
-      label: "Fire extinguisher",
+      label: "Test: fire extinguisher",
     });
     if (!created.ok) throw new Error("setup: expected item to be created");
     const recorded = await recordPreDepartureCheck(db, {
@@ -114,7 +143,7 @@ describe("pre-departure checklist items (in-memory PGlite)", () => {
       itemId: created.id,
     });
     expect(deleted).toEqual({ ok: true });
-    expect(await listChecklistItems(db, shop.id)).toEqual([]);
+    expect(await listChecklistItems(db, shop.id)).toEqual(before);
 
     // The append-only history is untouched — the departure log still reads it.
     const latest = await latestPreDepartureChecksForTrip(db, shop.id, reef.id);

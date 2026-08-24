@@ -45,7 +45,7 @@ function PreDepartureCheckRow({
           className={buttonClass({
             variant: checked ? "primary" : "secondary",
             size: "sm",
-            className: "w-full justify-start gap-2 text-left",
+            className: "w-full justify-start gap-2 text-start",
           })}
         >
           <span aria-hidden="true">{checked ? "☑️" : "☐"}</span>

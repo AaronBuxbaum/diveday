@@ -1255,11 +1255,11 @@ export function OfflineManifestView() {
                     className={buttonClass({
                       variant: check ? "primary" : "secondary",
                       size: "boat",
-                      className: "w-full justify-start text-left",
+                      className: "w-full justify-start text-start",
                     })}
                   >
                     <span aria-hidden="true">{check ? "☑️" : "☐"}</span>
-                    <span className="ml-2">{item.label}</span>
+                    <span className="ms-2">{item.label}</span>
                   </button>
                 </li>
               );
