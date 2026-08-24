@@ -526,6 +526,8 @@
   "preDepartureCheck": {
     "heading": "Comprobación previa a la salida",
     "checkedBy": "Comprobado por {name} · {date}",
+    "printLineChecked": "{label} — {status}",
+    "printLineNotChecked": "{label} — No comprobado",
     "errorRefusal": "Eso no se guardó — inténtalo de nuevo."
   }
 }
