@@ -154,13 +154,26 @@ test.describe("staff", () => {
     // Rows, not title spans: the "Hidden" badge is a `font-semibold` span too,
     // and a sibling test in this file hides a course — matching on the row that
     // *starts* with the title keeps the order readable either way.
-    const rows = await page.locator("main ul > li").allInnerTexts();
+    // Issue 623 expanded the published catalog beyond one screenful. Walk the
+    // real pager so this assertion covers the whole PADI ladder while keeping
+    // the roster's deliberate 20-row page size.
+    const rows: string[] = [];
+    for (;;) {
+      rows.push(...(await page.locator("main ul > li").allInnerTexts()));
+      const next = page.getByRole("navigation", { name: "Pages" }).getByRole("link", {
+        name: "Next",
+      });
+      if ((await next.count()) === 0) break;
+      await next.click();
+    }
     const at = (title: string) => rows.findIndex((row) => row.trimStart().startsWith(title));
     expect(at("Discover Scuba Diving")).toBeGreaterThanOrEqual(0);
     expect(at("Discover Scuba Diving")).toBeLessThan(at("Open Water Diver"));
     expect(at("Open Water Diver")).toBeLessThan(at("Advanced Open Water Diver"));
     expect(at("Advanced Open Water Diver")).toBeLessThan(at("Rescue Diver"));
     expect(at("Rescue Diver")).toBeLessThan(at("Divemaster"));
+
+    await page.goto("/shop/blue-mantis/courses");
 
     // Agency is a tab, not a pill repeated on every row — and there is no
     // "All". Progression order is the order a shop *teaches*, which only means
