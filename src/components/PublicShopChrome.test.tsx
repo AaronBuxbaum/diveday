@@ -32,7 +32,7 @@ const shop = {
  */
 describe("the public shop footer", () => {
   it("tells a diver where the shop is, and links a map at it", () => {
-    render(<PublicShopFooter shop={shop} t={t} />);
+    render(<PublicShopFooter shop={shop} spokenLanguagesLine={null} t={t} />);
 
     const link = screen.getByRole("link", { name: /100 Ocean Drive/ });
     expect(link).toHaveAttribute("target", "_blank");
@@ -54,6 +54,7 @@ describe("the public shop footer", () => {
           addressPostalCode: null,
           addressCountry: null,
         }}
+        spokenLanguagesLine={null}
         t={t}
       />,
     );
@@ -83,11 +84,29 @@ describe("the public shop footer", () => {
           addressPostalCode: null,
           addressCountry: "Bonaire",
         }}
+        spokenLanguagesLine={null}
         t={t}
       />,
     );
 
     expect(screen.getByText("Bonaire")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Bonaire" })).toBeNull();
+  });
+});
+
+/**
+ * The marketing half of issue #708 — "we speak German" is the whole pitch for
+ * a shop selling to international divers, and it belongs where a diver
+ * chooses a shop, not only on a trip page they reach after booking.
+ */
+describe("the shop-wide spoken-languages line", () => {
+  it("shows the pre-joined line when at least one staff member has recorded a language", () => {
+    render(<PublicShopFooter shop={shop} spokenLanguagesLine="Deutsch, 日本語" t={t} />);
+    expect(screen.getByText("We speak Deutsch, 日本語")).toBeInTheDocument();
+  });
+
+  it("renders nothing at all when no staff member has recorded any language", () => {
+    render(<PublicShopFooter shop={shop} spokenLanguagesLine={null} t={t} />);
+    expect(screen.queryByText(/We speak/)).toBeNull();
   });
 });

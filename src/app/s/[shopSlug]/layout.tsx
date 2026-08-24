@@ -15,9 +15,10 @@ import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { listShopSpokenLanguages } from "@/db/staff-accounts";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
-import { localeEndonym } from "@/i18n/language-labels";
+import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLanguageFallback, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "@/i18n/settings";
@@ -27,6 +28,7 @@ import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import { isStaff } from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 
 /**
@@ -276,10 +278,24 @@ async function PublicShopFooterSection({ params }: { params: Promise<{ shopSlug:
   const { shopSlug } = await params;
   const isEmbed = (await headers()).get(EMBED_REQUEST_HEADER) === "1";
   if (isEmbed) return null;
-  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const db = await getDb();
+  const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return null;
-  const t = diverTranslator(await requestLocale(shop.defaultLocale));
-  return <PublicShopFooter shop={shop} t={t} />;
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = diverTranslator(locale);
+  // "We speak …" — every language any active staff member has recorded
+  // (issue #708), named in each language's own endonym (not the reader's
+  // locale) so a diver who reads none of the site's two languages still
+  // recognises their own among the badges. Nothing when nobody has recorded
+  // one — additive, never a placeholder for an empty shop.
+  const spokenLanguages = await listShopSpokenLanguages(db, shop.id);
+  const spokenLanguagesLine =
+    spokenLanguages.length === 0
+      ? null
+      : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+          spokenLanguages.map((code) => languageEndonym(code) ?? code),
+        );
+  return <PublicShopFooter shop={shop} spokenLanguagesLine={spokenLanguagesLine} t={t} />;
 }
 
 /**
