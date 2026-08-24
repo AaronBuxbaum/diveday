@@ -7,10 +7,12 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { listBoats } from "@/db/boats";
 import { getTripOverview } from "@/db/trips-overview";
+import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
@@ -128,7 +130,19 @@ export default async function ManageTripPage({
     pulse,
     crew,
   } = overview;
-  const { crewIds, tripRoleByPerson, crewGap, ratioGap, onShiftIds } = crew;
+  const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds } = crew;
+  // Same tone as underTargetNote below: informs, refuses nothing (issue
+  // #708). Each missing language is named in the reader's own locale
+  // (`languageNameIn`), matching the team settings form's convention —
+  // unlike the diver-facing badge, which uses each language's own endonym.
+  const languageGapNote =
+    languageGap.code === "none"
+      ? null
+      : t("trips.crew.languageGap", {
+          languages: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+            languageGap.missing.map((code) => languageNameIn(code, locale) ?? code),
+          ),
+        });
   const underTargetNote =
     ratioGap.code === "none"
       ? null
@@ -553,6 +567,7 @@ export default async function ManageTripPage({
             courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
             overRatioWarning,
             underTargetNote: cancelled ? null : underTargetNote,
+            languageGapNote: cancelled ? null : languageGapNote,
             noStaff: t("trips.crew.noCrew"),
             notAssignedYet: t("trips.crew.notAssignedYet"),
             assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
