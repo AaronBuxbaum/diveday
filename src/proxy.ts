@@ -7,6 +7,12 @@ import {
   isEmbeddableShopRoute,
   REQUEST_PATH_HEADER,
 } from "@/lib/auth.config";
+import {
+  type CspOptions,
+  enforcedPolicy,
+  reportingEndpointsHeader,
+  reportOnlyPolicy,
+} from "@/lib/content-security-policy";
 import { stripSessionSetCookies } from "@/lib/session-cookies";
 
 // Route protection at the edge (Next 16 proxy convention; middleware is
@@ -49,6 +55,9 @@ function overrideRequestHeaders(
   }
   res.headers.set("x-middleware-override-headers", [...requestHeaders.keys()].join(","));
 }
+
+/** `/shop/<slug>/settings/whatsapp`, the one route that loads Meta's SDK. */
+const WHATSAPP_SETTINGS_PATH = /^\/shop\/[^/]+\/settings\/whatsapp(\/|$)/;
 
 export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
@@ -106,8 +115,28 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
   // embed its booking calendar on its own website (docs ADR 20260726-schedule-embed).
   if (!isEmbedRequest) {
     res.headers.set("X-Frame-Options", "DENY");
-    res.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
   }
+  // The rest of the policy lives in `src/lib/content-security-policy.ts` and is
+  // stamped here rather than in `next.config.ts`'s `headers()` for the same
+  // reason `frame-ancestors` always was: it varies per request on the embed
+  // exception, and a header rule cannot read a query string (issue #718).
+  //
+  // An embed request still gets everything except `frame-ancestors` — the
+  // exception is about who may frame the page, not about whether the page
+  // itself is guarded.
+  const cspOptions: CspOptions = {
+    denyFraming: !isEmbedRequest,
+    rumRegion: process.env.NEXT_PUBLIC_RUM_REGION ?? null,
+    // The WhatsApp settings page loads Meta's SDK, and it is the only page in
+    // the product that loads a third-party script at all. Granting those hosts
+    // here rather than app-wide keeps them off every page a diver ever sees.
+    metaSignup: WHATSAPP_SETTINGS_PATH.test(req.nextUrl.pathname),
+    development: process.env.NODE_ENV === "development",
+  };
+  const enforced = enforcedPolicy(cspOptions);
+  if (enforced.length > 0) res.headers.set("Content-Security-Policy", enforced);
+  res.headers.set("Content-Security-Policy-Report-Only", reportOnlyPolicy(cspOptions));
+  res.headers.set("Reporting-Endpoints", reportingEndpointsHeader());
   return res;
 }
 

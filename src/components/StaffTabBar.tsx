@@ -11,6 +11,7 @@ import {
 } from "@/components/ShopNavLinks";
 import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import {
   currentStaffNavDestinationId,
@@ -93,6 +94,8 @@ export function StaffTabBar({
   // contract (useMenuDismissal). A tap on another dock tab both closes the
   // sheet (pointerdown) and navigates (click), so no second tap is owed.
   const closeSheet = useCallback(() => setMoreOpen(false), []);
+  // 200ms matches .sheet-out in globals.css — the two must move together.
+  const { mounted: sheetMounted, closing: sheetClosing } = useExitAnimation(moreOpen, 200);
   useMenuDismissal({
     open: moreOpen,
     close: closeSheet,
@@ -105,14 +108,14 @@ export function StaffTabBar({
   // trackpad flick over the scrim used to scroll the dimmed document, losing
   // their place on a page they never meant to touch).
   useEffect(() => {
-    if (!moreOpen) return;
+    if (!sheetMounted) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [moreOpen]);
+  }, [sheetMounted]);
 
   const trapSheetFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Tab") return;
@@ -153,7 +156,7 @@ export function StaffTabBar({
     // negative-z children, then in-flow content), so a background up here
     // would be dimmed by the very scrim meant to stop at the page.
     <nav aria-label={navAriaLabel} className="fixed inset-x-0 bottom-0 z-30 print:hidden lg:hidden">
-      {moreOpen ? (
+      {sheetMounted ? (
         // The scrim dims the page, not the dock: it paints after nothing but
         // the nav's (empty) background, and the bar wrapper's own surface
         // paints over it, so everything above the dock recedes while the bar
@@ -162,7 +165,7 @@ export function StaffTabBar({
         // closes the sheet.
         <div
           aria-hidden="true"
-          className="fixed inset-0 -z-10 animate-fade-in bg-foreground/30 backdrop-blur-sm"
+          className={`fixed inset-0 -z-10 bg-foreground/30 backdrop-blur-sm ${sheetClosing ? "animate-fade-out" : "animate-fade-in"}`}
         />
       ) : null}
       {/* Solid surface first, glass only where backdrop-filter exists: at 85%
@@ -276,13 +279,15 @@ export function StaffTabBar({
           )}
         </ul>
       </div>
-      {moreOpen ? (
+      {sheetMounted ? (
         // The sheet rises from the dock itself — bottom-anchored, where the
         // thumb already is, never a dropdown from the far top edge. Same
         // rows, same groups, same components as the desktop More menu. In the
         // DOM it *follows* the bar, so Tab from the More button walks into
         // the rows it just disclosed (the desktop menu's summary→panel order,
-        // kept here even though the sheet renders above the bar).
+        // kept here even though the sheet renders above the bar). Closing
+        // mirrors opening: sheet-out settles it back down toward the dock it
+        // rose from (issue #832).
         <div
           id={sheetId}
           ref={sheetRef}
@@ -290,7 +295,7 @@ export function StaffTabBar({
           aria-modal="true"
           aria-labelledby={`${sheetId}-heading`}
           onKeyDown={trapSheetFocus}
-          className="rise-in absolute inset-x-0 bottom-full max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-t-2xl border-t border-border bg-surface shadow-xl"
+          className={`absolute inset-x-0 bottom-full max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-t-2xl border-t border-border bg-surface shadow-xl ${sheetClosing ? "sheet-out" : "rise-in"}`}
         >
           <div className="mx-auto w-full max-w-xl p-3 pb-2">
             <h2 id={`${sheetId}-heading`} className="sr-only">

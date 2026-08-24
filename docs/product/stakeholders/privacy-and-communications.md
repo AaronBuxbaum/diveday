@@ -6,6 +6,19 @@ a pilot. Status of record: [human-decisions.md](../human-decisions.md) rows **H-
 (retention/deletion — shared with [legal.md](legal.md)), **H-04** (incident-response owner), and
 **H-09** (consent, copy, sender identity, credentials).
 
+## Subject access — a diver's own copy (issue #726, ADR 20260824-diver-record-export)
+
+A per-diver record export shipped, reached from the diver's own record page and gated
+owner/manager like the shop-wide export. `security-reviewer` reviewed the shared-row scoping
+(party bookings, buddy teams, staff attribution) before merge and found no leak of another
+diver's identifying data. **One field is deliberately withheld pending your call: signed
+medical answers.** The incident export withholds them because its reader is an investigator; a
+subject-access request's reader is the person who wrote them, which is the opposite case — see
+**H-50** in [human-decisions.md](../human-decisions.md) for the question as recorded. Until it is
+answered, the export ships every other field of a diver's own signed waiver evidence and states
+the gap in the bundle's own README rather than leaving it silent. `/privacy` now names this
+export alongside the shop-wide one and says medical answers are excluded for now.
+
 ## Why this blocks rollout
 
 - AWS SNS's US SMS carrier compliance registration takes **days to weeks** and is mandatory for US

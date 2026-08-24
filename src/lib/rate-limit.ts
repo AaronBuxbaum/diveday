@@ -520,6 +520,21 @@ export const RATE_LIMITS = {
    * no real use reaches and no useful attack fits inside.
    */
   webVitalsBeacon: perHour(300),
+  /**
+   * Content-Security-Policy violation reports, per IP (issue #718).
+   *
+   * Public and unauthenticated for the same structural reason as the vitals
+   * beacon above — the browser posts it before anything has identified the
+   * visitor — and with the same two costs: a CloudWatch log line each, and a
+   * count an alarm watches.
+   *
+   * Tighter than the beacon, because the shapes differ. A vitals beacon is one
+   * per page view; a violation report is *zero* per page view once the policy
+   * is right, and while it is not, one page can emit a burst of them — one per
+   * blocked subresource. A cap well above a single page's worst burst and well
+   * below a useful firehose is the size worth having.
+   */
+  cspReport: perHour(120),
 } as const satisfies Record<string, RateLimitConfig>;
 
 /**

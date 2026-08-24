@@ -733,6 +733,30 @@ async function screenshotOrGiveUp(page: Page, path: string) {
   );
 }
 
+/**
+ * Waits out every running (finite) CSS animation — the same
+ * `document.getAnimations()` pattern `e2e/a11y.spec.ts` uses to settle a
+ * *paint* rather than a *duration*. The command palette gained a real
+ * `animate-scale-in`/`animate-fade-in` entrance in this change (issue #832)
+ * where it previously had none, and `capture()` shoots the instant its input
+ * is focused — mid-transform, not at rest. Exact and not a timing guess:
+ * `animate-pulse` skeletons and other infinite animations are excluded so a
+ * still-loading surface never hangs this wait.
+ */
+async function waitForEntranceAnimations(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ).then(() => undefined),
+  );
+}
+
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
   // Park the pointer somewhere inert, or the capture photographs whatever the
@@ -4087,6 +4111,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
+        await waitForEntranceAnimations(page);
         await capture(page, "command-palette", scheme);
         await page.keyboard.press("Escape");
         await expect(box).toBeHidden();
@@ -4107,6 +4132,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(box).toBeFocused();
         await box.fill("reef");
         await expect(page.getByRole("option", { name: /Reef/ }).first()).toBeVisible();
+        await waitForEntranceAnimations(page);
         await capture(page, "command-palette-results", scheme);
         await page.keyboard.press("Escape");
         await expect(box).toBeHidden();

@@ -2890,6 +2890,8 @@
         "heading": "Sacar los datos, y borrarlos",
         "exportTerm": "Exportación",
         "exportBody": "un centro puede descargar sus registros de DiveDay en un solo ZIP, desde sus propios ajustes, cualquier día, sin pedírnoslo y sin tarifa. Es el mismo paquete con el que se hacen nuestras propias copias de seguridad. Algunas tablas internas quedan fuera — mecánica de reintentos de entrega, registros de dispositivos, las credenciales selladas del destino de copia del propio centro — y nada de lo que queda fuera es el registro de un buceador.",
+        "diverCopyTerm": "La copia propia de un buceador",
+        "diverCopyBody": "un buceador puede pedirle a un centro una copia de lo que tiene sobre él, y el personal puede descargarla desde la propia página del buceador en un solo ZIP — sus reservas, certificaciones, exenciones, pagos y reseñas en ese centro, nunca las de otro buceador. Las respuestas médicas firmadas quedan fuera por ahora, a la espera de una decisión registrada en docs/product/human-decisions.md.",
         "erasureTerm": "Borrado",
         "erasureBody": "un centro puede borrar el registro de un buceador. Cuando ese registro llegó a un procesador de pagos, el borrado se sigue como pendiente hasta que se salda, en vez de darlo por hecho en nuestro propio borde: un objeto de cliente lo borra DiveDay y lo confirma; una factura que el procesador ya emitió es una solicitud que una persona debe presentar, y el centro la ve ahí hasta que lo hace."
       },

@@ -10,14 +10,16 @@ import { daysFromNow, e2eNow, openTripInEmbed, signOut } from "./helpers";
 test("the schedule embed renders without page chrome and allows framing", async ({ page }) => {
   const response = await page.goto("/s/blue-mantis?embed=1");
   expect(response?.headers()["x-frame-options"]).toBeUndefined();
-  expect(response?.headers()["content-security-policy"]).toBeUndefined();
+  // The exception is `frame-ancestors` alone: an embedded page keeps the rest
+  // of the policy, which used to be nothing at all (issue #718).
+  expect(response?.headers()["content-security-policy"]).not.toContain("frame-ancestors");
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).not.toBeVisible();
 });
 
 test("a non-embed page still denies framing", async ({ page }) => {
   const response = await page.goto("/s/blue-mantis");
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
-  expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
 });
 
 test("a repeated embed param can't smuggle framing past what the page actually renders", async ({
@@ -29,7 +31,7 @@ test("a repeated embed param can't smuggle framing past what the page actually r
   // lockstep, not grant the exception on a value the page itself refused.
   const response = await page.goto("/s/blue-mantis?embed=1&embed=0");
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
-  expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
 });
 
@@ -223,7 +225,8 @@ test.describe("the old /shop public URLs", () => {
     expect(new URL(page.url()).pathname).toBe("/s/blue-mantis");
     expect(new URL(page.url()).search).toBe("?embed=1");
     expect(response?.headers()["x-frame-options"]).toBeUndefined();
-    expect(response?.headers()["content-security-policy"]).toBeUndefined();
+    // As above: the exception is `frame-ancestors` alone (issue #718).
+    expect(response?.headers()["content-security-policy"]).not.toContain("frame-ancestors");
     await page
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })

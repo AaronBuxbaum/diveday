@@ -10,6 +10,7 @@ import {
   canPersonRefund,
 } from "@/db/authz";
 import { getDiverProfile } from "@/db/divers";
+import { canPersonExportShopData } from "@/db/export";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -24,6 +25,7 @@ import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
+import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
@@ -102,19 +104,32 @@ export default async function DiverDetailPage({
   // (H-06); flagging them for hands-on fitting stays open to all staff.
   // Erasing a diver's personal and medical data is stricter still — owner only,
   // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
-  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount, notes, activityPage] =
-    await Promise.all([
-      canPersonRefund(db, shop.id, session.user.personId),
-      canPersonDeleteDiver(db, shop.id, session.user.personId),
-      canPersonOverrideGearRequest(db, shop.id, session.user.personId),
-      canPersonErasePersonalData(db, shop.id, session.user.personId),
-      getShopStripeAccount(db, shop.id),
-      listDiverRecordNotes(db, shop.id, personId),
-      // Shop-scoped from the session, never the slug, like every read on this
-      // page. A non-numeric `?activity=` reads as page 1 and the query clamps
-      // anything past the end, so a stale bookmark lands on the last real page.
-      pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
-    ]);
+  const [
+    canRefund,
+    canDelete,
+    canOverrideFit,
+    canErase,
+    canExport,
+    stripeAccount,
+    notes,
+    activityPage,
+  ] = await Promise.all([
+    canPersonRefund(db, shop.id, session.user.personId),
+    canPersonDeleteDiver(db, shop.id, session.user.personId),
+    canPersonOverrideGearRequest(db, shop.id, session.user.personId),
+    canPersonErasePersonalData(db, shop.id, session.user.personId),
+    // Same owner/manager gate the shop-wide export uses (issue #726) — a
+    // subject-access request properly goes through the same door as the
+    // shop's own copy of everything, re-checked against the database like
+    // the other roles on this page.
+    canPersonExportShopData(db, shop.id, session.user.personId),
+    getShopStripeAccount(db, shop.id),
+    listDiverRecordNotes(db, shop.id, personId),
+    // Shop-scoped from the session, never the slug, like every read on this
+    // page. A non-numeric `?activity=` reads as page 1 and the query clamps
+    // anything past the end, so a stale bookmark lands on the last real page.
+    pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
+  ]);
   // `orders/new` refuses outright without a payable account, so the Payments
   // section offers "Connect payments" rather than invoice buttons that bounce.
   const paymentsConnected = canAcceptPayments(stripeAccount);
@@ -168,6 +183,15 @@ export default async function DiverDetailPage({
         // remains visible above the editor.
         editOpen={edit === "1" || detailsStatus?.tone === "danger"}
       />
+      {canExport ? (
+        <div className="mt-4">
+          <DownloadDiverExportButton
+            href={`/shop/${shopSlug}/divers/${personId}/export`}
+            idleLabel={t("divers.export.downloadButton.idle")}
+            acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
+          />
+        </div>
+      ) : null}
       {removed ? (
         <RestoreDiver
           shopSlug={shopSlug}

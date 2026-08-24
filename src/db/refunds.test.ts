@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
-import { seededShopContext } from "@/test/db";
+import { dbNowPlus, seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
+import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
 import {
   listOwedShopCancellationRefunds,
@@ -16,7 +17,7 @@ import {
   refundBookingsForShopCancelledTrip,
   shopCancellationPaymentStory,
 } from "./refunds";
-import { bookingPayments, trips } from "./schema";
+import { bookingPayments, paymentOperationIntents, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -950,5 +951,146 @@ describe("listOwedShopCancellationRefunds", () => {
   it("is bounded, so one bad weekend cannot render an unbounded list", async () => {
     const { db, shop } = await cancelledDepartureContext();
     expect(await listOwedShopCancellationRefunds(db, shop.id, { limit: 1 })).toHaveLength(1);
+  });
+});
+
+/**
+ * The booking-level refund claim (issue #950), from the ordering side.
+ *
+ * PGlite is single-connection, so the `FOR UPDATE` in `claimBookingRefund`
+ * never actually blocks here and deleting it would leave every test below
+ * green. What these pin is the *decision*: which refusal code each state
+ * produces, and that a refused attempt asks Stripe for nothing and leaves no
+ * intent behind. The lock's presence is asserted under genuine contention in
+ * `src/db/refunds.postgres.test.ts`, the same division `claimOrderRefund`'s
+ * tests already draw.
+ */
+describe("the booking refund claim", () => {
+  /** A `started` refund intent for this seat, the way a live attempt leaves one. */
+  async function liveRefundIntent(
+    db: Awaited<ReturnType<typeof paidBookingContext>>["db"],
+    shopId: string,
+    bookingId: string,
+  ) {
+    return startPaymentOperation(db, { shopId, kind: "refund", bookingId });
+  }
+
+  async function refundIntentsFor(
+    db: Awaited<ReturnType<typeof paidBookingContext>>["db"],
+    bookingId: string,
+  ) {
+    return db
+      .select()
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.bookingId, bookingId));
+  }
+
+  it("refuses a diver cancellation while another refund of the seat is at Stripe", async () => {
+    const { db, shop, bookingId, capturedCents, insideWindow } = await paidBookingContext(48);
+    await liveRefundIntent(db, shop.id, bookingId);
+    const calls: RefundCall[] = [];
+
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow },
+      fakeCheckout({ status: "refunded", refundId: "re_second" }, calls, capturedCents),
+    );
+
+    // Refused *locally*, before the network, and told apart from `failed` —
+    // which would send a staffer back to press the button again.
+    expect(outcome).toEqual({ status: "in_progress" });
+    expect(calls).toEqual([]);
+    // The refused attempt claimed nothing, so the money trail still shows one.
+    expect(await refundIntentsFor(db, bookingId)).toHaveLength(1);
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
+  it("refuses a shop cancellation the same way", async () => {
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(null);
+    await liveRefundIntent(db, shop.id, bookingId);
+    const calls: RefundCall[] = [];
+
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded", refundId: "re_second" }, calls, capturedCents),
+    );
+
+    expect(outcome).toEqual({ status: "in_progress" });
+    // The diver is still told the truth: money is owed and the shop will be in
+    // touch. Never `refunded` — the pass holding the claim may still fail.
+    expect(shopCancellationPaymentStory(outcome)).toBe("refund_owed");
+    expect(calls).toEqual([]);
+  });
+
+  it("stops blocking once an abandoned attempt goes stale", async () => {
+    const { db, shop, bookingId, capturedCents, insideWindow } = await paidBookingContext(48);
+    // A process that died mid-refund: its intent is still `started` and will
+    // never resolve itself. A claim guards one Stripe round trip, never a seat
+    // forever.
+    await liveRefundIntent(db, shop.id, bookingId);
+    const calls: RefundCall[] = [];
+    const checkout = fakeCheckout({ status: "refunded", refundId: "re_ok" }, calls, capturedCents);
+
+    // The bound is read off the *database's* clock, the one that stamped
+    // `started_at` — the frozen `DIVEDAY_CLOCK` never reaches it, so a bound
+    // derived from `nowDate()` would compare two different clocks (`dbNow`).
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow, staleBefore: await dbNowPlus(db, 1_000) },
+      checkout,
+    );
+
+    expect(outcome).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
+    expect(calls).toHaveLength(1);
+    // The abandoned intent is left exactly as the dead process left it — this
+    // guard ignores it, it does not rewrite someone else's money trail.
+    const intents = await refundIntentsFor(db, bookingId);
+    expect(intents.filter((intent) => intent.status === "started")).toHaveLength(1);
+  });
+
+  it("refuses rather than reverses again when Stripe already paid out on a stalled attempt", async () => {
+    const { db, shop, bookingId, capturedCents, insideWindow } = await paidBookingContext(48);
+    // An attempt that reached Stripe and died before its local write: the
+    // intent still reads `started` and carries the refund id, which is durable
+    // evidence money moved. On a shared party checkout the charge still has
+    // another seat's fare on it, so Stripe's own over-refund rejection would
+    // not catch a second reversal — this refusal is the only thing that does.
+    const stalled = await liveRefundIntent(db, shop.id, bookingId);
+    await db
+      .update(paymentOperationIntents)
+      .set({ stripeObjectId: "re_already_sent" })
+      .where(eq(paymentOperationIntents.id, stalled.id));
+    const calls: RefundCall[] = [];
+
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow, staleBefore: await dbNowPlus(db, 1_000) },
+      fakeCheckout({ status: "refunded", refundId: "re_second" }, calls, capturedCents),
+    );
+
+    expect(outcome).toEqual({ status: "needs_reconciliation" });
+    expect(calls).toEqual([]);
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
+  it("does not refuse on another seat's in-flight refund", async () => {
+    // The claim is per booking, not per payment intent. Two party members
+    // cancelling at once are two genuine refunds off one shared charge
+    // (PAY-C1), and neither may block the other.
+    const { db, shop, bookingIds, capturedCents, insideWindow } = await paidBookingContext(48);
+    const [first, second] = bookingIds;
+    if (!first || !second) throw new Error("expected a party of two");
+    await liveRefundIntent(db, shop.id, first);
+    const calls: RefundCall[] = [];
+
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId: second, now: insideWindow },
+      fakeCheckout({ status: "refunded", refundId: "re_other" }, calls, capturedCents),
+    );
+
+    expect(outcome).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
+    expect(calls).toHaveLength(1);
   });
 });

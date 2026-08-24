@@ -11,13 +11,18 @@
  * either exported here or on the deliberate exclusion list.
  */
 
-import { and, asc, count, eq, getTableColumns } from "drizzle-orm";
+import { and, asc, count, eq, getTableColumns, inArray, or } from "drizzle-orm";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData, type Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
+import {
+  type DiverExportBundleInput,
+  EXPORT_FILE_NOTES,
+  type ExportBundleInput,
+  type ExportTable,
+} from "@/lib/export";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { AppDb } from "./client";
@@ -2657,6 +2662,1093 @@ export async function loadShopExportBundleInput(
         shopName: shop.name,
         shopSlug: shop.slug,
         timezone: shop.timezone,
+        tables,
+        photoUrls: [...new Set(photoUrls)].sort(),
+      };
+    },
+    { accessMode: "read only", isolationLevel: "repeatable read" },
+  );
+}
+
+/**
+ * Everything this shop holds about **one** diver — the subject-access-request
+ * answer #726 asked for (ADR 20260824-diver-record-export). `loadShopExportBundleInput`
+ * above is the whole shop; this is a where-clause and a smaller bundle over
+ * the same tables, never a second exporter, per the issue's own instruction.
+ *
+ * ## The shared-row decisions
+ *
+ * The hard part of a per-diver export is never the diver's own rows — it is
+ * the rows several people share. Each of the following was a deliberate call,
+ * not a default, because a bundle that leaks another diver's name is the
+ * failure this feature exists to prevent:
+ *
+ * - **A party booking's `party_lead_booking_id`** points at a *different*
+ *   diver's booking row. It carries no name on its own, but it is a foreign
+ *   key this diver has no business holding, so it is blanked in `bookings.csv`
+ *   rather than exported as-is.
+ * - **A buddy team's other members** live as separate rows in
+ *   `buddy_pair_members`, keyed by a different `booking_id`/`crew_person_id`.
+ *   Filtering to this diver's own bookings (and, if they are also staff, their
+ *   own `crew_person_id`) naturally yields only their own membership row per
+ *   team — never another member's — so `buddy_pairs.csv` is included as-is.
+ * - **Roll-call `recorded_by`, order `created_by`, buddy-pair `paired_by`,
+ *   waiver `recorded_by`** are staff, not other divers. Included by name, on
+ *   the same rule the shop's own bundle uses: the shop's record of who did
+ *   what is the shop's own, not a third party's.
+ * - **`internal_notes`** is excluded outright. Its own note in the shop bundle
+ *   already says why: "Never shown to a diver, and never part of any gate" —
+ *   and its `body` is free text that can name a *different* diver by name
+ *   (`anonymize.ts`'s erasure sweep needs a fuzzy word-boundary regex over
+ *   exactly this column for exactly this reason).
+ * - **`activity_events`** is excluded outright for the same reason at larger
+ *   scale: its `message` column is English prose generated at write time that
+ *   routinely interpolates a full name — often someone else's, on a shared
+ *   booking or a roll-call line. Safely redacting it needs the same
+ *   name-matching sweep the erasure path uses, which is expensive to
+ *   replicate correctly here; this is recorded as a follow-up rather than
+ *   reinvented under this diff.
+ * - **`booking_checkouts`** is excluded outright. One checkout attempt can
+ *   cover an entire party sharing one Stripe session, so `customer_email` may
+ *   belong to whoever submitted the payment rather than this diver, and the
+ *   totals are the party's, not theirs. `booking_checkout_bookings.csv` — the
+ *   per-seat line within a checkout — carries none of that risk (it is
+ *   already one row per person) and is included.
+ * - **Shop-wide configuration** (the trip catalog, the course catalog, dive
+ *   sites, gear fleet, promo codes) never named this diver in the first
+ *   place and is out of scope by construction, not by a redaction.
+ * - **`orders.description` / `order_line_items.description`** are also
+ *   staff-typed free text (the invoice form's own note field) and dropped for
+ *   the same reason `internal_notes` is — found in security review rather
+ *   than the first pass, and covered by a regression test that builds an
+ *   order carrying another diver's name in that field.
+ *
+ * ## What is included but incomplete on purpose
+ *
+ * `waiver_records.csv` **omits `medical_answers`.** The shop-wide export's own
+ * comment on that column doesn't apply the other way: whether a subject access
+ * request should receive the diver's own medical answers is a real question,
+ * not an engineering default, and it belongs with H-01/H-03's legal review —
+ * see `docs/product/human-decisions.md`. Every other column of a diver's own
+ * signed evidence (status, signature, timestamps, template text) ships now.
+ * The same hold extends to `photoUrls`: an imported record's
+ * `importSourceMedicalDocumentUrl` (a re-stored scan of the same medical
+ * intake form) is never bundled, while `importSourceDocumentUrl` (the general
+ * signed release) is — a scanned document is medical evidence with a file
+ * extension rather than a JSON key, and the JSON column being withheld does
+ * not by itself withhold the document it came with.
+ *
+ * ## Tenant + subject scoping
+ *
+ * Every query below is scoped to `shopId` **and** to this `personId` (or to a
+ * booking/order/review id already proven to belong to them) — there is no
+ * query in this function that reads a table by `shopId` alone.
+ */
+export async function loadDiverExportBundleInput(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  _now: Date = nowDate(),
+): Promise<DiverExportBundleInput | null> {
+  return db.transaction(
+    async (tx) => {
+      const [person] = await tx
+        .select()
+        .from(people)
+        .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+        .limit(1);
+      if (!person) return null;
+      const [shop] = await tx.select().from(shops).where(eq(shops.id, shopId)).limit(1);
+      if (!shop) return null;
+
+      // The spine every via-booking table below joins against.
+      // diveday:allow-deleted-trips: a booking on a departure the shop later
+      // deleted is still the diver's own booking history — dropping it from
+      // their own export would be exactly the "migration loses data" failure
+      // the shop bundle's own rule refuses, applied to a bundle of one.
+      const bookingRows = await tx
+        .select()
+        .from(bookings)
+        .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
+        .orderBy(asc(bookings.createdAt), asc(bookings.id));
+      const bookingIds = bookingRows.map((row) => row.id);
+      const tripIds = [...new Set(bookingRows.map((row) => row.tripId))];
+      const tripRows = tripIds.length
+        ? await tx
+            .select()
+            .from(trips)
+            .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId)))
+        : [];
+      const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
+      const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
+
+      const paymentRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(bookingPayments)
+            .where(
+              and(
+                eq(bookingPayments.shopId, shopId),
+                inArray(bookingPayments.bookingId, bookingIds),
+              ),
+            )
+        : [];
+      const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
+
+      // Everyone this bundle might need to *name* besides the diver — a
+      // staffer who recorded a roll call, moderated a review, or paired a
+      // buddy team. Used only to resolve a name string onto the diver's own
+      // rows below; no other person's row is ever written to a file (see the
+      // shared-row decisions above).
+      const staffRows = await tx.select().from(people).where(eq(people.shopId, shopId));
+      const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
+
+      const certificationRows = await tx
+        .select()
+        .from(certifications)
+        .where(and(eq(certifications.shopId, shopId), eq(certifications.personId, personId)))
+        .orderBy(asc(certifications.createdAt), asc(certifications.id));
+
+      const specialtyRows = await tx
+        .select()
+        .from(specialtyCertifications)
+        .where(
+          and(
+            eq(specialtyCertifications.shopId, shopId),
+            eq(specialtyCertifications.personId, personId),
+          ),
+        )
+        .orderBy(asc(specialtyCertifications.createdAt), asc(specialtyCertifications.id));
+
+      const nitroxRows = await tx
+        .select()
+        .from(nitroxCertifications)
+        .where(
+          and(eq(nitroxCertifications.shopId, shopId), eq(nitroxCertifications.personId, personId)),
+        )
+        .orderBy(asc(nitroxCertifications.createdAt), asc(nitroxCertifications.id));
+
+      const waitlistRows = await tx
+        .select()
+        .from(tripWaitlistEntries)
+        .where(
+          and(eq(tripWaitlistEntries.shopId, shopId), eq(tripWaitlistEntries.personId, personId)),
+        )
+        .orderBy(asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id));
+
+      const invitationRows = await tx
+        .select()
+        .from(tripInvitations)
+        .where(and(eq(tripInvitations.shopId, shopId), eq(tripInvitations.personId, personId)))
+        .orderBy(asc(tripInvitations.createdAt), asc(tripInvitations.id));
+
+      const lastMinuteListRows = await tx
+        .select()
+        .from(lastMinuteListEntries)
+        .where(
+          and(
+            eq(lastMinuteListEntries.shopId, shopId),
+            eq(lastMinuteListEntries.personId, personId),
+          ),
+        )
+        .orderBy(asc(lastMinuteListEntries.createdAt), asc(lastMinuteListEntries.id));
+
+      const lastMinutePromoRecipientRows = await tx
+        .select()
+        .from(tripLastMinutePromoRecipients)
+        .where(
+          and(
+            eq(tripLastMinutePromoRecipients.shopId, shopId),
+            eq(tripLastMinutePromoRecipients.personId, personId),
+          ),
+        )
+        .orderBy(
+          asc(tripLastMinutePromoRecipients.createdAt),
+          asc(tripLastMinutePromoRecipients.id),
+        );
+
+      const paymentEventRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(bookingPaymentEvents)
+            .where(
+              and(
+                eq(bookingPaymentEvents.shopId, shopId),
+                inArray(bookingPaymentEvents.bookingId, bookingIds),
+              ),
+            )
+            .orderBy(asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.id))
+        : [];
+
+      const checkoutBookingRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(bookingCheckoutBookings)
+            .where(
+              and(
+                eq(bookingCheckoutBookings.shopId, shopId),
+                inArray(bookingCheckoutBookings.bookingId, bookingIds),
+              ),
+            )
+            .orderBy(
+              asc(bookingCheckoutBookings.checkoutId),
+              asc(bookingCheckoutBookings.bookingId),
+            )
+        : [];
+
+      const rollCallRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(rollCallEvents)
+            .where(
+              and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.bookingId, bookingIds)),
+            )
+            .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.seq))
+        : [];
+
+      // Either this diver's own seat, or — if they are also a staff member —
+      // a team they were recorded as crewing. Two rows can never collide: a
+      // member row is one or the other, never both.
+      const buddyPairRows = await tx
+        .select()
+        .from(buddyPairMembers)
+        .where(
+          and(
+            eq(buddyPairMembers.shopId, shopId),
+            or(
+              bookingIds.length ? inArray(buddyPairMembers.bookingId, bookingIds) : undefined,
+              eq(buddyPairMembers.crewPersonId, personId),
+            ),
+          ),
+        )
+        .orderBy(asc(buddyPairMembers.createdAt), asc(buddyPairMembers.pairId));
+
+      const notificationRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(notificationDeliveries)
+            .where(
+              and(
+                eq(notificationDeliveries.shopId, shopId),
+                inArray(notificationDeliveries.bookingId, bookingIds),
+              ),
+            )
+            .orderBy(asc(notificationDeliveries.attemptedAt), asc(notificationDeliveries.id))
+        : [];
+
+      const orderRows = await tx
+        .select()
+        .from(orders)
+        .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)))
+        .orderBy(asc(orders.createdAt), asc(orders.id));
+      const orderIds = orderRows.map((row) => row.id);
+      const orderLineRows = orderIds.length
+        ? await tx
+            .select()
+            .from(orderLineItems)
+            .where(
+              and(eq(orderLineItems.shopId, shopId), inArray(orderLineItems.orderId, orderIds)),
+            )
+            .orderBy(
+              asc(orderLineItems.orderId),
+              asc(orderLineItems.createdAt),
+              asc(orderLineItems.id),
+            )
+        : [];
+
+      const tipRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(tips)
+            .where(and(eq(tips.shopId, shopId), inArray(tips.bookingId, bookingIds)))
+            .orderBy(asc(tips.createdAt), asc(tips.id))
+        : [];
+
+      const recapPhotoRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(recapPhotos)
+            .where(and(eq(recapPhotos.shopId, shopId), inArray(recapPhotos.bookingId, bookingIds)))
+            .orderBy(asc(recapPhotos.createdAt), asc(recapPhotos.id))
+        : [];
+
+      const reviewRows = await tx
+        .select()
+        .from(tripReviews)
+        .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)))
+        .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
+      const reviewIds = reviewRows.map((row) => row.id);
+      const reviewModerationRows = reviewIds.length
+        ? await tx
+            .select()
+            .from(reviewModerationEvents)
+            .where(
+              and(
+                eq(reviewModerationEvents.shopId, shopId),
+                inArray(reviewModerationEvents.reviewId, reviewIds),
+              ),
+            )
+            .orderBy(asc(reviewModerationEvents.occurredAt), asc(reviewModerationEvents.id))
+        : [];
+
+      const entitlementRows = await tx
+        .select()
+        .from(divePackageEntitlements)
+        .where(
+          and(
+            eq(divePackageEntitlements.shopId, shopId),
+            eq(divePackageEntitlements.personId, personId),
+          ),
+        )
+        .orderBy(asc(divePackageEntitlements.createdAt), asc(divePackageEntitlements.id));
+      const packageIds = [...new Set(entitlementRows.map((row) => row.packageId))];
+      const packageRows = packageIds.length
+        ? await tx
+            .select()
+            .from(divePackages)
+            .where(and(inArray(divePackages.id, packageIds), eq(divePackages.shopId, shopId)))
+        : [];
+      const packageName = new Map(packageRows.map((row) => [row.id, row.name]));
+
+      const rentalFitRows = await tx
+        .select()
+        .from(rentalFitProfiles)
+        .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+
+      const gearReservationRows = bookingIds.length
+        ? await tx
+            .select()
+            .from(gearReservations)
+            .where(
+              and(
+                eq(gearReservations.shopId, shopId),
+                inArray(gearReservations.bookingId, bookingIds),
+              ),
+            )
+            .orderBy(
+              asc(gearReservations.reservedFrom),
+              asc(gearReservations.createdAt),
+              asc(gearReservations.id),
+            )
+        : [];
+      const gearItemIds = [...new Set(gearReservationRows.map((row) => row.gearItemId))];
+      const gearItemRows = gearItemIds.length
+        ? await tx
+            .select()
+            .from(gearItems)
+            .where(and(inArray(gearItems.id, gearItemIds), eq(gearItems.shopId, shopId)))
+        : [];
+      const gearItemLabel = new Map(gearItemRows.map((row) => [row.id, row.label]));
+
+      const priorVisitRows = await tx
+        .select()
+        .from(priorVisits)
+        .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, personId)))
+        .orderBy(asc(priorVisits.visitedOn), asc(priorVisits.id));
+
+      const importedPaymentHistoryRows = await tx
+        .select()
+        .from(importedPaymentHistory)
+        .where(
+          and(
+            eq(importedPaymentHistory.shopId, shopId),
+            eq(importedPaymentHistory.personId, personId),
+          ),
+        )
+        .orderBy(asc(importedPaymentHistory.occurredOn), asc(importedPaymentHistory.id));
+
+      const waiverRows = await tx
+        .select()
+        .from(waiverRecords)
+        .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.personId, personId)))
+        .orderBy(asc(waiverRecords.createdAt), asc(waiverRecords.id));
+
+      const inquiryRows = await tx
+        .select()
+        .from(courseInquiries)
+        .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.personId, personId)))
+        .orderBy(asc(courseInquiries.createdAt), asc(courseInquiries.id));
+      const inquiryCourseIds = [
+        ...new Set(inquiryRows.flatMap((row) => (row.courseId ? [row.courseId] : []))),
+      ];
+      const inquiryCourseRows = inquiryCourseIds.length
+        ? await tx
+            .select()
+            .from(courses)
+            .where(and(inArray(courses.id, inquiryCourseIds), eq(courses.shopId, shopId)))
+        : [];
+      const courseTitle = new Map(inquiryCourseRows.map((row) => [row.id, row.title]));
+
+      const photoUrls = [
+        ...recapPhotoRows.map((row) => row.imageUrl),
+        // importSourceDocumentUrl only — never importSourceMedicalDocumentUrl.
+        // A re-stored scanned intake form is medical evidence with a
+        // file extension rather than a JSON key, and bundling it here would
+        // hand a diver's medical document out from underneath H-50's still-open
+        // question of whether they should have it — the same withholding
+        // medical_answers gets above, extended to the form the medical answers
+        // actually shipped on when the waiver was imported.
+        ...waiverRows.flatMap((row) =>
+          row.importSourceDocumentUrl ? [row.importSourceDocumentUrl] : [],
+        ),
+        ...importedPaymentHistoryRows.map((row) => row.receiptDocumentUrl),
+      ].filter((url): url is string => Boolean(url));
+
+      const tables: ExportTable[] = [
+        {
+          file: "profile.csv",
+          header: [
+            "id",
+            "full_name",
+            "email",
+            "phone",
+            "date_of_birth",
+            "dive_insurance",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "courtesy_email_opt_out_at",
+            "no_certification_declared_at",
+            "no_certification_cleared_at",
+            "deleted_at",
+            "created_at",
+          ],
+          rows: [
+            [
+              person.id,
+              person.fullName,
+              person.email,
+              person.phone,
+              person.dateOfBirth,
+              person.diveInsurance,
+              person.emergencyContactName,
+              person.emergencyContactPhone,
+              person.courtesyEmailOptOutAt,
+              person.noCertificationDeclaredAt,
+              person.noCertificationClearedAt,
+              person.deletedAt,
+              person.createdAt,
+            ],
+          ],
+          note: "This diver's own contact and profile record.",
+        },
+        {
+          file: "certifications.csv",
+          header: [
+            "id",
+            "agency",
+            "level",
+            "identifier",
+            "declared_identifier",
+            "status",
+            "review_note",
+            "reviewed_at",
+            "reviewed_by_name",
+            "imported_at",
+            "imported_from_label",
+            "self_declared_at",
+            "deleted_at",
+            "created_at",
+          ],
+          rows: certificationRows.map((row) => [
+            row.id,
+            row.agency,
+            row.level,
+            row.identifier,
+            row.declaredIdentifier,
+            row.status,
+            row.reviewNote,
+            row.reviewedAt,
+            row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
+            row.importedAt,
+            row.importedFromLabel,
+            row.selfDeclaredAt,
+            row.deletedAt,
+            row.createdAt,
+          ]),
+          note: "Certification records this shop holds on file, with their verification status.",
+        },
+        {
+          file: "specialty_certifications.csv",
+          header: [
+            "id",
+            "agency",
+            "specialty",
+            "identifier",
+            "status",
+            "review_note",
+            "reviewed_at",
+            "reviewed_by_name",
+            "deleted_at",
+            "created_at",
+          ],
+          rows: specialtyRows.map((row) => [
+            row.id,
+            row.agency,
+            row.specialty,
+            row.identifier,
+            row.status,
+            row.reviewNote,
+            row.reviewedAt,
+            row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
+            row.deletedAt,
+            row.createdAt,
+          ]),
+          note: "Specialty certifications (deep, wreck, night, drysuit) with their verification status.",
+        },
+        {
+          file: "nitrox_certifications.csv",
+          header: [
+            "id",
+            "agency",
+            "identifier",
+            "status",
+            "review_note",
+            "reviewed_at",
+            "reviewed_by_name",
+            "imported_at",
+            "imported_from_label",
+            "self_declared_at",
+            "deleted_at",
+            "created_at",
+          ],
+          rows: nitroxRows.map((row) => [
+            row.id,
+            row.agency,
+            row.identifier,
+            row.status,
+            row.reviewNote,
+            row.reviewedAt,
+            row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
+            row.importedAt,
+            row.importedFromLabel,
+            row.selfDeclaredAt,
+            row.deletedAt,
+            row.createdAt,
+          ]),
+          note: "Nitrox (EANx) certification with its verification status.",
+        },
+        {
+          file: "bookings.csv",
+          header: [
+            "id",
+            "trip_title",
+            "trip_starts_at",
+            "status",
+            "wants_nitrox",
+            "conditions_briefed_at",
+            "group_preference",
+            "last_dived_band",
+            "claimed_at",
+            "payment_status",
+            "payment_amount_cents",
+            "payment_currency",
+            "payment_provider",
+            "created_at",
+          ],
+          rows: bookingRows.map((row) => {
+            const payment = paymentByBooking.get(row.id);
+            return [
+              row.id,
+              tripTitle.get(row.tripId),
+              tripStartsAt.get(row.tripId),
+              row.status,
+              row.wantsNitrox,
+              row.conditionsBriefedAt,
+              row.groupPreference,
+              row.lastDivedBand,
+              row.claimedAt,
+              payment?.status ?? "unpaid",
+              payment?.amountCents,
+              payment?.currency,
+              payment?.provider,
+              row.createdAt,
+            ];
+          }),
+          // party_lead_booking_id is deliberately not a column here: on a
+          // shared booking it is another diver's booking id, and it is a
+          // foreign key this diver has no reason to hold — see the module
+          // docblock's shared-row decisions.
+          note: "Every booking this diver has held at this shop, with its current payment state.",
+        },
+        {
+          file: "waitlist_entries.csv",
+          header: ["id", "trip_title", "trip_starts_at", "invited_at", "created_at"],
+          rows: waitlistRows.map((row) => [
+            row.id,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.invitedAt,
+            row.createdAt,
+          ]),
+          note: "Full trips this diver joined the wait list for.",
+        },
+        {
+          file: "trip_invitations.csv",
+          header: ["id", "trip_title", "trip_starts_at", "source", "invited_at", "created_at"],
+          rows: invitationRows.map((row) => [
+            row.id,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.source,
+            row.invitedAt,
+            row.createdAt,
+          ]),
+          note: "Staff outreach inviting this diver to a departure without claiming a seat.",
+        },
+        {
+          file: "last_minute_list.csv",
+          header: ["id", "available_from", "available_until", "unsubscribed_at", "created_at"],
+          rows: lastMinuteListRows.map((row) => [
+            row.id,
+            row.availableFrom,
+            row.availableUntil,
+            row.unsubscribedAt,
+            row.createdAt,
+          ]),
+          note: "This diver's opt-in to hear about last-minute deals shop-wide, and the date range they gave.",
+        },
+        {
+          file: "trip_last_minute_promo_recipients.csv",
+          header: ["id", "trip_promo_id", "email", "created_at"],
+          rows: lastMinutePromoRecipientRows.map((row) => [
+            row.id,
+            row.tripPromoId,
+            row.email,
+            row.createdAt,
+          ]),
+          note: "Last-minute deal blasts this diver was sent.",
+        },
+        {
+          file: "booking_payment_events.csv",
+          header: [
+            "id",
+            "booking_id",
+            "status",
+            "previous_status",
+            "amount_cents",
+            "currency",
+            "provider",
+            "operation",
+            "occurred_at",
+          ],
+          rows: paymentEventRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.status,
+            row.previousStatus,
+            row.amountCents,
+            row.currency,
+            row.provider,
+            row.operation,
+            row.occurredAt,
+          ]),
+          note: "Every recorded change to this diver's payment state, oldest first.",
+        },
+        {
+          file: "booking_checkout_bookings.csv",
+          header: ["checkout_id", "booking_id", "gear_cents"],
+          rows: checkoutBookingRows.map((row) => [row.checkoutId, row.bookingId, row.gearCents]),
+          // The checkout attempt itself (booking_checkouts.csv in the shop
+          // bundle) is not included: one attempt can cover a whole party
+          // sharing a single Stripe session, so its customer_email and totals
+          // may not be this diver's — see the module docblock. This is only
+          // this diver's own seat within any such attempt.
+          note: "Rental gear charged on this diver's own seat within a checkout attempt.",
+        },
+        {
+          file: "roll_call_events.csv",
+          header: [
+            "id",
+            "trip_title",
+            "trip_starts_at",
+            "booking_id",
+            "status",
+            "checkpoint",
+            "recorded_by_name",
+            "occurred_at",
+          ],
+          rows: rollCallRows.map((row) => [
+            row.id,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.bookingId,
+            row.status,
+            row.checkpoint,
+            personName.get(row.recordedByPersonId),
+            row.occurredAt,
+          ]),
+          // `note` (a free-text field staff can type at the rail) is
+          // deliberately not a column here — see activity_events in "Not
+          // included": free text on this table can name a different diver, and
+          // safely redacting it needs the same sweep the erasure path uses.
+          note: "This diver's own boarding and roll-call record.",
+        },
+        {
+          file: "buddy_pairs.csv",
+          header: [
+            "pair_id",
+            "trip_title",
+            "trip_starts_at",
+            "member_kind",
+            "paired_by_name",
+            "created_at",
+          ],
+          rows: buddyPairRows.map((row) => [
+            row.pairId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.bookingId ? "diver" : "crew",
+            personName.get(row.pairedByPersonId),
+            row.createdAt,
+          ]),
+          // Only this diver's own membership row per team: filtered to their
+          // own bookings/crew id, so another member's row is never selected in
+          // the first place — see the module docblock.
+          note: "Buddy teams this diver was recorded on. Other members are not named here.",
+        },
+        {
+          file: "waiver_templates.csv",
+          header: ["id", "title", "version", "body"],
+          // waiverRecords.templateBody is the text as signed — a snapshot at
+          // signing time, never the live waiverTemplates row, which a shop can
+          // go on editing after this diver signed. One row per distinct
+          // template this diver actually agreed to.
+          rows: (() => {
+            const templateIds = [...new Set(waiverRows.map((row) => row.templateId))];
+            return templateIds.map((id) => {
+              const row = waiverRows.find((waiver) => waiver.templateId === id);
+              return [id, row?.templateTitle, row?.templateVersion, row?.templateBody];
+            });
+          })(),
+          note: "The exact wording of each release this diver signed, by version, as it read the moment they signed it.",
+        },
+        {
+          file: "waiver_records.csv",
+          header: [
+            "id",
+            "booking_id",
+            "template_title",
+            "template_version",
+            "status",
+            "signed_name",
+            "signature_method",
+            "recorded_by_name",
+            "started_at",
+            "consented_at",
+            "signed_at",
+            "completed_at",
+            "medical_review_required",
+            "superseded_at",
+            "expires_at",
+            "created_at",
+          ],
+          // medical_answers is deliberately absent — see the module docblock.
+          rows: waiverRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.templateTitle,
+            row.templateVersion,
+            row.status,
+            row.signedName,
+            row.signatureMethod,
+            row.recordedByPersonId ? personName.get(row.recordedByPersonId) : null,
+            row.startedAt,
+            row.consentedAt,
+            row.signedAt,
+            row.completedAt,
+            row.medicalReviewRequired,
+            row.supersededAt,
+            row.expiresAt,
+            row.createdAt,
+          ]),
+          note: "Waiver evidence this diver signed. Medical answers are withheld pending a legal review of subject-access scope (docs/product/human-decisions.md).",
+        },
+        {
+          file: "rental_fit.csv",
+          header: [
+            "rents_bcd",
+            "rents_regulator",
+            "rents_wetsuit",
+            "rents_mask_fins",
+            "rents_weights",
+            "rents_dive_computer",
+            "rents_gopro",
+            "bcd_size",
+            "wetsuit_size",
+            "boot_size",
+            "fin_size",
+            "weight_preference",
+            "updated_at",
+          ],
+          rows: rentalFitRows.map((row) => [
+            row.rentsBcd,
+            row.rentsRegulator,
+            row.rentsWetsuit,
+            row.rentsMaskFins,
+            row.rentsWeights,
+            row.rentsDiveComputer,
+            row.rentsGopro,
+            row.bcdSize,
+            row.wetsuitSize,
+            row.bootSize,
+            row.finSize,
+            row.weightPreference,
+            row.updatedAt,
+          ]),
+          note: "This diver's rental kit and sizes on file.",
+        },
+        {
+          file: "gear_reservations.csv",
+          header: [
+            "id",
+            "gear_item_label",
+            "booking_id",
+            "reserved_from",
+            "reserved_until",
+            "checked_out_at",
+            "returned_at",
+            "created_at",
+          ],
+          rows: gearReservationRows.map((row) => [
+            row.id,
+            gearItemLabel.get(row.gearItemId),
+            row.bookingId,
+            row.reservedFrom,
+            row.reservedUntil,
+            row.checkedOutAt,
+            row.returnedAt,
+            row.createdAt,
+          ]),
+          note: "Rental gear reserved for this diver's own seats.",
+        },
+        {
+          file: "prior_visits.csv",
+          header: [
+            "id",
+            "visited_on",
+            "title",
+            "status_label",
+            "amount_label",
+            "source_label",
+            "imported_at",
+          ],
+          rows: priorVisitRows.map((row) => [
+            row.id,
+            row.visitedOn,
+            row.title,
+            row.statusLabel,
+            row.amountLabel,
+            row.sourceLabel,
+            row.importedAt,
+          ]),
+          note: "Visit history the shop imported from its previous system for this diver.",
+        },
+        {
+          file: "imported_payment_history.csv",
+          header: [
+            "id",
+            "occurred_on",
+            "direction",
+            "title",
+            "status_label",
+            "amount_label",
+            "amount_cents",
+            "currency",
+            "imported_at",
+          ],
+          rows: importedPaymentHistoryRows.map((row) => [
+            row.id,
+            row.occurredOn,
+            row.direction,
+            row.title,
+            row.statusLabel,
+            row.amountLabel,
+            row.amountCents,
+            row.currency,
+            row.importedAt,
+          ]),
+          note: "Payment source history the shop imported from its previous system for this diver.",
+        },
+        {
+          file: "notification_deliveries.csv",
+          header: ["id", "booking_id", "kind", "status", "provider_status", "attempted_at"],
+          rows: notificationRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.kind,
+            row.status,
+            row.providerStatus,
+            row.attemptedAt,
+          ]),
+          note: "Whether this diver actually got each message the shop sent them — confirmation, waiver request, reminder, recap.",
+        },
+        {
+          file: "orders.csv",
+          header: [
+            "id",
+            "booking_id",
+            "created_by_name",
+            "status",
+            "currency",
+            "total_cents",
+            "amount_paid_cents",
+            "refunded_cents",
+            "paid_at",
+            "refunded_at",
+            "created_at",
+          ],
+          // description is staff-typed free text (the invoice form's own note
+          // field) and dropped for the same reason internal_notes and
+          // activity_events are — see the module docblock.
+          rows: orderRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.createdByPersonId ? personName.get(row.createdByPersonId) : null,
+            row.status,
+            row.currency,
+            row.totalCents,
+            row.amountPaidCents,
+            row.refundedCents,
+            row.paidAt,
+            row.refundedAt,
+            row.createdAt,
+          ]),
+          note: "Orders this shop issued to this diver.",
+        },
+        {
+          file: "order_line_items.csv",
+          header: ["order_id", "kind", "quantity", "unit_amount_cents", "created_at"],
+          // description is also staff-typed free text on this form; the same
+          // exclusion, same reason.
+          rows: orderLineRows.map((row) => [
+            row.orderId,
+            row.kind,
+            row.quantity,
+            row.unitAmountCents,
+            row.createdAt,
+          ]),
+          note: "The lines on each of this diver's orders.",
+        },
+        {
+          file: "tips.csv",
+          header: [
+            "id",
+            "booking_id",
+            "status",
+            "currency",
+            "amount_cents",
+            "completed_at",
+            "created_at",
+          ],
+          rows: tipRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.status,
+            row.currency,
+            row.amountCents,
+            row.completedAt,
+            row.createdAt,
+          ]),
+          note: "Crew tips this diver started from their own post-trip recap page.",
+        },
+        {
+          file: "recap_photos.csv",
+          header: ["id", "booking_id", "image_url", "caption", "created_at"],
+          rows: recapPhotoRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.imageUrl,
+            row.caption,
+            row.createdAt,
+          ]),
+          note: "Photos this diver attached to their own post-trip recap pages.",
+        },
+        {
+          file: "trip_reviews.csv",
+          header: [
+            "id",
+            "booking_id",
+            "rating",
+            "comment",
+            "is_published",
+            "published_at",
+            "created_at",
+          ],
+          rows: reviewRows.map((row) => [
+            row.id,
+            row.bookingId,
+            row.rating,
+            row.comment,
+            row.isPublished,
+            row.publishedAt,
+            row.createdAt,
+          ]),
+          note: "This diver's own trip reviews.",
+        },
+        {
+          file: "review_moderation_events.csv",
+          header: [
+            "id",
+            "review_id",
+            "action",
+            "reason",
+            "reason_note",
+            "recorded_by_name",
+            "occurred_at",
+          ],
+          rows: reviewModerationRows.map((row) => [
+            row.id,
+            row.reviewId,
+            row.action,
+            row.reason,
+            row.reasonNote,
+            personName.get(row.recordedByPersonId),
+            row.occurredAt,
+          ]),
+          note: "Every time staff published or hid one of this diver's reviews, and why.",
+        },
+        {
+          file: "dive_package_entitlements.csv",
+          header: ["id", "package_name", "booking_id", "consumed_at", "expires_at", "created_at"],
+          rows: entitlementRows.map((row) => [
+            row.id,
+            packageName.get(row.packageId),
+            row.bookingId,
+            row.consumedAt,
+            row.expiresAt,
+            row.createdAt,
+          ]),
+          note: "Prepaid dives this diver bought — spent and still owed.",
+        },
+        {
+          file: "course_inquiries.csv",
+          header: [
+            "id",
+            "course_title",
+            "interest",
+            "experience_level",
+            "timing",
+            "message",
+            "created_at",
+          ],
+          rows: inquiryRows.map((row) => [
+            row.id,
+            row.courseId ? courseTitle.get(row.courseId) : null,
+            row.interest,
+            row.experienceLevel,
+            row.timing,
+            row.message,
+            row.createdAt,
+          ]),
+          note: "Course leads this diver submitted through the shop's public page.",
+        },
+      ];
+
+      return {
+        shopName: shop.name,
+        shopSlug: shop.slug,
+        timezone: shop.timezone,
+        diverName: person.fullName,
         tables,
         photoUrls: [...new Set(photoUrls)].sort(),
       };

@@ -1037,6 +1037,10 @@ const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
   forfeit: "booking-removed-forfeit",
   failed: "booking-removed-refund-failed",
   manual: "booking-removed-refund-manual",
+  // The booking-level refund lock's two refusals. Neither is `failed`: nothing
+  // is wrong at Stripe, and pressing again is precisely what must not happen.
+  in_progress: "booking-removed-refund-in-progress",
+  needs_reconciliation: "booking-removed-refund-reconcile",
   // Nothing owed either way — today's plain "spot is open" notice.
   no_policy: "booking-removed",
   unpaid: "booking-removed",

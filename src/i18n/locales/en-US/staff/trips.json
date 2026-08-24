@@ -20,6 +20,8 @@
     "bookingRemovedRefundManual": "Booking cancelled — a refund is owed but must be issued by hand (counter payment, or Stripe isn't connected). Refund from the diver's payments.",
     "bookingRemovedRefundFailed": "Booking cancelled, but the automatic refund didn't go through — issue it from the diver's payments.",
     "bookingRemovedRefundReview": "Booking cancelled. The payment record and Stripe disagree on what was captured — review the diver's payments before issuing any refund.",
+    "bookingRemovedRefundInProgress": "Booking cancelled. A refund for this seat is already going through.",
+    "bookingRemovedRefundReconcile": "Booking cancelled. An earlier refund reached Stripe but wasn't recorded here — reconcile it in Stripe before issuing another.",
     "bookingRemovedRefundOwner": "Booking cancelled and the seat is open. It was paid — an owner or manager issues the refund from the diver's payments.",
     "bookingRestored": "Back on the roster.",
     "bookingRestoreFull": "Couldn't undo — the freed spot has been taken and the trip is full again. Add them to the wait list instead.",

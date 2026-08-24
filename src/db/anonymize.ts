@@ -58,7 +58,7 @@ import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_ERASED,
 } from "@/lib/waiver-integrity";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
+import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";

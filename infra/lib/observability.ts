@@ -235,6 +235,26 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     response:
       "Read the daily count in Logs Insights; the target is zero, and no deadline is imposed by this metric.",
   },
+  {
+    metricName: "CspViolations",
+    title: "Content-Security-Policy would have blocked something",
+    why:
+      "The full policy ships as report-only (issue #718), so every one of these is a thing that works " +
+      "today and would stop working the day the policy is enforced. This count IS the enumeration the " +
+      "promotion waits on -- a steady zero across a real week of traffic is the signal to enforce, and a " +
+      "line naming a host nobody expected is the reason not to.",
+    events: ["security.csp_violation"],
+    threshold: 1,
+    periodMinutes: 1_440,
+    // Collected for evidence, not paged on. While the policy is report-only a
+    // violation is information rather than an incident, and the promotion
+    // decision is made by reading the daily counts rather than by being woken.
+    // Flip this to true in the same change that enforces the policy: from then
+    // on a report means the enforced policy blocked something real.
+    alarm: false,
+    response:
+      "Read the directive and blocked origin off the lines, decide whether the host belongs in the policy, then either add it or fix what is loading it.",
+  },
 ];
 
 /**

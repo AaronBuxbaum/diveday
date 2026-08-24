@@ -1,4 +1,3 @@
-import { createHash, randomBytes } from "node:crypto";
 import type { MedicalAnswers, WaiverRecord } from "@/db/schema";
 import { nowDate } from "./clock";
 import { needsPhysicianReview } from "./medical";
@@ -26,13 +25,14 @@ export const DEFAULT_WAIVER_BODY = [
   "I have read this release in full, understand it, and agree to it freely.",
 ].join("\n");
 
-export function createWaiverToken(): string {
-  return randomBytes(32).toString("base64url");
-}
-
-export function hashWaiverToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+// `createWaiverToken` and `hashWaiverToken` used to live here. They are the
+// only two things in this file that need `node:crypto`, and this file is
+// reachable from three client components through `src/lib/readiness.ts` and
+// `src/i18n/readiness-labels.ts` — so that one import put 440 KB of Node
+// polyfills, `eval` and all, into the first-load bundle of the public schedule
+// and the page a diver books on. They now live in `src/lib/waiver-tokens.ts`,
+// which nothing but `src/db` may import; see that file for the whole chain
+// (found by the CSP report-only pass, issue #718).
 
 /** Any referral-flagged "yes" needs physician review; fails closed (medical.ts). */
 export function needsMedicalReview(answers: MedicalAnswers): boolean {

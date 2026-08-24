@@ -38,7 +38,8 @@ import { nowDate } from "@/lib/clock";
 import { type PreparedImport, type PreparedRow, parseImportedMoney } from "@/lib/import";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/storage";
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
-import { createWaiverToken, hashWaiverToken, isCompletedWaiverCurrent } from "@/lib/waivers";
+import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
+import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
   certifications,

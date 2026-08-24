@@ -131,6 +131,13 @@ describe("WaterLocker", () => {
     act(() => {
       vi.advanceTimersByTime(1100);
     });
+    // The hold-to-unlock success still gets the graceful exit every other
+    // overlay in the app now has — it does not vanish in the same frame the
+    // 2-second hold completes (issue #832).
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
 
     expect(screen.queryByText("Screen locked — water detected")).toBeNull();
   });
@@ -154,6 +161,8 @@ describe("WaterLocker", () => {
     const button = screen.getByRole("button", { name: /hold/i });
     act(() => fireEvent.keyDown(button, { key: " " }));
     act(() => vi.advanceTimersByTime(2000));
+    // Same grace period as the mouse/touch path above.
+    act(() => vi.advanceTimersByTime(150));
 
     expect(screen.queryByText("Screen locked — water detected")).toBeNull();
   });
@@ -181,6 +190,11 @@ describe("WaterLocker", () => {
   });
 
   it("releases an in-progress lock the instant the toggle disables it, same tab", async () => {
+    // No fake timers here, deliberately: this path bypasses the exit
+    // animation entirely (issue #832's own module comment explains why —
+    // a captain who just disabled the feature must not wait out a fade for
+    // a screen they are actively trying to get rid of), so "instant" means
+    // instant under real timers too.
     render(
       <>
         <WaterLocker copy={COPY} />

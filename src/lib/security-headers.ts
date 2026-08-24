@@ -4,8 +4,19 @@
  * must vary per-request on the embed exception — ADR 20260726-schedule-embed).
  * Wired into `next.config.ts`'s `headers()`, not the proxy, so they cover
  * every route including `/api` and static assets, which the proxy's matcher
- * deliberately excludes (specialist-optimization-audit-20260731.md §5). A
- * full script/style-src CSP is a follow-up, not this pass.
+ * deliberately excludes (specialist-optimization-audit-20260731.md §5).
+ *
+ * The rest of the Content-Security-Policy is **not** here, and that is the one
+ * deliberate exception to the sentence above. It varies per request on two axes
+ * a header rule cannot read — the embed exception (a query string) and the one
+ * route that loads a third-party script (a path) — so it lives beside
+ * `frame-ancestors` in `src/proxy.ts`, built by
+ * `src/lib/content-security-policy.ts`. Two `Content-Security-Policy` headers
+ * on one response are *intersected* rather than overridden, so splitting it
+ * across both layers would produce a policy neither file states (ADR
+ * 20260824-content-security-policy). This docblock used to end "A full
+ * script/style-src CSP is a follow-up, not this pass" — that follow-up was
+ * issue #718.
  */
 
 export type ConfigHeader = { key: string; value: string };

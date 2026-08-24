@@ -115,6 +115,43 @@ export async function addDiverNote(
 }
 
 /**
+ * One line on the diver-record trail, subject-only — the same shape
+ * `addDiverNote` above writes for itself, pulled out because a second caller
+ * needed it (issue #726: recording that a diver's own record was exported).
+ * Both handles are null, same reason as `addDiverNote`'s own comment: the
+ * subject is what ties this line to the record it was written on, not a trip
+ * or a booking.
+ */
+export async function recordDiverActivity(
+  db: AppDb,
+  input: { shopId: string; personId: string; actorPersonId: string; action: string },
+): Promise<boolean> {
+  const action = input.action.trim();
+  if (!action || action.length > 500) return false;
+  const [diver] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  const [actor] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!diver || !actor) return false;
+  await db.insert(activityEvents).values({
+    shopId: input.shopId,
+    tripId: null,
+    bookingId: null,
+    actorPersonId: input.actorPersonId,
+    subjectPersonId: input.personId,
+    message: `${actor.name} ${action} ${diver.name}`,
+    occurredAt: nowDate(),
+  });
+  return true;
+}
+
+/**
  * Return-what-you-deleted, same convention as `deleteRecapPhoto`
  * (`DeleteRecapPhotoResult`): the caller needs the booking + text back to
  * offer a one-tap undo that recreates the note (docs/design/principles.md
