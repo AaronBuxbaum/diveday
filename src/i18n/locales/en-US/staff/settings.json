@@ -283,6 +283,10 @@
       "heading": "Waiver template",
       "description": "The release every diver signs, and the log of who has signed it."
     },
+    "safetyChecklist": {
+      "heading": "Pre-departure checklist",
+      "description": "What your crew confirms before a boat leaves the dock."
+    },
     "promos": {
       "heading": "Promo codes",
       "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits."
@@ -435,6 +439,30 @@
       "phoneLabel": "Emergency contact phone",
       "save": "Save contact",
       "saving": "Saving…"
+    }
+  },
+  "safetyChecklist": {
+    "eyebrow": "Settings",
+    "title": "Pre-departure checklist",
+    "description": "The lines your crew confirms before a boat leaves the dock. You write every item — DiveDay doesn't.",
+    "listHeading": "Checklist",
+    "empty": {
+      "title": "Nothing on the list yet",
+      "body": "Add the first line below — the crew sees it on every departure's manifest."
+    },
+    "addLabel": "New line",
+    "addPlaceholder": "Emergency oxygen kit aboard",
+    "addSubmit": "Add",
+    "delete": "Delete",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "notice": {
+      "added": "Added to the checklist.",
+      "deleted": "Removed from the checklist.",
+      "invalid": "That didn't save — try it again.",
+      "duplicateLabel": "That line is already on the list.",
+      "notAuthorized": "You don't have permission to change this.",
+      "moveRefused": "That didn't move — try it again."
     }
   },
   "export": {

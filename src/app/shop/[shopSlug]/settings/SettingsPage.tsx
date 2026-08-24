@@ -627,6 +627,11 @@ export default async function SettingsPage({
                 description={t("settings.main.waivers.description")}
               />
             ) : null}
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/safety-checklist`}
+              heading={t("settings.main.safetyChecklist.heading")}
+              description={t("settings.main.safetyChecklist.description")}
+            />
 
             {/* First editable row, because it is the setting every other date
               and time on every surface is read through — the board's day
