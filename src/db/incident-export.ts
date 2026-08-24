@@ -12,7 +12,7 @@ import { canPersonExportIncidentRecord } from "./authz";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { getTripManifests } from "./manifests";
-import { latestPreDepartureChecksForTrip, listChecklistItems } from "./pre-departure-check";
+import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
 import { bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
@@ -160,7 +160,7 @@ export async function getIncidentExport(
   const [teamRows, teamEventRows, checklistItems, checklistChecks] = await Promise.all([
     listTripBuddyTeams(db, shopId, tripId),
     listTripBuddyTeamEvents(db, shopId, tripId),
-    listChecklistItems(db, shopId),
+    listChecklistItemsForTrip(db, shopId, tripId),
     latestPreDepartureChecksForTrip(db, shopId, tripId),
   ]);
   const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({

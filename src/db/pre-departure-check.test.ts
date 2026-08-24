@@ -7,6 +7,7 @@ import {
   deleteChecklistItem,
   latestPreDepartureChecksForTrip,
   listChecklistItems,
+  listChecklistItemsForTrip,
   recordPreDepartureCheck,
   reorderChecklistItems,
 } from "./pre-departure-check";
@@ -148,6 +149,47 @@ describe("pre-departure checklist items (in-memory PGlite)", () => {
     // The append-only history is untouched — the departure log still reads it.
     const latest = await latestPreDepartureChecksForTrip(db, shop.id, reef.id);
     expect(latest.get(created.id)?.state).toBe("checked");
+  });
+
+  it("listChecklistItemsForTrip keeps a deleted item on the trip it was checked for, and only that trip", async () => {
+    // Found in dive-domain-expert review: the departure log used to read
+    // listChecklistItems (live only), so deleting an item after a departure
+    // silently dropped that item's row — and its recorded check — from a
+    // past incident document. This is the guard.
+    const { db, shop, owner } = await checklistContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    const night = trips.find((trip) => trip.title.startsWith("Night Dive"));
+    if (!reef || !night) throw new Error("demo reef/night trips missing");
+
+    const before = await listChecklistItems(db, shop.id);
+    const created = await createChecklistItem(db, {
+      shopId: shop.id,
+      personId: owner.id,
+      label: "Test: liferaft checked",
+    });
+    if (!created.ok) throw new Error("setup: expected item to be created");
+    const recorded = await recordPreDepartureCheck(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      checklistItemId: created.id,
+      recordedByPersonId: owner.id,
+      status: "checked",
+    });
+    expect(recorded.ok).toBe(true);
+    await deleteChecklistItem(db, { shopId: shop.id, personId: owner.id, itemId: created.id });
+
+    // Live list: gone, as before.
+    expect(await listChecklistItems(db, shop.id)).toEqual(before);
+    // The reef trip's own log still names it — the whole point of the fix.
+    expect(
+      (await listChecklistItemsForTrip(db, shop.id, reef.id)).map((item) => item.label),
+    ).toContain("Test: liferaft checked");
+    // A trip that never had an event against it never gets a deleted item
+    // resurrected onto its log.
+    expect(
+      (await listChecklistItemsForTrip(db, shop.id, night.id)).map((item) => item.label),
+    ).not.toContain("Test: liferaft checked");
   });
 });
 

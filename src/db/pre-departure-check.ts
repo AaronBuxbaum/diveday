@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, exists, isNull, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -40,6 +40,52 @@ export async function listChecklistItems(db: DbExecutor, shopId: string): Promis
       and(
         eq(preDepartureChecklistItems.shopId, shopId),
         isNull(preDepartureChecklistItems.deletedAt),
+      ),
+    )
+    .orderBy(asc(preDepartureChecklistItems.sortOrder), asc(preDepartureChecklistItems.createdAt));
+}
+
+/**
+ * Every item this trip should print on its departure log: every *live* item
+ * (what the manifest offers today), plus any item this trip has an event
+ * against even if the shop has since deleted it — found by a
+ * dive-domain-expert review before merge. `listChecklistItems` alone made a
+ * past incident document lose a line, and the check it recorded, the moment
+ * a shop fixed a typo in that line's wording (delete-then-recreate is the
+ * only edit path). The document's own footer promises "absence is stated,
+ * never blank"; silently dropping a real `checked` event is the opposite of
+ * that promise, on the one document built to hand to an insurer or an
+ * investigator. `getIncidentExport` uses this, never `listChecklistItems`.
+ */
+export async function listChecklistItemsForTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<ChecklistItem[]> {
+  return db
+    .select({
+      id: preDepartureChecklistItems.id,
+      label: preDepartureChecklistItems.label,
+      sortOrder: preDepartureChecklistItems.sortOrder,
+    })
+    .from(preDepartureChecklistItems)
+    .where(
+      and(
+        eq(preDepartureChecklistItems.shopId, shopId),
+        or(
+          isNull(preDepartureChecklistItems.deletedAt),
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(preDepartureCheckEvents)
+              .where(
+                and(
+                  eq(preDepartureCheckEvents.checklistItemId, preDepartureChecklistItems.id),
+                  eq(preDepartureCheckEvents.tripId, tripId),
+                ),
+              ),
+          ),
+        ),
       ),
     )
     .orderBy(asc(preDepartureChecklistItems.sortOrder), asc(preDepartureChecklistItems.createdAt));

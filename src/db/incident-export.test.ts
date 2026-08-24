@@ -5,6 +5,12 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
+import {
+  createChecklistItem,
+  deleteChecklistItem,
+  listChecklistItems,
+  recordPreDepartureCheck,
+} from "./pre-departure-check";
 import { createCertification, reviewCertification } from "./readiness";
 import { shops, waiverRecords } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -113,6 +119,59 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       // Every checkpoint row exists and reads as a stated result, never a hole.
       expect(entry.rollCall.length).toBeGreaterThan(0);
     }
+  });
+
+  it("states every checklist item's answer, checked or not, and states absence when the shop has none", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const items = await listChecklistItems(db, shop.id);
+    expect(items.length).toBeGreaterThan(0); // seedPreDepartureChecklist
+
+    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    expect(doc).not.toBeNull();
+    if (!doc) throw new Error("unreachable");
+    expect(doc.preDepartureCheck.map((entry) => entry.label)).toEqual(
+      items.map((item) => item.label),
+    );
+    // Nothing tapped this item for this departure — an absence, stated.
+    expect(doc.preDepartureCheck.every((entry) => !entry.checked)).toBe(true);
+
+    const checked = await recordPreDepartureCheck(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      checklistItemId: items[0].id,
+      recordedByPersonId: staff.id,
+      status: "checked",
+    });
+    expect(checked.ok).toBe(true);
+    const after = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    const entry = after?.preDepartureCheck.find((row) => row.label === items[0].label);
+    expect(entry?.checked).toBe(true);
+    expect(entry?.recordedByName).toBeTruthy();
+    expect(entry?.occurredAt).toBeTruthy();
+  });
+
+  it("keeps a deleted checklist item's recorded check on this trip's document (dive-domain-expert finding)", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const created = await createChecklistItem(db, {
+      shopId: shop.id,
+      personId: staff.id,
+      label: "Test: liferaft checked",
+    });
+    if (!created.ok) throw new Error("setup: expected item to be created");
+    const recorded = await recordPreDepartureCheck(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      checklistItemId: created.id,
+      recordedByPersonId: staff.id,
+      status: "checked",
+    });
+    expect(recorded.ok).toBe(true);
+    await deleteChecklistItem(db, { shopId: shop.id, personId: staff.id, itemId: created.id });
+
+    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    const entry = doc?.preDepartureCheck.find((row) => row.label === "Test: liferaft checked");
+    expect(entry).toBeDefined();
+    expect(entry?.checked).toBe(true);
   });
 
   it("never exports medical answers, even when a signed questionnaire exists", async () => {
