@@ -7,7 +7,7 @@ import {
   type PreDepartureCheckStatus,
 } from "@/lib/pre-departure-check";
 import { canPersonManageShopSettings, loadActiveStaffRoles } from "./authz";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -61,28 +61,37 @@ export async function createChecklistItem(
   if (!(await canPersonManageShopSettings(db, input.shopId, input.personId))) {
     return { ok: false, reason: "not_authorized" };
   }
-  return db.transaction(async (tx) => {
-    const [tail] = await tx
-      .select({ sortOrder: preDepartureChecklistItems.sortOrder })
-      .from(preDepartureChecklistItems)
-      .where(
-        and(
-          eq(preDepartureChecklistItems.shopId, input.shopId),
-          isNull(preDepartureChecklistItems.deletedAt),
-        ),
-      )
-      .orderBy(sql`${preDepartureChecklistItems.sortOrder} desc`)
-      .limit(1);
-    const [row] = await tx
-      .insert(preDepartureChecklistItems)
-      .values({ shopId: input.shopId, label, sortOrder: (tail?.sortOrder ?? -1) + 1 })
-      .onConflictDoNothing({
-        target: [preDepartureChecklistItems.shopId, preDepartureChecklistItems.label],
-      })
-      .returning({ id: preDepartureChecklistItems.id });
-    if (!row) return { ok: false, reason: "duplicate_label" };
-    return { ok: true, id: row.id };
-  });
+  try {
+    return await db.transaction(async (tx) => {
+      const [tail] = await tx
+        .select({ sortOrder: preDepartureChecklistItems.sortOrder })
+        .from(preDepartureChecklistItems)
+        .where(
+          and(
+            eq(preDepartureChecklistItems.shopId, input.shopId),
+            isNull(preDepartureChecklistItems.deletedAt),
+          ),
+        )
+        .orderBy(sql`${preDepartureChecklistItems.sortOrder} desc`)
+        .limit(1);
+      const [row] = await tx
+        .insert(preDepartureChecklistItems)
+        .values({ shopId: input.shopId, label, sortOrder: (tail?.sortOrder ?? -1) + 1 })
+        .returning({ id: preDepartureChecklistItems.id });
+      if (!row) throw new Error("createChecklistItem: insert returned no row");
+      return { ok: true, id: row.id };
+    });
+  } catch (error) {
+    // The unique index is partial (live rows only), and Postgres's
+    // ON CONFLICT arbiter only matches a partial index when the insert's own
+    // WHERE clause repeats the index's predicate verbatim — so this catches
+    // the 23505 instead, the same pattern `gear_reservations`' exclusion
+    // constraint follows for the same reason (`violatesUniqueIndex`).
+    if (violatesUniqueIndex(error, "pre_departure_checklist_items_shop_label_unique")) {
+      return { ok: false, reason: "duplicate_label" };
+    }
+    throw error;
+  }
 }
 
 /** The shop's own reordering, written whole — a short list, dragged in place. */
