@@ -16,6 +16,7 @@ import {
   type StaffMutationResult,
   setStaffAccountStatus,
   setStaffEmergencyContact,
+  setStaffLanguages,
   setStaffRoles,
 } from "@/db/staff-accounts";
 import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
@@ -25,6 +26,7 @@ import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
+import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
@@ -261,6 +263,32 @@ export async function saveStaffEmergencyContactAction(formData: FormData) {
   revalidateAndRedirect(
     path,
     noticeUrl(`${path}#staff-${personId}`, notice, { contactFor: personId }),
+  );
+}
+
+/**
+ * One staff member's spoken languages, from the team page (issue #708).
+ * Behind `teamManagementBlock`, the same gate every other mutation here uses.
+ */
+export async function saveStaffLanguagesAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const path = teamPath(session.user.shopSlug);
+  await teamManagementBlock(session);
+
+  const personId = String(formData.get("personId") ?? "");
+  if (!personId) redirect(path);
+
+  const languages = COMMON_SPOKEN_LANGUAGES.filter((code) => formData.get(`language_${code}`));
+  const saved = await setStaffLanguages(await getDb(), {
+    shopId: session.user.shopId,
+    personId,
+    languages: [...languages],
+  });
+  revalidateAndRedirect(
+    path,
+    noticeUrl(`${path}#staff-${personId}`, saved ? "languages-saved" : "not_found", {
+      languagesFor: personId,
+    }),
   );
 }
 

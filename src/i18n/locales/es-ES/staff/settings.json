@@ -385,7 +385,8 @@
       "notFound": "Esa persona no está en el equipo de este centro.",
       "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
       "contactSaved": "Contacto de emergencia guardado.",
-      "contactHalfFilled": "Un contacto de emergencia necesita nombre y teléfono."
+      "contactHalfFilled": "Un contacto de emergencia necesita nombre y teléfono.",
+      "languagesSaved": "Idiomas guardados."
     },
     "statusBadge": {
       "invited": "Invitado",
@@ -402,6 +403,10 @@
       "crew": "Tripulación",
       "diver": "Buceador"
     },
+    "languagesLegend": "Idiomas",
+    "languagesLabel": "Idiomas que habla esta persona",
+    "languagesSave": "Guardar",
+    "languagesSaving": "Guardando…",
     "invite": {
       "heading": "Invitar a alguien",
       "description": "Recibirá un correo para establecer su propia contraseña. Invitar con el mismo correo a alguien que ya es buceador añade acceso de personal a su ficha en vez de crear una segunda.",

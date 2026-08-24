@@ -13,10 +13,12 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
+import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
+import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { noticeFromParam } from "@/lib/staff-notices";
 import {
   inviteStaffAction,
@@ -25,6 +27,7 @@ import {
   restoreStaffAction,
   saveAllStaffRolesAction,
   saveStaffEmergencyContactAction,
+  saveStaffLanguagesAction,
   setStaffStatusAction,
 } from "./actions";
 
@@ -52,6 +55,8 @@ const INVITE_EMAIL_NOTICES = new Set([
 const INVITE_FORM_NOTICES = new Set(["invited", "invite-invalid"]);
 /** Outcomes of one staff card's emergency-contact form, shown on that card. */
 const CONTACT_FORM_NOTICES = new Set(["contact-saved", "half-filled"]);
+/** Outcomes of one staff card's spoken-languages form, shown on that card (issue #708). */
+const LANGUAGES_FORM_NOTICES = new Set(["languages-saved"]);
 
 /** One resolved `?notice=`: the tone it carries and the words for it. */
 type NoticeMessage = { tone: "success" | "danger" | "warning"; text: string };
@@ -83,6 +88,7 @@ function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
       text: t("settings.team.notice.inviteEmailReserved"),
     },
     "contact-saved": { tone: "success", text: t("settings.team.notice.contactSaved") },
+    "languages-saved": { tone: "success", text: t("settings.team.notice.languagesSaved") },
     "half-filled": { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
     "last-owner": { tone: "danger", text: t("settings.team.notice.lastOwner") },
     "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
@@ -155,14 +161,61 @@ function RoleCheckboxes({
   );
 }
 
+/**
+ * One staff member's spoken languages (issue #708) — a checkbox per language
+ * DiveDay can render, each labelled in the *reader's* own language
+ * (`languageNameIn`) so the staffer filling this in recognises the option,
+ * unlike the diver-facing badge below which uses each language's endonym.
+ *
+ * Nested directly in its own per-member `<form>` (unlike `RoleCheckboxes`,
+ * whose inputs cross-reference one shared form at the page's foot via the
+ * `form` attribute) — a bulk save makes sense for roles, which every row
+ * shares the same submit for, but not for a fact nobody else on the roster
+ * holds.
+ */
+function LanguageCheckboxes({
+  defaultLanguages,
+  locale,
+  t,
+}: {
+  defaultLanguages: readonly string[];
+  locale: string;
+  t: StaffTranslator;
+}) {
+  return (
+    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <legend className="sr-only">{t("settings.team.languagesLegend")}</legend>
+      {COMMON_SPOKEN_LANGUAGES.map((language) => (
+        <label
+          key={language}
+          className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm"
+        >
+          <input
+            name={`language_${language}`}
+            type="checkbox"
+            defaultChecked={defaultLanguages.includes(language)}
+            className="size-4 accent-primary"
+          />
+          {languageNameIn(language, locale) ?? language}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 function StaffRow({
   member,
   contactStatus,
+  languagesStatus,
+  locale,
   t,
 }: {
   member: StaffMember;
   /** This card's own emergency-contact outcome, or nothing. */
   contactStatus: NoticeMessage | undefined;
+  /** This card's own spoken-languages outcome, or nothing. */
+  languagesStatus: NoticeMessage | undefined;
+  locale: string;
   t: StaffTranslator;
 }) {
   const status = statusBadge(t)[member.accountStatus];
@@ -187,6 +240,29 @@ function StaffRow({
           formId={ROLES_FORM_ID}
           t={t}
         />
+      </div>
+
+      {/* What this person can say to a diver, shown to divers before they
+          book (a shop's "we speak …" line and each trip's crew section) and
+          nowhere gated — a shop that never fills this in loses nothing
+          (issue #708). Its own immediate form, like the emergency contact
+          below: unlike roles, there is no bulk save that makes sense for a
+          per-person fact nobody else on the roster shares. */}
+      <div className="mt-4">
+        <p className="mb-2 text-sm font-medium text-muted">{t("settings.team.languagesLabel")}</p>
+        <form action={saveStaffLanguagesAction} className="flex flex-col gap-3">
+          <input type="hidden" name="personId" value={member.personId} />
+          <LanguageCheckboxes defaultLanguages={member.spokenLanguages} locale={locale} t={t} />
+          <div className="flex items-center gap-3">
+            <SubmitButton
+              pendingLabel={t("settings.team.languagesSaving")}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("settings.team.languagesSave")}
+            </SubmitButton>
+            <FormStatus tone={languagesStatus?.tone}>{languagesStatus?.text}</FormStatus>
+          </div>
+        </form>
       </div>
 
       {/* Who to call for this person, and the one place a shop can say so.
@@ -332,10 +408,11 @@ export default async function TeamSettingsPage({
     undoRoles?: string;
     undoName?: string;
     contactFor?: string;
+    languagesFor?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName, contactFor } =
+  const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName, contactFor, languagesFor } =
     await searchParams;
   // Settings, not Today: Team is a Settings sub-page, and the nearest parent
   // surface is where a refusal explains itself best (the same landing the
@@ -347,7 +424,8 @@ export default async function TeamSettingsPage({
   });
 
   const staff = await listShopStaff(db, shop.id);
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, noticeMessages(t));
   // An invitation's outcome belongs on the invitation form — and the three
   // refusals that are really about one address belong on that address box.
@@ -362,7 +440,11 @@ export default async function TeamSettingsPage({
   // the two boxes that caused it and not above a roster of eleven people.
   const contactStatus =
     notice && CONTACT_FORM_NOTICES.has(notice) && contactFor ? banner : undefined;
-  const pageBanner = inviteEmailError || inviteStatus || contactStatus ? undefined : banner;
+  // Same routing, for the languages form (issue #708).
+  const languagesStatus =
+    notice && LANGUAGES_FORM_NOTICES.has(notice) && languagesFor ? banner : undefined;
+  const pageBanner =
+    inviteEmailError || inviteStatus || contactStatus || languagesStatus ? undefined : banner;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -374,6 +456,7 @@ export default async function TeamSettingsPage({
           "undoRoles",
           "undoName",
           "contactFor",
+          "languagesFor",
         ]}
       />
       <ShopPageHeader
@@ -475,6 +558,8 @@ export default async function TeamSettingsPage({
                     key={member.personId}
                     member={member}
                     contactStatus={contactFor === member.personId ? contactStatus : undefined}
+                    languagesStatus={languagesFor === member.personId ? languagesStatus : undefined}
+                    locale={locale}
                     t={t}
                   />
                 ))}
