@@ -203,7 +203,18 @@ test.describe("staff", () => {
     await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
     await tabs.getByRole("link", { name: "PADI" }).click();
     await expect(page).toHaveURL("/shop/blue-mantis/courses");
-    await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(1);
+    const padiRows: string[] = [];
+    for (;;) {
+      padiRows.push(...(await page.locator("main ul > li").allInnerTexts()));
+      const next = page.getByRole("navigation", { name: "Pages" }).getByRole("link", {
+        name: "Next",
+      });
+      if ((await next.count()) === 0) break;
+      const href = await next.getAttribute("href");
+      if (!href) break;
+      await page.goto(href);
+    }
+    expect(padiRows.filter((row) => row.includes("Divemaster"))).toHaveLength(1);
   });
 
   test("a course row schedules a session of itself, opening the board's add panel", async ({
