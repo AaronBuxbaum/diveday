@@ -195,7 +195,16 @@ function buildAuth() {
       // non-UUID base62 string, which Postgres refuses to store in a uuid
       // column. Keeps this schema's house style instead of special-casing
       // three tables to text ids.
-      advanced: { database: { generateId: "uuid" } },
+      advanced: {
+        database: { generateId: "uuid" },
+        // The browser suite runs production builds over loopback HTTP. A
+        // Secure cookie is valid for the browser's page requests on this
+        // host, but Playwright's APIRequestContext deliberately omits it,
+        // which makes direct authenticated API assertions look signed out.
+        // Keep real deployments secure while giving the HTTP test fleet the
+        // same cookie visibility as the browser.
+        useSecureCookies: process.env.DIVEDAY_E2E !== "1",
+      },
       emailAndPassword: { enabled: false },
       plugins: [diveDayCredentialsPlugin(), nextCookies()],
     }),
