@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
+  crewBelowTargetDetailText,
   emailDeliveryDetailText,
   emailResendActionText,
   failedPhotoDeletionDetailText,
@@ -34,6 +35,7 @@ import {
   rollCallGapDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
+  uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
@@ -43,6 +45,11 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
+import {
+  DEFAULT_DIVERS_PER_DIVEMASTER,
+  divemasterRatioGap,
+  inWaterDivemasterCount,
+} from "@/lib/divemaster-ratio";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import {
@@ -1004,6 +1011,17 @@ export async function getTodayWork(
    * pay for the pipeline twice. Omitted, the queue runs its own.
    */
   evidence?: HorizonReadinessEvidence,
+  /**
+   * The shop's own divemaster target (`shops.divers_per_divemaster`), for the
+   * `uncrewed_departure`/`crew_below_target` rows (issue #732). Defaults to
+   * `DEFAULT_DIVERS_PER_DIVEMASTER` alongside `t`/`locale` above, for the same
+   * reason: every pre-existing caller (tests included) keeps working
+   * unchanged. The close-out surface's own read of this queue
+   * (`src/db/closeout.ts`) accepts that default rather than threading the
+   * shop row the rest of the way down its call chain for a queue it only
+   * reads as leftovers.
+   */
+  diversPerDivemaster = DEFAULT_DIVERS_PER_DIVEMASTER,
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
@@ -1067,10 +1085,14 @@ export async function getTodayWork(
       shopId,
       inWindow.map((trip) => trip.id),
     ),
+    // Every trip in the window, not just course sessions (issue #732): the
+    // shop's own divemaster target below reads the same counts for a fun
+    // dive, and `courseCrewCountsByTrip`'s query has never actually been
+    // course-scoped — only every caller of it, until now, was.
     courseCrewCountsByTrip(
       db,
       shopId,
-      inWindow.filter((trip) => trip.course).map((trip) => trip.id),
+      inWindow.map((trip) => trip.id),
     ),
     listNotificationDeliveryIssues(db, shopId, { from: now, until: horizon }),
     tripIdsNeverSentLastMinuteDeal(
@@ -1285,6 +1307,74 @@ export async function getTodayWork(
         href: `${tripHref}#crew`,
         dueAt: trip.startsAt,
       });
+    }
+
+    // The shop's own divemaster target (`divemasterRatioGap`,
+    // src/lib/divemaster-ratio.ts) — applies to every dive the shop runs,
+    // course session or fun dive alike, unlike `courseCrewGap` above, which
+    // is an agency-published training ratio and only ever fires for a course
+    // (issue #732). Reuses `counts`: the same crew count `courseCrewGap` just
+    // read, never a second query or a second definition of who is in the
+    // water (`countInWaterCrew`, src/lib/crew-roles.ts). Binds nothing —
+    // this only informs, exactly as it does on the trip page.
+    //
+    // Skipped entirely when `courseCrewGap` already fired: a course session
+    // missing its instructor is already flagged above, more precisely (its
+    // sentence cites the actual agency ratio a seat is refused against), and
+    // firing both would put two rows under one departure header naming the
+    // same underlying gap in two vocabularies — the wallpaper failure this
+    // codebase designs hard against elsewhere (DOM-H3). `courseCrewGap`
+    // returns `"none"` for every fun dive by construction, so this never
+    // suppresses the signal this ticket exists to add.
+    const ratioGap =
+      crewGap.code === "none"
+        ? divemasterRatioGap({
+            divers: trip.booked,
+            divemasterCount: inWaterDivemasterCount(counts),
+            diversPerDivemaster,
+          })
+        : { code: "none" as const };
+    if (ratioGap.code === "under_target") {
+      // Two different sentences for two different problems, not one branching
+      // on count: "nobody is rostered at all" and "one short of your target"
+      // read as different severities because they are. The zero-crew case
+      // gets its own kind and rank, above `nitrox_gate`; the below-target
+      // case gets a quieter one, ranked with the other purely-advisory rows
+      // (`KIND_SEVERITY`, src/lib/today.ts).
+      if (ratioGap.divemasterCount === 0) {
+        actions.push({
+          id: `uncrewed:${trip.id}`,
+          kind: "uncrewed_departure",
+          urgency: urgencyFor(trip.startsAt, now),
+          subject: trip.title,
+          context: when,
+          departure,
+          aboutDeparture: true,
+          detail: uncrewedDepartureDetailText(t, ratioGap.divers),
+          actionLabel: openTripActionText(t),
+          href: `${tripHref}#crew`,
+          dueAt: trip.startsAt,
+        });
+      } else {
+        actions.push({
+          id: `crew-target:${trip.id}`,
+          kind: "crew_below_target",
+          urgency: urgencyFor(trip.startsAt, now),
+          subject: trip.title,
+          context: when,
+          departure,
+          aboutDeparture: true,
+          detail: crewBelowTargetDetailText(
+            t,
+            ratioGap.divers,
+            ratioGap.divemasterCount,
+            diversPerDivemaster,
+          ),
+          actionLabel: openTripActionText(t),
+          href: `${tripHref}#crew`,
+          dueAt: trip.startsAt,
+        });
+      }
     }
 
     // Emergency contact is a dock-settleable nudge, not a blocker, and only

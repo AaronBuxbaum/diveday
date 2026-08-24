@@ -41,6 +41,7 @@ import {
   createTrip,
   getTripRoster,
   listStaff,
+  setTripCrew,
   setTripStatus,
   upcomingTripsWithCounts,
 } from "./trips";
@@ -895,6 +896,178 @@ describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
     const asInstructor = await readBoth(db, shop, trip);
     expect(asInstructor.today).toBe(false);
     expect(asInstructor.needCrew).toBe(staffed.needCrew);
+  });
+});
+
+/**
+ * Issue #732. `divemasterRatioGap` (src/lib/divemaster-ratio.ts) "applies to
+ * every dive the shop runs, fun dives and course sessions alike", but before
+ * this it reached Today nowhere — a fun dive with divers booked and nobody
+ * rostered raised no row at all, while a missing rental size did. These
+ * assert both new rows, and that the boundary with `instructor_missing`
+ * (agency ratios, course-only) stays exactly where it was.
+ */
+describe("uncrewed and below-target departures (issue #732)", () => {
+  async function reefTrip(db: Awaited<ReturnType<typeof seededShopContext>>["db"], shopId: string) {
+    const trips = await upcomingTripsWithCounts(db, shopId);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    return reef;
+  }
+
+  it("raises uncrewed_departure for a fun dive with divers booked and zero in-water crew", async () => {
+    const { db, shop } = await seededShopContext();
+    // The seed's own first charter (src/db/seed-trips.ts) rosters its captain
+    // and divemaster as tripRole "crew"/"captain" — neither counts toward the
+    // in-water ratio (src/lib/crew-roles.ts) — so this trip is genuinely
+    // uncrewed by the rule the ratio itself uses, not a fixture I'm rigging.
+    const reef = await reefTrip(db, shop.id);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
+    expect(row?.kind).toBe("uncrewed_departure");
+    expect(row?.detail).toBe(
+      `${reef.booked} divers are booked and no divemaster or instructor is assigned to supervise this departure.`,
+    );
+    // The boundary this ticket must not blur: instructor_missing is an
+    // agency training ratio and only ever fires for a course session. This
+    // trip carries no course.
+    expect(work.actions.some((action) => action.id === `instructor:${reef.id}`)).toBe(false);
+  });
+
+  it("raises the quieter crew_below_target once some crew is rostered, not uncrewed_departure", async () => {
+    const { db, shop } = await seededShopContext();
+    const reef = await reefTrip(db, shop.id);
+    const staff = await listStaff(db, shop.id);
+    const divemaster = staff.find(
+      (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+    );
+    if (!divemaster) throw new Error("seeded fixture missing a divemaster");
+    await setTripCrew(db, shop.id, reef.id, [
+      { personId: divemaster.person.id, tripRole: "divemaster" },
+    ]);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(work.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(false);
+    const row = work.actions.find((action) => action.id === `crew-target:${reef.id}`);
+    expect(row?.kind).toBe("crew_below_target");
+    expect(row?.detail).toBe(
+      `${reef.booked} divers booked with 1 supervisor rostered — short of your 6:1 target.`,
+    );
+  });
+
+  it("clears both rows once the departure meets its own target", async () => {
+    const { db, shop } = await seededShopContext();
+    const reef = await reefTrip(db, shop.id);
+    // The demo's own default divers-per-divemaster is 6, and this trip books
+    // 9 — two divemasters clears ceil(9/6).
+    const staff = await listStaff(db, shop.id);
+    const inWaterQualified = staff.filter(
+      (entry) => entry.roles.includes("divemaster") || entry.roles.includes("instructor"),
+    );
+    expect(inWaterQualified.length).toBeGreaterThanOrEqual(2);
+    await setTripCrew(
+      db,
+      shop.id,
+      reef.id,
+      inWaterQualified
+        .slice(0, 2)
+        .map((entry) => ({ personId: entry.person.id, tripRole: "divemaster" as const })),
+    );
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(
+      work.actions.some(
+        (action) => action.id === `uncrewed:${reef.id}` || action.id === `crew-target:${reef.id}`,
+      ),
+    ).toBe(false);
+  });
+
+  it("never raises either row for an empty boat", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Empty afternoon dive",
+      startsAt: new Date(nowMs() + 26 * 60 * 60 * 1000),
+      endsAt: new Date(nowMs() + 28 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create trip");
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(
+      work.actions.some(
+        (action) => action.id === `uncrewed:${trip.id}` || action.id === `crew-target:${trip.id}`,
+      ),
+    ).toBe(false);
+  });
+
+  /**
+   * A course session missing its instructor already raises `instructor_missing`
+   * — the more precise, agency-ratio-citing row — so `uncrewed_departure` must
+   * not also fire for the same trip. Two rows naming one gap in two
+   * vocabularies is exactly the wallpaper failure `KIND_SEVERITY`'s own
+   * comments elsewhere design against.
+   */
+  it("does not double-fire uncrewed_departure for a course session already flagged instructor_missing", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!course || !instructor) throw new Error("seeded fixture missing");
+    const startsAt = new Date(nowMs() + 3 * 60 * 60 * 1000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Instructor reassigned Open Water session",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+    // Rostered (no per-trip role, so shop-wide inference staffs it) before the
+    // booking gate runs — the same shape as the DOM-M3 fixture above, and the
+    // realistic way this scenario actually arises: a session books out while
+    // staffed, and the instructor is reassigned to something else afterward
+    // (the booking gate only checks at booking time, never continuously).
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: instructor.person.id });
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Uncrewed Course Diver",
+        email: "uncrewed-course-diver@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    await db
+      .update(tripAssignments)
+      .set({ tripRole: "crew" })
+      .where(
+        and(
+          eq(tripAssignments.tripId, trip.id),
+          eq(tripAssignments.personId, instructor.person.id),
+        ),
+      );
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(work.actions.some((action) => action.id === `instructor:${trip.id}`)).toBe(true);
+    expect(
+      work.actions.some(
+        (action) => action.id === `uncrewed:${trip.id}` || action.id === `crew-target:${trip.id}`,
+      ),
+    ).toBe(false);
   });
 });
 

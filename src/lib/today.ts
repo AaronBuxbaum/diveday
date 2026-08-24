@@ -77,6 +77,8 @@ export type TodayActionKind =
   | "dive_prep"
   | "nitrox_gate"
   | "instructor_missing"
+  | "uncrewed_departure"
+  | "crew_below_target"
   | "waitlist_seat"
   | "last_minute_fill"
   | "email_delivery"
@@ -123,46 +125,63 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   requirements: 8,
   waiver: 9,
   instructor_missing: 10,
-  nitrox_gate: 11,
+  // Divers booked, zero in-water crew rostered — course session or fun dive
+  // alike (issue #732). Placed directly beside `instructor_missing`: both are
+  // the same underlying question, "is anyone qualified assigned to supervise
+  // this water time", one scoped to the agency's course ratio and this one to
+  // the shop's own divemaster target — and both rank above `nitrox_gate`
+  // because nobody in the water outranks a single diver's tank fill. It still
+  // sits below every kind above it: those describe one diver's own evidence
+  // (a medical flag, an unconfirmed identity, a card) which can take days to
+  // resolve, while a shop that notices this row can fix it in one tap on the
+  // crew editor if it has anyone free to roster.
+  uncrewed_departure: 11,
+  nitrox_gate: 12,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
   // deliberately sits far below the after-dive kinds above. Collapsing the
   // two into one row is what turns the red row into wallpaper (DOM-H3).
-  roll_call_departure_open: 12,
-  roll_call_not_started: 13,
-  dive_prep: 14,
-  payment: 15,
-  email_delivery: 16,
-  waitlist_seat: 17,
+  roll_call_departure_open: 13,
+  roll_call_not_started: 14,
+  dive_prep: 15,
+  payment: 16,
+  email_delivery: 17,
+  waitlist_seat: 18,
   // A revenue opportunity, not anything blocking or dock-settleable — ranks
   // with the other purely-commercial rows.
-  last_minute_fill: 18,
-  // Dock-settleable and never a boarding blocker, so it rides at the bottom.
-  emergency_contact: 19,
+  last_minute_fill: 19,
+  // Dock-settleable and never a boarding blocker, so it rides near the bottom.
+  emergency_contact: 20,
+  // Below-target crewing (issue #732): `divemasterRatioGap`'s own docblock
+  // is explicit that the target "binds nothing" and is advice a shop may act
+  // on or not, unlike `uncrewed_departure` above, which describes a
+  // departure with nobody in the water at all. Ranked with the other purely
+  // advisory, non-blocking rows so it reads as a nudge, not a problem.
+  crew_below_target: 21,
   // Platform-health chores (task 157) — never a departure blocker, so they
   // sink below every per-diver row when severity is what breaks a tie.
-  stuck_payment_operation: 20,
-  failed_photo_deletion: 21,
+  stuck_payment_operation: 22,
+  failed_photo_deletion: 23,
   // Somebody is owed their money back for a departure the shop called off.
   // Ranked above the other two platform-health rows: a diver is waiting on
   // this one, and has already been told the shop would be in touch.
-  owed_refund: 22,
+  owed_refund: 24,
   // Divers said something worth publishing; nothing sails or refunds on it.
-  reviews_pending: 23,
+  reviews_pending: 25,
   // The gear register's rows (ADR 20260815-minimal-gear-register). All
   // counter work, never a boarding blocker — a unit that never came home
   // outranks one due back tonight, and both outrank a bench clock, because
   // that is the order the desk actually chases them in.
-  gear_overdue: 24,
-  gear_due_back: 25,
-  gear_service_due: 26,
+  gear_overdue: 26,
+  gear_due_back: 27,
+  gear_service_due: 28,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 27,
+  units_unconfirmed: 29,
 };
 
 /**
@@ -188,6 +207,9 @@ export const ACTION_KIND_META = {
   requirements: { tone: "warning" },
   waiver: { tone: "warning" },
   instructor_missing: { tone: "warning" },
+  // Same tone as instructor_missing, its fun-dive sibling: nobody is in the
+  // water yet, but it is not paperwork either.
+  uncrewed_departure: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
   dive_prep: { tone: "neutral" },
   payment: { tone: "neutral" },
@@ -195,6 +217,9 @@ export const ACTION_KIND_META = {
   waitlist_seat: { tone: "neutral" },
   last_minute_fill: { tone: "neutral" },
   emergency_contact: { tone: "neutral" },
+  // Neutral, not warning: the target binds nothing and this is advice, not a
+  // problem (src/lib/divemaster-ratio.ts).
+  crew_below_target: { tone: "neutral" },
   stuck_payment_operation: { tone: "warning" },
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },

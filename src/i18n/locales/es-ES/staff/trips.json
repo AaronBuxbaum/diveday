@@ -169,7 +169,7 @@
   "crew": {
     "heading": "Tripulación",
     "courseNeedsInstructor": "Este curso no puede aceptar reservas hasta que un miembro de la tripulación asignado tenga el rol de instructor.",
-    "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún divemaster} one {# divemaster} other {# divemasters}} — tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
+    "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún supervisor} one {# supervisor} other {# supervisores}} — tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "Nadie asignado a esta salida tiene registrado hablar {languages}.",
     "noCrew": "Todavía no hay tripulación que asignar — tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo.",
     "notAssignedYet": "Todavía no asignado.",
