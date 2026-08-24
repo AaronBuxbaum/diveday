@@ -1,5 +1,10 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
+import { people } from "./schema";
+import { setStaffLanguages } from "./staff-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripOverview } from "./trips-overview";
@@ -146,5 +151,86 @@ describe("getTripOverview", () => {
     expect(overview.startWall.hour).toBeGreaterThanOrEqual(0);
     expect(overview.endWall.hour).toBeGreaterThanOrEqual(0);
     expect(overview.scheduleDays.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The staff-side half of issue #708: a quiet, non-gating note when a
+   * booked diver's stated language isn't covered by the assigned crew's
+   * recorded languages.
+   */
+  describe("crew.languageGap", () => {
+    it("reports none when no booked diver has signalled a language preference", async () => {
+      const ctx = await context();
+      const { crew } = await overviewFor(ctx);
+      expect(crew.languageGap).toEqual({ code: "none" });
+    });
+
+    it("reports the uncovered language once a booked diver signals one nobody on the crew speaks", async () => {
+      const ctx = await context();
+      const outcome = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.tripId,
+        fullName: "Freya Lindqvist",
+        email: `freya-${nowMs()}@example.com`,
+      });
+      if (!outcome.ok) throw new Error("expected booking to succeed");
+      await ctx.db.update(people).set({ locale: "es-ES" }).where(eq(people.id, outcome.personId));
+
+      const { crew } = await overviewFor(ctx);
+      expect(crew.languageGap).toEqual({ code: "uncovered", missing: ["es"] });
+    });
+
+    it("reports none once an assigned crew member records the language a booked diver signalled", async () => {
+      const ctx = await context();
+      const outcome = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.tripId,
+        fullName: "Freya Lindqvist",
+        email: `freya-${nowMs()}@example.com`,
+      });
+      if (!outcome.ok) throw new Error("expected booking to succeed");
+      await ctx.db.update(people).set({ locale: "es-ES" }).where(eq(people.id, outcome.personId));
+
+      const divemasterId = ctx.byRole("divemaster");
+      await setStaffLanguages(ctx.db, {
+        shopId: ctx.shop.id,
+        personId: divemasterId,
+        languages: ["es"],
+      });
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [divemasterId]);
+
+      const { crew } = await overviewFor(ctx);
+      expect(crew.languageGap).toEqual({ code: "none" });
+    });
+
+    it("is unaffected by a crew member's recorded languages if they are not actually assigned", async () => {
+      const ctx = await context();
+      const outcome = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.tripId,
+        fullName: "Freya Lindqvist",
+        email: `freya-${nowMs()}@example.com`,
+      });
+      if (!outcome.ok) throw new Error("expected booking to succeed");
+      await ctx.db.update(people).set({ locale: "es-ES" }).where(eq(people.id, outcome.personId));
+
+      // Recorded, but explicitly taken off this trip's crew — the seeded
+      // fixture assigns crew to it by default, so this clears that first
+      // rather than trusting nobody else on it happens to cover "es".
+      const divemasterId = ctx.byRole("divemaster");
+      await setStaffLanguages(ctx.db, {
+        shopId: ctx.shop.id,
+        personId: divemasterId,
+        languages: ["es"],
+      });
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, []);
+
+      const { crew } = await overviewFor(ctx);
+      expect(crew.crewIds).not.toContain(divemasterId);
+      expect(crew.languageGap).toEqual({ code: "uncovered", missing: ["es"] });
+    });
   });
 });

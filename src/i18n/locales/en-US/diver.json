@@ -60,6 +60,7 @@
     "languageAriaLabel": "Change language",
     "languageHeading": "Language",
     "footerLine": "{shop} · Powered by DiveDay",
+    "spokenLanguages": "We speak {languages}",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in."
   },
   "schedule": {

@@ -11,6 +11,7 @@ import {
   bookings,
   courses,
   diveSites,
+  people,
   rollCallEvents,
   tripDives,
   tripScheduleDays,
@@ -53,6 +54,36 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
   return row
     ? { ...row.trip, course: row.course, diveSite: row.diveSite, booked: row.booked }
     : null;
+}
+
+/**
+ * Primary-subtag languages this trip's current bookings actually signalled —
+ * `people.locale`, only ever written from a request the diver themselves made
+ * (`src/db/schema.ts`), never a default fallback. Feeds the quiet crew-
+ * language coverage note (`crewLanguageGap`, issue #708): a diver who never
+ * signalled a preference correctly contributes nothing to compare against.
+ */
+export async function bookedDiverLanguages(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ locale: people.locale })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(
+        eq(bookings.tripId, tripId),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  const languages = rows
+    .map((row) => row.locale)
+    .filter((locale): locale is string => locale !== null)
+    .map((locale) => locale.split("-")[0]);
+  return [...new Set(languages)];
 }
 
 /**
