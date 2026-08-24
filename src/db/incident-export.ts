@@ -12,6 +12,7 @@ import { canPersonExportIncidentRecord } from "./authz";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { getTripManifests } from "./manifests";
+import { latestPreDepartureChecksForTrip, listChecklistItems } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
 import { bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
@@ -156,9 +157,11 @@ export async function getIncidentExport(
   // manifest drops them: this document states the pairing as it stood for the
   // people who were aboard, and the trail below is where a cancelled member's
   // membership survives.
-  const [teamRows, teamEventRows] = await Promise.all([
+  const [teamRows, teamEventRows, checklistItems, checklistChecks] = await Promise.all([
     listTripBuddyTeams(db, shopId, tripId),
     listTripBuddyTeamEvents(db, shopId, tripId),
+    listChecklistItems(db, shopId),
+    latestPreDepartureChecksForTrip(db, shopId, tripId),
   ]);
   const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({
     teamId: team.teamId,
@@ -215,6 +218,15 @@ export async function getIncidentExport(
     events,
     buddyTeams,
     buddyTeamEvents,
+    preDepartureCheck: checklistItems.map((item) => {
+      const check = checklistChecks.get(item.id);
+      return {
+        label: item.label,
+        check: check
+          ? { occurredAt: check.occurredAt, recordedByName: check.recordedByName }
+          : undefined,
+      };
+    }),
     generatedAt,
     generatedByName,
   });

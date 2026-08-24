@@ -190,6 +190,42 @@ export default async function IncidentExportPage({
         </dl>
       </section>
 
+      {/* Absence is stated, never blank: a shop with no checklist defined says
+          so, rather than the section simply not appearing — the two mean
+          different things to an investigator. */}
+      <section className="mt-8" aria-labelledby="incident-checklist-heading">
+        <h2 id="incident-checklist-heading" className="text-lg font-semibold">
+          {t("incidentExport.checklistHeading")}
+        </h2>
+        {doc.preDepartureCheck.length === 0 ? (
+          <p className="mt-1 max-w-prose text-sm text-muted">
+            {t("incidentExport.checklistEmpty")}
+          </p>
+        ) : (
+          <Table minWidth="36rem" shellClassName="mt-3">
+            <THead>
+              <Th>{t("incidentExport.checklistColItem")}</Th>
+              <Th>{t("incidentExport.checklistColStatus")}</Th>
+            </THead>
+            <TBody>
+              {doc.preDepartureCheck.map((item) => (
+                <tr key={item.label}>
+                  <Td>{item.label}</Td>
+                  <Td>
+                    {item.checked && item.occurredAt && item.recordedByName
+                      ? t("incidentExport.checklistCheckedBy", {
+                          name: item.recordedByName,
+                          date: dateTime(item.occurredAt),
+                        })
+                      : t("incidentExport.checklistNotChecked")}
+                  </Td>
+                </tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </section>
+
       <section className="mt-8" aria-labelledby="incident-roster-heading">
         <h2 id="incident-roster-heading" className="text-lg font-semibold">
           {t("incidentExport.rosterHeading")}

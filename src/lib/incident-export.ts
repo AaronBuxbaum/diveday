@@ -203,6 +203,14 @@ export type IncidentCrewEntry = {
   buddyTeamNumbers: number[];
 };
 
+/** One line of the shop's own pre-departure safety checklist, and its answer. */
+export type IncidentPreDepartureCheckEntry = {
+  label: string;
+  checked: boolean;
+  occurredAt: string | null;
+  recordedByName: string | null;
+};
+
 export type IncidentTimelineEntry =
   | {
       kind: "diver" | "crew";
@@ -267,6 +275,16 @@ export type IncidentExportDocument = {
   };
   roster: IncidentRosterEntry[];
   crew: IncidentCrewEntry[];
+  /**
+   * The shop's own pre-departure line, in the shop's reading order, each with
+   * its answer at generation time (ADR 20260824-pre-departure-safety-check).
+   * `checked` is explicit rather than inferred from `occurredAt` being
+   * non-null — the same "absence is stated, never blank" rule every other
+   * field on this document follows. An empty array means the shop has
+   * defined no checklist, which the UI states plainly rather than omitting
+   * the section outright — the two read differently to an investigator.
+   */
+  preDepartureCheck: IncidentPreDepartureCheckEntry[];
   /** Every stored roll-call event and crew count, oldest first. Empty is stated by the UI. */
   timeline: IncidentTimelineEntry[];
   /**
@@ -328,6 +346,15 @@ export type IncidentExportInput = {
   buddyTeams?: readonly IncidentBuddyTeamInput[];
   /** The append-only pairing trail for this departure, oldest first. */
   buddyTeamEvents?: readonly IncidentBuddyTeamEventInput[];
+  /**
+   * The shop's checklist items, in the shop's own order, with this trip's
+   * latest answer for each — `latestPreDepartureChecksForTrip`. Optional and
+   * defaults to empty: a shop with no checklist has nothing to print here.
+   */
+  preDepartureCheck?: ReadonlyArray<{
+    label: string;
+    check?: { occurredAt: Date; recordedByName: string };
+  }>;
   generatedAt: Date;
   generatedByName: string;
 };
@@ -599,6 +626,12 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     },
     roster,
     crew,
+    preDepartureCheck: (input.preDepartureCheck ?? []).map((item) => ({
+      label: item.label,
+      checked: item.check !== undefined,
+      occurredAt: item.check ? item.check.occurredAt.toISOString() : null,
+      recordedByName: item.check?.recordedByName ?? null,
+    })),
     timeline,
   };
 
@@ -626,6 +659,7 @@ export function incidentExportContentHash(
     departureSummary: body.departureSummary,
     roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
     crew: body.crew,
+    preDepartureCheck: body.preDepartureCheck,
     timeline: body.timeline,
   };
   return createHash("sha256").update(JSON.stringify(facts)).digest("hex");
