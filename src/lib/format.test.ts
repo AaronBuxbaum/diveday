@@ -3,6 +3,7 @@ import {
   formatByteSize,
   formatDateTimeTz,
   formatDayParts,
+  formatOrdinal,
   formatRelativeDay,
   formatShortDate,
   formatTime,
@@ -244,5 +245,20 @@ describe("weekdayNames", () => {
 
   it("is stable — it reads a fixed reference week, never the clock", () => {
     expect(weekdayNames("en-US")).toEqual(weekdayNames("en-US"));
+  });
+});
+
+describe("formatOrdinal", () => {
+  it("formats English ordinals correctly", () => {
+    expect(formatOrdinal(1, "en-US")).toBe("1st");
+    expect(formatOrdinal(2, "en-US")).toBe("2nd");
+    expect(formatOrdinal(3, "en-US")).toBe("3rd");
+    expect(formatOrdinal(4, "en-US")).toBe("4th");
+    expect(formatOrdinal(21, "en-US")).toBe("21st");
+  });
+
+  it("formats Spanish ordinals correctly", () => {
+    expect(formatOrdinal(1, "es-ES")).toBe("1.º");
+    expect(formatOrdinal(4, "es-ES")).toBe("4.º");
   });
 });

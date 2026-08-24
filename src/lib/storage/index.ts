@@ -35,6 +35,7 @@ export interface ImageStorageProvider {
 export const MAX_COURSE_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_RECAP_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_DIVE_SITE_IMAGE_BYTES = MAX_IMAGE_BYTES;
+export const MAX_SHOP_LOGO_BYTES = MAX_IMAGE_BYTES;
 const ALLOWED_CONTENT_TYPES = new Set<string>(ALLOWED_IMAGE_CONTENT_TYPES);
 
 type Fetch = typeof fetch;
@@ -229,6 +230,16 @@ export async function storeDiveSiteImage(
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
   return storeImage({ ...upload, keyPrefix: "dive-sites" }, MAX_DIVE_SITE_IMAGE_BYTES, provider);
+}
+
+/**
+ * Store a dive shop's brand logo.
+ */
+export async function storeShopLogoImage(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "shop-logos" }, MAX_SHOP_LOGO_BYTES, provider);
 }
 
 /**

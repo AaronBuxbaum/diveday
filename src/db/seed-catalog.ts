@@ -14,7 +14,10 @@ import { courses } from "./schema";
  * education admits only a verified card at the stated level.
  */
 export async function seedCatalog(db: DbExecutor, shopId: string) {
-  const templateByTitle = new Map(COURSE_TEMPLATES.map((template) => [template.title, template]));
+  const templateKey = (agency: string, title: string) => `${agency.toLowerCase()}:${title}`;
+  const templateByKey = new Map(
+    COURSE_TEMPLATES.map((template) => [templateKey(template.agency, template.title), template]),
+  );
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const courseRows = await db
@@ -167,9 +170,9 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
         // slugs are minted, so the seed mints them the same way an import does.
       ].map((course) => ({
         ...course,
-        ...(templateByTitle.has(course.title)
+        ...(templateByKey.has(templateKey(course.agency, course.title))
           ? (() => {
-              const template = templateByTitle.get(course.title);
+              const template = templateByKey.get(templateKey(course.agency, course.title));
               if (!template) return {};
               return {
                 agency: template.agency,
@@ -204,7 +207,9 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
   // point — it edits from there. Open Water is the one a visitor is most
   // likely to open, so it is the most complete.
   for (const template of COURSE_TEMPLATES) {
-    const course = courseRows.find((row) => row.title === template.title);
+    const course = courseRows.find(
+      (row) => row.title === template.title && row.agency === template.agency,
+    );
     if (!course) continue;
     await db.update(courses).set(template.content).where(eq(courses.id, course.id));
   }

@@ -193,6 +193,7 @@ function ActionRow({
  */
 export function TodayQueue({
   actions,
+  withheldCount = 0,
   shopSlug,
   shopName,
   timezone,
@@ -203,6 +204,8 @@ export function TodayQueue({
   firstRun = false,
 }: {
   actions: readonly TodayAction[];
+  /** How many items were withheld for the reader's role lens (issue #715). */
+  withheldCount?: number;
   shopSlug: string;
   shopName: string;
   /** The shop's IANA timezone — the seasonal briefing reads the shop's month, not the server's. */
@@ -304,6 +307,11 @@ export function TodayQueue({
             </Link>
           }
         />
+        {withheldCount > 0 ? (
+          <p className="mt-4 text-center text-xs text-muted">
+            {t("shared.today.todayQueue.withheldDeskWork", { count: withheldCount })}
+          </p>
+        ) : null}
       </section>
     );
   }
@@ -382,6 +390,11 @@ export function TodayQueue({
           );
         })}
       </div>
+      {withheldCount > 0 ? (
+        <p className="mt-4 text-xs text-muted">
+          {t("shared.today.todayQueue.withheldDeskWork", { count: withheldCount })}
+        </p>
+      ) : null}
     </section>
   );
 }

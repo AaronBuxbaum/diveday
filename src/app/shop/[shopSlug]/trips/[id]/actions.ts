@@ -15,6 +15,7 @@ import {
   cancelBooking,
   confirmBookingIdentity,
   restoreBooking,
+  setBookingPickupDetails,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
@@ -1476,4 +1477,41 @@ export async function updateTripCrewAction(
     return { ok: true };
   }
   return { ok: false };
+}
+
+const updatePickupSchema = z.object({
+  pickupTime: z.string().trim().max(20).optional(),
+  hotelPickupLocation: z.string().trim().max(300).optional(),
+});
+
+export async function updateBookingPickupAction(
+  shopSlug: string,
+  tripId: string,
+  bookingId: string,
+  formData: FormData,
+) {
+  const s = (await requireShopSurface(shopSlug)).session;
+  const back = shopPath(shopSlug, "trips", tripId, "guests");
+  const parsed = updatePickupSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    redirect(noticeUrl(back, "pickup-invalid", { bid: bookingId }));
+  }
+  const db = await getDb();
+  const pickupTime = parsed.data.pickupTime ? parsed.data.pickupTime.trim() || null : null;
+  const hotelPickupLocation = parsed.data.hotelPickupLocation
+    ? parsed.data.hotelPickupLocation.trim() || null
+    : null;
+
+  await setBookingPickupDetails(db, {
+    shopId: s.user.shopId,
+    bookingId,
+    pickupTime,
+    hotelPickupLocation,
+  });
+
+  revalidatePath(shopPath(shopSlug));
+  revalidatePath(shopPath(shopSlug, "trips", tripId));
+  revalidatePath(shopPath(shopSlug, "trips", tripId, "prep"));
+  revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
+  revalidateAndRedirect(back, noticeUrl(back, "pickup-saved", { bid: bookingId }));
 }

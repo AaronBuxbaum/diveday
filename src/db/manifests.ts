@@ -582,6 +582,8 @@ export async function getTripManifests(
       minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       depthAdvisory: depthByBooking.get(booking.id),
+      hotelPickupLocation: booking.hotelPickupLocation,
+      pickupTime: booking.pickupTime,
       checkedIn: booking.status === "checked_in",
       buddyTeam: teamByBooking.get(booking.id) ?? null,
     };

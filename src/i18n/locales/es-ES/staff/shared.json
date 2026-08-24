@@ -263,7 +263,8 @@
       "emptyAction": "Ver el calendario",
       "needsYouHeading": "Necesita tu atención",
       "boatsClear": "Las salidas de hoy están todas despejadas 🤙",
-      "itemsCount": "{count, plural, one {# tarea} other {# tareas}}"
+      "itemsCount": "{count, plural, one {# tarea} other {# tareas}}",
+      "withheldDeskWork": "{count, plural, one {# tarea para recepción} other {# tareas para recepción}}"
     },
     "resendConfirmation": {
       "resending": "Reenviando…",
@@ -318,6 +319,7 @@
       "instructorMissing": "Tripulación",
       "uncrewedDeparture": "Sin tripulación",
       "nitroxGate": "Nitrox",
+      "highWindAlert": "Viento fuerte",
       "divePrep": "Preparación",
       "payment": "Pago",
       "emailDelivery": "Correo",
@@ -405,6 +407,7 @@
       "noRollCall": "No se hizo ningún recuento: {total, plural, one {# buceador zarpó} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; no hay registro.",
       "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler, así que la lista de preparación está incompleta.",
       "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin certificación verificada — esos tanques están planeados con aire.",
+      "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes { (rachas de {gusts} nudos)} other {}} — comprueba las condiciones antes de salir.",
       "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
       "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
       "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, la tripulación cubre {capacity}: {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor añade plazas.",

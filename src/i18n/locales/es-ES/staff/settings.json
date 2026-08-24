@@ -14,6 +14,8 @@
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "contactSaved": "Datos de contacto guardados.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
+      "profileSaved": "Perfil y marca del centro guardados.",
+      "profileInvalid": "Comprueba el lema, la descripción y el archivo del logotipo.",
       "addressSaved": "Dirección del centro guardada.",
       "addressRemoved": "Dirección del centro quitada.",
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
@@ -85,6 +87,22 @@
       "phoneHint": "(opcional)",
       "submit": "Guardar datos de contacto",
       "submitting": "Guardando…"
+    },
+    "profile": {
+      "heading": "Perfil y marca del centro",
+      "description": "Lema, descripción y logotipo visibles en tu calendario público y en las vistas previas de búsqueda.",
+      "detail": "Ofrece a los buceadores una idea clara de tu centro, embarcación, equipo y estilo de buceo antes de reservar.",
+      "tagline": "Lema",
+      "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
+      "descriptionLabel": "Acerca de tu centro",
+      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local...",
+      "logo": "Logotipo del centro",
+      "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
+      "removeLogo": "Eliminar logotipo actual",
+      "logoSet": "Logotipo subido",
+      "descriptionSet": "Descripción configurada",
+      "submitting": "Guardando…",
+      "submit": "Guardar perfil"
     },
     "address": {
       "heading": "Dirección del centro",

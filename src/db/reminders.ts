@@ -415,6 +415,8 @@ export async function sendDueReminders(
           endsAt: trip.endsAt,
           timezone: shop.timezone,
           dockCallMinutes: shop.dockCallMinutes,
+          pickupTime: booking.pickupTime,
+          hotelPickupLocation: booking.hotelPickupLocation,
           outstanding,
           medicalReview,
           readinessUrl,

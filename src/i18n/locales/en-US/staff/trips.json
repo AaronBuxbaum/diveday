@@ -35,6 +35,8 @@
     "certifyFailed": "That didn't save — check they're still on this roster and the level is picked, then try again.",
     "contactSaved": "Emergency contact saved.",
     "contactIncomplete": "A contact needs both a name and a phone number before the crew can actually reach someone.",
+    "pickupSaved": "Hotel pickup details updated.",
+    "pickupInvalid": "Check the pickup time and lodging details and try again.",
     "diverInvalid": "Enter a name and a valid email to add a diver.",
     "diverFull": "That trip is full — add them to the wait list instead.",
     "diverWaitlistAvailable": "There's room on this trip — add them to the trip instead of the wait list.",
@@ -166,7 +168,11 @@
     "editPublished": "Edit crew prediction",
     "holdOnSummary": "Conditions hold is on — new bookings are paused",
     "publishedAt": "Published {date}",
-    "visibilityFact": "{value} visibility"
+    "visibilityFact": "{value} visibility",
+    "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (gusts {gusts} kt)} other {}}",
+    "automatedCurrent": "Current {velocity} kt {direction}",
+    "automatedSun": "Sunrise {sunrise} · Sunset {sunset}",
+    "automatedOutlookHeading": "Automated outlook"
   },
   "crew": {
     "heading": "Crew",
@@ -405,7 +411,17 @@
     "sharedOnCard": "{count, plural, one {# blocker} other {# blockers}} shared with other divers — listed above.",
     "reviewCertificationsLink": "Review certifications →",
     "depthChip": "Depth advisory",
-    "blockersReferenceHeading": "Blockers"
+    "blockersReferenceHeading": "Blockers",
+    "hotelPickupHeading": "Hotel Pickup",
+    "hotelNotSpecified": "Lodging not specified",
+    "noPickupScheduled": "No hotel pickup scheduled",
+    "editPickup": "Edit pickup",
+    "setPickup": "Set pickup",
+    "pickupLocationLabel": "Lodging / Hotel",
+    "pickupLocationPlaceholder": "Hotel or landmark",
+    "pickupTimeLabel": "Pickup time",
+    "savePickup": "Save pickup",
+    "saving": "Saving…"
   },
   "celebrations": {
     "heading": "Celebrations",
@@ -503,7 +519,14 @@
     "emptyAction": "Open the guest list",
     "rentalKitEmptyOwnKitHeading": "No gear to pull",
     "rentalKitEmptyNeedsSortingHeading": "No gear to pull — yet",
-    "rentalKitEmptyAction": "Open the guest list"
+    "rentalKitEmptyAction": "Open the guest list",
+    "hotelPickupsHeading": "Hotel Pickups",
+    "hotelPickupsCount": "{count, plural, one {# pickup} other {# pickups}}",
+    "hotelPickupsDescription": "Morning van run order for diver pickups.",
+    "pickupTimeColumn": "Pickup time",
+    "pickupHotelColumn": "Hotel / Lodging",
+    "pickupDiverColumn": "Diver",
+    "pickupTimeUnset": "Unscheduled"
   },
   "guests": {
     "cancelledBadge": "Cancelled",

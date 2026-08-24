@@ -4,8 +4,8 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredVisibility } from "@/lib/depth-units";
-import { formatDateTimeTz } from "@/lib/format";
-import { hasCrewPrediction } from "@/lib/marine-forecast";
+import { formatDateTimeTz, formatTime } from "@/lib/format";
+import { type AutomatedMarineForecast, hasCrewPrediction } from "@/lib/marine-forecast";
 import type { FormNotice } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,
@@ -25,6 +25,7 @@ export function ConditionsSection({
   timezone,
   temperatureUnit,
   depthUnit,
+  automatedForecast,
 }: {
   saveAction: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Publish button. */
@@ -37,6 +38,7 @@ export function ConditionsSection({
   /** The shop's own units — the crew type in these; storage stays Celsius and metres. */
   temperatureUnit: TemperatureUnit;
   depthUnit: DepthUnit;
+  automatedForecast?: AutomatedMarineForecast | null;
 }) {
   const t = staffTranslator(locale);
   // The unit belongs in the label, not as a hint beside it: a crew member
@@ -95,6 +97,49 @@ export function ConditionsSection({
       ) : (
         <p className="text-sm text-muted">{t("trips.conditions.description")}</p>
       )}
+      {automatedForecast?.wind || automatedForecast?.current || automatedForecast?.sun ? (
+        <div className="mt-3 rounded-lg bg-surface-sunken p-3 text-xs text-muted">
+          <p className="font-medium text-foreground">
+            {t("trips.conditions.automatedOutlookHeading")}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            {automatedForecast.wind ? (
+              <span>
+                {t("trips.conditions.automatedWind", {
+                  speed: automatedForecast.wind.speedKnots,
+                  direction: automatedForecast.wind.direction
+                    ? automatedForecast.wind.direction.toUpperCase()
+                    : "",
+                  gusts: automatedForecast.wind.gustsKnots ?? 0,
+                  hasGusts:
+                    automatedForecast.wind.gustsKnots !== null &&
+                    automatedForecast.wind.gustsKnots > automatedForecast.wind.speedKnots
+                      ? "yes"
+                      : "no",
+                })}
+              </span>
+            ) : null}
+            {automatedForecast.current ? (
+              <span>
+                {t("trips.conditions.automatedCurrent", {
+                  velocity: automatedForecast.current.velocityKnots,
+                  direction: automatedForecast.current.direction
+                    ? automatedForecast.current.direction.toUpperCase()
+                    : "",
+                })}
+              </span>
+            ) : null}
+            {automatedForecast.sun?.sunrise && automatedForecast.sun?.sunset ? (
+              <span>
+                {t("trips.conditions.automatedSun", {
+                  sunrise: formatTime(automatedForecast.sun.sunrise, locale, timezone),
+                  sunset: formatTime(automatedForecast.sun.sunset, locale, timezone),
+                })}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <EditDisclosure
         label={published ? t("trips.conditions.editPublished") : t("trips.conditions.editEmpty")}
         open={Boolean(status)}

@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
-import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { useExitAnimation } from "@/components/useExitAnimation";
@@ -42,8 +41,16 @@ export type ShopIdentityMenuCopy = {
  * banner is not safe here, because its grace window would keep the session
  * alive briefly on a device the next person is already holding (principle 7).
  */
+export function shopInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "DD";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 export function ShopIdentityMenu({
   shopName,
+  logoUrl,
   signOutAction,
   locale,
   languages,
@@ -51,6 +58,7 @@ export function ShopIdentityMenu({
   copy,
 }: {
   shopName: string;
+  logoUrl?: string;
   signOutAction: () => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
@@ -70,6 +78,7 @@ export function ShopIdentityMenu({
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   // 180ms matches .animate-scale-out in globals.css — the two must move together.
   const { mounted, closing } = useExitAnimation(open, 180);
+  const initials = shopInitials(shopName);
 
   return (
     // `flex`, so the trigger below is a flex item and shrinks when the header
@@ -87,9 +96,16 @@ export function ShopIdentityMenu({
         data-identity-menu
         className="flex min-h-11 min-w-0 shrink cursor-pointer items-center gap-2 font-semibold tracking-tight"
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform hover:rotate-6">
-          <LogoMark className="size-5" />
-        </span>
+        {logoUrl ? (
+          <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform hover:rotate-6">
+            {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo */}
+            <img src={logoUrl} alt="" className="size-full object-cover" />
+          </span>
+        ) : (
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-transform hover:rotate-6">
+            {initials}
+          </span>
+        )}
         {/* No fixed clamp at any width. The 10rem one that survived at `lg`
             was sized when the header still carried wrapped tab rows and a
             standing Sign out, and it was ellipsing names — "Sandbar Pass

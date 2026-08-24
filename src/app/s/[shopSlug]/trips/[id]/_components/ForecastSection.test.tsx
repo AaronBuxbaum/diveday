@@ -28,6 +28,9 @@ function automated(overrides: Partial<NonNullable<AutomatedForecast>> = {}): Aut
   return {
     waterTemperatureC: 27,
     surface: { waveHeightMeters: 0.7, waveDirection: "e", wavePeriodSeconds: 7 },
+    wind: null,
+    current: null,
+    sun: null,
     source: "Open-Meteo marine forecast",
     validAt: new Date("2026-08-11T15:00:00Z"),
     ...overrides,
@@ -57,6 +60,18 @@ describe("ForecastSection — the automated marine outlook", () => {
     expect(screen.getByText(/small waves/i)).toBeInTheDocument();
     expect(screen.queryByText(/0\.7 m/)).not.toBeInTheDocument();
     expect(screen.queryByText(/7 s period/)).not.toBeInTheDocument();
+  });
+
+  it("reads the wind out as a diver reading rather than raw numbers", () => {
+    renderAutomated(
+      automated({
+        wind: { speedKnots: 18, gustsKnots: 24, direction: "e" },
+      }),
+    );
+
+    expect(screen.getByText("Breezy")).toBeInTheDocument();
+    expect(screen.getByText(/breezy morning/i)).toBeInTheDocument();
+    expect(screen.queryByText(/18 kt/)).not.toBeInTheDocument();
   });
 
   it("reads the same height differently once the period changes it", () => {

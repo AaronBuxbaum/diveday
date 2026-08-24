@@ -229,6 +229,8 @@ const tripReminderFields = {
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  pickupTime: z.string().trim().max(40).nullish(),
+  hotelPickupLocation: z.string().trim().max(300).nullish(),
   outstanding: z.array(reminderActionCodeSchema).max(8).optional(),
   medicalReview: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),

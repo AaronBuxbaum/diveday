@@ -138,4 +138,4 @@ export const onboardSchema = z.object({
  * gets a client *reference*, and the subtitle rendered "NaN steps" — green in
  * every test, wrong on the screen.
  */
-export const FIRST_RUN_STEP_COUNT = 6;
+export const FIRST_RUN_STEP_COUNT = 7;

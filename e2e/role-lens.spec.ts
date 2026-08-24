@@ -12,7 +12,9 @@ import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 test.describe("as captain", () => {
   signedInAs("captain");
 
-  test("a captain's Today leads with the boat they crew", { tag: READ_ONLY }, async ({ page }) => {
+  test("a captain's Today leads with the boat they crew and filters to boat work", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     // The cached session (signedInAs) carries cookies but never navigates —
     // land on Today ourselves, same as the live sign-in flow used to.
     await page.goto("/shop/blue-mantis");
@@ -20,6 +22,23 @@ test.describe("as captain", () => {
     // and the greeting names it.
     await expect(page.getByText("You’re crewing", { exact: false }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Board divers" }).first()).toBeVisible();
+
+    // A captain's action queue withholds clerical and commercial rows
+    await expect(page.getByText(/jobs? for the front desk/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send waiver" })).toHaveCount(0);
+  });
+});
+
+test.describe("as divemaster", () => {
+  signedInAs("divemaster");
+
+  test("a divemaster's Today leads with the boat they crew and filters clerical rows", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    await expect(page.getByText("You’re crewing", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(/jobs? for the front desk/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send waiver" })).toHaveCount(0);
   });
 });
 
@@ -42,12 +61,15 @@ test.describe("as instructor", () => {
 test.describe("as owner", () => {
   signedInAs("owner");
 
-  test("an owner keeps the whole-shop Today, no lens", { tag: READ_ONLY }, async ({ page }) => {
+  test("an owner keeps the whole-shop Today with no lens and no withheld notice", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       /Good (morning|afternoon|evening|night), Dana/,
     );
     await expect(page.getByRole("heading", { name: "Your sessions" })).toHaveCount(0);
     await expect(page.getByText("You’re crewing")).toHaveCount(0);
+    await expect(page.getByText(/jobs? for the front desk/)).toHaveCount(0);
   });
 });

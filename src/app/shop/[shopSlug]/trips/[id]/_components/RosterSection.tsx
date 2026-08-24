@@ -170,6 +170,7 @@ export function RosterSection({
   deleteNoteAction,
   saveEmergencyContactAction,
   certifyDiverAction,
+  updatePickupAction,
   // Accepted for interface parity with callers/DepthUnit plumbing elsewhere
   // on this page, but `depthWarningText` already embeds its own unit
   // formatting — nothing in this component needs it directly. Pre-existing
@@ -247,6 +248,7 @@ export function RosterSection({
    * roster — a fun dive has no completion to certify.
    */
   certifyDiverAction?: (formData: FormData) => void;
+  updatePickupAction?: (bookingId: string, formData: FormData) => void;
   /** How this shop reads depth; the stored figure is always metres. */
   depthUnit: DepthUnit;
   /** The trip's own shop-local calendar date — when age and birthdays are measured. */
@@ -1242,6 +1244,65 @@ export function RosterSection({
                       </ul>
                     </div>
                   ) : null}
+
+                  {/* Hotel Pickup / Lodging details */}
+                  <div>
+                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                      {t("trips.roster.hotelPickupHeading")}
+                    </p>
+                    {booking.hotelPickupLocation || booking.pickupTime ? (
+                      <p className="mt-1 text-sm text-muted">
+                        {booking.hotelPickupLocation ?? t("trips.roster.hotelNotSpecified")}
+                        {booking.pickupTime ? ` · ${booking.pickupTime}` : ""}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-muted">
+                        {t("trips.roster.noPickupScheduled")}
+                      </p>
+                    )}
+                    {updatePickupAction ? (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs font-medium text-primary hover:underline">
+                          {booking.hotelPickupLocation || booking.pickupTime
+                            ? t("trips.roster.editPickup")
+                            : t("trips.roster.setPickup")}
+                        </summary>
+                        <form
+                          action={updatePickupAction.bind(null, booking.id)}
+                          className="mt-2 flex max-w-md flex-col gap-2 rounded-lg border border-border bg-surface-sunken/50 p-2"
+                        >
+                          <FieldGrid columns={2}>
+                            <Field label={t("trips.roster.pickupLocationLabel")}>
+                              <input
+                                name="hotelPickupLocation"
+                                maxLength={300}
+                                defaultValue={booking.hotelPickupLocation ?? ""}
+                                placeholder={t("trips.roster.pickupLocationPlaceholder")}
+                                className={controlClass}
+                              />
+                            </Field>
+                            <Field label={t("trips.roster.pickupTimeLabel")}>
+                              <input
+                                name="pickupTime"
+                                maxLength={20}
+                                defaultValue={booking.pickupTime ?? ""}
+                                placeholder="07:15"
+                                className={controlClass}
+                              />
+                            </Field>
+                          </FieldGrid>
+                          <div>
+                            <SubmitButton
+                              pendingLabel={t("trips.roster.saving")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {t("trips.roster.savePickup")}
+                            </SubmitButton>
+                          </div>
+                        </form>
+                      </details>
+                    ) : null}
+                  </div>
                 </div>
 
                 {/* `-mx-3` on the row, and both controls at the same `sm`

@@ -10,6 +10,7 @@ import {
   gearNeverPickedUpDetailText,
   gearOverdueDetailText,
   gearServiceDueDetailText,
+  highWindAlertDetailText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
@@ -41,6 +42,7 @@ import {
   unitsUnconfirmedSubjectText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
+import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
@@ -57,12 +59,18 @@ import {
   rollCallCheckpoints,
   rollCallCompleteness,
 } from "@/lib/manifests";
+import {
+  fetchAutomatedMarineForecast,
+  isHighWind,
+  shouldShowAutomatedForecast,
+} from "@/lib/marine-forecast";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
 import { type AboardBlockerKind, groupAboardBlockers } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import {
   collapseDiverActions,
+  filterActionsForRoles,
   ROLL_CALL_GAP_KINDS,
   type RollCallGapReason,
   rollCallGapUrgency,
@@ -229,6 +237,8 @@ export type CrewedSessionSummary = {
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
+  /** How many actions were filtered out for the reader's role lens (issue #715). */
+  withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
   nextDeparture: { tripId: string; title: string; startsAt: Date } | null;
   /**
@@ -1022,6 +1032,12 @@ export async function getTodayWork(
    * reads as leftovers.
    */
   diversPerDivemaster = DEFAULT_DIVERS_PER_DIVEMASTER,
+  /**
+   * The viewer's roles, for filtering the action queue to the relevant audience
+   * (issue #715). Multi-role viewers see the union; owners and managers see all.
+   * Omitted, all actions are returned (withheldCount = 0).
+   */
+  roles?: readonly Role[],
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
@@ -1372,6 +1388,36 @@ export async function getTodayWork(
           ),
           actionLabel: openTripActionText(t),
           href: `${tripHref}#crew`,
+          dueAt: trip.startsAt,
+        });
+      }
+    }
+
+    const forecastPoint =
+      trip.diveSite &&
+      trip.diveSite.forecastLatitude !== null &&
+      trip.diveSite.forecastLongitude !== null
+        ? { latitude: trip.diveSite.forecastLatitude, longitude: trip.diveSite.forecastLongitude }
+        : null;
+    if (forecastPoint && trip.booked > 0 && shouldShowAutomatedForecast(trip.startsAt, now)) {
+      const forecast = await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt);
+      if (forecast && isHighWind(forecast.wind) && forecast.wind) {
+        actions.push({
+          id: `high-wind:${trip.id}`,
+          kind: "high_wind_alert",
+          urgency: "now",
+          subject: trip.title,
+          context: when,
+          departure,
+          aboutDeparture: true,
+          detail: highWindAlertDetailText(
+            t,
+            forecast.wind.speedKnots,
+            forecast.wind.gustsKnots,
+            forecast.wind.direction ? forecast.wind.direction.toUpperCase() : null,
+          ),
+          actionLabel: openTripActionText(t),
+          href: tripHref,
           dueAt: trip.startsAt,
         });
       }
@@ -1885,9 +1931,12 @@ export async function getTodayWork(
       });
   }
 
+  const { visibleActions, withheldCount } = filterActionsForRoles(actions, roles);
+
   return {
     departures,
-    actions,
+    actions: visibleActions,
+    withheldCount,
     nextDeparture: next ? { title: next.title, startsAt: next.startsAt, tripId: next.id } : null,
     crewedTripIds,
     crewedSessions,

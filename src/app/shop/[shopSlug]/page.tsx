@@ -230,8 +230,10 @@ async function TodayBody({
     canViewShopReports(session.user.roles),
     readinessEvidence,
     shop.diversPerDivemaster,
+    session.user.roles,
   );
-  const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
+  const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions, availableStaff } =
+    work;
   // Real shops only — the demo shop already teaches its own tour via the
   // role switcher banner, and a dismissal there would be meaningless (every
   // demo visit signs in as a fresh, credential-shared session).
@@ -611,6 +613,7 @@ async function TodayBody({
           // back to the path alone rather than crash the page on a bad base URL.
           scheduleUrl={publicScheduleUrl}
           contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
+          profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
           diveSiteCount={firstRunDiveSites?.length ?? 0}
           unitsDone={Boolean(shop.unitsConfirmedAt)}
           stripeDone={canAcceptPayments(firstRunStripeAccount)}
@@ -621,6 +624,10 @@ async function TodayBody({
             contactBody: t("shopHome.firstRun.contactBody"),
             contactAction: t("shopHome.firstRun.contactAction"),
             contactDone: t("shopHome.firstRun.contactDone"),
+            profileTitle: t("shopHome.firstRun.profileTitle"),
+            profileBody: t("shopHome.firstRun.profileBody"),
+            profileAction: t("shopHome.firstRun.profileAction"),
+            profileDone: t("shopHome.firstRun.profileDone"),
             unitsTitle: t("shopHome.firstRun.unitsTitle"),
             unitsBody: t("shopHome.firstRun.unitsBody", {
               currency: shop.currency.toUpperCase(),
@@ -672,6 +679,7 @@ async function TodayBody({
       ) : (
         <TodayQueue
           actions={actions}
+          withheldCount={withheldCount}
           shopSlug={shopSlug}
           shopName={shop.name}
           timezone={shop.timezone}

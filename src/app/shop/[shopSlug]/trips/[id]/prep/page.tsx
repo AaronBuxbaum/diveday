@@ -106,7 +106,7 @@ export default async function TripPrepPage({
   const t = staffTranslator(locale);
   const prep = await getTripPrep(db, shop, tripId);
   if (!prep) notFound();
-  const { trip, checklist, gearFleetTotal, freeByKind, assignmentRows } = prep;
+  const { trip, checklist, hotelPickups, gearFleetTotal, freeByKind, assignmentRows } = prep;
 
   /**
    * The size a staffer pulls, or the honest reason there isn't one — null when
@@ -407,6 +407,44 @@ export default async function TripPrepPage({
                   </li>
                 ))}
               </ul>
+            </section>
+          ) : null}
+
+          {hotelPickups.length > 0 ? (
+            <section aria-labelledby="hotel-pickups-heading" className="mt-8">
+              <div className="flex items-center justify-between gap-2">
+                <h2 id="hotel-pickups-heading" className="text-lg font-semibold">
+                  {t("trips.prep.hotelPickupsHeading")}
+                </h2>
+                <span className="text-sm text-muted">
+                  {t("trips.prep.hotelPickupsCount", { count: hotelPickups.length })}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-muted">{t("trips.prep.hotelPickupsDescription")}</p>
+              <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+                <Table>
+                  <THead>
+                    <tr>
+                      <Th>{t("trips.prep.pickupTimeColumn")}</Th>
+                      <Th>{t("trips.prep.pickupHotelColumn")}</Th>
+                      <Th>{t("trips.prep.pickupDiverColumn")}</Th>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {hotelPickups.map((pickup) => (
+                      <tr key={pickup.bookingId}>
+                        <Td className="font-medium">
+                          {pickup.pickupTime ?? (
+                            <span className="text-muted">{t("trips.prep.pickupTimeUnset")}</span>
+                          )}
+                        </Td>
+                        <Td className="font-medium">{pickup.hotelPickupLocation}</Td>
+                        <Td>{pickup.diverName}</Td>
+                      </tr>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
             </section>
           ) : null}
 

@@ -37,14 +37,12 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   }
 
   return (
-    <SectionCard
-      id="last-minute-list"
-      padding="lg"
-      className="mt-10"
-      title={t("lastMinute.heading")}
-      description={t("lastMinute.body")}
-    >
-      <p className="text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
+    <SectionCard id="last-minute-list" as="details" padding="lg" className="mt-6">
+      <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
+        {t("lastMinute.heading")}
+      </summary>
+      <p className="mt-2 text-sm text-muted">{t("lastMinute.body")}</p>
+      <p className="mt-1 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
           <Field label={t("common.name")}>

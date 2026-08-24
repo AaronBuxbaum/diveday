@@ -1,8 +1,8 @@
 import { diverTranslator } from "@/i18n/messages";
-import { depthText, seaStateText, temperatureText } from "@/i18n/unit-labels";
+import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
 import { exposureSuitFor } from "@/lib/diver-planning";
 import { formatDateTimeTz } from "@/lib/format";
-import { seaStateReading } from "@/lib/marine-forecast";
+import { seaStateReading, windReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
 import type { AutomatedForecast, Shop, Trip } from "./types";
@@ -45,6 +45,8 @@ export function ForecastSection({
   // does that comparing and returns a band; the words come from the bundle.
   const seaState = crewPrediction ? null : seaStateReading(automatedForecast?.surface ?? null);
   const sea = seaState ? seaStateText(t, seaState) : null;
+  const windState = crewPrediction ? null : windReading(automatedForecast?.wind ?? null);
+  const wind = windState ? windText(t, windState) : null;
   const surfaceText = crewPrediction ? trip.surfaceConditions : (sea?.label ?? null);
   // Only the crew ever records underwater visibility — the marine model has no
   // such reading (see `AutomatedMarineForecast`).
@@ -98,6 +100,13 @@ export function ForecastSection({
                 their own words, and a second sentence underneath explaining
                 theirs back to them would be the app talking over the boat. */}
             {sea ? <dd className="mt-1 text-sm text-muted">{sea.detail}</dd> : null}
+          </div>
+        ) : null}
+        {wind ? (
+          <div className="rounded-xl bg-surface-sunken p-4">
+            <dt className="text-sm text-muted">{t("trip.wind")}</dt>
+            <dd className="mt-1 text-lg font-semibold">{wind.label}</dd>
+            <dd className="mt-1 text-sm text-muted">{wind.detail}</dd>
           </div>
         ) : null}
       </dl>

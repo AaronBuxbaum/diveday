@@ -61,6 +61,9 @@ export type ShopForStructuredData = {
    * currency to the one audience that can't ask a follow-up question.
    */
   currency: string;
+  tagline?: string | null;
+  description?: string | null;
+  logoUrl?: string | null;
   /** Physical business address fields — see `shopAddressOf` for how they combine. */
   addressStreet: string | null;
   addressLocality: string | null;
@@ -182,6 +185,8 @@ export function shopJsonLd(
   return {
     "@type": "SportsActivityLocation",
     name: shop.name,
+    description: shop.description ?? shop.tagline ?? undefined,
+    image: shop.logoUrl ?? undefined,
     url: absoluteUrl(origin, publicSchedulePath(shop.slug)),
     email: shop.contactEmail,
     telephone: shop.contactPhone,

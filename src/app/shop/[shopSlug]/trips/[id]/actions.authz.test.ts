@@ -530,6 +530,7 @@ describe("who may run each action on the trip page", () => {
     // role: the tap only ever lands beside a name on that session's own
     // roster (issue #717).
     "certifyDiverFromRosterAction",
+    "updateBookingPickupAction",
   ];
 
   /** Every exported action's source, sliced from its `export` to its closing brace. */

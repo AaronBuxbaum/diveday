@@ -212,3 +212,11 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   // submit to one notice, not a per-file page reload.
   await expect(page.getByText("Photo uploads aren’t set up for this shop yet")).toBeVisible();
 });
+
+test("the recap renders a keepsake dive logbook entry with print affordance", async ({ page }) => {
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Print log entry/i })).toBeVisible();
+  await expect(page.getByText(/dive day with/i)).toBeVisible();
+  await expect(page.getByText(/Verified log entry from/i)).toBeVisible();
+});

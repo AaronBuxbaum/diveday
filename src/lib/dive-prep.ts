@@ -93,7 +93,50 @@ export type PrepDiver = {
    * who skipped it — which is silence, not an answer, and renders nothing.
    */
   lastDivedBand: DiveRecencyBand | null;
+  /** Lodging / hotel location stated by diver on /ready (text). */
+  hotelPickupLocation?: string | null;
+  /** Staff-set pickup time for this booking (e.g. "07:15"). */
+  pickupTime?: string | null;
 };
+
+export type HotelPickupRun = {
+  bookingId: string;
+  diverName: string;
+  hotelPickupLocation: string;
+  pickupTime: string | null;
+};
+
+/**
+ * Derives the morning's hotel van run from the roster's pickup requests.
+ * Ordered by pickup time (earliest first), then untimed pickups by hotel name.
+ */
+export function buildHotelPickupList(divers: readonly PrepDiver[]): HotelPickupRun[] {
+  const result: HotelPickupRun[] = [];
+  for (const diver of divers) {
+    if (diver.hotelPickupLocation?.trim()) {
+      result.push({
+        bookingId: diver.bookingId,
+        diverName: diver.fullName,
+        hotelPickupLocation: diver.hotelPickupLocation.trim(),
+        pickupTime: diver.pickupTime ? diver.pickupTime.trim() : null,
+      });
+    }
+  }
+
+  return result.sort((a, b) => {
+    if (a.pickupTime && b.pickupTime) {
+      const cmp = a.pickupTime.localeCompare(b.pickupTime);
+      if (cmp !== 0) return cmp;
+    } else if (a.pickupTime) {
+      return -1;
+    } else if (b.pickupTime) {
+      return 1;
+    }
+    const locCmp = a.hotelPickupLocation.localeCompare(b.hotelPickupLocation);
+    if (locCmp !== 0) return locCmp;
+    return a.diverName.localeCompare(b.diverName);
+  });
+}
 
 /**
  * Which way the one packing list is read: down the rack (every BCD together,

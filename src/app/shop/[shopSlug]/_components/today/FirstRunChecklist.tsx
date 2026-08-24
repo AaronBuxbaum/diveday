@@ -12,6 +12,10 @@ export type FirstRunChecklistCopy = {
   contactBody: string;
   contactAction: string;
   contactDone: string;
+  profileTitle: string;
+  profileBody: string;
+  profileAction: string;
+  profileDone: string;
   unitsTitle: string;
   unitsBody: string;
   unitsAction: string;
@@ -121,6 +125,7 @@ export function FirstRunChecklist({
   shopSlug,
   scheduleUrl,
   contactDone,
+  profileDone,
   diveSiteCount,
   unitsDone,
   stripeDone,
@@ -129,6 +134,7 @@ export function FirstRunChecklist({
   shopSlug: string;
   scheduleUrl: string;
   contactDone: boolean;
+  profileDone: boolean;
   diveSiteCount: number;
   /** The shop has saved its units at least once — see the step below. */
   unitsDone: boolean;
@@ -161,6 +167,21 @@ export function FirstRunChecklist({
               className={buttonClass({ size: "sm" })}
             >
               {copy.contactAction}
+            </Link>
+          }
+        />
+        <ChecklistStep
+          title={copy.profileTitle}
+          body={copy.profileBody}
+          done={profileDone}
+          doneLabel={copy.profileDone}
+          doneBadge={copy.doneBadge}
+          action={
+            <Link
+              href={`/shop/${shopSlug}/settings#profile`}
+              className={buttonClass({ size: "sm" })}
+            >
+              {copy.profileAction}
             </Link>
           }
         />

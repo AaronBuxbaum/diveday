@@ -295,6 +295,19 @@ describe("tripReminderEmail", () => {
     expect(email.html).toContain("<li>Logbook</li>");
   });
 
+  it("leads with hotel pickup arrival time when pickupTime is set", () => {
+    const email = tripReminderEmail({
+      ...base,
+      lead: "day",
+      pickupTime: "07:15",
+      hotelPickupLocation: "Sunset Palms Resort",
+    });
+    expect(email.text).toContain(
+      "Your morning pickup is scheduled for 07:15 at Sunset Palms Resort.",
+    );
+    expect(email.text).not.toContain("Aim to be at the dock by");
+  });
+
   it("keeps the 7-day reminder light with no brief sections", () => {
     const email = tripReminderEmail({
       ...base,
@@ -685,8 +698,16 @@ describe("wrapEmailHtml", () => {
   it("keeps the light values inline, so a client that strips the stylesheet still reads", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
     const body = html.slice(html.indexOf("<body"));
-    expect(body).toContain("background-color: #f3f4f6");
-    expect(body).toContain("color: #111827");
-    expect(body).toContain("#0e7490");
+    // docs/design/brand.md: sunlit sand, deep-sea ink, lagoon
+    expect(body).toContain("background-color: #FAF9F6");
+    expect(body).toContain("color: #0C2A35");
+    expect(body).toContain("#008080");
+  });
+
+  it("renders the inlined bubble mark in the email header", () => {
+    const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
+    expect(html).toContain("<svg");
+    expect(html).toContain('fill="#008080"');
+    expect(html).toContain('fill="#ff6b6b"');
   });
 });

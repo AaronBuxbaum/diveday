@@ -632,7 +632,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   if (owned) {
     await tx
       .update(bookings)
-      .set({ groupPreference: null })
+      .set({ groupPreference: null, hotelPickupLocation: null, pickupTime: null })
       .where(inArray(bookings.id, bookingIds));
 
     await tx

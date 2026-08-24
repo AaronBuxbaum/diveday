@@ -436,3 +436,28 @@ export async function setShopDivingOptions(
   const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }
+
+/**
+ * Sets the shop's tagline, about/description prose, and brand logo URL.
+ */
+export async function setShopProfile(
+  db: AppDb,
+  shopId: string,
+  profile: {
+    tagline?: string | null;
+    description?: string | null;
+    logoUrl?: string | null;
+  },
+) {
+  const clean = (value: string | null | undefined) => value?.trim() || null;
+  const [shop] = await db
+    .update(shops)
+    .set({
+      ...(profile.tagline !== undefined ? { tagline: clean(profile.tagline) } : {}),
+      ...(profile.description !== undefined ? { description: clean(profile.description) } : {}),
+      ...(profile.logoUrl !== undefined ? { logoUrl: clean(profile.logoUrl) } : {}),
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}

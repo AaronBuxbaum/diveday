@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDiverLocale } from "@/i18n/settings";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
@@ -24,7 +24,14 @@ import {
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
 } from "./recap";
-import { bookings, notificationDeliveries, people, recapPhotos, shops } from "./schema";
+import {
+  bookings,
+  notificationDeliveries,
+  people,
+  priorVisits,
+  recapPhotos,
+  shops,
+} from "./schema";
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
@@ -150,6 +157,31 @@ describe("getRecapPageData", () => {
     // A zero-decimal currency reaches the page as itself, undivided.
     await setShopCurrency(db, shop.id, "jpy");
     expect((await getRecapPageData(db, bookingId))?.currency).toBe("jpy");
+  });
+
+  it("includes keepsake dive record details: boat, crew, depths, and visitCount", async () => {
+    const { db, shop, bookingId } = await recapContext();
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!booking) throw new Error("test setup: booking missing");
+
+    // Add a prior visit from before DiveDay
+    await db.insert(priorVisits).values({
+      shopId: shop.id,
+      personId: booking.personId,
+      visitedOn: "2024-05-10",
+      title: "Earlier Dive",
+      statusLabel: "completed",
+      dedupeKey: "test-dedupe-1",
+      importedAt: nowDate(),
+    });
+
+    const data = await getRecapPageData(db, bookingId);
+    expect(data).not.toBeNull();
+    if (!data) return;
+
+    expect(data.visitCount).toBe(2);
+    expect(Array.isArray(data.trip.crew)).toBe(true);
+    expect(data.sites.length).toBeGreaterThan(0);
   });
 });
 

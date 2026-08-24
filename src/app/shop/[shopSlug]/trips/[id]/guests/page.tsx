@@ -46,6 +46,7 @@ import {
   saveRosterEmergencyContactAction,
   sendLastMinuteDealAction,
   undoRemoveBookingAction,
+  updateBookingPickupAction,
 } from "../actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -355,6 +356,7 @@ async function TripGuestsBody({
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}
         saveEmergencyContactAction={saveRosterEmergencyContactAction.bind(null, shopSlug, tripId)}
+        updatePickupAction={updateBookingPickupAction.bind(null, shopSlug, tripId)}
         keepOpenBookingId={keepOpenBookingId}
         depthUnit={shop.depthUnit}
         tripDate={tripDateIso}

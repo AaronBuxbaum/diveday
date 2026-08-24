@@ -106,6 +106,14 @@ export type ReadyPageData = {
    */
   cancelPreview: "refund" | "forfeit" | "no_policy" | "unpaid";
   /**
+   * Lodging / hotel pickup location (free text) provided by the diver on /ready.
+   */
+  hotelPickupLocation: string | null;
+  /**
+   * Staff-set pickup time for this booking (e.g. "07:15").
+   */
+  pickupTime: string | null;
+  /**
    * Whether a seat this diver can still release exists. Mirrors
    * `selfCancelBooking`'s own two pre-checks exactly — a plain `booked` seat,
    * on a departure that has not sailed — including its one-hour late-departure
@@ -132,6 +140,8 @@ export async function getReadyPageData(
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
       lastDivedBand: bookings.lastDivedBand,
+      hotelPickupLocation: bookings.hotelPickupLocation,
+      pickupTime: bookings.pickupTime,
       status: bookings.status,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
@@ -228,6 +238,8 @@ export async function getReadyPageData(
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
+    hotelPickupLocation: row.hotelPickupLocation,
+    pickupTime: row.pickupTime,
     canPay,
     cancelPreview,
     canCancelBooking,

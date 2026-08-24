@@ -191,7 +191,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Four open-water training dives",
         "Light lunch on full days",
       ],
-      excludes: ["Marine park fees", "Hotel transfers", "Underwater photos"],
+      excludes: ["Marine park fees", "Underwater photos"],
       scheduleDays: [
         {
           title: "Day 1 — classroom and confined water",
@@ -1623,6 +1623,913 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           question: "Is Divemaster the same as instructor?",
           answer:
             "No. Divemaster supervises and assists; it does not certify students. Instructor Development Course is the next step, and Divemaster is its prerequisite.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "dry-suit-diver",
+    version: 1,
+    title: "Dry Suit Diver",
+    agency: "padi",
+    description: "Stay warm and comfortable diving in colder water with a dry suit.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Dive warm in colder waters and extend your dive season",
+      overview:
+        "Diving in cold water opens up kelp forests, cold-water wrecks, and year-round diving without shivering. A dry suit seals water out completely, keeping you warm with an insulating layer of air and thermal undergarments.\n\nIn this course, you will learn how to choose the right dry suit and undergarments, master dry suit buoyancy control using both your suit and BCD, handle dry suit emergencies, and perform routine maintenance and care.\n\nYou will complete one confined water session to get comfortable with suit inflation, deflation, and buoyancy skills, followed by two open water training dives.",
+      heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Sponge 06 Molasses Reef 20230714.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "1–2 days · 1 confined water session + 2 dives",
+      groupSizeText: "Small groups for dedicated instructor attention",
+      minimumAge: 10,
+      prerequisiteNote:
+        "PADI (Junior) Open Water Diver or higher, at least 10 years old. You will complete a medical questionnaire before the course; some answers require a physician sign-off before diving.",
+      includes: [
+        "All PADI learning materials and certification fees",
+        "Confined water training session",
+        "Two open water training dives",
+        "Tanks, weights, and air fills",
+      ],
+      excludes: ["Dry suit rental or purchase", "Undergarments", "Personal dive gear rental"],
+      scheduleDays: [
+        {
+          title: "Day 1: Theory & Confined Water",
+          startTime: "09:00",
+          endTime: "15:00",
+          items: [
+            "Dry suit anatomy, valves, seals, and undergarment selection",
+            "Pool or confined water session: buoyancy, roll recovery, and valve drills",
+          ],
+        },
+        {
+          title: "Day 2: Open Water Dives",
+          startTime: "08:30",
+          endTime: "14:30",
+          items: [
+            "Dive 1: Weight check, controlled descent, trim, and buoyancy adjustment",
+            "Dive 2: Scenario practice, disconnection drill, and safe ascent",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is diving in a dry suit difficult?",
+          answer:
+            "It requires learning an additional buoyancy volume to manage, but with proper instruction in confined water first, most divers become comfortable quickly.",
+        },
+        {
+          question: "Do I need to own a dry suit?",
+          answer:
+            "Many shops offer dry suit rentals for the course or can help you fit and purchase one. Check with us for rental availability in your size.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "emergency-oxygen-provider",
+    version: 1,
+    title: "Emergency Oxygen Provider",
+    agency: "padi",
+    description: "Learn how to recognize dive emergencies and administer emergency oxygen.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      summary: "Recognize dive illnesses and provide life-saving oxygen support",
+      overview:
+        "Knowing how and when to administer emergency oxygen is a vital safety skill for divers and boaters. Emergency oxygen is the primary first aid given for decompression illness, lung overexpansion injuries, and near-drowning.\n\nIn this dry classroom course, you will learn the signs and symptoms of decompression sickness and arterial gas embolism, how to assemble and disassemble emergency oxygen units, and how to use non-rebreather masks and demand valves on breathing and non-breathing divers.\n\nThere are no in-water requirements, making this course ideal for divers, boat crew, dive buddies, and non-diving family members.",
+      heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Molasses Reef 20080309.jpg",
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+      ),
+      durationText: "Half day (dry course, no dives)",
+      groupSizeText: "Interactive small-group classroom workshops",
+      minimumAge: null,
+      prerequisiteNote:
+        "No dive certification or minimum age required. Open to divers, boat captains, and non-divers alike.",
+      includes: [
+        "PADI Emergency Oxygen Provider manual or eLearning",
+        "Hands-on equipment practice with oxygen systems and masks",
+        "PADI certification card processing",
+      ],
+      excludes: ["Personal first aid kit", "Pocket mask"],
+      scheduleDays: [
+        {
+          title: "Course Workshop",
+          startTime: "09:00",
+          endTime: "13:00",
+          items: [
+            "Decompression illness overview and indications for emergency oxygen",
+            "Oxygen equipment components, safety precautions, and maintenance",
+            "Practical skills: demand valve setup, non-rebreather mask, and resuscitation mask",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Are there any pool or open water dives?",
+          answer:
+            "No, this is a completely dry classroom and practical workshop course. No swimming or diving is involved.",
+        },
+        {
+          question: "Can non-divers take this course?",
+          answer:
+            "Yes! Anyone who spends time around divers, boats, or water sports can take and benefit from this course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "equipment-specialist",
+    version: 1,
+    title: "Equipment Specialist",
+    agency: "padi",
+    description: "Understand how your dive gear works and how to maintain and care for it.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Master gear maintenance, field repairs, and equipment principles",
+      overview:
+        "Don't miss a dive due to a minor gear glitch or missing O-ring. The Equipment Specialist course teaches you how your scuba gear works, routine maintenance procedures, and how to make basic field repairs.\n\nYou will learn the theory and operation of regulators, cylinder valves, BCDs, and dive computers. Through hands-on workshops, you will inspect equipment, replace common wear parts, and understand proper storage and cleaning techniques.\n\nWhile this course does not certify you as an authorized service technician, it gives you the confidence to maintain your own gear and troubleshoot common issues at the dive site.",
+      heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "1 day (dry workshop)",
+      groupSizeText: "Hands-on workbench sessions",
+      minimumAge: 10,
+      prerequisiteNote:
+        "PADI (Junior) Scuba Diver or higher certification and at least 10 years old.",
+      includes: [
+        "PADI Equipment Specialist eLearning or manual",
+        "Hands-on workshop with workshop tools and demonstration units",
+        "PADI certification card processing",
+      ],
+      excludes: ["Personal save-a-dive kit supplies", "Manufacturer service kits"],
+      scheduleDays: [
+        {
+          title: "Workshop Day",
+          startTime: "09:00",
+          endTime: "16:00",
+          items: [
+            "Regulator stages, balanced vs unbalanced designs, and piston vs diaphragm systems",
+            "Cylinder inspection standards, valves, burst disks, and hydrostatic testing",
+            "BCD care, inflator overhaul demonstrations, and leak testing",
+            "Hands-on field repair exercises: O-rings, mouthpieces, and fin straps",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Will I be certified to service other people's regulators?",
+          answer:
+            "No. Factory service certifications are issued by equipment manufacturers. This course focuses on diver maintenance, inspection, and field troubleshooting.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "underwater-naturalist",
+    version: 1,
+    title: "Underwater Naturalist",
+    agency: "padi",
+    description: "Look past the big animals to see the interactions and ecosystems of the reef.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "See aquatic life through an ecological and behavioural lens",
+      overview:
+        "Instead of just seeing a fish or a coral head, learn to see the complex relationships that make underwater ecosystems thrive. The Underwater Naturalist course teaches you to identify groupings of marine organisms, understand symbiotic relationships, and observe behavior without disturbing aquatic life.\n\nYou will learn the major aquatic life groupings, food chains, habitats, and the role divers play in preserving fragile underwater environments.\n\nAcross two open water dives, you will observe symbiotic relationships, practice non-destructive diving techniques, and identify organisms and their habitats.",
+      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Pickles Reef 20230713.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "1 day · 2 dives",
+      groupSizeText: "Small groups focused on guided reef observation",
+      minimumAge: 10,
+      prerequisiteNote:
+        "PADI (Junior) Open Water Diver or higher, at least 10 years old. Medical questionnaire required.",
+      includes: [
+        "PADI learning materials and certification fee",
+        "Two open water naturalist training dives",
+        "Underwater slates and identification guides",
+        "Tanks and weights",
+      ],
+      excludes: ["Personal gear rental", "Marine park conservation wristband"],
+      scheduleDays: [
+        {
+          title: "Naturalist Day",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Briefing: aquatic ecosystems, symbiosis, predator-prey relationships, and conservation",
+            "Dive 1: Identifying plant and invertebrate groupings and mutualistic relationships",
+            "Surface debrief: comparing observations and referencing identification slates",
+            "Dive 2: Vertebrate behaviors, feeding strategies, and camouflage",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How is this different from Fish Identification?",
+          answer:
+            "Fish Identification focuses on identifying species and families. Underwater Naturalist looks broader at entire marine ecosystems, food webs, invertebrates, and symbiosis.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-try-scuba",
+    version: 1,
+    title: "Try Scuba",
+    agency: "ssi",
+    description:
+      "Your first taste of breathing underwater under the direct care of an SSI instructor.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      isIntroCourse: true,
+      summary:
+        "Experience scuba diving for the first time in confined water with an SSI instructor",
+      overview:
+        "SSI Try Scuba is your introduction to the underwater world. Under the direct supervision of an SSI professional, you will learn the basic safety guidelines and skills needed to dive.\n\nYou will experience what it feels like to breathe underwater in a pool or calm confined water environment. Your instructor will guide you step by step through equipment familiarization and fundamental diving skills.\n\nIf you decide to continue your dive education, your Try Scuba experience can be credited toward your SSI Scuba Diver or Open Water Diver certification.",
+      heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Blue Tang Pickles 20080310.jpg",
+      ),
+      durationText: "Half day (approx. 3–4 hours)",
+      groupSizeText: "Direct 1:1 or small group instructor supervision",
+      minimumAge: 8,
+      prerequisiteNote:
+        "Minimum age 8 years old for pool/confined water (10 for optional open water dive). No prior diving experience needed. Medical questionnaire required before entering the water.",
+      includes: [
+        "SSI digital recognition card and learning materials",
+        "Full scuba equipment rental",
+        "Pool or confined water session with an SSI instructor",
+      ],
+      excludes: ["Swimwear and towel", "Optional open water add-on dive"],
+      scheduleDays: [
+        {
+          title: "Try Scuba Session",
+          startTime: "09:00",
+          endTime: "13:00",
+          items: [
+            "Briefing: equipment overview, equalizing, breathing rules, and underwater hand signals",
+            "Gear fit and pool/confined water entry",
+            "First breaths underwater, regulator clearing, and mask clearing practice",
+            "Fun swim and buoyancy practice under direct instructor supervision",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is Try Scuba a certification?",
+          answer:
+            "No, it is a non-certification introductory experience. However, the skills you learn can count toward your SSI Open Water Diver course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-open-water-diver",
+    version: 1,
+    title: "Open Water Diver",
+    agency: "ssi",
+    description: "The globally recognized SSI certification to dive independently with a buddy.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      summary: "Earn your worldwide lifetime scuba certification to dive to {depth18}",
+      overview:
+        "The SSI Open Water Diver program is your gateway to exploring the ocean worldwide. Through digital learning, pool training, and open water dives, you will gain the knowledge and skills necessary to dive safely to {depth18} with a certified buddy.\n\nSSI's training methodology focuses on comfort through repetition. You will master equipment assembly, mask clearing, regulator recovery, buoyancy control, and emergency procedures in confined water before completing four open water training dives.\n\nUpon graduation, your digital certification is recognized internationally with no expiration.",
+      heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "FGBNMS - nurse shark (27551309652).jpg",
+      ),
+      durationText: "3–4 days · 6 confined sessions + 4 open water dives",
+      groupSizeText: "Small student-to-instructor ratio for safety and comfort",
+      minimumAge: 10,
+      prerequisiteNote:
+        "Minimum age 10 years old (certified as Junior Open Water Diver until age 15). Ability to swim 200-meter/yard continuously and float/tread water for 10 minutes. Medical questionnaire required.",
+      includes: [
+        "SSI digital learning kit, video, and lifetime digital certification card",
+        "Confined water pool training sessions",
+        "Four open water training dives",
+        "Tanks, weights, and full gear rental during the course",
+        "Logbook integration via the MySSI app",
+      ],
+      excludes: ["Personal mask and snorkel (recommended)", "Transportation to dive sites"],
+      scheduleDays: [
+        {
+          title: "Day 1: Academics & Pool Training",
+          startTime: "08:30",
+          endTime: "16:00",
+          items: [
+            "Academic review and digital exam",
+            "Equipment assembly, disassembly, and pre-dive safety checks",
+            "Confined water skills: breathing, regulator clearing, and mask clearing",
+          ],
+        },
+        {
+          title: "Day 2: Pool Mastery & Gear Drills",
+          startTime: "08:30",
+          endTime: "15:30",
+          items: [
+            "Neutral buoyancy, fin pivots, and hover practice",
+            "Emergency out-of-air drills, alternate air source sharing, and emergency ascents",
+            "200-meter/yard swim test and 10-minute water survival float",
+          ],
+        },
+        {
+          title: "Day 3: Open Water Dives 1 & 2",
+          startTime: "08:00",
+          endTime: "14:00",
+          items: [
+            "Dive 1: Descent to {depth12}, buoyancy adjustment, and guided exploration",
+            "Dive 2: Mask removal and replacement, regulator recovery, and controlled ascent",
+          ],
+        },
+        {
+          title: "Day 4: Open Water Dives 3 & 4 & Certification",
+          startTime: "08:00",
+          endTime: "14:00",
+          items: [
+            "Dive 3: Descent to {depth18}, buoyancy hover, and buddy towing",
+            "Dive 4: Student-led dive planning, underwater navigation, and graduation",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How deep can I dive after graduating?",
+          answer:
+            "SSI Open Water Divers aged 15 and older are qualified to dive to {depth18}. Divers aged 10–11 have a maximum depth of {depth12}, and ages 12–14 can dive to {depth18} with an adult certified diver.",
+        },
+        {
+          question: "Does the certification expire?",
+          answer:
+            "No, your SSI Open Water Diver certification is valid for life. If you have been inactive for an extended period, a Scuba Skills Update is recommended.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-advanced-adventurer",
+    version: 1,
+    title: "Advanced Adventurer",
+    agency: "ssi",
+    description: "Sample five different specialty areas and expand your depth to {depth30}.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary:
+        "Try 5 specialty dives, increase your depth limit to {depth30}, and sharpen your skills",
+      overview:
+        "If you want to explore new diving styles and go deeper, the SSI Advanced Adventurer program allows you to sample five different SSI specialty dive programs without committing to the full specialty certifications.\n\nYou will complete five adventure dives, including mandatory Deep Diving (down to {depth30}) and Underwater Navigation dives, plus three elective dives such as Perfect Buoyancy, Night/Limited Visibility, or Wreck Diving.\n\nEach dive credits toward its corresponding full SSI specialty certification if you choose to pursue it later.",
+      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Pickles Reef 20230713.jpg",
+        "Sponge 06 Molasses Reef 20230714.jpg",
+      ),
+      durationText: "2–3 days · 5 adventure dives",
+      groupSizeText: "Small groups tailored to specialty exploration",
+      minimumAge: 10,
+      prerequisiteNote:
+        "SSI Open Water Diver or equivalent from a recognized agency. Minimum age 10 years old for shallow electives (12 years old for Deep Diving to {depth21}, 15 years old for {depth30}).",
+      includes: [
+        "SSI digital learning materials and certification card",
+        "Five specialty adventure dives",
+        "Tanks, weights, and air fills",
+      ],
+      excludes: ["Personal gear rental", "Specialty equipment rentals (torches, compasses, etc.)"],
+      scheduleDays: [
+        {
+          title: "Day 1: Navigation & Buoyancy",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Briefing on specialty topics and dive planning",
+            "Dive 1: Underwater Navigation (compass headings, reciprocal courses, natural cues)",
+            "Dive 2: Perfect Buoyancy (trim optimization, fin kicks, hovering)",
+          ],
+        },
+        {
+          title: "Day 2: Deep Dive & Electives",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Dive 3: Deep Diving (descent to {depth30}, nitrogen awareness, air consumption)",
+            "Dive 4: Boat Diving or Fish Identification",
+            "Dive 5: Wreck Diving or Night/Limited Visibility",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Does this certify me as a Deep Diver?",
+          answer:
+            "No, it certifies you as an Advanced Adventurer with a {depth30} depth limit. To earn the full Deep Diving specialty (to {depth40}), you can complete the remaining dives in the Deep specialty program.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-diver-stress-and-rescue",
+    version: 1,
+    title: "Diver Stress & Rescue",
+    agency: "ssi",
+    description: "Learn to prevent, recognize, and manage stress and diving emergencies.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Build confidence by learning to prevent problems and manage dive emergencies",
+      overview:
+        "Stress is a major contributor to diving accidents. The SSI Diver Stress & Rescue program provides you with the skills and knowledge required to recognize stress, prevent accidents, and respond effectively in emergency situations.\n\nYou will learn how to identify stress in yourself and other divers, manage panic, perform diver rescues from depth and at the surface, administer in-water rescue breaths, and coordinate emergency response procedures.\n\nMost divers find this course challenging, rewarding, and the single most confidence-building program in recreational diving.",
+      heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+      galleryPhotos: bundledGallery(
+        "AtlanticGoliathGrouper.jpg",
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "3 days · Pool sessions + Open water scenarios",
+      groupSizeText: "Scenario teams with direct instructor safety oversight",
+      minimumAge: 12,
+      prerequisiteNote:
+        "Open Water Diver certification and current First Aid / CPR / Oxygen provider training (such as SSI React Right). Minimum age 12 years old.",
+      includes: [
+        "SSI digital learning kit and certification fee",
+        "Pool and confined water rescue skill sessions",
+        "Open water rescue scenarios",
+        "Tanks and weights",
+      ],
+      excludes: ["Pocket mask", "First aid / CPR certification (can be taken concurrently)"],
+      scheduleDays: [
+        {
+          title: "Day 1: Self-Rescue & Stress Management",
+          startTime: "09:00",
+          endTime: "16:00",
+          items: [
+            "Psychology of stress, panic triggers, and early intervention",
+            "Pool session: self-rescue, cramp release, tired diver tows, and panicking diver defense",
+          ],
+        },
+        {
+          title: "Day 2: Rescue Techniques & Missing Diver Search",
+          startTime: "08:30",
+          endTime: "15:30",
+          items: [
+            "Surfacing an unresponsive diver from depth, controlled buoyant ascents",
+            "Surface artificial respiration, gear stripping, and exit techniques",
+            "Underwater search patterns for missing divers",
+          ],
+        },
+        {
+          title: "Day 3: Open Water Rescue Scenarios",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Scenario 1: Unresponsive diver at depth and surface rescue with in-water rescue breaths",
+            "Scenario 2: Distressed and panicking diver management at surface and boat exit",
+            "Emergency action plan debriefing and graduation",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need CPR and first aid training first?",
+          answer:
+            "Yes. You must hold current CPR and First Aid certifications (within 24 months). SSI React Right can be completed alongside this course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-scuba-skills-update",
+    version: 1,
+    title: "Scuba Skills Update",
+    agency: "ssi",
+    description: "A quick, comprehensive refresher to get your dive skills sharp and comfortable.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Refresh your knowledge, gear handling, and in-water skills before your next dive",
+      overview:
+        "If it has been several months or years since your last dive, the SSI Scuba Skills Update is the best way to regain your confidence and comfort in the water.\n\nWith an SSI professional, you will review dive planning, safe diving rules, and gear assembly. In a pool or calm confined water environment, you will practice fundamental skills including mask clearing, buoyancy control, and emergency procedures.\n\nAn optional open water dive can be added to put your refreshed skills into practice on the reef.",
+      heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Pickles Reef 20230713.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "Half day (approx. 3–4 hours)",
+      groupSizeText: "Relaxed, supportive small-group environment",
+      minimumAge: 10,
+      prerequisiteNote:
+        "Open Water Diver certification or higher from any recognized agency. Medical questionnaire required.",
+      includes: [
+        "SSI digital skills update completion sticker / digital record",
+        "Classroom / briefing review",
+        "Confined water pool session",
+        "Full scuba equipment rental",
+      ],
+      excludes: ["Optional open water boat dive"],
+      scheduleDays: [
+        {
+          title: "Refresher Session",
+          startTime: "09:00",
+          endTime: "13:00",
+          items: [
+            "Equipment assembly, safety checks, and dive table / computer review",
+            "Pool session: mask skills, regulator recovery, trim, and buoyancy hover",
+            "Emergency procedures review and MySSI logbook update",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Will I get a new certification card?",
+          answer:
+            "You will receive an official digital Scuba Skills Update recognition card in your MySSI app confirming your refresher.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-perfect-buoyancy",
+    version: 1,
+    title: "Perfect Buoyancy",
+    agency: "ssi",
+    description: "Master trim, reduce air consumption, and hover effortlessly in any position.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Perfect your weighting, trim, and fin kicks to float weightlessly",
+      overview:
+        "Good buoyancy control is what separates an average diver from a great diver. The SSI Perfect Buoyancy specialty program teaches you how to optimize your weighting, balance your gear, and master specialized finning techniques.\n\nYou will learn the principles of buoyancy and trim, how to determine exact weighting requirements, and practice advanced kicks such as the frog kick and helicopter turn.\n\nWith two in-water training sessions, you will dramatically reduce your air consumption, protect delicate marine life, and prolong your dive times.",
+      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "1 day · 2 dives (or pool + 1 dive)",
+      groupSizeText: "Small groups with personalized trim adjustments",
+      minimumAge: 10,
+      prerequisiteNote:
+        "SSI Open Water Diver or higher certification, at least 10 years old. Medical questionnaire required.",
+      includes: [
+        "SSI digital learning kit and certification card",
+        "Two buoyancy training sessions / dives",
+        "Tanks and weights for weighting optimization",
+      ],
+      excludes: ["Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Buoyancy Workshop",
+          startTime: "09:00",
+          endTime: "15:00",
+          items: [
+            "Weighting calculations, weight distribution, and cylinder buoyancy characteristics",
+            "Dive 1: Exact buoyancy check, trim adjustments, and horizontal body positioning",
+            "Dive 2: Obstacle courses, hovering at various depths, and propulsion techniques",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Will this help me use less air?",
+          answer:
+            "Yes! Being properly weighted and swimming horizontally in trim significantly reduces drag and exertion, resulting in lower gas consumption.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-deep-diving",
+    version: 1,
+    title: "Deep Diving",
+    agency: "ssi",
+    description: "Learn the procedures and safety protocols for diving to {depth40}.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Safely explore deeper reefs and wrecks down to {depth40}",
+      overview:
+        "Many of the most exciting dive sites — deep drop-offs, pinnacles, and historic shipwrecks — lie below {depth18}. The SSI Deep Diving specialty prepares you to plan and execute dives to a maximum recreational depth of {depth40}.\n\nYou will study deep dive planning, gas management, decompression theory, nitrogen narcosis recognition, and safety stop / emergency decompression procedures.\n\nAcross three open water training dives, you will experience the effects of depth, practice emergency gas sharing at depth, and navigate deep environments with confidence.",
+      heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
+      galleryPhotos: bundledGallery(
+        "FKNMS - Goliath Grouper With Remora (27094933605).jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "2 days · 3 deep training dives",
+      groupSizeText: "Small student-to-instructor ratios for deep dive monitoring",
+      minimumAge: 15,
+      prerequisiteNote:
+        "Open Water Diver certification from a recognized agency. Minimum age 15 years old. Medical questionnaire required.",
+      includes: [
+        "SSI digital learning materials and certification card",
+        "Three deep training dives ({depth30} to {depth40})",
+        "Tanks and weights",
+      ],
+      excludes: ["Personal dive computer (required for all deep dives)", "Dive light rental"],
+      scheduleDays: [
+        {
+          title: "Day 1: Deep Planning & Dives 1-2",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Deep dive physiology, narcosis management, gas consumption rules",
+            "Dive 1: Descent to {depth30}, computer comparison, and color loss exercise",
+            "Dive 2: Navigation at {depth30n}–{depth30}, gas supply management",
+          ],
+        },
+        {
+          title: "Day 2: Deep Dive 3 & Graduation",
+          startTime: "08:30",
+          endTime: "14:00",
+          items: [
+            "Dive 3: Deep dive to {depth40}, simulated emergency decompression stop, and ascent",
+            "Debriefing and certification logging",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "What is the maximum depth I can dive after this course?",
+          answer:
+            "This course certifies you to dive to the recreational maximum limit of {depth40} with a certified dive buddy.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-navigation",
+    version: 1,
+    title: "Navigation",
+    agency: "ssi",
+    description:
+      "Learn to navigate underwater using compass headings, natural references, and patterns.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Never get lost on a dive: master compass work, patterns, and natural navigation",
+      overview:
+        "Underwater navigation is the skill that turns an anxious dive into a relaxed exploration. The SSI Navigation specialty teaches you how to use a compass and natural underwater references to always know where you are and how to return to the boat or shore.\n\nYou will learn to measure distance underwater through kick cycles and elapsed time, navigate complex search patterns, and compensate for currents.\n\nAcross two open water dives, you will navigate compass courses, practice square and triangle search patterns, and successfully navigate back to your starting point.",
+      heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Blue Tang Pickles 20080310.jpg",
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+      ),
+      durationText: "1–2 days · 2 open water dives",
+      groupSizeText: "Buddy-pair focused navigation challenges",
+      minimumAge: 10,
+      prerequisiteNote:
+        "SSI (Junior) Open Water Diver or higher certification, at least 10 years old.",
+      includes: [
+        "SSI digital learning kit and certification card",
+        "Two navigation training dives",
+        "Tanks and weights",
+      ],
+      excludes: ["Underwater compass rental or purchase", "Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Navigation Day",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Compass mechanics, natural navigation indicators, and search pattern planning",
+            "Dive 1: Reciprocal heading navigation, kick cycle calibration, and natural landmarks",
+            "Dive 2: Square and triangle multi-leg compass patterns and relocation exercises",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need my own compass?",
+          answer:
+            "We have compasses available for course use and recommend owning one as part of your core dive kit.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-photo-and-video",
+    version: 1,
+    title: "Photo & Video",
+    agency: "ssi",
+    description:
+      "Learn underwater photography and videography techniques to capture stunning imagery.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Capture crisp, colorful underwater photos and video without harming the reef",
+      overview:
+        "Underwater photography and videography allow you to share the beauty of the ocean with friends and family. The SSI Photo & Video program teaches you the techniques needed to take great digital photos and video underwater.\n\nYou will learn camera system preparation, housing maintenance, strobe and video light positioning, composition, and white balance settings in aquatic environments.\n\nAcross two training dives, you will practice capturing macro and wide-angle subjects while maintaining neutral buoyancy and reef-safe diving habits.",
+      heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Pickles Reef 20230713.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "1–2 days · 2 dives",
+      groupSizeText: "Small groups with individual image critique",
+      minimumAge: 10,
+      prerequisiteNote:
+        "Open Water Diver certification from a recognized agency. Minimum age 10 years old.",
+      includes: [
+        "SSI digital learning kit and certification card",
+        "Two photography training dives",
+        "Tanks and weights",
+        "Post-dive photo analysis workshop",
+      ],
+      excludes: ["Camera and housing rental", "Memory cards", "Editing software"],
+      scheduleDays: [
+        {
+          title: "Photo Workshop Day",
+          startTime: "08:30",
+          endTime: "15:30",
+          items: [
+            "Camera setup, housing O-ring care, strobe positioning, and underwater optics",
+            "Dive 1: Neutral buoyancy shooting, color correction, and wide-angle composition",
+            "Dive 2: Close-up and macro photography techniques",
+            "Post-dive workflow, editing tips, and image critique",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Can I use an action camera like a GoPro?",
+          answer:
+            "Yes! You can use action cameras, compact cameras, or mirrorless/DSLR systems in this course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-marine-ecology",
+    version: 1,
+    title: "Marine Ecology",
+    agency: "ssi",
+    description:
+      "Explore the complex relationships between marine organisms and their ocean habitats.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      summary: "Understand ocean ecosystems, coral reefs, and marine conservation",
+      overview:
+        "The oceans are home to incredible biodiversity and complex ecological systems. The SSI Marine Ecology specialty provides an in-depth look at the science of ocean life and the challenges facing marine environments today.\n\nYou will explore marine ecosystems, ocean food webs, coral reef biology, coastal habitats, and human impacts on the oceans. You will learn practical ways divers and ocean lovers can protect marine life.\n\nThis is a knowledge-based program that can be completed with or without optional open water experience dives.",
+      heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "1 day (dry seminars + optional dives)",
+      groupSizeText: "Interactive ecology discussions",
+      minimumAge: 10,
+      prerequisiteNote:
+        "Minimum age 10 years old. Open to divers and non-divers alike. No prior certifications needed for academic completion.",
+      includes: [
+        "SSI digital learning materials and certification card",
+        "Interactive ecology workshop and case study discussions",
+      ],
+      excludes: ["Optional marine ecology open water dives", "Personal dive gear"],
+      scheduleDays: [
+        {
+          title: "Ecology Seminar",
+          startTime: "09:00",
+          endTime: "15:00",
+          items: [
+            "Marine biodiversity, ocean chemistry, and food web dynamics",
+            "Coral reef ecosystems, mangrove habitats, and kelp forests",
+            "Human impacts: climate change, ocean acidification, and conservation initiatives",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I have to dive to complete this specialty?",
+          answer:
+            "No, this specialty is an ecology and knowledge-based program. Dives are optional but highly recommended to see principles in action.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-react-right",
+    version: 1,
+    title: "React Right",
+    agency: "ssi",
+    description:
+      "Emergency First Response: CPR, First Aid, AED, and Emergency Oxygen administration.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      summary: "Learn essential CPR, first aid, and oxygen administration skills for emergencies",
+      overview:
+        "SSI React Right is an emergency response training program designed for divers and non-divers. You will gain the skills and confidence to act as a first responder in medical emergencies.\n\nThe program covers primary assessment, CPR and rescue breathing, Automated External Defibrillator (AED) operation, first aid and wound care, and Emergency Oxygen administration in diving emergencies.\n\nHands-on scenario practice ensures you are prepared to respond calmly and effectively during an accident.",
+      heroImageUrl: bundledImage("Stoplight parrotfish Pickles Reef.jpg"),
+      galleryPhotos: bundledGallery(
+        "Blue Tang Pickles 20080310.jpg",
+        "French Angelfish Pickles Reef 20230713.jpg",
+      ),
+      durationText: "1 day (dry classroom & practical skills)",
+      groupSizeText: "Hands-on medical scenario training",
+      minimumAge: 12,
+      prerequisiteNote:
+        "Minimum age 12 years old. No prior dive certification required. Open to divers and non-divers.",
+      includes: [
+        "SSI React Right digital learning materials and certification",
+        "Practical training with CPR manikins, AED trainers, and oxygen systems",
+        "First aid scenario training",
+      ],
+      excludes: ["Pocket mask", "Personal first aid kit"],
+      scheduleDays: [
+        {
+          title: "React Right Workshop",
+          startTime: "09:00",
+          endTime: "16:30",
+          items: [
+            "Primary Assessment and scene safety",
+            "CPR and AED practical application on adult manikins",
+            "Secondary Assessment: splinting, bandaging, and shock management",
+            "Oxygen administration unit setup and delivery for dive emergencies",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Does this satisfy the prerequisite for Diver Stress & Rescue?",
+          answer:
+            "Yes! SSI React Right satisfies the CPR, First Aid, and Emergency Oxygen prerequisites for the SSI Diver Stress & Rescue program.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "ssi-dive-guide",
+    version: 1,
+    title: "Dive Guide",
+    agency: "ssi",
+    description: "The first step in SSI professional leadership: learn to guide certified divers.",
+    minimumCertificationLevel: "rescue",
+    content: {
+      ...blank,
+      summary: "Step into professional diving: lead certified divers and conduct dive briefings",
+      overview:
+        "The SSI Dive Guide program is the foundation of the SSI Dive Professional pathway. You will learn to lead certified divers in various underwater environments and conditions.\n\nThrough practical application, dive briefings, site assessments, and in-water leadership training, you will develop the organizational and supervisory skills required of a professional dive guide.\n\nCombined with the Science of Diving specialty, the Dive Guide certification qualifies you as an SSI Divemaster.",
+      heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
+      galleryPhotos: bundledGallery(
+        "FGBNMS - nurse shark (27551309652).jpg",
+        "Grouper 2 Molasses Reef 1999.jpg",
+      ),
+      durationText: "1–2 weeks (or internship format)",
+      groupSizeText: "Professional mentorship and practical guiding",
+      minimumAge: 15,
+      prerequisiteNote:
+        "SSI Diver Stress & Rescue (or equivalent), current CPR/First Aid/O2 certification, at least 40 logged dives to start (50 to certify), and at least 15 years old (18 for active professional status).",
+      includes: [
+        "SSI Dive Guide digital professional materials",
+        "Leadership and group management workshops",
+        "Practical guiding assessments and briefings",
+        "Tanks and weights during course sessions",
+      ],
+      excludes: [
+        "SSI professional registration and membership fees",
+        "Professional liability insurance",
+        "Complete personal professional dive gear",
+      ],
+      scheduleDays: [
+        {
+          title: "Week 1: Leadership & Briefings",
+          startTime: "08:30",
+          endTime: "16:00",
+          items: [
+            "The role of the Dive Guide, risk management, and legal responsibilities",
+            "Dive site evaluation, weather assessment, and dive briefing preparation",
+            "In-water guiding skills, group control, and problem prevention",
+          ],
+        },
+        {
+          title: "Week 2: Practical Guiding & Stamina Evaluations",
+          startTime: "08:30",
+          endTime: "16:00",
+          items: [
+            "Water fitness evaluations: swim, tread, and tired diver tow",
+            "Real-world dive briefing delivery and student-led guided dives",
+            "Emergency scenario management and debriefing",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "What is the difference between Dive Guide and Divemaster in SSI?",
+          answer:
+            "An SSI Dive Guide who also completes the SSI Science of Diving specialty earns the prestigious rating of SSI Divemaster.",
         },
       ],
     },

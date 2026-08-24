@@ -13,6 +13,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz, weekdayNames } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { fetchAutomatedMarineForecast, shouldShowAutomatedForecast } from "@/lib/marine-forecast";
 import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary, SERIES_HORIZON_DAYS } from "@/lib/recurrence";
@@ -323,6 +324,24 @@ export default async function ManageTripPage({
     ) : null,
   ].filter((fact): fact is React.ReactElement => fact !== null);
 
+  const siteWithForecast = tripDiveList.find(
+    ({ diveSite }) =>
+      diveSite && diveSite.forecastLatitude !== null && diveSite.forecastLongitude !== null,
+  )?.diveSite;
+  const forecastPoint =
+    siteWithForecast &&
+    siteWithForecast.forecastLatitude !== null &&
+    siteWithForecast.forecastLongitude !== null
+      ? {
+          latitude: siteWithForecast.forecastLatitude,
+          longitude: siteWithForecast.forecastLongitude,
+        }
+      : null;
+  const automatedForecast =
+    forecastPoint && shouldShowAutomatedForecast(trip.startsAt)
+      ? await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt)
+      : null;
+
   return (
     <>
       <FlashParams params={["notice", "count", "form"]} />
@@ -617,6 +636,7 @@ export default async function ManageTripPage({
           timezone={shop.timezone}
           temperatureUnit={temperatureUnitFor(shop)}
           depthUnit={shop.depthUnit}
+          automatedForecast={automatedForecast}
         />
 
         {canConfigure && series ? (

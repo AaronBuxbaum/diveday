@@ -327,30 +327,45 @@ export default async function SchedulePage({
           departure itself — the fact a diver arrives for (principle 10). */}
       {isEmbed ? null : (
         <header className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">{t("schedule.title")}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            {t("schedule.diverDescription")}
-            {(() => {
-              // Whose morning is "7:30 AM"? A diver comparing boats from
-              // another timezone reads these times against their own clock
-              // unless something says otherwise (review finding I18N-L2).
-              // Stated once, above everything that shows a time. Anchored to
-              // the first departure on the page, because a zone's *name*
-              // moves with daylight saving and a schedule read in March may
-              // be listing July boats.
-              const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
-              if (!zoneAnchor) return null;
-              return (
-                <>
-                  {" "}
-                  {t("schedule.timesInZone", {
-                    shop: shop.name,
-                    zone: timeZoneLabel(zoneAnchor, locale, tz),
-                  })}
-                </>
-              );
-            })()}
-          </p>
+          <div className="flex items-start gap-4">
+            {shop.logoUrl ? (
+              // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
+              <img
+                src={shop.logoUrl}
+                alt=""
+                className="size-16 shrink-0 rounded-2xl border border-border bg-surface object-cover shadow-xs"
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-semibold tracking-tight">{t("schedule.title")}</h1>
+              {shop.tagline ? (
+                <p className="mt-0.5 text-base font-medium text-foreground/90">{shop.tagline}</p>
+              ) : null}
+              <p className="mt-1 max-w-2xl text-sm text-muted">
+                {shop.description ?? t("schedule.diverDescription")}
+                {(() => {
+                  // Whose morning is "7:30 AM"? A diver comparing boats from
+                  // another timezone reads these times against their own clock
+                  // unless something says otherwise (review finding I18N-L2).
+                  // Stated once, above everything that shows a time. Anchored to
+                  // the first departure on the page, because a zone's *name*
+                  // moves with daylight saving and a schedule read in March may
+                  // be listing July boats.
+                  const zoneAnchor = upcoming[0]?.startsAt ?? range.first;
+                  if (!zoneAnchor) return null;
+                  return (
+                    <>
+                      {" "}
+                      {t("schedule.timesInZone", {
+                        shop: shop.name,
+                        zone: timeZoneLabel(zoneAnchor, locale, tz),
+                      })}
+                    </>
+                  );
+                })()}
+              </p>
+            </div>
+          </div>
         </header>
       )}
       {/* **The timezone sentence moved to the footer**, it did not go. It is
@@ -855,12 +870,15 @@ export default async function SchedulePage({
               `submitInquiryAction` already skips when there is none. Guarding
               the form on it switched off the one conversion a shop with
               nothing on the books can still make (issue #710). */}
+          {/* On the public schedule, the footer four rows below already
+              carries the shop's email and phone, so omitting them here prevents
+              duplicate contact lines on the same screen (issue #777). */}
           <DateRequestForm
             submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
             askInterest
             sectionId="request-a-date"
-            contactEmail={shop.contactEmail}
-            contactPhone={shop.contactPhone}
+            contactEmail={null}
+            contactPhone={null}
             copy={dateRequestCopy(t, "dive")}
           />
         </DiverIntlProvider>
