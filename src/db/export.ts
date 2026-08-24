@@ -56,6 +56,8 @@ import {
   orders,
   people,
   personRoles,
+  preDepartureCheckEvents,
+  preDepartureChecklistItems,
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
@@ -562,6 +564,26 @@ export async function loadShopExportBundleInput(
           asc(gearReservations.reservedFrom),
           asc(gearReservations.createdAt),
           asc(gearReservations.id),
+        );
+
+      const checklistItemRows = await tx
+        .select()
+        .from(preDepartureChecklistItems)
+        .where(eq(preDepartureChecklistItems.shopId, shopId))
+        .orderBy(
+          asc(preDepartureChecklistItems.sortOrder),
+          asc(preDepartureChecklistItems.createdAt),
+        );
+      const checklistItemLabel = new Map(checklistItemRows.map((row) => [row.id, row.label]));
+
+      const checklistEventRows = await tx
+        .select()
+        .from(preDepartureCheckEvents)
+        .where(eq(preDepartureCheckEvents.shopId, shopId))
+        .orderBy(
+          asc(preDepartureCheckEvents.occurredAt),
+          asc(preDepartureCheckEvents.createdAt),
+          asc(preDepartureCheckEvents.seq),
         );
 
       const priorVisitRows = await tx
@@ -1931,6 +1953,51 @@ export async function loadShopExportBundleInput(
             ];
           }),
           note: EXPORT_FILE_NOTES["gear_reservations.csv"],
+        },
+        {
+          file: "pre_departure_checklist_items.csv",
+          header: ["id", "label", "sort_order", "deleted_at", "created_at", "updated_at"],
+          rows: checklistItemRows.map((row) => [
+            row.id,
+            row.label,
+            row.sortOrder,
+            row.deletedAt,
+            row.createdAt,
+            row.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["pre_departure_checklist_items.csv"],
+        },
+        {
+          file: "pre_departure_check_events.csv",
+          header: [
+            "id",
+            "trip_id",
+            "checklist_item_id",
+            "checklist_item_label",
+            "status",
+            "source",
+            "client_event_id",
+            "note",
+            "recorded_by_person_id",
+            "recorded_by_name",
+            "occurred_at",
+            "created_at",
+          ],
+          rows: checklistEventRows.map((row) => [
+            row.id,
+            row.tripId,
+            row.checklistItemId,
+            checklistItemLabel.get(row.checklistItemId),
+            row.status,
+            row.source,
+            row.clientEventId,
+            row.note,
+            row.recordedByPersonId,
+            personName.get(row.recordedByPersonId),
+            row.occurredAt,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["pre_departure_check_events.csv"],
         },
         {
           // History the shop brought in from its previous system
@@ -3932,6 +3999,18 @@ export async function loadShopExportCounts(
     ),
     "gear_reservations.csv": await countOf(
       db.select({ n: count() }).from(gearReservations).where(eq(gearReservations.shopId, shopId)),
+    ),
+    "pre_departure_checklist_items.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(preDepartureChecklistItems)
+        .where(eq(preDepartureChecklistItems.shopId, shopId)),
+    ),
+    "pre_departure_check_events.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(preDepartureCheckEvents)
+        .where(eq(preDepartureCheckEvents.shopId, shopId)),
     ),
     "prior_visits.csv": await countOf(
       db.select({ n: count() }).from(priorVisits).where(eq(priorVisits.shopId, shopId)),
