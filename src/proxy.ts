@@ -4,16 +4,16 @@ import { NextResponse } from "next/server";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import {
-  EMBED_REQUEST_HEADER,
-  isEmbeddableShopRoute,
-  REQUEST_PATH_HEADER,
-} from "@/lib/embed-routes";
-import {
   type CspOptions,
   enforcedPolicy,
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
+import {
+  EMBED_REQUEST_HEADER,
+  isEmbeddableShopRoute,
+  REQUEST_PATH_HEADER,
+} from "@/lib/embed-routes";
 
 const STAFF_PREFIX = "/shop";
 
