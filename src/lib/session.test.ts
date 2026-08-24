@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { personRoles, userAccounts } from "@/db/schema";
+import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
+  staffSession,
 } from "@/test/staff-session";
 
 /**
@@ -44,7 +45,7 @@ vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
-const { requireShopSurface, requireStaffSession } = await import("./session");
+const { isLiveShopStaff, requireShopSurface, requireStaffSession } = await import("./session");
 
 /**
  * NextAuth's `auth` is overloaded (route handler, middleware, and the
@@ -283,5 +284,91 @@ describe("requireShopSurface", () => {
       refusal: { notice: "not-authorized" },
     });
     expect(allow).toHaveBeenCalledWith(context.db, context.shop.id, owner);
+  });
+});
+
+/**
+ * The public `/s/[shopSlug]/**` surfaces (the course page, the trip page, the
+ * layout's "you work here" bar) can never call `requireStaffSession()` — a
+ * genuine diver visitor must not be redirected to `/sign-in` — so they gate a
+ * staff-only preview with this instead. It takes a session directly rather
+ * than calling `auth()` itself, so these tests build one with `staffSession()`
+ * rather than mocking the module.
+ */
+describe("isLiveShopStaff", () => {
+  it("is false for a signed-out visitor", async () => {
+    expect(await isLiveShopStaff(context.db, context.shop.id, null)).toBe(false);
+  });
+
+  it("is true for a real, active staff member of this shop", async () => {
+    const owner = await seededStaffPersonId(context.db, context.shop.id, SEEDED_OWNER_EMAIL);
+    const session = staffSession({
+      shopId: context.shop.id,
+      shopSlug: context.shop.slug,
+      personId: owner,
+      roles: ["owner"],
+    });
+    expect(await isLiveShopStaff(context.db, context.shop.id, session)).toBe(true);
+  });
+
+  /**
+   * Issue #966. These pages used to compare only `isStaff(session.user.roles)`
+   * — the cached JWT claim — against `session.user.shopId === shop.id`, so a
+   * disabled staffer's already-issued 30-day session could still unlock a
+   * shop's unpublished course preview. Same shape as issue #701's fix to
+   * `requireStaffSession()`, just returning `false` here instead of
+   * redirecting, since these callers must render the ordinary public page for
+   * anyone this returns false for rather than bouncing them anywhere.
+   */
+  it("is false for a disabled staffer's stale session, even with unchanged JWT claims", async () => {
+    const captain = await seededStaffPersonId(context.db, context.shop.id, SEEDED_CAPTAIN_EMAIL);
+    await context.db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, captain));
+    const session = staffSession({
+      shopId: context.shop.id,
+      shopSlug: context.shop.slug,
+      personId: captain,
+    });
+    expect(await isLiveShopStaff(context.db, context.shop.id, session)).toBe(false);
+  });
+
+  it("is false for a person demoted off every staff role, not only a disabled account", async () => {
+    const captain = await seededStaffPersonId(context.db, context.shop.id, SEEDED_CAPTAIN_EMAIL);
+    await context.db.delete(personRoles).where(eq(personRoles.personId, captain));
+    const session = staffSession({
+      shopId: context.shop.id,
+      shopSlug: context.shop.slug,
+      personId: captain,
+    });
+    expect(await isLiveShopStaff(context.db, context.shop.id, session)).toBe(false);
+  });
+
+  it("is false for a real, active staff member of a different shop", async () => {
+    const [otherShop] = await context.db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("failed to insert other shop");
+    const [otherPerson] = await context.db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Other Owner", email: "other-owner@example.com" })
+      .returning();
+    if (!otherPerson) throw new Error("failed to insert other shop's staff person");
+    await context.db.insert(personRoles).values({ personId: otherPerson.id, role: "owner" });
+    await context.db.insert(userAccounts).values({
+      personId: otherPerson.id,
+      email: "other-owner@example.com",
+      hashedPassword: "x",
+      status: "active",
+    });
+    const session = staffSession({
+      shopId: otherShop.id,
+      shopSlug: otherShop.slug,
+      personId: otherPerson.id,
+      roles: ["owner"],
+    });
+    expect(await isLiveShopStaff(context.db, context.shop.id, session)).toBe(false);
   });
 });

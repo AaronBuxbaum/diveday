@@ -18,11 +18,11 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
 import { courseTotalCents, resolveCourseContentDepths, resolveCourseDepths } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
+import { isLiveShopStaff } from "@/lib/session";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import {
@@ -54,13 +54,12 @@ export async function generateMetadata({
   const course = shop ? await getCourseBySlug(db, shop.id, slug) : null;
   if (!course) return { title: "Course — DiveDay" };
   // A hidden course 404s in the page body for anyone but this shop's own
-  // staff (`staffView` below) — metadata must refuse it the same way, since
-  // Next resolves `generateMetadata` independently of that later `notFound()`
-  // and would otherwise leak the title/summary into the anonymous <head>.
+  // live staff (`staffView` below) — metadata must refuse it the same way,
+  // since Next resolves `generateMetadata` independently of that later
+  // `notFound()` and would otherwise leak the title/summary into the
+  // anonymous <head>.
   const session = await auth();
-  const staffView = Boolean(
-    shop && session?.user?.shopId === shop.id && isStaff(session.user.roles),
-  );
+  const staffView = shop ? await isLiveShopStaff(db, shop.id, session) : false;
   if (!course.isActive && !staffView) return { title: "Course — DiveDay" };
   const canonical = shop ? publicCoursePath(shop.slug, course.slug) : undefined;
   const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;
@@ -106,10 +105,13 @@ export default async function CoursePage({
   const stored = await getCourseBySlug(db, shop.id, slug);
   if (!stored) notFound();
 
-  // A hidden course is invisible to the public, but its own staff need to
-  // preview it — that is what the editor's Preview button opens.
+  // A hidden course is invisible to the public, but its own live staff need
+  // to preview it — that is what the editor's Preview button opens. A
+  // disabled, deleted, or demoted staffer's stale session must not (issue
+  // #966), so this re-reads the account rather than trusting cached JWT
+  // roles.
   const session = await auth();
-  const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
+  const staffView = await isLiveShopStaff(db, shop.id, session);
   if (!stored.isActive && !staffView) notFound();
 
   const sessions = await listUpcomingSessionsForCourse(db, shop.id, stored.id);

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { loadActiveStaffRolesByPerson } from "@/db/authz";
+import type { Session } from "next-auth";
+import { loadActiveStaffRoles, loadActiveStaffRolesByPerson } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -40,6 +41,30 @@ export async function requireStaffSession() {
   // `/sign-in` for exactly this reason (see its own doc comment).
   if (!liveRoles || !isStaff(liveRoles)) redirect("/sign-in?session=ended");
   return session;
+}
+
+/**
+ * Whether the signed-in session is a *live*, active staff member of this shop
+ * — for the public `/s/[shopSlug]/**` surfaces, which can never call
+ * `requireStaffSession()` themselves (a genuine diver visitor must not be
+ * redirected to `/sign-in`) but still gate a staff-only preview off session
+ * state. `requireStaffSession()` closed this gap for `/shop/**` (issue #701);
+ * these callers compared only `isStaff(session.user.roles)` against the
+ * cached JWT, so a disabled, deleted, or demoted staffer's already-issued
+ * 30-day token kept unlocking a staff-only preview here too (issue #966).
+ * Shop-scoped like `loadActiveStaffRoles` itself: every caller here already
+ * has the shop row resolved, so this also replaces the separate
+ * `session.user.shopId === shop.id` JWT-claim comparison those call sites
+ * used to make alongside it.
+ */
+export async function isLiveShopStaff(
+  db: AppDb,
+  shopId: string,
+  session: Session | null,
+): Promise<boolean> {
+  if (!session?.user) return false;
+  const liveRoles = await loadActiveStaffRoles(db, shopId, session.user.personId);
+  return isStaff(liveRoles ?? undefined);
 }
 
 /**
