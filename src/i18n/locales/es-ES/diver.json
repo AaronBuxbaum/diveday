@@ -1704,6 +1704,7 @@
       "title": "Bienvenido de nuevo",
       "description": "Inicia sesión para llevar el centro.",
       "error": "Ese correo y contraseña no coinciden.",
+      "sessionEnded": "Se cerró tu sesión porque esta cuenta ya no está activa. Contacta al propietario del centro si esto no era lo esperado.",
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",

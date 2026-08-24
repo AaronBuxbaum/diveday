@@ -12,6 +12,7 @@ import {
   canPersonOverrideGearRequest,
   canPersonRefund,
   loadActiveStaffRoles,
+  loadActiveStaffRolesByPerson,
 } from "./authz";
 import type { AppDb } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
@@ -65,6 +66,46 @@ describe("loadActiveStaffRoles", () => {
     expect(await loadActiveStaffRoles(db, shop.id, deleted)).toBeNull();
     expect(
       await loadActiveStaffRoles(db, "00000000-0000-0000-0000-000000000000", owner),
+    ).toBeNull();
+  });
+});
+
+/**
+ * The person-scoped sibling `requireStaffSession()` calls (issue #701). The
+ * one behavior that distinguishes it from `loadActiveStaffRoles` above: it
+ * must not care whether the caller's own claimed shop id is right, only
+ * whether the account itself is still real — a stale shop claim is a 404 for
+ * `requireShopSurface` to decide, never a reason this reports "disabled".
+ */
+describe("loadActiveStaffRolesByPerson", () => {
+  it("returns the person's live roles for an active staff member", async () => {
+    const { db, shop } = await seededShopContext();
+    const person = await makeStaff(db, shop.id, ["owner", "manager"]);
+    const roles = await loadActiveStaffRolesByPerson(db, person);
+    expect([...(roles ?? [])].sort()).toEqual(["manager", "owner"]);
+  });
+
+  it("returns null for a disabled account or a deleted person", async () => {
+    const { db, shop } = await seededShopContext();
+    const disabled = await makeStaff(db, shop.id, ["owner"], { status: "disabled" });
+    const deleted = await makeStaff(db, shop.id, ["owner"], { deleted: true });
+
+    expect(await loadActiveStaffRolesByPerson(db, disabled)).toBeNull();
+    expect(await loadActiveStaffRolesByPerson(db, deleted)).toBeNull();
+  });
+
+  it("does not care which shop id the caller supplies — there isn't one to check", async () => {
+    const { db, shop } = await seededShopContext();
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    // Same person, still active — a wrong or stale shop claim is simply not
+    // this function's question.
+    expect(await loadActiveStaffRolesByPerson(db, owner)).toEqual(["owner"]);
+  });
+
+  it("returns null for a person id that does not exist", async () => {
+    const { db } = await seededShopContext();
+    expect(
+      await loadActiveStaffRolesByPerson(db, "00000000-0000-0000-0000-000000000000"),
     ).toBeNull();
   });
 });

@@ -93,7 +93,22 @@ export const authConfig = {
         if (!shopSlug) return false;
         return NextResponse.redirect(new URL(`/shop/${shopSlug}`, request.nextUrl));
       }
-      if (pathname === "/sign-in" && isStaff(roles)) {
+      // Skipped for `?session=ended`: that param is only ever set by
+      // `requireStaffSession()` (src/lib/session.ts) after a live database
+      // check found the session's own JWT stale — disabled, deleted, or
+      // demoted off every staff role since it was minted. The edge has no
+      // database access and can't re-check that itself (ADR-0006), so
+      // `roles` here can still read `isStaff` for up to the token's full
+      // 30-day life; bouncing back to `/shop/<slug>` unconditionally would
+      // send that request straight into `requireStaffSession()` again, which
+      // would bounce it right back here — an infinite redirect loop between
+      // the one layer that knows the account is stale and the one that
+      // doesn't (issue #701).
+      if (
+        pathname === "/sign-in" &&
+        isStaff(roles) &&
+        request.nextUrl.searchParams.get("session") !== "ended"
+      ) {
         const shopSlug = auth?.user?.shopSlug;
         if (shopSlug) {
           return NextResponse.redirect(new URL(`/shop/${shopSlug}`, request.nextUrl));

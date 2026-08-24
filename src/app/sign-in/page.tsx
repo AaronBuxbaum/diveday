@@ -61,7 +61,7 @@ async function authenticate(formData: FormData) {
  * request here. Typed as possibly repeated because a URL can carry it twice;
  * only a single value is trusted.
  */
-type SignInSearchParams = { error?: string; callbackUrl?: string | string[] };
+type SignInSearchParams = { error?: string; session?: string; callbackUrl?: string | string[] };
 
 export default function SignInPage({
   searchParams,
@@ -84,7 +84,7 @@ export default function SignInPage({
 }
 
 async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearchParams> }) {
-  const { error, callbackUrl } = await searchParams;
+  const { error, session, callbackUrl } = await searchParams;
   const t = diverTranslator(await requestLocale());
   // A diver who followed a `/shop/<slug>/…` link lands here with no way back to
   // the thing they wanted. `callbackUrl` names the shop; if it doesn't — no
@@ -161,6 +161,16 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         {error ? (
           <FormStatus tone="danger" className="justify-center">
             {t("account.signIn.error")}
+          </FormStatus>
+        ) : null}
+        {/* `?session=ended`: requireStaffSession() (src/lib/session.ts)
+            forced this sign-out because a live database check found the
+            account disabled, deleted, or demoted off every staff role since
+            its token was minted (issue #701) — worth saying, since the
+            visitor did nothing wrong on this device. */}
+        {!error && session === "ended" ? (
+          <FormStatus tone="warning" className="justify-center">
+            {t("account.signIn.sessionEnded")}
           </FormStatus>
         ) : null}
       </form>
