@@ -297,7 +297,21 @@ export default async function GearUnitPage({
                 </li>
               ))}
               {priorAssignments.map((assignment) => (
-                <li key={assignment.id} className="px-4 py-3 sm:px-5"><p className="text-sm font-medium">{t("gear.unit.rentals.importedAssignment", { name: assignment.personName })}</p><p className="mt-0.5 text-sm text-muted">{t("gear.unit.where.window", { from: formatCalendarDate(assignment.assignedFrom, locale), until: formatCalendarDate(assignment.assignedUntil, locale) })}{assignment.statusLabel ? ` · ${assignment.statusLabel}` : ""}</p>{assignment.note ? <p className="mt-0.5 text-xs text-muted">{assignment.note}</p> : null}</li>
+                <li key={assignment.id} className="px-4 py-3 sm:px-5">
+                  <p className="text-sm font-medium">
+                    {t("gear.unit.rentals.importedAssignment", { name: assignment.personName })}
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted">
+                    {t("gear.unit.where.window", {
+                      from: formatCalendarDate(assignment.assignedFrom, locale),
+                      until: formatCalendarDate(assignment.assignedUntil, locale),
+                    })}
+                    {assignment.statusLabel ? ` · ${assignment.statusLabel}` : ""}
+                  </p>
+                  {assignment.note ? (
+                    <p className="mt-0.5 text-xs text-muted">{assignment.note}</p>
+                  ) : null}
+                </li>
               ))}
             </ul>
           </SectionCard>

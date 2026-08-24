@@ -1096,7 +1096,14 @@ export type GearItemDetail = {
   clocks: GearServiceClock[];
   history: GearServiceEventRow[];
   reservations: GearRowReservation[];
-  priorAssignments: Array<{ id: string; assignedFrom: CalendarDate; assignedUntil: CalendarDate; personName: string; statusLabel: string | null; note: string | null }>;
+  priorAssignments: Array<{
+    id: string;
+    assignedFrom: CalendarDate;
+    assignedUntil: CalendarDate;
+    personName: string;
+    statusLabel: string | null;
+    note: string | null;
+  }>;
 };
 
 /**
@@ -1132,7 +1139,27 @@ export async function getGearItemDetail(
     latestServiceClocks(db, shopId, [gearItemId]),
     listGearServiceEvents(db, shopId, gearItemId),
     listItemReservationHistory(db, shopId, gearItemId),
-    db.select({ id: priorGearAssignments.id, assignedFrom: priorGearAssignments.assignedFrom, assignedUntil: priorGearAssignments.assignedUntil, personName: people.fullName, statusLabel: priorGearAssignments.statusLabel, note: priorGearAssignments.note }).from(priorGearAssignments).innerJoin(people, and(eq(people.id, priorGearAssignments.personId), eq(people.shopId, shopId))).where(and(eq(priorGearAssignments.shopId, shopId), eq(priorGearAssignments.gearItemId, gearItemId))).orderBy(desc(priorGearAssignments.assignedFrom), desc(priorGearAssignments.createdAt)),
+    db
+      .select({
+        id: priorGearAssignments.id,
+        assignedFrom: priorGearAssignments.assignedFrom,
+        assignedUntil: priorGearAssignments.assignedUntil,
+        personName: people.fullName,
+        statusLabel: priorGearAssignments.statusLabel,
+        note: priorGearAssignments.note,
+      })
+      .from(priorGearAssignments)
+      .innerJoin(
+        people,
+        and(eq(people.id, priorGearAssignments.personId), eq(people.shopId, shopId)),
+      )
+      .where(
+        and(
+          eq(priorGearAssignments.shopId, shopId),
+          eq(priorGearAssignments.gearItemId, gearItemId),
+        ),
+      )
+      .orderBy(desc(priorGearAssignments.assignedFrom), desc(priorGearAssignments.createdAt)),
   ]);
   return {
     item,

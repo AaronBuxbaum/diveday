@@ -1,6 +1,6 @@
-import { parseCsv } from "./import";
-import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "./gear";
 import { isValidCalendarDate } from "./calendar-date";
+import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "./gear";
+import { parseCsv } from "./import";
 
 export type PreparedGearImportRow = {
   rowNumber: number;
@@ -48,12 +48,21 @@ const aliases = {
   assignedFrom: ["assigned_from", "rental_start", "checkout_date", "from_date", "rented_from"],
   assignedUntil: ["assigned_until", "rental_end", "return_date", "to_date", "rented_until"],
   assignmentStatus: ["assignment_status", "rental_status", "status"],
-  assignmentReference: ["assignment_reference", "rental_reference", "booking_reference", "order_reference"],
+  assignmentReference: [
+    "assignment_reference",
+    "rental_reference",
+    "booking_reference",
+    "order_reference",
+  ],
   assignmentNote: ["assignment_note", "rental_note", "rental_notes"],
 } as const;
 
 function normalize(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function text(value: string | undefined) {
@@ -64,13 +73,20 @@ function text(value: string | undefined) {
 function kind(value: string | null): GearItemKind {
   const normalized = normalize(value ?? "");
   const aliasesByKind: Record<GearItemKind, string[]> = {
-    bcd: ["bcd", "buoyancy_compensator"], regulator: ["regulator", "regs"],
-    wetsuit: ["wetsuit", "exposure_suit"], boots: ["boots", "boot"],
-    mask_fins: ["mask_fins", "mask_and_fins", "mask_fins"], weights: ["weights", "weight"],
-    dive_computer: ["dive_computer", "computer"], gopro: ["gopro", "go_pro"],
-    tank: ["tank", "cylinder"], other: ["other", "misc"],
+    bcd: ["bcd", "buoyancy_compensator"],
+    regulator: ["regulator", "regs"],
+    wetsuit: ["wetsuit", "exposure_suit"],
+    boots: ["boots", "boot"],
+    mask_fins: ["mask_fins", "mask_and_fins", "mask_fins"],
+    weights: ["weights", "weight"],
+    dive_computer: ["dive_computer", "computer"],
+    gopro: ["gopro", "go_pro"],
+    tank: ["tank", "cylinder"],
+    other: ["other", "misc"],
   };
-  return GEAR_KIND_ORDER.find((candidate) => aliasesByKind[candidate].includes(normalized)) ?? "other";
+  return (
+    GEAR_KIND_ORDER.find((candidate) => aliasesByKind[candidate].includes(normalized)) ?? "other"
+  );
 }
 
 function serviceKind(value: string | null): GearServiceKind {
@@ -90,7 +106,9 @@ export function prepareGearImport(csv: string): PreparedGearImport {
   const unmappedColumns: string[] = [];
   headers.forEach((header, index) => {
     if (!header) return;
-    const field = (Object.entries(aliases) as Array<[string, readonly string[]]>).find(([, names]) => names.includes(header))?.[0];
+    const field = (Object.entries(aliases) as Array<[string, readonly string[]]>).find(
+      ([, names]) => names.includes(header),
+    )?.[0];
     if (field && !indexes.has(field)) indexes.set(field, index);
     else if (!field) unmappedColumns.push(grid[0][index] ?? header);
   });
@@ -115,23 +133,38 @@ export function prepareGearImport(csv: string): PreparedGearImport {
     if (hasAssignment && (!assignedFrom || !assignedUntil)) issues.push("assignment_missing_dates");
     if (assignedFrom && !isValidCalendarDate(assignedFrom)) issues.push("invalid_assignment_start");
     if (assignedUntil && !isValidCalendarDate(assignedUntil)) issues.push("invalid_assignment_end");
-    if (assignedFrom && assignedUntil && assignedUntil < assignedFrom) issues.push("assignment_end_before_start");
+    if (assignedFrom && assignedUntil && assignedUntil < assignedFrom)
+      issues.push("assignment_end_before_start");
     if (!label) issues.push("missing_label");
     if (purchasedOn && !isValidCalendarDate(purchasedOn)) issues.push("invalid_purchase_date");
     if (servicedOn && !isValidCalendarDate(servicedOn)) issues.push("invalid_service_date");
     if (nextDueOn && !isValidCalendarDate(nextDueOn)) issues.push("invalid_due_date");
     const divesRaw = value(cells, "nextDueDives");
     const nextDueDives = divesRaw ? Number(divesRaw) : null;
-    if (divesRaw && (!Number.isInteger(nextDueDives) || (nextDueDives ?? 0) <= 0)) issues.push("invalid_due_dives");
+    if (divesRaw && (!Number.isInteger(nextDueDives) || (nextDueDives ?? 0) <= 0))
+      issues.push("invalid_due_dives");
     if (nextDueDives !== null && !nextDueOn) issues.push("dives_need_date");
     return {
-      rowNumber: index + 2, label, kind: kind(value(cells, "kind")), size: value(cells, "size"),
-      serialNumber: value(cells, "serialNumber"), brandModel: value(cells, "brandModel"),
-      purchasedOn, serviceKind: servicedOn ? serviceKind(value(cells, "serviceKind")) : null,
-      servicedOn, nextDueOn, nextDueDives, note: value(cells, "note"),
-      personEmail: personEmail?.toLowerCase() ?? null, personName, assignedFrom, assignedUntil,
-      assignmentStatus: value(cells, "assignmentStatus"), assignmentReference: value(cells, "assignmentReference"),
-      assignmentNote: value(cells, "assignmentNote"), issues,
+      rowNumber: index + 2,
+      label,
+      kind: kind(value(cells, "kind")),
+      size: value(cells, "size"),
+      serialNumber: value(cells, "serialNumber"),
+      brandModel: value(cells, "brandModel"),
+      purchasedOn,
+      serviceKind: servicedOn ? serviceKind(value(cells, "serviceKind")) : null,
+      servicedOn,
+      nextDueOn,
+      nextDueDives,
+      note: value(cells, "note"),
+      personEmail: personEmail?.toLowerCase() ?? null,
+      personName,
+      assignedFrom,
+      assignedUntil,
+      assignmentStatus: value(cells, "assignmentStatus"),
+      assignmentReference: value(cells, "assignmentReference"),
+      assignmentNote: value(cells, "assignmentNote"),
+      issues,
     };
   });
   return { rows, unmappedColumns, fatal: null };

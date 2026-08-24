@@ -45,9 +45,9 @@ import { AddUnitLink } from "./_components/AddUnitLink";
 import {
   checkOutGearReservationAction,
   createGearItemAction,
+  importGearServiceHistoryAction,
   releaseGearReservationFromRegisterAction,
   restoreGearItemAction,
-  importGearServiceHistoryAction,
   returnGearReservationAction,
 } from "./actions";
 
@@ -198,7 +198,13 @@ export default async function GearRegisterPage({
         <EarnedMomentLine className="mt-6">{t("gear.notice.allHome")}</EarnedMomentLine>
       ) : importedMatch ? (
         <StaffNoticeBanner tone="success">
-          {t("gear.notice.imported", { events: importedMatch[1], units: importedMatch[2], skipped: importedMatch[3], assignments: importedMatch[4], assignmentSkipped: importedMatch[5] })}
+          {t("gear.notice.imported", {
+            events: importedMatch[1],
+            units: importedMatch[2],
+            skipped: importedMatch[3],
+            assignments: importedMatch[4],
+            assignmentSkipped: importedMatch[5],
+          })}
         </StaffNoticeBanner>
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
@@ -248,13 +254,11 @@ export default async function GearRegisterPage({
           <EmptyState
             title={t("gear.empty.heading")}
             action={
-              <>
-                <div className="mt-4 flex flex-wrap justify-center gap-3">
-                  <AddUnitLink className={buttonClass()}>
-                    <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
-                  </AddUnitLink>
-                </div>
-              </>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <AddUnitLink className={buttonClass()}>
+                  <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
+                </AddUnitLink>
+              </div>
             }
             className="mt-4"
           />
@@ -464,15 +468,32 @@ export default async function GearRegisterPage({
 
         <SectionCard title={t("gear.import.title")} description={t("gear.import.description")}>
           <p className="text-sm text-muted">{t("gear.import.help")}</p>
-          <a className={buttonClass({ variant: "secondary", className: "mt-4" })} href="/diveday-gear-service-import-template.csv" download>
+          <a
+            className={buttonClass({ variant: "secondary", className: "mt-4" })}
+            href="/diveday-gear-service-import-template.csv"
+            download
+          >
             {t("gear.import.downloadTemplate")}
           </a>
-          <form action={importGearServiceHistoryAction} encType="multipart/form-data" className="mt-5 flex flex-wrap items-end gap-3">
+          <form
+            action={importGearServiceHistoryAction}
+            encType="multipart/form-data"
+            className="mt-5 flex flex-wrap items-end gap-3"
+          >
             <label className="grid gap-1 text-sm font-medium">
               {t("gear.import.file")}
-              <input name="file" type="file" accept=".csv,text/csv" required className={controlClass} />
+              <input
+                name="file"
+                type="file"
+                accept=".csv,text/csv"
+                required
+                className={controlClass}
+              />
             </label>
-            <SubmitButton pendingLabel={t("gear.import.pending")} className={buttonClass({ variant: "secondary" })}>
+            <SubmitButton
+              pendingLabel={t("gear.import.pending")}
+              className={buttonClass({ variant: "secondary" })}
+            >
               {t("gear.import.submit")}
             </SubmitButton>
           </form>

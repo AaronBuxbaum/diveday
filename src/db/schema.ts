@@ -5018,9 +5018,15 @@ export const priorGearAssignments = pgTable(
   "prior_gear_assignments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id").notNull().references(() => shops.id),
-    personId: uuid("person_id").notNull().references(() => people.id),
-    gearItemId: uuid("gear_item_id").notNull().references(() => gearItems.id),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    gearItemId: uuid("gear_item_id")
+      .notNull()
+      .references(() => gearItems.id),
     assignedFrom: date("assigned_from").notNull(),
     assignedUntil: date("assigned_until").notNull(),
     statusLabel: text("status_label"),
@@ -5031,9 +5037,22 @@ export const priorGearAssignments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("prior_gear_assignments_shop_gear_idx").on(table.shopId, table.gearItemId, table.assignedFrom),
-    index("prior_gear_assignments_shop_person_idx").on(table.shopId, table.personId, table.assignedFrom),
-    uniqueIndex("prior_gear_assignments_shop_dedupe_unique").on(table.shopId, table.personId, table.gearItemId, table.dedupeKey),
+    index("prior_gear_assignments_shop_gear_idx").on(
+      table.shopId,
+      table.gearItemId,
+      table.assignedFrom,
+    ),
+    index("prior_gear_assignments_shop_person_idx").on(
+      table.shopId,
+      table.personId,
+      table.assignedFrom,
+    ),
+    uniqueIndex("prior_gear_assignments_shop_dedupe_unique").on(
+      table.shopId,
+      table.personId,
+      table.gearItemId,
+      table.dedupeKey,
+    ),
     check("prior_gear_assignments_window", sql`${table.assignedUntil} >= ${table.assignedFrom}`),
   ],
 );
