@@ -534,17 +534,30 @@ describe("calculateReadiness", () => {
     ).toContainEqual(expect.objectContaining({ code: "payment_refunded" }));
   });
 
-  it.each(["paid", "deposit_paid", "waived"] as const)("clears payment when %s", (status) => {
-    expect(
-      calculateReadiness({
-        requirement: paymentRequirement,
-        waiver: signedWaiver,
-        certifications: [certification()],
-        paymentStatus: status,
-        now,
-      }),
-    ).toEqual({ status: "ready", blockers: [] });
-  });
+  /**
+   * `partly_refunded` is in here deliberately, and it is the case worth
+   * stating out loud: the commonest partial refund there is happens *after*
+   * weather cuts a boat short, and the second commonest hands back a fare
+   * while keeping a non-refundable fee. Either way the shop is still holding
+   * real money against that seat, exactly as with `deposit_paid`. Had the new
+   * status been added to the column without being added here, every diver a
+   * shop showed that kindness to would have turned up blocked at the next
+   * roll call (issue #699).
+   */
+  it.each(["paid", "deposit_paid", "partly_refunded", "waived"] as const)(
+    "clears payment when %s",
+    (status) => {
+      expect(
+        calculateReadiness({
+          requirement: paymentRequirement,
+          waiver: signedWaiver,
+          certifications: [certification()],
+          paymentStatus: status,
+          now,
+        }),
+      ).toEqual({ status: "ready", blockers: [] });
+    },
+  );
 
   it("ignores payment when the trip does not require it", () => {
     expect(

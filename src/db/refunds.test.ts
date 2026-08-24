@@ -657,6 +657,37 @@ describe("refundBookingOnShopCancellation", () => {
     expect(trail.some((event) => event.operation === "cancellation_refund")).toBe(false);
   });
 
+  it("still owes a part-refunded seat the rest of its money", async () => {
+    // The regression: `partly_refunded` was added to the boarding gate and the
+    // revenue sums but not to this predicate, so a seat holding real money
+    // answered `unpaid` — and `shopCancellationPaymentStory` turned that into
+    // "none", telling a diver who had paid $180 and been handed $30 back that
+    // they were never charged, while the other $150 stayed with the shop
+    // (issue #699 security review).
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(48);
+    const heldCents = REEF_PRICE_CENTS - 3_000;
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "partly_refunded",
+      currency: "usd",
+      amountCents: heldCents,
+      provider: "stripe",
+      providerRef: "re_goodwill",
+    });
+
+    const outcome = await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded", refundId: "re_rest" }, [], capturedCents),
+    );
+
+    // What comes back is what the seat still holds, never the original fare.
+    expect(outcome).toEqual({ status: "refunded", amountCents: heldCents });
+    expect(shopCancellationPaymentStory(outcome)).not.toBe("none");
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("refunded");
+  });
+
   it("hands a counter (non-Stripe) payment to staff and leaves the money where it is", async () => {
     const { db, shop, bookingId } = await paidBookingContext(48);
     await setBookingPayment(db, {
@@ -779,6 +810,31 @@ describe("listOwedShopCancellationRefunds", () => {
     expect(party).toMatchObject({ depositOnly: false, amountCents: REEF_PRICE_CENTS });
     expect(party?.diverName).toMatch(/Pat Party|Sam Second/);
     expect(party?.tripTitle).toContain("Two-Tank Reef");
+  });
+
+  it("lists a part-refunded seat, which still holds the rest of its money", async () => {
+    // Same omission as the predicate above, one layer out: a seat invisible
+    // here reaches neither the Orders-index owed panel nor Today's "now" row,
+    // so nobody is ever told the shop still owes it (issue #699 security
+    // review).
+    const { db, shop, bookingIds } = await cancelledDepartureContext();
+    const heldCents = REEF_PRICE_CENTS - 3_000;
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: bookingIds[0],
+      status: "partly_refunded",
+      currency: "usd",
+      amountCents: heldCents,
+      provider: "stripe",
+      providerRef: "re_goodwill",
+    });
+
+    const owed = await listOwedShopCancellationRefunds(db, shop.id);
+
+    expect(owed.map((row) => row.bookingId)).toContain(bookingIds[0]);
+    expect(owed.find((row) => row.bookingId === bookingIds[0])).toMatchObject({
+      amountCents: heldCents,
+    });
   });
 
   it("drops a seat the moment its money actually goes back", async () => {

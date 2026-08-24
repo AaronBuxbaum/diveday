@@ -47,6 +47,7 @@ const PAYMENT_KEY: Record<PaymentStatus, StaffMessageKey> = {
   deposit_paid: "divers.shared.paymentStatus.depositPaid",
   paid: "divers.shared.paymentStatus.paid",
   waived: "divers.shared.paymentStatus.waived",
+  partly_refunded: "divers.shared.paymentStatus.partlyRefunded",
   refunded: "divers.shared.paymentStatus.refunded",
 };
 

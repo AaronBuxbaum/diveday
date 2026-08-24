@@ -135,7 +135,11 @@ function OrderRow({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {canRefund && order.status === "paid" ? (
+        {/* `partly_refunded` too: the remainder is still refundable, and
+            `refundOrder` accepts both. Gating on `paid` alone made the button
+            vanish from this door the moment a first partial landed, leaving
+            the order page as the only way to send back the rest (issue #699). */}
+        {canRefund && (order.status === "paid" || order.status === "partly_refunded") ? (
           <RefundButton
             orderId={order.id}
             shopSlug={shopSlug}

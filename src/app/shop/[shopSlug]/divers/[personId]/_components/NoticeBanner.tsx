@@ -177,6 +177,15 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "divers.notices.refundInProgress",
   },
+  // Stripe already paid out on an attempt whose local write never landed. Like
+  // the one above this is "don't press again" rather than "it failed" — and for
+  // the same reason it must not read as a failure: a retry issues a *second*
+  // real reversal (issue #699 security review).
+  "refund-needs-reconciliation": {
+    form: "payments",
+    tone: "warning",
+    key: "divers.notices.refundNeedsReconciliation",
+  },
   "demo-disabled": { form: "payments", tone: "warning", key: "divers.notices.demoDisabled" },
   "not-authorized-refund": {
     form: "payments",

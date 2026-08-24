@@ -51,10 +51,12 @@ import { at } from "./seed-clock";
 type SeedOrderPlan = {
   /** Index into the seeded customer cast — whose order this is. */
   customer: number;
-  status: "open" | "paid" | "void" | "uncollectible" | "refunded";
+  status: "open" | "paid" | "void" | "uncollectible" | "partly_refunded" | "refunded";
   totalCents: number;
   /** What has actually been collected. Below the total on a part-paid order. */
   paidCents: number;
+  /** What has gone back, for a partial. Defaults to the whole total on `refunded`. */
+  refundedCents?: number;
   daysAgo: number;
   description: string;
   lines: {
@@ -129,6 +131,23 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 18_000,
     daysAgo: 17,
     description: "Two-tank charter — part settled at the desk",
+    lines: [
+      { kind: "trip_fee", description: "Two-tank charter", quantity: 2, unitAmountCents: 12_000 },
+    ],
+  },
+  // Partly refunded — a boat cut short by weather, half the dives done, half
+  // the money back. The commonest partial there is, and the one a shop most
+  // needs to see modelled: the order still shows money held, the diver is
+  // still boardable, and the month's revenue counts what was kept (issue
+  // #699).
+  {
+    customer: 14,
+    status: "partly_refunded",
+    totalCents: 24_000,
+    paidCents: 12_000,
+    refundedCents: 12_000,
+    daysAgo: 9,
+    description: "Two-tank charter — second dive blown out, half returned",
     lines: [
       { kind: "trip_fee", description: "Two-tank charter", quantity: 2, unitAmountCents: 12_000 },
     ],
@@ -259,16 +278,28 @@ export async function seedOrders(
         status: plan.status,
         currency: "usd",
         totalCents: plan.totalCents,
-        amountPaidCents: plan.paidCents,
+        // Zero once it is all back, because that is the invariant `refundOrder`
+        // maintains and the order tests assert: a fully refunded order holds
+        // nothing. The seed was writing the original figure, which the new
+        // "Refunded / Still held" pair on the detail page rendered literally —
+        // a fully refunded order claiming to be sitting on the money it had
+        // just returned (CodeRabbit review on PR #949).
+        amountPaidCents: plan.status === "refunded" ? 0 : plan.paidCents,
+        refundedCents: plan.refundedCents ?? (plan.status === "refunded" ? plan.totalCents : 0),
         description: plan.description,
         stripeAccountId: "acct_demo",
         stripeCustomerId: `cus_demo_${shopId}_state_${index}`,
         stripeInvoiceId: `in_demo_${shopId}_state_${index}`,
         finalizedAt: raisedAt,
-        paidAt: plan.status === "paid" || plan.status === "refunded" ? settledAt : null,
+        paidAt:
+          plan.status === "paid" || plan.status === "refunded" || plan.status === "partly_refunded"
+            ? settledAt
+            : null,
         voidedAt: plan.status === "void" ? settledAt : null,
         refundedAt:
-          plan.status === "refunded" ? new Date(settledAt.getTime() + 36 * 60 * 60 * 1000) : null,
+          plan.status === "refunded" || plan.status === "partly_refunded"
+            ? new Date(settledAt.getTime() + 36 * 60 * 60 * 1000)
+            : null,
         createdAt: raisedAt,
         updatedAt: settledAt,
       },

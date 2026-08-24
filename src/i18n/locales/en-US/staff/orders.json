@@ -48,6 +48,7 @@
       "paid": "Paid",
       "void": "Void",
       "uncollectible": "Uncollectible",
+      "partlyRefunded": "Partly refunded",
       "refunded": "Refunded"
     },
     "kind": {
@@ -67,6 +68,9 @@
     "voidOrder": "Void order",
     "voiding": "Voiding…",
     "refundPayment": "Refund payment",
+    "refundedSoFar": "Refunded",
+    "stillHeld": "Still held",
+    "refundAmountLabel": "Refund ({currency})",
     "refunding": "Refunding…",
     "notice": {
       "refreshed": "Status refreshed from Stripe.",
@@ -74,8 +78,11 @@
       "voided": "Order voided.",
       "voidFailed": "Couldn't void this order.",
       "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
+      "refundInvalidAmount": "That refund amount isn't one this order can give back. Enter an amount up to what's still held.",
+      "partlyRefunded": "Part of this payment is on its way back. The rest is still with you, and the trip still shows as paid for this diver.",
       "refundFailed": "Couldn't refund this order.",
       "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
+      "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more — this order is on the stuck payments list.",
       "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "demoDisabled": "This is a demo order — it can't be changed.",
       "fallback": "Something changed on this order — the details below are current."

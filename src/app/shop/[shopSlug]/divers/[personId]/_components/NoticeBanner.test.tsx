@@ -200,6 +200,10 @@ describe("resolveDiverNotice", () => {
     // (PAY-L3) — a warning beside the payments form, never a page banner.
     expect(resolve("refund-in-progress")?.form).toBe("payments");
     expect(resolve("refund-in-progress")?.tone).toBe("warning");
+    // Warning, never danger: a refund Stripe already paid out must not read as
+    // a failure, which is an invitation to press again (issue #699).
+    expect(resolve("refund-needs-reconciliation")?.form).toBe("payments");
+    expect(resolve("refund-needs-reconciliation")?.tone).toBe("warning");
     expect(resolve("booked")?.form).toBe("book-activity");
     expect(resolve("course-min-age")?.form).toBe("book-activity");
     expect(resolve("not-authorized-delete")?.form).toBe("remove");

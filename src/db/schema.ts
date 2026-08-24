@@ -2477,6 +2477,17 @@ export const paymentStatus = pgEnum("payment_status", [
   "deposit_paid",
   "paid",
   "waived",
+  /**
+   * Money came back but not all of it — the shop still holds some (issue
+   * #699). `amount_cents` is what it still holds, on the same "what is
+   * collected right now" basis a full refund already used when it wrote zero.
+   *
+   * **This clears the boarding gate.** It is in `PAYMENT_CLEARED`
+   * (`src/lib/readiness.ts`) beside `deposit_paid` for the same reason: part
+   * of the fare is real money, and a shop that hands back half after weather
+   * cuts a boat short must not thereby make that diver unable to board.
+   */
+  "partly_refunded",
   "refunded",
 ]);
 
@@ -2994,6 +3005,13 @@ export const orderStatus = pgEnum("order_status", [
   "paid",
   "void",
   "uncollectible",
+  /**
+   * Part of what was captured has been sent back and part is still held
+   * (issue #699). Distinct from `refunded`, which means nothing is left:
+   * `amount_paid_cents` is still positive here and still counts as revenue,
+   * and a further refund of the remainder is still allowed.
+   */
+  "partly_refunded",
   "refunded",
 ]);
 
@@ -3047,6 +3065,22 @@ export const orders = pgTable(
     currency: text("currency").notNull(),
     totalCents: integer("total_cents").notNull(),
     amountPaidCents: integer("amount_paid_cents").notNull().default(0),
+    /**
+     * The running total sent back, in minor units — the sum of every refund
+     * this order has had, and never reset (issue #699).
+     *
+     * `amount_paid_cents` is the money still held and falls as this rises, so
+     * the two together are the whole story: gross captured is their sum. It
+     * exists because `amount_paid_cents` alone cannot tell a partly-refunded
+     * $200 order from a $100 order that was always $100, which is a
+     * distinction an owner reading a refund history needs and the revenue
+     * figure does not.
+     *
+     * Incremented by the amount **Stripe reports refunding**, never by what
+     * was asked for: Stripe is the authority on what actually moved (ADR
+     * 20260806-stale-quote-and-refund-lock).
+     */
+    refundedCents: integer("refunded_cents").notNull().default(0),
     description: text("description"),
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeCustomerId: text("stripe_customer_id").notNull(),
@@ -3074,6 +3108,7 @@ export const orders = pgTable(
     index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
+    check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
   ],
 );
 

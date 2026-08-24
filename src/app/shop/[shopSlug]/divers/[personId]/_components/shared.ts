@@ -40,6 +40,7 @@ export const PAYMENT_STATUS_KEYS: Record<PaymentStatus, StaffMessageKey> = {
   deposit_paid: "divers.shared.paymentStatus.depositPaid",
   paid: "divers.shared.paymentStatus.paid",
   waived: "divers.shared.paymentStatus.waived",
+  partly_refunded: "divers.shared.paymentStatus.partlyRefunded",
   refunded: "divers.shared.paymentStatus.refunded",
 };
 
@@ -62,6 +63,10 @@ export const PAYMENT_STATUS_TONES: Record<PaymentStatus, BadgeTone> = {
   deposit_paid: "primary",
   paid: "success",
   waived: "neutral",
+  // Warning, like `refunded` and like the order half of the same question:
+  // money went back out, and how much is left does not change what a staffer
+  // reconciling the day needs to notice (issue #699).
+  partly_refunded: "warning",
   refunded: "warning",
 };
 

@@ -934,7 +934,9 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
       ? "refunded"
       : outcome.status === "in_progress"
         ? "refund-in-progress"
-        : "refund-failed";
+        : outcome.status === "needs_reconciliation"
+          ? "refund-needs-reconciliation"
+          : "refund-failed";
   revalidateAndRedirect(base, backTo(base, notice, "payments"));
 }
 

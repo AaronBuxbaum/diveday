@@ -5,6 +5,7 @@ import { cancelBooking, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { getReadyPageData } from "./ready";
 import { bookings } from "./schema";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -69,6 +70,37 @@ describe("getReadyPageData", () => {
     const data = await getReadyPageData(db, bookingId);
     expect(data?.canCancelBooking).toBe(true);
     expect(data?.cancelPreview).toBe("unpaid");
+  });
+
+  // Both halves of the same omission. `partly_refunded` settles a seat and it
+  // captures one, and it was absent from `ready.ts`'s `settled` and `captured`
+  // alike — so this page invited a diver who had already paid, and been handed
+  // part of it back, to pay the full fare a second time, while telling them a
+  // cancellation would return nothing (issue #699 security review). The URL is
+  // shared by design, so anyone holding it could have done it.
+  it("never offers pay again on a seat the shop has part-refunded", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await upsertShopStripeAccount(db, shop.id, "acct_ready_partial");
+    await setShopStripeAccountStatus(db, "acct_ready_partial", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "partly_refunded",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "re_goodwill",
+    });
+
+    const data = await getReadyPageData(db, bookingId);
+
+    expect(data?.canPay).toBe(false);
+    // And the money it still holds is money a cancellation would return.
+    expect(data?.cancelPreview).not.toBe("unpaid");
   });
 
   it("withdraws the cancel once the seat is checked in", async () => {
