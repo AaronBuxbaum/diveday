@@ -77,10 +77,22 @@ async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string)
   return shop?.isDemo ?? false;
 }
 
+/**
+ * Every action on this page narrows the posted `orderId` with `uuidParam`
+ * before it can reach `eq(orders.id, $1)`.
+ *
+ * Postgres raises on a malformed uuid literal rather than returning no rows,
+ * so a hand-posted `orderId=abc` was an unhandled **500** where each action's
+ * own `not_found` refusal belongs two lines later — the same failure the
+ * dynamic-segment guard (`scripts/check-uuid-segments.mjs`) exists to stop on
+ * routes, on a surface that moves money. The sibling refund door in
+ * `divers/[personId]/actions.ts` already did this; here the money action was
+ * the outlier (issue #699 security review).
+ */
 async function refreshAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const orderId = String(formData.get("orderId") ?? "");
+  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (await isDemoShop(db, session.user.shopId)) {
@@ -94,7 +106,7 @@ async function refreshAction(formData: FormData) {
 async function voidAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const orderId = String(formData.get("orderId") ?? "");
+  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   if (await isDemoShop(db, session.user.shopId)) {
@@ -108,7 +120,7 @@ async function voidAction(formData: FormData) {
 async function refundAction(formData: FormData) {
   "use server";
   const session = await requireStaffSession();
-  const orderId = String(formData.get("orderId") ?? "");
+  const orderId = uuidParam(String(formData.get("orderId") ?? "")) ?? "";
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   // Money leaving the account is owner/manager work, re-checked against live
@@ -167,7 +179,12 @@ async function refundAction(formData: FormData) {
         ? "refund-in-progress"
         : outcome.status === "invalid_amount"
           ? "refund-invalid-amount"
-          : "refund-failed";
+          : // Stripe already moved money on an earlier attempt whose local
+            // write never landed. Pressing again would reverse more, so this
+            // says so and points at the stuck-operations panel instead.
+            outcome.status === "needs_reconciliation"
+            ? "refund-needs-reconciliation"
+            : "refund-failed";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }
 
@@ -183,6 +200,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "refund-invalid-amount": { tone: "danger", key: "orders.detail.notice.refundInvalidAmount" },
   "refund-failed": { tone: "danger", key: "orders.detail.notice.refundFailed" },
   "refund-in-progress": { tone: "warning", key: "orders.detail.notice.refundInProgress" },
+  "refund-needs-reconciliation": {
+    tone: "warning",
+    key: "orders.detail.notice.refundNeedsReconciliation",
+  },
   "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
   "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
 };

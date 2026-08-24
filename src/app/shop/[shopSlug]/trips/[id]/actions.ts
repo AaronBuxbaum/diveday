@@ -65,6 +65,7 @@ import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
@@ -1019,7 +1020,7 @@ async function bookingRefundMayBeOwed(
   bookingId: string,
 ): Promise<boolean> {
   const payment = await getBookingPayment(db, shopId, bookingId);
-  return payment?.status === "paid" || payment?.status === "deposit_paid";
+  return isCapturedPaymentStatus(payment?.status);
 }
 
 /**
@@ -1274,7 +1275,16 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // selectable, so a captain looking at a waived seat can submit `waived`
   // unchanged. Nothing is decided by a tap that changes nothing, and refusing
   // it would be a confusing refusal rather than a protection.
-  if (status.success && current?.status === status.data) {
+  //
+  // Compared against the **raw** submitted value rather than the parsed one.
+  // `paymentStatusSchema` deliberately omits `partly_refunded` — no dropdown
+  // may move money — but the control still renders the booking's current
+  // status as an option, so on a part-refunded seat the unchanged submit
+  // failed to parse, missed this branch, and dead-ended at `?notice=invalid`:
+  // an unexplained refusal on a money row for a tap that changed nothing
+  // (issue #699 security review).
+  const submitted = String(formData.get("status") ?? "");
+  if (current?.status !== undefined && current.status === submitted) {
     revalidateAndRedirect(back, noticeUrl(back, "payment", { bid: bookingId }));
   }
   const decidesAboutMoney =

@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
+import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb } from "./client";
 import {
@@ -70,7 +71,7 @@ export async function refundBookingOnCancellation(
   if (!row) return { status: "failed" };
 
   const payment = await getBookingPayment(db, input.shopId, input.bookingId);
-  if (!payment || (payment.status !== "paid" && payment.status !== "deposit_paid")) {
+  if (!isCapturedPaymentStatus(payment?.status)) {
     return { status: "unpaid" };
   }
 
@@ -202,7 +203,7 @@ export async function refundBookingOnShopCancellation(
 
   const payment = await getBookingPayment(db, input.shopId, input.bookingId);
   if (payment?.status === "refunded") return { status: "already_refunded" };
-  if (!payment || (payment.status !== "paid" && payment.status !== "deposit_paid")) {
+  if (!isCapturedPaymentStatus(payment?.status)) {
     return { status: "unpaid" };
   }
 
@@ -384,7 +385,7 @@ export async function listOwedShopCancellationRefunds(
     .where(
       and(
         eq(bookingPayments.shopId, shopId),
-        inArray(bookingPayments.status, ["paid", "deposit_paid"]),
+        inArray(bookingPayments.status, [...capturedPaymentStatuses]),
         eq(trips.status, "cancelled"),
         // The forfeit carve-out — see the doc comment above.
         ne(bookings.status, "cancelled"),

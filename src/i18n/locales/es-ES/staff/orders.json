@@ -80,6 +80,7 @@
       "partlyRefunded": "Parte de este pago ya va de vuelta. El resto sigue contigo y la salida sigue apareciendo como pagada para este buceador.",
       "refundFailed": "No se pudo reembolsar este pedido.",
       "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
+      "refundNeedsReconciliation": "Stripe ya envió un reembolso de este pedido que no llegamos a registrar. Compruébalo en tu panel de Stripe antes de enviar más — este pedido está en la lista de pagos atascados.",
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
       "demoDisabled": "Este es un pedido de demostración — no se puede modificar.",
       "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."

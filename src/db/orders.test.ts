@@ -1541,6 +1541,79 @@ describe("orders — a partial refund", () => {
     });
   });
 
+  // Both of these are the same defect seen from two sides: `refundOrder` has
+  // to commit its claim before calling Stripe, so the order snapshot it holds
+  // afterwards is arbitrarily old — and writing figures derived from it as
+  // *absolutes* made `applyOrderUpdate`'s own `FOR UPDATE` decorative.
+  it("adds up two refunds that overlap, instead of the later erasing the earlier", async () => {
+    const { db, shop, order } = await paidOrder();
+    // A second refund lands while this one is at Stripe — exactly the window
+    // the claim's lock cannot cover, since it commits before the network call.
+    const racing = fakeInvoicing({
+      async refundInvoice(_account, _invoice, _key, amountCents): Promise<RefundInvoiceResult> {
+        await db
+          .update(orders)
+          .set({ status: "partly_refunded", amountPaidCents: 15_000, refundedCents: 7_000 })
+          .where(eq(orders.id, order.id));
+        return { status: "refunded", refundId: "re_racing", amountCents };
+      },
+    });
+
+    const outcome = await refundOrder(db, shop.id, order.id, racing, { amountCents: 5_000 });
+
+    if (outcome.status !== "refunded") throw new Error(`expected a refund, got ${outcome.status}`);
+    // 7,000 already back + 5,000 now = 12,000, against the row as it stands —
+    // not 5,000 computed from a snapshot that never saw the other refund.
+    expect(outcome.order).toMatchObject({
+      status: "partly_refunded",
+      refundedCents: 12_000,
+      amountPaidCents: 10_000,
+    });
+  });
+
+  it("refuses rather than reverses again when Stripe already paid out on a stalled attempt", async () => {
+    const { db, shop, order } = await paidOrder();
+    // An attempt that reached Stripe and died before its local write: the
+    // intent still reads `started`, and carries the refund id as durable
+    // evidence money moved.
+    const stalled = await startPaymentOperation(db, {
+      shopId: shop.id,
+      kind: "refund",
+      orderId: order.id,
+    });
+    await db
+      .update(paymentOperationIntents)
+      .set({ stripeObjectId: "re_already_sent" })
+      .where(eq(paymentOperationIntents.id, stalled.id));
+
+    const asked: number[] = [];
+    const counting = fakeInvoicing({
+      async refundInvoice(_a, _i, _k, amountCents): Promise<RefundInvoiceResult> {
+        asked.push(amountCents ?? -1);
+        return { status: "refunded", refundId: "re_second", amountCents };
+      },
+    });
+
+    // Past the horizon, so the ordinary in-progress guard has let go — the
+    // bound is read off the *database's* clock, which the frozen app clock
+    // never reaches (see `dbNow`, and the sibling abandoned-intent test above).
+    const outcome = await refundOrder(db, shop.id, order.id, counting, {
+      staleBefore: await dbNowPlus(db, 1_000),
+      amountCents: 5_000,
+    });
+
+    // A full refund had Stripe's own over-refund rejection behind it. A
+    // partial leaves refundable balance on the charge, so nothing but this
+    // stops a second real payout (issue #699 security review).
+    expect(outcome).toEqual({ status: "needs_reconciliation" });
+    expect(asked).toEqual([]);
+    expect((await getOrder(db, shop.id, order.id))?.order).toMatchObject({
+      status: "paid",
+      amountPaidCents: 22_000,
+      refundedCents: 0,
+    });
+  });
+
   it("passes the amount to Stripe, and passes nothing at all for a full refund", async () => {
     const seen: (number | undefined)[] = [];
     const watching = () =>

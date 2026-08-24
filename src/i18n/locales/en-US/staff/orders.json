@@ -80,6 +80,7 @@
       "partlyRefunded": "Part of this payment is on its way back. The rest is still with you, and the trip still shows as paid for this diver.",
       "refundFailed": "Couldn't refund this order.",
       "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
+      "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more — this order is on the stuck payments list.",
       "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "demoDisabled": "This is a demo order — it can't be changed.",
       "fallback": "Something changed on this order — the details below are current."

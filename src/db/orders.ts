@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor } from "@/lib/money";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
@@ -577,6 +577,23 @@ async function applyOrderUpdate(
   patch: {
     status: OrderStatus;
     amountPaidCents?: number;
+    /**
+     * Minor units coming back on **this** refund, applied as a delta against
+     * the row this transaction locks — never a figure computed from a snapshot
+     * the caller read earlier.
+     *
+     * `refundOrder` has to commit its claim before calling Stripe, so by the
+     * time it knows what Stripe reversed, the snapshot it captured under the
+     * claim's lock is arbitrarily old. Writing `snapshot.refundedCents + n` as
+     * an absolute would make the lock here decorative: two refunds either side
+     * of the five-minute stale horizon would each write from their own
+     * snapshot, and the later write would erase the earlier refund from the
+     * ledger — leaving `refunded_cents` understating what actually left and
+     * the local over-refund check permitting more against phantom balance
+     * (issue #699 security review). Given this, the status is derived here too:
+     * only the locked row knows whether anything is left.
+     */
+    reverseCents?: number;
     /** Absolute new running total, not a delta — see `orders.refunded_cents`. */
     refundedCents?: number;
     hostedInvoiceUrl?: string | null;
@@ -587,12 +604,24 @@ async function applyOrderUpdate(
     const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
     if (!current) return null;
 
-    if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(patch.status)) {
+    // Resolved against `current`, inside the lock. Clamped so a provider
+    // reporting more than the order still holds cannot drive
+    // `amount_paid_cents` through its non-negative check constraint.
+    const reversedCents =
+      patch.reverseCents === undefined
+        ? null
+        : Math.min(patch.reverseCents, current.amountPaidCents);
+    const remainingCents =
+      reversedCents === null ? current.amountPaidCents : current.amountPaidCents - reversedCents;
+    const status: OrderStatus =
+      reversedCents === null ? patch.status : remainingCents > 0 ? "partly_refunded" : "refunded";
+
+    if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(status)) {
       console.error("applyOrderUpdate: refused an illegal order status transition", {
         orderId: current.id,
         shopId: current.shopId,
         from: current.status,
-        to: patch.status,
+        to: status,
       });
       return current;
     }
@@ -601,19 +630,25 @@ async function applyOrderUpdate(
     const [updated] = await tx
       .update(orders)
       .set({
-        status: patch.status,
-        amountPaidCents: patch.amountPaidCents ?? current.amountPaidCents,
-        refundedCents: patch.refundedCents ?? current.refundedCents,
+        status,
+        amountPaidCents:
+          reversedCents === null
+            ? (patch.amountPaidCents ?? current.amountPaidCents)
+            : remainingCents,
+        refundedCents:
+          reversedCents === null
+            ? (patch.refundedCents ?? current.refundedCents)
+            : current.refundedCents + reversedCents,
         hostedInvoiceUrl: patch.hostedInvoiceUrl ?? current.hostedInvoiceUrl,
         invoicePdfUrl: patch.invoicePdfUrl ?? current.invoicePdfUrl,
-        paidAt: patch.status === "paid" ? (current.paidAt ?? now) : current.paidAt,
-        voidedAt: patch.status === "void" ? (current.voidedAt ?? now) : current.voidedAt,
+        paidAt: status === "paid" ? (current.paidAt ?? now) : current.paidAt,
+        voidedAt: status === "void" ? (current.voidedAt ?? now) : current.voidedAt,
         // Stamped on the *first* money to come back, whether or not it was all
         // of it — the question this column answers is "when did this order
         // start being reversed", and a partly-refunded order with a null
         // `refunded_at` would read as untouched.
         refundedAt:
-          patch.status === "refunded" || patch.status === "partly_refunded"
+          status === "refunded" || status === "partly_refunded"
             ? (current.refundedAt ?? now)
             : current.refundedAt,
         updatedAt: now,
@@ -756,11 +791,21 @@ export async function voidOrder(
  */
 export type RefundOrderOutcome =
   | { status: "refunded"; order: Order }
-  | { status: "not_found" | "not_paid" | "in_progress" | "invalid_amount" | "failed" };
+  | {
+      status:
+        | "not_found"
+        | "not_paid"
+        | "in_progress"
+        | "invalid_amount"
+        | "needs_reconciliation"
+        | "failed";
+    };
 
 type OrderRefundClaim =
   | { status: "claimed"; order: Order; intent: PaymentOperationIntent }
-  | { status: "not_found" | "not_paid" | "in_progress" | "invalid_amount" };
+  | {
+      status: "not_found" | "not_paid" | "in_progress" | "invalid_amount" | "needs_reconciliation";
+    };
 
 /**
  * Whether a requested partial refund is a real amount of money this order can
@@ -870,6 +915,35 @@ async function claimOrderRefund(
       .limit(1);
     if (live) return { status: "in_progress" };
 
+    // A *stale* started refund is ordinarily abandoned work and is ignored, so
+    // the button keeps working after a crash. One carrying a `stripeObjectId`
+    // is not: that column is written the moment Stripe confirms a refund
+    // exists, so it is durable evidence money already moved and only the local
+    // write after it failed. Minting a fresh intent for it would mint a fresh
+    // idempotency key (deliberately, PAY-C1) and Stripe would accept a second
+    // reversal against the balance still on the charge.
+    //
+    // For a full refund this could not happen — Stripe's own over-refund
+    // rejection caught it. A partial leaves refundable balance behind, which
+    // removes that backstop and is what makes this check load-bearing rather
+    // than belt-and-braces (issue #699 security review). It belongs on the
+    // stuck-payment-operations panel, where a human reconciles it against the
+    // Stripe dashboard, never behind a button that reverses more money.
+    const [settledByStripe] = await tx
+      .select({ id: paymentOperationIntents.id })
+      .from(paymentOperationIntents)
+      .where(
+        and(
+          eq(paymentOperationIntents.shopId, shopId),
+          eq(paymentOperationIntents.orderId, order.id),
+          eq(paymentOperationIntents.kind, "refund"),
+          eq(paymentOperationIntents.status, "started"),
+          isNotNull(paymentOperationIntents.stripeObjectId),
+        ),
+      )
+      .limit(1);
+    if (settledByStripe) return { status: "needs_reconciliation" };
+
     const intent = await startPaymentOperation(tx, {
       shopId,
       kind: "refund",
@@ -939,18 +1013,21 @@ export async function refundOrder(
   if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
   // Stripe's figure first, the requested one only as a fallback for a provider
   // that reports no amount, and the whole held balance when neither says
-  // otherwise — which is the pre-existing full-refund case, unchanged. Clamped
-  // so a provider answering with more than the order holds cannot drive
-  // `amount_paid_cents` negative through the check constraint.
-  const reversedCents = Math.min(
-    result.amountCents ?? options.amountCents ?? order.amountPaidCents,
-    order.amountPaidCents,
-  );
-  const remainingCents = order.amountPaidCents - reversedCents;
+  // otherwise — which is the pre-existing full-refund case, unchanged.
+  //
+  // Handed over as a **delta**: `order` is the snapshot `claimOrderRefund` read
+  // before the Stripe round trip, and that claim's lock was released when its
+  // transaction committed. `applyOrderUpdate` applies this against the row it
+  // locks itself, and derives the resulting status from what is left there —
+  // so two refunds that straddle the stale horizon add up instead of the later
+  // one erasing the earlier (issue #699 security review). The clamp lives
+  // there too, against the figure that is actually current.
+  const reversedCents = result.amountCents ?? options.amountCents ?? order.amountPaidCents;
   const updated = await applyOrderUpdate(db, order, {
-    status: remainingCents > 0 ? "partly_refunded" : "refunded",
-    amountPaidCents: remainingCents,
-    refundedCents: order.refundedCents + reversedCents,
+    // Overridden inside the lock once `reverseCents` is resolved; named here
+    // so the patch stays a legal `OrderStatus` shape.
+    status: "refunded",
+    reverseCents: reversedCents,
   });
   await resolvePaymentOperation(db, intent.id, {
     status: "succeeded",
