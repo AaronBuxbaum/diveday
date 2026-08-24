@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
+import { capturedPaymentStatuses } from "@/lib/payment-source";
 import {
   type CheckoutProvider,
   checkoutProviderFromEnvironment,
@@ -19,7 +20,14 @@ import {
 } from "./payment-operations";
 import { setBookingPaymentIfNotFinal } from "./payments";
 import type { BookingCheckout } from "./schema";
-import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookingPayments,
+  bookings,
+  courses,
+  trips,
+} from "./schema";
 import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
@@ -92,7 +100,10 @@ export type StartCheckoutInput = {
 
 export type StartCheckoutOutcome =
   | { ok: true; checkout: BookingCheckout; reused: boolean }
-  | { ok: false; reason: "not_connected" | "unpriced" | "invalid" | "checkout_unavailable" };
+  | {
+      ok: false;
+      reason: "not_connected" | "unpriced" | "invalid" | "checkout_unavailable" | "already_paid";
+    };
 
 /**
  * Hand a fresh public booking (or party) a hosted Stripe Checkout on the
@@ -146,6 +157,27 @@ export async function startBookingCheckout(
       ),
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
+
+  // Nothing here may charge a seat the shop has already taken money for. Until
+  // now the only thing standing between a diver and a second full charge was
+  // `canPay` on the /ready page — a UI boolean, on a page reached by a
+  // capability URL that is shared by design. `partly_refunded` is the state
+  // that made that gap reachable (it settles, but was absent from `canPay`
+  // until issue #699's security review), and `paid` was one forgotten
+  // condition away from the same thing. This is the boundary that actually
+  // charges money, so it asks for itself.
+  const settledRows = await db
+    .select({ id: bookingPayments.bookingId })
+    .from(bookingPayments)
+    .where(
+      and(
+        eq(bookingPayments.shopId, input.shopId),
+        inArray(bookingPayments.bookingId, input.bookingIds),
+        inArray(bookingPayments.status, [...capturedPaymentStatuses, "waived"]),
+      ),
+    )
+    .limit(1);
+  if (settledRows.length > 0) return { ok: false, reason: "already_paid" };
 
   // Never trust a gear line for a booking outside this exact party, or a
   // non-positive amount — the caller composes these from a diver's own

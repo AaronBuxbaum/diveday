@@ -36,6 +36,7 @@
       "depositPaid": "Depósito pagado",
       "paid": "Pagado",
       "waived": "Exonerado",
+      "partlyRefunded": "Reembolsado en parte",
       "refunded": "Reembolsado"
     },
     "orderStatus": {
@@ -43,6 +44,7 @@
       "paid": "Pagado",
       "void": "Anulado",
       "uncollectible": "Incobrable",
+      "partlyRefunded": "Reembolsado en parte",
       "refunded": "Reembolsado"
     },
     "cardStatus": {
@@ -335,6 +337,7 @@
     "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
     "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
     "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
+    "refundNeedsReconciliation": "Stripe ya envió un reembolso de este pedido que no llegamos a registrar. Compruébalo en tu panel de Stripe antes de enviar más — este pedido está en la lista de pagos atascados.",
     "demoDisabled": "Este es un pedido de demostración — no se puede reembolsar.",
     "deleted": "Buceador eliminado.",
     "restored": "Buceador restaurado.",

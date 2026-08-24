@@ -264,6 +264,11 @@ export function RosterSection({
       deposit_paid: t("trips.roster.paymentDepositPaid"),
       paid: t("trips.roster.paymentPaid"),
       waived: t("trips.roster.paymentWaived"),
+      // Between `waived` and `refunded` because this object's key order is the
+      // select's option order (`PaymentStatusControl`), and the money states
+      // read low-to-high. It is never *selectable* — no entry in
+      // `PAYMENT_STATUSES_ALL` — only shown when the seat is already in it.
+      partly_refunded: t("trips.roster.paymentPartlyRefunded"),
       refunded: t("trips.roster.paymentRefunded"),
     },
     update: t("trips.roster.paymentUpdate"),
@@ -539,8 +544,18 @@ export function RosterSection({
             // is the exception that keeps faith with the card's own rule that
             // a control never moves out from under the finger that used it —
             // the row a staffer just acted on renders expanded once more.
+            // `partly_refunded` settles the row. The question this asks is
+            // "is there anything left to chase", and a seat that paid in full
+            // and had part of it handed back owes nothing — which is why it
+            // belongs with `paid` and `waived` rather than with `deposit_paid`,
+            // where a balance genuinely is still due. Without it a part-refunded
+            // seat held its roster row open forever, on a departure that was
+            // otherwise ready (CodeRabbit review on PR #949).
             const paymentSettled =
-              !requiresPayment || paymentStatus === "paid" || paymentStatus === "waived";
+              !requiresPayment ||
+              paymentStatus === "paid" ||
+              paymentStatus === "waived" ||
+              paymentStatus === "partly_refunded";
             const settled =
               readiness?.status === "ready" &&
               waiverControl.action === null &&

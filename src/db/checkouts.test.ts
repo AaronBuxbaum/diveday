@@ -386,6 +386,33 @@ describe("startBookingCheckout", () => {
     expect(outcome).toEqual({ ok: false, reason: "invalid" });
   });
 
+  // The boundary that actually charges money asks for itself. Until now the
+  // only thing standing between a diver and a second full charge was `canPay`
+  // on the /ready page — a UI boolean, on a page reached by a capability URL
+  // that is shared by design (issue #699 security review).
+  it.each([
+    ["paid", "paid"],
+    ["a part-refunded seat still holding money", "partly_refunded"],
+    ["a comped seat", "waived"],
+  ] as const)("refuses to charge %s a second time", async (_label, status) => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: bookingIds[0],
+      status,
+      currency: "usd",
+      amountCents: 12_000,
+    });
+
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+
+    expect(outcome).toEqual({ ok: false, reason: "already_paid" });
+  });
+
   it("reuses an open pending checkout instead of minting a second session", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const provider = fakeCheckout();

@@ -1486,3 +1486,296 @@ describe("resendOrderInvoice", () => {
     expect(outcome).toEqual({ status: "not_configured" });
   });
 });
+
+/**
+ * **Half a refund is what a shop actually gives** (issue #699).
+ *
+ * Four ordinary things were impossible while every refund was total: a policy
+ * step rather than a cliff, returning the fare and keeping the non-refundable
+ * fee, releasing one diver out of a party that booked on one shared checkout,
+ * and the goodwill part-refund after weather cuts a boat short. Stripe has
+ * supported partial refunds the whole time; the limit was ours.
+ *
+ * The order is $220 (`lineItems`), so the arithmetic below is readable on
+ * sight.
+ */
+describe("orders — a partial refund", () => {
+  async function paidOrder(invoicing = fakeInvoicing()) {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+    return { db, shop, entry, order: result.order };
+  }
+
+  it("sends back part of the money and leaves the rest with the shop", async () => {
+    const { db, shop, entry, order } = await paidOrder();
+    const refunded = await refundOrder(db, shop.id, order.id, fakeInvoicing(), {
+      amountCents: 5_000,
+    });
+    if (refunded.status !== "refunded")
+      throw new Error(`expected a refund, got ${refunded.status}`);
+    expect(refunded.order).toMatchObject({
+      status: "partly_refunded",
+      amountPaidCents: 17_000,
+      refundedCents: 5_000,
+    });
+    // Stamped on the *first* money to come back, not only on the last.
+    expect(refunded.order.refundedAt).not.toBeNull();
+    // The seat still reads as money-in, at what is left of it.
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      status: "partly_refunded",
+      amountCents: 17_000,
+      providerRef: order.stripeInvoiceId,
+    });
+  });
+
+  // Both of these are the same defect seen from two sides: `refundOrder` has
+  // to commit its claim before calling Stripe, so the order snapshot it holds
+  // afterwards is arbitrarily old — and writing figures derived from it as
+  // *absolutes* made `applyOrderUpdate`'s own `FOR UPDATE` decorative.
+  it("adds up two refunds that overlap, instead of the later erasing the earlier", async () => {
+    const { db, shop, order } = await paidOrder();
+    // A second refund lands while this one is at Stripe — exactly the window
+    // the claim's lock cannot cover, since it commits before the network call.
+    const racing = fakeInvoicing({
+      async refundInvoice(_account, _invoice, _key, amountCents): Promise<RefundInvoiceResult> {
+        await db
+          .update(orders)
+          .set({ status: "partly_refunded", amountPaidCents: 15_000, refundedCents: 7_000 })
+          .where(eq(orders.id, order.id));
+        return { status: "refunded", refundId: "re_racing", amountCents };
+      },
+    });
+
+    const outcome = await refundOrder(db, shop.id, order.id, racing, { amountCents: 5_000 });
+
+    if (outcome.status !== "refunded") throw new Error(`expected a refund, got ${outcome.status}`);
+    // 7,000 already back + 5,000 now = 12,000, against the row as it stands —
+    // not 5,000 computed from a snapshot that never saw the other refund.
+    expect(outcome.order).toMatchObject({
+      status: "partly_refunded",
+      refundedCents: 12_000,
+      amountPaidCents: 10_000,
+    });
+  });
+
+  it("refuses rather than reverses again when Stripe already paid out on a stalled attempt", async () => {
+    const { db, shop, order } = await paidOrder();
+    // An attempt that reached Stripe and died before its local write: the
+    // intent still reads `started`, and carries the refund id as durable
+    // evidence money moved.
+    const stalled = await startPaymentOperation(db, {
+      shopId: shop.id,
+      kind: "refund",
+      orderId: order.id,
+    });
+    await db
+      .update(paymentOperationIntents)
+      .set({ stripeObjectId: "re_already_sent" })
+      .where(eq(paymentOperationIntents.id, stalled.id));
+
+    const asked: number[] = [];
+    const counting = fakeInvoicing({
+      async refundInvoice(_a, _i, _k, amountCents): Promise<RefundInvoiceResult> {
+        asked.push(amountCents ?? -1);
+        return { status: "refunded", refundId: "re_second", amountCents };
+      },
+    });
+
+    // Past the horizon, so the ordinary in-progress guard has let go — the
+    // bound is read off the *database's* clock, which the frozen app clock
+    // never reaches (see `dbNow`, and the sibling abandoned-intent test above).
+    const outcome = await refundOrder(db, shop.id, order.id, counting, {
+      staleBefore: await dbNowPlus(db, 1_000),
+      amountCents: 5_000,
+    });
+
+    // A full refund had Stripe's own over-refund rejection behind it. A
+    // partial leaves refundable balance on the charge, so nothing but this
+    // stops a second real payout (issue #699 security review).
+    expect(outcome).toEqual({ status: "needs_reconciliation" });
+    expect(asked).toEqual([]);
+    expect((await getOrder(db, shop.id, order.id))?.order).toMatchObject({
+      status: "paid",
+      amountPaidCents: 22_000,
+      refundedCents: 0,
+    });
+  });
+
+  it("refreshes a part-refunded order's links without undoing the refund", async () => {
+    // Stripe leaves the invoice `paid` and its `amount_paid` at the full figure
+    // after a refund, so a refresh used to log an illegal transition and drop
+    // the URLs it was pressed for (CodeRabbit review on #949).
+    const { db, shop, order } = await paidOrder();
+    await refundOrder(db, shop.id, order.id, fakeInvoicing(), { amountCents: 5_000 });
+    const stripeSaysPaid = fakeInvoicing({
+      async retrieveInvoice(): Promise<InvoiceLookupResult> {
+        return {
+          status: "ok",
+          invoice: {
+            status: "paid",
+            totalCents: 22_000,
+            amountPaidCents: 22_000,
+            hostedInvoiceUrl: "https://stripe.test/refreshed",
+            invoicePdfUrl: "https://stripe.test/refreshed.pdf",
+          },
+        };
+      },
+    });
+
+    const refreshed = await refreshOrderStatus(db, shop.id, order.id, stripeSaysPaid);
+
+    // The links arrive; the refund is untouched.
+    expect(refreshed).toMatchObject({
+      status: "partly_refunded",
+      amountPaidCents: 17_000,
+      refundedCents: 5_000,
+      hostedInvoiceUrl: "https://stripe.test/refreshed",
+      invoicePdfUrl: "https://stripe.test/refreshed.pdf",
+    });
+  });
+
+  it("passes the amount to Stripe, and passes nothing at all for a full refund", async () => {
+    const seen: (number | undefined)[] = [];
+    const watching = () =>
+      fakeInvoicing({
+        async refundInvoice(_account, _invoice, _key, amountCents): Promise<RefundInvoiceResult> {
+          seen.push(amountCents);
+          return { status: "refunded", refundId: `re_${seen.length}`, amountCents };
+        },
+      });
+    const { db, shop, order } = await paidOrder();
+    await refundOrder(db, shop.id, order.id, watching(), { amountCents: 5_000 });
+    await refundOrder(db, shop.id, order.id, watching());
+    // An absent amount is Stripe's own "all of it" — never the full figure
+    // spelled out, which would be a different request it could reject.
+    expect(seen).toEqual([5_000, undefined]);
+  });
+
+  it("can be refunded again, down to zero, and then refuses", async () => {
+    const { db, shop, entry, order } = await paidOrder();
+    await refundOrder(db, shop.id, order.id, fakeInvoicing(), { amountCents: 20_000 });
+    const rest = await refundOrder(db, shop.id, order.id, fakeInvoicing(), { amountCents: 2_000 });
+    if (rest.status !== "refunded") throw new Error(`expected a refund, got ${rest.status}`);
+    expect(rest.order).toMatchObject({
+      status: "refunded",
+      amountPaidCents: 0,
+      refundedCents: 22_000,
+    });
+    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+      status: "refunded",
+      amountCents: 0,
+    });
+    // Nothing left to give back.
+    expect(await refundOrder(db, shop.id, order.id, fakeInvoicing())).toEqual({
+      status: "not_paid",
+    });
+  });
+
+  it("refuses more than the order still holds, without asking Stripe", async () => {
+    let calls = 0;
+    const counting = fakeInvoicing({
+      async refundInvoice(): Promise<RefundInvoiceResult> {
+        calls += 1;
+        return { status: "refunded", refundId: "re_over" };
+      },
+    });
+    const { db, shop, order } = await paidOrder();
+    expect(await refundOrder(db, shop.id, order.id, counting, { amountCents: 22_001 })).toEqual({
+      status: "invalid_amount",
+    });
+    // And the bound follows the balance down, not the original charge.
+    await refundOrder(db, shop.id, order.id, fakeInvoicing(), { amountCents: 20_000 });
+    expect(await refundOrder(db, shop.id, order.id, counting, { amountCents: 2_001 })).toEqual({
+      status: "invalid_amount",
+    });
+    expect(calls).toBe(0);
+  });
+
+  it.each([
+    ["zero", 0],
+    ["negative", -100],
+    ["fractional", 12.5],
+    ["unparseable", Number.NaN],
+  ])("refuses a %s amount", async (_name, amountCents) => {
+    const { db, shop, order } = await paidOrder();
+    expect(await refundOrder(db, shop.id, order.id, fakeInvoicing(), { amountCents })).toEqual({
+      status: "invalid_amount",
+    });
+  });
+
+  it("records what Stripe says it reversed, not what was asked for", async () => {
+    // Stripe is the authority on what actually moved (ADR
+    // 20260806-stale-quote-and-refund-lock). A disagreement has to land in the
+    // ledger as the truth rather than as silent drift between two systems.
+    const { db, shop, order } = await paidOrder();
+    const refunded = await refundOrder(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({
+        async refundInvoice(): Promise<RefundInvoiceResult> {
+          return { status: "refunded", refundId: "re_short", amountCents: 4_999 };
+        },
+      }),
+      { amountCents: 5_000 },
+    );
+    if (refunded.status !== "refunded")
+      throw new Error(`expected a refund, got ${refunded.status}`);
+    expect(refunded.order).toMatchObject({ refundedCents: 4_999, amountPaidCents: 17_001 });
+  });
+
+  it("cannot be driven negative by a provider claiming more than the order holds", async () => {
+    const { db, shop, order } = await paidOrder();
+    const refunded = await refundOrder(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({
+        async refundInvoice(): Promise<RefundInvoiceResult> {
+          return { status: "refunded", refundId: "re_huge", amountCents: 999_999 };
+        },
+      }),
+      { amountCents: 5_000 },
+    );
+    if (refunded.status !== "refunded")
+      throw new Error(`expected a refund, got ${refunded.status}`);
+    expect(refunded.order).toMatchObject({
+      status: "refunded",
+      amountPaidCents: 0,
+      refundedCents: 22_000,
+    });
+  });
+
+  it("still refuses a second refund racing the first", async () => {
+    // The claim is per *order*, not per amount: two part-refunds are two
+    // reversals and must serialize exactly as two full ones did (PAY-L3).
+    const { db, shop, order } = await paidOrder();
+    let calls = 0;
+    const slow = fakeInvoicing({
+      async refundInvoice(): Promise<RefundInvoiceResult> {
+        calls += 1;
+        return { status: "refunded", refundId: `re_${calls}` };
+      },
+    });
+    const [first, second] = await Promise.all([
+      refundOrder(db, shop.id, order.id, slow, { amountCents: 1_000 }),
+      refundOrder(db, shop.id, order.id, slow, { amountCents: 1_000 }),
+    ]);
+    const outcomes = [first.status, second.status].sort();
+    expect(outcomes).toEqual(["in_progress", "refunded"]);
+    expect(calls).toBe(1);
+  });
+});

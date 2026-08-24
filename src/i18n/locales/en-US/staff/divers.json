@@ -36,6 +36,7 @@
       "depositPaid": "Deposit paid",
       "paid": "Paid",
       "waived": "Waived",
+      "partlyRefunded": "Partly refunded",
       "refunded": "Refunded"
     },
     "orderStatus": {
@@ -43,6 +44,7 @@
       "paid": "Paid",
       "void": "Void",
       "uncollectible": "Uncollectible",
+      "partlyRefunded": "Partly refunded",
       "refunded": "Refunded"
     },
     "cardStatus": {
@@ -335,6 +337,7 @@
     "bookingInvalid": "Add an email and choose an available activity.",
     "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
     "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
+    "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more — this order is on the stuck payments list.",
     "demoDisabled": "This is a demo order — it can't be refunded.",
     "deleted": "Diver deleted.",
     "restored": "Diver restored.",

@@ -3264,6 +3264,41 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "orders-unconfirmed-and-owed", scheme);
       });
 
+      /**
+       * The one order that has given money back and is still holding some.
+       *
+       * `partly_refunded` arrived with the staff partial refund (issue #699)
+       * and had no capture at all: the seeded example sorts onto a later page
+       * of the index, so the only pixel that moved on the whole visual suite
+       * was the pager counting one more order. A new money status, a new badge
+       * tone, and the refund control's amount field — the actual new UI —
+       * photographed nowhere, which is the silent pass the two comments above
+       * were written about.
+       *
+       * Reached through the index's own `?status=` filter rather than a
+       * hardcoded id, because the seeded order's uuid is regenerated on every
+       * seed. This narrows *which order* is on screen, never the page itself —
+       * the surface is captured whole, and the list it lands on is bounded by
+       * the same pager the unfiltered one wears (AGENTS.md's rule is against
+       * shrinking a capture to dodge an unbounded page, which this is not).
+       */
+      test(`a part-refunded order renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/orders?status=partly_refunded");
+        await page
+          .locator('tbody tr a[href*="/orders/"]')
+          .filter({ visible: true })
+          .first()
+          .click();
+        // "Back to diver" for the reason the sibling capture below gives: the
+        // eyebrow text is identical on the list this came from, so waiting on
+        // it resolves instantly against the old page.
+        await page.getByRole("link", { name: "Back to diver" }).waitFor();
+        // The refund control is the point of the capture, so the capture waits
+        // for it rather than for the heading that arrives before it.
+        await page.getByRole("button", { name: "Refund payment" }).waitFor();
+        await capture(page, "order-detail-partly-refunded", scheme);
+      });
+
       // One order in full: the total, and the per-line-item amounts that a
       // literal `$` and a hardcoded `/ 100` used to compose by hand.
       test(`an order's detail renders true to the design (${scheme})`, async ({ page }) => {

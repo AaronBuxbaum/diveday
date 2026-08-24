@@ -72,8 +72,21 @@ export async function canPersonViewShopReports(
 
 /** Bookings that still count as "on the boat" — the roster set, not cancellations. */
 const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
-/** Payment states that represent money actually collected (a deposit is partial, but real). */
-const COLLECTED_PAYMENT_STATUSES = ["paid", "deposit_paid"] as const;
+/**
+ * Payment states that represent money actually collected (a deposit is partial,
+ * but real).
+ *
+ * `partly_refunded` belongs here, and the reason is the whole of why this
+ * constant is safe: what is summed is `amount_cents`, and that column holds
+ * **what the shop still has**, not what it once charged. A partial refund
+ * lowers it by exactly the amount that went back (`applyOrderUpdate`,
+ * src/db/orders.ts), so revenue subtracts the refunded money by arithmetic
+ * rather than by inferring it from a status word. Leaving the state out
+ * instead would have taken the *retained* portion to zero as well — a shop
+ * that handed back $30 of a $200 charge would have reported $0 for that seat
+ * (issue #699).
+ */
+const COLLECTED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] as const;
 
 /**
  * The month's numbers, anchored to trips that *departed* in `[startUtc, endUtc)`.
@@ -160,8 +173,10 @@ export async function getMonthlyReport(
     .groupBy(trips.id);
 
   // Money collected on this month's trips. The base is each booking's current
-  // payment row (paid or deposit_paid), which correctly covers full payments,
-  // deposits not yet topped up, refunds (excluded), and staff manual marks.
+  // payment row, which correctly covers full payments, deposits not yet topped
+  // up, full refunds (excluded — the row leaves `COLLECTED_PAYMENT_STATUSES`),
+  // partial refunds (counted at what is left, because `amount_cents` is the
+  // retained figure), and staff manual marks.
   // `bookings`/`bookingPayments` carry their own (independently-writable)
   // `shop_id` alongside the FK chain to `trips` — every join here is scoped
   // to both, so this never trusts a child row's own shop_id alone (CR-007).
@@ -243,7 +258,12 @@ export async function getMonthlyReport(
       and(
         inWindow,
         eq(orders.shopId, shopId),
-        eq(orders.status, "paid"),
+        // `partly_refunded` as well as `paid`: `amount_paid_cents` is what the
+        // shop still holds, so the row's own figure is already net of what
+        // went back, and dropping the status entirely would report a
+        // part-refunded invoice as no revenue at all rather than as less of
+        // it (issue #699).
+        inArray(orders.status, ["paid", "partly_refunded"]),
         gt(orders.amountPaidCents, 0),
         not(
           exists(

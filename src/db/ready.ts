@@ -4,6 +4,7 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { withinCancellationWindow } from "@/lib/deposits";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
@@ -165,10 +166,12 @@ export async function getReadyPageData(
     verifiedNitroxPersonIds(db, row.shopId),
     nitroxCardOnFilePersonIds(db, row.shopId),
   ]);
-  const settled =
-    payment?.status === "paid" ||
-    payment?.status === "deposit_paid" ||
-    payment?.status === "waived";
+  // `partly_refunded` settles too, or this page would invite a diver who has
+  // already paid — and been handed part of it back — to pay the full price a
+  // second time. The capability URL is shared by design, so anyone holding it
+  // could do it (issue #699 security review). `startBookingCheckout` refuses
+  // it server-side as well; this only decides whether the button is drawn.
+  const settled = isCapturedPaymentStatus(payment?.status) || payment?.status === "waived";
 
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const canPay = Boolean(
@@ -178,7 +181,7 @@ export async function getReadyPageData(
   // `captured`, not `settled`: a waived booking has no money to give back, so
   // it reads as `unpaid` here — the same answer `refundBookingOnCancellation`
   // reaches, and the reason this preview is derived rather than stored.
-  const captured = payment?.status === "paid" || payment?.status === "deposit_paid";
+  const captured = isCapturedPaymentStatus(payment?.status);
   const cancelPreview: ReadyPageData["cancelPreview"] = !captured
     ? "unpaid"
     : trip.cancellationWindowHours

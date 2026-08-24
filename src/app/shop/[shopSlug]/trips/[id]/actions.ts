@@ -22,6 +22,7 @@ import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/op
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import type { PaymentStatus } from "@/db/schema";
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
@@ -64,6 +65,7 @@ import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
@@ -173,15 +175,21 @@ const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", 
  * the one direction this classification must never fail. Here it is a compile
  * error instead.
  */
-const PAYMENT_STATUS_CLASS: Record<z.infer<typeof paymentStatusSchema>, "record" | "write_off"> = {
+const PAYMENT_STATUS_CLASS: Record<PaymentStatus, "record" | "write_off"> = {
   unpaid: "record",
   deposit_paid: "record",
   paid: "record",
   waived: "write_off",
+  // Money went back out, so changing away from it is a decision about money
+  // even though some is still held. Note it is absent from
+  // `paymentStatusSchema` above on purpose: `partly_refunded` is only ever
+  // reached by an actual Stripe partial refund, never set by hand from the
+  // roster select (issue #699).
+  partly_refunded: "write_off",
   refunded: "write_off",
 };
 
-function paymentStatusClass(status: z.infer<typeof paymentStatusSchema>): "record" | "write_off" {
+function paymentStatusClass(status: PaymentStatus): "record" | "write_off" {
   return PAYMENT_STATUS_CLASS[status];
 }
 const requirementsSchema = z.object({
@@ -1012,7 +1020,7 @@ async function bookingRefundMayBeOwed(
   bookingId: string,
 ): Promise<boolean> {
   const payment = await getBookingPayment(db, shopId, bookingId);
-  return payment?.status === "paid" || payment?.status === "deposit_paid";
+  return isCapturedPaymentStatus(payment?.status);
 }
 
 /**
@@ -1267,7 +1275,16 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // selectable, so a captain looking at a waived seat can submit `waived`
   // unchanged. Nothing is decided by a tap that changes nothing, and refusing
   // it would be a confusing refusal rather than a protection.
-  if (status.success && current?.status === status.data) {
+  //
+  // Compared against the **raw** submitted value rather than the parsed one.
+  // `paymentStatusSchema` deliberately omits `partly_refunded` — no dropdown
+  // may move money — but the control still renders the booking's current
+  // status as an option, so on a part-refunded seat the unchanged submit
+  // failed to parse, missed this branch, and dead-ended at `?notice=invalid`:
+  // an unexplained refusal on a money row for a tap that changed nothing
+  // (issue #699 security review).
+  const submitted = String(formData.get("status") ?? "");
+  if (current?.status !== undefined && current.status === submitted) {
     revalidateAndRedirect(back, noticeUrl(back, "payment", { bid: bookingId }));
   }
   const decidesAboutMoney =

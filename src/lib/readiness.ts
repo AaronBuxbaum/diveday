@@ -12,10 +12,20 @@ import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import { waiverState } from "./waivers";
 
-/** Payment states that clear the "ready to board" payment gate. */
+/**
+ * Payment states that clear the "ready to board" payment gate.
+ *
+ * `partly_refunded` is in here for the same reason `deposit_paid` is: the
+ * shop is holding real money against this seat. A goodwill part-refund —
+ * weather cut the boat short, half the dives done, half the money back — is
+ * the commonest partial there is, and leaving it out would have made every
+ * diver it was granted to unboardable at the next roll call (issue #699).
+ * The gate asks whether money was collected, never whether the sum is tidy.
+ */
 const PAYMENT_CLEARED: ReadonlySet<PaymentStatus> = new Set<PaymentStatus>([
   "deposit_paid",
   "paid",
+  "partly_refunded",
   "waived",
 ]);
 
