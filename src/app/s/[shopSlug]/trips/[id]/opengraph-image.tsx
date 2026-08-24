@@ -86,13 +86,7 @@ export default async function TripOpenGraphImage({
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         {shop.logoUrl ? (
           // biome-ignore lint/performance/noImgElement: ImageResponse needs a direct remote image
-          <img
-            src={shop.logoUrl}
-            alt=""
-            width="64"
-            height="64"
-            style={{ objectFit: "cover", borderRadius: 16 }}
-          />
+          <img src={shop.logoUrl} alt="" width="64" height="64" style={{ objectFit: "cover" }} />
         ) : null}
         <div style={{ display: "flex", fontSize: 34, fontWeight: 600 }}>{shop.name}</div>
       </div>

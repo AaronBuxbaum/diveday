@@ -65,7 +65,7 @@ export default async function ScheduleOpenGraphImage({
           alt=""
           width="96"
           height="96"
-          style={{ objectFit: "cover", borderRadius: 24, marginBottom: 24 }}
+          style={{ objectFit: "cover", marginBottom: 24 }}
         />
       ) : null}
       {/* The same three-zone rhythm as the departure card — a small line at
