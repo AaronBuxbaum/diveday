@@ -1523,6 +1523,23 @@ export const trips = pgTable(
     courseId: uuid("course_id").references(() => courses.id),
     title: text("title").notNull(),
     description: text("description"),
+    /**
+     * Where this specific departure meets, when it isn't the shop's own front
+     * door (issue #704 slice 2). Both null (every trip until this shipped)
+     * means "the shop" everywhere this renders — a marina three miles from
+     * the storefront, a shore dive's beach car park, a second dock. A label
+     * alone with no address is a real, legitimate state ("North Jetty") for a
+     * shop whose divers already know the spot; an address with no label
+     * renders as plain text.
+     *
+     * Free text, not `shops.address_*`'s structured street/locality/region/
+     * postal/country columns and not geocoded — a meeting point is casual by
+     * nature ("the gravel lot past the ranger station"), and the settings
+     * address-search box that backs the shop's own address would guess wrong
+     * coordinates for exactly the kind of place this field exists to name.
+     */
+    meetingPointLabel: text("meeting_point_label"),
+    meetingPointAddress: text("meeting_point_address"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     capacity: integer("capacity").notNull(),

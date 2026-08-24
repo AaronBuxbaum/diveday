@@ -116,6 +116,8 @@ export default async function TripPrintPage({
             description: dive.description,
           }))}
           description={details.trip.description}
+          meetingPointLabel={details.trip.meetingPointLabel}
+          meetingPointAddress={details.trip.meetingPointAddress}
           conditions={details.trip.conditionsSummary}
           t={t}
         />

@@ -116,6 +116,8 @@
     "heading": "Detalles",
     "titleLabel": "Título",
     "descriptionLabel": "Descripción",
+    "meetingPointLabelLabel": "Punto de encuentro",
+    "meetingPointAddressLabel": "Dirección del punto de encuentro",
     "optionalHint": "(opcional)",
     "dateLabel": "Fecha",
     "departsLabel": "Sale",

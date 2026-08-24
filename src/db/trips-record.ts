@@ -165,6 +165,9 @@ export async function getTripDiveSitesPeek(
 export type TripPatch = {
   title: string;
   description?: string;
+  /** Where this departure meets, when it isn't the shop's own front door (issue #704 slice 2). */
+  meetingPointLabel?: string | null;
+  meetingPointAddress?: string | null;
   startsAt: Date;
   endsAt: Date;
   capacity: number;
@@ -283,6 +286,8 @@ export async function updateTrip(
       .set({
         title: patch.title,
         description: patch.description ?? null,
+        meetingPointLabel: patch.meetingPointLabel ?? null,
+        meetingPointAddress: patch.meetingPointAddress ?? null,
         startsAt: patch.startsAt,
         endsAt: patch.endsAt,
         capacity: patch.capacity,

@@ -35,17 +35,30 @@ export type PacketDive = {
 export function PacketDives({
   dives,
   description,
+  meetingPointLabel,
+  meetingPointAddress,
   conditions,
   t,
 }: {
   dives: readonly PacketDive[];
   description: string | null;
+  /** Where this departure meets, when it isn't the shop's own front door (issue #704 slice 2). */
+  meetingPointLabel: string | null;
+  meetingPointAddress: string | null;
   conditions: string | null;
   t: StaffTranslator;
 }) {
-  if (dives.length === 0 && !description && !conditions) return null;
+  if (dives.length === 0 && !description && !conditions && !meetingPointLabel) return null;
   return (
     <div className="mt-6">
+      {meetingPointLabel ? (
+        <p className="text-base font-semibold">
+          {t("shared.printPacket.meetingPoint", { label: meetingPointLabel })}
+          {meetingPointAddress ? (
+            <span className="block text-sm font-normal text-muted">{meetingPointAddress}</span>
+          ) : null}
+        </p>
+      ) : null}
       {description ? <p className="text-base whitespace-pre-line">{description}</p> : null}
       {dives.length > 0 ? (
         <ol className="mt-4 flex flex-col gap-4">

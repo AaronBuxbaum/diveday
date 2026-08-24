@@ -214,3 +214,29 @@ test("staff moves a departure to a different boat after it is on the board", asy
   await page.getByText("Edit details", { exact: true }).click();
   await expect(page.locator('select[name="boatId"]')).toHaveValue(other[0]);
 });
+
+/**
+ * A departure's own meeting point, when it isn't the shop's own front door
+ * (issue #704 slice 2) — a marina three miles out, a shore dive's beach car
+ * park. Staff sets it on the trip's own details form; the diver reads it on
+ * the exact line ("Arrive and check in") that used to say only a time.
+ */
+test("a departure's own meeting point reaches the diver on the booking page", async ({ page }) => {
+  test.setTimeout(BOARD_FLOW_TIMEOUT_MS);
+  const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+  await page.goto(tripPath);
+
+  await page.getByText("Edit details", { exact: true }).click();
+  // By form name, not label: `Field` renders its "(optional)" hint inside
+  // the caption, so an accessible-name match here is fragile — same reason
+  // the boat-swap test above locates its `<select>` this way.
+  await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
+  await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status")).toContainText("Changes saved");
+
+  const tripId = tripPath.split("/").pop();
+  await page.goto(`/s/blue-mantis/trips/${tripId}`);
+  await expect(page.getByText("North Jetty Marina")).toBeVisible();
+  await expect(page.getByText("12 Dock Rd")).toBeVisible();
+});

@@ -146,4 +146,46 @@ describe("listFeedTrips", () => {
       expect(text).not.toContain(diver.name);
     }
   });
+
+  /**
+   * Issue #704 slice 2. A dive site out on the water is not a place a
+   * calendar app can point anyone toward — a departure with its own meeting
+   * point is exactly the case where the site's name would send a captain to
+   * the wrong parking lot.
+   */
+  it("locates a departure by its own meeting point over the dive site, when one is set", async () => {
+    const { db, shop, personId, trip } = await context();
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: "North Jetty Marina", meetingPointAddress: "12 Dock Rd" })
+      .where(eq(trips.id, trip.id));
+
+    const feed = await listFeedTrips(db, { shopId: shop.id, personId, scope: "shop_trips" });
+    const entry = feed.find((row) => row.tripId === trip.id);
+    expect(entry?.location).toBe("North Jetty Marina, 12 Dock Rd");
+  });
+
+  it("names the meeting point alone when no address is on file", async () => {
+    const { db, shop, personId, trip } = await context();
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: "North Jetty Marina", meetingPointAddress: null })
+      .where(eq(trips.id, trip.id));
+
+    const feed = await listFeedTrips(db, { shopId: shop.id, personId, scope: "shop_trips" });
+    const entry = feed.find((row) => row.tripId === trip.id);
+    expect(entry?.location).toBe("North Jetty Marina");
+  });
+
+  it("falls back to the dive site when the departure has no meeting point of its own", async () => {
+    const { db, shop, personId, trip } = await context();
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: null, meetingPointAddress: null })
+      .where(eq(trips.id, trip.id));
+
+    const feed = await listFeedTrips(db, { shopId: shop.id, personId, scope: "shop_trips" });
+    const entry = feed.find((row) => row.tripId === trip.id);
+    expect(entry?.location).not.toContain("North Jetty");
+  });
 });

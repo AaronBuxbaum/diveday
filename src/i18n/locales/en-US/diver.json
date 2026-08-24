@@ -153,6 +153,7 @@
     },
     "dockDayRhythm": "Your dock-day rhythm",
     "dockDayLabel": "Day {number}",
+    "meetingPointWithAddress": "{label} — {address}",
     "briefingsEyebrow": "Dive briefings",
     "planTwoTank": "Your two-tank plan",
     "planDiveCount": "Your {count}-dive plan",

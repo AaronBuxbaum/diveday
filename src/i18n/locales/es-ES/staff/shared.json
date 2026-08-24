@@ -78,6 +78,7 @@
     "title": "Paquete de salida",
     "diveNumber": "Inmersión {number}",
     "travelMinutes": "{minutes} min de trayecto",
+    "meetingPoint": "Punto de encuentro: {label}",
     "conditionsHeading": "Condiciones"
   },
   "rollCallNote": {

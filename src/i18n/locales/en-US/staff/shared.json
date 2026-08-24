@@ -78,6 +78,7 @@
     "title": "Trip packet",
     "diveNumber": "Dive {number}",
     "travelMinutes": "{minutes} min out",
+    "meetingPoint": "Meeting point: {label}",
     "conditionsHeading": "Conditions"
   },
   "rollCallNote": {
