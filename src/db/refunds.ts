@@ -1,17 +1,32 @@
-import { and, desc, eq, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
-import type { AppDb } from "./client";
+import type { AppDb, AppTransaction } from "./client";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
+  STALE_AFTER_MS,
   startPaymentOperation,
 } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookingPayments, bookings, people, trips } from "./schema";
+import type { BookingPayment, PaymentOperationIntent } from "./schema";
+import { bookingPayments, bookings, paymentOperationIntents, people, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 /**
@@ -29,6 +44,17 @@ export type CancellationRefundOutcome =
   | { status: "unpaid" }
   /** Refund is owed but can't be automated here — staff must issue it. */
   | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
+  /**
+   * Another refund of this same seat is already at Stripe. Refused *locally*
+   * rather than sent as a second reversal — see {@link claimBookingRefund}.
+   */
+  | { status: "in_progress" }
+  /**
+   * A previous attempt got a refund out of Stripe and then failed to record it.
+   * A human reconciles that against the Stripe dashboard; this never reverses
+   * more money on top of it — see {@link claimBookingRefund}.
+   */
+  | { status: "needs_reconciliation" }
   /** Stripe was asked to refund and failed; staff should retry. */
   | { status: "failed" };
 
@@ -37,7 +63,139 @@ export type RefundOnCancellationInput = {
   bookingId: string;
   /** Injectable for tests; defaults to now. */
   now?: Date;
+  /** See {@link claimBookingRefund} — the abandoned-attempt horizon, for tests. */
+  staleBefore?: Date;
 };
+
+/** Everything the Stripe call needs, decided under the booking's own lock. */
+type BookingRefundPlan = {
+  refundCents: number;
+  stripeAccountId: string;
+  /** The captured Stripe object this reversal is taken against. */
+  providerRef: string;
+  currency: string;
+};
+
+/**
+ * What one refund path decided about a booking's money, inside the lock —
+ * either a plan to send Stripe, or the outcome that path answers with instead.
+ * Generic in the outcome because the two callers refuse for different reasons:
+ * a diver cancelling can be `forfeit`, a shop cancelling never can.
+ */
+type BookingRefundDecision<Outcome> =
+  | { proceed: true; plan: BookingRefundPlan }
+  | { proceed: false; outcome: Outcome };
+
+type BookingRefundClaim<Outcome> =
+  | { status: "claimed"; intent: PaymentOperationIntent; plan: BookingRefundPlan }
+  | { status: "not_found" | "in_progress" | "needs_reconciliation" }
+  | { status: "refused"; outcome: Outcome };
+
+/**
+ * Claim the sole in-flight refund of one *booking*, under that booking row's
+ * own lock — the booking-level twin of `claimOrderRefund` (src/db/orders.ts).
+ *
+ * Before this, both cancellation paths read the seat's retained balance with a
+ * plain `getBookingPayment`, minted an intent — and therefore a fresh
+ * `Idempotency-Key` — and called Stripe, with no lock held across the three.
+ * Two concurrent cancellations of one booking both passed the balance read,
+ * presented Stripe two different keys, and Stripe accepted both whenever the
+ * underlying charge still had capacity. On a **shared party checkout** it does:
+ * one payment intent covers several seats, so a per-seat reversal never
+ * exhausts it, and one seat is refunded twice out of another seat's money while
+ * that other seat still reads `paid` (issue #950). The race is older than the
+ * partial-refund work — `git show 000b2bcc^:src/db/refunds.ts` has the same
+ * shape — so it applied to a plain `paid` seat exactly as it does now.
+ *
+ * **The lock is on `bookings`, not `booking_payments`**, for the reason
+ * `withBookingPaymentLock` (src/db/payments.ts) already states: `SELECT …
+ * FOR UPDATE` on a row that does not exist yet takes no lock at all in
+ * Postgres, and a booking's payment row is exactly the sort that may be
+ * absent. The `bookings` row always exists, and it is the row every other
+ * writer of this seat's money already serializes on.
+ *
+ * The whole money decision — is anything captured, does the window still hold,
+ * how much comes back — runs inside the lock, in `decide`, because that
+ * decision is read off the balance the lock exists to protect. What stays
+ * outside is the Stripe call itself: the transaction commits **before** the
+ * network round trip, never around it, which keeps `startPaymentOperation`'s
+ * durability contract intact (CR-005) — a crash mid-call still leaves a
+ * committed intent for `listStuckPaymentOperations` to surface.
+ *
+ * A claim is a guard for the duration of one Stripe round trip, never a
+ * permanent lock: an intent still `started` past `STALE_AFTER_MS` belonged to a
+ * process that died and is ignored, exactly as `claimBookingsForCheckout` and
+ * `claimOrderRefund` treat theirs. The one exception is a stale intent carrying
+ * a `stripeObjectId` — that column is written the moment Stripe confirms a
+ * refund exists, so it is durable evidence money already moved and only the
+ * local write after it failed. Minting a fresh intent for it would mint a fresh
+ * idempotency key (deliberately, PAY-C1) and Stripe would accept a second
+ * reversal against the balance still on the charge, which on a party checkout
+ * is somebody else's fare. It belongs on the stuck-payment-operations panel,
+ * where a human reconciles it, and answers `needs_reconciliation` here.
+ *
+ * **PGlite caveat**, the same one `claimOrderRefund` carries: the default test
+ * database is single-connection, so `FOR UPDATE` never blocks there and the
+ * PGlite suite would stay green with the lock deleted. What those tests pin is
+ * the ordering and the refusal codes; the lock's *presence* is asserted under
+ * real contention in `src/db/refunds.postgres.test.ts`.
+ *
+ * `staleBefore` is injectable for the same reason `claimOrderRefund`'s is:
+ * `payment_operation_intents.started_at` is stamped by the *database's* clock,
+ * which `DIVEDAY_CLOCK` does not freeze.
+ */
+async function claimBookingRefund<Outcome>(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; staleBefore?: Date },
+  decide: (
+    tx: AppTransaction,
+    payment: BookingPayment | null,
+  ) => Promise<BookingRefundDecision<Outcome>>,
+): Promise<BookingRefundClaim<Outcome>> {
+  const staleBefore = input.staleBefore ?? new Date(nowDate().getTime() - STALE_AFTER_MS);
+  const refundIntentsForThisBooking = and(
+    eq(paymentOperationIntents.shopId, input.shopId),
+    eq(paymentOperationIntents.bookingId, input.bookingId),
+    eq(paymentOperationIntents.kind, "refund"),
+    eq(paymentOperationIntents.status, "started"),
+  );
+  return db.transaction(async (tx): Promise<BookingRefundClaim<Outcome>> => {
+    const [booking] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .for("update");
+    if (!booking) return { status: "not_found" };
+
+    // Read under the lock, never before it: this balance is what the decision
+    // below is made of, and a value read outside could describe money a
+    // concurrent reversal has already taken.
+    const payment = await getBookingPayment(tx, input.shopId, input.bookingId);
+    const decision = await decide(tx, payment);
+    if (!decision.proceed) return { status: "refused", outcome: decision.outcome };
+
+    const [live] = await tx
+      .select({ id: paymentOperationIntents.id })
+      .from(paymentOperationIntents)
+      .where(and(refundIntentsForThisBooking, gte(paymentOperationIntents.startedAt, staleBefore)))
+      .limit(1);
+    if (live) return { status: "in_progress" };
+
+    const [settledByStripe] = await tx
+      .select({ id: paymentOperationIntents.id })
+      .from(paymentOperationIntents)
+      .where(and(refundIntentsForThisBooking, isNotNull(paymentOperationIntents.stripeObjectId)))
+      .limit(1);
+    if (settledByStripe) return { status: "needs_reconciliation" };
+
+    const intent = await startPaymentOperation(tx, {
+      shopId: input.shopId,
+      kind: "refund",
+      bookingId: input.bookingId,
+    });
+    return { status: "claimed", intent, plan: decision.plan };
+  });
+}
 
 /**
  * Automatically refund a cancelled booking when the shop's stated cancellation
@@ -70,49 +228,67 @@ export async function refundBookingOnCancellation(
     .limit(1);
   if (!row) return { status: "failed" };
 
-  const payment = await getBookingPayment(db, input.shopId, input.bookingId);
-  if (!isCapturedPaymentStatus(payment?.status)) {
-    return { status: "unpaid" };
-  }
+  // Every read the money decision is made of happens inside the booking's own
+  // lock, and the intent — this refund's Idempotency-Key — is minted there too,
+  // so a second concurrent cancellation of this seat is refused locally instead
+  // of presenting Stripe a second key against the same charge (issue #950).
+  // Each *distinct* refund still gets its own key, deliberately: a second party
+  // member cancelling for the same amount off the same payment intent is a
+  // second, genuine refund rather than a replay of the first (PAY-C1).
+  const claim = await claimBookingRefund<CancellationRefundOutcome>(
+    db,
+    { shopId: input.shopId, bookingId: input.bookingId, staleBefore: input.staleBefore },
+    async (tx, payment) => {
+      if (!isCapturedPaymentStatus(payment?.status)) {
+        return { proceed: false, outcome: { status: "unpaid" } };
+      }
 
-  const decision = refundOnCancellation(row.trip, payment.amountCents ?? 0, now);
-  if (decision.outcome === "no_policy") return { status: "no_policy" };
-  if (decision.outcome === "forfeit") return { status: "forfeit" };
+      const decision = refundOnCancellation(row.trip, payment.amountCents ?? 0, now);
+      if (decision.outcome === "no_policy") {
+        return { proceed: false, outcome: { status: "no_policy" } };
+      }
+      if (decision.outcome === "forfeit") return { proceed: false, outcome: { status: "forfeit" } };
 
-  // A refund is owed. Only a Stripe-captured payment can be auto-reversed here;
-  // a counter/cash mark (provider not "stripe", commonly with no recorded
-  // amount) is owed a refund too but staff must issue it — never silently drop
-  // it as "unpaid" just because the amount wasn't recorded.
-  if (payment.provider !== "stripe" || !payment.providerRef) {
-    return { status: "manual", reason: "not_stripe" };
-  }
-  if (decision.refundCents <= 0) {
-    // A Stripe payment with no recorded amount shouldn't happen; don't fire a
-    // zero/blank refund — hand it to staff to reconcile.
-    return { status: "manual", reason: "not_refundable" };
-  }
+      // A refund is owed. Only a Stripe-captured payment can be auto-reversed
+      // here; a counter/cash mark (provider not "stripe", commonly with no
+      // recorded amount) is owed a refund too but staff must issue it — never
+      // silently drop it as "unpaid" just because the amount wasn't recorded.
+      if (payment.provider !== "stripe" || !payment.providerRef) {
+        return { proceed: false, outcome: { status: "manual", reason: "not_stripe" } };
+      }
+      if (decision.refundCents <= 0) {
+        // A Stripe payment with no recorded amount shouldn't happen; don't fire
+        // a zero/blank refund — hand it to staff to reconcile.
+        return { proceed: false, outcome: { status: "manual", reason: "not_refundable" } };
+      }
 
-  const account = await getShopStripeAccount(db, input.shopId);
-  if (!canAcceptPayments(account)) return { status: "manual", reason: "not_connected" };
-  const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
-
-  // Durable evidence before calling Stripe (CR-005), and the source of this
-  // refund's Idempotency-Key: each cancellation mints its own intent row with
-  // a fresh id, so a retry of *this* attempt converges on the one Stripe
-  // refund it already issued, while a second party member cancelling for the
-  // same amount off the same payment intent is a second, distinct refund
-  // rather than a replay of the first (PAY-C1). Same shape as `refundOrder`.
-  const intent = await startPaymentOperation(db, {
-    shopId: input.shopId,
-    kind: "refund",
-    bookingId: input.bookingId,
-  });
+      const account = await getShopStripeAccount(tx, input.shopId);
+      if (!account || !canAcceptPayments(account)) {
+        return { proceed: false, outcome: { status: "manual", reason: "not_connected" } };
+      }
+      return {
+        proceed: true,
+        plan: {
+          refundCents: decision.refundCents,
+          stripeAccountId: account.stripeAccountId,
+          providerRef: payment.providerRef,
+          currency: payment.currency,
+        },
+      };
+    },
+  );
+  if (claim.status === "refused") return claim.outcome;
+  // The booking was read above, so a disappearance between the two is a fault
+  // rather than a policy answer.
+  if (claim.status === "not_found") return { status: "failed" };
+  if (claim.status !== "claimed") return { status: claim.status };
+  const { intent, plan } = claim;
 
   const result = await checkout.refundCheckoutSession(
-    stripeAccountId,
-    payment.providerRef,
+    plan.stripeAccountId,
+    plan.providerRef,
     idempotencyKeyFor(intent.id),
-    decision.refundCents,
+    plan.refundCents,
   );
   if (result.status === "refunded") {
     // Durable the moment Stripe confirms the refund exists — before the
@@ -122,10 +298,10 @@ export async function refundBookingOnCancellation(
       shopId: input.shopId,
       bookingId: input.bookingId,
       status: "refunded",
-      amountCents: decision.refundCents,
-      currency: payment.currency,
+      amountCents: plan.refundCents,
+      currency: plan.currency,
       provider: "stripe",
-      providerRef: result.refundId ?? payment.providerRef,
+      providerRef: result.refundId ?? plan.providerRef,
       note: "Auto-refunded on cancellation within the free window",
       // The capture this reverses is overwritten in `booking_payments`; the
       // append-only trail is where it survives (ADR
@@ -133,8 +309,12 @@ export async function refundBookingOnCancellation(
       operation: "cancellation_refund",
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
-    return { status: "refunded", amountCents: decision.refundCents };
+    return { status: "refunded", amountCents: plan.refundCents };
   }
+  // Left `started` only when Stripe answered *and* said no; a reversal Stripe
+  // did make has its id recorded above, and a crash before this line leaves the
+  // intent for `listStuckPaymentOperations` and for the reconciliation refusal
+  // in `claimBookingRefund`.
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
@@ -163,6 +343,19 @@ export type ShopCancellationRefundOutcome =
   | { status: "unpaid" }
   /** Money is owed but no card can be reversed from here — staff must return it. */
   | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
+  /**
+   * Another refund of this same seat is already at Stripe — a resumed cascade
+   * racing the sweep, say. Refused *locally* rather than sent as a second
+   * reversal (see {@link claimBookingRefund}). Distinct from
+   * `already_refunded`, which is a reversal that has already landed.
+   */
+  | { status: "in_progress" }
+  /**
+   * A previous attempt got a refund out of Stripe and then failed to record it.
+   * A human reconciles that against the Stripe dashboard; this never reverses
+   * more money on top of it — see {@link claimBookingRefund}.
+   */
+  | { status: "needs_reconciliation" }
   /** Stripe was asked to refund and failed; staff should retry. */
   | { status: "failed" };
 
@@ -187,55 +380,61 @@ export type ShopCancellationRefundOutcome =
  */
 export async function refundBookingOnShopCancellation(
   db: AppDb,
-  input: { shopId: string; bookingId: string },
+  input: { shopId: string; bookingId: string; staleBefore?: Date },
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
 ): Promise<ShopCancellationRefundOutcome> {
-  // The booking must be this shop's. `getBookingPayment` is tenant-scoped too,
-  // so a foreign caller could move no money regardless — this states the rule
-  // rather than relying on a second function to happen to enforce it, and it
-  // answers `failed` instead of the misleading `unpaid`.
-  const [booking] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
-    .limit(1);
-  if (!booking) return { status: "failed" };
+  // The booking must be this shop's — the lock `claimBookingRefund` takes is
+  // scoped to the shop, so a foreign caller finds no row and moves no money,
+  // and answers `failed` rather than the misleading `unpaid`. Everything the
+  // money decision is made of is read inside that lock; see #950.
+  const claim = await claimBookingRefund<ShopCancellationRefundOutcome>(
+    db,
+    input,
+    async (tx, payment) => {
+      if (payment?.status === "refunded") {
+        return { proceed: false, outcome: { status: "already_refunded" } };
+      }
+      if (!isCapturedPaymentStatus(payment?.status)) {
+        return { proceed: false, outcome: { status: "unpaid" } };
+      }
 
-  const payment = await getBookingPayment(db, input.shopId, input.bookingId);
-  if (payment?.status === "refunded") return { status: "already_refunded" };
-  if (!isCapturedPaymentStatus(payment?.status)) {
-    return { status: "unpaid" };
-  }
+      // A refund is owed unconditionally. Only a Stripe capture can be reversed
+      // from here; a counter/cash mark is owed one too, and staff issue it.
+      if (payment.provider !== "stripe" || !payment.providerRef) {
+        return { proceed: false, outcome: { status: "manual", reason: "not_stripe" } };
+      }
+      const refundCents = payment.amountCents ?? 0;
+      if (refundCents <= 0) {
+        // A Stripe payment with no recorded amount shouldn't happen; don't fire
+        // a zero/blank refund — hand it to staff to reconcile.
+        return { proceed: false, outcome: { status: "manual", reason: "not_refundable" } };
+      }
 
-  // A refund is owed unconditionally. Only a Stripe capture can be reversed
-  // from here; a counter/cash mark is owed one too, and staff issue it.
-  if (payment.provider !== "stripe" || !payment.providerRef) {
-    return { status: "manual", reason: "not_stripe" };
-  }
-  const refundCents = payment.amountCents ?? 0;
-  if (refundCents <= 0) {
-    // A Stripe payment with no recorded amount shouldn't happen; don't fire a
-    // zero/blank refund — hand it to staff to reconcile.
-    return { status: "manual", reason: "not_refundable" };
-  }
-
-  const account = await getShopStripeAccount(db, input.shopId);
-  if (!canAcceptPayments(account)) return { status: "manual", reason: "not_connected" };
-  const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
-
-  // Durable evidence before calling Stripe, and the source of this refund's
-  // Idempotency-Key (CR-005) — same shape as the diver-cancel arm above.
-  const intent = await startPaymentOperation(db, {
-    shopId: input.shopId,
-    kind: "refund",
-    bookingId: input.bookingId,
-  });
+      const account = await getShopStripeAccount(tx, input.shopId);
+      if (!account || !canAcceptPayments(account)) {
+        return { proceed: false, outcome: { status: "manual", reason: "not_connected" } };
+      }
+      return {
+        proceed: true,
+        plan: {
+          refundCents,
+          stripeAccountId: account.stripeAccountId,
+          providerRef: payment.providerRef,
+          currency: payment.currency,
+        },
+      };
+    },
+  );
+  if (claim.status === "refused") return claim.outcome;
+  if (claim.status === "not_found") return { status: "failed" };
+  if (claim.status !== "claimed") return { status: claim.status };
+  const { intent, plan } = claim;
 
   const result = await checkout.refundCheckoutSession(
-    stripeAccountId,
-    payment.providerRef,
+    plan.stripeAccountId,
+    plan.providerRef,
     idempotencyKeyFor(intent.id),
-    refundCents,
+    plan.refundCents,
   );
   if (result.status === "refunded") {
     if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
@@ -243,15 +442,15 @@ export async function refundBookingOnShopCancellation(
       shopId: input.shopId,
       bookingId: input.bookingId,
       status: "refunded",
-      amountCents: refundCents,
-      currency: payment.currency,
+      amountCents: plan.refundCents,
+      currency: plan.currency,
       provider: "stripe",
-      providerRef: result.refundId ?? payment.providerRef,
+      providerRef: result.refundId ?? plan.providerRef,
       note: "Auto-refunded: the shop cancelled this departure",
       operation: "shop_cancellation_refund",
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
-    return { status: "refunded", amountCents: refundCents };
+    return { status: "refunded", amountCents: plan.refundCents };
   }
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
@@ -264,10 +463,14 @@ export async function refundBookingOnShopCancellation(
  * template picks the words (ADR 20260731-domain-layer-copy-leaks).
  *
  * `refund_owed` covers every way the reversal did not happen here: a counter
- * payment, a disconnected account, a Stripe refusal, a failure. The diver reads
- * the same honest sentence in all four cases — the shop owes them money and
- * will be in touch — because the difference between them is the shop's problem
- * to solve, not the diver's to understand.
+ * payment, a disconnected account, a Stripe refusal, a failure, a reversal
+ * another pass is already making (`in_progress`), and one a human has to
+ * reconcile against Stripe (`needs_reconciliation`). The diver reads the same
+ * honest sentence in all of them — the shop owes them money and will be in
+ * touch — because the difference between them is the shop's problem to solve,
+ * not the diver's to understand. In particular `in_progress` is *not* told as
+ * `refunded`: the pass that holds the claim may still fail, and a diver told
+ * their money is on its way must not depend on that.
  */
 export function shopCancellationPaymentStory(
   outcome: ShopCancellationRefundOutcome,

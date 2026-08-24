@@ -67,6 +67,18 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.bookingRemovedRefundReview",
   },
+  // Warning, not danger: nothing is wrong — a refund of this seat is simply
+  // already in flight, and the only thing to do is not start a second one.
+  "booking-removed-refund-in-progress": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.bookingRemovedRefundInProgress",
+  },
+  "booking-removed-refund-reconcile": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.bookingRemovedRefundReconcile",
+  },
   "booking-removed-refund-owner": {
     form: "roster",
     tone: "danger",

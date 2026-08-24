@@ -1,11 +1,16 @@
 import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
+import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
 import type { InvoicingProvider, RefundInvoiceResult } from "@/lib/payments/invoicing";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
 import { refundOrder } from "./orders";
-import { orders, paymentOperationIntents, people, shops } from "./schema";
+import { setBookingPayment } from "./payments";
+import { refundBookingOnCancellation, refundBookingOnShopCancellation } from "./refunds";
+import { bookings, orders, paymentOperationIntents, people, shops, trips } from "./schema";
+import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 
 /**
  * The refund lock, under genuine contention (PAY-L3).
@@ -278,5 +283,236 @@ describePostgres("refundOrder under real concurrency", () => {
       status: "not_paid",
     });
     expect(invoicing.keys).toHaveLength(1);
+  });
+});
+
+/**
+ * The **booking**-level refund lock, under the same genuine contention (issue
+ * #950).
+ *
+ * `refundBookingOnCancellation` and `refundBookingOnShopCancellation` used to
+ * read a seat's retained balance with a plain `getBookingPayment`, mint an
+ * intent — and therefore a distinct `Idempotency-Key` — and call Stripe, with
+ * no lock held across the three. Two concurrent cancellations of one seat both
+ * passed the balance read and presented Stripe two different keys, and Stripe
+ * accepts both while the underlying charge still has capacity.
+ *
+ * On a **shared party checkout** it always does: one payment intent covers
+ * several seats, so a per-seat reversal never exhausts it. That is what removes
+ * Stripe's own over-refund rejection as the backstop, and it is why these tests
+ * seat a party of two on one `providerRef` — one seat refunded twice comes out
+ * of the other seat's fare, and the other seat still reads `paid`.
+ *
+ * Same machinery and the same division of labour as the order suite above: the
+ * gate proves the taps are genuinely simultaneous, and `checkout.calls` proves
+ * the guard. `claimBookingRefund` locks the **bookings** row (not
+ * `booking_payments`, which may not exist — `withBookingPaymentLock`'s reason),
+ * so that is the row the gate holds.
+ */
+
+/** A connected shop, a party of two on one Stripe charge, both seats paid. */
+async function paidPartyOfTwo(db: AppDb) {
+  const suffix = randomBytes(4).toString("hex");
+  const [shop] = await db
+    .insert(shops)
+    .values({
+      name: `Party Refund Divers ${suffix}`,
+      slug: `party-refund-${suffix}`,
+      timezone: "America/New_York",
+    })
+    .returning();
+  if (!shop) throw new Error("shop insert returned no row");
+  await upsertShopStripeAccount(db, shop.id, `acct_${suffix}`);
+  await setShopStripeAccountStatus(db, `acct_${suffix}`, {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+
+  // Far enough out that the stated cancellation window is still open, so the
+  // diver-cancel path reaches Stripe rather than answering `forfeit`.
+  const startsAt = new Date(nowMs() + 30 * 24 * 60 * 60 * 1000);
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Two-Tank Reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      priceCents: 18_000,
+      cancellationWindowHours: 48,
+    })
+    .returning();
+  if (!trip) throw new Error("trip insert returned no row");
+
+  const bookingIds: string[] = [];
+  for (const name of ["Pat Party", "Sam Second"]) {
+    const [person] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: name,
+        email: `${name.split(" ")[0]?.toLowerCase()}-${suffix}@example.com`,
+      })
+      .returning();
+    if (!person) throw new Error("person insert returned no row");
+    const [booking] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: trip.id, personId: person.id })
+      .returning();
+    if (!booking) throw new Error("booking insert returned no row");
+    // One `providerRef` across both seats: this *is* the shared party checkout,
+    // and the reason a second reversal of one seat is not caught by Stripe.
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      status: "paid",
+      amountCents: 18_000,
+      currency: "usd",
+      provider: "stripe",
+      providerRef: `cs_${suffix}`,
+      operation: "checkout_settled",
+    });
+    bookingIds.push(booking.id);
+  }
+  const [bookingId, otherBookingId] = bookingIds;
+  if (!bookingId || !otherBookingId) throw new Error("expected a party of two");
+  return { shopId: shop.id, bookingId, otherBookingId, startsAt };
+}
+
+/** The lock `claimBookingRefund` takes first, held open by the starting gate. */
+const bookingRowLock = (bookingId: string) =>
+  sql`select id from bookings where id = ${bookingId} for update`;
+
+/**
+ * A checkout provider that counts reversals and records each idempotency key.
+ * The booking-side twin of {@link countingInvoicing}; `atStripe` plays the same
+ * role, holding the winner inside its round trip until every tap has answered
+ * or arrived, so the losers' refusals are the ones this file describes rather
+ * than a scheduling accident.
+ */
+function countingCheckout(atStripe?: { arrive: () => void; open: Promise<void> }): {
+  provider: CheckoutProvider;
+  keys: string[];
+} {
+  const keys: string[] = [];
+  const unreachable = () => {
+    throw new Error("countingCheckout: unexpected provider call");
+  };
+  const provider: CheckoutProvider = {
+    createCheckoutSession: unreachable,
+    retrieveCheckoutSession: unreachable,
+    async refundCheckoutSession(
+      _accountId: string,
+      _sessionId: string,
+      idempotencyKey: string,
+    ): Promise<RefundCheckoutResult> {
+      keys.push(idempotencyKey);
+      if (atStripe) {
+        atStripe.arrive();
+        await atStripe.open;
+      }
+      return { status: "refunded", refundId: `re_${keys.length}` };
+    },
+  };
+  return { provider, keys };
+}
+
+async function bookingRefundIntentCount(db: AppDb, bookingId: string): Promise<number> {
+  const rows = await db
+    .select({ id: paymentOperationIntents.id })
+    .from(paymentOperationIntents)
+    .where(eq(paymentOperationIntents.bookingId, bookingId));
+  return rows.length;
+}
+
+describePostgres("booking refunds under real concurrency", () => {
+  it("lets exactly one of two simultaneous shop-cancellation refunds reach Stripe", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, bookingId } = await paidPartyOfTwo(pg.db);
+    const atStripe = tapsMeetingAtStripe(2);
+    const checkout = countingCheckout(atStripe);
+
+    const gate = await holdRowLock(pg, bookingRowLock(bookingId));
+    // Two genuinely separate connections — a resumed blow-out cascade racing
+    // the minimum-seats sweep is exactly this shape, and both are retry loops.
+    const first = refundBookingOnShopCancellation(
+      pg.connect(),
+      { shopId, bookingId },
+      checkout.provider,
+    ).finally(atStripe.arrive);
+    const second = refundBookingOnShopCancellation(
+      pg.connect(),
+      { shopId, bookingId },
+      checkout.provider,
+    ).finally(atStripe.arrive);
+
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+
+    const outcomes = await Promise.all([first, second]);
+    expect(outcomes.filter((outcome) => outcome.status === "refunded")).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome.status !== "refunded")).toEqual([
+      { status: "in_progress" },
+    ]);
+    // The money, not the wording: a second reversal shows up here as 2 even
+    // when the loser was politely told `in_progress`.
+    expect(checkout.keys).toHaveLength(1);
+    expect(await bookingRefundIntentCount(pg.db, bookingId)).toBe(1);
+  });
+
+  it("refuses four of five simultaneous diver cancellations and asks Stripe once", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, bookingId, startsAt } = await paidPartyOfTwo(pg.db);
+    const atStripe = tapsMeetingAtStripe(5);
+    const checkout = countingCheckout(atStripe);
+    const insideWindow = new Date(startsAt.getTime() - 72 * 60 * 60 * 1000);
+
+    const gate = await holdRowLock(pg, bookingRowLock(bookingId));
+    const contenders = [0, 1, 2, 3, 4].map(() =>
+      refundBookingOnCancellation(
+        pg.connect(),
+        { shopId, bookingId, now: insideWindow },
+        checkout.provider,
+      ).finally(atStripe.arrive),
+    );
+
+    await waitForLockWaiters(pg.db, contenders.length);
+    await gate.release();
+
+    const outcomes = await Promise.all(contenders);
+    expect(outcomes.filter((outcome) => outcome.status === "refunded")).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome.status === "in_progress")).toHaveLength(4);
+    expect(checkout.keys).toHaveLength(1);
+    expect(await bookingRefundIntentCount(pg.db, bookingId)).toBe(1);
+  });
+
+  it("never blocks a second seat on the same charge", async () => {
+    // The guard is per booking, deliberately. Two party members cancelling at
+    // once are two *genuine* refunds off one payment intent (PAY-C1), and a
+    // lock that collapsed them into one would be its own money bug.
+    const pg = await postgresTestDb();
+    const { shopId, bookingId, otherBookingId } = await paidPartyOfTwo(pg.db);
+    const atStripe = tapsMeetingAtStripe(2);
+    const checkout = countingCheckout(atStripe);
+
+    const outcomes = await Promise.all([
+      refundBookingOnShopCancellation(
+        pg.connect(),
+        { shopId, bookingId },
+        checkout.provider,
+      ).finally(atStripe.arrive),
+      refundBookingOnShopCancellation(
+        pg.connect(),
+        { shopId, bookingId: otherBookingId },
+        checkout.provider,
+      ).finally(atStripe.arrive),
+    ]);
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual(["refunded", "refunded"]);
+    // Two distinct keys, so Stripe treats them as the two separate reversals
+    // they are rather than collapsing the second onto the first.
+    expect(new Set(checkout.keys).size).toBe(2);
   });
 });

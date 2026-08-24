@@ -148,7 +148,13 @@ export type AnalyticsEvent =
       /** A refund was issued after a cancellation, automatically or by a staff member. */
       name: "refund_issued";
       auto: boolean;
-      status: "refunded" | "forfeit" | "failed" | "manual";
+      /**
+       * `in_progress` and `needs_reconciliation` are the booking-level refund
+       * lock's two refusals (`claimBookingRefund`, src/db/refunds.ts). Counted
+       * rather than folded into `failed` because they mean the opposite of it:
+       * money was *not* moved a second time, on purpose.
+       */
+      status: "refunded" | "forfeit" | "failed" | "manual" | "in_progress" | "needs_reconciliation";
     }
   | {
       /** A staff sign-in attempt and how it resolved — the friction signal for the sign-in form. */
