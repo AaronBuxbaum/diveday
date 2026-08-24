@@ -44,11 +44,15 @@ new domain concept, define it here in the same PR.
   CPR/EFR and O₂-provider tickets expire too, and are a real prerequisite for Rescue and above.
   What a card cannot tell you either way is when this diver was last in the water — that is
   **Dive recency**, a different question asked of the diver, and it is not a gate.
-- **Verified certification** — a card is evidence, not clearance. DiveDay records it as pending
-  until staff certify it — staff look the card number up with the issuing agency (in the agency's
-  own portal, outside DiveDay) and click **Mark certified**. There is no automated agency
-  integration. Only a certified card at or above a trip’s required level can satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which is
-  what readiness reads.)
+- **Verified certification** — a card is evidence, not clearance. `validVerifiedCertification` is one
+  predicate, `status === "verified"`, read identically by every gate — but there is more than one
+  path to it: a staffer looks a card number up with the issuing agency (in the agency's own portal,
+  outside DiveDay) and clicks **Mark certified**; a card arrives already `verified` through the contact
+  importer (see **Imported certification**); or this shop's own instructor certifies a diver directly
+  from a course session's own roster (see **Shop-issued certification**). There is no automated agency
+  integration for the first path. Only a certified card at or above a trip's required level can
+  satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
+  is what readiness reads.)
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
   `pending`. It is what a card entered by hand starts as (the shop-owner-facing word is "claimed").
   A claimed card never satisfies readiness or authorizes a nitrox fill until staff **Mark certified**.
@@ -70,6 +74,24 @@ new domain concept, define it here in the same PR.
   yet: on file, `verified`, and still holding its gate. Shown as “certified · confirm to clear” in a
   warning tone rather than the plain green “certified” a hand-verified card gets, so the two are never
   read as the same thing at a busy desk.
+- **Shop-issued certification** — a level card **this shop's own instructor certified**, from a per-
+  student tap on a course session's own roster (issue #717), never automatic. It lands `verified`
+  immediately (`issued_by_shop_at` set, alongside `issued_from_trip_id` naming the session and
+  `issued_by_person_id` naming the instructor) with `identifier` left null — the card *number* is the
+  agency's own processing, routinely days behind the instructor's own sign-off, and this is the one
+  path from "this shop taught and ran this course" to a card its own booking gate actually reads. A
+  numberless `verified` row is otherwise refused (`certifications_identifier_present_unless_self_declared`);
+  this is the check constraint's third exception, deliberately not conditioned on `status = 'pending'`
+  the way a **Self-declared certification** is, because the two are opposite cases — nobody has seen
+  anything there, while here an accountable instructor is asserting personal knowledge that a specific
+  person met the standard, in a session this shop ran. Trusted the same way an **Imported
+  certification** is — by provenance rather than by a staffer looking a number up with the agency —
+  and more strongly: an import is trusted because of a system nobody at this shop watched, this
+  because of a specific instructor on this shop's own roster. Refuses a level the diver already holds
+  a live verified card for, any provenance, so a repeat tap cannot mint a second numberless row the
+  unique index (keyed on `identifier`) cannot catch. Scoped to `certifications` only — the level
+  ladder — not the **specialty** or **nitrox** tables, which stay one-tap-away from this treatment on
+  purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
   one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
   list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`

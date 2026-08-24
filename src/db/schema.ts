@@ -4148,6 +4148,61 @@ export const certifications = pgTable(
      * that happens to have started as a claim.
      */
     selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
+    /**
+     * **This shop's own instructor certified this diver, on this session.**
+     * Set only by a per-student "Certified" tap on a course session's roster
+     * (issue #717), never automatically — a session ending or a roll call
+     * closing must never mint a card. A shop that taught the course, ran the
+     * dives, and signed the paperwork is not in the same position as a shop
+     * that has never met the diver, and until this existed it was: every
+     * fresh graduate had their own card hand-typed back in as an unsighted
+     * capture, exactly like a stranger's.
+     *
+     * Lands `verified` immediately, not `pending` — a third instance of the
+     * pattern `importedAt` already established (`verified` on arrival,
+     * trusted by *provenance* rather than by a staffer looking a number up
+     * with the agency) and stronger than it: an import is trusted because of
+     * a system nobody at this shop watched, a shop-issued card is trusted
+     * because a specific, accountable instructor on this shop's own roster is
+     * asserting personal knowledge that this specific person met the
+     * standard, in a session this shop ran.
+     *
+     * `identifier` may therefore be absent while this is set — see the check
+     * constraint below — because the card *number* comes from the agency's
+     * own processing, routinely days behind the instructor's own sign-off.
+     * Refusing the diver's next booking until a staffer later retypes a
+     * number that arrives asynchronously would reproduce the exact gap this
+     * column exists to close, just one layer down.
+     *
+     * The stamp stays forever, like `importedAt`/`selfDeclaredAt` — where a
+     * row began is history.
+     *
+     * See ADR 20260824-shop-issued-certification-is-verified for the full
+     * reasoning, alternatives considered, and consequences.
+     */
+    issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
+    /**
+     * The course session this card came from. Set only alongside
+     * `issuedByShopAt`; null for every other provenance. A trip, not a
+     * course: the level and the class of divers are the specific sailing
+     * that earned the card, not the catalog entry a shop might run for years.
+     * `onDelete: "set null"`: a *production* trip is never hard-deleted
+     * (ADR 20260820-every-delete-is-soft), but the e2e/demo reset path
+     * (`resetDemoSchedule`, src/db/seed.ts) genuinely does, and the
+     * certification is not trip-scoped data — it is the diver's permanent
+     * evidence and must survive its own session's row going away, just with
+     * this one pointer cleared rather than the row erroring the reset or
+     * being deleted along with it.
+     */
+    issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * The live staff member whose tap issued this card — mirrors
+     * `reviewedByPersonId`'s accountable-name role for the sighted-review
+     * path. Set only alongside `issuedByShopAt`.
+     */
+    issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -4205,9 +4260,19 @@ export const certifications = pgTable(
     // was tightening (caught by a `dive-domain-expert` pass, 2026-08-15). Both
     // conjuncts are load-bearing and neither is redundant: the first rules out
     // NULL, the second rules out blank.
+    //
+    // **A third exception, added for `issuedByShopAt` (issue #717,
+    // ADR 20260824-shop-issued-certification-is-verified).** Unlike the
+    // self-declared one, it is not conditioned on `status = 'pending'` — a
+    // shop-issued row lands `verified` immediately, deliberately. A
+    // self-declared row cannot reach `verified` without a number precisely
+    // because nobody at the shop has seen anything; a shop-issued row is the
+    // opposite case, an accountable instructor's own act of certifying, and
+    // the missing number is the agency's own processing lag, not missing
+    // evidence.
     check(
       "certifications_identifier_present_unless_self_declared",
-      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null)`,
     ),
   ],
 );

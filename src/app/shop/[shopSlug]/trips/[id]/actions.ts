@@ -20,7 +20,12 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { getTripRequirements, listTripReadiness, upsertTripRequirements } from "@/db/readiness";
+import {
+  getTripRequirements,
+  issueShopCertification,
+  listTripReadiness,
+  upsertTripRequirements,
+} from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import type { PaymentStatus } from "@/db/schema";
 import { people } from "@/db/schema";
@@ -61,6 +66,7 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
+import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -1165,6 +1171,38 @@ export async function confirmDiverIdentityAction(
   revalidateAndRedirect(
     back,
     noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
+  );
+}
+
+/**
+ * The one path from "this shop's own instructor taught and ran this course"
+ * to a `certifications` row this shop's own booking gate will actually read
+ * (issue #717) — a per-student tap on the course session's own roster,
+ * never automatic. See `issueShopCertification`'s doc comment for why the
+ * card lands `verified` immediately with no number yet.
+ */
+export async function certifyDiverFromRosterAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const personId = String(formData.get("personId") ?? "");
+  const levelInput = String(formData.get("level") ?? "");
+  const level = DECLARABLE_CERTIFICATION_LEVELS.find((value) => value === levelInput);
+  if (!bookingId || !personId || !level) redirect(back);
+  const certification = await issueShopCertification(await getDb(), {
+    shopId: s.user.shopId,
+    personId,
+    tripId,
+    level,
+    issuedByPersonId: s.user.personId,
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, certification ? "certified" : "certify-failed", { bid: bookingId }),
   );
 }
 

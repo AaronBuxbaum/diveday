@@ -201,6 +201,19 @@ export function needsImportConfirm(card: ImportedCard): boolean {
 }
 
 /**
+ * A level card issued by this shop's own instructor on a course session it
+ * ran (issue #717, `certifications.issuedByShopAt`). Lands `verified`
+ * immediately — a card the shop taught and signed off on, not a capture of
+ * one somebody else issued — so unlike {@link needsImportConfirm} there is
+ * no confirm nudge: the instructor's tap already was the confirmation.
+ */
+export type ShopIssuedCard = { issuedByShopAt?: Date | string | null };
+
+export function isShopIssuedCard(card: ShopIssuedCard): boolean {
+  return Boolean(card.issuedByShopAt);
+}
+
+/**
  * The badge for a card **whose gate is still shut** — an imported specialty card
  * (the dive it authorizes waits) or an imported nitrox card (the fill waits, and
  * gives plain air meanwhile). Neither may read the same as a hand-verified card,

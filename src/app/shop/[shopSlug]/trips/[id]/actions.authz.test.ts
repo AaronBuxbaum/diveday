@@ -525,6 +525,11 @@ describe("who may run each action on the trip page", () => {
     // Re-confirmed with Aaron on 2026-08-22 before correcting it (issue #788):
     // a captain swapping a divemaster at the dock does not wait for an owner.
     "updateTripCrewAction",
+    // Same H-48 trust boundary as reviewCertification (any active staff
+    // role, not instructor-only) — scoped to the surface rather than the
+    // role: the tap only ever lands beside a name on that session's own
+    // roster (issue #717).
+    "certifyDiverFromRosterAction",
   ];
 
   /** Every exported action's source, sliced from its `export` to its closing brace. */
