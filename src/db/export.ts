@@ -899,6 +899,11 @@ export async function loadShopExportBundleInput(
             "dive_insurance",
             "emergency_contact_name",
             "emergency_contact_phone",
+            // Staff-only in practice — set from the team settings form — but
+            // the column lives on every row (issue #708), so it dumps here
+            // like every other fact this file carries regardless of who it's
+            // ever actually populated for.
+            "spoken_languages",
             "courtesy_email_opt_out_at",
             // The diver's own "I'm not certified yet", which is a statement
             // about them and not a card — it has no row in certifications.csv
@@ -933,6 +938,7 @@ export async function loadShopExportBundleInput(
             row.diveInsurance,
             row.emergencyContactName,
             row.emergencyContactPhone,
+            row.spokenLanguages.length > 0 ? [...row.spokenLanguages].sort().join("; ") : null,
             row.courtesyEmailOptOutAt,
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,
