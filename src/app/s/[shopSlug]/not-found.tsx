@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { REQUEST_PATH_HEADER } from "@/lib/auth.config";
+import { REQUEST_PATH_HEADER } from "@/lib/embed-routes";
 import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes";
 
 /**

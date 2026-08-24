@@ -7,7 +7,7 @@ import type { TodayAction } from "@/lib/today";
 // TodayQueue composes WaiverSendControl/ResendConfirmationControl/
 // PaymentActionControl, each of which statically imports its own
 // `"use server"` action file. Those import `requireStaffSession` ->
-// next-auth, which fails to resolve under vitest's module graph — mocking
+// better-auth, which fails to resolve under vitest's module graph — mocking
 // them here is what makes TodayQueue renderable in this environment at all,
 // the same boundary DepartureBoard's own tests draw by taking a bound action
 // as a prop instead.

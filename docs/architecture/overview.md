@@ -16,7 +16,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Database | Postgres via Drizzle ORM; PGlite in dev/test, Neon in production | [0005](decisions/0005-database.md), [20260718 Neon](decisions/20260718-vercel-neon-hosting.md), [20260718 Drizzle beta](decisions/20260718-drizzle-v1-beta.md) |
 | Hosting | Vercel (Git integration, preview deploys) | [20260718 hosting](decisions/20260718-vercel-hosting.md) |
 | Analytics | Vercel Analytics via `@vercel/analytics` | [20260718 analytics](decisions/20260718-vercel-analytics.md) |
-| Auth | Auth.js v5 credentials, JWT sessions, proxy gating | [0006](decisions/0006-auth.md) |
+| Auth | better-auth credentials, DB-backed sessions, proxy gating | [20260824](decisions/20260824-migrate-staff-auth-to-better-auth.md) |
 | Transactional email | AWS SES (`@aws-sdk/client-sesv2`) behind `src/lib/notifications/` | [20260803 SES sole provider](decisions/20260803-ses-sole-email-provider.md) |
 | Offline manifests | Encrypted IndexedDB snapshot + data-free service-worker shell | [20260718 offline manifests](decisions/20260718-offline-manifest-snapshots.md) |
 | Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account. Imported payment/receipt history stays outside live orders and is explicitly labelled as unverified source evidence. | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md), [20260816 imported evidence](decisions/20260816-imported-payment-history-is-evidence.md) |

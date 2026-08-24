@@ -1,7 +1,7 @@
 import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { DAY_MS } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
-import { authSecret } from "./auth.config";
+import { authSecret } from "./auth-secret";
 import { nowMs } from "./clock";
 
 /**
@@ -28,7 +28,7 @@ function recapSecret(): string {
   const dedicated = process.env.RECAP_LINK_SECRET;
   if (dedicated) return dedicated;
   // In production Auth.js refuses to boot without AUTH_SECRET; this is only ever
-  // null in dev/e2e where auth.config.ts supplies a fixed fallback. Fail loud
+  // null in dev/e2e where auth-secret.ts supplies a fixed fallback. Fail loud
   // rather than sign with an empty key.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign recap links.");
   const derived = hkdfSync("sha256", authSecret, "", "diveday-recap-link", 32);

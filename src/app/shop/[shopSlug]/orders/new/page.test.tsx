@@ -1,28 +1,28 @@
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
+import type { DiveDaySession } from "@/lib/auth";
 import { seededTestDb } from "@/test/db";
 import { hiddenInputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 
 // Same mocking shape as ../page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
-// (the db handle, next-auth, and request headers) are stubbed and nothing else.
+// (the db handle, better-auth, and request headers) are stubbed and nothing else.
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const NewOrderPage = (await import("./page")).default;
@@ -60,9 +60,9 @@ async function shopThatCanBill() {
       shopId: shop.id,
       shopSlug: SHOP_SLUG,
       name: owner.fullName,
+      email: "staff@demo.invalid",
       roles: owner.roles,
     },
-    expires: new Date(Date.now() + 60_000).toISOString(),
   });
   return { bookingId: booking.id };
 }

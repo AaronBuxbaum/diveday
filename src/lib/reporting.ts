@@ -150,3 +150,123 @@ export function tripFillRate(trip: Pick<ReportTrip, "capacity" | "activeBookings
   if (trip.capacity <= 0) return null;
   return Math.min(1, trip.activeBookings / trip.capacity);
 }
+
+/**
+ * Which prior month a headline card compares against (issue #700). The
+ * report page decides this once, off the same `floorMonth` it already
+ * computes for the month picker — the earliest month this shop could
+ * possibly have anything to report on — never off whether the fetched month
+ * happens to be all zeroes, because a genuinely quiet month a shop *did* run
+ * is a real baseline and a month before the shop existed is not.
+ */
+export type ComparisonBaselineKind = "yearAgo" | "previousMonth";
+
+/**
+ * One metric's comparison against a baseline month — bookings, revenue,
+ * tips. `percentChange` is null below `smallBaseThreshold`: "2 bookings to 3"
+ * is not "+50% growth", and a report that says so is one an owner stops
+ * trusting (issue #700). The caller shows both raw numbers instead.
+ */
+export type MetricComparison = {
+  current: number;
+  baseline: number;
+  percentChange: number | null;
+};
+
+/** Below this baseline, a percent change reads as noise rather than a trend. */
+export const COUNT_SMALL_BASE = 10;
+
+export function compareMetric(
+  current: number,
+  baseline: number,
+  smallBaseThreshold: number,
+): MetricComparison {
+  const percentChange =
+    baseline >= smallBaseThreshold ? Math.round(((current - baseline) / baseline) * 100) : null;
+  return { current, baseline, percentChange };
+}
+
+/**
+ * A ratio comparison (seat fill, waiver completion) in percentage POINTS,
+ * never a relative "percent change of a percent" — the same small-base trap
+ * `compareMetric`'s threshold exists to avoid, except a percent-of-a-percent
+ * (10% to 15% read as "+50%") is misleading at every base, not only a small
+ * one. Null when either side has nothing to measure.
+ */
+export type RatioComparison = {
+  current: number | null;
+  baseline: number | null;
+  pointsChange: number | null;
+};
+
+export function compareRatio(current: number | null, baseline: number | null): RatioComparison {
+  return {
+    current,
+    baseline,
+    pointsChange:
+      current !== null && baseline !== null ? Math.round((current - baseline) * 100) : null,
+  };
+}
+
+export type MonthComparison = {
+  kind: ComparisonBaselineKind;
+  revenueCents: MetricComparison;
+  tipsCents: MetricComparison;
+  seatsBooked: MetricComparison;
+  fillRate: RatioComparison;
+  waiverCompletion: RatioComparison;
+};
+
+/**
+ * Every headline card's comparison against one baseline month, computed in
+ * one pass so the page never re-derives the small-base thresholds per card.
+ *
+ * Revenue and tips ride the *same* small-base signal bookings already use —
+ * `baseline.seatsBooked` — rather than a second, money-shaped magic number.
+ * A dollar floor cannot mean the same thing across every shop's own scale (a
+ * single-boat operation's real month and a resort's are different orders of
+ * magnitude), but "did this month have next to no bookings" does: a shop's
+ * founding month reading $165 against a thriving $7,479 a year later is not
+ * "+4433% growth", it is a month that barely happened yet, and the low
+ * booking count is the honest reason why — the same reason the bookings
+ * card itself would suppress its own percent for the identical baseline.
+ */
+export function compareMonthlyReports(
+  kind: ComparisonBaselineKind,
+  current: MonthlyReport,
+  baseline: MonthlyReport,
+  currency: string,
+): MonthComparison {
+  // `Infinity` never clears `baseline >= smallBaseThreshold` (short of an
+  // infinite baseline), so a thinly-booked baseline month suppresses the
+  // money percent exactly like a small count does; `0` always clears it
+  // once there was real activity, so a genuine seasonal swing still shows —
+  // seasonality is the whole point of this feature, not noise to hide.
+  const moneyThreshold = baseline.seatsBooked >= COUNT_SMALL_BASE ? 0 : Number.POSITIVE_INFINITY;
+  return {
+    kind,
+    revenueCents: compareMetric(
+      minorToMajor(current.revenueCents, currency),
+      minorToMajor(baseline.revenueCents, currency),
+      moneyThreshold,
+    ),
+    tipsCents: compareMetric(
+      minorToMajor(current.tipsCents, currency),
+      minorToMajor(baseline.tipsCents, currency),
+      moneyThreshold,
+    ),
+    seatsBooked: compareMetric(current.seatsBooked, baseline.seatsBooked, COUNT_SMALL_BASE),
+    fillRate: compareRatio(current.fillRate, baseline.fillRate),
+    waiverCompletion: compareRatio(current.waiverCompletion, baseline.waiverCompletion),
+  };
+}
+
+/** "+12%" / "−8%" — signed, never a bare "12%" that could read as a level rather than a change. */
+export function formatPercentChange(percentChange: number): string {
+  return `${percentChange > 0 ? "+" : ""}${percentChange}%`;
+}
+
+/** "+6pp" / "−6pp" — a percentage-POINT delta, deliberately not styled as `formatPercentChange`'s relative change so the two are never confused reading down a page of cards. */
+export function formatPointsChange(pointsChange: number): string {
+  return `${pointsChange > 0 ? "+" : ""}${pointsChange}pp`;
+}

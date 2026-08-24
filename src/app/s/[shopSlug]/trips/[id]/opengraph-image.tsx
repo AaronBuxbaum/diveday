@@ -8,6 +8,7 @@ import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { spotsRemaining } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as the root `opengraph-image.tsx`.
@@ -48,6 +49,10 @@ export default async function TripOpenGraphImage({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const { shopSlug, id: tripId } = await params;
+  // Link-preview crawlers request this route independently of the page. A
+  // malformed id must produce the generic card rather than reaching Postgres,
+  // where comparing a non-UUID literal against trips.id is a 500.
+  if (!uuidParam(tripId)) return genericCard();
   // Before any ImageResponse is built: Next's image optimizer disables
   // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
   // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
