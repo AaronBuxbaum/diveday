@@ -4,6 +4,7 @@ import {
   WaitlistInvite,
   type WaitlistInviteCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
+import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -331,12 +332,9 @@ export function TodayQueue({
         {viewSwitch}
       </div>
       {todaysBoatsClear ? (
-        <p
-          role="status"
-          className="rise-in mt-4 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold"
-        >
+        <EarnedMomentLine className="mt-4">
           {t("shared.today.todayQueue.boatsClear")}
-        </p>
+        </EarnedMomentLine>
       ) : null}
       <div className="mt-5 flex flex-col gap-8">
         {groups.map((group, index) => {

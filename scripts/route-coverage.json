@@ -197,7 +197,7 @@
   },
   "/shop/[shopSlug]/close-out": {
     "e2e": ["a11y.spec.ts", "closeout.spec.ts"],
-    "visual": ["close-out", "close-out-quiet"]
+    "visual": ["close-out", "close-out-quiet", "close-out-closed"]
   },
   "/shop/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],

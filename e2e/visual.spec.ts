@@ -1976,6 +1976,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "A quiet day at the dock" }).waitFor();
         await capture(page, "close-out-quiet", scheme);
 
+        // **The moment at the end of the ritual** (issue 761). Closing a day
+        // with nothing outstanding is what principle 3 rations `--accent` for,
+        // and the record it leaves had never been photographed in any state.
+        // It cannot be reached on `blue-mantis`: that shop's seeded day still
+        // has a boat ahead of the frozen clock, so `latestHasOutstanding` is
+        // true there and the close always lands on the plain card. This shop
+        // has no departures at all, which is the only way to the coral branch.
+        await page.getByRole("button", { name: "Close the day" }).click();
+        await page.getByRole("heading", { name: "Day closed" }).waitFor();
+        await capture(page, "close-out-closed", scheme);
+
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
         await page.goto(`/shop/${unique}/settings`);

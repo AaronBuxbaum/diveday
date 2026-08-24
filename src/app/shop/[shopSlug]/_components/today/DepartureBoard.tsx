@@ -4,6 +4,7 @@ import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BoardingBar } from "@/components/BoardingBar";
+import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -361,10 +362,11 @@ function DepartureCard({
           // is already satisfied, so this condition is strictly stronger than
           // the manifest's own verdict: the card cannot celebrate a checkpoint
           // the manifest holds open.
-          <p className="rise-in mt-1.5 inline-block rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-base font-semibold">
-            <span aria-hidden="true">🎉 </span>
-            {copy.everyoneAboard}
-          </p>
+          // The 🎉 that used to lead this line is gone with the hand-rolled
+          // panel: the coral is the celebration, and Today's own all-clear line
+          // keeps its 🤙 inside the sentence in the bundle, where a translator
+          // can see it. One mechanism (EarnedMoment's doc comment).
+          <EarnedMomentLine className="mt-1.5">{copy.everyoneAboard}</EarnedMomentLine>
         ) : boarded === booked && blocked === 0 && crewReason !== "crew_none_assigned" ? (
           // Every diver aboard, and a crew member the boat named has no result
           // — which is the one state where somebody may still be in the water
