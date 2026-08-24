@@ -46,6 +46,7 @@ import {
   preDepartureCheckEvents,
   preDepartureChecklistItems,
   priorVisits,
+  priorGearAssignments,
   processorErasureObligations,
   recapPhotos,
   rentalFitProfiles,
@@ -200,6 +201,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // (ADR 20260815-minimal-gear-register).
   await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
+  await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));

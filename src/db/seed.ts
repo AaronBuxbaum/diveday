@@ -48,6 +48,7 @@ import {
   personRoles,
   preDepartureCheckEvents,
   priorVisits,
+  priorGearAssignments,
   processorErasureObligations,
   recapPhotos,
   rentalFitProfiles,
@@ -861,6 +862,7 @@ export async function resetDemoSchedule(
   // add, retire, or reserve units freely and the next test starts clean.
   await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
+  await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));

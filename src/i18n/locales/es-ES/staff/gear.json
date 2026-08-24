@@ -127,7 +127,7 @@
     "divesNeedADate": "Un número de inmersiones necesita una fecha al lado — la unidad vence con lo que ocurra primero.",
     "importEmpty": "Elige un CSV de equipo para importar.",
     "importNoGearColumn": "El archivo no tiene una columna de etiqueta del equipo. Usa la plantilla.",
-    "imported": "Se importaron {events} eventos de mantenimiento y {units} unidades nuevas. Se dejaron {skipped} duplicados sin cambios."
+    "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios."
   },
   "import": {
     "title": "Importar historial del equipo",
@@ -175,7 +175,8 @@
       "recordedBy": "Registrado por {name}"
     },
     "rentals": {
-      "title": "Historial de alquiler"
+      "title": "Historial de alquiler",
+      "importedAssignment": "Asignación histórica a {name}"
     },
     "details": {
       "title": "Detalles",

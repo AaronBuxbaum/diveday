@@ -90,7 +90,7 @@ export function prepareGearImport(csv: string): PreparedGearImport {
   const unmappedColumns: string[] = [];
   headers.forEach((header, index) => {
     if (!header) return;
-    const field = Object.entries(aliases).find(([, names]) => names.includes(header))?.[0];
+    const field = (Object.entries(aliases) as Array<[string, readonly string[]]>).find(([, names]) => names.includes(header))?.[0];
     if (field && !indexes.has(field)) indexes.set(field, index);
     else if (!field) unmappedColumns.push(grid[0][index] ?? header);
   });

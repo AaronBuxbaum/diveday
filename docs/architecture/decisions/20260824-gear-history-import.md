@@ -1,29 +1,41 @@
-# Gear register history import
+# 20260824-gear-history-import — Gear register history import
+
+- **Status:** Accepted
+- **Date:** 2026-08-24
+
+## Context
+
+Shops switching to DiveDay need to carry the care history of their tagged
+fleet. They also need historical rental assignments now that DiveDay manages
+which gear is assigned to people. These records are source evidence, not live
+reservations or bookings.
 
 ## Decision
 
-The switching import now accepts a separate gear-history CSV. It imports the
-shop's own tagged fleet and its dated service records, including manufacturer
-service, hydro tests, visual inspections, O2 cleaning, and condition notes.
-It also accepts historical rental assignments when a row identifies an
-existing diver and a date range.
+The switching import accepts a separate gear-history CSV. It imports tagged
+units and dated service, hydro, visual, O2-clean, and condition records. Units
+match by tag first, then serial number; otherwise the importer creates the
+unit. Exact service re-imports are ignored.
 
-The import is intentionally separate from the diver/contact CSV: equipment
-history belongs to a shop-owned unit and source exports often contain no diver
-identity. Units match an existing live unit by tag first, then serial number;
-otherwise the importer creates the unit. Service rows are appended to the
-unit's existing history and an exact re-import is ignored.
+Rows may also contain `person_email` or `person_name`, `assigned_from`,
+`assigned_until`, `assignment_status`, `assignment_reference`, and
+`assignment_note`. Matching assignments are stored in
+`prior_gear_assignments`, shown in the unit's rental history, and deduplicated.
+They never create a booking, block availability, or become actionable live
+reservations. Unmatched people are reported while the unit/service row remains
+importable.
 
-The supported starter columns are `gear_label`, `gear_kind`, `gear_size`,
-`serial_number`, `brand_model`, `purchased_on`, `service_kind`, `serviced_on`,
-`next_due_on`, `next_due_dives`, and `service_note`. Unknown columns remain
-visible to the operator and are not guessed into the register.
-Assignment rows may additionally use `person_email` or `person_name`,
-`assigned_from`, `assigned_until`, `assignment_status`,
-`assignment_reference`, and `assignment_note`. Assignments are stored in
-`prior_gear_assignments`, separate from live reservations: they are display-only,
-deduplicated, and never block availability or create a booking.
+## Alternatives considered
 
-This does not import work orders, parts, labor, vendor invoices, customer-owned
-gear, ownership transfers, or payment credentials. Those concepts
-have no destination in the current register and remain outside this import.
+- Put historical assignments in `gear_reservations`: rejected because that
+  would affect availability and require a booking that did not exist.
+- Put assignments only on the diver: rejected because the gear unit is the
+  other essential side of the historical relationship.
+- Reconstruct bookings and payments: rejected because source exports do not
+  provide enough authoritative evidence.
+
+## Consequences
+
+The import template carries both service and assignment fields. Work orders,
+parts, labor, vendor invoices, customer-owned gear, ownership transfers, and
+payment credentials remain outside this import until their own models exist.
