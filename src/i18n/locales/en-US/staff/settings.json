@@ -381,7 +381,8 @@
       "notFound": "That person isn't on this shop's team.",
       "notAuthorized": "Team management is limited to owners and managers.",
       "contactSaved": "Emergency contact saved.",
-      "contactHalfFilled": "An emergency contact needs both a name and a number."
+      "contactHalfFilled": "An emergency contact needs both a name and a number.",
+      "languagesSaved": "Languages saved."
     },
     "statusBadge": {
       "invited": "Invited",
@@ -398,6 +399,10 @@
       "crew": "Crew",
       "diver": "Diver"
     },
+    "languagesLegend": "Languages",
+    "languagesLabel": "Languages this person speaks",
+    "languagesSave": "Save",
+    "languagesSaving": "Saving…",
     "invite": {
       "heading": "Invite someone",
       "description": "They'll get an email to set their own password. Inviting an existing diver by the same email adds staff access to their record instead of creating a second one.",
