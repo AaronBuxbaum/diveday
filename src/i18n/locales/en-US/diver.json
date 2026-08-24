@@ -2890,6 +2890,8 @@
         "heading": "Getting data out, and getting it deleted",
         "exportTerm": "Export",
         "exportBody": "a shop can download its records from DiveDay as one ZIP, from its own settings, on any day, without asking us and without a fee. It is the same bundle our own backups are made of. A few internal tables are left out of it — delivery retry mechanics, device registrations, the sealed credentials for a shop's own backup destination — and nothing left out is a record of a diver.",
+        "diverCopyTerm": "A diver's own copy",
+        "diverCopyBody": "a diver may ask a shop for a copy of what it holds about them, and staff can download it from the diver's own record page as one ZIP — their bookings, certifications, waivers, payments and reviews at that shop, never another diver's. Signed medical answers are left out of it for now, pending a decision recorded at docs/product/human-decisions.md.",
         "erasureTerm": "Erasure",
         "erasureBody": "a shop can erase a diver's record. Where that record reached a payment processor, the erasure is tracked as owed until it is discharged rather than being declared done at our own edge — a customer object DiveDay deletes itself and confirms; an invoice a processor has already issued is a request a person has to file, and the shop can see it sitting there until they do."
       },

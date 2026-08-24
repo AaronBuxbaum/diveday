@@ -366,5 +366,11 @@
     "noteAdded": "Nota del buceador añadida.",
     "noteDeleted": "Nota del buceador eliminada.",
     "notAuthorizedNotes": "Tu cuenta ya no puede cambiar las notas de este buceador en este centro. Pide a un propietario o gerente que revise tu acceso."
+  },
+  "export": {
+    "downloadButton": {
+      "idle": "Descargar el registro de este buceador",
+      "acknowledged": "En camino — revisa tus descargas"
+    }
   }
 }

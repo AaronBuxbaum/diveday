@@ -189,6 +189,25 @@ export function exportFileName(shopSlug: string, now: Date, timezone: string): s
 }
 
 /**
+ * `<first 8 hex chars of the person id>` — enough to make two divers exported
+ * from the same shop on the same day land in two different files, without
+ * putting a diver's full id (or their name, which a filename survives outside
+ * any access control DiveDay enforces) into a downloaded file's name.
+ */
+function personFileFragment(personId: string): string {
+  return personId.replace(/-/g, "").slice(0, 8);
+}
+
+export function diverExportFileName(
+  shopSlug: string,
+  personId: string,
+  now: Date,
+  timezone: string,
+): string {
+  return `diveday-diver-export-${shopSlug}-${personFileFragment(personId)}-${exportDateStamp(now, timezone)}.zip`;
+}
+
+/**
  * Record families deliberately absent from the bundle, stated in the README —
  * an export that is quiet about its gaps is how migrations lose data.
  */
@@ -212,6 +231,16 @@ export type ExportBundleInput = {
   timezone: string;
   tables: ExportTable[];
   /** Every DiveDay-stored image or import-document URL referenced in `tables`, deduped. */
+  photoUrls: string[];
+};
+
+/** {@link ExportBundleInput}'s per-diver twin — see `buildDiverExportBundle`. */
+export type DiverExportBundleInput = {
+  shopName: string;
+  shopSlug: string;
+  timezone: string;
+  diverName: string;
+  tables: ExportTable[];
   photoUrls: string[];
 };
 
@@ -254,6 +283,62 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     ...NOT_INCLUDED.map((line) => `- ${line}`),
     ``,
     `Your data is yours. This export is available to every shop on every plan.`,
+  ].join("\n");
+
+  return [{ name: "README.txt", content: `${readme}\n` }, ...files];
+}
+
+/**
+ * Every record family named in `loadDiverExportBundleInput` (src/db/export.ts)
+ * that is deliberately absent from a diver's own bundle, and why — the same
+ * discipline `NOT_INCLUDED` above holds the shop bundle to, so a diver reading
+ * their own README can tell "not applicable" from "silently dropped".
+ */
+const DIVER_NOT_INCLUDED = [
+  "Medical answers on any signed waiver — withheld pending a legal review of what a subject-access request should return; every other field of the signature is included.",
+  "Internal staff notes about this diver. They were never shown to a diver and never gated anything; the shop's own words about its own customer stay the shop's.",
+  "The staff activity trail. Its entries are English sentences generated at write time that routinely name a different diver — safely removing just that risk needs the same name-matching sweep the erasure path uses, and is a follow-up rather than reinvented here.",
+  "Payment checkout attempts (as opposed to their outcome, which is in booking_payment_events.csv). One checkout can cover an entire party sharing a single Stripe session, so its email and totals may not be this diver's alone.",
+  "Everything the shop-wide export excludes for the same reasons stated there: notification retry queues and provider logs, Stripe account linkage, the day close-out and buddy-pairing trails, weather-cancellation cascade state, push-notification credentials, DiveDay's own internal reconciliation ledgers, login accounts and credentials, and the reading language DiveDay inferred for this diver rather than one they stated.",
+];
+
+/** Assemble one diver's record bundle: one CSV per table plus a README.txt. */
+export function buildDiverExportBundle(input: DiverExportBundleInput, now: Date): ExportFile[] {
+  const files = input.tables.map((table) => ({
+    name: table.file,
+    content: buildCsv(table.header, table.rows),
+  }));
+
+  const readme = [
+    `DiveDay diver record export`,
+    `Shop: ${input.shopName} (${input.shopSlug})`,
+    `Diver: ${input.diverName}`,
+    `Exported at: ${now.toISOString()} (dates below are in ${input.timezone})`,
+    ``,
+    `Every file is UTF-8 CSV (RFC 4180). Timestamps are ISO 8601 in UTC.`,
+    `Money columns are minor units (cents). Rows with a deleted_at value are`,
+    `soft-archived history — kept so nothing is lost.`,
+    `Text that would open as a spreadsheet formula (leading =, @, or a +/-`,
+    `followed by anything beyond digits and phone punctuation) is prefixed`,
+    `with an apostrophe so it always reads as text; strip it when importing`,
+    `programmatically. Phone numbers like +1 305 555 0100 are never altered.`,
+    ``,
+    `This is everything this shop holds about this one diver — not the`,
+    `whole shop's records, and never another diver's name or details.`,
+    ``,
+    `Files:`,
+    ...input.tables.map(
+      (table) =>
+        `- ${table.file} (${table.rows.length} ${table.rows.length === 1 ? "row" : "rows"}): ${table.note}`,
+    ),
+    ``,
+    `Photos and imported documents: any image_url / *_url column above whose link is`,
+    `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
+    `path as the URL. A link that was never stored through DiveDay (an external`,
+    `link, or a bundled template asset) has no file here.`,
+    ``,
+    `Not included in this bundle:`,
+    ...DIVER_NOT_INCLUDED.map((line) => `- ${line}`),
   ].join("\n");
 
   return [{ name: "README.txt", content: `${readme}\n` }, ...files];

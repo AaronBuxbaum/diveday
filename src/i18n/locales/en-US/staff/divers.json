@@ -366,5 +366,11 @@
     "noteAdded": "Diver note added.",
     "noteDeleted": "Diver note deleted.",
     "notAuthorizedNotes": "Your account can’t change this diver’s notes for this shop any more. Ask an owner or manager to check your access."
+  },
+  "export": {
+    "downloadButton": {
+      "idle": "Download this diver's record",
+      "acknowledged": "On its way — check your downloads"
+    }
   }
 }

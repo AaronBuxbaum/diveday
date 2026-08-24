@@ -95,6 +95,70 @@ test.describe("full-shop data export", () => {
   });
 });
 
+/**
+ * The per-diver record export (issue #726, ADR 20260824-diver-record-export):
+ * a subject-access answer scoped to one diver's own rows, reached from their
+ * own record page. Not READ_ONLY — a successful download writes one line to
+ * the diver's activity trail — but it needs no private shop either, since
+ * that write is scoped to one diver's own booking-shaped rows and resets like
+ * any other per-test mutation (AGENTS.md's RESET_KEEPS list is shop-wide
+ * settings, not this). The stronger "no other diver's name anywhere in the
+ * bundle" property is proven with full control over a shared party and buddy
+ * team in src/db/diver-export.test.ts; this proves the real HTTP route and
+ * the file-level shape it serves.
+ */
+test.describe("one diver's own record export", () => {
+  signedInAsOwner();
+
+  test("downloads one diver's own record, and only their own", async ({ page, request }) => {
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
+    await page.getByRole("link", { name: "Priya Sharma" }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Download this diver's record" }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^diveday-diver-export-blue-mantis-[0-9a-f]{8}-\d{4}-\d{2}-\d{2}\.zip$/,
+    );
+
+    const personId = new URL(page.url()).pathname.split("/").at(-1);
+    const response = await request.get(`/shop/blue-mantis/divers/${personId}/export`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("application/zip");
+    const unzipped = unzipSync(new Uint8Array(await response.body()));
+
+    // The diver's own record is really in there.
+    expect(Object.keys(unzipped)).toContain("profile.csv");
+    expect(Object.keys(unzipped)).toContain("bookings.csv");
+    expect(strFromU8(unzipped["profile.csv"])).toContain("Priya Sharma");
+    const readme = strFromU8(unzipped["README.txt"]);
+    expect(readme).toContain("Diver: Priya Sharma");
+
+    // The files the shop-wide bundle carries but a diver's own copy never
+    // does — free text that can name a different diver, and a payment
+    // session that can cover a whole party (ADR 20260824-diver-record-export).
+    for (const excluded of ["internal_notes.csv", "activity_events.csv", "booking_checkouts.csv"]) {
+      expect(Object.keys(unzipped)).not.toContain(excluded);
+    }
+  });
+});
+
+test("a diver's own export never leaves without a staff session", { tag: READ_ONLY }, async ({
+  request,
+}) => {
+  const response = await request.get(
+    "/shop/blue-mantis/divers/00000000-0000-0000-0000-000000000000/export",
+    {
+      maxRedirects: 0,
+    },
+  );
+  expect(response.status()).toBeGreaterThanOrEqual(300);
+  expect(response.status()).toBeLessThan(400);
+  expect(response.headers().location).toContain("/sign-in");
+});
+
 test("the export never leaves without a staff session", { tag: READ_ONLY }, async ({ request }) => {
   const response = await request.get("/shop/blue-mantis/settings/export/download", {
     maxRedirects: 0,

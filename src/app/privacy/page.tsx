@@ -191,6 +191,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
         <LegalTermList
           items={[
             { term: p("out.exportTerm"), body: p("out.exportBody") },
+            { term: p("out.diverCopyTerm"), body: p("out.diverCopyBody") },
             { term: p("out.erasureTerm"), body: p("out.erasureBody") },
           ]}
         />
