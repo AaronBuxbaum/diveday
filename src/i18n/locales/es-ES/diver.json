@@ -1907,6 +1907,10 @@
           "column": "Teléfono",
           "detail": "Móvil o fijo, como lo tengas escrito."
         },
+        "dateOfBirth": {
+          "column": "Fecha de nacimiento",
+          "detail": "Una fecha real de nacimiento se traslada cuando el archivo la incluye."
+        },
         "emergencyContact": {
           "column": "Contacto de emergencia",
           "detail": "Un nombre y un teléfono, cuando los tengas, aterrizan en la ficha del buceador."
@@ -1934,6 +1938,22 @@
         "pastVisits": {
           "column": "Visitas anteriores",
           "detail": "Una fecha, el nombre del viaje y el precio por fila se vuelven el historial de ese buceador, así un habitual llega como habitual. Repite su correo en cada fila para asociarlo a la persona correcta."
+        },
+        "waivers": {
+          "column": "Exenciones y documentos",
+          "detail": "Puede trasladarse una exención firmada y enlaces seguros; no se trasladan respuestas médicas individuales."
+        },
+        "paymentHistory": {
+          "column": "Historial de pagos",
+          "detail": "Los pagos, reembolsos y recibos pueden conservarse como historial sin verificar, nunca como datos de tarjeta activos."
+        },
+        "notes": {
+          "column": "Notas",
+          "detail": "Las notas del personal y del buceador se convierten en notas privadas del perfil."
+        },
+        "gearHistory": {
+          "column": "Historial del equipo",
+          "detail": "Un CSV separado trae las unidades etiquetadas y sus registros fechados de mantenimiento, inspección y estado."
         }
       },
       "closingTitle": "Míralo antes de cambiar nada.",
@@ -2367,7 +2387,7 @@
           },
           "serviceHistory": {
             "what": "Historial de mantenimiento de equipo",
-            "detail": "Se queda fuera — el importador trae fichas de buceadores, nunca el registro de equipo de otro sistema. Los plazos de mantenimiento de tu flota empiezan de cero en el registro de equipo."
+            "detail": "Se importa mediante el CSV del historial del equipo; las unidades coinciden por etiqueta o número de serie y conservan sus registros fechados."
           },
           "diverNotes": {
             "what": "Notas internas y del buceador",

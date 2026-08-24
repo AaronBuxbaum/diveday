@@ -559,7 +559,7 @@
       },
       "serviceHistory": {
         "what": "Gear service history",
-        "detail": "Stays behind — the importer carries diver records, never another system's equipment log. Your fleet's service clocks start fresh on the gear register."
+        "detail": "Imported through the gear register's gear-history CSV. Units match by tag or serial number, and dated service records stay attached to the unit."
       },
       "diverNotes": {
         "what": "Internal & diver notes",

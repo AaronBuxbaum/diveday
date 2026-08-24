@@ -143,8 +143,9 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    templates matching what the rivals actually emit (DiveShop360's customer/cert exports,
    DiveAdmin's CSVs, Smartwaiver participant CSVs, generic spreadsheet). Publish Jane-style scope
    tables: what imports fully / partially / never. Card credentials stay with the processor — never
-   card numbers, CVCs, payment methods, or reusable tokens — and incumbent repair/service history
-   stays behind, which is the documented un-migratable residue everyone resents. Payment, refund,
+   card numbers, CVCs, payment methods, or reusable tokens. Incumbent repair/service history is
+   now portable through the gear-history CSV; payment credentials remain behind, which is the
+   documented un-migratable residue everyone resents. Payment, refund,
    receipt, and source Stripe-reference rows now come across in their own **unverified** Orders
    section. A clearly parsed matching-currency payment/refund can be named in the aggregate revenue
    figure, but it never becomes a live Stripe order, booking payment, or reconciliation claim.

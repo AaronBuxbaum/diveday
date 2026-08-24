@@ -124,7 +124,19 @@
     "dueNotAfterService": "La próxima fecha de vencimiento tiene que ser posterior a la del servicio.",
     "allHome": "Todo en casa — cada unidad está de vuelta en la pared.",
     "invalidDives": "Las inmersiones tienen que ser un número entero mayor que cero.",
-    "divesNeedADate": "Un número de inmersiones necesita una fecha al lado — la unidad vence con lo que ocurra primero."
+    "divesNeedADate": "Un número de inmersiones necesita una fecha al lado — la unidad vence con lo que ocurra primero.",
+    "importEmpty": "Elige un CSV de equipo para importar.",
+    "importNoGearColumn": "El archivo no tiene una columna de etiqueta del equipo. Usa la plantilla.",
+    "imported": "Se importaron {events} eventos de mantenimiento y {units} unidades nuevas. Se dejaron {skipped} duplicados sin cambios."
+  },
+  "import": {
+    "title": "Importar historial del equipo",
+    "description": "Trae tu flota y sus registros de mantenimiento desde otro sistema.",
+    "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
+    "downloadTemplate": "Descargar plantilla CSV del equipo",
+    "file": "Archivo CSV",
+    "submit": "Importar historial",
+    "pending": "Importando…"
   },
   "unit": {
     "deleted": {

@@ -559,7 +559,7 @@
       },
       "serviceHistory": {
         "what": "Historial de mantenimiento de equipo",
-        "detail": "Se queda fuera — el importador trae fichas de buceadores, nunca el registro de equipo de otro sistema. Los plazos de mantenimiento de tu flota empiezan de cero en el registro de equipo."
+        "detail": "Se importa mediante el CSV del registro de equipo; las unidades coinciden por etiqueta o número de serie y conservan sus registros fechados."
       },
       "diverNotes": {
         "what": "Notas internas y del buceador",

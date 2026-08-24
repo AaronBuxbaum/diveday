@@ -1907,6 +1907,10 @@
           "column": "Phone",
           "detail": "Mobile or landline, however you've written it."
         },
+        "dateOfBirth": {
+          "column": "Date of birth",
+          "detail": "A real date of birth carries over when your file has one."
+        },
         "emergencyContact": {
           "column": "Emergency contact",
           "detail": "A name and a phone number, when you have them, land on the diver's record."
@@ -1934,6 +1938,22 @@
         "pastVisits": {
           "column": "Past visits",
           "detail": "A date, trip name, and price per row becomes that diver's history here, so a regular arrives as a regular. Repeat their email on each row to match the right person."
+        },
+        "waivers": {
+          "column": "Waivers and documents",
+          "detail": "A signed waiver claim and safe document links can come across; individual medical answers do not."
+        },
+        "paymentHistory": {
+          "column": "Payment history",
+          "detail": "Payment, refund, and receipt rows can be kept as unverified history — never as live card data."
+        },
+        "notes": {
+          "column": "Notes",
+          "detail": "Staff and diver notes become private notes on the diver's profile."
+        },
+        "gearHistory": {
+          "column": "Gear service history",
+          "detail": "A separate gear CSV brings in your tagged units and dated service, hydro, inspection, O2-clean, and condition records."
         }
       },
       "closingTitle": "See it before you switch a thing.",
@@ -2367,7 +2387,7 @@
           },
           "serviceHistory": {
             "what": "Gear service history",
-            "detail": "Stays behind — the importer carries diver records, never another system's equipment log. Your fleet's service clocks start fresh on the gear register."
+            "detail": "Comes across through the separate gear-history CSV — units match by tag or serial number, and dated service records stay attached to the right unit."
           },
           "diverNotes": {
             "what": "Diver & staff notes",
@@ -2384,7 +2404,7 @@
         "heroLede": "EVE keeps your divers and their certification records on a Windows PC in the back office. Here's how to get that data out of EVE yourself and bring your people, certification records, and rental sizes into DiveDay — with a plain account of what makes the trip and what stays behind.",
         "context": {
           "item1": "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you're planning a move off it, this guide is about the practical part: getting your people and their certification records out of EVE and into DiveDay.",
-          "item2": "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import isn't trying to move all that. It moves what you need on day one — your roster, their certification records, their rental sizes — so your people are trip-ready from the first booking, and the history stays where it already is.",
+          "item2": "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of booking history can be hard to pull out cleanly. DiveDay brings over your roster, certification records, rental sizes, and — through the separate gear-history CSV — your tagged fleet's dated service records, so your people and equipment are ready from the first booking.",
           "item3": "One rule we won't bend: you export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data — that's your data to hand us, not ours to take."
         },
         "exportHeading": "Get your data out of EVE",

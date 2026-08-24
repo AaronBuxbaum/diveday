@@ -138,6 +138,7 @@ const SHEET_COLUMNS = [
   "name",
   "email",
   "phone",
+  "dateOfBirth",
   "emergencyContact",
   "diveInsurance",
   "certification",
@@ -145,6 +146,10 @@ const SHEET_COLUMNS = [
   "nitrox",
   "rentalSizes",
   "pastVisits",
+  "waivers",
+  "paymentHistory",
+  "notes",
+  "gearHistory",
 ] as const;
 
 /** The four jobs a spreadsheet has no way to hold — this guide's whole wedge. */

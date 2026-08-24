@@ -47,6 +47,7 @@ import {
   createGearItemAction,
   releaseGearReservationFromRegisterAction,
   restoreGearItemAction,
+  importGearServiceHistoryAction,
   returnGearReservationAction,
 } from "./actions";
 
@@ -70,6 +71,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   deleted: { tone: "success", key: "gear.notice.deleted" },
   updated: { tone: "success", key: "gear.notice.updated" },
   "service-logged": { tone: "success", key: "gear.notice.serviceLogged" },
+  "import-empty": { tone: "danger", key: "gear.notice.importEmpty" },
+  "import-no_gear_column": { tone: "danger", key: "gear.notice.importNoGearColumn" },
 };
 
 /** Refusals born in the add form render beside it, not in the page banner. */
@@ -145,6 +148,7 @@ export default async function GearRegisterPage({
   const showDeleted = deletedPage.total > 0 && (deletedView || fleetTotal === 0);
 
   const banner = noticeFromParam(notice, NOTICES);
+  const importedMatch = notice?.match(/^imported-(\d+)-(\d+)-(\d+)$/);
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const addStatus = notice && ADD_FORM_NOTICES.has(notice) ? NOTICES[notice] : undefined;
   const pageBanner = noticeField || addStatus ? undefined : banner;
@@ -192,6 +196,10 @@ export default async function GearRegisterPage({
         // closes the loop — one coral line, nothing animated past its 200ms
         // entrance, and only when the queue is genuinely empty.
         <EarnedMomentLine className="mt-6">{t("gear.notice.allHome")}</EarnedMomentLine>
+      ) : importedMatch ? (
+        <StaffNoticeBanner tone="success">
+          {t("gear.notice.imported", { events: importedMatch[1], units: importedMatch[2], skipped: importedMatch[3] })}
+        </StaffNoticeBanner>
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
@@ -453,6 +461,22 @@ export default async function GearRegisterPage({
             <FieldErrorFocus key={notice} scope="add-unit" />
           </div>
         </AddUnitDetails>
+
+        <SectionCard title={t("gear.import.title")} description={t("gear.import.description")}>
+          <p className="text-sm text-muted">{t("gear.import.help")}</p>
+          <a className={buttonClass({ variant: "secondary", className: "mt-4" })} href="/diveday-gear-service-import-template.csv" download>
+            {t("gear.import.downloadTemplate")}
+          </a>
+          <form action={importGearServiceHistoryAction} encType="multipart/form-data" className="mt-5 flex flex-wrap items-end gap-3">
+            <label className="grid gap-1 text-sm font-medium">
+              {t("gear.import.file")}
+              <input name="file" type="file" accept=".csv,text/csv" required className={controlClass} />
+            </label>
+            <SubmitButton pendingLabel={t("gear.import.pending")} className={buttonClass({ variant: "secondary" })}>
+              {t("gear.import.submit")}
+            </SubmitButton>
+          </form>
+        </SectionCard>
       </div>
     </main>
   );

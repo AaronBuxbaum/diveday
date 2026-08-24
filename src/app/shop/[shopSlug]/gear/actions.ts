@@ -9,6 +9,8 @@ import {
   restoreGearItem,
   returnGearReservation,
 } from "@/db/gear";
+import { commitGearImport } from "@/db/gear-import";
+import { prepareGearImport } from "@/lib/gear-import";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -40,6 +42,16 @@ export async function createGearItemAction(formData: FormData) {
     ...parsed.data,
   });
   revalidateAndRedirect(gear, noticeUrl(gear, outcome.ok ? "added" : outcome.reason));
+}
+
+export async function importGearServiceHistoryAction(formData: FormData) {
+  const { session, gear } = await requireGearSurface();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) revalidateAndRedirect(gear, noticeUrl(gear, "import-empty"));
+  const prepared = prepareGearImport(await file.text());
+  if (prepared.fatal) revalidateAndRedirect(gear, noticeUrl(gear, `import-${prepared.fatal}`));
+  const summary = await commitGearImport(await getDb(), session.user.shopId, prepared, session.user.personId);
+  revalidateAndRedirect(gear, noticeUrl(gear, `imported-${summary.eventsAdded}-${summary.unitsCreated}-${summary.eventsSkipped}`));
 }
 
 /**
