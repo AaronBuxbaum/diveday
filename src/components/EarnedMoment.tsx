@@ -1,11 +1,70 @@
 /**
- * The one concentrated, coral-accented moment a surface earns when the user
- * finishes something — booking confirmed, waiver signed, everyone aboard,
- * you're all set (design/principles.md #3). It is deliberately the only place
- * `--accent` appears on a page, so joy stays rationed and keeps its meaning.
- * `rise-in` gives it a ≤400 ms entrance that the reduced-motion kill-switch
- * still neutralises.
+ * The coral-accented moment a surface earns when the user finishes something —
+ * booking confirmed, waiver signed, everyone aboard, you're all set
+ * (design/principles.md #3). `--accent` appears nowhere else on a page, so joy
+ * stays rationed and keeps its meaning, and `rise-in` gives it a ≤400 ms
+ * entrance that the reduced-motion kill-switch still neutralises.
+ *
+ * **Two shapes, one vocabulary** (issue 761). This module owns the look and the
+ * rationing rule; a surface picks the shape its moment is, and never redraws
+ * either at the call site:
+ *
+ * - {@link EarnedMoment} — the whole-page moment on a diver's token page. A
+ *   heading, a body, and rising coral bubbles.
+ * - {@link EarnedMomentLine} — one line inside a working staff surface, where
+ *   a coral panel with bubbles in the middle of a queue would be far too much.
+ *
+ * The compact shape is not new; three surfaces had already built it by hand,
+ * each correctly citing principle 3 and each arriving at a different object:
+ * Today's all-clear line, the departure board's everyone-aboard line and the
+ * gear register's last-return line disagreed on radius, padding, text size,
+ * whether they announced themselves with `role="status"`, and whether they
+ * carried an emoji. That is the same drift `SectionCard` and `EmptyState` were
+ * built to stop.
+ *
+ * **The component supplies no glyph.** The departure board's `🎉` lived in
+ * markup while Today's `🤙` lives inside its sentence in both locale bundles —
+ * two mechanisms for one idea, and the markup one is invisible to a translator.
+ * The panel is the celebration; if a moment's words carry a mark, it belongs in
+ * the words, where somebody translating them can see it. (This is not the
+ * `tone.ts` question: those emoji are *status* marks carrying pass/fail/caution
+ * to a colourblind scan, which is a different job with its own long argument.)
  */
+/**
+ * The accent surface itself, for the rare moment that is a panel with its own
+ * heading rather than a line or a whole-page block — the close-out's record of
+ * a day that closed with nothing outstanding is the only one.
+ *
+ * Exported as a class string rather than forced into one of the two components
+ * because that panel has a heading, a `closedBy` line and an
+ * `aria-labelledby` of its own; bending a component to accept all three would
+ * buy nothing the constant does not. What matters is that the *vocabulary*
+ * lives here, so a fourth surface cannot invent a fourth coral.
+ */
+export const EARNED_MOMENT_SURFACE = "rise-in rounded-2xl border border-accent/40 bg-accent/10";
+
+/**
+ * One earned line inside a working surface. `role="status"` because these all
+ * appear in response to something the user just did — the last diver boarding,
+ * the last set of fins coming back — on a page that does not reload.
+ */
+export function EarnedMomentLine({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <p
+      role="status"
+      className={`rise-in rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold ${className}`.trim()}
+    >
+      {children}
+    </p>
+  );
+}
+
 export function EarnedMoment({
   eyebrow,
   title,

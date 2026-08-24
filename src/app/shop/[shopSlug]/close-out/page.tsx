@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { KindChip } from "@/app/shop/[shopSlug]/_components/today/KindChip";
+import { EARNED_MOMENT_SURFACE } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -512,11 +513,19 @@ export default async function CloseOutPage({
       {latest ? (
         <section
           aria-labelledby="closeout-record-heading"
-          // Success-tinted only when the record says nothing was outstanding:
-          // a green box listing an unreconciled head count would be the card
-          // contradicting its own contents.
-          className={`mb-8 rounded-2xl border p-5 sm:p-6 ${
-            latestHasOutstanding ? "border-border bg-surface" : "border-success/40 bg-success/5"
+          // **The joy vocabulary, not the feedback one** (issue 761). The
+          // split is unchanged and was always right — a coral box listing an
+          // unreconciled head count would be the card contradicting its own
+          // contents — but the winning branch used to be
+          // `border-success/40 bg-success/5`, the same green that means "waiver
+          // valid". Closing a day where everybody is home is the ritual
+          // AGENTS.md names and principle 3 rations `--accent` for, and the app
+          // answered it with OK. It now wears the one earned-moment surface,
+          // rise-in and all, rather than a fourth hand-rolled coral.
+          className={`mb-8 p-5 sm:p-6 ${
+            latestHasOutstanding
+              ? "rounded-2xl border border-border bg-surface"
+              : EARNED_MOMENT_SURFACE
           }`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">

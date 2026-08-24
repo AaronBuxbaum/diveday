@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
@@ -190,9 +191,7 @@ export default async function GearRegisterPage({
         // The earned moment (principles.md #3): the last return of the day
         // closes the loop — one coral line, nothing animated past its 200ms
         // entrance, and only when the queue is genuinely empty.
-        <div className="rise-in mt-6 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm font-medium">
-          {t("gear.notice.allHome")}
-        </div>
+        <EarnedMomentLine className="mt-6">{t("gear.notice.allHome")}</EarnedMomentLine>
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
