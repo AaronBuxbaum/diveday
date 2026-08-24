@@ -49,7 +49,15 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
   const { pathname } = req.nextUrl;
   const hasSession = getSessionCookie(req) !== null;
   const cache = hasSession
-    ? await getCookieCache(req, { secret: authSecret, strategy: "jwe" }).catch(() => null)
+    ? await getCookieCache(req, {
+        secret: authSecret,
+        strategy: "jwe",
+        // Keep the edge reader aligned with buildAuth().advanced.useSecureCookies.
+        // The e2e fleet deliberately uses unprefixed cookies over loopback HTTP;
+        // Better Auth otherwise defaults this cache reader to the production
+        // __Secure- name even though the session cookie itself accepts either.
+        isSecure: process.env.DIVEDAY_E2E !== "1",
+      }).catch(() => null)
     : null;
   const session = cache?.session as unknown as CachedSessionSnapshot | undefined;
   const roles = session?.roles;
