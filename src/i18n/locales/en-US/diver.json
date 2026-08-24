@@ -345,6 +345,14 @@
       "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
     }
   },
+  "findMyBooking": {
+    "heading": "Can't find your link?",
+    "body": "If you booked with us, enter the email you used and we'll send it again.",
+    "submit": "Send my link",
+    "submitting": "Sending…",
+    "sentHeading": "Check your inbox",
+    "sentBody": "If that email has a current booking with us, we've sent a fresh link to it."
+  },
   "courtesyEmailUnsubscribe": {
     "title": "Stop these emails?",
     "description": "You're on {shopName}'s list for wait-list openings and post-trip recaps. You'll still get emails about your own bookings, waivers, and trip updates.",
