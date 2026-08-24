@@ -52,6 +52,8 @@ The app is tap-first; precision swipe and drag gestures are avoided unless they 
 2. **Pull-to-refresh** (`PullToRefresh`): pulling down at the top of the offline manifest (`OfflineManifestView`) or check-in queue to force a sync without hunting for a small text button on a sunny dock.
 
 Both share the exact same contract: unified touch + pointer events (zero third-party gesture libraries), visual progress feedback with resistance dampening, cancel curves when released below threshold, and zero interference with ordinary vertical scrolling.
+A directional swipe never commits a head-count change; only the explicit check-in tap/re-tap or
+roll-call tap changes that count.
 
 ## 3. Calm surfaces, earned moments of joy
 

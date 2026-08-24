@@ -1,4 +1,4 @@
-import { nowDate } from "./clock";
+import { nowDate, nowMs } from "./clock";
 /** Open-Meteo supplies sea-surface temperature only ten days ahead. */
 export const AUTOMATED_FORECAST_WINDOW_DAYS = 10;
 
@@ -196,6 +196,26 @@ export type AutomatedMarineForecast = {
   validAt: Date;
 };
 
+const AUTOMATED_FORECAST_CACHE_TTL_MS = 5 * 60 * 1_000;
+const AUTOMATED_FORECAST_CACHE_MAX_ENTRIES = 256;
+type CachedForecast = { expiresAt: number; value: AutomatedMarineForecast };
+const forecastCaches = new WeakMap<Fetcher, Map<string, CachedForecast>>();
+
+function forecastCacheFor(fetcher: Fetcher) {
+  const existing = forecastCaches.get(fetcher);
+  if (existing) return existing;
+  const created = new Map<string, CachedForecast>();
+  forecastCaches.set(fetcher, created);
+  return created;
+}
+
+function forecastCacheKey(point: ForecastPoint, startsAt: Date) {
+  // The provider publishes hourly values. Rounding the departure to that same
+  // granularity lets several trips at one site share one provider response
+  // without making a forecast for a different hour look current.
+  return `${point.latitude}:${point.longitude}:${Math.floor(startsAt.getTime() / 3_600_000)}`;
+}
+
 export type CrewPrediction = {
   conditionsSummary: string | null;
   waterTemperatureC: number | null;
@@ -300,8 +320,10 @@ function surfaceConditions(
 }
 
 /**
- * Returns a planning forecast without persisting it. A fresh request on each dynamic page render
- * keeps the automatic fallback separate from the crew's dated, published briefing.
+ * Returns a planning forecast without persisting it to a trip. A short-lived
+ * in-process cache avoids asking Open-Meteo twice for the same site/hour while
+ * keeping the automatic fallback separate from the crew's dated, published
+ * briefing.
  */
 export async function fetchAutomatedMarineForecast(
   point: ForecastPoint,
@@ -311,6 +333,14 @@ export async function fetchAutomatedMarineForecast(
   // Browser tests exercise our full Next/database stack, but must not wait on or depend on a
   // third-party forecast. Passing an explicit fetcher still exercises the adapter in unit tests.
   if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
+
+  const cache = forecastCacheFor(fetcher);
+  const key = forecastCacheKey(point, startsAt);
+  const cached = cache.get(key);
+  if (cached) {
+    if (cached.expiresAt > nowMs()) return cached.value;
+    cache.delete(key);
+  }
 
   const marineParams = new URLSearchParams({
     latitude: String(point.latitude),
@@ -409,7 +439,7 @@ export async function fetchAutomatedMarineForecast(
 
     if (temperature === null && surface === null && wind === null && current === null) return null;
 
-    return {
+    const forecast: AutomatedMarineForecast = {
       waterTemperatureC: temperature === null ? null : Math.round(temperature),
       surface,
       wind,
@@ -418,6 +448,12 @@ export async function fetchAutomatedMarineForecast(
       source: "Open-Meteo marine forecast",
       validAt: new Date(unixTime * 1_000),
     };
+    if (cache.size >= AUTOMATED_FORECAST_CACHE_MAX_ENTRIES) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey) cache.delete(oldestKey);
+    }
+    cache.set(key, { expiresAt: nowMs() + AUTOMATED_FORECAST_CACHE_TTL_MS, value: forecast });
+    return forecast;
   } catch {
     return null;
   }

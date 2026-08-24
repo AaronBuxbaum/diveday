@@ -354,7 +354,6 @@ export default async function DiveRecapPage({
               copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
               failedLabel={t("recap.linkCopyFailed")}
             />
-            <PrintRecordButton label={t("recap.printRecord")} />
           </div>
         </TokenPageHeader>
 
@@ -522,7 +521,7 @@ export default async function DiveRecapPage({
           ) : null}
 
           {conditions.length > 0 ? (
-            <div className="mt-4 border-t border-border pt-3">
+            <dl className="mt-4 border-t border-border pt-3">
               <dt className="text-xs font-medium text-muted">{t("recap.conditionsOnTheDay")}</dt>
               <dd className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm font-medium">
                 {conditions.map((c) => (
@@ -532,7 +531,7 @@ export default async function DiveRecapPage({
                   </span>
                 ))}
               </dd>
-            </div>
+            </dl>
           ) : null}
 
           <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-xs text-muted">

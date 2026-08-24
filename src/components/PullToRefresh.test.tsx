@@ -66,4 +66,22 @@ describe("PullToRefresh", () => {
       resolveRefresh();
     });
   });
+
+  it("accepts a touch pointer, whose primary button is -1", async () => {
+    const onRefresh = vi.fn().mockResolvedValue(undefined);
+    const { container } = render(
+      <PullToRefresh onRefresh={onRefresh}>
+        <div>Manifest Content</div>
+      </PullToRefresh>,
+    );
+
+    const root = container.firstElementChild as HTMLElement;
+    fireEvent.pointerDown(root, { button: -1, pointerType: "touch", clientY: 10 });
+    fireEvent.pointerMove(root, { pointerType: "touch", clientY: 160 });
+    await act(async () => {
+      fireEvent.pointerUp(root, { pointerType: "touch" });
+    });
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
 });

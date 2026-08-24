@@ -24,6 +24,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // now ("Nothing on a date that works?"), which legitimately asks for a
   // name and an email too, and getByLabel matches by substring.
   const waitList = page.locator("#last-minute-list");
+  await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Nora Quinn");
   await waitList.getByLabel("Email").fill("nora.e2e@example.com");
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
@@ -76,6 +77,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   // now ("Nothing on a date that works?"), which legitimately asks for a
   // name and an email too, and getByLabel matches by substring.
   const waitList = page.locator("#last-minute-list");
+  await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Priya Shah");
   await waitList.getByLabel("Email").fill("priya.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
@@ -118,6 +120,7 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   // now ("Nothing on a date that works?"), which legitimately asks for a
   // name and an email too, and getByLabel matches by substring.
   const waitList = page.locator("#last-minute-list");
+  await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Uma Torres");
   await waitList.getByLabel("Email").fill("uma.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
@@ -159,6 +162,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   test.setTimeout(45_000);
   await page.goto("/s/blue-mantis");
   const dealList = page.locator("#last-minute-list");
+  await dealList.locator("summary").click();
   await dealList.getByLabel("Name").fill("Tess Alvarez");
   await dealList.getByLabel("Email").fill("tess.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("open_water");
@@ -212,6 +216,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   test.setTimeout(45_000);
   await page.goto("/s/blue-mantis");
   const dealList = page.locator("#last-minute-list");
+  await dealList.locator("summary").click();
   await dealList.getByLabel("Name").fill("Nell Byrne");
   await dealList.getByLabel("Email").fill("nell.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("none_declared");
@@ -250,6 +255,7 @@ test("a self-declared card cannot be certified without verified evidence", async
   test.setTimeout(45_000);
   await page.goto("/s/blue-mantis");
   const dealList = page.locator("#last-minute-list");
+  await dealList.locator("summary").click();
   await dealList.getByLabel("Name").fill("Milo Vance");
   await dealList.getByLabel("Email").fill("milo.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("rescue");

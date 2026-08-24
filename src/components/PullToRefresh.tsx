@@ -16,6 +16,7 @@ const DEFAULT_COPY: PullToRefreshCopy = {
 
 const THRESHOLD_PX = 60;
 const MAX_PULL_PX = 90;
+const SLOP_PX = 10;
 
 /**
  * A gesture-driven pull-to-refresh container for dockside operational views
@@ -50,7 +51,10 @@ export function PullToRefresh({
   }, []);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (refreshing || event.button !== 0) return;
+    // Touch and pen pointers report `button === -1`; only reject non-primary
+    // mouse buttons. The gesture has to work on the wet-finger devices this
+    // surface is for, not only in a desktop pointer test.
+    if (refreshing || (event.pointerType === "mouse" && event.button !== 0)) return;
     const scrollY = window.scrollY ?? document.documentElement.scrollTop ?? 0;
     if (scrollY <= 0) {
       startY.current = event.clientY;
@@ -60,12 +64,13 @@ export function PullToRefresh({
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (startY.current === null || refreshing) return;
     const deltaY = event.clientY - startY.current;
-    if (deltaY > 0) {
+    if (deltaY > SLOP_PX) {
       isPulling.current = true;
       // Damped pull curve
-      const damped = Math.min(deltaY ** 0.85, MAX_PULL_PX);
+      const damped = Math.min((deltaY - SLOP_PX) ** 0.85, MAX_PULL_PX);
       setPullY(damped);
     } else {
+      isPulling.current = false;
       setPullY(0);
     }
   };

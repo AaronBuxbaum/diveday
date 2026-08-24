@@ -56,6 +56,18 @@ export default async function ScheduleOpenGraphImage({
   // sits at the foot.
   return new ImageResponse(
     <div style={CARD_STYLE}>
+      {shop.logoUrl ? (
+        // The uploaded mark is optional, and the card remains readable when a
+        // shop has not set one.
+        // biome-ignore lint/performance/noImgElement: ImageResponse needs a direct remote image
+        <img
+          src={shop.logoUrl}
+          alt=""
+          width="96"
+          height="96"
+          style={{ objectFit: "cover", borderRadius: 24, marginBottom: 24 }}
+        />
+      ) : null}
       {/* The same three-zone rhythm as the departure card — a small line at
           the top, the subject in the middle, the credit at the foot — so the
           two read as one family rather than as two layouts. */}

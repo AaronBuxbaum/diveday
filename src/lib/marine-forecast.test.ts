@@ -50,7 +50,7 @@ describe("fetchAutomatedMarineForecast", () => {
 
   it("selects the forecast hour closest to departure and returns conditions as numbers and codes", async () => {
     const fetcher = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("marine-api.open-meteo.com")) {
+      if (new URL(url).hostname === "marine-api.open-meteo.com") {
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -106,7 +106,7 @@ describe("fetchAutomatedMarineForecast", () => {
 
   it("keeps the sea state and wind when partial fields are published", async () => {
     const fetcher = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("marine-api.open-meteo.com")) {
+      if (new URL(url).hostname === "marine-api.open-meteo.com") {
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -152,6 +152,32 @@ describe("fetchAutomatedMarineForecast", () => {
       direction: "ne",
     });
     expect(forecast?.waterTemperatureC).toBeNull();
+  });
+
+  it("caches a provider response for the same site and forecast hour", async () => {
+    const fetcher = vi.fn().mockImplementation((url: string) => {
+      if (new URL(url).hostname === "marine-api.open-meteo.com") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              hourly: {
+                time: [1_784_422_800],
+                sea_surface_temperature: [26.4],
+              },
+            }),
+          ),
+        );
+      }
+      return Promise.resolve(new Response("unavailable", { status: 503 }));
+    });
+    const point = { latitude: 25.12, longitude: -80.3 };
+    const startsAt = new Date(1_784_422_800_000);
+
+    const first = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+    const second = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+
+    expect(second).toEqual(first);
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it("returns null when both providers fail", async () => {

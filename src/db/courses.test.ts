@@ -8,7 +8,7 @@ import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createTestDb } from "./client";
-import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
+import { COURSE_TEMPLATES, courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import {
   courseAgencies,
   getCourseBySlug,
@@ -108,6 +108,31 @@ async function listCourses(db: AppDb, shopId: string) {
 }
 
 describe("course catalog and sessions (in-memory PGlite)", () => {
+  it("seeds every published PADI and SSI course template into the catalog", async () => {
+    const { db, shop } = await seededShopContext();
+    const catalog = await listActiveCourses(db, shop.id);
+
+    // The demo keeps one legacy SSI Nitrox row that predates the published
+    // template list. Every published template must still be represented.
+    expect(catalog.filter((course) => course.sourceTemplateSlug)).toHaveLength(
+      COURSE_TEMPLATES.length,
+    );
+    for (const template of COURSE_TEMPLATES) {
+      const displayTitle =
+        template.slug === "ssi-open-water-diver" ? "SSI Open Water Diver" : template.title;
+      expect(
+        catalog.find((course) => course.sourceTemplateSlug === template.slug),
+        `${template.slug} is missing from the seeded catalog`,
+      ).toEqual(
+        expect.objectContaining({
+          agency: template.agency,
+          title: displayTitle,
+          minimumCertificationLevel: template.minimumCertificationLevel,
+        }),
+      );
+    }
+  });
+
   it("admits an uncertified participant to an instructor-staffed Discover Scuba session", async () => {
     const { db, shop, discover } = await courseContext();
     const outcome = await createBooking(db, {
@@ -1078,7 +1103,7 @@ describe("agency tabs (in-memory PGlite)", () => {
 
   it("narrows the roster to one agency, count and rows agreeing", async () => {
     const { db, shop } = await seededShopContext();
-    const all = await pagedCourses(db, shop.id, { page: 1 });
+    const all = await pagedCourses(db, shop.id, { page: 1, limit: 1000 });
     const ssi = await pagedCourses(db, shop.id, { page: 1, agency: "ssi" });
 
     expect(ssi.total).toBeGreaterThan(0);
@@ -1348,7 +1373,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
 
   it("hides a course from scheduling without deleting it — staff can still find and reshow it", async () => {
     const { db, shop } = await seededShopContext();
-    const course = await createCourse(db, { shopId: shop.id, title: "Sidemount Diver" });
+    const course = await createCourse(db, { shopId: shop.id, title: "Cavern Diver" });
     if (!course) throw new Error("course not created");
 
     const isActive = async () =>

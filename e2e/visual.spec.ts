@@ -2701,6 +2701,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await page.goto("/s/blue-mantis");
         const dealList = page.locator("#last-minute-list");
+        await dealList.locator("summary").click();
         await dealList.getByLabel("Name").fill("Tess Alvarez");
         await dealList.getByLabel("Email").fill("tess.visual@example.com");
         await dealList.getByLabel("Certification level").selectOption("open_water");
@@ -2737,6 +2738,7 @@ for (const scheme of ["light", "dark"] as const) {
         const join = async (name: string, email: string, level?: string) => {
           await page.goto("/s/blue-mantis");
           const dealList = page.locator("#last-minute-list");
+          await dealList.locator("summary").click();
           await dealList.getByLabel("Name").fill(name);
           await dealList.getByLabel("Email").fill(email);
           if (level) await dealList.getByLabel("Certification level").selectOption(level);

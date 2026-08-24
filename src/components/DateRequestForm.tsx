@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { telHref } from "@/lib/contact-links";
 import {
@@ -60,6 +61,7 @@ export function DateRequestForm({
   sectionId = "get-in-touch",
   contactEmail,
   contactPhone,
+  collapsible = false,
   copy,
 }: {
   submitRequest: (prevState: InquiryFormState, formData: FormData) => Promise<InquiryFormState>;
@@ -75,6 +77,8 @@ export function DateRequestForm({
    */
   contactEmail: string | null;
   contactPhone: string | null;
+  /** Collapse the low-frequency schedule request behind its own disclosure. */
+  collapsible?: boolean;
   copy: DateRequestCopy;
 }) {
   const t = useTranslations();
@@ -96,8 +100,13 @@ export function DateRequestForm({
   const [experienceMissing, setExperienceMissing] = useState(false);
   const [contactMissing, setContactMissing] = useState(false);
   const [interestMissing, setInterestMissing] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const headingId = `${sectionId}-heading`;
+
+  useEffect(() => {
+    if (collapsible && window.location.hash === `#${sectionId}`) setOpen(true);
+  }, [collapsible, sectionId]);
 
   /**
    * What a submission requires before it is worth sending.
@@ -184,26 +193,14 @@ export function DateRequestForm({
       </p>
     ) : null;
 
-  if (state.success) {
-    return (
-      <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
-        <h2 id={headingId} className="text-2xl font-semibold tracking-tight">
-          {copy.heading}
-        </h2>
-        <div className="rise-in mt-6 rounded-2xl border border-border bg-surface-sunken p-6">
-          <p className="font-semibold">{copy.sentHeading}</p>
-          <p className="mt-2 text-sm text-muted">{copy.sentBody}</p>
-          {contactLine}
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
-      <h2 id={headingId} className="text-2xl font-semibold tracking-tight">
-        {copy.heading}
-      </h2>
+  const body = state.success ? (
+    <div className="rise-in mt-6 rounded-2xl border border-border bg-surface-sunken p-6">
+      <p className="font-semibold">{copy.sentHeading}</p>
+      <p className="mt-2 text-sm text-muted">{copy.sentBody}</p>
+      {contactLine}
+    </div>
+  ) : (
+    <>
       <p className="mt-3 max-w-2xl text-muted">{copy.intro}</p>
       {state.error ? (
         <p role="alert" className="mt-3 text-sm text-danger">
@@ -390,6 +387,33 @@ export function DateRequestForm({
         </div>
         {contactLine}
       </div>
+    </>
+  );
+
+  if (collapsible) {
+    return (
+      <details
+        id={sectionId}
+        open={open}
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+        className={sectionCardClass({ padding: "lg", className: "mt-12 scroll-mt-8" })}
+      >
+        <summary className="flex cursor-pointer items-center font-semibold">
+          <h2 id={headingId} className="text-2xl tracking-tight">
+            {copy.heading}
+          </h2>
+        </summary>
+        <div className="mt-4">{body}</div>
+      </details>
+    );
+  }
+
+  return (
+    <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
+      <h2 id={headingId} className="text-2xl font-semibold tracking-tight">
+        {copy.heading}
+      </h2>
+      {body}
     </section>
   );
 }

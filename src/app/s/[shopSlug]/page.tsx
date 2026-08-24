@@ -76,7 +76,7 @@ export async function generateMetadata({
   const shop = await getShopBySlug(await getDb(), shopSlug);
   if (!shop) return { title: "Schedule — DiveDay" };
   const { t } = await requestTranslator(shop.defaultLocale);
-  const description = t("schedule.diverDescription");
+  const description = shop.description ?? shop.tagline ?? t("schedule.diverDescription");
   return {
     title: `Dive schedule — ${shop.name}`,
     description,
@@ -87,6 +87,7 @@ export async function generateMetadata({
       title: `Dive schedule — ${shop.name}`,
       description,
       url: publicSchedulePath(shop.slug),
+      ...(shop.logoUrl ? { images: [{ url: shop.logoUrl, alt: `${shop.name} logo` }] } : {}),
     },
   };
 }
@@ -879,6 +880,7 @@ export default async function SchedulePage({
             sectionId="request-a-date"
             contactEmail={null}
             contactPhone={null}
+            collapsible
             copy={dateRequestCopy(t, "dive")}
           />
         </DiverIntlProvider>
