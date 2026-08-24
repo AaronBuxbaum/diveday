@@ -1696,6 +1696,7 @@
       "title": "Welcome back",
       "description": "Sign in to run the shop.",
       "error": "That email and password don't match.",
+      "sessionEnded": "You've been signed out because this account is no longer active. Contact your shop owner if that's unexpected.",
       "forgotPassword": "Forgot password?",
       "signingIn": "Signing in…",
       "submit": "Sign in",
