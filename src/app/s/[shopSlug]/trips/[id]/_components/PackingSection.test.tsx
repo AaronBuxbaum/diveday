@@ -71,3 +71,51 @@ describe("PackingSection — the exposure-suit line", () => {
     expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
   });
 });
+
+/**
+ * Issue #704 slice 2. Renders on both pages `PackingSection` is shared
+ * between — the booking page and `/ready/[token]` — since neither has any
+ * other section that reads a departure's own meeting point.
+ */
+describe("PackingSection — the dock-day rhythm's meeting point", () => {
+  function renderRhythm(overrides: {
+    meetingPointLabel: string | null;
+    meetingPointAddress: string | null;
+  }) {
+    const trip = {
+      startsAt: new Date("2026-08-12T12:00:00Z"),
+      endsAt: new Date("2026-08-12T16:00:00Z"),
+      plannedDives: 2,
+      waterTemperatureC: null,
+      course: null,
+      diveMode: "boat",
+      meetingPointLabel: overrides.meetingPointLabel,
+      meetingPointAddress: overrides.meetingPointAddress,
+    } as unknown as Trip;
+    return render(
+      <PackingSection
+        shop={shop}
+        trip={trip}
+        multiDay={false}
+        temperatureStatedAbove={false}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+  }
+
+  it("names the meeting point beside the arrival line, with its address", () => {
+    renderRhythm({ meetingPointLabel: "North Jetty Marina", meetingPointAddress: "12 Dock Rd" });
+    expect(screen.getByText(/North Jetty Marina/)).toBeInTheDocument();
+    expect(screen.getByText(/12 Dock Rd/)).toBeInTheDocument();
+  });
+
+  it("names the meeting point alone when no address is on file", () => {
+    renderRhythm({ meetingPointLabel: "North Jetty Marina", meetingPointAddress: null });
+    expect(screen.getByText("North Jetty Marina")).toBeInTheDocument();
+  });
+
+  it("says nothing extra when the departure has no meeting point of its own", () => {
+    renderRhythm({ meetingPointLabel: null, meetingPointAddress: null });
+    expect(screen.queryByText(/North Jetty/)).not.toBeInTheDocument();
+  });
+});

@@ -116,6 +116,8 @@
     "heading": "Details",
     "titleLabel": "Title",
     "descriptionLabel": "Description",
+    "meetingPointLabelLabel": "Meeting point",
+    "meetingPointAddressLabel": "Meeting point address",
     "optionalHint": "(optional)",
     "dateLabel": "Date",
     "departsLabel": "Departs",
@@ -169,7 +171,7 @@
   "crew": {
     "heading": "Crew",
     "courseNeedsInstructor": "This course cannot take bookings until one assigned crew member has the instructor role.",
-    "underTarget": "{divers, plural, one {# diver} other {# divers}} with {divemasters, plural, =0 {no divemaster} one {# divemaster} other {# divemasters}} — your {ratio}:1 target wants {needed, plural, one {# divemaster} other {# divemasters}}.",
+    "underTarget": "{divers, plural, one {# diver} other {# divers}} with {divemasters, plural, =0 {no supervisor} one {# supervisor} other {# supervisors}} — your {ratio}:1 target wants {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "No one assigned to this trip has recorded speaking {languages}.",
     "noCrew": "No crew to assign yet — your instructors and divemasters show up here once they’re on the team.",
     "notAssignedYet": "Not yet assigned.",

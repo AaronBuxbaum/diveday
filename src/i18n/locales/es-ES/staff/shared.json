@@ -78,6 +78,7 @@
     "title": "Paquete de salida",
     "diveNumber": "Inmersión {number}",
     "travelMinutes": "{minutes} min de trayecto",
+    "meetingPoint": "Punto de encuentro: {label}",
     "conditionsHeading": "Condiciones"
   },
   "rollCallNote": {
@@ -315,6 +316,7 @@
       "requirements": "Configuración",
       "waiver": "Exención",
       "instructorMissing": "Tripulación",
+      "uncrewedDeparture": "Sin tripulación",
       "nitroxGate": "Nitrox",
       "divePrep": "Preparación",
       "payment": "Pago",
@@ -322,6 +324,7 @@
       "waitlistSeat": "Lista de espera",
       "lastMinuteFill": "Llenar plazas",
       "emergencyContact": "Contacto",
+      "crewBelowTarget": "Bajo el objetivo",
       "stuckPaymentOperation": "Stripe",
       "failedPhotoDeletion": "Limpieza",
       "owedRefund": "Reembolso pendiente",
@@ -405,6 +408,8 @@
       "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
       "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
       "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, la tripulación cubre {capacity}: {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor añade plazas.",
+      "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y no hay divemaster ni instructor asignado para supervisar esta salida.",
+      "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasterCount, plural, one {# supervisor} other {# supervisores}} — bajo tu objetivo de {ratio}:1.",
       "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "missingContactNamed": "No tiene contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
       "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",

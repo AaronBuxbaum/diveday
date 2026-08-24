@@ -97,6 +97,11 @@ import { uuidParam } from "@/lib/uuid";
 const detailsSchema = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500),
+  // Where this departure meets, when it isn't the shop's own front door
+  // (issue #704 slice 2). Both blank means "the shop" everywhere this
+  // renders — see meetingPointLabel's schema comment.
+  meetingPointLabel: z.string().trim().max(120),
+  meetingPointAddress: z.string().trim().max(200),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -361,6 +366,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const {
     title,
     description,
+    meetingPointLabel,
+    meetingPointAddress,
     date,
     startTime,
     endTime,
@@ -442,6 +449,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
+    meetingPointLabel: meetingPointLabel || null,
+    meetingPointAddress: meetingPointAddress || null,
     startsAt: details.patch.startsAt,
     // The whole departure, first day's departure to last day's return.
     endsAt: details.patch.endsAt,

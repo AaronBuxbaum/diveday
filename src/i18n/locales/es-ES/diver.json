@@ -153,6 +153,7 @@
     },
     "dockDayRhythm": "Cómo será tu día en el muelle",
     "dockDayLabel": "Día {number}",
+    "meetingPointWithAddress": "{label} — {address}",
     "briefingsEyebrow": "Briefings de inmersión",
     "planTwoTank": "Tu plan de dos inmersiones",
     "planDiveCount": "Tu plan de {count, plural, one {# inmersión} other {# inmersiones}}",

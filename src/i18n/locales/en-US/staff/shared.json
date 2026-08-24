@@ -78,6 +78,7 @@
     "title": "Trip packet",
     "diveNumber": "Dive {number}",
     "travelMinutes": "{minutes} min out",
+    "meetingPoint": "Meeting point: {label}",
     "conditionsHeading": "Conditions"
   },
   "rollCallNote": {
@@ -315,6 +316,7 @@
       "requirements": "Setup",
       "waiver": "Waiver",
       "instructorMissing": "Crew",
+      "uncrewedDeparture": "No crew",
       "nitroxGate": "Nitrox",
       "divePrep": "Prep",
       "payment": "Payment",
@@ -322,6 +324,7 @@
       "waitlistSeat": "Wait list",
       "lastMinuteFill": "Fill seats",
       "emergencyContact": "Contact",
+      "crewBelowTarget": "Under target",
       "stuckPaymentOperation": "Stripe",
       "failedPhotoDeletion": "Cleanup",
       "owedRefund": "Refund owed",
@@ -405,6 +408,8 @@
       "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
       "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
       "overRatioIntro": "{booked} booked on this intro session, crew covers {capacity} — {perInstructor} per instructor for the open-water dive, and a certified assistant does not raise it. Only another instructor adds seats.",
+      "uncrewedDeparture": "{divers, plural, one {# diver is} other {# divers are}} booked and no divemaster or instructor is assigned to supervise this departure.",
+      "crewBelowTarget": "{divers, plural, one {# diver} other {# divers}} booked with {divemasterCount, plural, one {# supervisor} other {# supervisors}} rostered — short of your {ratio}:1 target.",
       "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
       "missingContactNamed": "No emergency contact on file — ask at the counter; it prints on the manifest.",
       "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",

@@ -34,6 +34,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   requirements: "shared.today.actionKind.requirements",
   waiver: "shared.today.actionKind.waiver",
   instructor_missing: "shared.today.actionKind.instructorMissing",
+  uncrewed_departure: "shared.today.actionKind.uncrewedDeparture",
   nitrox_gate: "shared.today.actionKind.nitroxGate",
   dive_prep: "shared.today.actionKind.divePrep",
   payment: "shared.today.actionKind.payment",
@@ -41,6 +42,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   waitlist_seat: "shared.today.actionKind.waitlistSeat",
   last_minute_fill: "shared.today.actionKind.lastMinuteFill",
   emergency_contact: "shared.today.actionKind.emergencyContact",
+  crew_below_target: "shared.today.actionKind.crewBelowTarget",
   stuck_payment_operation: "shared.today.actionKind.stuckPaymentOperation",
   failed_photo_deletion: "shared.today.actionKind.failedPhotoDeletion",
   owed_refund: "shared.today.actionKind.owedRefund",
@@ -195,6 +197,36 @@ export function ungatedNitroxDetailText(t: StaffTranslator, count: number): stri
 
 export function instructorMissingDetailText(t: StaffTranslator): string {
   return t("shared.today.detail.instructorMissing");
+}
+
+/**
+ * `divemasterRatioGap`'s `divemasterCount === 0` case (issue #732) — divers
+ * booked, nobody rostered at all, course session or fun dive. A distinct
+ * sentence from `crewBelowTargetDetailText`, not a shared one branching on
+ * count: "nobody assigned" and "one short of target" are different problems
+ * with different tone, and collapsing them is the failure this ticket exists
+ * to fix on the trip page's own `underTargetNote` wording it deliberately
+ * does not reuse verbatim — the trip page speaks to someone already looking
+ * at the crew editor, this queue row is the fact that gets them there.
+ */
+export function uncrewedDepartureDetailText(t: StaffTranslator, divers: number): string {
+  return t("shared.today.detail.uncrewedDeparture", { divers });
+}
+
+/**
+ * `divemasterRatioGap`'s `divemasterCount > 0` case — under the shop's own
+ * target, but not empty. Quieter than {@link uncrewedDepartureDetailText}
+ * (`crew_below_target`'s tone is neutral, its severity ranked with the other
+ * purely-advisory rows) because the target "binds nothing"
+ * (src/lib/divemaster-ratio.ts) — this is a nudge, not a problem.
+ */
+export function crewBelowTargetDetailText(
+  t: StaffTranslator,
+  divers: number,
+  divemasterCount: number,
+  ratio: number,
+): string {
+  return t("shared.today.detail.crewBelowTarget", { divers, divemasterCount, ratio });
 }
 
 /**

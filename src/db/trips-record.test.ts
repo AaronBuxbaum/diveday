@@ -61,6 +61,46 @@ describe("trip records (in-memory PGlite)", () => {
     expect((await getTripWithBooked(db, shop.id, priced.id))?.priceCents).toBeNull();
   });
 
+  it("stores an optional meeting point and lets staff clear it back to null (issue #704)", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef — needs a meeting point",
+      startsAt: new Date("2030-08-03T13:00:00.000Z"),
+      endsAt: new Date("2030-08-03T17:00:00.000Z"),
+      capacity: 10,
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.meetingPointLabel).toBeNull();
+    expect(trip.meetingPointAddress).toBeNull();
+
+    await updateTrip(db, shop.id, trip.id, {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+      meetingPointLabel: "North Jetty Marina",
+      meetingPointAddress: "12 Dock Rd",
+    });
+    const withMeetingPoint = await getTripWithBooked(db, shop.id, trip.id);
+    expect(withMeetingPoint?.meetingPointLabel).toBe("North Jetty Marina");
+    expect(withMeetingPoint?.meetingPointAddress).toBe("12 Dock Rd");
+
+    await updateTrip(db, shop.id, trip.id, {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+      meetingPointLabel: null,
+      meetingPointAddress: null,
+    });
+    const cleared = await getTripWithBooked(db, shop.id, trip.id);
+    expect(cleared?.meetingPointLabel).toBeNull();
+    expect(cleared?.meetingPointAddress).toBeNull();
+  });
+
   it("names a departure by id, and never one belonging to another shop", async () => {
     // The Orders index's `?tripId=` line reads this: a filter matching no
     // orders still has to say which boat it filtered for, so the title comes

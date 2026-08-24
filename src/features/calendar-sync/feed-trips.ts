@@ -53,6 +53,8 @@ export async function listFeedTrips(
       tripEndsAt: trips.endsAt,
       courseTitle: courses.title,
       siteName: diveSites.name,
+      meetingPointLabel: trips.meetingPointLabel,
+      meetingPointAddress: trips.meetingPointAddress,
       dayNumber: tripScheduleDays.dayNumber,
       dayStartsAt: tripScheduleDays.startsAt,
       dayEndsAt: tripScheduleDays.endsAt,
@@ -89,7 +91,16 @@ export async function listFeedTrips(
         courseTitle: row.courseTitle,
         startsAt: row.dayStartsAt ?? row.tripStartsAt,
         endsAt: row.dayEndsAt ?? row.tripEndsAt,
-        location: row.siteName,
+        // Where the crew shows up wins over where the dive happens — a site
+        // out on the water is not a place a calendar app can point anyone
+        // toward, and a departure with its own meeting point (issue #704
+        // slice 2) is exactly the case where the dive site's name would send
+        // a captain to the wrong parking lot. Falls back to the dive site,
+        // unchanged, for the far more common case where the meeting point is
+        // unset and the answer really is "the shop".
+        location: row.meetingPointLabel
+          ? [row.meetingPointLabel, row.meetingPointAddress].filter(Boolean).join(", ")
+          : row.siteName,
         crew: [],
       });
     }

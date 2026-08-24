@@ -27,7 +27,6 @@ import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
@@ -42,6 +41,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
+import { isLiveShopStaff } from "@/lib/session";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -150,8 +150,10 @@ export default async function TripDetailPage({
   // also serves the staffer who followed a shared /s/ link and wants the
   // management view. Never in embed mode: that destination isn't in the
   // framing allowlist, so an embedded staff preview would show a blocked
-  // frame instead of the compact booking widget.
-  const staffPreview = !isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles);
+  // frame instead of the compact booking widget. Live-checked (issue #966):
+  // the "manage this trip" link it discloses is separately live-gated on
+  // click, but the banner itself used to trust the cached JWT alone.
+  const staffPreview = !isEmbed && (await isLiveShopStaff(db, shop.id, session));
   // Staff words come from the staff bundle even here — the rest of this page
   // speaks to divers, and mixing the two vocabularies in one file is exactly
   // what the two bundles exist to prevent.

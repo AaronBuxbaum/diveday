@@ -439,8 +439,10 @@ new domain concept, define it here in the same PR.
   stored as the divers half (`5` is "5:1"). Asked of every shop on its settings page and applying
   to **every** dive, fun dive or course session alike. It **binds nothing**: it refuses no booking,
   holds up no manifest, and blocks no crew change — DiveDay shows a departure against it
-  (`under_target`, on the trip page's Crew panel) and sizes the Requests planner's crew suggestion
-  by it. Everybody supervising in the water counts towards it, instructors included, which is where
+  (`under_target`, on the trip page's Crew panel, and as the quieter `crew_below_target` or the
+  `uncrewed_departure` Today row when a booked departure carries no in-water supervision at all;
+  issue #732) and sizes the Requests planner's crew suggestion by it. Everybody supervising in the
+  water counts towards it, instructors included, which is where
   it parts company with the two ratios above: those split instructors from assistants because an
   agency's published cap does. **Do not confuse it with them.** The **entry-level** and **intro
   in-water ratios** are sourced safety caps that refuse a seat; this is a preference, and a shop
@@ -505,7 +507,10 @@ new domain concept, define it here in the same PR.
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its
   departure board is where crew are assigned. The shift roster only counts them —
   "N departures in this window still need crew" — and links across
-  (ADR 20260806-staffing-is-the-shift-roster). Formerly "coverage gap", which named a second
+  (ADR 20260806-staffing-is-the-shift-roster). A **different** gap, the shop's own **Target
+  diver:divemaster ratio** below, fires `uncrewed_departure`/`crew_below_target` instead —
+  `courseCrewGap` wins when both would apply to the same course session, so one departure never
+  carries two rows for one underlying fact (issue #732). Formerly "coverage gap", which named a second
   vocabulary that no longer exists.
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;

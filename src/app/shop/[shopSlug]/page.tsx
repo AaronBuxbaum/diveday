@@ -229,6 +229,7 @@ async function TodayBody({
     // chores — same gate as Reports (task 157).
     canViewShopReports(session.user.roles),
     readinessEvidence,
+    shop.diversPerDivemaster,
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
   // Real shops only — the demo shop already teaches its own tour via the

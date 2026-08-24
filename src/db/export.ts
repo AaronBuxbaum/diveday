@@ -1125,6 +1125,10 @@ export async function loadShopExportBundleInput(
             "surface_conditions",
             "conditions_updated_at",
             "description",
+            // Where this departure meets, when it isn't the shop's own front
+            // door (issue #704 slice 2) — both empty means "the shop".
+            "meeting_point_label",
+            "meeting_point_address",
             "is_private",
             // The bundle carries deleted departures (they are still the shop's
             // rows), so it has to carry the stamp that says which — a file that
@@ -1162,6 +1166,8 @@ export async function loadShopExportBundleInput(
             row.surfaceConditions,
             row.conditionsUpdatedAt,
             row.description,
+            row.meetingPointLabel,
+            row.meetingPointAddress,
             row.isPrivate,
             row.deletedAt,
             row.createdAt,

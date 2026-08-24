@@ -24,12 +24,12 @@ import { requestLanguageFallback, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { EMBED_REQUEST_HEADER } from "@/lib/embed-routes";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
+import { isLiveShopStaff } from "@/lib/session";
 
 /**
  * The diver-facing shell for `/s/[shopSlug]/**` — the shop's own identity,
@@ -177,12 +177,9 @@ async function PublicShopChrome({ params }: { params: Promise<{ shopSlug: string
   // the page divers buy from, and staff need to be able to look at it. A slim
   // bar says "you work here" and points back at the operations board, so
   // nobody is stranded on a diver surface with no staff chrome (task 153).
-  const showStaffBar =
-    !isEmbed &&
-    Boolean(session?.user) &&
-    Boolean(shop) &&
-    isStaff(session?.user?.roles) &&
-    session?.user?.shopId === shop?.id;
+  // Live-checked (issue #966): it discloses nothing sensitive, but the same
+  // stale-JWT gap the other public surfaces had is worth closing uniformly.
+  const showStaffBar = !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session));
   const staffT = staffTranslator(locale);
   // Each language named in itself (src/i18n/language-labels.ts): the reader
   // reaching for this is the one who cannot read the page around it.

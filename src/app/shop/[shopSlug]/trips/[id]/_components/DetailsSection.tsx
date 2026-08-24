@@ -144,6 +144,39 @@ export function DetailsSection({
               />
             </Field>
           </FieldGrid>
+          {/* Where this departure meets, when it isn't the shop's own front
+              door — a marina three miles out, a shore dive's beach car park, a
+              second dock (issue #704 slice 2). Both blank, the default and
+              every trip until this shipped, means "the shop" everywhere this
+              renders. Free text, not the shop's own address-search box: a
+              meeting point is casual by nature, and geocoding one would guess
+              wrong coordinates for exactly the kind of place this names. */}
+          <FieldGrid columns={2} className="gap-x-5 gap-y-5">
+            <Field
+              label={t("trips.details.meetingPointLabelLabel")}
+              hint={t("trips.details.optionalHint")}
+            >
+              <input
+                name="meetingPointLabel"
+                type="text"
+                maxLength={120}
+                defaultValue={trip.meetingPointLabel ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("trips.details.meetingPointAddressLabel")}
+              hint={t("trips.details.optionalHint")}
+            >
+              <input
+                name="meetingPointAddress"
+                type="text"
+                maxLength={200}
+                defaultValue={trip.meetingPointAddress ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
           <TripDiveFields
             diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
             initialCount={trip.plannedDives}

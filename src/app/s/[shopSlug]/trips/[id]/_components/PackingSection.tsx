@@ -376,6 +376,21 @@ export function PackingSection({
                               {t(timelineStepKey(entry.step, trip.diveMode), {
                                 number: entry.number ?? 1,
                               })}
+                              {/* Where this departure meets, when it isn't the
+                                  shop's own front door — the exact line that
+                                  should carry it and, until now, could not
+                                  (issue #704 slice 2). Plain text: this is a
+                                  meeting spot, not a map to embed. */}
+                              {entry.step === "arrive" && trip.meetingPointLabel ? (
+                                <span className="block text-xs">
+                                  {trip.meetingPointAddress
+                                    ? t("trip.meetingPointWithAddress", {
+                                        label: trip.meetingPointLabel,
+                                        address: trip.meetingPointAddress,
+                                      })
+                                    : trip.meetingPointLabel}
+                                </span>
+                              ) : null}
                             </span>
                           </div>
                         </li>
