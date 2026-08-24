@@ -65,6 +65,7 @@ import { queueMediaDeletion } from "./media-deletions";
 import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
 import type { ProcessorErasureObligation } from "./schema";
 import {
+  accountSessions,
   accountTokens,
   activityEvents,
   bookingCapabilities,
@@ -608,6 +609,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .limit(1);
   if (account) {
     await tx.delete(accountTokens).where(eq(accountTokens.userAccountId, account.id));
+    // Revoke any session issued before this instant — status alone
+    // (`disabled` below) is not read by the session lookup itself, so a
+    // live sign-in would otherwise keep working until it naturally expires.
+    await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, account.id));
     await tx
       .update(userAccounts)
       .set({

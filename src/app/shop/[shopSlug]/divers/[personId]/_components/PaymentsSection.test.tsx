@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PaymentsSection } from "./PaymentsSection";
 import type { DiverProfile, Shop } from "./shared";
 
-// The refund server action drags next-auth (and therefore the whole Next
+// The refund server action drags better-auth (and therefore the whole Next
 // server runtime) in behind it; this suite is about what the section renders,
 // so the action is stubbed rather than booted.
 vi.mock("../actions", () => ({ refundPaymentAction: vi.fn() }));

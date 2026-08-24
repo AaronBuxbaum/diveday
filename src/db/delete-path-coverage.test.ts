@@ -111,6 +111,8 @@ async function recordDeletedTables(
  */
 const RESET_KEEPS: Record<string, string> = {
   shops: "the shop itself survives a schedule reset — that is the whole point",
+  account_sessions:
+    "a demo session must stay signed in across a schedule reset (the point of the reset is a fresh schedule, not a fresh sign-in)",
   // Operational and provider plumbing a reset has no seeded state to restore
   // and no visitor path that writes one.
   notification_rate_limit_state: "provider coordination state, not shop records",

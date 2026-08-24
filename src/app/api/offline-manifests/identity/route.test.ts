@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_CAPTAIN_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -13,11 +13,11 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 // See the sync route's test for why `auth` is mocked bare instead of via
 // importOriginal (ADR 20260719-msw-offline-sync-only).
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const { GET } = await import("./route");
@@ -25,11 +25,10 @@ const { GET } = await import("./route");
 const sessionFor = (
   shopId: string,
   personId: string,
-  roles: Session["user"]["roles"] = ["captain"],
+  roles: DiveDaySession["user"]["roles"] = ["captain"],
   shopSlug = "blue-mantis",
-): Session => ({
-  user: { personId, shopId, shopSlug, name: "Dana Reyes", roles },
-  expires: new Date(Date.now() + 60_000).toISOString(),
+): DiveDaySession => ({
+  user: { personId, shopId, shopSlug, name: "Dana Reyes", email: "staff@demo.invalid", roles },
 });
 
 /**

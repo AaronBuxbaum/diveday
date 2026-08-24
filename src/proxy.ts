@@ -1,28 +1,97 @@
+import { getCookieCache, getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import NextAuth from "next-auth";
+import { authSecret } from "@/lib/auth-secret";
+import { isStaff, type Role } from "@/lib/authz";
 import {
-  authConfig,
   EMBED_REQUEST_HEADER,
   isEmbeddableShopRoute,
   REQUEST_PATH_HEADER,
-} from "@/lib/auth.config";
+} from "@/lib/embed-routes";
 import {
   type CspOptions,
   enforcedPolicy,
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
-import { stripSessionSetCookies } from "@/lib/session-cookies";
 
-// Route protection at the edge (Next 16 proxy convention; middleware is
-// deprecated). Server code re-checks via requireStaffSession() — this is
-// the outer layer, never the only one (ADR-0006). The bare `.auth` middleware
-// runs the `authorized` callback (allow/deny + redirects) from authConfig.
-const authMiddleware = NextAuth(authConfig).auth as unknown as (
-  req: NextRequest,
-  ctx: unknown,
-) => Promise<Response | undefined>;
+const STAFF_PREFIX = "/shop";
+
+type CachedSessionSnapshot = {
+  personId: string;
+  shopId: string;
+  shopSlug: string;
+  roles: Role[];
+};
+
+/**
+ * Route protection at the edge (Next 16 proxy convention; middleware is
+ * deprecated). Server code re-checks via requireStaffSession() — this is
+ * the outer layer, never the only one (ADR-0006), and better-auth's own docs
+ * say so explicitly about `getSessionCookie`/`getCookieCache`: cookie-only
+ * checks are for redirect convenience, not the security decision.
+ *
+ * `getSessionCookie` is the cheap, reliable signal — a plain cookie-presence
+ * check with nothing to decode, so "no cookie" means "definitely not signed
+ * in" with no false negatives. `getCookieCache` additionally decrypts the
+ * cached session snapshot (personId/shopId/shopSlug/roles, mirroring what
+ * next-auth's JWT used to carry) for the nice-to-have redirects below, but
+ * that cache expires well before the underlying session does — a signed-in
+ * staffer idle past the cache's `maxAge` will have a session cookie but no
+ * readable cache. When that happens this function does **not** treat it as
+ * "signed out": it lets the request through unmodified and leaves the call
+ * to `requireStaffSession()` server-side, which always re-derives a fresh
+ * session (and warms the cache back up for next time). Denying at the edge
+ * is reserved for the one case that's actually unambiguous — no session
+ * cookie at all.
+ */
+async function authGateResponse(req: NextRequest): Promise<Response | undefined> {
+  const { pathname } = req.nextUrl;
+  const hasSession = getSessionCookie(req) !== null;
+  const cache = hasSession
+    ? await getCookieCache(req, { secret: authSecret, strategy: "jwe" }).catch(() => null)
+    : null;
+  const session = cache?.session as unknown as CachedSessionSnapshot | undefined;
+  const roles = session?.roles;
+  const shopSlug = session?.shopSlug;
+
+  if ((pathname === STAFF_PREFIX || pathname === `${STAFF_PREFIX}/`) && roles && isStaff(roles)) {
+    if (shopSlug) return NextResponse.redirect(new URL(`/shop/${shopSlug}`, req.nextUrl));
+  }
+  // Skipped for `?session=ended`: that param is only ever set by
+  // `requireStaffSession()` (src/lib/session.ts) after a live database check
+  // found the session stale — disabled, deleted, or demoted off every staff
+  // role since it was minted. The cookie cache can still read `isStaff` for
+  // up to its own maxAge (or the underlying session's full life, if the
+  // cache is cold and this falls through elsewhere), so bouncing back to
+  // `/shop/<slug>` unconditionally would send that request straight into
+  // `requireStaffSession()` again, which would bounce it right back here —
+  // an infinite redirect loop between the one layer that knows the account
+  // is stale and the one that doesn't (issue #701).
+  if (
+    pathname === "/sign-in" &&
+    roles &&
+    isStaff(roles) &&
+    shopSlug &&
+    req.nextUrl.searchParams.get("session") !== "ended"
+  ) {
+    return NextResponse.redirect(new URL(`/shop/${shopSlug}`, req.nextUrl));
+  }
+  if (pathname.startsWith(STAFF_PREFIX)) {
+    if (!hasSession) {
+      // `callbackUrl` is what src/app/sign-in/page.tsx reads
+      // (`shopSlugFromStaffUrl`) to offer a diver who followed a dead staff
+      // link a way back to that shop's public schedule instead — carried
+      // forward from next-auth's own denial redirect, which set the same
+      // parameter automatically.
+      const signIn = new URL("/sign-in", req.nextUrl);
+      signIn.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(signIn);
+    }
+    if (roles && !isStaff(roles)) return NextResponse.redirect(new URL("/", req.nextUrl));
+  }
+  return undefined;
+}
 
 /**
  * Stamp the `x-middleware-request-*` / `x-middleware-override-headers` pair
@@ -59,7 +128,7 @@ function overrideRequestHeaders(
 /** `/shop/<slug>/settings/whatsapp`, the one route that loads Meta's SDK. */
 const WHATSAPP_SETTINGS_PATH = /^\/shop\/[^/]+\/settings\/whatsapp(\/|$)/;
 
-export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | undefined> {
+export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
   // visit to /s/x with no ?embed=1 must stay denied. Only an
   // actual embed request gets the exception. `searchParams.get()` silently
@@ -75,24 +144,12 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
     embedParams.length === 1 &&
     embedParams[0] === "1";
 
-  // authMiddleware only returns a Response for a redirect/deny; letting a
-  // request through (the common case) can *also* return its own Response
-  // rather than undefined (observed: it stamps a session/callback cookie
-  // even on an allowed request), so `?? NextResponse.next()` is not a
-  // reliable signal for "which object do I attach headers to" — always
-  // attach to whatever came back, falling back to a plain pass-through only
-  // when nothing did. overrideRequestHeader always rebuilds the override
-  // list from the original request, so it's safe regardless of which Response
-  // this ends up being.
-  const res = (await authMiddleware(req, ctx)) ?? NextResponse.next();
-  const setCookies = res.headers.getSetCookie?.() ?? [];
-  if (setCookies.length > 0) {
-    const kept = stripSessionSetCookies(setCookies);
-    if (kept.length !== setCookies.length) {
-      res.headers.delete("set-cookie");
-      for (const cookie of kept) res.headers.append("set-cookie", cookie);
-    }
-  }
+  // getSessionCookie/getCookieCache are pure reads — unlike next-auth's edge
+  // middleware, nothing here ever issues a Set-Cookie, so there is no longer
+  // a stale-prefetch session-resurrection class of bug to guard against at
+  // this layer (the property src/lib/session-cookies.ts used to protect;
+  // removed alongside next-auth for exactly this reason).
+  const res = (await authGateResponse(req)) ?? NextResponse.next();
   // Forward embed-mode and the request's own pathname to the server-component
   // tree — a layout can't read searchParams or the URL itself (only page.tsx
   // can), so these headers are the one way it learns "this render is going

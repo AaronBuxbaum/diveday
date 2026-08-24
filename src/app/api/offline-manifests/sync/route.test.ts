@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getTripManifest } from "@/db/manifests";
@@ -12,6 +11,7 @@ import {
   userAccounts,
 } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -21,18 +21,18 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-// Not importOriginal()'d: the real module pulls in next-auth, which this
-// preview-track Next/next-auth combo can't resolve outside Next's own
+// Not importOriginal()'d: the real module pulls in better-auth, which this
+// preview-track Next/better-auth combo can't resolve outside Next's own
 // bundler (see ADR 20260719-msw-offline-sync-only). The route only needs
 // `auth`, so a bare mock avoids ever loading the real module. `auth`'s real
 // type is NextAuth's overloaded (session-getter | middleware) signature,
 // which confuses `vi.mocked()`'s overload resolution — type the mock
 // directly as the narrow shape this route actually calls.
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const { POST } = await import("./route");
@@ -71,10 +71,16 @@ async function seededContext() {
 const staffSession = (
   shopId: string,
   personId: string,
-  roles: Session["user"]["roles"] = ["owner"],
-): Session => ({
-  user: { personId, shopId, shopSlug: "blue-mantis", name: "Dana Reyes", roles },
-  expires: new Date(Date.now() + 60_000).toISOString(),
+  roles: DiveDaySession["user"]["roles"] = ["owner"],
+): DiveDaySession => ({
+  user: {
+    personId,
+    shopId,
+    shopSlug: "blue-mantis",
+    name: "Dana Reyes",
+    email: "staff@demo.invalid",
+    roles,
+  },
 });
 
 let seq = 0;
@@ -168,9 +174,15 @@ describe("POST /api/offline-manifests/sync", () => {
     const { db, shop } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue({
-      user: { personId: "diver-1", shopId: shop.id, shopSlug: "blue-mantis", roles: ["diver"] },
-      expires: new Date(Date.now() + 60_000).toISOString(),
-    } as Session);
+      user: {
+        personId: "diver-1",
+        shopId: shop.id,
+        shopSlug: "blue-mantis",
+        name: "Test Diver",
+        email: "diver@example.com",
+        roles: ["diver"],
+      },
+    } as DiveDaySession);
 
     const response = await POST(postRequest({ events: [] }));
     expect(response.status).toBe(401);

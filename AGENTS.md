@@ -117,7 +117,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Feature modules | `src/features/<feature>/` — one `index.ts` is the whole public surface, `README.md` states what it owns; deep imports fail `pnpm check:architecture`. First one is `calendar-sync` (ADR 20260730-feature-module-contracts) |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
-| Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts`. `/shop/**` is staff-only end to end — there is no public-route allowlist any more |
+| Auth: session, gates, edge check | `src/lib/auth.ts` (better-auth instance + credentials plugin) / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts`. `/shop/**` is staff-only end to end — there is no public-route allowlist any more |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
 | Form/button/control/panel wrappers | `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`), `button.ts` (`buttonClass`), `card.tsx` (`SectionCard`, `sectionCardClass`), `tone.ts` (`toneGlyph`, the one ✅⚠️❌ map) |
