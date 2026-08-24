@@ -22,7 +22,8 @@
       }
     },
     "reg-notify-github-plugin": {
-      "clientId": "MzQ2MAICY1ND/ZTMstSUxEp9QxNLS1NzI0tTfcfEovw8p9KKpMTSXAA="
+      "clientId": "MzQ2MAICY1ND/ZTMstSUxEp9QxNLS1NzI0tTfcfEovw8p9KKpMTSXAA=",
+      "setCommitStatus": false
     }
   }
 }

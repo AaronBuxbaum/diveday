@@ -16,9 +16,10 @@ record keeps it. What was missing was not enforcement but **visibility**: a diff
 only by a human opening the S3-hosted `index.html`, which is a client-rendered SPA that no agent and
 no notification can read.
 
-The `reg-notify-github-plugin` is configured and live — it posts a `reg-suit[bot]` comment and a
-`reg` commit status through reg-suit's GitHub App. It is genuinely useful and stays. But its payload
-is counts and a link, and nothing else: the plugin POSTs
+The `reg-notify-github-plugin` is configured and live — it posts a `reg-suit[bot]` comment through
+reg-suit's GitHub App. Its commit-status side effect was disabled on 2026-08-24 after the only
+repository collaborator encountered a self-approval dead end on a stacked PR. The comment remains
+useful and stays. Its payload is counts and a link, and nothing else: the plugin POSTs
 `{failedItemsCount, newItemsCount, deletedItemsCount, passedItemsCount, reportUrl}`
 (`node_modules/reg-notify-github-plugin/lib/github-notifier-plugin.js`). Two consequences follow
 from that shape, and they are the whole reason for this decision.
@@ -82,13 +83,14 @@ headline for the same reason.
 - **A GitHub Check Run with a `neutral` conclusion.** Would render the intent literally, but needs
   `checks: write` on top of the comment permission and adds an API surface that can fail. The
   comment plus a never-failing step expresses the same thing with less machinery.
-- **Replace reg-suit's own comment** (`prComment: false` in `regconfig.json`). Rejected: the App's
-  `reg` status is the existing loud signal and doubles as the reviewer-approval flow, and removing
-  it to avoid a second comment would trade real signal for tidiness. Two comments is the accepted
-  cost; ours is sticky, so the thread does not grow.
-- **Turn off reg-suit's `reg` commit status** so nothing about visual regression ever shows red.
-  Rejected as out of scope here: the status is not a required check, it goes green when a reviewer
-  approves, and this decision is about adding visibility, not removing what exists.
+- **Replace reg-suit's own comment** (`prComment: false` in `regconfig.json`). Rejected: removing
+  the App's counts comment to avoid a second comment would trade real signal for tidiness. Two
+  comments is the accepted cost; ours is sticky, so the thread does not grow.
+- **Turn off reg-suit's `reg` commit status** so visual regression remains visible without making a
+  stack unmergeable when no separate reviewer is available. Adopted on 2026-08-24: the repository
+  sets `reg-notify-github-plugin.setCommitStatus` to `false` in `regconfig.json`. The reg-suit
+  comment, hosted report, and repository-owned visual summary remain unchanged; only the external
+  red commit status is removed.
 - **Upload `out.json` as a GitHub artifact** and read it from there. The S3 key is already the
   contract `scripts/visual-report.mjs` depends on; a second publication path is a second thing to
   keep in sync.
