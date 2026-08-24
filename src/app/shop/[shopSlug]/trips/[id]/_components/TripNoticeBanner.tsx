@@ -99,6 +99,8 @@ const NOTICE_KEYS: Record<
   },
   "diver-waitlisted": { form: "add-diver", tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
+  certified: { form: "roster", tone: "success", key: "trips.notices.certified" },
+  "certify-failed": { form: "roster", tone: "danger", key: "trips.notices.certifyFailed" },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },

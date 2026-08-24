@@ -946,6 +946,17 @@ export async function loadShopExportBundleInput(
             // sighted. Dropping it from the export would launder a claim into
             // an ordinary card the moment the file is read back.
             "self_declared_at",
+            // A third provenance, alongside imported_at and self_declared_at
+            // above: a non-null issued_by_shop_at means this shop's own
+            // instructor certified the diver from a course session's roster
+            // (issue #717), never a captured or self-declared card.
+            // issued_from_trip_id names that session; issued_by_person_id
+            // names the instructor. Same reasoning as the other two
+            // provenance stamps — dropping any of the three from the export
+            // would launder one kind of card into another on the way back in.
+            "issued_by_shop_at",
+            "issued_from_trip_id",
+            "issued_by_person_id",
             "deleted_at",
             "deleted_by_person_id",
             "created_at",
@@ -965,6 +976,9 @@ export async function loadShopExportBundleInput(
             row.importedAt,
             row.importedFromLabel,
             row.selfDeclaredAt,
+            row.issuedByShopAt,
+            row.issuedFromTripId,
+            row.issuedByPersonId,
             row.deletedAt,
             row.deletedByPersonId,
             row.createdAt,

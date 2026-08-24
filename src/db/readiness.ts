@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -19,6 +19,7 @@ import { paymentsByBooking } from "./payments";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
 import {
   bookings,
+  certificationAgency,
   certifications,
   courses,
   diveSites,
@@ -336,6 +337,177 @@ export async function createCertification(db: AppDb, input: NewCertification) {
     if (isUniqueConstraintViolation(error)) return null;
     throw error;
   }
+}
+
+/**
+ * `courses.agency` is shop-typed free text (`normalizeAgency` in
+ * src/lib/course-ratios.ts is its lowercase/trim twin for ratio matching);
+ * `certifications.agency` is the fixed enum every readiness gate reads. A
+ * shop that typed "PADI ", a typo, or an agency DiveDay's enum does not carry
+ * (IANTD, for one) must still get a real row rather than an uncaught cast
+ * failure — `other` is the enum's own bucket for exactly this (see its
+ * "Other agency" glossary entry), and the roster still shows the shop's own
+ * spelling in `courses.agency` itself.
+ */
+function agencyFromCourseAgency(courseAgency: string): CertificationAgency {
+  const normalized = courseAgency.trim().toLowerCase();
+  return (certificationAgency.enumValues.find((value) => value === normalized) ??
+    "other") as CertificationAgency;
+}
+
+export type NewShopIssuedCertification = {
+  shopId: string;
+  personId: string;
+  /** The course session that earned this card. Must be a live course trip of this shop. */
+  tripId: string;
+  /**
+   * Picked by the instructor at the moment of the tap, never derived from
+   * `courses.minimumCertificationLevel` — that field is the course's
+   * *prerequisite* ("what do you need to get in"), not its *outcome* ("what
+   * do you get for finishing"), and no column anywhere records the latter.
+   * Deriving one from the other would silently mint an Advanced Open Water
+   * graduate an Open Water card (`minimumCertificationLevel` on an AOW
+   * session), or fail outright on an entry-level course, whose prerequisite
+   * is null.
+   */
+  level: CertificationLevel;
+  /** The instructor (or any active staff member — the same H-48 trust boundary `reviewCertification` uses) whose tap this is. */
+  issuedByPersonId: string;
+};
+
+/**
+ * **This shop's own instructor certifies a diver, from the course session's
+ * own roster** (issue #717) — the one path from "this shop taught and ran
+ * this course" to "this shop's booking gate stops treating its own graduate
+ * like a stranger's."
+ *
+ * Lands `verified` immediately, with no card number required —
+ * `certifications.issuedByShopAt`'s doc comment carries the full reasoning
+ * and the dive-domain-expert sign-off. A card number, when the agency's own
+ * processing produces one, has no path back onto this row yet — this only
+ * ever inserts, and today's other capture path (`createCertification`) only
+ * ever inserts its own new row too, so a later-typed number lands as a
+ * second, separate live card at the same level rather than completing this
+ * one. Harmless for gating (either satisfies `validVerifiedCertification`)
+ * but worth knowing before assuming this row grows a number in place.
+ *
+ * **Never automatic.** This is the only writer of `issuedByShopAt`, and it
+ * is reached from exactly one place: an explicit per-student tap on that
+ * session's own roster. A trip's status changing, a roll call closing, or
+ * any other lifecycle event must never call this.
+ *
+ * Refuses (returns `null`) rather than throwing for every way the request
+ * could be describing something other than what its own roster shows:
+ * `issuedByPersonId` is not a live staff member of this shop, `tripId` does
+ * not name a live course session of this shop, or `personId` does not hold a
+ * live, non-cancelled booking on it. The last check is what ties this to the
+ * *roster* rather than to any person id a caller might supply — the surface
+ * this is reached from already only ever shows the tap beside a name on the
+ * session's own list, and the write proves that rather than trusting it.
+ * Also refuses a level the diver already holds a live `verified` card for
+ * (any provenance) — a numberless row is invisible to the unique index that
+ * would otherwise catch a repeat tap. That guard is a plain read inside the
+ * same transaction as the write, serialized by locking the person's own row
+ * `for("update")` first — without it, two genuinely concurrent taps (a
+ * second tab, a retried submit over flaky boat wifi) could both pass the
+ * check before either insert commits, since a numberless row has no unique
+ * index to catch the duplicate the way every other write to this table does.
+ */
+export async function issueShopCertification(
+  db: AppDb,
+  input: NewShopIssuedCertification,
+): Promise<Certification | null> {
+  const issuedByPersonId = await activeCertificationReviewerId(
+    db,
+    input.shopId,
+    input.issuedByPersonId,
+  );
+  if (!issuedByPersonId) return null;
+  return db.transaction(async (tx) => {
+    // Locked first and held for the rest of this transaction: two concurrent
+    // calls for the same person now serialize here, so the "already holds
+    // this level" check below and the insert that follows it act as one
+    // atomic unit rather than a race either could win.
+    const [person] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .limit(1)
+      .for("update");
+    if (!person) return null;
+    const [trip] = await tx
+      .select({ id: trips.id, courseId: trips.courseId })
+      .from(trips)
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+      .limit(1);
+    if (!trip?.courseId) return null;
+    const [course] = await tx
+      .select({ agency: courses.agency })
+      .from(courses)
+      .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, input.shopId)))
+      .limit(1);
+    if (!course) return null;
+    const [booking] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.tripId, input.tripId),
+          eq(bookings.personId, input.personId),
+          eq(bookings.shopId, input.shopId),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1);
+    if (!booking) return null;
+    // A numberless row is invisible to the unique index (CR-009's own "nulls
+    // never collide" reasoning) — a second tap would otherwise mint a second
+    // live row at the same level rather than refusing, unlike every other
+    // path into this table. Checked by level alone, any provenance: re-issuing
+    // a rung the diver already holds — verified, imported, or shop-issued
+    // earlier — is redundant regardless of how the existing one arrived.
+    const [existing] = await tx
+      .select({ id: certifications.id })
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, input.shopId),
+          eq(certifications.personId, input.personId),
+          eq(certifications.level, input.level),
+          eq(certifications.status, "verified"),
+          isNull(certifications.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (existing) return null;
+    const now = nowDate();
+    try {
+      const [certification] = await tx
+        .insert(certifications)
+        .values({
+          shopId: input.shopId,
+          personId: input.personId,
+          agency: agencyFromCourseAgency(course.agency),
+          level: input.level,
+          identifier: null,
+          status: "verified",
+          issuedByShopAt: now,
+          issuedFromTripId: input.tripId,
+          issuedByPersonId,
+          // The instructor's own tap is the review — see issuedByShopAt's doc
+          // comment. Stamping these too is what makes "Certified by {name} on
+          // {date}" (the same line every other verified card carries) true for
+          // this one rather than blank.
+          reviewedAt: now,
+          reviewedByPersonId: issuedByPersonId,
+        })
+        .returning();
+      return certification ?? null;
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return null;
+      throw error;
+    }
+  });
 }
 
 /**

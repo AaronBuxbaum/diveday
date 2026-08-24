@@ -19,6 +19,7 @@ import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import {
+  CERTIFICATION_LEVEL_KEYS,
   diveRecencyText,
   readinessBlockerText,
   readinessStatusText,
@@ -168,6 +169,7 @@ export function RosterSection({
   addNoteAction,
   deleteNoteAction,
   saveEmergencyContactAction,
+  certifyDiverAction,
   // Accepted for interface parity with callers/DepthUnit plumbing elsewhere
   // on this page, but `depthWarningText` already embeds its own unit
   // formatting — nothing in this component needs it directly. Pre-existing
@@ -239,6 +241,12 @@ export function RosterSection({
   deleteNoteAction: (formData: FormData) => void;
   /** Staff record or correct a diver's emergency contact from their card (task 144). */
   saveEmergencyContactAction: (formData: FormData) => void;
+  /**
+   * The one path from "this shop taught and ran this course" to a
+   * certifications row (issue #717). Present only on a course session's own
+   * roster — a fun dive has no completion to certify.
+   */
+  certifyDiverAction?: (formData: FormData) => void;
   /** How this shop reads depth; the stored figure is always metres. */
   depthUnit: DepthUnit;
   /** The trip's own shop-local calendar date — when age and birthdays are measured. */
@@ -883,6 +891,55 @@ export function RosterSection({
                       triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
                     />
                   </form>
+                ) : null}
+
+                {/* The one path from "this shop taught and ran this course"
+                    to a certifications row (issue #717) — a per-student tap,
+                    collapsed by default like the diver record's own card
+                    sighting form. Present only on a course session's own
+                    roster (certifyDiverAction is only ever passed there);
+                    the level is picked here rather than inferred, because
+                    no column anywhere records what a course grants on
+                    completion, only what it demands to enrol. */}
+                {certifyDiverAction ? (
+                  <details className="mt-3">
+                    <summary
+                      className={buttonClass({
+                        variant: "secondary",
+                        size: "sm",
+                        className: "cursor-pointer list-none",
+                      })}
+                    >
+                      {t("trips.roster.certifyDiver")}
+                    </summary>
+                    <FieldGrid
+                      as="form"
+                      action={certifyDiverAction}
+                      columns={1}
+                      className="mt-2 gap-y-3 sm:w-72"
+                    >
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <input type="hidden" name="personId" value={person.id} />
+                      <Field
+                        label={t("trips.roster.certifyLevel")}
+                        description={t("trips.roster.certifyLevelHint")}
+                      >
+                        <select name="level" className={controlClass}>
+                          {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+                            <option key={value} value={value}>
+                              {t(key)}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <SubmitButton
+                        pendingLabel={t("trips.roster.certifying")}
+                        className={buttonClass({ variant: "primary", size: "sm" })}
+                      >
+                        {t("trips.roster.certifyConfirm")}
+                      </SubmitButton>
+                    </FieldGrid>
+                  </details>
                 ) : null}
 
                 {/* The waiver, when there is one to send. No "Waiver" column

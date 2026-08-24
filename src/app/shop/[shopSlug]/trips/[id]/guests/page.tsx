@@ -33,6 +33,7 @@ import { WaitlistSection } from "../_components/WaitlistSection";
 import {
   addInternalNoteAction,
   addToWaitlistAction,
+  certifyDiverFromRosterAction,
   confirmDiverIdentityAction,
   createDirectTripInvitationAction,
   deleteInternalNoteAction,
@@ -345,6 +346,11 @@ async function TripGuestsBody({
         mayWriteOffPayment={mayWriteOffPayment}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
         confirmIdentityAction={confirmDiverIdentityAction.bind(null, shopSlug, tripId)}
+        // Only a course session's own roster gets the tap (issue #717) — a
+        // fun dive has no completion to certify.
+        certifyDiverAction={
+          trip.course ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId) : undefined
+        }
         notesByBooking={notesByBooking}
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}

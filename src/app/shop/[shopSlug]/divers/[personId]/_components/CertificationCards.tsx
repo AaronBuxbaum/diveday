@@ -22,6 +22,7 @@ import {
   CARD_STATUS_KEYS,
   type DiverProfile,
   isImportedCard,
+  isShopIssuedCard,
   needsImportConfirm,
   type Shop,
   statusTone,
@@ -237,6 +238,11 @@ export async function CertificationCards({
             // the laundering `selfDeclaredAt` exists to prevent
             // (`security-reviewer` + `dive-domain-expert`, issue #630).
             const declaredNumber = selfDeclared ? card.declaredIdentifier : null;
+            // A card this shop's own instructor issued, whose number has not
+            // arrived from the agency yet (issue #717) — a materially
+            // different "no number yet" from `claimWithoutANumber` above: this
+            // one is `verified`, not a diver's unconfirmed claim.
+            const shopIssuedWithoutANumber = isShopIssuedCard(card) && !card.identifier;
             return (
               <li
                 key={card.id}
@@ -268,7 +274,9 @@ export async function CertificationCards({
                       ? t("divers.certifications.declaredNumber", { number: declaredNumber })
                       : claimWithoutANumber
                         ? t("divers.certifications.selfDeclaredLabel")
-                        : card.identifier}
+                        : shopIssuedWithoutANumber
+                          ? t("divers.certifications.shopIssuedNoNumberLabel")
+                          : card.identifier}
                     {/* Provenance, on the line that already carries the card's
                         own small print — not a pill in the control row. Where
                         a card came from is a fact about the card, and it never
@@ -281,6 +289,12 @@ export async function CertificationCards({
                               source: card.importedFromLabel,
                             })
                           : t("divers.certifications.importedLabel")}
+                      </span>
+                    ) : null}
+                    {isShopIssuedCard(card) ? (
+                      <span>
+                        {" · "}
+                        {t("divers.certifications.shopIssuedLabel")}
                       </span>
                     ) : null}
                   </p>

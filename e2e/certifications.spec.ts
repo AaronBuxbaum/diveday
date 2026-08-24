@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import {
+  acceptAgeAttestation,
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  signInAsOwner,
+  signOut,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -90,6 +98,78 @@ test("staff captures and verifies level and specialty certifications before eith
   await expect(
     page.locator("li").filter({ hasText: cardNo }).filter({ visible: true }),
   ).toHaveCount(0);
+});
+
+/**
+ * Issue #717. Before this, a shop that taught and certified its own student
+ * had to hand-type that diver's card into DiveDay exactly as if a stranger
+ * had issued it — and until a staffer did, the shop's own booking gate
+ * refused the student's next-level booking. This walks the whole loop: an
+ * instructor certifies a diver from their own course session's roster, with
+ * no card number, and the diver books the next rung immediately.
+ */
+test("an instructor certifies a diver from the course roster, and they can book the next level with no retyping", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  const sessionTitle = `Open Water Diver — cert test ${e2eNow().getTime()}`;
+  await createTrip(page, {
+    course: "Open Water Diver",
+    title: sessionTitle,
+    date: daysFromNow(24),
+    departsAt: "08:00",
+    returnsAt: "17:00",
+  });
+
+  await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
+  await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+  await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
+
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await expect(page).toHaveURL(/\/guests/);
+
+  const diverName = `Cert Test Diver ${e2eNow().getTime()}`;
+  const diverEmail = `cert-test-${e2eNow().getTime()}@example.com`;
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill(diverName);
+  await page.getByLabel("Email").fill(diverEmail);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/]+\/guests/);
+  await expect(page.getByRole("link", { name: diverName })).toBeVisible();
+
+  const row = page.locator("li").filter({ hasText: diverName });
+  await row.getByText("Certify", { exact: true }).click();
+  await row.getByLabel("Level").selectOption({ label: "Open Water" });
+  await row.getByRole("button", { name: "Confirm certification" }).click();
+  await expect(
+    page.getByText("Certified — they can book their next level with no further review."),
+  ).toBeVisible();
+
+  // The other half of the loop: no staffer retyped anything, and the same
+  // diver (same email — createBookingRecord resolves the person by it)
+  // already clears the course_prerequisite gate on their next booking.
+  await page.context().clearCookies();
+  await page.goto("/s/blue-mantis/courses");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Advanced Open Water Diver" })
+    .first()
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(page.getByRole("heading", { name: "Upcoming dates" })).toBeVisible();
+  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name").fill(diverName);
+  await page.getByLabel("Email").fill(diverEmail);
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await expect(page.getByRole("heading", { name: /You.re on the boat/ })).toBeVisible();
 });
 
 test("a diver record keeps card refusals visible and clears a wrong no-card stamp", async ({

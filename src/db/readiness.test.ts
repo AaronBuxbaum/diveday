@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { createBooking, createBookingParty } from "./bookings";
 import {
   createNitroxCertification,
   listShopNitroxCertifications,
@@ -16,6 +16,7 @@ import {
   deleteSpecialtyCertification,
   getBookingReadiness,
   getBookingReadinessDetail,
+  issueShopCertification,
   listTripReadiness,
   listTripsReadiness,
   restoreCertification,
@@ -26,9 +27,22 @@ import {
   upsertTripRequirements,
 } from "./readiness";
 import type { DiveSpecialty } from "./schema";
-import { certifications, diveSites, specialtyCertifications, trips } from "./schema";
+import {
+  certifications,
+  courses,
+  diveSites,
+  specialtyCertifications,
+  tripAssignments,
+  trips,
+} from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
-import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  listTripDives,
+  upcomingTripsWithCounts,
+} from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function readinessContext() {
@@ -1054,5 +1068,222 @@ describe("tripRequirementSummaries — the gate every card on a page shows", () 
   it("answers with an empty map for no trips, without touching the database", async () => {
     const { db, shop } = await seededShopContext();
     expect(await tripRequirementSummaries(db, shop.id, [])).toEqual(new Map());
+  });
+});
+
+/**
+ * Issue #717. The one path from "this shop taught and ran this course" to a
+ * `certifications` row this shop's own booking gate reads — a per-student tap
+ * on a course session's own roster, never automatic.
+ */
+describe("issueShopCertification (issue #717)", () => {
+  async function courseSessionWithBooking() {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    if (!course) throw new Error("seeded course missing");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded fixture missing an instructor");
+    const startsAt = nowDate();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Certification test session",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+    // The booking gate refuses course_unstaffed with no instructor rostered —
+    // orthogonal to what this describe block is testing, so roster one first.
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: instructor.person.id });
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Certification Test Diver",
+        email: "cert-test-diver@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const [seat] = party.bookings;
+    if (!seat) throw new Error("booking party returned no seat");
+    return {
+      db,
+      shop,
+      trip,
+      instructorId: instructor.person.id,
+      personId: seat.personId,
+    };
+  }
+
+  it("certifies a booked diver, verified immediately with no card number", async () => {
+    const { db, shop, trip, instructorId, personId } = await courseSessionWithBooking();
+
+    const certification = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: instructorId,
+    });
+
+    expect(certification?.status).toBe("verified");
+    expect(certification?.identifier).toBeNull();
+    expect(certification?.level).toBe("open_water");
+    expect(certification?.issuedByShopAt).not.toBeNull();
+    expect(certification?.issuedFromTripId).toBe(trip.id);
+    expect(certification?.issuedByPersonId).toBe(instructorId);
+    // The instructor's own tap is the review (see the column's own doc
+    // comment) — so "Certified by {name} on {date}" reads true, not blank.
+    expect(certification?.reviewedByPersonId).toBe(instructorId);
+    expect(certification?.reviewedAt).not.toBeNull();
+  });
+
+  it("takes the course's own agency, mapped through the enum, not left as free text", async () => {
+    const { db, shop, trip, instructorId, personId } = await courseSessionWithBooking();
+    // The seed's own courses are typed lowercase "padi" already; prove the
+    // mapping survives a shop's messier spelling too.
+    await db
+      .update(courses)
+      .set({ agency: " PADI " })
+      .where(eq(courses.id, trip.courseId ?? ""));
+
+    const certification = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: instructorId,
+    });
+
+    expect(certification?.agency).toBe("padi");
+  });
+
+  it("refuses a person who isn't actually booked on this session", async () => {
+    const { db, shop, trip, instructorId } = await courseSessionWithBooking();
+    const staff = await listStaff(db, shop.id);
+    const someoneElse = staff.find((entry) => entry.person.id !== instructorId);
+    if (!someoneElse) throw new Error("seeded fixture needs a second person");
+
+    const certification = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId: someoneElse.person.id,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: instructorId,
+    });
+
+    expect(certification).toBeNull();
+  });
+
+  it("refuses a fun dive — this trip carries no course", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded fixture missing an instructor");
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const now = nowDate();
+    const funDive = trips.find(
+      (trip) =>
+        !trip.course &&
+        trip.capacity - trip.booked > 0 &&
+        trip.startsAt.getTime() + 60 * 60 * 1000 > now.getTime(),
+    );
+    if (!funDive) throw new Error("seeded fixture missing an open fun dive");
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: funDive.id,
+        fullName: "Fun Dive Diver",
+        email: "fun-dive-diver@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const [seat] = party.bookings;
+    if (!seat) throw new Error("booking party returned no seat");
+
+    const certification = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId: seat.personId,
+      tripId: funDive.id,
+      level: "open_water",
+      issuedByPersonId: instructor.person.id,
+    });
+
+    expect(certification).toBeNull();
+  });
+
+  it("refuses when the issuer isn't a live staff member of this shop", async () => {
+    const { db, shop, trip, personId } = await courseSessionWithBooking();
+
+    const certification = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: personId, // the diver, not staff
+    });
+
+    expect(certification).toBeNull();
+  });
+
+  it("refuses a repeat tap at a level the diver already holds, verified", async () => {
+    const { db, shop, trip, instructorId, personId } = await courseSessionWithBooking();
+    const first = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: instructorId,
+    });
+    expect(first).not.toBeNull();
+
+    const second = await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: instructorId,
+    });
+
+    expect(second).toBeNull();
+    const rows = await db
+      .select()
+      .from(certifications)
+      .where(and(eq(certifications.shopId, shop.id), eq(certifications.personId, personId)));
+    expect(rows).toHaveLength(1);
+  });
+
+  it("clears the shop's own booking gate for the diver's next-level course", async () => {
+    const { db, shop, trip, instructorId, personId } = await courseSessionWithBooking();
+    await issueShopCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      level: "open_water",
+      issuedByPersonId: instructorId,
+    });
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const advanced = trips.find(
+      (candidate) => candidate.course?.minimumCertificationLevel === "open_water",
+    );
+    if (!advanced) throw new Error("seeded fixture missing an Advanced Open Water session");
+
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: advanced.id,
+      fullName: "Certification Test Diver",
+      email: "cert-test-diver@example.com",
+    });
+
+    expect(booked.ok).toBe(true);
   });
 });
