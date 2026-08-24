@@ -156,10 +156,12 @@ schema sketch above, each for a reason worth keeping:
   shop wants the printable history as proof of care. Still deliberately not a work order — no
   parts, no labor, no billing (`src/lib/gear.ts` holds the interval conventions; the form
   suggests, staff decide).
-- **Two more kinds.** `gear_item_kind` is the prep list's eight (including `boots`, which the
-  original sketch's "reuse `RentableItemKind`" would have dropped) plus `tank` — the most
-  numerous, most compliance-bound unit a shop owns, absent from the rentable catalog because a
-  fit never mentions gas — and `other` for the odd tagged thing (torch, SMB, camera tray).
+- **Register-only kinds stay explicit.** `gear_item_kind` is the prep list's eight (including
+  `boots`, which the original sketch's "reuse `RentableItemKind`" would have dropped) plus
+  `tank`, `drysuit`, `hood`, `gloves`, `torch`, `dpv`, `smb`, `reel`, `camera`, `nitrox_analyzer`,
+  `o2_kit`, and `other`. These categories are inventory vocabulary, not rental-fit or prep
+  vocabulary; `other` remains the genuine catch-all. New categories follow the same total enum,
+  ordering, service-clock, and localized-label records rather than a second taxonomy.
 - **`shop_id` on every table.** The sketch's `gear_reservations` had none; every domain table
   carries it (tenancy + the delete-path coverage tests force the decision anyway).
 - **No feature module.** The sketch said `src/features/gear`; the shipped shape is

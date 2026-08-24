@@ -21,10 +21,10 @@ import {
 } from "./calendar-date";
 
 /**
- * What a tracked unit is. The prep list's eight rental kinds plus the two a
- * fleet has that a fit never mentions: `tank` (the compliance-heavy unit with
- * its own hydro/VIP clocks) and `other` for the odd tagged thing — a torch,
- * an SMB, a camera tray. Keep aligned with the `gear_item_kind` pg enum.
+ * What a tracked unit is. The prep list's eight rental kinds plus register-only
+ * fleet categories. Register-only kinds never become rental-fit options until
+ * a separate product decision says they should. Keep aligned with the
+ * `gear_item_kind` pg enum.
  */
 export type GearItemKind =
   | "bcd"
@@ -36,6 +36,16 @@ export type GearItemKind =
   | "dive_computer"
   | "gopro"
   | "tank"
+  | "drysuit"
+  | "hood"
+  | "gloves"
+  | "torch"
+  | "dpv"
+  | "smb"
+  | "reel"
+  | "camera"
+  | "nitrox_analyzer"
+  | "o2_kit"
   | "other";
 
 /**
@@ -63,7 +73,8 @@ export type GearServiceKind = "service" | "hydro_test" | "visual_inspection" | "
 /**
  * Fleet display order. The eight shared kinds keep the prep list's own order
  * (`KIND_ORDER` in dive-prep.ts) so the register and the packing list read
- * the same way; the two register-only kinds follow.
+ * the same way; register-only categories follow, with `other` last as the
+ * genuine catch-all.
  */
 export const GEAR_KIND_ORDER: readonly GearItemKind[] = [
   "bcd",
@@ -75,6 +86,16 @@ export const GEAR_KIND_ORDER: readonly GearItemKind[] = [
   "dive_computer",
   "gopro",
   "tank",
+  "drysuit",
+  "hood",
+  "gloves",
+  "torch",
+  "dpv",
+  "smb",
+  "reel",
+  "camera",
+  "nitrox_analyzer",
+  "o2_kit",
   "other",
 ];
 
@@ -115,6 +136,16 @@ export const GEAR_SERVICE_KINDS_FOR: Record<GearItemKind, readonly GearServiceKi
   dive_computer: ["service", "note"],
   gopro: ["note"],
   tank: ["visual_inspection", "hydro_test", "o2_clean", "note"],
+  drysuit: ["note"],
+  hood: ["note"],
+  gloves: ["note"],
+  torch: ["service", "note"],
+  dpv: ["service", "note"],
+  smb: ["note"],
+  reel: ["note"],
+  camera: ["note"],
+  nitrox_analyzer: ["service", "note"],
+  o2_kit: ["service", "note"],
   other: ["service", "note"],
 };
 

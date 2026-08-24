@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { shiftCalendarDateMonths } from "./calendar-date";
 import {
+  GEAR_KIND_ORDER,
+  GEAR_SERVICE_KINDS_FOR,
   GEAR_SERVICE_DUE_SOON_DAYS,
   GEAR_SERVICE_DUE_SOON_DIVES,
   gearKindRank,
@@ -11,6 +13,22 @@ import {
   suggestNextDueOn,
   tripReservationWindow,
 } from "./gear";
+
+describe("gear kind coverage", () => {
+  it("ranks and assigns service clocks to every register category", () => {
+    expect(new Set(GEAR_KIND_ORDER).size).toBe(GEAR_KIND_ORDER.length);
+    for (const kind of GEAR_KIND_ORDER) {
+      expect(gearKindRank(kind)).toBeGreaterThanOrEqual(0);
+      expect(GEAR_SERVICE_KINDS_FOR[kind].length).toBeGreaterThan(0);
+    }
+    expect(GEAR_KIND_ORDER[GEAR_KIND_ORDER.length - 1]).toBe("other");
+    expect(GEAR_SERVICE_KINDS_FOR.drysuit).toEqual(["note"]);
+    expect(GEAR_SERVICE_KINDS_FOR.torch).toEqual(["service", "note"]);
+    expect(GEAR_SERVICE_KINDS_FOR.dpv).toEqual(["service", "note"]);
+    expect(GEAR_SERVICE_KINDS_FOR.nitrox_analyzer).toEqual(["service", "note"]);
+    expect(GEAR_SERVICE_KINDS_FOR.o2_kit).toEqual(["service", "note"]);
+  });
+});
 
 describe("shiftCalendarDateMonths", () => {
   it("adds whole months", () => {

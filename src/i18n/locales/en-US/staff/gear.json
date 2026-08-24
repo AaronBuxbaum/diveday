@@ -4,6 +4,16 @@
   "description": "Your own rental fleet — who has what, when it's due back, and what's due for service.",
   "itemKinds": {
     "tank": "Tank",
+    "drysuit": "Drysuit",
+    "hood": "Hood",
+    "gloves": "Gloves",
+    "torch": "Torch",
+    "dpv": "DPV",
+    "smb": "SMB",
+    "reel": "Reel",
+    "camera": "Camera",
+    "nitroxAnalyzer": "Nitrox analyzer",
+    "o2Kit": "O2 kit",
     "other": "Other"
   },
   "status": {

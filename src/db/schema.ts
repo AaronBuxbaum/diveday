@@ -4817,6 +4817,16 @@ export const gearItemKind = pgEnum("gear_item_kind", [
   "dive_computer",
   "gopro",
   "tank",
+  "drysuit",
+  "hood",
+  "gloves",
+  "torch",
+  "dpv",
+  "smb",
+  "reel",
+  "camera",
+  "nitrox_analyzer",
+  "o2_kit",
   "other",
 ]);
 
