@@ -55,8 +55,15 @@ argue from **proof we can demonstrate**, in one sentence:
 - **Honest flat price** — one number, no setup fee, no per-seat math, no feature tiers. Contrast
   with concrete buyer fears, not with named-competitor digs.
 
-Concede loudly what we don't do: retail POS, agency (PADI) sync, gear inventory. An honest no on
-these buys trust our claims can't. See
+Concede loudly what we don't do: retail POS, agency (PADI) sync. An honest no on these buys
+trust our claims can't. **Gear inventory is not on that list** — the gear register shipped
+2026-08-20 ([shipped.md](shipped.md), ADR
+[20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md)), and
+the concession outlived it here and in the `/about` truths block until it was swept out. Retail POS
+and repair work orders stay declined as vision non-goals, but *rental* gear tracking is a shipped
+capability: it belongs in `productCapabilityIndex`, never in the concession list. The general rule
+this is an instance of — **when a slice ships, sweep the concessions before writing new copy**; a
+stale "we don't do X" costs more trust than the honest no ever bought. See
 [assessments/competitive-strategy.md](assessments/competitive-strategy.md) for why these are the
 chosen battlegrounds — and re-read it before changing the spine.
 

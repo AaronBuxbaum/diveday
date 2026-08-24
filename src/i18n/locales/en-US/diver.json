@@ -2216,6 +2216,14 @@
         "item7": "Crew conditions predictions and an automated marine outlook",
         "item8": "A counter check-in for the morning rush"
       },
+      "gear": {
+        "title": "Your rental fleet",
+        "item1": "A register of your own units: tag, kind, size, serial, and status",
+        "item2": "Per-booking reservations that can't hand the same unit to two divers",
+        "item3": "Check-out and return stamps, and a list of what's due back today",
+        "item4": "Service clocks — annual, hydro, visual, O2-clean — due by date or by dives",
+        "item5": "A printable rental slip: what a diver has and when it's due back"
+      },
       "money": {
         "title": "Money",
         "item1": "Card payments through the shop's own Stripe account",
@@ -2349,7 +2357,7 @@
           },
           "serviceHistory": {
             "what": "Gear service history",
-            "detail": "Stays behind — DiveDay tracks rental sizes, not a specific rig's service record."
+            "detail": "Stays behind — the importer carries diver records, never another system's equipment log. Your fleet's service clocks start fresh on the gear register."
           },
           "diverNotes": {
             "what": "Diver & staff notes",
@@ -2645,7 +2653,7 @@
         },
         "notEverything": {
           "title": "It doesn't do everything.",
-          "body": "No retail register, no agency sync, no gear inventory. Those are real jobs for the tools your shop already trusts, while DiveDay keeps the water side focused."
+          "body": "No retail register and no agency sync. Those are real jobs for the tools your shop already trusts, while DiveDay keeps the water side focused."
         },
         "stillMoving": {
           "title": "It's still moving.",
