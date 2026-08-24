@@ -19,8 +19,10 @@ import {
   getWaitlistEntryForTrip,
   listTripDives,
   listTripScheduleDays,
+  listTripSpokenLanguages,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { languageEndonym } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -32,6 +34,7 @@ import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
@@ -203,6 +206,17 @@ export default async function TripDetailPage({
     );
   }
   const crewPrediction = hasCrewPrediction(trip);
+  // The per-trip half of issue #708's "we speak …" line: which languages
+  // *this sailing's* currently assigned crew can point to, named in each
+  // language's own endonym like the shop-wide footer line — never the
+  // reader's locale — and nothing when nobody assigned has recorded one.
+  const crewSpokenLanguages = await listTripSpokenLanguages(db, shop.id, trip.id);
+  const crewLanguagesLine =
+    crewSpokenLanguages.length === 0
+      ? null
+      : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+          crewSpokenLanguages.map((code) => languageEndonym(code) ?? code),
+        );
   const forecastPoint =
     trip.diveSite &&
     trip.diveSite.forecastLatitude !== null &&
@@ -435,6 +449,15 @@ export default async function TripDetailPage({
               minimum: minimumSeats.minimum,
               deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
             })}
+          </p>
+        ) : null}
+        {/* The per-trip half of issue #708 — the shop-wide footer line said
+            "we speak German", this says which of that set is actually
+            assigned to *this* sailing. Same quiet material as the seats
+            notice above: a stated fact, not a reason to book. */}
+        {crewLanguagesLine ? (
+          <p className="mt-5 rounded-xl bg-surface-sunken p-4 text-sm text-muted">
+            {t("trip.crewLanguages", { languages: crewLanguagesLine })}
           </p>
         ) : null}
         {!isEmbed ? <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} /> : null}

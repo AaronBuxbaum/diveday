@@ -82,6 +82,27 @@ export async function getTripCrewAssignments(
 }
 
 /**
+ * Every language this trip's *currently assigned* crew has recorded speaking,
+ * deduplicated — the per-trip half of issue #708's shop-wide "we speak …"
+ * line (`listShopSpokenLanguages`, src/db/staff-accounts.ts). Safe to call
+ * from a public page: it names no one, only the set of languages someone on
+ * this sailing can point to.
+ */
+export async function listTripSpokenLanguages(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ language: sql<string>`jsonb_array_elements_text(${people.spokenLanguages})` })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId), liveTrip()));
+  return rows.map((row) => row.language);
+}
+
+/**
  * One entry in a crew replacement. A bare id means "this person, leave their
  * per-trip role alone"; the object form sets it, and an explicit `null` clears
  * it back to unspecified.

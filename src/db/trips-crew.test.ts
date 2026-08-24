@@ -8,6 +8,7 @@ import type { AppDb } from "./client";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
 import type { Course } from "./schema";
 import { bookings, courses, people, personRoles, shops } from "./schema";
+import { setStaffLanguages } from "./staff-accounts";
 import {
   changeTripCrew,
   createTrip,
@@ -17,6 +18,7 @@ import {
   getTripRoster,
   listStaff,
   listTripScheduleDays,
+  listTripSpokenLanguages,
   setTripCrew,
   upcomingStaffSchedule,
   upcomingTripsWithCounts,
@@ -567,5 +569,78 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     // A real second shop, asking about shop's real, booked trip — not a
     // hardcoded placeholder id — sees nothing.
     expect(await getTripRoster(db, otherShop.id, trip.id)).toEqual([]);
+  });
+});
+
+describe("listTripSpokenLanguages (issue #970 — the per-trip half of #708)", () => {
+  it("returns the union of the trip's currently assigned crew's languages, deduplicated", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const [first, second] = staff;
+    if (!first || !second) throw new Error("seeded shop needs at least two staff members");
+    await setStaffLanguages(db, {
+      shopId: shop.id,
+      personId: first.person.id,
+      languages: ["de", "fr"],
+    });
+    await setStaffLanguages(db, {
+      shopId: shop.id,
+      personId: second.person.id,
+      languages: ["fr", "ja"],
+    });
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    await setTripCrew(db, shop.id, trip.id, [first.person.id, second.person.id]);
+
+    expect([...(await listTripSpokenLanguages(db, shop.id, trip.id))].sort()).toEqual([
+      "de",
+      "fr",
+      "ja",
+    ]);
+  });
+
+  it("says nothing for a crew member's language once they're no longer assigned to the trip", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const [first, second] = staff;
+    if (!first || !second) throw new Error("seeded shop needs at least two staff members");
+    await setStaffLanguages(db, { shopId: shop.id, personId: first.person.id, languages: ["de"] });
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    await setTripCrew(db, shop.id, trip.id, [first.person.id]);
+    expect(await listTripSpokenLanguages(db, shop.id, trip.id)).toEqual(["de"]);
+
+    // Reassigned off the boat — not this sailing's crew any more, so not this
+    // sailing's languages either. `setTripCrew` replaces the whole roster.
+    await setTripCrew(db, shop.id, trip.id, [second.person.id]);
+    expect(await listTripSpokenLanguages(db, shop.id, trip.id)).toEqual([]);
+  });
+
+  it("returns nothing when the assigned crew has recorded no language", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const [first] = staff;
+    if (!first) throw new Error("seeded shop needs a staff member");
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    await setTripCrew(db, shop.id, trip.id, [first.person.id]);
+    expect(await listTripSpokenLanguages(db, shop.id, trip.id)).toEqual([]);
+  });
+
+  it("never leaks a language from a genuinely different shop's trip (CR-007)", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const [first] = staff;
+    if (!first) throw new Error("seeded shop needs a staff member");
+    await setStaffLanguages(db, { shopId: shop.id, personId: first.person.id, languages: ["de"] });
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    await setTripCrew(db, shop.id, trip.id, [first.person.id]);
+
+    expect(await listTripSpokenLanguages(db, FOREIGN_SHOP_ID, trip.id)).toEqual([]);
   });
 });

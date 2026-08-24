@@ -35,6 +35,7 @@ export {
   getTripCrewAssignments,
   getTripCrewIds,
   listStaff,
+  listTripSpokenLanguages,
   setTripCrew,
   type TripCrewChange,
   type TripCrewMemberInput,

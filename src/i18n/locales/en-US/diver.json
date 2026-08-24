@@ -220,6 +220,7 @@
     "conditionsHoldHeading": "This trip is on a conditions hold",
     "conditionsHoldBody": "Weather is being watched. Existing seats stay held; new bookings are paused for now.",
     "minimumSeatsNotice": "This one runs with at least {minimum, plural, one {# diver} other {# divers}}. If it hasn't got there by {deadline}, the shop cancels it and emails everyone booked — so you'll know either way, in time to make another plan.",
+    "crewLanguages": "Your crew speaks {languages}",
     "conditionsChangedHeading": "Conditions changed since you booked",
     "conditionsChangedBody": "The crew has published a newer read for this day. Review it below; the final route and go/no-go call still happen at the dock.",
     "bookAndSpotsLeft": "Book · {count} left",

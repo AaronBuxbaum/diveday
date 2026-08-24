@@ -220,6 +220,7 @@
     "conditionsHoldHeading": "Esta salida está en espera por las condiciones",
     "conditionsHoldBody": "Se está observando el tiempo. Las plazas ya reservadas se mantienen; las nuevas reservas están pausadas por ahora.",
     "minimumSeatsNotice": "Esta salida se realiza con un mínimo de {minimum, plural, one {# buceador} other {# buceadores}}. Si no los alcanza antes del {deadline}, el centro la cancela y avisa por correo a quienes tengan reserva, así que lo sabrás en cualquier caso con tiempo para organizarte.",
+    "crewLanguages": "Tu tripulación habla {languages}",
     "conditionsChangedHeading": "Las condiciones cambiaron desde que reservaste",
     "conditionsChangedBody": "La tripulación ha publicado una lectura más reciente para este día. Revísala abajo; la ruta final y la decisión de salir o no se confirman igualmente en el muelle.",
     "bookAndSpotsLeft": "Reservar · quedan {count}",
