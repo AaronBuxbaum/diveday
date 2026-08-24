@@ -600,6 +600,25 @@ textarea {
   animation: toast-dismiss 200ms var(--ease-in-soft) both;
 }
 
+/* The dock's "More" sheet closing (StaffTabBar) — issue #832. Same shape as
+   toast-dismiss (rise-in's own inverse), sized for a sheet rather than a
+   toast: it settles back down toward the dock it rose from, further than a
+   toast settles because the sheet travelled further to arrive. */
+@keyframes sheet-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.sheet-out {
+  animation: sheet-out 200ms var(--ease-in-soft) both;
+}
+
 /*
  * Motion language as brand (principles.md: motion has a job, 150-250ms, ease-out, transform/opacity)
  * Reusable animation keyframes and standard classes.
@@ -666,6 +685,21 @@ textarea {
 
 .animate-fade-in {
   animation: fade-in 150ms var(--ease-out-soft) both;
+}
+
+/* The inverse of fade-in, for a scrim/backdrop layer closing (WaterLocker) —
+   issue #832. Nothing on a fade needs a transform; opacity alone reverses. */
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-fade-out {
+  animation: fade-out 150ms var(--ease-in-soft) both;
 }
 
 /*

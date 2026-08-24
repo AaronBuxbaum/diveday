@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition
 import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
+import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
@@ -152,6 +153,11 @@ export function CommandPalette({
   const root = `/shop/${shopSlug}`;
 
   useFocusTrap(open, dialogRef);
+  // 180ms matches .animate-scale-out in globals.css — the two must move
+  // together. Restrained on purpose (docs/design/principles.md §5): a short
+  // scale-and-fade, the same pair every other menu on the page uses, so the
+  // palette reads as a layer arriving rather than a dialog performing.
+  const { mounted, closing } = useExitAnimation(open, 180);
 
   // ⌘K / Ctrl-K from anywhere opens the palette.
   useEffect(() => {
@@ -514,7 +520,7 @@ export function CommandPalette({
         </kbd>
       </button>
 
-      {open
+      {mounted
         ? createPortal(
             // The header this button lives in has `backdrop-blur`, which makes it a
             // containing block for `position: fixed` descendants — a portal escapes
@@ -526,7 +532,7 @@ export function CommandPalette({
               // A wash, not a curtain: `backdrop-blur-sm` over a 30% scrim
               // left the page behind unreadable, which takes away the sense of
               // the palette floating over your own work (issue #773).
-              className="fixed inset-0 z-50 flex items-start justify-center bg-foreground/25 px-4 pt-[12vh] backdrop-blur-[2px]"
+              className={`fixed inset-0 z-50 flex items-start justify-center bg-foreground/25 px-4 pt-[12vh] backdrop-blur-[2px] ${closing ? "animate-fade-out" : "animate-fade-in"}`}
               role="presentation"
               onClick={(event) => {
                 if (event.target === event.currentTarget) setOpen(false);
@@ -538,7 +544,7 @@ export function CommandPalette({
                 aria-modal="true"
                 aria-label={copy.dialogAriaLabel}
                 tabIndex={-1}
-                className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl outline-none"
+                className={`w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl outline-none ${closing ? "animate-scale-out" : "animate-scale-in"}`}
               >
                 {/* Counts, not the full result list — a screen reader user
                     typing a query hears how many matches landed in each

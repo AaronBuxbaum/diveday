@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
+import { useExitAnimation } from "@/components/useExitAnimation";
 
 export type LanguagePickerCopy = {
   /** Names the control for a screen reader — "Change language". */
@@ -54,6 +55,8 @@ export function LanguagePicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  // 180ms matches .animate-scale-out in globals.css — the two must move together.
+  const { mounted, closing } = useExitAnimation(open, 180);
 
   useEffect(() => {
     if (!open) return;
@@ -111,8 +114,10 @@ export function LanguagePicker({
           ▾
         </span>
       </button>
-      {open ? (
-        <div className="absolute top-full right-0 z-10 mt-1 min-w-40 rounded-xl border border-border bg-surface p-2 shadow-lg animate-scale-in">
+      {mounted ? (
+        <div
+          className={`absolute top-full right-0 z-10 mt-1 min-w-40 rounded-xl border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+        >
           <p className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
             {copy.heading}
           </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import { fill } from "@/i18n/fill";
 
@@ -61,6 +62,14 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   // must not reach the roll call it's covering) *and* an immediate
   // announcement of why, not just a focus move a screen reader might miss.
   useFocusTrap(isLocked, dialogRef);
+  // 150ms matches .animate-fade-out in globals.css — the two must move
+  // together. Keyed on `isLocked` alone, not `disabled`, because disabling
+  // mid-lock is a deliberate override — "stuck behind a screen for a feature
+  // you just turned off" — and must release the same instant it always has,
+  // never wait out a fade-out; the `disabled` check below the render gate is
+  // what keeps that path instant while the ordinary hold-to-unlock close
+  // still gets the graceful exit (issue #832).
+  const { mounted, closing } = useExitAnimation(isLocked, 150);
 
   useEffect(() => {
     setDisabled(readWaterLockerDisabled());
@@ -159,7 +168,10 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
     setHoldProgress(0);
   };
 
-  if (disabled || !isLocked) return null;
+  // Instant, not animated: a captain flipping the toggle off mid-lock needs
+  // the screen back now, not after the fade-out below finishes.
+  if (disabled) return null;
+  if (!mounted) return null;
 
   return (
     <div
@@ -170,7 +182,7 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
       aria-labelledby={headingId}
       aria-describedby={bodyId}
       tabIndex={-1}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md animate-fade-in outline-none"
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md outline-none ${closing ? "animate-fade-out" : "animate-fade-in"}`}
     >
       <div className="max-w-md text-center">
         <span className="text-5xl animate-bounce" role="img" aria-label={copy.rainAlt}>
