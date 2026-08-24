@@ -25,6 +25,45 @@ function tokenRouteDirectories(dir = APP_DIR, trail: string[] = []): string[] {
   return found;
 }
 
+/**
+ * Every routable path that lives *below* a `[token]` segment, as segments
+ * appended after the token.
+ *
+ * The walk above cannot see these: it stops the moment it meets `[token]`, so
+ * it was structurally unable to notice the one route that was not covered.
+ * `src/app/unsubscribe/[token]/one-click/route.ts` is real and reachable, and
+ * `"/unsubscribe/:token"` matches exactly one segment, so it matched nothing in
+ * the list and fell back to the baseline policy (issue #946).
+ *
+ * Nothing leaked — that endpoint returns a null body, so no document exists to
+ * send a `Referer` from. This asserts the invariant rather than a live fix, and
+ * exists so the *next* nested capability route cannot quietly opt out.
+ */
+function routesNestedUnderToken(
+  dir = APP_DIR,
+  trail: string[] = [],
+  belowToken = false,
+): { prefix: string; rest: string[] }[] {
+  const found: { prefix: string; rest: string[] }[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const child = join(dir, entry.name);
+    if (!entry.isDirectory()) {
+      // A route group or private folder holds no URL of its own; only a
+      // `page`/`route` module makes a directory addressable.
+      if (belowToken && /^(page|route)\.tsx?$/.test(entry.name) && trail.length > 1) {
+        found.push({ prefix: trail[0] as string, rest: trail.slice(1) });
+      }
+      continue;
+    }
+    if (entry.name === "[token]" && !belowToken) {
+      found.push(...routesNestedUnderToken(child, trail, true));
+      continue;
+    }
+    found.push(...routesNestedUnderToken(child, [...trail, entry.name], belowToken));
+  }
+  return found;
+}
+
 describe("securityHeaderRules (specialist-optimization-audit-20260731.md §5)", () => {
   it("applies the baseline set to every route", () => {
     const rules = securityHeaderRules();
@@ -69,7 +108,25 @@ describe("securityHeaderRules (specialist-optimization-audit-20260731.md §5)", 
       expect(rule, `expected a header rule for ${source}`).toBeDefined();
       expect(rule?.headers).toEqual([{ key: "Referrer-Policy", value: "no-referrer" }]);
     }
-    // Nothing outside the catch-all and the token routes above.
-    expect(rules).toHaveLength(1 + tokenSources.length);
+    // Nothing outside the catch-all and the two sources per prefix.
+    expect(rules).toHaveLength(1 + tokenSources.length * 2);
+  });
+
+  it("covers a route nested below the token segment, at any depth", () => {
+    const rules = securityHeaderRules();
+    const nested = routesNestedUnderToken();
+    // The route that started this. If it ever moves, the assertion below still
+    // holds for wherever the walk finds it — this only pins that the walk is
+    // actually finding something, so a broken walk cannot pass vacuously.
+    expect(nested).toContainEqual({ prefix: "unsubscribe", rest: ["one-click"] });
+
+    for (const { prefix } of nested) {
+      const deep = rules.find((r) => r.source === `/${prefix}/:token/:rest*`);
+      expect(
+        deep,
+        `a routable path exists below /${prefix}/[token], so it needs a :rest* rule`,
+      ).toBeDefined();
+      expect(deep?.headers).toEqual([{ key: "Referrer-Policy", value: "no-referrer" }]);
+    }
   });
 });
