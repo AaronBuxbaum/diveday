@@ -3,7 +3,7 @@
 // hand-rolled approximation is the whole point of this file.
 import { pathToRegexp } from "next/dist/compiled/path-to-regexp";
 import { describe, expect, it } from "vitest";
-import { isEmbeddableShopRoute } from "./auth.config";
+import { isEmbeddableShopRoute } from "./embed-routes";
 import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./public-routes";
 
 /**

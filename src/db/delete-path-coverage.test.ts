@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
 import type { AppDb, DbExecutor } from "./client";
 import * as schema from "./schema";
-import { mediaDeletionAttempts, shops } from "./schema";
+import { accountSessions, mediaDeletionAttempts, people, shops, userAccounts } from "./schema";
 import { createDemoShop, deleteDemoShopCascade, resetDemoSchedule } from "./seed";
 
 /**
@@ -143,6 +143,8 @@ const RESET_KEEPS: Record<string, string> = {
 const RESET_PERSON_SCOPED: Record<string, string> = {
   staff_shifts: "seeded once with the permanent staff; a purged person's shifts go with them",
   calendar_feeds: "a stable staffer's subscription must survive a schedule reset",
+  account_sessions:
+    "a purged person's session goes with their login; stable staff sessions survive",
   processor_erasure_obligations: "names the erased person and whoever discharged it",
 };
 
@@ -165,6 +167,35 @@ describe("shop-scoped delete-path coverage", () => {
     const db = await seededTestDb();
     const [shop] = await db.select().from(shops).where(eq(shops.slug, "blue-mantis")).limit(1);
     if (!shop) throw new Error("test setup: the canonical demo shop is missing");
+    const [purgedPerson] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Delete Path Session",
+        email: "delete-path-session@example.com",
+      })
+      .returning({ id: people.id });
+    if (!purgedPerson) throw new Error("test setup: expected a non-staff demo person");
+    const [purgedAccount] = await db
+      .insert(userAccounts)
+      .values({
+        personId: purgedPerson.id,
+        email: "delete-path-session@example.com",
+        hashedPassword: "x",
+        status: "active",
+      })
+      .returning({ id: userAccounts.id });
+    if (!purgedAccount) throw new Error("test setup: expected a purged account");
+    await db.insert(accountSessions).values({
+      userAccountId: purgedAccount.id,
+      personId: purgedPerson.id,
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      roles: [],
+      name: "Delete path session",
+      token: "delete-path-session",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
     const deleted = await recordDeletedTables(db, (recorder) =>
       resetDemoSchedule(recorder, shop.id),
     );

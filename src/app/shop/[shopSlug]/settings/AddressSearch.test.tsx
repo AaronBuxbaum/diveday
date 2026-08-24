@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AddressLookupResult, ShopAddressFields } from "@/lib/address-lookup";
 import { AddressSearch } from "./AddressSearch";
 
-// The actions drag next-auth (and the whole Next server runtime) in behind them.
+// The actions drag better-auth (and the whole Next server runtime) in behind them.
 const suggest = vi.fn<(query: string) => Promise<AddressLookupResult>>();
 const save = vi.fn<(form: FormData) => Promise<void>>();
 vi.mock("./actions", () => ({

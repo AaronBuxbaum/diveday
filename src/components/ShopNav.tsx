@@ -1,10 +1,12 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
 import { gearStatusLabels } from "@/i18n/gear-labels";
 import { localeEndonym } from "@/i18n/language-labels";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { signOut } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import {
   STAFF_DESTINATION_LABEL_KEYS,
   STAFF_DESTINATION_TITLE_KEYS,
@@ -24,7 +26,9 @@ import { CommandPalette } from "./search/CommandPalette";
 
 async function signOutAction() {
   "use server";
-  await signOut({ redirectTo: "/" });
+  const auth = await getAuth();
+  await auth.api.signOut({ headers: await headers() });
+  redirect("/");
 }
 
 /**

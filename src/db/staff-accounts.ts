@@ -4,7 +4,7 @@ import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import type { AppDb, DbExecutor } from "./client";
-import { people, personRoles, pushSubscriptions, userAccounts } from "./schema";
+import { accountSessions, people, personRoles, pushSubscriptions, userAccounts } from "./schema";
 
 export type StaffMember = {
   personId: string;
@@ -377,6 +377,15 @@ export async function setStaffAccountStatus(
       .update(userAccounts)
       .set({ status: input.status })
       .where(eq(userAccounts.id, input.userAccountId));
+    // Disabling does not touch an already-issued session on its own — revoke
+    // it here so the change takes effect immediately rather than waiting out
+    // whatever's left of the session's lifetime (the same reasoning
+    // removeStaffMember below already applies to push subscriptions).
+    if (input.status === "disabled") {
+      await tx
+        .delete(accountSessions)
+        .where(eq(accountSessions.userAccountId, input.userAccountId));
+    }
     return { ok: true };
   });
 }
@@ -408,6 +417,9 @@ export async function removeStaffMember(
       .update(userAccounts)
       .set({ status: "disabled" })
       .where(eq(userAccounts.id, input.userAccountId));
+    // Revoke any session issued before this instant, same reasoning as
+    // setStaffAccountStatus above.
+    await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, input.userAccountId));
     // Revoke this person's push subscriptions in the same transaction (ADR
     // 20260804-manifest-web-push). Disabling the account does not reach them:
     // the `people` row deliberately survives, so the row's ON DELETE CASCADE

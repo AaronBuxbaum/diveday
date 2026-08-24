@@ -1,13 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { seededTestDb } from "@/test/db";
 import {
@@ -23,19 +23,19 @@ import { demoteOwnerToManager } from "@/test/staff-session";
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
-// (the db handle, next-auth, and request headers) are stubbed and nothing else.
+// (the db handle, better-auth, and request headers) are stubbed and nothing else.
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 // An empty header set negotiates down to the shop's default locale, same as a
 // real request that sends no Accept-Language.
 vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const settingsModule = await import("./SettingsPage");
@@ -51,7 +51,7 @@ const SHOP_SLUG = "blue-mantis";
  * (`canPersonManagePaymentSettings`), so a made-up person id would not survive
  * the lookup and a made-up role set would disagree with what the row says.
  */
-async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> {
+async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySession }> {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
@@ -65,14 +65,17 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: Session }> 
         shopId: shop.id,
         shopSlug: SHOP_SLUG,
         name: member.fullName,
+        email: "staff@demo.invalid",
         roles: member.roles,
       },
-      expires: new Date(Date.now() + 60_000).toISOString(),
     },
   };
 }
 
-async function renderSettings(role: Role, seed?: (db: AppDb, session: Session) => Promise<void>) {
+async function renderSettings(
+  role: Role,
+  seed?: (db: AppDb, session: DiveDaySession) => Promise<void>,
+) {
   const { db, session } = await sessionFor(role);
   if (seed) await seed(db, session);
   vi.mocked(getDb).mockResolvedValue(db);
@@ -213,7 +216,7 @@ describe("the units card", () => {
 const MEDIA_PANEL = "Photos that didn't finish deleting";
 const ERASURE_PANEL = "Erasures not finished at Stripe";
 
-async function queueStuckDeletion(db: AppDb, session: Session) {
+async function queueStuckDeletion(db: AppDb, session: DiveDaySession) {
   await db.insert(mediaDeletionAttempts).values({
     shopId: session.user.shopId,
     kind: "recap_photo",
@@ -230,7 +233,7 @@ async function queueStuckDeletion(db: AppDb, session: Session) {
  */
 async function oweErasure(
   db: AppDb,
-  session: Session,
+  session: DiveDaySession,
   target: "stripe_customer" | "stripe_invoice_snapshot",
 ) {
   await db.insert(processorErasureObligations).values({

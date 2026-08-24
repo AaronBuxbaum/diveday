@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
+import { nextHeadersStub } from "@/test/next-headers";
 
 /**
  * **The demo half of the marketing funnel: the event, and the founder's alert**
@@ -24,7 +25,11 @@ import { seededTestDb } from "@/test/db";
  * `redirect` — node_modules/next/dist/docs/.../after.md).
  */
 
-const hoisted = vi.hoisted(() => ({ afterTasks: [] as Promise<unknown>[] }));
+const hoisted = vi.hoisted(() => ({
+  afterTasks: [] as Promise<unknown>[],
+  signInDiveDayCredentials: vi.fn(async () => ({})),
+  signOut: vi.fn(async () => ({})),
+}));
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
@@ -36,8 +41,16 @@ vi.mock("next/server", () => ({
     hoisted.afterTasks.push(Promise.resolve().then(task));
   }),
 }));
-vi.mock("next-auth", () => ({ AuthError: class AuthError extends Error {} }));
-vi.mock("@/lib/auth", () => ({ auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }));
+vi.mock("next/headers", () => nextHeadersStub());
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn(),
+  getAuth: vi.fn(async () => ({
+    api: {
+      signInDiveDayCredentials: hoisted.signInDiveDayCredentials,
+      signOut: hoisted.signOut,
+    },
+  })),
+}));
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -56,7 +69,6 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { trackEvent } = await import("@/lib/analytics");
 const { sendNotification } = await import("@/db/notifications");
-const { signIn } = await import("@/lib/auth");
 const { enterDemoAction } = await import("./demo");
 
 /** Run the action to its redirect, then drain the work it deferred with `after()`. */
@@ -106,10 +118,9 @@ beforeEach(() => {
   vi.mocked(sendNotification).mockReset();
   vi.mocked(sendNotification).mockResolvedValue({ status: "sent", providerMessageId: "m1" });
   // The diver pick redirects straight to the public schedule and never signs
-  // anyone in; the staff picks do, and Auth.js signals success by throwing.
-  vi.mocked(signIn).mockImplementation(async (_provider, options) => {
-    throw new Error(`REDIRECT:${(options as { redirectTo: string }).redirectTo}`);
-  });
+  // anyone in; the staff picks do, resolving normally on success — the
+  // action's own explicit redirect() call is what produces the landing.
+  hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});
 });
 
 describe("enterDemoAction instrumentation", () => {

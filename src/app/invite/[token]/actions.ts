@@ -1,11 +1,12 @@
 "use server";
 
+import { APIError } from "better-auth/api";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
 import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { activateStaffAccount, getAccountContact } from "@/db/user-accounts";
-import { signIn } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
 import { hashPassword } from "@/lib/password-hashing";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -51,15 +52,16 @@ export async function acceptStaffInvite(token: string, formData: FormData) {
   if (!account) redirect(base);
 
   try {
-    await signIn("credentials", {
-      email: account.email,
-      password: parsed.data.password,
-      redirectTo: `/shop/${account.shopSlug}`,
+    const auth = await getAuth();
+    await auth.api.signInDiveDayCredentials({
+      body: { email: account.email, password: parsed.data.password },
+      headers: await headers(),
     });
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof APIError) {
       redirect("/sign-in");
     }
-    throw error; // Propagate NEXT_REDIRECT
+    throw error;
   }
+  redirect(`/shop/${account.shopSlug}`);
 }

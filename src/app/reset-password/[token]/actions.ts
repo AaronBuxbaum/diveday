@@ -1,14 +1,15 @@
 "use server";
 
+import { APIError } from "better-auth/api";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { AuthError } from "next-auth";
 import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getAccountContact, setAccountPassword } from "@/db/user-accounts";
 import { toDiverLocale } from "@/i18n/settings";
-import { signIn } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
 import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
@@ -74,15 +75,16 @@ export async function submitPasswordReset(token: string, formData: FormData) {
   });
 
   try {
-    await signIn("credentials", {
-      email: account.email,
-      password: parsed.data.password,
-      redirectTo: `/shop/${account.shopSlug}`,
+    const auth = await getAuth();
+    await auth.api.signInDiveDayCredentials({
+      body: { email: account.email, password: parsed.data.password },
+      headers: await headers(),
     });
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof APIError) {
       redirect("/sign-in");
     }
-    throw error; // Propagate NEXT_REDIRECT
+    throw error;
   }
+  redirect(`/shop/${account.shopSlug}`);
 }

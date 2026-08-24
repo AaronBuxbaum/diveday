@@ -23,10 +23,10 @@ import { requestLanguageFallback, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import { isStaff } from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { EMBED_REQUEST_HEADER } from "@/lib/embed-routes";
 import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 
 /**

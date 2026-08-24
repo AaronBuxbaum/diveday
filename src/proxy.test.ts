@@ -1,14 +1,23 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
-import { EMBED_REQUEST_HEADER, REQUEST_PATH_HEADER } from "@/lib/auth.config";
+import { EMBED_REQUEST_HEADER, REQUEST_PATH_HEADER } from "@/lib/embed-routes";
 
-// The real NextAuth middleware wants an edge runtime and a session store; the
-// behavior under test is everything the proxy does *around* it — header
-// stamping, the override-list wire protocol, frame denial — so stub it as
-// "allowed, no Response of its own", the common case where the proxy falls
-// back to NextResponse.next().
-vi.mock("next-auth", () => ({
-  default: () => ({ auth: () => Promise.resolve(undefined) }),
+// The real better-auth cookie cache wants a matching encrypted payload; the
+// behavior under test is everything the proxy does *around* the auth
+// decision — header stamping, the override-list wire protocol, frame denial
+// — so stub the cookie helpers as "a signed-in owner of blue-mantis", the
+// one identity that never trips a redirect on any route these tests visit
+// (a bare `/shop` or `/sign-in` request would, and none of them are).
+vi.mock("better-auth/cookies", () => ({
+  getSessionCookie: () => "mock-session-token",
+  getCookieCache: async () => ({
+    session: {
+      personId: "person-1",
+      shopId: "shop-1",
+      shopSlug: "blue-mantis",
+      roles: ["owner"],
+    },
+  }),
 }));
 
 import { proxy } from "@/proxy";
@@ -30,13 +39,13 @@ describe("proxy request-header overrides", () => {
     // signed every visitor out on their next navigation; (b) two sequential
     // single-header calls rebuilt the list and the second dropped the first.
     const res = await run(
-      request("/shop/blue-mantis/divers", { cookie: "authjs.session-token=abc" }),
+      request("/shop/blue-mantis/divers", { cookie: "better-auth.session_token=abc" }),
     );
     const surviving = (res.headers.get("x-middleware-override-headers") ?? "").split(",");
     expect(surviving).toContain("cookie");
     expect(surviving).toContain(EMBED_REQUEST_HEADER);
     expect(surviving).toContain(REQUEST_PATH_HEADER);
-    expect(res.headers.get("x-middleware-request-cookie")).toBe("authjs.session-token=abc");
+    expect(res.headers.get("x-middleware-request-cookie")).toBe("better-auth.session_token=abc");
     expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("");
     expect(res.headers.get(`x-middleware-request-${REQUEST_PATH_HEADER}`)).toBe(
       "/shop/blue-mantis/divers",

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { people, shops, userAccounts } from "./schema";
+import { accountSessions, people, shops, userAccounts } from "./schema";
 
 export type AccountContact = {
   id: string;
@@ -76,17 +76,27 @@ export async function markEmailVerified(
 ): Promise<void> {
   await db
     .update(userAccounts)
-    .set({ emailVerifiedAt: now })
+    .set({ emailVerifiedAt: now, emailVerified: true })
     .where(eq(userAccounts.id, userAccountId));
 }
 
-/** Accepts a transaction so a caller can pair this with the token claim that authorized it (see consumeAccountToken). */
+/**
+ * Accepts a transaction so a caller can pair this with the token claim that
+ * authorized it (see consumeAccountToken). Also revokes every session
+ * already issued for this account — the same reasoning
+ * `setStaffAccountStatus`/`removeStaffMember` (src/db/staff-accounts.ts) and
+ * person erasure (src/db/anonymize.ts) already apply on disable/removal:
+ * "I think someone has my password" is the whole point of a reset, and a
+ * session issued before it must not keep working after (security review
+ * finding).
+ */
 export async function setAccountPassword(
   db: DbExecutor,
   userAccountId: string,
   hashedPassword: string,
 ): Promise<void> {
   await db.update(userAccounts).set({ hashedPassword }).where(eq(userAccounts.id, userAccountId));
+  await db.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
 }
 
 /**
@@ -105,8 +115,13 @@ export async function activateStaffAccount(
 ): Promise<void> {
   await db
     .update(userAccounts)
-    .set({ hashedPassword, status: "active", emailVerifiedAt: now })
+    .set({ hashedPassword, status: "active", emailVerifiedAt: now, emailVerified: true })
     .where(eq(userAccounts.id, userAccountId));
+  // An `invited` account can never have signed in (verifyCredentials refuses
+  // anything but `active`), so there is nothing to revoke in practice today —
+  // kept for the same reason setAccountPassword now does it: consistent with
+  // every other place this account's credentials change.
+  await db.delete(accountSessions).where(eq(accountSessions.userAccountId, userAccountId));
 }
 
 /**

@@ -1,7 +1,8 @@
+import { APIError } from "better-auth/api";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
 import { Suspense } from "react";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
@@ -12,7 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { signIn } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
 
@@ -34,32 +35,39 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("account.signIn.metaTitle") };
 }
 
-// Rate limiting lives in the Credentials provider's authorize() callback
-// (src/lib/auth.ts), not here — NextAuth invokes that for every credentials
-// attempt regardless of entry path (this page's action, or a direct POST to
-// /api/auth/callback/credentials), so it is the one chokepoint that can't
-// be bypassed. A check here too would double-consume the same budget
-// (CR-013).
+// Rate limiting lives in the custom credentials plugin's endpoint handler
+// (src/lib/auth.ts), not here — it runs for every credentials attempt
+// regardless of entry path (this page's action, or a direct POST to
+// /api/auth/sign-in/diveday-credentials, if a route ever mounts the handler),
+// so it is the one chokepoint that can't be bypassed. A check here too would
+// double-consume the same budget (CR-013).
 async function authenticate(formData: FormData) {
   "use server";
   try {
-    await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirectTo: "/shop",
+    const auth = await getAuth();
+    await auth.api.signInDiveDayCredentials({
+      body: {
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+      },
+      headers: await headers(),
     });
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof APIError) {
       redirect("/sign-in?error=1");
     }
-    throw error; // NEXT_REDIRECT and unexpected errors propagate
+    throw error;
   }
+  // Outside the try: this redirect must never be caught as a refusal. Always
+  // /shop, never `callbackUrl` — src/proxy.ts redirects a signed-in staffer
+  // visiting the bare path on to their own shop immediately afterward.
+  redirect("/shop");
 }
 
 /**
- * `callbackUrl` is Auth.js's own parameter, set when it bounces an unauthorized
- * request here. Typed as possibly repeated because a URL can carry it twice;
- * only a single value is trusted.
+ * `callbackUrl` is set by src/proxy.ts when it bounces an unauthenticated
+ * `/shop/**` visit here. Typed as possibly repeated because a URL can carry
+ * it twice; only a single value is trusted.
  */
 type SignInSearchParams = { error?: string; session?: string; callbackUrl?: string | string[] };
 
