@@ -30,6 +30,8 @@ describe("the enforced half", () => {
       "base-uri",
       "form-action",
       "frame-ancestors",
+      "report-uri",
+      "report-to",
     ]);
   });
 
@@ -40,6 +42,15 @@ describe("the enforced half", () => {
     // whether the page itself is guarded.
     expect(embed.get("object-src")).toEqual(["'none'"]);
     expect(embed.get("base-uri")).toEqual(["'self'"]);
+  });
+
+  it("reports its own violations, not only the report-only half's", () => {
+    // A violation the enforced policy actually blocks is the one the ADR's
+    // "worse than no CSP" warning is about, so it must be audible the same
+    // way a report-only one is — not rehearsed, but real.
+    const policy = directives(enforcedPolicy(base));
+    expect(policy.get("report-uri")).toEqual([CSP_REPORT_PATH]);
+    expect(policy.get("report-to")).toEqual(["csp"]);
   });
 
   it("lets a form reach Stripe's hosted pages", () => {

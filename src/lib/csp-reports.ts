@@ -24,6 +24,16 @@ import { redactCapabilityUrl } from "./capability-urls";
  * whose path segment **is** the bearer token (waivers, ready, recap, claim), and
  * a log group is exactly where one must not land
  * (docs/engineering/capability-telemetry-runbook.md).
+ *
+ * `/api/csp-report` is public and unauthenticated by necessity — the report
+ * comes from a stranger's browser before anything has identified them — which
+ * means every field here doubles as something a `curl` script can set to
+ * anything it likes. `directive`, `blocked`'s keyword branch, and
+ * `disposition` are each a small closed set in the CSP spec, so each is
+ * normalized against that set rather than merely bounded: an unrecognized
+ * value becomes `"unknown"`, never passed through. That is what keeps the
+ * shape of a genuine browser report and a forged one apart on the pages a
+ * dashboard groups by, security-review finding on issue #718.
  */
 
 /** The classic `application/csp-report` body: `{"csp-report": {…}}`. */
@@ -63,7 +73,7 @@ export type CspViolation = {
   /** Which route the violating document was, with any capability segment gone. */
   route: string;
   /** `report` for the report-only header, `enforce` for the enforced one. */
-  disposition: string;
+  disposition: "enforce" | "report";
 };
 
 /** Keeps an unbounded field out of a log line and out of a dashboard's grouping. */
@@ -72,14 +82,84 @@ function bounded(value: string, max = 120): string {
 }
 
 /**
+ * Every directive this policy's own two builders can name
+ * (`content-security-policy.ts`), plus the handful CSP3 defines that this app
+ * does not currently emit but a future policy change might — `child-src`,
+ * `script-src-elem`, `script-src-attr`, `style-src-elem`, `style-src-attr`,
+ * `navigate-to`, `require-trusted-types-for`, `trusted-types`,
+ * `upgrade-insecure-requests`, `sandbox`. A browser's `effective-directive`
+ * only ever names one of these; an unrecognized value is a forged report
+ * rather than a browser one.
+ */
+const KNOWN_DIRECTIVES = new Set([
+  "default-src",
+  "script-src",
+  "script-src-elem",
+  "script-src-attr",
+  "style-src",
+  "style-src-elem",
+  "style-src-attr",
+  "img-src",
+  "font-src",
+  "connect-src",
+  "frame-src",
+  "frame-ancestors",
+  "worker-src",
+  "manifest-src",
+  "media-src",
+  "object-src",
+  "base-uri",
+  "form-action",
+  "child-src",
+  "navigate-to",
+  "require-trusted-types-for",
+  "trusted-types",
+  "upgrade-insecure-requests",
+  "sandbox",
+]);
+
+/**
+ * The keywords a browser sends in `blocked-uri` in place of a URL, per the CSP
+ * spec's "special scheme" list — never anything else.
+ */
+const KNOWN_BLOCKED_KEYWORDS = new Set([
+  "inline",
+  "eval",
+  "wasm-eval",
+  "data",
+  "blob",
+  "filesystem",
+  "about",
+  "self",
+]);
+
+/** `report` unless the value is exactly the one other word this header carries. */
+function normalizeDisposition(value: string | undefined): "enforce" | "report" {
+  return value === "enforce" ? "enforce" : "report";
+}
+
+/** The directive name, or "unknown" for anything outside the CSP3 vocabulary. */
+function normalizeDirective(value: string | undefined): string {
+  if (!value) return "unknown";
+  // `effective-directive` occasionally carries the whole source-list value
+  // rather than the bare name (a real browser quirk on some old builds); take
+  // only the first token before comparing.
+  const name = value.trim().split(/\s+/, 1)[0] ?? "";
+  return KNOWN_DIRECTIVES.has(name) ? name : "unknown";
+}
+
+/**
  * An origin for an absolute URL, the keyword itself for the handful a browser
- * sends instead (`inline`, `eval`, `data`, `blob`), and `unknown` for anything
- * else. Never a path: a blocked URL can carry a query string, and this endpoint
- * is not a place to reconstruct one.
+ * sends instead (`inline`, `eval`, `data`, `blob`, …), and `unknown` for
+ * anything else — including a non-URL value outside that closed set, which is
+ * a forged report rather than a browser one. Never a path: a blocked URL can
+ * carry a query string, and this endpoint is not a place to reconstruct one.
  */
 export function blockedOrigin(value: string | undefined): string {
   if (!value) return "unknown";
-  if (!value.includes("://")) return bounded(value, 24);
+  if (!value.includes("://")) {
+    return KNOWN_BLOCKED_KEYWORDS.has(value) ? value : "unknown";
+  }
   try {
     return new URL(value).origin;
   } catch {
@@ -115,13 +195,10 @@ export function parseCspReports(json: unknown): CspViolation[] {
     const body = legacy.data["csp-report"];
     return [
       {
-        directive: bounded(
-          body["effective-directive"] || body["violated-directive"] || "unknown",
-          40,
-        ),
+        directive: normalizeDirective(body["effective-directive"] || body["violated-directive"]),
         blocked: blockedOrigin(body["blocked-uri"]),
         route: reportRoute(body["document-uri"]),
-        disposition: bounded(body.disposition || "report", 16),
+        disposition: normalizeDisposition(body.disposition),
       },
     ];
   }
@@ -131,9 +208,9 @@ export function parseCspReports(json: unknown): CspViolation[] {
   return modern.data
     .filter((entry) => entry.type === "csp-violation" && entry.body)
     .map((entry) => ({
-      directive: bounded(entry.body?.effectiveDirective || "unknown", 40),
+      directive: normalizeDirective(entry.body?.effectiveDirective),
       blocked: blockedOrigin(entry.body?.blockedURL),
       route: reportRoute(entry.body?.documentURL),
-      disposition: bounded(entry.body?.disposition || "report", 16),
+      disposition: normalizeDisposition(entry.body?.disposition),
     }));
 }

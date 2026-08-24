@@ -40,6 +40,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const limit = await checkRateLimit(rateLimitKey("csp-report", ip), RATE_LIMITS.cspReport);
   if (!limit.allowed) return new NextResponse(null, { status: 204 });
 
+  // A stated `Content-Length` past the cap is refused before the body is ever
+  // read, so an oversized POST costs nothing beyond the header. A caller that
+  // omits or lies about the header is still caught below, by the same cap
+  // applied to what was actually received.
+  const declaredLength = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const raw = await request.text().catch(() => "");
   if (raw.length === 0 || byteLength(raw) > MAX_BODY_BYTES) {
     return new NextResponse(null, { status: 204 });

@@ -49,10 +49,12 @@ describe("parsing a violation report", () => {
   });
 
   it("falls back to violated-directive when the effective one is absent", () => {
+    // `violated-directive` sometimes carries the source list too
+    // ("script-src 'self'"), so only the leading token is compared.
     const [violation] = parseCspReports({
       "csp-report": { "violated-directive": "script-src 'self'" },
     });
-    expect(violation?.directive).toBe("script-src 'self'");
+    expect(violation?.directive).toBe("script-src");
   });
 
   it("keeps the keyword a browser sends in place of a URL", () => {
@@ -62,6 +64,44 @@ describe("parsing a violation report", () => {
       "csp-report": { "effective-directive": "script-src", "blocked-uri": "inline" },
     });
     expect(violation?.blocked).toBe("inline");
+  });
+
+  describe("the closed sets — directive, blocked keyword, disposition", () => {
+    // This endpoint is public and unauthenticated by necessity, so every field
+    // here is also something a curl script can set to anything. Each of these
+    // three is a small vocabulary in the CSP spec, so each is normalized
+    // against it rather than merely bounded (security-review finding, #718).
+
+    it("reads unknown for a directive name outside the CSP vocabulary", () => {
+      const [violation] = parseCspReports({
+        "csp-report": { "effective-directive": "not-a-real-directive" },
+      });
+      expect(violation?.directive).toBe("unknown");
+    });
+
+    it("reads unknown for a blocked-uri keyword outside the browser's set", () => {
+      const [violation] = parseCspReports({
+        "csp-report": { "effective-directive": "script-src", "blocked-uri": "made-up-keyword" },
+      });
+      expect(violation?.blocked).toBe("unknown");
+    });
+
+    it('reads report for any disposition but exactly "enforce"', () => {
+      const [asEnforce] = parseCspReports({
+        "csp-report": { "effective-directive": "script-src", disposition: "enforce" },
+      });
+      expect(asEnforce?.disposition).toBe("enforce");
+
+      const [asAnythingElse] = parseCspReports({
+        "csp-report": { "effective-directive": "script-src", disposition: "whatever-i-like" },
+      });
+      expect(asAnythingElse?.disposition).toBe("report");
+
+      const [asMissing] = parseCspReports({
+        "csp-report": { "effective-directive": "script-src" },
+      });
+      expect(asMissing?.disposition).toBe("report");
+    });
   });
 
   it("answers nothing rather than throwing on a body it does not recognise", () => {
@@ -114,7 +154,11 @@ describe("parsing a violation report", () => {
       expect(JSON.stringify(violation)).not.toContain("Adaeze");
     });
 
-    it("bounds every field so one caller cannot write a wall of text", () => {
+    it("bounds the one field that is still free text — the route", () => {
+      // directive, blocked's keyword branch, and disposition are all closed
+      // sets now (above), so only route — a real path, deliberately not an
+      // allowlisted value — still needs a length bound rather than a
+      // membership check.
       const [violation] = parseCspReports({
         "csp-report": {
           "document-uri": `https://dive.day/${"a".repeat(500)}`,
@@ -124,9 +168,11 @@ describe("parsing a violation report", () => {
         },
       });
       expect(violation?.route.length).toBeLessThanOrEqual(123);
-      expect(violation?.directive.length).toBeLessThanOrEqual(43);
-      expect(violation?.blocked.length).toBeLessThanOrEqual(27);
-      expect(violation?.disposition.length).toBeLessThanOrEqual(19);
+      // The other three collapse to their "unrecognized" fallback rather than
+      // truncating a wall of text.
+      expect(violation?.directive).toBe("unknown");
+      expect(violation?.blocked).toBe("unknown");
+      expect(violation?.disposition).toBe("report");
     });
   });
 });

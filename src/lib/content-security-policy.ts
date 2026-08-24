@@ -190,6 +190,13 @@ function serialize(directives: (readonly [string, readonly string[]] | [string])
  * The half that is enforced today: directives measured not to break anything,
  * each closing a class on its own. `frame-ancestors` is the pre-existing
  * clickjacking guard, unchanged in behaviour.
+ *
+ * Carries `report-uri`/`report-to` too, and that is deliberate rather than
+ * copied from the report-only half by habit: this is the header that can
+ * actually break a real page, so it is also the header whose breakage must be
+ * audible. A report-only violation is a rehearsal; an enforced one is the
+ * thing the ADR's "worse than no CSP" warning is about, and it must produce a
+ * `security.csp_violation` line the same way.
  */
 export function enforcedPolicy(options: CspOptions): string {
   return serialize([
@@ -200,6 +207,8 @@ export function enforcedPolicy(options: CspOptions): string {
     // {@link STRIPE_FORM_HOSTS}.
     ["form-action", ["'self'", ...STRIPE_FORM_HOSTS]],
     ...(options.denyFraming ? ([["frame-ancestors", ["'none'"]]] as const) : []),
+    ["report-uri", [CSP_REPORT_PATH]],
+    ["report-to", [REPORT_GROUP]],
   ]);
 }
 
