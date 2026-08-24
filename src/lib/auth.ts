@@ -17,6 +17,7 @@ import { authSecret } from "@/lib/auth-secret";
 import type { Role } from "@/lib/authz";
 import { verifyCredentials } from "@/lib/credentials";
 import { log } from "@/lib/log";
+import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications/app-url";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -144,6 +145,10 @@ function buildAuth() {
   return getDb().then((db) =>
     betterAuth({
       secret: authSecret,
+      // Keep callbacks and redirects on DiveDay's server-owned origin. The
+      // fallback is the compiled-in production origin; APP_HOST still lets
+      // local, preview, and self-hosted deployments opt into their own host.
+      baseURL: publicAppUrl() ?? APP_ORIGIN,
       database: drizzleAdapter(db, {
         provider: "pg",
         schema: {
