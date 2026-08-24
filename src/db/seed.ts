@@ -45,6 +45,7 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
+  preDepartureCheckEvents,
   priorVisits,
   processorErasureObligations,
   recapPhotos,
@@ -104,6 +105,7 @@ import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
+import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
@@ -359,6 +361,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // settings row a demo visitor cannot break, so it lives outside the
   // resettable schedule (ADR 20260804-shop-owned-backup-export).
   await seedBackup(db, shop.id);
+  // Same tier: the shop's own checklist items are settings, not schedule
+  // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
+  // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
+  await seedPreDepartureChecklist(db, shop.id);
 }
 
 /**
@@ -830,6 +836,10 @@ export async function resetDemoSchedule(
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // The shop's own checklist *items* are settings, not schedule — kept, like
+  // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
+  // against them are schedule-scoped operational history.
+  await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
   // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
   // both reference `people` without cascade. So a demo where anyone used the

@@ -118,6 +118,7 @@ const RESET_KEEPS: Record<string, string> = {
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
   boats: "shop settings, outside the resettable schedule",
   dive_packages: "the shop's own price list of packages — settings, not schedule",
+  pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
   shop_backup_deliveries: "delivery history for those bundles, seeded alongside the destination",
   // The one table here that needs no delete at all: both its foreign keys carry
