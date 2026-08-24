@@ -95,6 +95,7 @@ function envelope(
       expiresAt: EXPIRES_AT,
     },
     events,
+    checklistEvents: [],
   };
 }
 

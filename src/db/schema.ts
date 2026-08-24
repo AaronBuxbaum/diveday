@@ -5074,6 +5074,106 @@ export const rollCallCrewEvents = pgTable(
 );
 
 /**
+ * One line a shop wants confirmed before a boat leaves the dock — "Emergency
+ * oxygen aboard", "Life jackets counted" — in the order the shop wants it read
+ * (ADR 20260824-pre-departure-safety-check).
+ *
+ * **DiveDay authors none of this.** The required set differs by flag state,
+ * vessel class and jurisdiction, so the label is free text the shop writes for
+ * itself, not a code this table looks up. `sortOrder` is the shop's own
+ * reading order, not a priority; it may repeat or skip after edits, and reads
+ * always resolve ties on `createdAt`.
+ */
+export const preDepartureChecklistItems = pgTable(
+  "pre_departure_checklist_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    label: text("label").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    /** Set when staff remove an item (ADR 20260820-every-delete-is-soft). The
+     * row stays so `pre_departure_check_events` naming it keeps reading. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("pre_departure_checklist_items_shop_order_idx")
+      .on(table.shopId, table.sortOrder, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
+    // A shop retyping the same line twice is a mistake, not a second item —
+    // mirrors gear_items_shop_label_unique.
+    uniqueIndex("pre_departure_checklist_items_shop_label_unique")
+      .on(table.shopId, table.label)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+/**
+ * `cleared` mirrors roll call's own undo grammar: a re-tap of an already-
+ * checked item retracts it rather than being silently ignored, so an accidental
+ * tap leaves a correction in the trail instead of a claim nobody can take back.
+ */
+export const preDepartureCheckStatus = pgEnum("pre_departure_check_status", ["checked", "cleared"]);
+
+/**
+ * Append-only, one row per tap — never a boarding gate. `divemaster-ratio.ts`
+ * and the gear service clocks are both "informs, never gates"; this is
+ * modeled on the same stance and nothing here may block a departure page from
+ * rendering or a trip from sailing (see the ADR — whether it *should* gate is
+ * recorded as an open call, H-51, not decided by this table's shape).
+ *
+ * The newest event per `checklistItemId` is the current answer, exactly like
+ * `rollCallEvents`; absence means not yet checked, and the manifest and the
+ * departure log both say so explicitly rather than rendering nothing.
+ */
+export const preDepartureCheckEvents = pgTable(
+  "pre_departure_check_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    checklistItemId: uuid("checklist_item_id")
+      .notNull()
+      .references(() => preDepartureChecklistItems.id, { onDelete: "cascade" }),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: preDepartureCheckStatus("status").notNull(),
+    /** Same offline contract as `rollCallEvents.source` — rides the same queue. */
+    source: rollCallSource("source").notNull().default("live"),
+    /** Device-generated idempotency key. Live events leave this null. */
+    clientEventId: uuid("client_event_id"),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The same final tiebreak `rollCallEvents.seq` carries, and for the same
+     * reason: this document is hashed for the incident export, and `occurred_at`
+     * ties constantly under a frozen e2e clock or a batched offline sync. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("pre_departure_check_events_shop_trip_item_occurred_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checklistItemId,
+      table.occurredAt,
+    ),
+    uniqueIndex("pre_departure_check_events_shop_client_event_unique").on(
+      table.shopId,
+      table.clientEventId,
+    ),
+  ],
+);
+
+/**
  * Buddy teams: staff group a departure's roster the way it will dive, so roll
  * call can read "someone is back aboard and someone on their team is not" as a
  * first-class state instead of a flat list (ADR 20260804-buddy-teams).

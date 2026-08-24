@@ -378,8 +378,10 @@ async function flushPendingRollCall(): Promise<void> {
   // phone must not cost a round trip. `syncOfflineManifest` would return early
   // on these anyway; the filter is here so "is there anything to flush?" is
   // answered before "who are we?", not after.
-  const pending = envelopes.filter((envelope) =>
-    envelope.events.some((event) => event.syncStatus === "pending"),
+  const pending = envelopes.filter(
+    (envelope) =>
+      envelope.events.some((event) => event.syncStatus === "pending") ||
+      envelope.checklistEvents.some((event) => event.syncStatus === "pending"),
   );
   if (pending.length === 0) return;
 

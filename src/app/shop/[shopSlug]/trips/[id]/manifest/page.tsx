@@ -18,6 +18,7 @@ import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
+import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -93,7 +94,14 @@ export default async function TripManifestPage({
   const t = staffTranslator(locale);
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
-  const [completeManifests, buddyTeamsList, bookingNotes, diverNotes] = await Promise.all([
+  const [
+    completeManifests,
+    buddyTeamsList,
+    bookingNotes,
+    diverNotes,
+    checklistItems,
+    checklistChecks,
+  ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
@@ -106,6 +114,8 @@ export default async function TripManifestPage({
     // Person-scoped notes written on the Diver record. Resolve them onto this
     // trip's booking below so every interface reads the same source of truth.
     listDiverNotesForTrip(db, shop.id, tripId),
+    listChecklistItems(db, shop.id),
+    latestPreDepartureChecksForTrip(db, shop.id, tripId),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -464,6 +474,11 @@ export default async function TripManifestPage({
                 emergencyReference: shop.emergencyReference,
               },
               (blocker) => readinessBlockerText(t, blocker),
+              checklistItems.map((item) => ({
+                id: item.id,
+                label: item.label,
+                check: checklistChecks.get(item.id),
+              })),
             )}
             copy={
               {

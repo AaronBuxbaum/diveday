@@ -40,6 +40,7 @@ import {
 } from "@/lib/manifests";
 import {
   acknowledgeDiscardedOfflineRecords,
+  appendOfflineChecklistCheck,
   appendOfflineRollCall,
   type DiscardedOfflineRecord,
   listOfflineManifests,
@@ -52,6 +53,7 @@ import {
 import {
   fetchOfflineManifestShopSlug,
   isOfflineManifestExpired,
+  latestOfflineChecklistCheck,
   latestOfflineCrewRollCall,
   latestOfflineRollCall,
   type OfflineManifestEnvelope,
@@ -60,6 +62,7 @@ import {
   offlineManifestAge,
   offlineManifestFreshness,
 } from "@/lib/offline-manifests";
+import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 
 /**
  * The device's own language. This is the one surface that cannot use
@@ -333,6 +336,7 @@ export function OfflineManifestView() {
    */
   const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
+  const [busyChecklistItem, setBusyChecklistItem] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   /**
    * The one row whose "aboard" control is currently asking to be confirmed —
@@ -1092,6 +1096,58 @@ export function OfflineManifestView() {
     }
   }
 
+  /**
+   * The checklist's own tap, sibling to `record` above and deliberately
+   * simpler: no checkpoint, no confirm-before-unsaying dialog (nothing here
+   * is the missing-diver alarm that dialog exists to protect — see
+   * `pre-departure-check.ts`), and its own busy key so a checklist tap can
+   * never appear to disable a diver's row or vice versa.
+   */
+  async function recordChecklistCheck(checklistItemId: string, status: PreDepartureCheckStatus) {
+    // Only ever invoked from the JSX below, which is itself gated on
+    // `envelope` — this is the same guard shape as the `!envelope` early
+    // return above, restated because a nested function declaration doesn't
+    // inherit that narrowing across the closure boundary.
+    if (!envelope) return;
+    if (expired) {
+      setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
+      return;
+    }
+    setBusyChecklistItem(checklistItemId);
+    try {
+      const next = await appendOfflineChecklistCheck(tripId, {
+        checklistItemId,
+        status,
+        note: null,
+        retractsClientEventId:
+          status === "cleared"
+            ? latestOfflineChecklistCheck(
+                envelope.snapshot,
+                checklistItemId,
+                envelope.checklistEvents,
+              )?.clientEventId
+            : undefined,
+      });
+      dispatchSaved({ type: "loaded", envelope: next });
+      setMessage(t("shared.offlineManifest.single.record.saved"));
+      if (navigator.onLine) await reconcile();
+    } catch (error) {
+      if (error instanceof OfflineManifestError) {
+        setMessage(
+          error.code === "expired"
+            ? t("shared.offlineManifest.single.record.expiredCannotRecord")
+            : error.code === "not_allowed"
+              ? t("shared.offlineManifest.single.record.notAllowed")
+              : t("shared.offlineManifest.single.record.unavailable"),
+        );
+      } else {
+        setMessage(t("shared.offlineManifest.single.record.genericError"));
+      }
+    } finally {
+      setBusyChecklistItem(null);
+    }
+  }
+
   const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
@@ -1168,6 +1224,49 @@ export function OfflineManifestView() {
           planLabel: t("trips.emergency.planLabel"),
         }}
       />
+
+      {/* Opt-in by presence, the same rule the gear register follows: a shop
+          with no checklist items renders nothing here, not an empty card.
+          Above the checkpoint switcher because the check happens once,
+          before the boat leaves — not once per checkpoint. */}
+      {envelope.snapshot.checklist && envelope.snapshot.checklist.items.length > 0 ? (
+        <section
+          className={sectionCardClass({ className: "mt-6" })}
+          aria-labelledby="pre-departure-check-heading"
+        >
+          <h2 id="pre-departure-check-heading" className="text-base font-semibold text-ink">
+            {t("shared.offlineManifest.single.checklist.heading")}
+          </h2>
+          <ul className="mt-3 flex flex-col gap-2">
+            {envelope.snapshot.checklist.items.map((item) => {
+              const check = latestOfflineChecklistCheck(
+                envelope.snapshot,
+                item.id,
+                envelope.checklistEvents,
+              );
+              const busy = busyChecklistItem === item.id;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    disabled={busy || expired}
+                    aria-busy={busy}
+                    onClick={() => recordChecklistCheck(item.id, check ? "cleared" : "checked")}
+                    className={buttonClass({
+                      variant: check ? "primary" : "secondary",
+                      size: "boat",
+                      className: "w-full justify-start text-left",
+                    })}
+                  >
+                    <span aria-hidden="true">{check ? "☑️" : "☐"}</span>
+                    <span className="ml-2">{item.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <nav
         className="mt-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2"
