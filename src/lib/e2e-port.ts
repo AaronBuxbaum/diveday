@@ -2,7 +2,8 @@ const DEFAULT_BASE_PORT = 12_000;
 const WORKER_PORT_STRIDE = 64;
 const EPHEMERAL_PORT_START = 32_768;
 const BUCKET_COUNT =
-  Math.floor((EPHEMERAL_PORT_START - DEFAULT_BASE_PORT - WORKER_PORT_STRIDE) / WORKER_PORT_STRIDE) + 1;
+  Math.floor((EPHEMERAL_PORT_START - DEFAULT_BASE_PORT - WORKER_PORT_STRIDE) / WORKER_PORT_STRIDE) +
+  1;
 
 /**
  * Derive a stable port block from the worktree path. The hash makes collisions

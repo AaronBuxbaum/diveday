@@ -1,12 +1,12 @@
+import { describe, expect, it } from "vitest";
 import {
   defaultE2EBasePort,
-  e2ePortBlock,
   E2E_DEFAULT_BASE_PORT_MIN,
   E2E_EPHEMERAL_PORT_START,
   E2E_WORKER_PORT_STRIDE,
+  e2ePortBlock,
   resolveE2EBasePort,
 } from "./e2e-port";
-import { describe, expect, it } from "vitest";
 
 describe("e2e port allocation", () => {
   it("derives the same base port for the same worktree every time", () => {
@@ -23,10 +23,7 @@ describe("e2e port allocation", () => {
   });
 
   it("keeps the derived block above the normal development port and below ephemeral ports", () => {
-    const block = e2ePortBlock(
-      defaultE2EBasePort("/worktrees/port-range"),
-      E2E_WORKER_PORT_STRIDE,
-    );
+    const block = e2ePortBlock(defaultE2EBasePort("/worktrees/port-range"), E2E_WORKER_PORT_STRIDE);
 
     expect(Math.min(...block)).toBeGreaterThanOrEqual(E2E_DEFAULT_BASE_PORT_MIN);
     expect(Math.max(...block)).toBeLessThan(E2E_EPHEMERAL_PORT_START);
