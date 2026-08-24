@@ -68,6 +68,8 @@
     "voidOrder": "Void order",
     "voiding": "Voiding…",
     "refundPayment": "Refund payment",
+    "refundedSoFar": "Refunded",
+    "stillHeld": "Still held",
     "refundAmountLabel": "Refund ({currency})",
     "refunding": "Refunding…",
     "notice": {

@@ -342,6 +342,31 @@ export default async function OrderDetailPage({
           </span>
         </div>
 
+        {/* **What came back, and what is still here.** A `Partly refunded`
+            badge above a total is not a fact a shop can act on: it says money
+            moved without saying how much, so $10 back on $240 and $230 back on
+            $240 render identically. `refunded_cents` and `amount_paid_cents`
+            carry the whole story in the row — they were simply never put on
+            the screen (issue #699; found by looking at the new capture).
+            Only on an order that has actually given something back, so a plain
+            paid order gains no line. */}
+        {order.order.refundedCents > 0 ? (
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <div className="flex gap-2">
+              <dt className="text-muted">{t("orders.detail.refundedSoFar")}</dt>
+              <dd className="font-medium tabular-nums">
+                {formatMoneyCents(order.order.refundedCents, order.order.currency, locale)}
+              </dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-muted">{t("orders.detail.stillHeld")}</dt>
+              <dd className="font-medium tabular-nums">
+                {formatMoneyCents(order.order.amountPaidCents, order.order.currency, locale)}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
+
         <ul className="mt-4 divide-y divide-border">
           {order.lineItems.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-3 py-2 text-sm">

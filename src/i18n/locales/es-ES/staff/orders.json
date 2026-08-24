@@ -68,6 +68,8 @@
     "voidOrder": "Anular pedido",
     "voiding": "Anulando…",
     "refundPayment": "Reembolsar pago",
+    "refundedSoFar": "Reembolsado",
+    "stillHeld": "Retenido",
     "refundAmountLabel": "Reembolsar ({currency})",
     "refunding": "Reembolsando…",
     "notice": {
