@@ -41,7 +41,7 @@ import {
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
-import { MAX_PACKAGE_DIVE_COUNT, MAX_PACKAGE_VALIDITY_DAYS } from "@/lib/dive-packages";
+import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
   DOCK_DAY_FIELDS,
@@ -1689,16 +1689,13 @@ export default async function SettingsPage({
                       description={t("settings.main.divePackages.validityDescription")}
                     >
                       <input
-                        name="validityDays"
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        max={MAX_PACKAGE_VALIDITY_DAYS}
+                        name="validUntil"
+                        type="date"
                         className={`${controlClass} tabular-nums`}
                       />
                     </Field>
                     <Field label={t("settings.main.divePackages.scopeLabel")}>
-                      <select name="scope" defaultValue="all" className={controlClass}>
+                      <select name="scope" defaultValue="fun_dives" className={controlClass}>
                         <option value="all">{t("settings.main.divePackages.scopeAll")}</option>
                         <option value="fun_dives">
                           {t("settings.main.divePackages.scopeFunDives")}

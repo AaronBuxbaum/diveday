@@ -28,22 +28,26 @@ describe("isCapturedPaymentStatus", () => {
 
 describe("paymentSourceLine", () => {
   it("names Stripe when a card was taken online", () => {
-    expect(paymentSourceLine("paid", "stripe")).toBe("Paid online · Stripe");
-    expect(paymentSourceLine("deposit_paid", "stripe")).toBe("Paid online · Stripe");
+    expect(paymentSourceLine("paid", "stripe")).toBe("online");
+    expect(paymentSourceLine("deposit_paid", "stripe")).toBe("online");
     // Still holding the rest, so how it was taken is exactly what a staffer
     // deciding whether to send the remainder back needs to know. Pinned here
     // as well as on the predicate, since this line is what the roster renders.
-    expect(paymentSourceLine("partly_refunded", "stripe")).toBe("Paid online · Stripe");
-    expect(paymentSourceLine("partly_refunded", null)).toBe("Marked paid at the counter");
+    expect(paymentSourceLine("partly_refunded", "stripe")).toBe("online");
+    expect(paymentSourceLine("partly_refunded", null)).toBe("counter");
   });
 
   it("names the counter when staff marked it paid manually", () => {
-    expect(paymentSourceLine("paid", null)).toBe("Marked paid at the counter");
-    expect(paymentSourceLine("deposit_paid", undefined)).toBe("Marked paid at the counter");
+    expect(paymentSourceLine("paid", null)).toBe("counter");
+    expect(paymentSourceLine("deposit_paid", undefined)).toBe("counter");
+  });
+
+  it("names a prepaid package instead of calling it cash", () => {
+    expect(paymentSourceLine("paid", "dive_package")).toBe("package");
   });
 
   it("calls out a waived charge", () => {
-    expect(paymentSourceLine("waived", null)).toBe("Waived — no charge");
+    expect(paymentSourceLine("waived", null)).toBe("waived");
   });
 
   it("adds no source line where the status already tells the story", () => {

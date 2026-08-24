@@ -17,6 +17,7 @@ import { refundOnCancellation } from "@/lib/deposits";
 import { capturedPaymentStatuses, isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb, AppTransaction } from "./client";
+import { releasePackageCoverageForBooking } from "./bookings";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
@@ -26,7 +27,14 @@ import {
 } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import type { BookingPayment, PaymentOperationIntent } from "./schema";
-import { bookingPayments, bookings, paymentOperationIntents, people, trips } from "./schema";
+import {
+  bookingPaymentEvents,
+  bookingPayments,
+  bookings,
+  paymentOperationIntents,
+  people,
+  trips,
+} from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 /**
@@ -331,6 +339,8 @@ export async function refundBookingOnCancellation(
  */
 export type ShopCancellationRefundOutcome =
   | { status: "refunded"; amountCents: number }
+  /** Package tanks were returned; no cash refund is owed. */
+  | { status: "dive_returned" }
   /**
    * This seat's capture was already reversed — by an earlier pass of the same
    * cascade or sweep, or by staff. Distinct from `unpaid` because the diver's
@@ -391,10 +401,28 @@ export async function refundBookingOnShopCancellation(
     db,
     input,
     async (tx, payment) => {
+      const released = await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
+      if (released.length > 0 && payment?.provider === "dive_package") {
+        return { proceed: false, outcome: { status: "dive_returned" } };
+      }
       if (payment?.status === "refunded") {
         return { proceed: false, outcome: { status: "already_refunded" } };
       }
       if (!isCapturedPaymentStatus(payment?.status)) {
+        const [packageConsumption] = await tx
+          .select({ id: bookingPaymentEvents.id })
+          .from(bookingPaymentEvents)
+          .where(
+            and(
+              eq(bookingPaymentEvents.shopId, input.shopId),
+              eq(bookingPaymentEvents.bookingId, input.bookingId),
+              eq(bookingPaymentEvents.operation, "package_consumed"),
+            ),
+          )
+          .limit(1);
+        if (packageConsumption) {
+          return { proceed: false, outcome: { status: "dive_returned" } };
+        }
         return { proceed: false, outcome: { status: "unpaid" } };
       }
 
@@ -475,7 +503,7 @@ export async function refundBookingOnShopCancellation(
 export function shopCancellationPaymentStory(
   outcome: ShopCancellationRefundOutcome,
 ): "none" | "refunded" | "refund_owed" {
-  if (outcome.status === "unpaid") return "none";
+  if (outcome.status === "unpaid" || outcome.status === "dive_returned") return "none";
   // `already_refunded` reads the same to the diver as a reversal this pass made
   // — the money is on its way back either way, and a resumed cascade must not
   // tell somebody who paid that they were never charged.

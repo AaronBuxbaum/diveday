@@ -65,14 +65,12 @@ describe("the dive package tables", () => {
     ).rejects.toThrow();
   });
 
-  it("refuses a validity window of zero days", async () => {
-    // Null never lapses, which is the safe default; zero would mean a package
-    // that expired the instant it was sold.
+  it("refuses an invalid fixed end date", async () => {
     const { db, shop } = await context();
     await expect(
       db
         .insert(divePackages)
-        .values({ shopId: shop.id, name: "Instant", diveCount: 1, priceCents: 1, validityDays: 0 }),
+        .values({ shopId: shop.id, name: "Invalid", diveCount: 1, priceCents: 1, validUntil: "not-a-date" }),
     ).rejects.toThrow();
   });
 
@@ -93,9 +91,7 @@ describe("the dive package tables", () => {
     ).rejects.toThrow();
   });
 
-  it("lets one seat consume exactly one dive, never two", async () => {
-    // The guard that matters most: `bookSpot` runs concurrently, and two
-    // bookings racing on one seat must not spend two of a diver's dives.
+  it("lets one booking consume one row per tank", async () => {
     const { db, shop, person, pkg, order } = await context();
     const [booking] = await db
       .select({ id: bookings.id })
@@ -113,12 +109,12 @@ describe("the dive package tables", () => {
     };
 
     await db.insert(divePackageEntitlements).values(consumed);
-    await expect(db.insert(divePackageEntitlements).values(consumed)).rejects.toThrow();
+    await db.insert(divePackageEntitlements).values(consumed);
   });
 
-  it("lets many unused entitlements coexist, which the unique index must not block", async () => {
+  it("lets many unused entitlements coexist", async () => {
     // The partial-index half: ten unused dives all carry a null booking, and a
-    // plain unique index would let a diver hold exactly one.
+    // An unused package is represented by one row per tank.
     const { db, shop, person, pkg, order } = await context();
     const rows = Array.from({ length: 10 }, () => ({
       shopId: shop.id,

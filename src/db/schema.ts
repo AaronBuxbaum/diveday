@@ -2403,14 +2403,9 @@ export const divePackages = pgTable(
      * Resolved against the departure at booking time, which is a read: what the
      * shop sold cannot depend on when the diver books.
      */
-    scope: divePackageScope("scope").notNull().default("all"),
-    /**
-     * How long a purchased package stays usable, in days from purchase. Null
-     * means it never lapses — the behaviour that cannot surprise anyone, and
-     * the default until the policy question in the ADR is answered. An expiry
-     * that silently eats prepaid dives is what generates the complaint.
-     */
-    validityDays: integer("validity_days"),
+    scope: divePackageScope("scope").notNull().default("fun_dives"),
+    /** Inclusive calendar end date; null means the package never lapses. */
+    validUntil: date("valid_until"),
     /**
      * Soft-deleted like everything a user can delete
      * (ADR 20260820-every-delete-is-soft). Deleting a package the shop no longer
@@ -2427,10 +2422,6 @@ export const divePackages = pgTable(
       .where(sql`${table.deletedAt} is null`),
     check("dive_packages_dive_count_positive", sql`${table.diveCount} > 0`),
     check("dive_packages_price_positive", sql`${table.priceCents} > 0`),
-    check(
-      "dive_packages_validity_positive",
-      sql`${table.validityDays} is null or ${table.validityDays} > 0`,
-    ),
   ],
 );
 
@@ -2473,14 +2464,13 @@ export const divePackageEntitlements = pgTable(
       .references(() => orders.id),
     /**
      * The booking this dive was used on, and `consumedAt` beside it. Null means
-     * unused. Unique on the booking, so one seat can never eat two dives — the
-     * guard that matters most, because `bookSpot` runs concurrently.
+     * unused. A two-tank departure consumes two rows, one per tank.
      */
     bookingId: uuid("booking_id").references(() => bookings.id),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
     /**
-     * When this dive stops being usable, resolved from the package's
-     * `validityDays` at purchase. Null never lapses. Stamped per entitlement
+     * When this dive stops being usable, resolved from the package's fixed
+     * `validUntil` date at purchase. Null never lapses. Stamped per entitlement
      * rather than read back through the package, so a later edit to the product
      * cannot retroactively shorten a package somebody already bought.
      */
@@ -2493,11 +2483,10 @@ export const divePackageEntitlements = pgTable(
       .on(table.shopId, table.personId)
       .where(sql`${table.consumedAt} is null`),
     index("dive_package_entitlements_order_idx").on(table.orderId),
-    // One seat, one dive. Partial so the many unused rows (null booking) do not
-    // collide with each other.
-    uniqueIndex("dive_package_entitlements_booking_unique")
-      .on(table.bookingId)
-      .where(sql`${table.bookingId} is not null`),
+    // A booking may consume one row per tank; the booking transaction is the
+    // concurrency boundary, so this remains a lookup index rather than a
+    // uniqueness constraint.
+    index("dive_package_entitlements_booking_idx").on(table.bookingId),
     // Consumed and unconsumed are the only two shapes; a row carrying one half
     // of the pair is a bug that would read as "used by nobody" or "used at no
     // time", and both are worse than a refusal.
@@ -2577,6 +2566,10 @@ export const paymentEventOperation = pgEnum("payment_event_operation", [
   "checkout_settled",
   /** A Stripe invoice (staff order) reported paid. */
   "order_settled",
+  /** One or more prepaid package tanks covered a booking. */
+  "package_consumed",
+  /** A cancellation returned prepaid package tanks to the diver. */
+  "package_released",
   /** A staff order was refunded through Stripe. */
   "order_refunded",
   /** The automated cancellation-window refund reversed a Stripe capture. */
@@ -3391,6 +3384,8 @@ export const bookingCheckoutBookings = pgTable(
      * this column) gear was never part of checkout — both read the same way:
      * nothing to attribute to gear for this diver on this payment.
      */
+    /** This booking's trip-fee share after package coverage, snapshotted. */
+    tripCents: integer("trip_cents"),
     gearCents: integer("gear_cents").notNull().default(0),
   },
   (table) => [
@@ -3400,6 +3395,10 @@ export const bookingCheckoutBookings = pgTable(
     ),
     index("booking_checkout_bookings_booking_idx").on(table.bookingId),
     check("booking_checkout_bookings_gear_cents_nonnegative", sql`${table.gearCents} >= 0`),
+    check(
+      "booking_checkout_bookings_trip_cents_nonnegative",
+      sql`${table.tripCents} is null or ${table.tripCents} >= 0`,
+    ),
   ],
 );
 
@@ -3451,6 +3450,8 @@ export const orderLineItems = pgTable(
     orderId: uuid("order_id")
       .notNull()
       .references(() => orders.id),
+    /** Set for a package line so a later paid webhook can grant it. */
+    packageId: uuid("package_id").references(() => divePackages.id),
     kind: orderLineItemKind("kind").notNull().default("other"),
     description: text("description").notNull(),
     quantity: integer("quantity").notNull().default(1),

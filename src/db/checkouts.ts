@@ -10,6 +10,7 @@ import {
 } from "@/lib/payments/checkout";
 import { allocateSettledTotal, netOfPercentDiscount } from "@/lib/payments/settlement";
 import type { AppDb, DbExecutor } from "./client";
+import { countConsumedEntitlementsForBookings } from "./dive-packages";
 import {
   claimBookingsForCheckout,
   idempotencyKeyFor,
@@ -158,6 +159,20 @@ export async function startBookingCheckout(
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
 
+  const consumedByBooking = await countConsumedEntitlementsForBookings(
+    db,
+    input.shopId,
+    input.bookingIds,
+  );
+  const tripCentsByBooking = new Map(
+    bookingRows.map((row) => {
+      const consumed = consumedByBooking.get(row.id) ?? 0;
+      const uncovered = Math.max(0, tripRow.trip.plannedDives - consumed);
+      const tripCents = Math.ceil((charge.amountCents * uncovered) / tripRow.trip.plannedDives);
+      return [row.id, tripCents] as const;
+    }),
+  );
+
   // Nothing here may charge a seat the shop has already taken money for. Until
   // now the only thing standing between a diver and a second full charge was
   // `canPay` on the /ready page — a UI boolean, on a page reached by a
@@ -204,7 +219,13 @@ export async function startBookingCheckout(
         : null
     : null;
 
-  const totalCents = amountPerDiverCents * input.bookingIds.length + gearTotalCents;
+  const totalCents =
+    [...tripCentsByBooking.values()].reduce((sum, cents) => sum + cents, 0) + gearTotalCents;
+  if (totalCents === 0) return { ok: false, reason: "already_paid" };
+  const tripLineQuantities = new Map<number, number>();
+  for (const cents of tripCentsByBooking.values()) {
+    if (cents > 0) tripLineQuantities.set(cents, (tripLineQuantities.get(cents) ?? 0) + 1);
+  }
 
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
   if (
@@ -270,16 +291,13 @@ export async function startBookingCheckout(
       stripeAccountId,
       currency,
       lineItems: [
-        {
-          // A deposit is labelled as one on the hosted page so the diver knows
-          // a balance is still due, not that this is the whole fare — but the
-          // words come from the caller's message bundle, not from here.
+        ...[...tripLineQuantities].map(([tripCents, quantity]) => ({
           description: stripeLineDescription(
             input.describeLine({ isDeposit: charge.isDeposit, tripTitle: tripRow.trip.title }),
           ),
-          unitAmountCents: amountPerDiverCents,
-          quantity: input.bookingIds.length,
-        },
+          unitAmountCents: tripCents,
+          quantity,
+        })),
         // One single-quantity line per diver's priced gear, always charged in
         // full — a deposit only ever discounts the trip fee above (docs ADR
         // 20260801-checkout-upsells-rental-gear).
@@ -347,6 +365,7 @@ export async function startBookingCheckout(
           shopId: input.shopId,
           checkoutId: row.id,
           bookingId,
+          tripCents: tripCentsByBooking.get(bookingId) ?? 0,
           gearCents: gearCentsByBooking.get(bookingId) ?? 0,
         })),
       );
@@ -756,6 +775,7 @@ export async function markCheckoutPaidBySessionId(
     const linked = await tx
       .select({
         bookingId: bookingCheckoutBookings.bookingId,
+        tripCents: bookingCheckoutBookings.tripCents,
         gearCents: bookingCheckoutBookings.gearCents,
       })
       .from(bookingCheckoutBookings)
@@ -767,7 +787,8 @@ export async function markCheckoutPaidBySessionId(
     // and the settled total is split back across them in proportion, so a
     // promo discount lands on everyone it discounted and gear money is
     // attributed to the diver who rented it (PAY-H1/H2).
-    const askedCentsFor = (gearCents: number) => checkout.amountPerDiverCents + gearCents;
+    const askedCentsFor = (tripCents: number | null, gearCents: number) =>
+      (tripCents ?? checkout.amountPerDiverCents) + gearCents;
     // The one figure every per-booking amount is derived from. Stripe's own
     // settled total whenever there is one; otherwise the most this session can
     // have captured, worked out locally (PAY-M3, `attributableTotalCents`).
@@ -776,7 +797,10 @@ export async function markCheckoutPaidBySessionId(
     const attributableCents =
       updated.settledTotalCents ?? (await attributableTotalCents(tx, updated));
     const allocation = allocateSettledTotal(
-      linked.map((row) => ({ key: row.bookingId, askedCents: askedCentsFor(row.gearCents) })),
+      linked.map((row) => ({
+        key: row.bookingId,
+        askedCents: askedCentsFor(row.tripCents, row.gearCents),
+      })),
       attributableCents,
     );
     // A diver's own self-service cancel/reschedule (docs ADR
@@ -830,7 +854,10 @@ export async function markCheckoutPaidBySessionId(
         // that column existed and completed only now — no snapshot exists to
         // read, so it keeps the conservative pre-column answer rather than a
         // guessed one; see `attributableTotalCents`.
-        amountCents: allocation.get(bookingId) ?? askedCentsFor(gearCents),
+        amountCents: allocation.get(bookingId) ?? askedCentsFor(
+          linked.find((row) => row.bookingId === bookingId)?.tripCents ?? null,
+          gearCents,
+        ),
         currency: checkout.currency,
         provider: "stripe",
         providerRef: checkout.stripeSessionId,

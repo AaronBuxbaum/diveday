@@ -30,7 +30,7 @@ describe("defining a package", () => {
     diveCount: 10,
     priceCents: 90_000,
     scope: "all" as const,
-    validityDays: null,
+    validUntil: null,
     maxPriceCents: MAX,
   };
 
@@ -38,7 +38,7 @@ describe("defining a package", () => {
     const result = validateDivePackage(base);
     if (!result.ok) throw new Error(`refused: ${result.reason}`);
     expect(result.value.name).toBe("Ten dives");
-    expect(result.value.validityDays).toBeNull();
+    expect(result.value.validUntil).toBeNull();
   });
 
   it("refuses a package nobody paid for", () => {
@@ -72,23 +72,22 @@ describe("defining a package", () => {
     });
   });
 
-  it("refuses a validity window of no days, and keeps null meaning never", () => {
-    expect(validateDivePackage({ ...base, validityDays: 0 })).toEqual({
+  it("refuses an invalid end date, and keeps null meaning never", () => {
+    expect(validateDivePackage({ ...base, validUntil: "2026-02-30" })).toEqual({
       ok: false,
-      reason: "validity_out_of_range",
+      reason: "valid_until_invalid",
     });
-    const forever = validateDivePackage({ ...base, validityDays: null });
+    const forever = validateDivePackage({ ...base, validUntil: null });
     expect(forever.ok).toBe(true);
   });
 });
 
 describe("when a dive stops being usable", () => {
-  it("is stamped from the purchase, not read back through the package", () => {
-    // A later edit to the product must not retroactively shorten a package
-    // somebody already bought — the exact shape of surprise this feature exists
-    // to avoid.
-    expect(entitlementExpiry(30, NOW)).toEqual(days(30));
-    expect(entitlementExpiry(null, NOW)).toBeNull();
+  it("uses the whole fixed end date rather than purchase-time arithmetic", () => {
+    expect(entitlementExpiry("2026-08-31")).toEqual(
+      new Date("2026-08-31T23:59:59.999Z"),
+    );
+    expect(entitlementExpiry(null)).toBeNull();
   });
 });
 
