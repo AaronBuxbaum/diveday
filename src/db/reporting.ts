@@ -31,6 +31,7 @@ import {
   people,
   personRoles,
   tips,
+  tripAssignments,
   trips,
   userAccounts,
   waiverRecords,
@@ -534,4 +535,31 @@ export async function pagedMonthlyReportTrips(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/**
+ * How many crew were assigned to each of these trips — the number only, never
+ * a cost. DiveDay does not know what a shop pays anybody, so a thin departure
+ * that sailed with a full crew is visible here as a fact about staffing, not
+ * an inference about money (issue #700). One batched query rather than one
+ * per row, the same shape `courseCrewCountsByTrip` (src/db/today.ts) uses for
+ * the identical N+1 reason.
+ *
+ * `trip_assignments` carries no `shop_id` of its own (CR-007) — proven here by
+ * joining through `trips`, filtered to `tripIds`, which the caller has already
+ * scoped to this shop's own report window.
+ */
+export async function crewCountsByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, number>> {
+  if (tripIds.length === 0) return new Map();
+  const rows = await db
+    .select({ tripId: tripAssignments.tripId, crewCount: countDistinct(tripAssignments.personId) })
+    .from(tripAssignments)
+    .innerJoin(trips, and(eq(trips.id, tripAssignments.tripId), eq(trips.shopId, shopId)))
+    .where(inArray(tripAssignments.tripId, tripIds))
+    .groupBy(tripAssignments.tripId);
+  return new Map(rows.map((row) => [row.tripId, Number(row.crewCount)]));
 }
