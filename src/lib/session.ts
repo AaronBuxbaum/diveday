@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { loadActiveStaffRolesByPerson } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -9,12 +10,35 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 /**
  * Server-side staff gate for /shop surfaces. The proxy already blocks these
  * routes at the edge; this is the inner layer that server code must still
- * call (ADR-0006). Role-specific gates (H-14) go a step further and re-check
- * the person's live roles against the database — see `src/db/authz.ts`.
+ * call (ADR-0006).
+ *
+ * **Every call re-reads the account live** (issue #701), not only the H-14
+ * role-specific gates. Sessions are stateless 30-day JWTs
+ * (`src/lib/auth.config.ts`) with no built-in re-validation, so before this,
+ * `isStaff(session.user.roles)` trusted claims cached at sign-in — a
+ * disabled, deleted, or fully-demoted staff member kept every ordinary
+ * `/shop/**` surface working for up to 30 days, because only the ~12
+ * `canPerson*`-gated actions ever called `loadActiveStaffRoles` themselves.
+ * This reuses `loadActiveStaffRolesByPerson`, the person-scoped sibling of
+ * the same query the H-14 gates already run, so "disabled" means the same
+ * thing everywhere in one query shape rather than a second copy of it here.
+ * Person-scoped rather than shop-scoped deliberately: this runs before any
+ * shop has been resolved from the session's own claim, so re-verifying that
+ * claim here would conflate "the account is gone" with "the token's shopId
+ * is stale" — the second is `requireShopSurface`'s tenant assert to catch,
+ * not this function's.
  */
 export async function requireStaffSession() {
   const session = await auth();
   if (!session?.user || !isStaff(session.user.roles)) redirect("/sign-in");
+  const db = await getDb();
+  const liveRoles = await loadActiveStaffRolesByPerson(db, session.user.personId);
+  // `!isStaff(liveRoles)` catches a demotion off every staff role, the same
+  // way `!liveRoles` catches disabled/deleted — both are "this token no
+  // longer describes someone who belongs here", and the edge proxy's
+  // `authorized()` callback stops bouncing a matching request away from
+  // `/sign-in` for exactly this reason (see its own doc comment).
+  if (!liveRoles || !isStaff(liveRoles)) redirect("/sign-in?session=ended");
   return session;
 }
 

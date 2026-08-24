@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { personRoles, userAccounts } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
@@ -101,6 +103,50 @@ describe("requireStaffSession", () => {
     const error = await refusal(() => requireStaffSession());
     expect(error).toBeInstanceOf(RedirectError);
     expect(error.message).toBe("/sign-in");
+  });
+
+  it("passes a real, active staff member through", async () => {
+    const owner = await seededStaffPersonId(context.db, context.shop.id, SEEDED_OWNER_EMAIL);
+    signIn({ personId: owner });
+    const session = await requireStaffSession();
+    expect(session.user.personId).toBe(owner);
+  });
+
+  /**
+   * **Issue #701.** Sessions are stateless 30-day JWTs with no built-in
+   * re-validation — before this fix, a disabled account's already-issued
+   * session kept passing `requireStaffSession()` (and therefore every
+   * ordinary `/shop/**` page) because only `isStaff(session.user.roles)`,
+   * the *cached* claim, was ever checked. This is the scenario the issue
+   * asked to be verified and fixed first, ahead of anything else in it.
+   */
+  it("ends a session the moment its account is disabled, even with unchanged JWT claims", async () => {
+    const captain = await seededStaffPersonId(context.db, context.shop.id, SEEDED_CAPTAIN_EMAIL);
+    // The JWT is untouched — same roles it had at sign-in — only the
+    // database row changes, exactly as it would for a real disabled session
+    // that hasn't hit its 30-day expiry yet.
+    signIn({ personId: captain, roles: ["captain"] });
+    await context.db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, captain));
+
+    const error = await refusal(() => requireStaffSession());
+    expect(error).toBeInstanceOf(RedirectError);
+    // Distinct from a plain `/sign-in`: the edge `authorized()` callback
+    // (src/lib/auth.config.ts) reads this exact param to stop bouncing the
+    // request straight back to `/shop/<slug>` off the same stale JWT, which
+    // would otherwise loop forever between the two layers.
+    expect(error.message).toBe("/sign-in?session=ended");
+  });
+
+  it("ends a session for a person removed from the shop entirely, not only a disabled one", async () => {
+    const captain = await seededStaffPersonId(context.db, context.shop.id, SEEDED_CAPTAIN_EMAIL);
+    signIn({ personId: captain, roles: ["captain"] });
+    await context.db.delete(personRoles).where(eq(personRoles.personId, captain));
+
+    const error = await refusal(() => requireStaffSession());
+    expect(error.message).toBe("/sign-in?session=ended");
   });
 });
 
