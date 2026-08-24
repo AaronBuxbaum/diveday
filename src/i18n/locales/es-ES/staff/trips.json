@@ -524,7 +524,7 @@
     "planLabel": "Si algo sale mal"
   },
   "preDepartureCheck": {
-    "heading": "Antes de zarpar",
+    "heading": "Comprobación previa a la salida",
     "checkedBy": "Comprobado por {name} · {date}",
     "errorRefusal": "Eso no se guardó — inténtalo de nuevo."
   }

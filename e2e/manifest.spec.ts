@@ -877,3 +877,66 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   const row = page.locator(`#${bookingAnchor}`);
   await expect(row).toBeInViewport();
 });
+
+test("an owner adds and removes a line on the shop's own pre-departure checklist", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/settings/safety-checklist");
+  // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
+  await expect(page.getByText("VHF radio checked")).toBeVisible();
+
+  await page.getByLabel("New line").fill("Test kit checked");
+  await page.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByText("Added to the checklist.")).toBeVisible();
+  const newRow = page.getByRole("listitem").filter({ hasText: "Test kit checked" });
+  await expect(newRow).toBeVisible();
+
+  await newRow.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText("Removed from the checklist.")).toBeVisible();
+  await expect(page.getByText("Test kit checked")).not.toBeVisible();
+});
+
+test("a crew member checks a pre-departure item on the live manifest, and a re-tap undoes it", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  const item = page.getByRole("button", { name: "VHF radio checked" });
+  await expect(item).toBeVisible();
+  await item.click();
+  await expect(page.getByText(/Checked by .* · /)).toBeVisible();
+
+  // The same control, re-tapped, is the undo (ADR 20260824-pre-departure-safety-check).
+  await item.click();
+  await expect(page.getByText(/Checked by .* · /)).not.toBeVisible();
+});
+
+test("a checklist tap made offline queues, then syncs once signal returns", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  await expect(page.getByRole("link", { name: "Open offline roll call" })).toBeVisible();
+  await page.getByRole("button", { name: "Refresh now" }).click();
+  await expect(page.getByText("Fresh copy")).toBeVisible();
+  await page.getByRole("link", { name: "Open offline roll call" }).click();
+  await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("Fresh copy")).toBeVisible();
+
+  const item = page.getByRole("button", { name: "Fire extinguisher aboard and charged" });
+  await item.click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "when you're back in service" }),
+  ).toBeVisible();
+
+  await context.setOffline(false);
+  await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
+});

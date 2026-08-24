@@ -114,6 +114,15 @@ test("one tap from close-out opens the departure log with the recorded facts", a
   await expect(timeline.getByText("Buddy team formed").first()).toBeVisible();
   await expect(timeline.getByText(/Members at that moment: .*Tom Okafor/).first()).toBeVisible();
 
+  // The shop's own pre-departure checklist (ADR 20260824-pre-departure-safety-check):
+  // seeded (src/db/seed-pre-departure-checklist.ts) but never tapped on this
+  // departure, so every line states its absence rather than rendering blank.
+  await expect(page.getByRole("heading", { name: "Pre-departure check" })).toBeVisible();
+  const checklistTable = page.getByRole("table").filter({ hasText: "VHF radio checked" });
+  await expect(
+    checklistTable.getByRole("row").filter({ hasText: "VHF radio checked" }),
+  ).toContainText("Not checked");
+
   // The tamper-evidence code: a full SHA-256 in the footer.
   await expect(page.getByText("Integrity code (SHA-256)")).toBeVisible();
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();

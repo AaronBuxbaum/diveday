@@ -366,6 +366,10 @@
     "e2e": ["import.spec.ts"],
     "visual": ["settings-import"]
   },
+  "/shop/[shopSlug]/settings/safety-checklist": {
+    "e2e": ["manifest.spec.ts"],
+    "visual": ["settings-safety-checklist"]
+  },
   "/shop/[shopSlug]/settings/team": {
     "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],
     "visual": ["settings-team"]
