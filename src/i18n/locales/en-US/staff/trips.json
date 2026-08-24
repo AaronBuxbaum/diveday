@@ -522,5 +522,10 @@
     "vesselLabel": "Vessel:",
     "shoreContactLabel": "Shore contact:",
     "planLabel": "If something goes wrong"
+  },
+  "preDepartureCheck": {
+    "heading": "Before you leave the dock",
+    "checkedBy": "Checked by {name} · {date}",
+    "errorRefusal": "That didn't save — try it again."
   }
 }

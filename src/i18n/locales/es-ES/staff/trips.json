@@ -522,5 +522,10 @@
     "vesselLabel": "Embarcación:",
     "shoreContactLabel": "Contacto en tierra:",
     "planLabel": "Si algo sale mal"
+  },
+  "preDepartureCheck": {
+    "heading": "Antes de zarpar",
+    "checkedBy": "Comprobado por {name} · {date}",
+    "errorRefusal": "Eso no se guardó — inténtalo de nuevo."
   }
 }

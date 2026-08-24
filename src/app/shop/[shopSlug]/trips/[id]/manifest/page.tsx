@@ -23,6 +23,7 @@ import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   isRollCallCheckpoint,
@@ -41,6 +42,7 @@ import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
@@ -51,6 +53,7 @@ import {
   isPushSubscribedAction,
   isPushSubscribedAnywhereAction,
   type ManifestActionContext,
+  preDepartureCheckAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
   subscribePushAction,
@@ -154,6 +157,22 @@ export default async function TripManifestPage({
   // The note carries its own checkpoint and the action re-proves it, so this
   // one takes the narrower context that has none.
   const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
+  // Same narrower context as the note above: the checklist is checkpoint-
+  // independent, so its action re-proves nothing about which one was open.
+  const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
+  const checklistListItems = checklistItems.map((item) => {
+    const check = checklistChecks.get(item.id);
+    return {
+      id: item.id,
+      label: item.label,
+      checkedByLine: check
+        ? t("trips.preDepartureCheck.checkedBy", {
+            name: check.recordedByName,
+            date: formatDateTimeTz(check.occurredAt, locale, shop.timezone),
+          })
+        : undefined,
+    };
+  });
 
   // Who can still join a *new* team: any active roster entry not already on
   // one — including a member of a team whose other seat was cancelled, which
@@ -328,6 +347,17 @@ export default async function TripManifestPage({
           vesselLabel: t("trips.emergency.vesselLabel"),
           shoreContactLabel: t("trips.emergency.shoreContactLabel"),
           planLabel: t("trips.emergency.planLabel"),
+        }}
+      />
+      {/* Above the checkpoint switch, deliberately: the check happens once
+          before the boat leaves, not once per dive — see the offline copy's
+          own placement in OfflineManifestView.tsx, which this mirrors. */}
+      <PreDepartureCheckList
+        action={boundPreDepartureCheckAction}
+        items={checklistListItems}
+        copy={{
+          heading: t("trips.preDepartureCheck.heading"),
+          errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
         }}
       />
       {/* A segmented control, not a row of buttons: the active checkpoint used
