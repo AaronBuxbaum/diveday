@@ -345,6 +345,14 @@
       "unavailableText": "Puede ser de un centro que ya no está activo. Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
     }
   },
+  "findMyBooking": {
+    "heading": "¿No encuentras tu enlace?",
+    "body": "Si reservaste con nosotros, escribe el correo que usaste y te lo enviamos de nuevo.",
+    "submit": "Enviar mi enlace",
+    "submitting": "Enviando…",
+    "sentHeading": "Revisa tu correo",
+    "sentBody": "Si ese correo tiene una reserva vigente con nosotros, te hemos enviado un enlace nuevo."
+  },
   "courtesyEmailUnsubscribe": {
     "title": "¿Dejar de recibir estos correos?",
     "description": "Estás en la lista de {shopName} para avisos de lista de espera y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",

@@ -25,6 +25,7 @@ cannot see it.
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
 | Password-reset request | `src/app/forgot-password/actions.ts` | IP **and** requested email, checked concurrently | `RATE_LIMITS.passwordResetRequestByIp` (5/hour) + `RATE_LIMITS.passwordResetRequestByEmail` (3/15min) |
+| "Can't find your link?" request | `src/app/s/[shopSlug]/actions.ts` `requestFindMyBookingAction` (IP) + `src/db/find-my-booking.ts` `sendFindMyBookingLinks` (email) | IP, checked synchronously; requested email, checked only once at least one matching booking actually needs a fresh mint | `RATE_LIMITS.findMyBookingByIp` (5/hour) + `RATE_LIMITS.findMyBookingByEmail` (3/15min) |
 | Account-token actions (verify, reset submit, invite accept, unsubscribe confirm) | `src/app/verify/[token]/actions.ts`, `reset-password/[token]/actions.ts`, `invite/[token]/actions.ts`, `unsubscribe/[token]/actions.ts` | IP, checked before the token is looked up | `RATE_LIMITS.accountTokenAction` (20/hour) |
 | RFC 8058 one-click unsubscribe | `src/app/unsubscribe/[token]/one-click/route.ts` | capability token, checked before the token is looked up | `RATE_LIMITS.oneClickUnsubscribe` (10/hour) |
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
@@ -83,7 +84,11 @@ say nothing for reasons of their own, one of them by accident.
 - **Silent on the surfaces where the limiter itself could enumerate.**
   Sign-in (`authorize()`) returns `null`, indistinguishable from a wrong
   password. A password-reset request redirects to `/forgot-password?sent=1`,
-  indistinguishable from a mail that was actually sent. The account-token
+  indistinguishable from a mail that was actually sent. A "Can't find your
+  link?" request (`requestFindMyBookingAction`) returns the identical
+  `{ success: true }` action state whether or not the address has a booking at
+  this shop, throttled or not — see `src/app/s/[shopSlug]/actions.test.ts`'s
+  identical-response assertion. The account-token
   actions (verify, reset submit, invite accept, unsubscribe confirm) bounce
   back to their own page, which re-derives the same "this link isn't valid"
   notice a genuinely dead token gets. Naming the limiter on any of these would

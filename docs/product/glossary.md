@@ -645,6 +645,17 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+- **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
+  a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
+  own flag state and vessel class require). DiveDay writes none of the content; a shop types its
+  own list in Settings. Distinct from **roll call** in every way that matters: it happens once per
+  departure rather than once per dive, it is never a per-*person* record, and it **informs, never
+  gates** — an unchecked item cannot refuse a departure from sailing or a page from rendering,
+  matching the stance the gear register's service clocks already take (whether it *should* gate is
+  an open owner decision, H-51). It rides the same offline queue roll call does, as a second event
+  array rather than a widened roll-call event, and its own answer — checked, by whom, when, or
+  explicitly not checked — is what the **departure log** prints.
+  See [20260824-pre-departure-safety-check](../architecture/decisions/20260824-pre-departure-safety-check.md).
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: divers plus crew, one number, no distinction between who paid and who works. It is
   printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
@@ -653,6 +664,8 @@ new domain concept, define it here in the same PR.
   correct itself. The screen answers the live question, in the checkpoint panel.
 - **Departure log** (was "incident-ready export" until 2026-08-12) — the print-optimized document a
   shop hands to authorities or insurers after a departure, generated from close-out: the manifest roster with each person's per-checkpoint roll-call state, the
+  **pre-departure checklist**'s own answer for each shop-defined item (checked, by whom, when, or
+  explicitly not checked), the
   complete append-only roll-call timeline (corrections included), certification evidence as held,
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
   the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,

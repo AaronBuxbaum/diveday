@@ -2,6 +2,7 @@ import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
+import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import type { RollCallCheckpoint } from "@/lib/manifests";
@@ -86,7 +87,34 @@ const eventSchema = z
   // batch was refused and nothing about which event or why.
   .refine((event) => (event.bookingId === undefined) !== (event.crewPersonId === undefined));
 
-const bodySchema = z.object({ events: z.array(eventSchema).min(1).max(200) });
+/**
+ * A checklist tap. No subject refinement needed the way `eventSchema` has one
+ * — `checklistItemId` is always the whole of the claim, never optional-and-
+ * exclusive with a second field the way a roll-call event's diver/crew split
+ * is.
+ */
+const checklistEventSchema = z.object({
+  clientEventId: z.string().uuid(),
+  snapshotId: z.string().uuid(),
+  snapshotSavedAt: z.iso.datetime(),
+  tripId: z.string().uuid(),
+  checklistItemId: z.string().uuid(),
+  status: z.enum(["checked", "cleared"]),
+  retractsClientEventId: z.string().uuid().optional(),
+  note: z.string().trim().max(300).nullable(),
+  occurredAt: z.iso.datetime(),
+});
+
+const bodySchema = z
+  .object({
+    events: z.array(eventSchema).max(200),
+    checklistEvents: z.array(checklistEventSchema).max(200).optional(),
+  })
+  // A batch naming neither is refused rather than accepted as a no-op — the
+  // caller always has at least one pending event when it POSTs at all
+  // (`syncOfflineManifest`'s own guard), so an empty pair means a malformed
+  // request, not a legitimately quiet device.
+  .refine((body) => body.events.length + (body.checklistEvents?.length ?? 0) > 0);
 
 /**
  * Apply roll-call events a boat tablet recorded while it was offline.
@@ -190,6 +218,33 @@ export async function POST(request: Request) {
           // with it — and never a `""` handed to a uuid comparison, which
           // Postgres raises on rather than coercing.
           { ok: false as const, reason: "invalid_subject" as const };
+    results.push({
+      clientEventId: event.clientEventId,
+      status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",
+      ...(!outcome.ok ? { reason: outcome.reason } : {}),
+    });
+  }
+
+  // Same ordering discipline as the roll-call loop above, applied to the
+  // sibling array — oldest first, stable sort, so two taps on one item
+  // sharing a timestamp still apply in the order this device queued them.
+  const sortedChecklist = [...(parsed.data.checklistEvents ?? [])].sort((a, b) =>
+    a.occurredAt.localeCompare(b.occurredAt),
+  );
+  for (const event of sortedChecklist) {
+    const outcome = await recordPreDepartureCheck(db, {
+      shopId: session.user.shopId,
+      tripId: event.tripId,
+      checklistItemId: event.checklistItemId,
+      recordedByPersonId: session.user.personId,
+      status: event.status,
+      source: "offline",
+      clientEventId: event.clientEventId,
+      retractsClientEventId: event.retractsClientEventId,
+      offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
+      occurredAt: new Date(event.occurredAt),
+      note: event.note ?? undefined,
+    });
     results.push({
       clientEventId: event.clientEventId,
       status: outcome.ok ? (outcome.duplicate ? "duplicate" : "applied") : "rejected",

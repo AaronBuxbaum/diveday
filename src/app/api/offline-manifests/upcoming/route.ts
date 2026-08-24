@@ -1,6 +1,7 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
+import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopById } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -100,12 +101,24 @@ export async function GET() {
     // the device when the signal goes (issue #688).
     emergencyReference: shop.emergencyReference,
   };
+  // Shop-wide, fetched once — every trip in the window shares the same list.
+  const checklistItems = await listChecklistItems(db, shop.id);
   const payloads = await Promise.all(
     tripIds.map(async (tripId): Promise<OfflineManifestPayload | null> => {
       const manifests = await getTripManifests(db, shop.id, tripId);
       if (!manifests) return null;
-      return serializeManifests(manifests, shopIdentity, (blocker) =>
-        readinessBlockerText(t, blocker),
+      const checks = checklistItems.length
+        ? await latestPreDepartureChecksForTrip(db, shop.id, tripId)
+        : new Map();
+      return serializeManifests(
+        manifests,
+        shopIdentity,
+        (blocker) => readinessBlockerText(t, blocker),
+        checklistItems.map((item) => ({
+          id: item.id,
+          label: item.label,
+          check: checks.get(item.id),
+        })),
       );
     }),
   );

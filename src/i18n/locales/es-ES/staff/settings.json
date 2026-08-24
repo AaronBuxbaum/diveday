@@ -283,6 +283,10 @@
       "heading": "Plantilla de exención",
       "description": "La exención que firma cada buceador, y el registro de quién la ha firmado."
     },
+    "safetyChecklist": {
+      "heading": "Lista de comprobación previa a la salida",
+      "description": "Lo que tu tripulación confirma antes de que el barco zarpe."
+    },
     "promos": {
       "heading": "Códigos promocionales",
       "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites."
@@ -435,6 +439,30 @@
       "phoneLabel": "Teléfono del contacto de emergencia",
       "save": "Guardar contacto",
       "saving": "Guardando…"
+    }
+  },
+  "safetyChecklist": {
+    "eyebrow": "Ajustes",
+    "title": "Lista de comprobación previa a la salida",
+    "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento — DiveDay no lo hace.",
+    "listHeading": "Lista de comprobación",
+    "empty": {
+      "title": "Aún no hay nada en la lista",
+      "body": "Añade la primera línea abajo — la tripulación la ve en el manifiesto de cada salida."
+    },
+    "addLabel": "Nueva línea",
+    "addPlaceholder": "Kit de oxígeno de emergencia a bordo",
+    "addSubmit": "Añadir",
+    "delete": "Eliminar",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "notice": {
+      "added": "Añadido a la lista de comprobación.",
+      "deleted": "Eliminado de la lista de comprobación.",
+      "invalid": "Eso no se guardó — inténtalo de nuevo.",
+      "duplicateLabel": "Esa línea ya está en la lista.",
+      "notAuthorized": "No tienes permiso para cambiar esto.",
+      "moveRefused": "Eso no se movió — inténtalo de nuevo."
     }
   },
   "export": {

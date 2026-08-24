@@ -3412,6 +3412,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-team", scheme);
       });
 
+      // The shop's own pre-departure checklist: seeded lines
+      // (src/db/seed-pre-departure-checklist.ts), the reorder/delete controls
+      // beside each, and the add form (ADR 20260824-pre-departure-safety-check).
+      test(`the pre-departure checklist settings render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings/safety-checklist");
+        await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
+        await page.getByText("VHF radio checked").waitFor();
+        await capture(page, "settings-safety-checklist", scheme);
+      });
+
       /**
        * **The first DiveDay screen a new hire ever sees**, and nothing had ever
        * looked at it. It has an `error.tsx` of its own — somebody thought about

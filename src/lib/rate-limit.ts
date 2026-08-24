@@ -427,6 +427,15 @@ export const RATE_LIMITS = {
   /** Password-reset requests, per requested email — the narrow net. */
   passwordResetRequestByEmail: per15Min(3),
   /**
+   * "Can't find your link?" requests (issue #723), per IP — the wider net,
+   * same figure and the same reasoning as the password-reset request above:
+   * this is the identical anonymous-capability-minting shape, one shop
+   * namespace over.
+   */
+  findMyBookingByIp: perHour(5),
+  /** Same request, per requested email — the narrow net. */
+  findMyBookingByEmail: per15Min(3),
+  /**
    * Consuming a verify/reset/invite/unsubscribe account token (the
    * confirm/submit actions on `/verify/[token]`, `/reset-password/[token]`,
    * `/invite/[token]`, and `/unsubscribe/[token]`), per IP. A personal link,

@@ -15,6 +15,7 @@ import {
 import { getDb } from "@/db/client";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { addInternalNote } from "@/db/operations";
+import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import {
   deletePushSubscription,
   isDeviceSubscribed,
@@ -306,6 +307,44 @@ export async function rollCallAction(
     return { ok: false, reason: "error" };
   }
   // Settle the card in place instead of a full-page redirect per tap.
+  revalidatePath(manifestPath(ctx));
+  return { ok: true };
+}
+
+const preDepartureCheckSchema = z.object({
+  checklistItemId: z.string().uuid(),
+  status: z.enum(["checked", "cleared"]),
+});
+
+/** The one refusal a staffer can act on; everything else reads as "try again". */
+export type PreDepartureCheckResult = { ok: true } | { ok: false; reason: "error" } | null;
+
+/**
+ * Record one tap against one pre-departure checklist item (ADR
+ * 20260824-pre-departure-safety-check). Checkpoint-independent — unlike
+ * `rollCallAction`, this takes the trip-only context, because the check
+ * happens once before the boat leaves, not once per dive.
+ */
+export async function preDepartureCheckAction(
+  ctx: ManifestTripContext,
+  _prev: PreDepartureCheckResult,
+  formData: FormData,
+): Promise<PreDepartureCheckResult> {
+  const staff = await requireStaffSession();
+  const parsed = preDepartureCheckSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, reason: "error" };
+  try {
+    const outcome = await recordPreDepartureCheck(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId: ctx.tripId,
+      checklistItemId: parsed.data.checklistItemId,
+      recordedByPersonId: staff.user.personId,
+      status: parsed.data.status,
+    });
+    if (!outcome.ok) return { ok: false, reason: "error" };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
   revalidatePath(manifestPath(ctx));
   return { ok: true };
 }

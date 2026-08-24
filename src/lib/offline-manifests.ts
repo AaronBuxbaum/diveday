@@ -2,6 +2,9 @@ import { MINUTE_MS } from "@/lib/clock";
 import { nowDate } from "./clock";
 import type { EmergencyReference } from "./emergency-reference";
 import type { TripManifest } from "./manifests";
+// Same reasoning as the roll-call import above: dependency-free, so a value
+// import here is safe for the service worker to carry.
+import { latestPreDepartureCheck, type PreDepartureCheckStatus } from "./pre-departure-check";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // The roll-call rules come from `./roll-call`, never from `./manifests`: this
 // module is compiled into the service worker, and a *value* import from
@@ -118,6 +121,26 @@ export type OfflineManifestPayload = {
      * `/offline-manifest` to catch it. It fails toward silence instead.
      */
     emergencyReference?: EmergencyReference;
+  };
+  /**
+   * The shop's own pre-departure safety line, and the last known answer to
+   * each item **for the trip this payload is about** — trip-level, unlike
+   * `manifests` below, because the check happens once before the boat leaves,
+   * not once per checkpoint. Optional and additive for the usual reason: a
+   * snapshot saved before this field existed still decrypts, and its absence
+   * reads as "nothing to check" rather than throwing.
+   */
+  checklist?: {
+    items: Array<{
+      id: string;
+      label: string;
+      check?: {
+        state: "checked";
+        occurredAt: string;
+        recordedByName: string;
+        note: string | null;
+      };
+    }>;
   };
   manifests: Array<
     Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {
@@ -355,9 +378,36 @@ export function offlineRollCallSubject(
   return null;
 }
 
+/**
+ * One queued tap against one checklist item. A sibling array on the envelope,
+ * not a widened `OfflineRollCallEvent` and not a discriminated union of the
+ * two — the same reasoning `OfflineRollCallEvent`'s own doc comment gives:
+ * events already sitting in a captain's IndexedDB were written to this exact
+ * shape, and a union would make every one of them fail to parse the moment
+ * the app adds a second kind. This rides the *same* queue, storage, lock and
+ * sync round trip as roll call — see `appendOfflineChecklistCheck` and
+ * `syncOfflineManifest` — it is simply never merged into roll call's own
+ * array.
+ */
+export type OfflineChecklistEvent = {
+  clientEventId: string;
+  snapshotId: string;
+  snapshotSavedAt: string;
+  tripId: string;
+  checklistItemId: string;
+  status: PreDepartureCheckStatus;
+  /** Names the `checked` this `cleared` takes back — see `OfflineRollCallEvent.retractsClientEventId`. */
+  retractsClientEventId?: string;
+  note: string | null;
+  occurredAt: string;
+  syncStatus: "pending" | "applied" | "rejected";
+  rejectionReason?: string;
+};
+
 export type OfflineManifestEnvelope = {
   snapshot: OfflineManifestSnapshot;
   events: OfflineRollCallEvent[];
+  checklistEvents: OfflineChecklistEvent[];
 };
 
 /**
@@ -494,9 +544,29 @@ export function serializeManifests(
   shop: OfflineManifestPayload["shop"],
   /** Same resolver `src/i18n/readiness-labels.ts#readinessBlockerText` gives a caller with a translator. */
   resolveBlockerText: (blocker: ReadinessBlocker) => string,
+  /** The shop's checklist items and this trip's latest known check per item — absent (or empty) is a shop with none. */
+  checklist: ReadonlyArray<{
+    id: string;
+    label: string;
+    check?: { occurredAt: Date; recordedByName: string; note: string | null };
+  }> = [],
 ): OfflineManifestPayload {
   return {
     shop,
+    checklist: {
+      items: checklist.map((item) => ({
+        id: item.id,
+        label: item.label,
+        check: item.check
+          ? {
+              state: "checked" as const,
+              occurredAt: item.check.occurredAt.toISOString(),
+              recordedByName: item.check.recordedByName,
+              note: item.check.note,
+            }
+          : undefined,
+      })),
+    },
     manifests: manifests.map(({ completeness: _completeness, ...manifest }) => ({
       ...manifest,
       trip: {
@@ -746,6 +816,71 @@ export function canRecordOfflineCrewStatus(
   return !!snapshot.manifests
     .find((manifest) => manifest.checkpoint === checkpoint)
     ?.crew.some((member) => member.id === crewPersonId);
+}
+
+/**
+ * The checklist sibling of `canRecordOfflineStatus`/`canRecordOfflineCrewStatus`,
+ * and much simpler: there is no checkpoint and no status this snapshot must
+ * refuse. `checked` and `cleared` are both always allowed once the item is one
+ * this copy has heard of — neither is an alarm and neither is a boarding
+ * claim, so there is no direction here that needs to fail closed.
+ */
+export function canRecordOfflineChecklistCheck(
+  snapshot: OfflineManifestSnapshot,
+  checklistItemId: string,
+): boolean {
+  return !!snapshot.checklist?.items.some((item) => item.id === checklistItemId);
+}
+
+/**
+ * What this device currently shows for one checklist item: its own queued
+ * taps first, the snapshot's last known answer behind them — the same
+ * precedence `explicitResultAt` gives roll call, minus the checkpoint,
+ * carry-forward and rejection-rescue machinery that exists there only to
+ * protect the missing-diver alarm (see `pre-departure-check.ts`'s doc
+ * comment for why none of that applies here).
+ */
+export type OfflineChecklistCheckResult = {
+  state: "checked";
+  occurredAt: string;
+  note: string | null;
+  pending: boolean;
+  /** This device queued the tap itself — see `OfflineRollCallResult.local`. */
+  local: boolean;
+  clientEventId?: string;
+  /**
+   * Who recorded it, when this is a *saved* (server-resolved) reading. A
+   * locally queued tap carries no name — nothing on this device knows who is
+   * holding it — the same omission `OfflineRollCallResult` makes, and the UI
+   * renders its own "you" wording for a `local` result instead.
+   */
+  recordedByName?: string;
+};
+
+export function latestOfflineChecklistCheck(
+  snapshot: OfflineManifestSnapshot,
+  checklistItemId: string,
+  queuedEvents: readonly OfflineChecklistEvent[],
+): OfflineChecklistCheckResult | undefined {
+  const forItem = queuedEvents.filter((event) => event.checklistItemId === checklistItemId);
+  const latestLocal = latestPreDepartureCheck(forItem);
+  if (latestLocal) {
+    return {
+      state: "checked",
+      occurredAt: latestLocal.occurredAt,
+      note: latestLocal.note,
+      pending: latestLocal.syncStatus === "pending",
+      local: true,
+      clientEventId: latestLocal.clientEventId,
+    };
+  }
+  // A queued `cleared` with nothing standing beneath it must not fall through
+  // to the snapshot's own stale "checked" — that would hand the mark right
+  // back to whoever just tapped it off, the same rule roll call's `cleared`
+  // follows.
+  if (forItem.some((event) => event.status === "cleared")) return undefined;
+  const saved = snapshot.checklist?.items.find((item) => item.id === checklistItemId)?.check;
+  return saved ? { ...saved, pending: false, local: false } : undefined;
 }
 
 /**

@@ -1,7 +1,9 @@
 "use server";
 
+import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { sendFindMyBookingLinks } from "@/db/find-my-booking";
 import { joinLastMinuteList } from "@/db/last-minute-list";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
@@ -11,6 +13,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { publicAppUrl } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -84,6 +87,66 @@ export async function joinLastMinuteListAction(
     // shown to staff before a blast goes out — never used to filter one
     // (src/db/self-declared-cards.ts).
     declaration: declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+  });
+  return { success: true };
+}
+
+const findMyBookingSchema = z.object({ email: diverEmailSchema });
+
+export type FindMyBookingFormState = { success?: boolean };
+
+/**
+ * "Can't find your link?" (issue #723) — the public way back into a booking
+ * whose confirmation never arrived. Every diver surface past the moment of
+ * booking is a bearer token from an email (`/ready/[token]`,
+ * `/waivers/[token]`, `/recap/[token]`, `/claim/[token]`); this re-issues one.
+ *
+ * **The response never varies with whether the address has a booking.**
+ * Always the identical `{ success: true }`, on the identical code path,
+ * whether the email matches or not — the same shape `requestPasswordReset`
+ * (`forgot-password/actions.ts`) uses for the same reason: an anonymous
+ * capability-minting endpoint that answered differently would be an
+ * account-enumeration oracle. A well-formed email does the identical fixed
+ * work — resolve the shop, check the per-IP limiter, schedule `after()` —
+ * whether it is throttled, matches, or does not, so a throttled request is
+ * not measurably cheaper than an allowed one (`security-reviewer`, issue
+ * #723). Only a malformed email short-circuits earlier, the same shape
+ * `requestPasswordReset` accepts: it costs no DB read either way, so it
+ * leaks nothing about the database.
+ *
+ * **Only the per-IP limiter is checked here.** The per-*inbox*
+ * (`findMyBookingByEmail`) limiter is checked inside `sendFindMyBookingLinks`
+ * itself, once it has decided real work is pending — see that function's own
+ * doc comment for why checking it here, unconditionally, would let anyone who
+ * merely knows an address drain that diver's own recovery budget.
+ *
+ * The actual work — deciding which bookings exist and mailing them —
+ * happens in `sendFindMyBookingLinks`, `after()`-deferred past the response
+ * so a match is never measurably slower than a miss.
+ */
+export async function requestFindMyBookingAction(
+  shopSlug: string,
+  _prev: FindMyBookingFormState,
+  formData: FormData,
+): Promise<FindMyBookingFormState> {
+  const parsed = findMyBookingSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { success: true };
+  const email = parsed.data.email.trim().toLowerCase();
+
+  const dbi = await getDb();
+  const [shop, ip] = await Promise.all([getShopBySlug(dbi, shopSlug), clientIp()]);
+  const origin = publicAppUrl();
+  const byIp = await checkRateLimit(
+    rateLimitKey("find-my-booking-ip", ip),
+    RATE_LIMITS.findMyBookingByIp,
+  );
+
+  // Always scheduled, matched or not, throttled or not — only what happens
+  // inside varies, and that happens after the response is already sent.
+  after(() => {
+    if (byIp.allowed && shop && origin) {
+      sendFindMyBookingLinks(dbi, { shopId: shop.id, email, origin }).catch(() => {});
+    }
   });
   return { success: true };
 }

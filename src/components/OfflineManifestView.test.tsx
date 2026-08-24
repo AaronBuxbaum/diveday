@@ -117,6 +117,7 @@ function envelope(
       expiresAt: opts.expiresAt ?? new Date(FROZEN_MS + 1_000_000).toISOString(),
     },
     events: opts.events ?? [],
+    checklistEvents: [],
   };
 }
 
@@ -314,6 +315,7 @@ function richEnvelope(
       expiresAt: envOpts.expiresAt ?? new Date(FROZEN_MS + 1_000_000).toISOString(),
     },
     events: envOpts.events ?? [],
+    checklistEvents: [],
   };
 }
 

@@ -18,10 +18,12 @@ import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
+import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   isRollCallCheckpoint,
@@ -40,6 +42,7 @@ import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
   addBuddyTeamMemberAction,
@@ -50,6 +53,7 @@ import {
   isPushSubscribedAction,
   isPushSubscribedAnywhereAction,
   type ManifestActionContext,
+  preDepartureCheckAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
   subscribePushAction,
@@ -93,7 +97,14 @@ export default async function TripManifestPage({
   const t = staffTranslator(locale);
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
-  const [completeManifests, buddyTeamsList, bookingNotes, diverNotes] = await Promise.all([
+  const [
+    completeManifests,
+    buddyTeamsList,
+    bookingNotes,
+    diverNotes,
+    checklistItems,
+    checklistChecks,
+  ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
@@ -106,6 +117,8 @@ export default async function TripManifestPage({
     // Person-scoped notes written on the Diver record. Resolve them onto this
     // trip's booking below so every interface reads the same source of truth.
     listDiverNotesForTrip(db, shop.id, tripId),
+    listChecklistItems(db, shop.id),
+    latestPreDepartureChecksForTrip(db, shop.id, tripId),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -144,6 +157,34 @@ export default async function TripManifestPage({
   // The note carries its own checkpoint and the action re-proves it, so this
   // one takes the narrower context that has none.
   const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
+  // Same narrower context as the note above: the checklist is checkpoint-
+  // independent, so its action re-proves nothing about which one was open.
+  const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
+  const checklistListItems = checklistItems.map((item) => {
+    const check = checklistChecks.get(item.id);
+    const checkedByLine = check
+      ? t("trips.preDepartureCheck.checkedBy", {
+          name: check.recordedByName,
+          date: formatDateTimeTz(check.occurredAt, locale, shop.timezone),
+        })
+      : undefined;
+    return {
+      id: item.id,
+      label: item.label,
+      checkedByLine,
+      // The trip packet's print stylesheet hides the interactive control
+      // this item otherwise renders as (a <button>) — this whole sentence is
+      // what survives on the printed sheet, composed here rather than in the
+      // client component so word order and the separator stay a locale
+      // choice, not a JSX literal's.
+      printLine: checkedByLine
+        ? t("trips.preDepartureCheck.printLineChecked", {
+            label: item.label,
+            status: checkedByLine,
+          })
+        : t("trips.preDepartureCheck.printLineNotChecked", { label: item.label }),
+    };
+  });
 
   // Who can still join a *new* team: any active roster entry not already on
   // one — including a member of a team whose other seat was cancelled, which
@@ -320,6 +361,17 @@ export default async function TripManifestPage({
           planLabel: t("trips.emergency.planLabel"),
         }}
       />
+      {/* Above the checkpoint switch, deliberately: the check happens once
+          before the boat leaves, not once per dive — see the offline copy's
+          own placement in OfflineManifestView.tsx, which this mirrors. */}
+      <PreDepartureCheckList
+        action={boundPreDepartureCheckAction}
+        items={checklistListItems}
+        copy={{
+          heading: t("trips.preDepartureCheck.heading"),
+          errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
+        }}
+      />
       {/* A segmented control, not a row of buttons: the active checkpoint used
           to wear the same filled-primary costume as "Mark boarded", which gave
           the page a second primary that was not an action at all (principle
@@ -464,6 +516,11 @@ export default async function TripManifestPage({
                 emergencyReference: shop.emergencyReference,
               },
               (blocker) => readinessBlockerText(t, blocker),
+              checklistItems.map((item) => ({
+                id: item.id,
+                label: item.label,
+                check: checklistChecks.get(item.id),
+              })),
             )}
             copy={
               {

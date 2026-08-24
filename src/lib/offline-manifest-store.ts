@@ -2,11 +2,13 @@
 import { nowDate } from "./clock";
 
 import {
+  canRecordOfflineChecklistCheck,
   canRecordOfflineCrewStatus,
   canRecordOfflineStatus,
   isOfflineManifestExpired,
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
+  type OfflineChecklistEvent,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
   type OfflineRollCallEvent,
@@ -424,9 +426,9 @@ export async function loadOfflineManifest(tripId: string): Promise<OfflineManife
       // follows. It is enforced lazily, on read: IndexedDB has no background
       // expiry, so the guarantee is "no read after the ceiling ever returns
       // it", exactly as the ordinary retention window has always worked.
-      const pendingEvents = envelope.events.filter(
-        (event) => event.syncStatus === "pending",
-      ).length;
+      const pendingEvents =
+        envelope.events.filter((event) => event.syncStatus === "pending").length +
+        envelope.checklistEvents.filter((event) => event.syncStatus === "pending").length;
       if (pendingEvents === 0 || isPastPendingGrace(record)) {
         if (pendingEvents > 0) await noteDiscardedRecord(db, envelope, pendingEvents);
         await deleteOfflineManifest(tripId, db);
@@ -566,7 +568,11 @@ export async function purgeOfflineManifestsExceptShop(currentShopSlug: string): 
       return withManifestLock(tripId, async () => {
         const current = await loadOfflineManifest(tripId);
         if (!current) return;
-        if (current.events.some((event) => event.syncStatus === "pending")) return;
+        if (
+          current.events.some((event) => event.syncStatus === "pending") ||
+          current.checklistEvents.some((event) => event.syncStatus === "pending")
+        )
+          return;
         await deleteOfflineManifest(tripId);
       });
     }),
@@ -594,6 +600,7 @@ export async function saveOfflineManifest(
         expiresAt: offlineManifestExpiresAt(savedAt, new Date(trip.endsAt)).toISOString(),
       },
       events: existing?.events ?? [],
+      checklistEvents: existing?.checklistEvents ?? [],
     };
     const db = await openDatabase();
     try {
@@ -692,18 +699,65 @@ export async function appendOfflineRollCall(
   });
 }
 
+/**
+ * Queue one tap against one checklist item — `appendOfflineRollCall`'s
+ * sibling, narrowed to the simpler subject `OfflineChecklistEvent` carries
+ * (see that type's doc comment for why this is a second array rather than a
+ * widened roll-call event).
+ */
+export async function appendOfflineChecklistCheck(
+  tripId: string,
+  input: Pick<
+    OfflineChecklistEvent,
+    "checklistItemId" | "status" | "note" | "retractsClientEventId"
+  >,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope) throw new OfflineManifestError("unavailable");
+    if (isOfflineManifestExpired(envelope.snapshot)) {
+      throw new OfflineManifestError("expired");
+    }
+    if (!canRecordOfflineChecklistCheck(envelope.snapshot, input.checklistItemId)) {
+      throw new OfflineManifestError("not_allowed");
+    }
+    envelope.checklistEvents.push({
+      ...input,
+      clientEventId: crypto.randomUUID(),
+      snapshotId: envelope.snapshot.snapshotId,
+      snapshotSavedAt: envelope.snapshot.savedAt,
+      tripId,
+      occurredAt: nowDate().toISOString(),
+      syncStatus: "pending",
+    });
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope);
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
 export async function syncOfflineManifest(tripId: string): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
   const pending = envelope.events.filter((event) => event.syncStatus === "pending");
-  if (pending.length === 0 || !navigator.onLine) return envelope;
+  const pendingChecklist = envelope.checklistEvents.filter(
+    (event) => event.syncStatus === "pending",
+  );
+  if ((pending.length === 0 && pendingChecklist.length === 0) || !navigator.onLine) return envelope;
   const response = await fetch("/api/offline-manifests/sync", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ events: pending }),
+    body: JSON.stringify({ events: pending, checklistEvents: pendingChecklist }),
   });
   if (!response.ok) throw new OfflineManifestError("sync_unreachable");
   const body = (await response.json()) as { results: OfflineSyncResult[] };
+  // One map for both arrays: a roll-call event id and a checklist event id are
+  // both `crypto.randomUUID()`, so they never collide, and the sync route
+  // returns one flat `results` list naming whichever kind each id belongs to.
   const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
   // Re-read and merge under the lock instead of writing back the envelope
   // read before the network round-trip: a concurrent appendOfflineRollCall
@@ -712,7 +766,7 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
   return withManifestLock(tripId, async () => {
     const current = await loadOfflineManifest(tripId);
     if (!current) return null;
-    current.events = current.events.map((event) => {
+    const applyResult = <T extends { clientEventId: string }>(event: T) => {
       const result = byId.get(event.clientEventId);
       if (!result) return event;
       return {
@@ -720,7 +774,9 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
         syncStatus: result.status === "rejected" ? "rejected" : "applied",
         rejectionReason: result.reason,
       };
-    });
+    };
+    current.events = current.events.map(applyResult);
+    current.checklistEvents = current.checklistEvents.map(applyResult);
     const db = await openDatabase();
     try {
       await persistEnvelope(db, current);

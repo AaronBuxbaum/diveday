@@ -50,6 +50,7 @@ import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull, pinnedNextDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 
@@ -836,7 +837,7 @@ export default async function SchedulePage({
           // `course` is where the diver-facing certification-level words live
           // (`DIVER_CERTIFICATION_LEVEL_KEYS`), shared with the public course
           // pages — `DiveDeclarationFields` inside the deal-list form reads them.
-          namespaces={["lastMinute", "inquiry", "common", "course"]}
+          namespaces={["lastMinute", "findMyBooking", "inquiry", "common", "course"]}
         >
           {/* The deal list stands down for a shop that has never had a
               departure. It asks a diver to be told when a boat needs to fill
@@ -845,6 +846,9 @@ export default async function SchedulePage({
               about trips that do not exist (issue #710). `everHadDeparture`,
               not `hasUpcoming`: see above. */}
           {everHadDeparture ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
+          {/* Same gate, same reason: a shop that has never had a departure
+              cannot have a real booking to recover (issue #723). */}
+          {everHadDeparture ? <FindMyBookingForm shopSlug={shopSlug} /> : null}
           {/* Not gated on `contactEmail`. The request lands in
               `course_inquiries` and staff read it at /shop/<slug>/requests, so
               the shop's email is only needed for the notification — which

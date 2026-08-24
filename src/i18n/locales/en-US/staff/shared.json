@@ -607,6 +607,9 @@
         "genericError": "That change couldn't be saved on this device — try it again.",
         "notAllowed": "This diver isn't ready to board yet — clear what's outstanding on the live manifest first.",
         "unavailable": "This saved copy isn't available anymore — open the live manifest to record roll call."
+      },
+      "checklist": {
+        "heading": "Before you leave the dock"
       }
     },
     "shellVersion": {

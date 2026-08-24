@@ -113,6 +113,7 @@ function envelope(events: OfflineManifestEnvelope["events"] = []): OfflineManife
       expiresAt: new Date(Date.now() + 1_000_000).toISOString(),
     },
     events,
+    checklistEvents: [],
   };
 }
 
