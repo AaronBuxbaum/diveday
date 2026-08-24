@@ -5,6 +5,7 @@ import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
   canPersonViewShopReports,
+  crewCountsByTrip,
   earliestImportedFinancialHistoryDate,
   earliestReportedTripStart,
   getMonthlyReport,
@@ -25,6 +26,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { listStaff, setTripCrew } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 type BookingStatus = "booked" | "checked_in" | "cancelled" | "no_show";
@@ -827,5 +829,48 @@ describe("monthly revenue after a partial refund", () => {
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
     expect(report.revenueCents).toBe(0);
+  });
+});
+
+describe("crewCountsByTrip (issue #700 — crew load, never a cost)", () => {
+  it("counts distinct crew assigned per trip, batched across every trip in one query", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const [first, second] = staff;
+    if (!first || !second) throw new Error("seeded shop needs at least two staff members");
+    const thin = await makeTrip(db, shop.id, new Date("2026-06-05T12:00:00Z"), 10, "Thin charter");
+    const crewed = await makeTrip(
+      db,
+      shop.id,
+      new Date("2026-06-12T12:00:00Z"),
+      10,
+      "Fully crewed charter",
+    );
+    await setTripCrew(db, shop.id, crewed, [first.person.id, second.person.id]);
+
+    const counts = await crewCountsByTrip(db, shop.id, [thin, crewed]);
+    expect(counts.get(thin)).toBeUndefined();
+    expect(counts.get(crewed)).toBe(2);
+  });
+
+  it("returns nothing for a trip ids list that is empty, without a query", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(await crewCountsByTrip(db, shop.id, [])).toEqual(new Map());
+  });
+
+  it("never counts a genuinely different shop's crew against this trip id (CR-007)", async () => {
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-crew-count-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    const staff = await listStaff(db, shop.id);
+    const [first] = staff;
+    if (!first) throw new Error("seeded shop needs a staff member");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-12T12:00:00Z"), 10, "Reef");
+    await setTripCrew(db, shop.id, trip, [first.person.id]);
+
+    expect(await crewCountsByTrip(db, otherShop.id, [trip])).toEqual(new Map());
   });
 });

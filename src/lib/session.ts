@@ -1,10 +1,9 @@
 import { notFound, redirect } from "next/navigation";
-import type { Session } from "next-auth";
 import { loadActiveStaffRoles, loadActiveStaffRolesByPerson } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { auth } from "@/lib/auth";
+import { auth, type DiveDaySession } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -60,7 +59,7 @@ export async function requireStaffSession() {
 export async function isLiveShopStaff(
   db: AppDb,
   shopId: string,
-  session: Session | null,
+  session: DiveDaySession | null,
 ): Promise<boolean> {
   if (!session?.user) return false;
   const liveRoles = await loadActiveStaffRoles(db, shopId, session.user.personId);

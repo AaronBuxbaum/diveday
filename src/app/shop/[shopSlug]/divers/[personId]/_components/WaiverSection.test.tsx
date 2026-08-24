@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DiverProfile } from "./shared";
 import { WaiverSection } from "./WaiverSection";
 
-// Both server actions this card reaches for drag next-auth (and with it the
+// Both server actions this card reaches for drag better-auth (and with it the
 // whole Next server runtime) in behind them; this suite is about which controls
 // the card offers, so they are stubbed rather than booted.
 vi.mock("../actions", () => ({ markWaiverInPersonAction: vi.fn() }));

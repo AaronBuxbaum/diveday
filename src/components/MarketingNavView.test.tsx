@@ -19,7 +19,7 @@ function renderNav(props: Partial<Parameters<typeof MarketingNavView>[0]> = {}) 
       shopSlug={null}
       locale={DEFAULT_DIVER_LOCALE}
       hideCta={false}
-      // A stub: `enterDemoAction` itself imports `next-auth`, unloadable under
+      // A stub: `enterDemoAction` itself imports `better-auth`, unloadable under
       // jsdom, which is exactly why `demoAction` is a prop rather than an
       // import here (see MarketingNavView's own file comment).
       demoAction={() => {}}

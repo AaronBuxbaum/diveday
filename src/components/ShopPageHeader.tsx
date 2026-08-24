@@ -191,6 +191,7 @@ export function ShopStat({
   label,
   value,
   detail,
+  comparison,
   tone = "default",
   variant = "card",
   definition = false,
@@ -201,6 +202,15 @@ export function ShopStat({
   label: string;
   value: string | number;
   detail?: string;
+  /**
+   * A baseline reading beside this month's own (issue #700) — "vs $6,690
+   * last August" or "+12% vs $6,690 last August". A distinct line from
+   * `detail` rather than folded into it: `detail` states a fact about this
+   * month alone ("8 bookings this month"), and a baseline is a second,
+   * separable fact a reader may not want translated as one interpolated
+   * sentence.
+   */
+  comparison?: string;
   tone?: "default" | "primary" | "warning" | "success";
   /** `card` on the page; `inset` (sunken, chrome-less) inside an existing card. */
   variant?: "card" | "inset";
@@ -255,20 +265,22 @@ export function ShopStat({
         {/* In definition mode the detail and link live inside the <dd> — a
             <dl>'s groups may hold only <dt>/<dd>, and the sentence *is* part
             of the value's definition. */}
-        {definition ? statDetail({ detail, celebrate, linkHref, linkLabel }) : null}
+        {definition ? statDetail({ detail, comparison, celebrate, linkHref, linkLabel }) : null}
       </Value>
-      {definition ? null : statDetail({ detail, celebrate, linkHref, linkLabel })}
+      {definition ? null : statDetail({ detail, comparison, celebrate, linkHref, linkLabel })}
     </div>
   );
 }
 
 function statDetail({
   detail,
+  comparison,
   celebrate,
   linkHref,
   linkLabel,
 }: {
   detail?: string;
+  comparison?: string;
   celebrate: boolean;
   linkHref?: string;
   linkLabel?: string;
@@ -296,6 +308,13 @@ function statDetail({
             </svg>
           ) : null}
           {detail}
+        </span>
+      ) : null}
+      {/* Its own line, one step quieter than `detail`: a baseline is
+          supporting reading, not the fact `detail` already states. */}
+      {comparison ? (
+        <span className="mt-1 block text-sm tracking-normal text-muted tabular-nums">
+          {comparison}
         </span>
       ) : null}
       {linkHref && linkLabel ? (

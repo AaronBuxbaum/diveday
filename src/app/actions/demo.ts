@@ -1,15 +1,16 @@
 "use server";
 
+import { APIError } from "better-auth/api";
 import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { AuthError } from "next-auth";
 import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
-import { auth, signIn, signOut } from "@/lib/auth";
+import { auth, getAuth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { eventSource } from "@/lib/funnel";
@@ -145,15 +146,16 @@ export async function enterDemoAction(formData?: FormData) {
   }
 
   try {
-    await signIn("credentials", {
-      email: targetEmail,
-      password: DEMO_BYPASS_PASSWORD,
-      redirectTo: `/shop/${slug}`,
+    const auth = await getAuth();
+    await auth.api.signInDiveDayCredentials({
+      body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
+      headers: await headers(),
     });
   } catch (error) {
-    if (error instanceof AuthError) redirect("/sign-in?error=1");
-    throw error; // NEXT_REDIRECT (the success path) and unexpected errors propagate
+    if (error instanceof APIError) redirect("/sign-in?error=1");
+    throw error; // unexpected errors propagate
   }
+  redirect(`/shop/${slug}`);
 }
 
 export async function resetDemoAction() {
@@ -181,24 +183,24 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
   if (!SWITCHABLE_DEMO_ROLES.has(role)) redirect(`/shop/${shopSlug}`);
 
   if (role === "diver") {
-    try {
-      const session = await auth();
-      // Auth.js signOut will throw a redirect error to execute the redirect.
-      if (session) await signOut({ redirectTo: publicSchedulePath(shopSlug) });
-    } catch (error) {
-      if (error instanceof AuthError) {
-        redirect(publicSchedulePath(shopSlug));
+    const session = await auth();
+    if (session) {
+      try {
+        const instance = await getAuth();
+        await instance.api.signOut({ headers: await headers() });
+      } catch (error) {
+        if (error instanceof APIError) {
+          redirect(publicSchedulePath(shopSlug));
+        }
+        throw error;
       }
-      throw error; // NEXT_REDIRECT will propagate
     }
     // Nobody was signed in, so there was nothing to sign out of — an ordinary
-    // navigation, and deliberately *outside* the `try` it used to sit in.
-    // `redirect()` unwinds by throwing, and the `catch` above sorts throws by
-    // shape (`instanceof AuthError`): a redirect written inside was a refusal
-    // handed to error handling that never asked for it, surviving only because
-    // the `throw error` line happened to re-raise it. One edit to that catch and
-    // the diver preview would have gone nowhere, silently
-    // (scripts/check-redirect-in-try.mjs).
+    // navigation, and deliberately *outside* the `try`. `redirect()` unwinds by
+    // throwing, and the `catch` above sorts throws by shape (`instanceof
+    // APIError`): a redirect written inside was a refusal handed to error
+    // handling that never asked for it. One edit to that catch and the diver
+    // preview would have gone nowhere, silently (scripts/check-redirect-in-try.mjs).
     redirect(publicSchedulePath(shopSlug));
   } else {
     // Look the target person up by their role *within this shop* rather than by
@@ -218,16 +220,17 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
     }
 
     try {
-      await signIn("credentials", {
-        email: targetEmail,
-        password: DEMO_BYPASS_PASSWORD,
-        redirectTo: `/shop/${shopSlug}`,
+      const auth = await getAuth();
+      await auth.api.signInDiveDayCredentials({
+        body: { email: targetEmail, password: DEMO_BYPASS_PASSWORD },
+        headers: await headers(),
       });
     } catch (error) {
-      if (error instanceof AuthError) {
+      if (error instanceof APIError) {
         redirect(`/shop/${shopSlug}?error=switch_failed`);
       }
-      throw error; // NEXT_REDIRECT will propagate
+      throw error;
     }
+    redirect(`/shop/${shopSlug}`);
   }
 }
