@@ -49,6 +49,7 @@ const COPY: CrewSectionCopy = {
   courseNeedsInstructor: "This course needs an instructor.",
   overRatioWarning: null,
   underTargetNote: null,
+  languageGapNote: null,
   noStaff: "No staff on file yet.",
   notAssignedYet: "Nobody assigned yet.",
   assignLabel: "Assign crew",

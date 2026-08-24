@@ -70,6 +70,7 @@ export {
   upcomingTripsWithCounts,
 } from "./trips-queries";
 export {
+  bookedDiverLanguages,
   getShopTripTitle,
   getTripDiveSitesPeek,
   getTripWithBooked,

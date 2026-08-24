@@ -1,5 +1,6 @@
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
+import { crewLanguageGap } from "@/lib/crew-languages";
 import { countInWaterCrew } from "@/lib/crew-roles";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
 import { rentalFitCompleteness } from "@/lib/rentals";
@@ -16,6 +17,7 @@ import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "
 import { listTripPrepDivers } from "./rental-fit";
 import { crewShiftCoverage } from "./staffing";
 import {
+  bookedDiverLanguages,
   getTripCrewAssignments,
   getTripSeriesSummary,
   getTripWithBooked,
@@ -86,6 +88,7 @@ export async function getTripOverview(
     scheduleDays,
     canConfigure,
     blowoutCalled,
+    diverLanguages,
     pulseReadiness,
     pulsePrepDivers,
     pulseBoardedByTrip,
@@ -104,6 +107,7 @@ export async function getTripOverview(
     // is the surface a weather morning is worked from, so the trip page must
     // always offer the way back to it (ADR 20260804-blowout-cascade).
     hasTripBlowout(db, shop.id, tripId),
+    bookedDiverLanguages(db, shop.id, tripId),
     // The pulse's facts, read only while the trip is still ahead. All go through
     // the readers their destination surfaces already trust — the roster's own
     // blocked predicate, the prep list's own completeness rule, and the
@@ -185,6 +189,15 @@ export async function getTripOverview(
     divemasterCount: inWaterDivemasterCount(inWaterCrew),
     diversPerDivemaster: shop.diversPerDivemaster,
   });
+  // Same stance as ratioGap above: informs, refuses nothing (issue #708).
+  // Diver languages come only from a first-hand signal (`bookedDiverLanguages`
+  // above), so a trip full of divers with no stated preference correctly
+  // reports no gap rather than flagging every crew that never recorded
+  // English.
+  const languageGap = crewLanguageGap({
+    crewSpokenLanguages: assignedCrew.map((entry) => entry.person.spokenLanguages),
+    diverLanguages,
+  });
 
   // The other half of the shift <-> crew cross-link: whether each assigned crew
   // member actually has a working shift covering this sailing. `null` — the shop
@@ -215,6 +228,7 @@ export async function getTripOverview(
       inWaterCrew,
       crewGap,
       ratioGap,
+      languageGap,
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
     },
   };
