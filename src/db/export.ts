@@ -2717,6 +2717,11 @@ export async function loadShopExportBundleInput(
  * - **Shop-wide configuration** (the trip catalog, the course catalog, dive
  *   sites, gear fleet, promo codes) never named this diver in the first
  *   place and is out of scope by construction, not by a redaction.
+ * - **`orders.description` / `order_line_items.description`** are also
+ *   staff-typed free text (the invoice form's own note field) and dropped for
+ *   the same reason `internal_notes` is — found in security review rather
+ *   than the first pass, and covered by a regression test that builds an
+ *   order carrying another diver's name in that field.
  *
  * ## What is included but incomplete on purpose
  *
@@ -2726,6 +2731,12 @@ export async function loadShopExportBundleInput(
  * not an engineering default, and it belongs with H-01/H-03's legal review —
  * see `docs/product/human-decisions.md`. Every other column of a diver's own
  * signed evidence (status, signature, timestamps, template text) ships now.
+ * The same hold extends to `photoUrls`: an imported record's
+ * `importSourceMedicalDocumentUrl` (a re-stored scan of the same medical
+ * intake form) is never bundled, while `importSourceDocumentUrl` (the general
+ * signed release) is — a scanned document is medical evidence with a file
+ * extension rather than a JSON key, and the JSON column being withheld does
+ * not by itself withhold the document it came with.
  *
  * ## Tenant + subject scoping
  *
@@ -2763,7 +2774,10 @@ export async function loadDiverExportBundleInput(
       const bookingIds = bookingRows.map((row) => row.id);
       const tripIds = [...new Set(bookingRows.map((row) => row.tripId))];
       const tripRows = tripIds.length
-        ? await tx.select().from(trips).where(inArray(trips.id, tripIds))
+        ? await tx
+            .select()
+            .from(trips)
+            .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId)))
         : [];
       const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
       const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
@@ -2989,7 +3003,10 @@ export async function loadDiverExportBundleInput(
         .orderBy(asc(divePackageEntitlements.createdAt), asc(divePackageEntitlements.id));
       const packageIds = [...new Set(entitlementRows.map((row) => row.packageId))];
       const packageRows = packageIds.length
-        ? await tx.select().from(divePackages).where(inArray(divePackages.id, packageIds))
+        ? await tx
+            .select()
+            .from(divePackages)
+            .where(and(inArray(divePackages.id, packageIds), eq(divePackages.shopId, shopId)))
         : [];
       const packageName = new Map(packageRows.map((row) => [row.id, row.name]));
 
@@ -3016,7 +3033,10 @@ export async function loadDiverExportBundleInput(
         : [];
       const gearItemIds = [...new Set(gearReservationRows.map((row) => row.gearItemId))];
       const gearItemRows = gearItemIds.length
-        ? await tx.select().from(gearItems).where(inArray(gearItems.id, gearItemIds))
+        ? await tx
+            .select()
+            .from(gearItems)
+            .where(and(inArray(gearItems.id, gearItemIds), eq(gearItems.shopId, shopId)))
         : [];
       const gearItemLabel = new Map(gearItemRows.map((row) => [row.id, row.label]));
 
@@ -3052,16 +3072,24 @@ export async function loadDiverExportBundleInput(
         ...new Set(inquiryRows.flatMap((row) => (row.courseId ? [row.courseId] : []))),
       ];
       const inquiryCourseRows = inquiryCourseIds.length
-        ? await tx.select().from(courses).where(inArray(courses.id, inquiryCourseIds))
+        ? await tx
+            .select()
+            .from(courses)
+            .where(and(inArray(courses.id, inquiryCourseIds), eq(courses.shopId, shopId)))
         : [];
       const courseTitle = new Map(inquiryCourseRows.map((row) => [row.id, row.title]));
 
       const photoUrls = [
         ...recapPhotoRows.map((row) => row.imageUrl),
+        // importSourceDocumentUrl only — never importSourceMedicalDocumentUrl.
+        // A re-stored scanned intake form is medical evidence with a
+        // file extension rather than a JSON key, and bundling it here would
+        // hand a diver's medical document out from underneath H-50's still-open
+        // question of whether they should have it — the same withholding
+        // medical_answers gets above, extended to the form the medical answers
+        // actually shipped on when the waiver was imported.
         ...waiverRows.flatMap((row) =>
-          [row.importSourceDocumentUrl, row.importSourceMedicalDocumentUrl].filter(
-            (url): url is string => Boolean(url),
-          ),
+          row.importSourceDocumentUrl ? [row.importSourceDocumentUrl] : [],
         ),
         ...importedPaymentHistoryRows.map((row) => row.receiptDocumentUrl),
       ].filter((url): url is string => Boolean(url));
@@ -3381,14 +3409,18 @@ export async function loadDiverExportBundleInput(
         {
           file: "waiver_templates.csv",
           header: ["id", "title", "version", "body"],
+          // waiverRecords.templateBody is the text as signed — a snapshot at
+          // signing time, never the live waiverTemplates row, which a shop can
+          // go on editing after this diver signed. One row per distinct
+          // template this diver actually agreed to.
           rows: (() => {
             const templateIds = [...new Set(waiverRows.map((row) => row.templateId))];
             return templateIds.map((id) => {
               const row = waiverRows.find((waiver) => waiver.templateId === id);
-              return [id, row?.templateTitle, row?.templateVersion, null];
+              return [id, row?.templateTitle, row?.templateVersion, row?.templateBody];
             });
           })(),
-          note: "The exact wording of each release this diver signed, by version. Full text lives in waiver_records.csv's template reference; body is populated where the shop's current template text is still on file.",
+          note: "The exact wording of each release this diver signed, by version, as it read the moment they signed it.",
         },
         {
           file: "waiver_records.csv",
@@ -3561,11 +3593,13 @@ export async function loadDiverExportBundleInput(
             "total_cents",
             "amount_paid_cents",
             "refunded_cents",
-            "description",
             "paid_at",
             "refunded_at",
             "created_at",
           ],
+          // description is staff-typed free text (the invoice form's own note
+          // field) and dropped for the same reason internal_notes and
+          // activity_events are — see the module docblock.
           rows: orderRows.map((row) => [
             row.id,
             row.bookingId,
@@ -3575,7 +3609,6 @@ export async function loadDiverExportBundleInput(
             row.totalCents,
             row.amountPaidCents,
             row.refundedCents,
-            row.description,
             row.paidAt,
             row.refundedAt,
             row.createdAt,
@@ -3584,18 +3617,12 @@ export async function loadDiverExportBundleInput(
         },
         {
           file: "order_line_items.csv",
-          header: [
-            "order_id",
-            "kind",
-            "description",
-            "quantity",
-            "unit_amount_cents",
-            "created_at",
-          ],
+          header: ["order_id", "kind", "quantity", "unit_amount_cents", "created_at"],
+          // description is also staff-typed free text on this form; the same
+          // exclusion, same reason.
           rows: orderLineRows.map((row) => [
             row.orderId,
             row.kind,
-            row.description,
             row.quantity,
             row.unitAmountCents,
             row.createdAt,

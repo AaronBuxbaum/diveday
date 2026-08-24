@@ -126,6 +126,8 @@ export async function recordDiverActivity(
   db: AppDb,
   input: { shopId: string; personId: string; actorPersonId: string; action: string },
 ): Promise<boolean> {
+  const action = input.action.trim();
+  if (!action || action.length > 500) return false;
   const [diver] = await db
     .select({ name: people.fullName })
     .from(people)
@@ -143,7 +145,7 @@ export async function recordDiverActivity(
     bookingId: null,
     actorPersonId: input.actorPersonId,
     subjectPersonId: input.personId,
-    message: `${actor.name} ${input.action} ${diver.name}`,
+    message: `${actor.name} ${action} ${diver.name}`,
     occurredAt: nowDate(),
   });
   return true;

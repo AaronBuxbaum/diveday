@@ -60,6 +60,14 @@ diver's name is the exact failure this feature exists to prevent:
   risk (already one row per person) and is included.
 - **Shop-wide configuration** (the trip catalog, the course catalog, dive sites, the gear fleet,
   promo codes) never named this diver and is out of scope by construction.
+- **`orders.description` and `order_line_items.description`** are staff-typed free text on the
+  invoice form, the same shape as `internal_notes.body` and `activity_events.message` — found in
+  security review, not in the first pass. Dropped from `orders.csv`/`order_line_items.csv` for the
+  same reason; every other column, including the amounts, ships.
+- **An imported waiver's re-stored source documents** split the same way `medical_answers` does:
+  `importSourceDocumentUrl` (the general signed release) is bundled, `importSourceMedicalDocumentUrl`
+  (a scanned intake form) is not — found in security review, where the JSON column was correctly
+  withheld but the equivalent scanned document was not.
 
 **Medical answers on a signed waiver are withheld, deliberately unresolved rather than defaulted.**
 The incident export withholds them because its reader is an investigator (H-03's boundary); a
@@ -107,3 +115,8 @@ of it.
 - H-50 stays open until legal review answers it. Until then, `waiver_records.csv`'s `medical_answers`
   column is absent from both the header and the README's own accounting of what's included — a
   diver reading their own export sees that the gap is stated, not silent.
+- The `orders.description` gap and the medical-document leak through `photoUrls` were both found by
+  a `security-reviewer` pass before merge, not by the first design pass — proof that the "same three
+  questions" discipline above needs the second read as much as it needs the first. Both are fixed in
+  the version this ADR describes and covered by regression tests
+  (`src/db/diver-export.test.ts`) that build the exact fixture each gap needed to be visible in.

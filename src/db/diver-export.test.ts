@@ -8,7 +8,7 @@ import { createBookingParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import { canPersonExportShopData, loadDiverExportBundleInput } from "./export";
 import { addDiverNote } from "./operations";
-import { shops, userAccounts, waiverRecords } from "./schema";
+import { orderLineItems, orders, shops, userAccounts, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -135,7 +135,7 @@ describe("one diver's own record export (issue #726)", () => {
     expect(serialize(leadInput)).not.toContain(follower.personName);
   });
 
-  it("withholds medical answers from a signed waiver but keeps every other field", async () => {
+  it("withholds medical answers from a signed waiver, and the scanned medical document that came with an import, but keeps every other field", async () => {
     const { db, shop } = await seededShopContext();
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     const { follower } = await partyOfTwo(shop, db);
@@ -165,6 +165,16 @@ describe("one diver's own record export (issue #726)", () => {
         responses: { "has-asthma-diagnosis-requiring-a-secret-clinic-referral": true },
       },
       recordedByPersonId: owner,
+      // An imported record's re-stored source documents (ADR
+      // 20260724-import-waiver-acceptance). The general document is fine to
+      // hand back — it's the same signed release either way — but the medical
+      // one is a scanned copy of the exact thing medical_answers withholds,
+      // and it is what security review found this test did not yet cover:
+      // it went out through photoUrls even while the JSON column stayed home.
+      importSourceDocumentUrl:
+        "https://blue-mantis.public.blob.vercel-storage.com/waivers/signed-release.pdf",
+      importSourceMedicalDocumentUrl:
+        "https://blue-mantis.public.blob.vercel-storage.com/waivers/medical-questionnaire-scan.pdf",
     });
 
     const input = await loadDiverExportBundleInput(db, shop.id, follower.personId);
@@ -175,13 +185,81 @@ describe("one diver's own record export (issue #726)", () => {
     expect(records.header).not.toContain("medical_answers");
     expect(serialize(input)).not.toContain("secret-clinic-referral");
 
-    // Everything else about the diver's own signature is still there.
+    // The general document is bundled; the medical scan is not — checked
+    // against the photo manifest this loader hands the download route, not
+    // against the CSV, since a URL bundles as a *file* rather than a cell.
+    expect(input.photoUrls).toContain(
+      "https://blue-mantis.public.blob.vercel-storage.com/waivers/signed-release.pdf",
+    );
+    expect(input.photoUrls).not.toContain(
+      "https://blue-mantis.public.blob.vercel-storage.com/waivers/medical-questionnaire-scan.pdf",
+    );
+
+    // Everything else about the diver's own signature is still there,
+    // including the exact wording they signed.
     expect(records.header).toContain("signed_name");
     expect(records.header).toContain("signature_method");
     expect(records.header).toContain("recorded_by_name");
     const row = records.rows.find((candidate) => candidate[records.header.indexOf("id")]);
     expect(row?.[records.header.indexOf("status")]).toBe("completed");
     expect(row?.[records.header.indexOf("recorded_by_name")]).toBeTruthy();
+
+    const templates = input.tables.find((t) => t.file === "waiver_templates.csv");
+    if (!templates) throw new Error("waiver_templates.csv missing");
+    const templateRow = templates.rows.find(
+      (candidate) => candidate[templates.header.indexOf("id")] === template.id,
+    );
+    expect(templateRow?.[templates.header.indexOf("body")]).toBe(template.body);
+  });
+
+  it("drops staff free-text notes from a diver's own orders, keeping the money", async () => {
+    const { db, shop } = await seededShopContext();
+    const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
+    const { lead } = await partyOfTwo(shop, db);
+    // Raw inserts, deliberately: this test is about the export's column
+    // selection, not about the invoicing flow that ordinarily writes these
+    // rows (the same call `refunds.postgres.test.ts` makes for the same
+    // reason).
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: lead.personId,
+        createdByPersonId: owner,
+        bookingId: lead.bookingId,
+        currency: "usd",
+        totalCents: 2_000,
+        description: `Split with ${lead.personName}'s buddy this trip`,
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_test",
+        stripeInvoiceId: `in_${lead.bookingId}`,
+      })
+      .returning();
+    if (!order) throw new Error("order insert returned no row");
+    await db.insert(orderLineItems).values({
+      shopId: shop.id,
+      orderId: order.id,
+      kind: "rental",
+      description: `Rental gear, shared with ${lead.personName}'s buddy this trip`,
+      unitAmountCents: 2_000,
+    });
+
+    const input = await loadDiverExportBundleInput(db, shop.id, lead.personId);
+    if (!input) throw new Error("export failed to load");
+    const ordersTable = input.tables.find((t) => t.file === "orders.csv");
+    const lineItems = input.tables.find((t) => t.file === "order_line_items.csv");
+    if (!ordersTable || !lineItems) throw new Error("orders tables missing");
+
+    expect(ordersTable.header).not.toContain("description");
+    expect(lineItems.header).not.toContain("description");
+    expect(serialize(input)).not.toContain("Split with");
+    expect(serialize(input)).not.toContain("shared with");
+    // The money is still there — only the free text is gone.
+    expect(lineItems.header).toContain("unit_amount_cents");
+    const lineRow = lineItems.rows.find(
+      (candidate) => candidate[lineItems.header.indexOf("order_id")] === order.id,
+    );
+    expect(lineRow?.[lineItems.header.indexOf("unit_amount_cents")]).toBe(2_000);
   });
 
   it("resolves a staff name onto a roll-call event without naming any other diver", async () => {
