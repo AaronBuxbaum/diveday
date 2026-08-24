@@ -27,6 +27,12 @@ export type CrewSectionCopy = {
    * two agency gates above it use.
    */
   underTargetNote: string | null;
+  /**
+   * Pre-rendered, or null when every booked diver who signalled a language
+   * preference is covered by the assigned crew's recorded languages — same
+   * tone and reasoning as `underTargetNote` (issue #708).
+   */
+  languageGapNote: string | null;
   /** No staff exist in the shop at all yet, so there's nobody to assign. */
   noStaff: string;
   /** Staff exist, but nobody is on this trip's crew yet. */
@@ -226,6 +232,11 @@ export function CrewSection({
       {copy.underTargetNote ? (
         <p className="mb-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
           {copy.underTargetNote}
+        </p>
+      ) : null}
+      {copy.languageGapNote ? (
+        <p className="mb-3 rounded-lg bg-surface-sunken px-4 py-3 text-sm text-muted">
+          {copy.languageGapNote}
         </p>
       ) : null}
 

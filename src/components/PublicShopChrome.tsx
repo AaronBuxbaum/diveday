@@ -77,6 +77,7 @@ export function PublicShopHeader({
 
 export function PublicShopFooter({
   shop,
+  spokenLanguagesLine,
   t,
 }: {
   shop: {
@@ -90,6 +91,14 @@ export function PublicShopFooter({
     addressPostalCode: string | null;
     addressCountry: string | null;
   };
+  /**
+   * Pre-formatted, already-joined ("Deutsch, 日本語"), or null when no active
+   * staff member has recorded a language (issue #708). Named in each
+   * language's own endonym, not the reader's locale — the whole point is
+   * that a diver recognises their own language among the shop's, whatever
+   * language the page itself renders in.
+   */
+  spokenLanguagesLine: string | null;
   t: DiverTranslator;
 }) {
   // **Where the shop is** — the first question a visiting diver asks, and the
@@ -136,7 +145,12 @@ export function PublicShopFooter({
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
-        <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
+        <div>
+          <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
+          {spokenLanguagesLine ? (
+            <p>{t("shopChrome.spokenLanguages", { languages: spokenLanguagesLine })}</p>
+          ) : null}
+        </div>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {addressNode}
           {shop.contactPhone ? (

@@ -26,6 +26,7 @@ import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
+import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 
 /**
  * The domain spine. Multi-tenant from day one: every domain table carries
@@ -433,6 +434,28 @@ export const people = pgTable(
      * nothing about what the diver reads.
      */
     locale: text("locale"),
+    /**
+     * Languages this person can hold a conversation in — not what DiveDay
+     * shows *them*, but what a staff member can say to a diver. BCP-47
+     * primary-language tags (`"de"`, `"ja"`, never a free-text sentence like
+     * "conversational German"), a set with no ranking and no proficiency
+     * scale: "we speak German" is the whole claim a badge can honestly make,
+     * and a shop can put nuance in its own words elsewhere (issue #708).
+     *
+     * Staff-only in practice — set from the team settings form — but the
+     * column lives on every `people` row rather than a staff-only table
+     * because `people` already is that unified table (a diver row simply
+     * never has one written to it, the same as `noCertificationDeclaredAt`
+     * only ever being set on a diver's).
+     *
+     * Empty by default and nothing downstream requires it: a shop that never
+     * fills this in sees no badge, no "we speak" line, and no crew-language
+     * signal — the whole feature is additive.
+     */
+    // Typed to the fixed set, not a bare `string[]`, so a future writer that
+    // skips `setStaffLanguages`' own filtering fails to compile rather than
+    // silently storing an arbitrary string (`security-reviewer`, issue #708).
+    spokenLanguages: jsonb("spoken_languages").$type<SpokenLanguageTag[]>().notNull().default([]),
     /**
      * Set once this person self-serves out of courtesy email — wait-list
      * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two

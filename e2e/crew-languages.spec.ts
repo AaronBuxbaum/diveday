@@ -1,0 +1,51 @@
+import { expect, test } from "./fixtures";
+
+/**
+ * Issue #708 — recording which languages a staff member speaks, and the
+ * public payoff: a shop's own "we speak …" line, shown where a diver
+ * chooses a shop rather than only after booking.
+ *
+ * Recording a language is shop-wide staff configuration, the same shape
+ * disabling an account is — not restored by the shared `demoReset` fixture
+ * — so this takes a private shop of its own (ADR 20260815-per-test-private-shops).
+ */
+test("an owner records a captain's languages, and the public schedule says so", async ({
+  page,
+  privateShop,
+}) => {
+  test.setTimeout(30_000);
+
+  await page.goto(`/shop/${privateShop.slug}/settings/team`);
+  const captainCard = page.locator("li").filter({ hasText: "Sal Moretti" });
+  // Each option is named in the *staffer's own reading language* here
+  // ("German", "Japanese") — unlike the public badge below, which uses each
+  // language's own endonym. A Spanish-reading staffer would see "alemán",
+  // not "Deutsch"; this session reads English.
+  await captainCard.getByLabel("German").check();
+  await captainCard.getByLabel("Japanese").check();
+  await captainCard.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Languages saved.")).toBeVisible();
+
+  // The checkboxes stayed checked across the round trip — not just a
+  // confirmation banner with nothing actually stored.
+  await page.reload();
+  const reloadedCard = page.locator("li").filter({ hasText: "Sal Moretti" });
+  await expect(reloadedCard.getByLabel("German")).toBeChecked();
+  await expect(reloadedCard.getByLabel("Japanese")).toBeChecked();
+
+  // Every language recorded by any active staff member, not only Sal's —
+  // and named in each language's own endonym on the public page, which
+  // renders in whatever locale the visitor negotiated. The join order isn't
+  // semantically meaningful (it's a set), so this checks both names appear
+  // rather than pinning a specific order.
+  await page.goto(`/s/${privateShop.slug}`);
+  const spokenLanguagesLine = page.getByText(/We speak/);
+  await expect(spokenLanguagesLine).toBeVisible();
+  await expect(spokenLanguagesLine).toContainText("Deutsch");
+  await expect(spokenLanguagesLine).toContainText("日本語");
+});
+
+test("a shop with no recorded languages shows no line at all", async ({ page, privateShop }) => {
+  await page.goto(`/s/${privateShop.slug}`);
+  await expect(page.getByText(/We speak/)).toHaveCount(0);
+});

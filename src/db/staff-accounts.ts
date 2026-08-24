@@ -3,6 +3,7 @@ import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
+import { isSpokenLanguageTag } from "@/lib/spoken-languages";
 import type { AppDb, DbExecutor } from "./client";
 import { accountSessions, people, personRoles, pushSubscriptions, userAccounts } from "./schema";
 
@@ -26,7 +27,33 @@ export type StaffMember = {
    */
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  /** BCP-47 tags this person can hold a conversation in (issue #708). Empty until a shop records one. */
+  spokenLanguages: string[];
 };
+
+/**
+ * Every language *any* active staff member has recorded speaking, deduplicated
+ * — the shop-wide "we speak …" line (issue #708), shown on the public
+ * schedule so a diver sees it before booking, not only on a trip's crew list
+ * afterward. Safe to call from a public page: it names no one, only the set
+ * of languages the shop can point to somewhere among its team.
+ */
+export async function listShopSpokenLanguages(db: DbExecutor, shopId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ language: sql<string>`jsonb_array_elements_text(${people.spokenLanguages})` })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        eq(userAccounts.status, "active"),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    );
+  return rows.map((row) => row.language);
+}
 
 /** Every non-deleted person in the shop holding at least one staff role, name-sorted. */
 export async function listShopStaff(db: DbExecutor, shopId: string): Promise<StaffMember[]> {
@@ -37,6 +64,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       email: people.email,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
+      spokenLanguages: people.spokenLanguages,
       role: personRoles.role,
       userAccountId: userAccounts.id,
       accountStatus: userAccounts.status,
@@ -69,6 +97,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       accountStatus: row.accountStatus,
       emergencyContactName: row.emergencyContactName,
       emergencyContactPhone: row.emergencyContactPhone,
+      spokenLanguages: row.spokenLanguages,
     });
   }
   return [...byPerson.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -133,6 +162,45 @@ export async function setStaffEmergencyContact(
     .returning({ id: people.id });
 
   return updated.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
+}
+
+/**
+ * Set (or clear) the languages one staff member speaks (issue #708) — the
+ * same scoping `setStaffEmergencyContact` above uses, and the same reason:
+ * this cannot be pointed at an arbitrary `people` row, only the team page's
+ * own staff subjects.
+ *
+ * Filters to `COMMON_SPOKEN_LANGUAGES` rather than trusting the submitted
+ * list outright: the form only ever offers that set, so anything else can
+ * only be a stale or tampered request, and this is the one place that
+ * decides what "a language tag" means for the column.
+ */
+export async function setStaffLanguages(
+  db: DbExecutor,
+  { shopId, personId, languages }: { shopId: string; personId: string; languages: string[] },
+): Promise<boolean> {
+  const spokenLanguages = [
+    ...new Set(languages.filter((language) => isSpokenLanguageTag(language))),
+  ];
+  const updated = await db
+    .update(people)
+    .set({ spokenLanguages })
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        inArray(
+          people.id,
+          db
+            .select({ id: personRoles.personId })
+            .from(personRoles)
+            .where(inArray(personRoles.role, [...STAFF_ROLES])),
+        ),
+      ),
+    )
+    .returning({ id: people.id });
+  return updated.length > 0;
 }
 
 /** Case-insensitive, mirrors `people_shop_email_unique` (schema.ts). */
