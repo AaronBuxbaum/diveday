@@ -13,7 +13,7 @@ import {
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { isWaiverCode } from "@/lib/today";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
+import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
 import {

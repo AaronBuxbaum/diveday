@@ -22,10 +22,9 @@ import { personNamesMatch } from "@/lib/person-name";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
+import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
-  createWaiverToken,
   DEFAULT_WAIVER_TITLE,
-  hashWaiverToken,
   isCompletedWaiverCurrent,
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,

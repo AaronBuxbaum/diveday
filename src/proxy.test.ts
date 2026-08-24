@@ -64,7 +64,13 @@ describe("proxy embed handling", () => {
     const res = await run(request("/s/blue-mantis?embed=1"));
     expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
     expect(res.headers.get("X-Frame-Options")).toBeNull();
-    expect(res.headers.get("Content-Security-Policy")).toBeNull();
+    // The framing exception is about `frame-ancestors` and nothing else. An
+    // embedded page is still a page of this app, so it keeps the rest of the
+    // policy — this assertion used to read `toBeNull()`, which was true only
+    // while `frame-ancestors` WAS the entire CSP (issue #718).
+    const csp = res.headers.get("Content-Security-Policy") ?? "";
+    expect(csp).not.toContain("frame-ancestors");
+    expect(csp).toContain("object-src 'none'");
   });
 
   it("does not grant embed on a repeated ?embed=1&embed=0 — the page and the proxy must agree", async () => {
