@@ -1029,13 +1029,22 @@ export async function refundOrder(
     status: "refunded",
     reverseCents: reversedCents,
   });
-  await resolvePaymentOperation(db, intent.id, {
-    status: "succeeded",
-  });
-  // Stripe reversed the charge; only the local write after it can have failed.
-  // `failed` is the honest answer for staff (retry, then reconcile) — the
-  // intent above carries the Stripe refund id for exactly that.
-  return updated ? { status: "refunded", order: updated } : { status: "failed" };
+  // **Resolved only once the local write lands.** Marking the intent
+  // `succeeded` before checking `updated` left a hole in the very guard above:
+  // `claimOrderRefund` matches a stalled attempt by `status = "started"` **and**
+  // a non-null `stripe_object_id`, and a resolved intent matches neither. So a
+  // null return here — Stripe reversed the money, the local write failed — used
+  // to close the intent, and the next attempt claimed cleanly, minted a fresh
+  // idempotency key, and sent a *second real reversal*. Left `started`, the
+  // intent keeps its refund id and the next attempt gets `needs_reconciliation`
+  // instead. A thrown error already behaved this way; only the null path
+  // escaped (CodeRabbit review on PR #949).
+  //
+  // `failed` stays the honest answer for staff — but the door they come back
+  // through is reconciliation now, not another payout.
+  if (!updated) return { status: "failed" };
+  await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
+  return { status: "refunded", order: updated };
 }
 
 export type ResendInvoiceOutcome =
@@ -1083,9 +1092,23 @@ export async function refreshOrderStatus(
   if (!order) return null;
   const result = await invoicing.retrieveInvoice(order.stripeAccountId, order.stripeInvoiceId);
   if (result.status !== "ok") return null;
+  // **A refunded order refreshes its links and nothing else.** Stripe leaves an
+  // invoice `paid` after a refund — the reversal attaches to the payment intent,
+  // not the invoice, and `paid` there is terminal. So this read answers `paid`
+  // for an order we know is `partly_refunded` or `refunded`, and two things
+  // follow. The status is a transition `ALLOWED_ORDER_TRANSITIONS` refuses, so
+  // pressing "Refresh status" logged an illegal-transition error and silently
+  // dropped the URL updates it was pressed for. And `invoice.amount_paid` is
+  // still the *full* figure, so honouring it would overwrite the balance the
+  // refund correctly reduced.
+  //
+  // Both are avoided by not asking: keep the local status and balance, take
+  // only the hosted links, which are the one thing Stripe is still authoritative
+  // about here (CodeRabbit review on PR #949).
+  const refundState = order.status === "partly_refunded" || order.status === "refunded";
   return applyOrderUpdate(db, order, {
-    status: mapStripeStatus(result.invoice.status),
-    amountPaidCents: result.invoice.amountPaidCents,
+    status: refundState ? order.status : mapStripeStatus(result.invoice.status),
+    ...(refundState ? {} : { amountPaidCents: result.invoice.amountPaidCents }),
     hostedInvoiceUrl: result.invoice.hostedInvoiceUrl,
     invoicePdfUrl: result.invoice.invoicePdfUrl,
   });

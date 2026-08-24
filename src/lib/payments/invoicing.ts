@@ -177,7 +177,19 @@ function paidPaymentIntentId(invoice: z.infer<typeof invoiceResponseSchema>): st
   return legacy?.id ?? null;
 }
 
-const refundResponseSchema = z.object({ id: z.string().min(1), amount: z.number().optional() });
+// `amount` is a non-negative **integer** count of minor units, matching every
+// other amount this file parses. It is not pedantry: `refundOrder` hands this
+// figure to `applyOrderUpdate` as the `reverseCents` delta, and a bare
+// `z.number()` accepts a negative one — which subtracts through the clamp,
+// *raising* `amount_paid_cents` above what the order ever held and *lowering*
+// `refunded_cents`. A fractional one writes a non-integer into an integer
+// column. Refusing it here means a malformed provider response fails the parse
+// and lands on `failed`, where a caller can see it, rather than silently
+// corrupting the ledger (CodeRabbit review on PR #949).
+const refundResponseSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().int().nonnegative().optional(),
+});
 
 function headersFor(secretKey: string, stripeAccountId: string): Record<string, string> {
   return {

@@ -425,6 +425,28 @@ describe("invoicing provider against real Invoice payloads", () => {
       expect(fullForm.get("amount")).toBeNull();
     });
 
+    it("refuses a refund amount that is not a whole, non-negative count of minor units", async () => {
+      // `amountCents` becomes the `reverseCents` delta the ledger applies, so a
+      // negative one subtracts through the clamp — *raising* `amount_paid_cents`
+      // above what the order ever held and *lowering* `refunded_cents` — and a
+      // fractional one writes a non-integer into an integer column. Failing the
+      // parse puts a malformed response on `failed`, where a caller can see it
+      // (CodeRabbit review on PR #949).
+      const invoice = stripeObjectFixture("invoice.paid");
+      const refund = stripeObjectFixture("refund");
+      for (const amount of [-5_000, 12.5]) {
+        const fetchImpl = fetchReturning({ body: invoice }, { body: { ...refund, amount } });
+        expect(
+          await invoicingProviderFromEnvironment(ENV, fetchImpl).refundInvoice(
+            "acct_1Nv0FGQ9RKHgCVdK",
+            "in_1QsAVe",
+            `intent-refund-${amount}`,
+            5_000,
+          ),
+        ).toEqual({ status: "failed" });
+      }
+    });
+
     it("never asks Stripe to expand the field it no longer has", async () => {
       // Stripe answers 400 `parameter_unknown` for `expand[]=payment_intent`
       // rather than ignoring it, so sending that parameter did not merely

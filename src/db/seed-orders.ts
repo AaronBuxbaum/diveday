@@ -278,7 +278,13 @@ export async function seedOrders(
         status: plan.status,
         currency: "usd",
         totalCents: plan.totalCents,
-        amountPaidCents: plan.paidCents,
+        // Zero once it is all back, because that is the invariant `refundOrder`
+        // maintains and the order tests assert: a fully refunded order holds
+        // nothing. The seed was writing the original figure, which the new
+        // "Refunded / Still held" pair on the detail page rendered literally —
+        // a fully refunded order claiming to be sitting on the money it had
+        // just returned (CodeRabbit review on PR #949).
+        amountPaidCents: plan.status === "refunded" ? 0 : plan.paidCents,
         refundedCents: plan.refundedCents ?? (plan.status === "refunded" ? plan.totalCents : 0),
         description: plan.description,
         stripeAccountId: "acct_demo",

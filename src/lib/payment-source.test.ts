@@ -30,6 +30,11 @@ describe("paymentSourceLine", () => {
   it("names Stripe when a card was taken online", () => {
     expect(paymentSourceLine("paid", "stripe")).toBe("Paid online · Stripe");
     expect(paymentSourceLine("deposit_paid", "stripe")).toBe("Paid online · Stripe");
+    // Still holding the rest, so how it was taken is exactly what a staffer
+    // deciding whether to send the remainder back needs to know. Pinned here
+    // as well as on the predicate, since this line is what the roster renders.
+    expect(paymentSourceLine("partly_refunded", "stripe")).toBe("Paid online · Stripe");
+    expect(paymentSourceLine("partly_refunded", null)).toBe("Marked paid at the counter");
   });
 
   it("names the counter when staff marked it paid manually", () => {

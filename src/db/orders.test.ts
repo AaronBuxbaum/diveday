@@ -1614,6 +1614,39 @@ describe("orders — a partial refund", () => {
     });
   });
 
+  it("refreshes a part-refunded order's links without undoing the refund", async () => {
+    // Stripe leaves the invoice `paid` and its `amount_paid` at the full figure
+    // after a refund, so a refresh used to log an illegal transition and drop
+    // the URLs it was pressed for (CodeRabbit review on #949).
+    const { db, shop, order } = await paidOrder();
+    await refundOrder(db, shop.id, order.id, fakeInvoicing(), { amountCents: 5_000 });
+    const stripeSaysPaid = fakeInvoicing({
+      async retrieveInvoice(): Promise<InvoiceLookupResult> {
+        return {
+          status: "ok",
+          invoice: {
+            status: "paid",
+            totalCents: 22_000,
+            amountPaidCents: 22_000,
+            hostedInvoiceUrl: "https://stripe.test/refreshed",
+            invoicePdfUrl: "https://stripe.test/refreshed.pdf",
+          },
+        };
+      },
+    });
+
+    const refreshed = await refreshOrderStatus(db, shop.id, order.id, stripeSaysPaid);
+
+    // The links arrive; the refund is untouched.
+    expect(refreshed).toMatchObject({
+      status: "partly_refunded",
+      amountPaidCents: 17_000,
+      refundedCents: 5_000,
+      hostedInvoiceUrl: "https://stripe.test/refreshed",
+      invoicePdfUrl: "https://stripe.test/refreshed.pdf",
+    });
+  });
+
   it("passes the amount to Stripe, and passes nothing at all for a full refund", async () => {
     const seen: (number | undefined)[] = [];
     const watching = () =>
