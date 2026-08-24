@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
-import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import { createTrip } from "@/db/trips";
+import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -16,7 +16,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 // See the sync route's test for why `auth` is mocked bare instead of via
 // importOriginal (ADR 20260719-msw-offline-sync-only).
-vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<Session | null>>() }));
+vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 // `requestLocale` reads `next/headers`' `headers()`, which only resolves
 // inside a real Next request scope — absent here since the route is invoked
 // directly. An empty header set negotiates down to the shop's default
@@ -25,7 +25,7 @@ vi.mock("next/headers", () => nextHeadersStub());
 
 const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
-  auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
+  auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
 const { GET } = await import("./route");
@@ -33,16 +33,16 @@ const { GET } = await import("./route");
 const staffSession = (
   shopId: string,
   personId: string,
-  roles: Session["user"]["roles"] = ["owner"],
-): Session => ({
+  roles: DiveDaySession["user"]["roles"] = ["owner"],
+): DiveDaySession => ({
   user: {
     personId,
     shopId,
     shopSlug: "blue-mantis",
     name: "Dana Reyes",
+    email: "staff@demo.invalid",
     roles,
   },
-  expires: new Date(Date.now() + 60_000).toISOString(),
 });
 
 /**
@@ -116,9 +116,15 @@ describe("GET /api/offline-manifests/upcoming", () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue({
-      user: { personId: "diver-1", shopId: shop.id, shopSlug: "blue-mantis", roles: ["diver"] },
-      expires: new Date(Date.now() + 60_000).toISOString(),
-    } as Session);
+      user: {
+        personId: "diver-1",
+        shopId: shop.id,
+        shopSlug: "blue-mantis",
+        name: "Test Diver",
+        email: "diver@example.com",
+        roles: ["diver"],
+      },
+    } as DiveDaySession);
 
     const response = await GET();
     expect(response.status).toBe(401);

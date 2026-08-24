@@ -1,5 +1,5 @@
 import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
-import { authSecret } from "./auth.config";
+import { authSecret } from "./auth-secret";
 import {
   decodeTripAdmissionRefusal,
   encodeTripAdmissionRefusal,
@@ -78,7 +78,7 @@ const SIGNATURE_SEPARATOR = ".";
 
 function gateSecret(): string {
   // In production Auth.js refuses to boot without AUTH_SECRET; this is only
-  // ever null in dev/e2e, where auth.config.ts supplies a fixed fallback. Fail
+  // ever null in dev/e2e, where auth-secret.ts supplies a fixed fallback. Fail
   // loud rather than sign with an empty key.
   if (!authSecret) throw new Error("AUTH_SECRET is required to sign trip-admission gates.");
   const derived = hkdfSync("sha256", authSecret, "", "diveday-trip-admission-gate", 32);

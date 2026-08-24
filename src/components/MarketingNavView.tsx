@@ -15,11 +15,11 @@ const navLinkClassName =
  * value: the signed-in staffer's shop slug, or null.
  *
  * It lives apart from `MarketingNav` so it can be rendered in a unit test.
- * Its sibling reads `auth()`, which drags `next-auth` (and `next/server`) into
+ * Its sibling reads `auth()`, which drags `better-auth` (and `next/server`) into
  * whatever imports it — unloadable under jsdom — so a test of "what does the
  * CTA slot say" could not reach the markup at all while the two shared a file.
  * `demoAction` (`enterDemoAction` from `@/app/actions/demo`) is a prop for the
- * same reason: that module imports `next-auth` too, so `MarketingNav` passes
+ * same reason: that module imports `better-auth` too, so `MarketingNav` passes
  * the function down rather than this file importing it directly.
  */
 export function MarketingNavView({

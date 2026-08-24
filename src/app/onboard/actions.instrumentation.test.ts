@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { seededTestDb } from "@/test/db";
+import { nextHeadersStub } from "@/test/next-headers";
 
 /**
  * **The trial half of the marketing funnel: the event, and the founder's
@@ -31,8 +32,12 @@ vi.mock("next/server", () => ({
     hoisted.afterTasks.push(Promise.resolve().then(task));
   }),
 }));
-vi.mock("next-auth", () => ({ AuthError: class AuthError extends Error {} }));
-vi.mock("@/lib/auth", () => ({ signIn: vi.fn() }));
+vi.mock("next/headers", () => nextHeadersStub());
+vi.mock("@/lib/auth", () => ({
+  getAuth: vi.fn(async () => ({
+    api: { signInDiveDayCredentials: vi.fn(async () => ({})) },
+  })),
+}));
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -51,7 +56,6 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { trackEvent } = await import("@/lib/analytics");
 const { sendNotification } = await import("@/db/notifications");
-const { signIn } = await import("@/lib/auth");
 const { onboardAction } = await import("./actions");
 
 function onboardForm(overrides: Record<string, string> = {}): FormData {
@@ -117,10 +121,6 @@ beforeEach(() => {
   vi.mocked(trackEvent).mockResolvedValue(undefined);
   vi.mocked(sendNotification).mockReset();
   vi.mocked(sendNotification).mockResolvedValue({ status: "sent", providerMessageId: "m1" });
-  // Auth.js signals a successful credentials sign-in by throwing its redirect.
-  vi.mocked(signIn).mockImplementation(async (_provider, options) => {
-    throw new Error(`REDIRECT:${(options as { redirectTo: string }).redirectTo}`);
-  });
 });
 
 afterEach(() => {

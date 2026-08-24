@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { seededShopContext } from "@/test/db";
+import { nextHeadersStub } from "@/test/next-headers";
 
 /**
  * **`switchDemoRoleAction` takes a role string from an unauthenticated caller.**
@@ -14,20 +16,32 @@ import { seededShopContext } from "@/test/db";
  * `"crew'; --"` and prove nothing.
  */
 
+const hoisted = vi.hoisted(() => ({
+  signInDiveDayCredentials: vi.fn(async () => ({})),
+  signOut: vi.fn(async () => ({})),
+}));
+
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("next-auth", () => ({ AuthError: class AuthError extends Error {} }));
-vi.mock("@/lib/auth", () => ({ auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }));
+vi.mock("next/headers", () => nextHeadersStub());
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn(),
+  getAuth: vi.fn(async () => ({
+    api: {
+      signInDiveDayCredentials: hoisted.signInDiveDayCredentials,
+      signOut: hoisted.signOut,
+    },
+  })),
+}));
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
-const { signIn } = await import("@/lib/auth");
 const { switchDemoRoleAction } = await import("./demo");
 
 /** Where the action sent the caller, or the error it failed with instead. */
@@ -45,7 +59,7 @@ async function landing(role: string): Promise<string> {
 beforeEach(async () => {
   const { db } = await seededShopContext();
   vi.mocked(getDb).mockResolvedValue(db);
-  vi.mocked(signIn).mockReset();
+  hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});
 });
 
 describe("switchDemoRoleAction", () => {
@@ -57,15 +71,15 @@ describe("switchDemoRoleAction", () => {
     ["constructor", "a prototype-walking value"],
   ])("refuses %s (%s) back to the shop rather than 500ing", async (role) => {
     expect(await landing(role)).toBe("/shop/blue-mantis");
-    expect(signIn).not.toHaveBeenCalled();
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
   });
 
   it("still switches to a role the shop actually staffs", async () => {
-    vi.mocked(signIn).mockRejectedValue(new Error("REDIRECT:/shop/blue-mantis"));
     await expect(landing("instructor")).resolves.toBe("/shop/blue-mantis");
-    expect(signIn).toHaveBeenCalledWith(
-      "credentials",
-      expect.objectContaining({ redirectTo: "/shop/blue-mantis" }),
+    expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ password: DEMO_BYPASS_PASSWORD }),
+      }),
     );
   });
 });

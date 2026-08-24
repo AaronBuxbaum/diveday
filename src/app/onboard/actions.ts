@@ -1,9 +1,10 @@
 "use server";
 
+import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { AuthError } from "next-auth";
 import { issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
@@ -11,7 +12,7 @@ import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/
 import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { trackEvent } from "@/lib/analytics";
-import { signIn } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
@@ -288,15 +289,16 @@ export async function onboardAction(formData: FormData) {
 
   // 3. Sign in the new owner and redirect to dashboard
   try {
-    await signIn("credentials", {
-      email: ownerEmail.toLowerCase(),
-      password: ownerPassword,
-      redirectTo: `/shop/${shopSlug}`,
+    const auth = await getAuth();
+    await auth.api.signInDiveDayCredentials({
+      body: { email: ownerEmail.toLowerCase(), password: ownerPassword },
+      headers: await headers(),
     });
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof APIError) {
       backToForm("signin_failed");
     }
-    throw error; // Propagate NEXT_REDIRECT
+    throw error;
   }
+  redirect(`/shop/${shopSlug}`);
 }

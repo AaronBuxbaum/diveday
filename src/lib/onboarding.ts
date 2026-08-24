@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isValidTimeZone } from "./format";
 
 /**
- * Framework-free so it can be unit-tested without pulling in next-auth (which
+ * Framework-free so it can be unit-tested without pulling in better-auth (which
  * needs a Next.js server runtime). `src/app/onboard/actions.ts`,
  * `src/app/invite/[token]/actions.ts`, and
  * `src/app/reset-password/[token]/actions.ts` all set a new password against

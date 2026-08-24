@@ -21,8 +21,8 @@
   },
   // Only the worker's own sources. TypeScript follows its imports from here, so
   // the store and its transitive deps are checked in this lib context without
-  // dragging in every unrelated module under src/lib — auth config included,
-  // whose next-auth type augmentation does not exist in a worker context.
+  // dragging in every unrelated module under src/lib — the DB-backed auth
+  // module included, which has no business resolving in a worker context.
   "include": ["./**/*.ts"],
   // The root config excludes `src/worker` (so its DOM libs never see this
   // file); inheriting that exclude here would leave this config with no inputs

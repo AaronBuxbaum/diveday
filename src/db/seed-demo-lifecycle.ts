@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
+  accountSessions,
   accountTokens,
   activityEvents,
   boats,
@@ -263,6 +264,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
   await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));
   await db.delete(shopWhatsappAccounts).where(eq(shopWhatsappAccounts.shopId, shopId));
+  // References user_accounts/people/shops, all of which go below — a live
+  // sign-in session for this shop's own staff must not survive the shop it
+  // belonged to.
+  await db.delete(accountSessions).where(eq(accountSessions.shopId, shopId));
 
   if (personIds.length > 0) {
     // Account tokens reference user_accounts, one layer further down the same

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { personRoles, userAccounts } from "@/db/schema";
+import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
@@ -46,13 +47,7 @@ const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
 const { requireShopSurface, requireStaffSession } = await import("./session");
 
-/**
- * NextAuth's `auth` is overloaded (route handler, middleware, and the
- * no-argument session reader). Only the last overload is ever called here, and
- * `vi.mocked` resolves against the first — so the mock is narrowed to the
- * signature under test rather than each call site being cast.
- */
-const authMock = vi.mocked(auth as unknown as () => Promise<unknown>);
+const authMock = vi.mocked(auth);
 
 type Context = Awaited<ReturnType<typeof seededShopContext>>;
 
@@ -64,7 +59,7 @@ beforeEach(async () => {
   vi.mocked(getDb).mockResolvedValue(context.db);
 });
 
-function signIn(input: { shopId?: string; personId: string; roles?: string[] }) {
+function signIn(input: { shopId?: string; personId: string; roles?: Role[] }) {
   authMock.mockResolvedValue({
     user: {
       personId: input.personId,
@@ -72,8 +67,8 @@ function signIn(input: { shopId?: string; personId: string; roles?: string[] }) 
       shopSlug: context.shop.slug,
       roles: input.roles ?? ["captain"],
       name: "Seeded staff",
+      email: "seeded-staff@demo.invalid",
     },
-    expires: "2099-01-01T00:00:00.000Z",
   });
 }
 
@@ -133,10 +128,10 @@ describe("requireStaffSession", () => {
 
     const error = await refusal(() => requireStaffSession());
     expect(error).toBeInstanceOf(RedirectError);
-    // Distinct from a plain `/sign-in`: the edge `authorized()` callback
-    // (src/lib/auth.config.ts) reads this exact param to stop bouncing the
-    // request straight back to `/shop/<slug>` off the same stale JWT, which
-    // would otherwise loop forever between the two layers.
+    // Distinct from a plain `/sign-in`: the edge gate (src/proxy.ts,
+    // `authGateResponse`) reads this exact param to stop bouncing the
+    // request straight back to `/shop/<slug>` off a still-warm cookie
+    // cache, which would otherwise loop forever between the two layers.
     expect(error.message).toBe("/sign-in?session=ended");
   });
 
