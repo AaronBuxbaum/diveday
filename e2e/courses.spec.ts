@@ -164,7 +164,12 @@ test.describe("staff", () => {
         name: "Next",
       });
       if ((await next.count()) === 0) break;
-      await next.click();
+      // Read the server-rendered destination before navigating. A client-side
+      // click can leave the old pager in the DOM during the RSC transition,
+      // making the next iteration race a disappearing link on a long catalog.
+      const href = await next.getAttribute("href");
+      if (!href) break;
+      await page.goto(href);
     }
     const at = (title: string) => rows.findIndex((row) => row.trimStart().startsWith(title));
     expect(at("Discover Scuba Diving")).toBeGreaterThanOrEqual(0);
