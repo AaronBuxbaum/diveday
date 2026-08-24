@@ -2216,6 +2216,14 @@
         "item7": "Predicciones de la tripulación y un pronóstico marino automático",
         "item8": "Un registro de llegada en el mostrador para la hora punta"
       },
+      "gear": {
+        "title": "Tu flota de alquiler",
+        "item1": "Un registro de tus propias unidades: etiqueta, tipo, talla, número de serie y estado",
+        "item2": "Reservas por plaza que nunca asignan la misma unidad a dos buceadores",
+        "item3": "Entregas y devoluciones con sello de hora, y una lista de lo que vuelve hoy",
+        "item4": "Plazos de mantenimiento — servicio, hidrostática, visual y limpieza de O2 — por fecha o por inmersiones",
+        "item5": "Un comprobante de alquiler imprimible: qué lleva el buceador y cuándo lo devuelve"
+      },
       "money": {
         "title": "Dinero",
         "item1": "Pagos con tarjeta a través de la cuenta de Stripe del centro",
@@ -2349,7 +2357,7 @@
           },
           "serviceHistory": {
             "what": "Historial de mantenimiento de equipo",
-            "detail": "Se queda fuera — DiveDay guarda tallas de alquiler, no el historial de mantenimiento de un equipo concreto."
+            "detail": "Se queda fuera — el importador trae fichas de buceadores, nunca el registro de equipo de otro sistema. Los plazos de mantenimiento de tu flota empiezan de cero en el registro de equipo."
           },
           "diverNotes": {
             "what": "Notas internas y del buceador",
@@ -2645,7 +2653,7 @@
         },
         "notEverything": {
           "title": "No lo hace todo.",
-          "body": "Sin caja registradora, sin sincronización con agencias, sin inventario de equipo. Son trabajos para las herramientas en las que tu centro ya confía, mientras DiveDay mantiene enfocado el lado del agua."
+          "body": "Sin caja registradora y sin sincronización con agencias. Son trabajos para las herramientas en las que tu centro ya confía, mientras DiveDay mantiene enfocado el lado del agua."
         },
         "stillMoving": {
           "title": "Todavía está en marcha.",

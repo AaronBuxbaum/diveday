@@ -187,6 +187,21 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
     ],
   },
   {
+    // The gear register is opt-in by presence (ADR 20260815-minimal-gear-register):
+    // a shop with zero `gear_items` rows sees none of this. It is listed anyway
+    // because the seeded demo fleet makes every line here walkable today, and the
+    // absence of item tracking is what competitive-analysis.md names as the
+    // disqualifier for a gear-heavy shop.
+    title: "marketing.capabilities.gear.title",
+    items: [
+      "marketing.capabilities.gear.item1",
+      "marketing.capabilities.gear.item2",
+      "marketing.capabilities.gear.item3",
+      "marketing.capabilities.gear.item4",
+      "marketing.capabilities.gear.item5",
+    ],
+  },
+  {
     title: "marketing.capabilities.money.title",
     items: [
       "marketing.capabilities.money.item1",
