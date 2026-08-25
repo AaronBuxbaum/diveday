@@ -10,6 +10,7 @@ import {
   canManageShopSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
+  canMergeDiver,
   canOverrideGearRequest,
   canRefund,
   type Role,
@@ -141,6 +142,10 @@ export const canPersonManageShopSettings = (db: DbExecutor, shopId: string, pers
 
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);
+
+/** Live DB-checked companion of the explicit diver-record merge gate. */
+export const canPersonMergeDiver = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canMergeDiver);
 
 /**
  * Live DB-checked companion of the owner-only erasure gate

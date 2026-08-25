@@ -6,6 +6,7 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -169,9 +170,10 @@ function ActionRow({
             className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary sm:pt-0.5"
           >
             {action.actionLabel}
-            <span className="inline-block transition-transform group-hover/row:translate-x-0.5">
-              ›
-            </span>
+            <DiveDayIcon
+              name="chevron-right"
+              className="size-4 transition-transform group-hover/row:translate-x-0.5"
+            />
           </span>
         </>
       )}

@@ -8,6 +8,7 @@ import { DateRequestForm } from "@/components/DateRequestForm";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews } from "@/components/ShopReviews";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -438,7 +439,7 @@ export default async function SchedulePage({
                 className: "min-w-11 text-base",
               })}
             >
-              <span aria-hidden="true">‹</span>
+              <DiveDayIcon name="chevron-left" className="size-4" />
             </Link>
           ) : null}
           {nextMonthKey ? (
@@ -452,7 +453,7 @@ export default async function SchedulePage({
                 className: "min-w-11 text-base",
               })}
             >
-              <span aria-hidden="true">›</span>
+              <DiveDayIcon name="chevron-right" className="size-4" />
             </Link>
           ) : null}
         </section>
@@ -486,7 +487,11 @@ export default async function SchedulePage({
       {!hasUpcoming ? (
         <EmptyState
           title={t("schedule.noTrips")}
-          body={t(shop.contactPhone ? "schedule.noTripsPublic" : "schedule.noTripsPublicNoPhone")}
+          body={t(
+            shop.contactPhone || shop.contactEmail
+              ? "schedule.noTripsPublic"
+              : "schedule.noTripsPublicNoPhone",
+          )}
         />
       ) : upcoming.length === 0 ? (
         <EmptyState
@@ -701,12 +706,10 @@ export default async function SchedulePage({
                       ) : (
                         <p className="text-sm text-muted tabular-nums">{capacityText}</p>
                       )}
-                      <span
-                        aria-hidden="true"
-                        className="text-muted transition-transform group-hover:translate-x-0.5"
-                      >
-                        ›
-                      </span>
+                      <DiveDayIcon
+                        name="chevron-right"
+                        className="size-4 text-muted transition-transform group-hover:translate-x-0.5"
+                      />
                     </div>
                   </div>
                 </li>

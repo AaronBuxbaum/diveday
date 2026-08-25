@@ -238,8 +238,6 @@ async function TodayBody({
   // role switcher banner, and a dismissal there would be meaningless (every
   // demo visit signs in as a fresh, credential-shared session).
   const orientationRole = shop.isDemo ? null : orientationRoleFor(session.user.roles);
-  const showOrientation =
-    orientationRole !== null && !(await isOrientationDismissed(db, session.user.personId));
   async function dismissOrientationAction() {
     "use server";
     const staff = await requireStaffSession();
@@ -272,6 +270,20 @@ async function TodayBody({
   const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
     ? await Promise.all([listDiveSites(db, shop.id), getShopStripeAccount(db, shop.id)])
     : [null, null];
+  // A first-run shop gets one quiet progress fact, derived from persisted
+  // records. The trip and public-link rows are guided actions, not completion
+  // states, so they are intentionally excluded from the progress total.
+  const firstRunDoneCount = [
+    Boolean(shop.contactEmail || shop.contactPhone),
+    Boolean(shop.tagline || shop.description || shop.logoUrl),
+    Boolean(shop.unitsConfirmedAt),
+    Boolean(firstRunDiveSites?.length),
+    canAcceptPayments(firstRunStripeAccount),
+  ].filter(Boolean).length;
+  const showOrientation =
+    orientationRole !== null &&
+    !showFirstRunChecklist &&
+    !(await isOrientationDismissed(db, session.user.personId));
   // The first departure ever landing on the board is the moment this shop
   // became bookable — and the moment the checklist above (which carried the
   // public-schedule link) leaves the page. Exactly then, the created notice
@@ -620,6 +632,10 @@ async function TodayBody({
           copy={{
             heading: t("shopHome.firstRun.heading"),
             subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
+            progress: t("shopHome.firstRun.progress", {
+              done: firstRunDoneCount,
+              total: FIRST_RUN_STEP_COUNT,
+            }),
             contactTitle: t("shopHome.firstRun.contactTitle"),
             contactBody: t("shopHome.firstRun.contactBody"),
             contactAction: t("shopHome.firstRun.contactAction"),

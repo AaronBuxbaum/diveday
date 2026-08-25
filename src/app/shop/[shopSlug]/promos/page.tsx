@@ -343,11 +343,9 @@ export default async function PromosPage({
           title={t("promos.empty.heading")}
           body={t("promos.empty.detail")}
           action={
-            <>
-              <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
-                {t("promos.empty.action")}
-              </a>
-            </>
+            <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
+              {t("promos.empty.action")}
+            </a>
           }
         />
       ) : (
@@ -486,14 +484,12 @@ export default async function PromosPage({
         <EmptyState
           title={t("promos.tripDeals.empty")}
           action={
-            <>
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-              >
-                {t("promos.tripDeals.emptyAction")}
-              </Link>
-            </>
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("promos.tripDeals.emptyAction")}
+            </Link>
           }
           className="mt-3"
         />

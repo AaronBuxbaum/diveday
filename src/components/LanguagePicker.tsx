@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { useExitAnimation } from "@/components/useExitAnimation";
 
 export type LanguagePickerCopy = {
@@ -90,29 +91,15 @@ export function LanguagePicker({
         {/* The globe is the half of this control that needs no language at
             all — the reader most likely to reach for it is the one who cannot
             read the label beside it. */}
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.75}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-4 shrink-0"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M3 12h18" />
-          <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" />
-        </svg>
+        <DiveDayIcon name="globe" className="size-4 shrink-0" strokeWidth={1.75} />
         {/* `lang` so a screen reader pronounces "Español" as Spanish rather
             than reading it through the page's own language. */}
         <span lang={current}>{currentLabel}</span>
-        <span
-          aria-hidden="true"
-          className={`text-xs transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          ▾
-        </span>
+        <DiveDayIcon
+          name="caret"
+          direction="down"
+          className={`size-3 transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {mounted ? (
         <div

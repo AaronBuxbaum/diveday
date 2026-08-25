@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import {
   type BookingRequestCardItem,
   BookingRequestContext,
@@ -181,9 +182,10 @@ export default async function NewBookingPage({
       <ShopPageHeader eyebrow={t("bookings.new.eyebrow")} title={t("bookings.new.title")} />
       <Link
         href={`/shop/${shopSlug}/schedule/board`}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
-        ← {t("bookings.new.backToBoard")}
+        <DiveDayIcon name="arrow-left" className="size-4" />
+        {t("bookings.new.backToBoard")}
       </Link>
 
       {selectedRequest ? (
@@ -226,14 +228,12 @@ export default async function NewBookingPage({
             <EmptyState
               title={t("bookings.new.tripEmpty")}
               action={
-                <>
-                  <Link
-                    href={`/shop/${shopSlug}/schedule/board`}
-                    className={buttonClass({ className: "mt-4" })}
-                  >
-                    {t("bookings.new.tripEmptyAction")}
-                  </Link>
-                </>
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board`}
+                  className={buttonClass({ className: "mt-4" })}
+                >
+                  {t("bookings.new.tripEmptyAction")}
+                </Link>
               }
               className="mt-2"
             />

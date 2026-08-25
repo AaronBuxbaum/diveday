@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -402,7 +403,7 @@ export default async function EditCoursePage({
                             // diveday:allow-tinted-ink: the tick is `text-transparent` until the box is checked, and `text-danger` on `danger/15` measures 5.01:1 over `--surface` — this sits on a card (issue #874)
                             className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
                           >
-                            ✓
+                            <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
                           </span>
                           <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
                             {t("courses.edit.removeLabel")}

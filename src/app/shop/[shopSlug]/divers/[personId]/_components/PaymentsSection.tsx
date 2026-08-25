@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -222,14 +223,12 @@ export function PaymentsSection({
         {paymentsConnected ? (
           <Link
             href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
-            className={buttonClass()}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("divers.payments.newPayment")}
           </Link>
         ) : (
-          <Link href={`/shop/${shopSlug}/settings#money`} className={buttonClass()}>
-            {t("shared.payments.connect")}
-          </Link>
+          <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
         )}
       </div>
 
@@ -239,11 +238,7 @@ export function PaymentsSection({
           looking at. */}
       <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
 
-      {orders.length === 0 ? (
-        <p className={sectionCardClass({ padding: "lg", className: "mt-4 text-sm text-muted" })}>
-          {t("divers.payments.noPaymentsYet")}
-        </p>
-      ) : (
+      {orders.length === 0 ? null : (
         <>
           <ul
             className={sectionCardClass({

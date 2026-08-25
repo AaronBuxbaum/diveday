@@ -86,6 +86,7 @@ const copy = {
   tableHeaderPerson: t("divers.list.tableHeaderPerson"),
   tableHeaderLevel: t("divers.list.tableHeaderLevel"),
   tableHeaderAttention: t("divers.list.tableHeaderAttention"),
+  possibleDuplicateLabel: t("divers.list.possibleDuplicateLabel"),
 };
 
 function renderList({
@@ -104,6 +105,7 @@ function renderList({
       shopSlug="blue-mantis"
       query={query}
       filter={filter}
+      possibleDuplicateIds={[]}
       importHref={importHref}
       canRestore={canRestore}
       quickAddAction={quickAddAction}
@@ -464,6 +466,7 @@ describe("DiverList removed view", () => {
         page: emptyPage,
         shopSlug: "blue-mantis",
         filter: "needs_attention" as DiverFilter,
+        possibleDuplicateIds: [],
         importHref: null,
         canRestore: false,
         copy,

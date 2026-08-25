@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -120,9 +121,10 @@ export default async function WalkInPage({
       />
       <Link
         href={`/shop/${shopSlug}/check-in`}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
-        ← {t("checkIn.walkIn.backToQueue")}
+        <DiveDayIcon name="arrow-left" className="size-4" />
+        {t("checkIn.walkIn.backToQueue")}
       </Link>
 
       {banner ? (
@@ -139,14 +141,12 @@ export default async function WalkInPage({
             <EmptyState
               title={t("checkIn.walkIn.tripEmpty")}
               action={
-                <>
-                  <Link
-                    href={`/shop/${shopSlug}/schedule/board`}
-                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                  >
-                    {t("checkIn.walkIn.tripEmptyAction")}
-                  </Link>
-                </>
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board`}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                >
+                  {t("checkIn.walkIn.tripEmptyAction")}
+                </Link>
               }
               className="mt-2"
             />

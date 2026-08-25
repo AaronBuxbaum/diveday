@@ -234,7 +234,7 @@ export function DiverHeader({
                   is happening", not "you cannot do this". */}
               <SubmitButton
                 pendingLabel={t("divers.header.saving")}
-                className={buttonClass({ busy: true })}
+                className={buttonClass({ variant: "secondary", busy: true })}
               >
                 {t("divers.header.saveDetails")}
               </SubmitButton>

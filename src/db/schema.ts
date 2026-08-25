@@ -496,6 +496,14 @@ export const people = pgTable(
      * `roll_call_events.recorded_by_person_id` record who called a safety flag.
      */
     anonymizedByPersonId: uuid("anonymized_by_person_id").references((): AnyPgColumn => people.id),
+    /**
+     * The surviving person record after an explicit staff merge. The source
+     * row remains as a soft-deleted, auditable shell so old activity trails and
+     * exported identifiers never silently change owners (issue #730).
+     */
+    mergedIntoPersonId: uuid("merged_into_person_id").references((): AnyPgColumn => people.id),
+    mergedAt: timestamp("merged_at", { withTimezone: true }),
+    mergedByPersonId: uuid("merged_by_person_id").references((): AnyPgColumn => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -503,6 +511,18 @@ export const people = pgTable(
     check(
       "people_anonymized_stays_removed",
       sql`${table.anonymizedAt} is null or ${table.deletedAt} is not null`,
+    ),
+    check(
+      "people_merged_stays_removed",
+      sql`${table.mergedIntoPersonId} is null or ${table.deletedAt} is not null`,
+    ),
+    check(
+      "people_merge_metadata_complete",
+      sql`(${table.mergedIntoPersonId} is null and ${table.mergedAt} is null and ${table.mergedByPersonId} is null) or (${table.mergedIntoPersonId} is not null and ${table.mergedAt} is not null and ${table.mergedByPersonId} is not null)`,
+    ),
+    check(
+      "people_cannot_merge_into_self",
+      sql`${table.mergedIntoPersonId} is null or ${table.mergedIntoPersonId} <> ${table.id}`,
     ),
     // Case-insensitive so "Nora@x.com" and "nora@x.com" can never split one
     // diver's cert/waiver/rental history into two rows (CR-008). Partial on

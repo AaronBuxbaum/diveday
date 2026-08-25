@@ -35,8 +35,10 @@ describe("the diver record's jump row", () => {
     ).toEqual([
       "#waiver",
       "#cards",
+      "#specialty",
       "#fit",
       "#payments",
+      "#book-activity",
       "#trips",
       "#notes",
       "#history",
@@ -54,8 +56,10 @@ describe("the diver record's jump row", () => {
     ).toEqual([
       "Waiver",
       "Certifications",
+      "Specialty certifications",
       "Fit",
       "Payments",
+      "Book activity",
       "Trips",
       "Notes",
       "History",

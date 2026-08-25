@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RepeatFields } from "@/components/RepeatFields";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields, type TripDiveFieldsCopy } from "@/components/TripDiveFields";
 import { Badge } from "@/components/ui/badge";
@@ -1614,9 +1615,7 @@ export function ScheduleBuilder({
                             >
                               {/* Decorative — the aria-label above names what
                                   this discloses, per row, uniquely. */}
-                              <span aria-hidden="true" className="tracking-wider">
-                                ⋯
-                              </span>
+                              <DiveDayIcon name="more" className="size-4" />
                             </button>
                             {/* The three choices disclose *inline*, unfolding
                                 beside the "⋯" that revealed them, never as a
@@ -1687,12 +1686,10 @@ export function ScheduleBuilder({
                             hover doesn't exist — reads as a text listing
                             rather than a pressable thing. Decorative; the
                             title link is the navigation. */}
-                        <span
-                          aria-hidden="true"
-                          className="text-muted transition-transform group-hover/trip:translate-x-0.5"
-                        >
-                          ›
-                        </span>
+                        <DiveDayIcon
+                          name="chevron-right"
+                          className="size-4 text-muted transition-transform group-hover/trip:translate-x-0.5"
+                        />
                       </div>
                     </div>
 

@@ -7,6 +7,7 @@ import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingN
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -198,12 +199,10 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
                   </h2>
                   <p className="mt-1.5 leading-7 text-muted">{guide.summary}</p>
                 </div>
-                <span
-                  aria-hidden
-                  className="mt-1 shrink-0 text-lg text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
-                >
-                  →
-                </span>
+                <DiveDayIcon
+                  name="arrow-right"
+                  className="mt-1 size-5 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary motion-reduce:transition-none"
+                />
               </Link>
             </li>
           ))}

@@ -207,16 +207,14 @@ export default async function StaffingPage({
                 : t("staffing.working.rosterEmptyBody")
             }
             action={
-              <>
-                {canManage ? (
-                  <Link
-                    href={`/shop/${shopSlug}/settings/team`}
-                    className={buttonClass({ className: "mt-4" })}
-                  >
-                    {t("staffing.working.rosterEmptyAction")}
-                  </Link>
-                ) : null}
-              </>
+              canManage ? (
+                <Link
+                  href={`/shop/${shopSlug}/settings/team`}
+                  className={buttonClass({ className: "mt-4" })}
+                >
+                  {t("staffing.working.rosterEmptyAction")}
+                </Link>
+              ) : null
             }
             className="mt-4"
           />

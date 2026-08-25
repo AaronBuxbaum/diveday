@@ -149,6 +149,22 @@ Typography should feel modern, open, and quietly capable:
 The visual world is **sunlit sand above the surface and open ocean at depth**. It is tactile,
 spacious, and gently in motion.
 
+Marketing motion is earned, quiet, and progressive: sections that begin below the first viewport
+rise once as they enter it, while the first screen stays visible in the server-rendered paint. The
+hero roll-call mockup settles into place and its two rows arrive in sequence. These entrances use
+only `transform` and `opacity`, the shared `--ease-out-soft` curve, and a short 150–250ms window;
+`prefers-reduced-motion` removes both the entrance and the stagger. Keep the `/product` paint
+measurement in the visual suite when changing this: if the motion makes the page feel late or
+janky, remove the effect rather than adding more choreography.
+
+Interface icons come from the one drawn `DiveDayIcon` family in
+`src/components/StaffDestinationIcon.tsx`: a 24px grid, shared stroke language, and
+`aria-hidden` artwork beside words that carry the meaning. Do not add an icon library or a text
+codepoint as a one-off substitute. The status tones are the exception and stay exactly as the
+emoji vocabulary in `src/components/ui/tone.ts` — emoji carry their own two-colour artwork,
+whereas text dingbats such as `✓`, `▲`, and `✕` inherit the surrounding font and read like stray
+glyphs at badge size.
+
 Good recurring concepts:
 
 - ascending bubbles and buoyancy;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export interface DiverListCopy {
   tableHeaderPerson: string;
   tableHeaderLevel: string;
   tableHeaderAttention: string;
+  possibleDuplicateLabel: string;
 }
 
 function initials(fullName: string): string {
@@ -145,6 +147,7 @@ export function DiverList({
   shopSlug,
   query,
   filter,
+  possibleDuplicateIds,
   importHref,
   canRestore,
   quickAddAction,
@@ -155,6 +158,8 @@ export function DiverList({
   shopSlug: string;
   query: string;
   filter: DiverFilter;
+  /** Active rows with an exact normalized phone or name collision. */
+  possibleDuplicateIds: readonly string[];
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
   /**
@@ -287,6 +292,7 @@ export function DiverList({
   };
 
   const { divers } = page;
+  const possibleDuplicateSet = new Set(possibleDuplicateIds);
   /** A search box or a view chip is on, so "nothing here" is a filter result. */
   const narrowed = Boolean(query) || filter !== "all";
   /**
@@ -477,6 +483,9 @@ export function DiverList({
                         pill (`levelClass`). Badges below appear only when a row
                         actually needs a staffer (design principle 9). */}
                     <span className={levelClass(diver)}>{levelText(diver, copy)}</span>
+                    {possibleDuplicateSet.has(diver.person.id) ? (
+                      <Badge tone="warning">{copy.possibleDuplicateLabel}</Badge>
+                    ) : null}
                     {pendingCount(diver) > 0 ? (
                       <Badge tone="warning">
                         {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -535,12 +544,10 @@ export function DiverList({
                       <div className="min-w-0">
                         <p className="truncate font-semibold group-hover:text-primary">
                           {diver.person.fullName}
-                          <span
-                            aria-hidden="true"
-                            className="ml-1 opacity-0 transition-opacity group-hover:opacity-100"
-                          >
-                            →
-                          </span>
+                          <DiveDayIcon
+                            name="arrow-right"
+                            className="ml-1 inline-block size-4 align-[-0.15em] opacity-0 transition-opacity group-hover:opacity-100"
+                          />
                         </p>
                         <p className="truncate text-sm font-normal text-muted">
                           {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
@@ -556,6 +563,9 @@ export function DiverList({
                   </Td>
                   <Td className="align-middle">
                     <div className="flex flex-wrap items-center gap-2">
+                      {possibleDuplicateSet.has(diver.person.id) ? (
+                        <Badge tone="warning">{copy.possibleDuplicateLabel}</Badge>
+                      ) : null}
                       {pendingCount(diver) > 0 ? (
                         <Badge tone="warning">
                           {fill(copy.pendingReviewText, { count: pendingCount(diver) })}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
@@ -450,7 +451,7 @@ export default async function ReportsPage({
               className={navClass}
               scroll={false}
             >
-              <span aria-hidden="true">←</span>
+              <DiveDayIcon name="arrow-left" className="size-4" />
             </Link>
           ) : (
             <span
@@ -458,7 +459,7 @@ export default async function ReportsPage({
               title={t("reports.earliestMonthTitle")}
               className={navDisabledClass}
             >
-              ←
+              <DiveDayIcon name="arrow-left" className="size-4" />
             </span>
           )}
           <form className="flex items-center gap-2">
@@ -490,7 +491,7 @@ export default async function ReportsPage({
               className={navClass}
               scroll={false}
             >
-              <span aria-hidden="true">→</span>
+              <DiveDayIcon name="arrow-right" className="size-4" />
             </Link>
           ) : (
             <span
@@ -498,7 +499,7 @@ export default async function ReportsPage({
               title={t("reports.currentMonthTitle")}
               className={navDisabledClass}
             >
-              →
+              <DiveDayIcon name="arrow-right" className="size-4" />
             </span>
           )}
         </nav>

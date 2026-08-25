@@ -74,7 +74,9 @@ export async function CertificationCards({
           <p className="mt-1 text-sm text-muted">{t("divers.certifications.description")}</p>
         </div>
         <details className="relative ml-auto shrink-0">
-          <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
+          <summary
+            className={`${buttonClass({ variant: "secondary" })} list-none [&::-webkit-details-marker]:hidden`}
+          >
             {t("divers.certifications.addCard")}
           </summary>
           <div className="absolute top-full right-0 z-20 mt-2 max-w-[calc(100vw-2rem)]">

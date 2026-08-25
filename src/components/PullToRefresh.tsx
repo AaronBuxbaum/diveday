@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 export type PullToRefreshCopy = {
   pulling: string;
@@ -137,7 +138,7 @@ export function PullToRefresh({
               }`}
               aria-hidden="true"
             >
-              ↓
+              <DiveDayIcon name="arrow-down" className="size-4" />
             </span>
             <span>{statusText}</span>
           </div>

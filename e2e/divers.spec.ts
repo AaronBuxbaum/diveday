@@ -98,7 +98,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeAttached();
 
   // And back up, so the bar is a spine rather than a one-way trip.
-  await subNav.getByRole("link", { name: "Certifications" }).click();
+  await subNav.getByRole("link", { name: "Certifications", exact: true }).click();
   await expect(page).toHaveURL(/#cards$/);
   await expect(page.getByRole("heading", { name: "Certification records" })).toBeInViewport();
 
@@ -442,7 +442,10 @@ test("a diver's record carries the shop's activity about them, paged", async ({ 
   // The sub-nav reaches it without leaving the page — it is last on a very
   // long scroll.
   const nav = page.getByRole("navigation", { name: "Diver record" });
-  await expect(nav.getByRole("link", { name: "Activity" })).toHaveAttribute("href", "#activity");
+  await expect(nav.getByRole("link", { name: "Activity", exact: true })).toHaveAttribute(
+    "href",
+    "#activity",
+  );
 
   const firstLine = await activity.getByRole("listitem").first().textContent();
   await activity.getByRole("link", { name: "Next" }).click();

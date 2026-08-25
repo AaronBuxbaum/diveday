@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SectionCard } from "@/components/ui/card";
 import type { diveSites } from "@/db/schema";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
@@ -203,12 +204,11 @@ export function DiveBriefingCard({
               <span className="font-semibold">{t("trip.siteWhatToLookFor")}</span>
               <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
                 {extrasHint ? <span className="tabular-nums">{extrasHint}</span> : null}
-                <span
-                  aria-hidden="true"
-                  className="transition-transform ease-out group-open:rotate-180"
-                >
-                  ▾
-                </span>
+                <DiveDayIcon
+                  name="caret"
+                  direction="down"
+                  className="size-3 transition-transform ease-out group-open:rotate-180"
+                />
               </span>
             </summary>
             <DiveSiteLandmarks landmarks={landmarks} t={t} />

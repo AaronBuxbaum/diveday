@@ -65,7 +65,7 @@ test.describe("as owner", () => {
     await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
     await openTripInEmbed(page, title);
     await expect(page).toHaveURL(/embed=1/);
-    await expect(page.getByRole("link", { name: "← All trips" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
 
     // The booking form is controlled, so wait for hydration before typing.
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -77,7 +77,7 @@ test.describe("as owner", () => {
     // The redirect after a successful book-now-pay-later booking must have
     // carried embed=1 forward, or the confirmation reloads into full chrome.
     await expect(page).toHaveURL(/embed=1/);
-    await expect(page.getByRole("link", { name: "← All trips" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "All trips", exact: true })).toHaveCount(0);
     const backLink = page.getByRole("link", { name: "Back to the schedule" });
     await expect(backLink).toHaveAttribute("href", /embed=1/);
 
@@ -248,6 +248,6 @@ test.describe("the old /shop public URLs", () => {
 
     await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
     expect(new URL(page.url()).pathname).toBe(`/s/blue-mantis/trips/${tripId}`);
-    await expect(page.getByRole("link", { name: "← All trips" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "All trips", exact: true })).toBeVisible();
   });
 });

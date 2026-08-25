@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 
 export type FirstRunChecklistCopy = {
   heading: string;
   subtitle: string;
+  progress: string;
   contactTitle: string;
   contactBody: string;
   contactAction: string;
@@ -46,6 +48,7 @@ function ChecklistStep({
   doneLabel,
   doneBadge,
   action,
+  isNext,
 }: {
   title: string;
   body: string;
@@ -53,12 +56,16 @@ function ChecklistStep({
   doneLabel: string;
   doneBadge: string;
   action: React.ReactNode;
+  isNext: boolean;
 }) {
   return (
     // These are compact steps inside the primary-toned onboarding panel, not
     // page sections. They stay inset and retain their tighter radius so the
     // checklist reads as one guided object rather than nested full cards.
-    <li className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+    <li
+      data-first-run-next={isNext ? "true" : undefined}
+      className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
@@ -72,7 +79,7 @@ function ChecklistStep({
               : "border-2 border-dashed border-border-strong"
           }`}
         >
-          {done ? "✓" : ""}
+          {done ? <DiveDayIcon name="check" className="size-3.5" strokeWidth={2.2} /> : null}
         </span>
         <div>
           <p className="font-medium">{title}</p>
@@ -113,13 +120,10 @@ function CopyScheduleLinkButton({
 }
 
 /**
- * A new, real shop's Today is otherwise an empty work queue — nothing to
- * crew, nothing to check divers into. This replaces that blank landing with
- * the five things that actually get a shop from "just signed up" to "divers
- * can book": contact details, a dive site, a trip, the link that sells it,
- * and (optional) taking payment online. Each step's done-state comes from a
- * real query, never a dismiss-and-forget flag, so it reflects the shop's
- * actual progress on every visit.
+ * A new, real shop's Today is otherwise an empty work queue. This replaces
+ * that blank landing with five persisted setup checks plus two guided actions
+ * (schedule a trip and share its public link). Each completion state comes
+ * from a real query, never a dismiss-and-forget flag.
  */
 export function FirstRunChecklist({
   shopSlug,
@@ -141,6 +145,25 @@ export function FirstRunChecklist({
   stripeDone: boolean;
   copy: FirstRunChecklistCopy;
 }) {
+  const siteDone = diveSiteCount > 0;
+  // The trip row is intentionally the step that keeps this panel visible: the
+  // checklist only mounts before the first departure exists. It remains an
+  // actionable step rather than pretending a scheduled trip is complete.
+  const nextStep = !contactDone
+    ? "contact"
+    : !profileDone
+      ? "profile"
+      : !unitsDone
+        ? "units"
+        : !siteDone
+          ? "site"
+          : "trip";
+  const contactNext = nextStep === "contact";
+  const profileNext = nextStep === "profile";
+  const unitsNext = nextStep === "units";
+  const siteNext = nextStep === "site";
+  const tripNext = nextStep === "trip";
+
   return (
     <section
       aria-labelledby="first-run-heading"
@@ -150,6 +173,7 @@ export function FirstRunChecklist({
         {copy.heading}
       </h2>
       <p className="mt-1 text-sm text-muted">{copy.subtitle}</p>
+      <p className="mt-2 text-sm font-medium text-primary">{copy.progress}</p>
 
       <ol className="mt-4 flex flex-col gap-2.5">
         <ChecklistStep
@@ -158,13 +182,18 @@ export function FirstRunChecklist({
           done={contactDone}
           doneLabel={copy.contactDone}
           doneBadge={copy.doneBadge}
+          isNext={nextStep === "contact"}
           action={
             // Straight to the open contact row — the settings hub keeps its
             // forms behind summary rows, and a link that promises a form must
             // land on it open.
             <Link
               href={`/shop/${shopSlug}/settings#contact`}
-              className={buttonClass({ size: "sm" })}
+              data-first-run-primary={contactNext ? "true" : undefined}
+              className={buttonClass({
+                size: "sm",
+                variant: contactNext ? "primary" : "secondary",
+              })}
             >
               {copy.contactAction}
             </Link>
@@ -176,10 +205,15 @@ export function FirstRunChecklist({
           done={profileDone}
           doneLabel={copy.profileDone}
           doneBadge={copy.doneBadge}
+          isNext={nextStep === "profile"}
           action={
             <Link
               href={`/shop/${shopSlug}/settings#profile`}
-              className={buttonClass({ size: "sm" })}
+              data-first-run-primary={profileNext ? "true" : undefined}
+              className={buttonClass({
+                size: "sm",
+                variant: profileNext ? "primary" : "secondary",
+              })}
             >
               {copy.profileAction}
             </Link>
@@ -197,8 +231,16 @@ export function FirstRunChecklist({
           done={unitsDone}
           doneLabel={copy.unitsDone}
           doneBadge={copy.doneBadge}
+          isNext={nextStep === "units"}
           action={
-            <Link href={`/shop/${shopSlug}/settings#units`} className={buttonClass({ size: "sm" })}>
+            <Link
+              href={`/shop/${shopSlug}/settings#units`}
+              data-first-run-primary={unitsNext ? "true" : undefined}
+              className={buttonClass({
+                size: "sm",
+                variant: unitsNext ? "primary" : "secondary",
+              })}
+            >
               {copy.unitsAction}
             </Link>
           }
@@ -206,11 +248,16 @@ export function FirstRunChecklist({
         <ChecklistStep
           title={copy.siteTitle}
           body={copy.siteBody}
-          done={diveSiteCount > 0}
+          done={siteDone}
           doneLabel={copy.siteDone}
           doneBadge={copy.doneBadge}
+          isNext={nextStep === "site"}
           action={
-            <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass({ size: "sm" })}>
+            <Link
+              href={`/shop/${shopSlug}/dive-sites/new`}
+              data-first-run-primary={siteNext ? "true" : undefined}
+              className={buttonClass({ size: "sm", variant: siteNext ? "primary" : "secondary" })}
+            >
               {copy.siteAction}
             </Link>
           }
@@ -224,10 +271,12 @@ export function FirstRunChecklist({
           done={false}
           doneLabel={copy.tripTitle}
           doneBadge={copy.doneBadge}
+          isNext={nextStep === "trip"}
           action={
             <Link
               href={`/shop/${shopSlug}/schedule/board?add=1`}
-              className={buttonClass({ size: "sm" })}
+              data-first-run-primary={tripNext ? "true" : undefined}
+              className={buttonClass({ size: "sm", variant: tripNext ? "primary" : "secondary" })}
             >
               {copy.tripAction}
             </Link>
@@ -266,6 +315,7 @@ export function FirstRunChecklist({
           done={stripeDone}
           doneLabel={copy.stripeDone}
           doneBadge={copy.doneBadge}
+          isNext={false}
           action={
             // A plain <a>, not <Link>: this route 302s to Stripe's OAuth
             // authorize URL, and Next's client-side navigation would follow

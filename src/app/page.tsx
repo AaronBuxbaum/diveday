@@ -5,6 +5,7 @@ import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
+import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import {
   CaptainPhoneFrame,
@@ -12,6 +13,7 @@ import {
   MarketingMockup,
   marketingMockups,
 } from "@/components/MarketingSections";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
@@ -298,15 +300,17 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
           </div>
 
-          <div className="mx-auto w-full max-w-sm lg:max-w-md">
-            <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
-            <div className="mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3 shadow-lg">
-              <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.home.dockEyebrow")}
-              </p>
-              <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
+          <MarketingHeroMotion>
+            <div className="mx-auto w-full max-w-sm lg:max-w-md">
+              <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
+              <div className="mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3 shadow-lg">
+                <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+                  {t("marketing.home.dockEyebrow")}
+                </p>
+                <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
+              </div>
             </div>
-          </div>
+          </MarketingHeroMotion>
         </div>
       </section>
 
@@ -314,71 +318,75 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           proof rows (marker → title → one sentence beside a large mockup)
           instead of the twin-card grid this section used to be — the pair are
           different moments of one day, and the geometry now says so. */}
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {t("marketing.home.momentsTitle")}
-          </h2>
-          <p className="mt-4 text-lg leading-8 text-pretty text-muted">
-            {t("marketing.home.momentsDescription")}
-          </p>
-        </div>
+      <MarketingReveal>
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              {t("marketing.home.momentsTitle")}
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-pretty text-muted">
+              {t("marketing.home.momentsDescription")}
+            </p>
+          </div>
 
-        <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
-          {dailyMoments.map((moment, index) => (
-            <div key={moment.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
-              <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
-                <SectionMarker>{moment.when}</SectionMarker>
-                <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                  {moment.title}
-                </h3>
-                <p className="mt-3 max-w-lg leading-7 text-muted">{moment.description}</p>
-                {moment.link ? (
-                  <Link
-                    href={moment.link.href}
-                    className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+          <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
+            {dailyMoments.map((moment, index) => (
+              <div key={moment.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
+                <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
+                  <SectionMarker>{moment.when}</SectionMarker>
+                  <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+                    {moment.title}
+                  </h3>
+                  <p className="mt-3 max-w-lg leading-7 text-muted">{moment.description}</p>
+                  {moment.link ? (
+                    <Link
+                      href={moment.link.href}
+                      className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+                    >
+                      {moment.link.label}
+                    </Link>
+                  ) : null}
+                </div>
+                <div className="lg:col-span-6">
+                  <MarketingMockup
+                    label={moment.mockupLabel}
+                    className="shadow-xl shadow-foreground/5"
                   >
-                    {moment.link.label}
-                  </Link>
-                ) : null}
+                    {moment.mockup.render(locale)}
+                  </MarketingMockup>
+                </div>
               </div>
-              <div className="lg:col-span-6">
-                <MarketingMockup
-                  label={moment.mockupLabel}
-                  className="shadow-xl shadow-foreground/5"
-                >
-                  {moment.mockup.render(locale)}
-                </MarketingMockup>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      </MarketingReveal>
 
       {/* The breadth band: one provocative statement, the four groups as the
           answer, one door to the full story. Deliberately still four
           assertions rather than imagery — see docs/product/marketing.md. */}
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <h2 className="mx-auto max-w-3xl text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {t("marketing.home.productTitle")}
-          </h2>
-          <div className="mt-12">
-            <FeatureGroupsGrid locale={locale} />
+      <MarketingReveal>
+        <section className="border-y border-border bg-surface">
+          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+            <h2 className="mx-auto max-w-3xl text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              {t("marketing.home.productTitle")}
+            </h2>
+            <div className="mt-12">
+              <FeatureGroupsGrid locale={locale} />
+            </div>
+            <div className="mt-10 text-center">
+              <Link
+                href="/product"
+                className={buttonClass({
+                  variant: "secondary",
+                  className: "border-border-strong",
+                })}
+              >
+                {t("marketing.home.seeFullProduct")}
+              </Link>
+            </div>
           </div>
-          <div className="mt-10 text-center">
-            <Link
-              href="/product"
-              className={buttonClass({
-                variant: "secondary",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.home.seeFullProduct")}
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      </MarketingReveal>
 
       {/* The portability band, and the one section whose geometry *is* its
           argument: records come in clean and leave the same way, so the two
@@ -386,22 +394,23 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           same marker, same rule, same weight — rather than the copy-left /
           visual-right split it shared with the hero and the first moment row.
           Arriving reads first (docs/product/marketing.md). */}
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-        <h2 className="max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {t("marketing.home.exportTitle")}
-        </h2>
+      <MarketingReveal>
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
+          <h2 className="max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            {t("marketing.home.exportTitle")}
+          </h2>
 
-        <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
-          <div className="flex flex-col gap-5 lg:pr-14">
-            <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
-            <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
-            <MarketingMockup
-              label={t("marketing.home.importMockupLabel")}
-              className="shadow-xl shadow-foreground/5"
-            >
-              <ImportPreviewFallback locale={locale} />
-            </MarketingMockup>
-            {/* The spreadsheet door, and it belongs to this column rather than
+          <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
+            <div className="flex flex-col gap-5 lg:pr-14">
+              <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
+              <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
+              <MarketingMockup
+                label={t("marketing.home.importMockupLabel")}
+                className="shadow-xl shadow-foreground/5"
+              >
+                <ImportPreviewFallback locale={locale} />
+              </MarketingMockup>
+              {/* The spreadsheet door, and it belongs to this column rather than
                 to the section: the mockup above it is the importer reading a
                 sheet, so the reader who recognizes their own sheet in it is
                 already looking here. Deliberately *not* a second link stacked
@@ -426,41 +435,39 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 cannot do, but it is not what was promised, and the gap reads as
                 bait. The fragment goes through `switchingHref` so it can only
                 land after the `?from=` tag. */}
-            <Link
-              href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
-              className={buttonClass({
-                variant: "link",
-                flush: true,
-                className: "self-start text-left",
-              })}
-            >
-              {t("marketing.home.spreadsheetLink")}
-            </Link>
-          </div>
+              <Link
+                href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
+                className={buttonClass({
+                  variant: "link",
+                  flush: true,
+                  className: "self-start text-left",
+                })}
+              >
+                {t("marketing.home.spreadsheetLink")}
+              </Link>
+            </div>
 
-          <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
-            <SectionMarker as="h3">{t("marketing.home.leavingLabel")}</SectionMarker>
-            <p className="leading-7 text-muted">
-              {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
-            </p>
-            {/* A manifest, not a card: hairline rows echoing the marker rule
+            <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
+              <SectionMarker as="h3">{t("marketing.home.leavingLabel")}</SectionMarker>
+              <p className="leading-7 text-muted">
+                {t("marketing.home.exportDescription2", { terms: t(fullShopExport.termsKey) })}
+              </p>
+              {/* A manifest, not a card: hairline rows echoing the marker rule
                 above them. The bordered card this replaced put a second
                 rounded box beside the import mockup and read as its twin,
                 when the two halves are a picture and an inventory. */}
-            <ul className="divide-y divide-border border-y border-border leading-6 text-muted">
-              {exportInventory.map((itemKey) => (
-                <li key={itemKey} className="flex gap-3 py-4">
-                  <span aria-hidden="true" className="font-semibold text-primary">
-                    ✓
-                  </span>
-                  <span>{t(itemKey)}</span>
-                </li>
-              ))}
-            </ul>
+              <ul className="divide-y divide-border border-y border-border leading-6 text-muted">
+                {exportInventory.map((itemKey) => (
+                  <li key={itemKey} className="flex gap-3 py-4">
+                    <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
+                    <span>{t(itemKey)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
 
-        {/* One door to the whole switching surface, closing the band rather
+          {/* One door to the whole switching surface, closing the band rather
             than belonging to either half: the hub fronts every incumbent guide,
             so two stacked link CTAs here were one door pretending to be two.
             The rule above it is load-bearing now that the arriving column ends
@@ -470,64 +477,67 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             a stacked pair — the exact shape the 2026-08-13 redesign removed,
             reached from a different direction. The rule says this one closes
             both columns. */}
-        <div className="mt-12 border-t border-border pt-6">
-          <Link
-            href={switchingHref("/switching", "home-records")}
-            className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
-          >
-            {t("marketing.home.guidesLink", { competitors })}
-          </Link>
-        </div>
-      </section>
+          <div className="mt-12 border-t border-border pt-6">
+            <Link
+              href={switchingHref("/switching", "home-records")}
+              className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+            >
+              {t("marketing.home.guidesLink", { competitors })}
+            </Link>
+          </div>
+        </section>
+      </MarketingReveal>
 
       {/* The one close. Until 2026-08-13 the page ended on three consecutive
           banded CTAs (a mid-page demo card, a "Try it" band, a contact band);
           they merged into this single band — ask, price, and the human path,
           in that order. */}
-      <section className="border-t border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
-              {t("marketing.home.tryTitle")}
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-              {t("marketing.home.tryDescription")}
-            </p>
-            <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
-            <p className="mt-6 font-medium">
-              {t("marketing.home.priceLine", {
-                price: earlyAccessPrice.price,
-                cadence: t(earlyAccessPrice.cadenceKey),
-              })}
-            </p>
-            <Link href="/pricing" className={buttonClass({ variant: "link" })}>
-              {t("marketing.home.seeIncluded")}
-            </Link>
-          </div>
+      <MarketingReveal>
+        <section className="border-t border-border bg-surface">
+          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
+                {t("marketing.home.tryTitle")}
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
+                {t("marketing.home.tryDescription")}
+              </p>
+              <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
+              <p className="mt-6 font-medium">
+                {t("marketing.home.priceLine", {
+                  price: earlyAccessPrice.price,
+                  cadence: t(earlyAccessPrice.cadenceKey),
+                })}
+              </p>
+              <Link href="/pricing" className={buttonClass({ variant: "link" })}>
+                {t("marketing.home.seeIncluded")}
+              </Link>
+            </div>
 
-          <div className="mx-auto mt-16 flex max-w-3xl flex-col items-center gap-5 border-t border-border pt-10 text-center sm:flex-row sm:justify-between sm:gap-8 sm:text-left">
-            <div>
-              {/* An `h2` at `text-xl`: the human path is a top-level way out of
+            <div className="mx-auto mt-16 flex max-w-3xl flex-col items-center gap-5 border-t border-border pt-10 text-center sm:flex-row sm:justify-between sm:gap-8 sm:text-left">
+              <div>
+                {/* An `h2` at `text-xl`: the human path is a top-level way out of
                   this page, not a footnote under the demo — a buyer who will
                   not self-serve either button needs it in the outline. Level
                   and size are separate decisions; it sits quietly on purpose. */}
-              <h2 className="text-xl font-semibold tracking-tight">
-                {t("marketing.home.contactTitle")}
-              </h2>
-              <p className="mt-2 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
+                <h2 className="text-xl font-semibold tracking-tight">
+                  {t("marketing.home.contactTitle")}
+                </h2>
+                <p className="mt-2 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
+              </div>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className={buttonClass({
+                  variant: "secondary",
+                  className: "shrink-0 border-border-strong",
+                })}
+              >
+                {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
+              </a>
             </div>
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className={buttonClass({
-                variant: "secondary",
-                className: "shrink-0 border-border-strong",
-              })}
-            >
-              {t("marketing.home.contactCta", { email: SUPPORT_EMAIL })}
-            </a>
           </div>
-        </div>
-      </section>
+        </section>
+      </MarketingReveal>
     </main>
   );
 }

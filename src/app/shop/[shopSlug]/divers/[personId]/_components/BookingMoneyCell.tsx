@@ -26,6 +26,7 @@ export function BookingMoneyCell({
   shopSlug,
   personId,
   paymentsConnected,
+  showNoOrderBadge = true,
   t,
 }: {
   diver: DiverProfile;
@@ -34,6 +35,7 @@ export function BookingMoneyCell({
   personId: string;
   /** No payable Stripe account means `orders/new` refuses and bounces straight back. */
   paymentsConnected: boolean;
+  showNoOrderBadge?: boolean;
   t: StaffTranslator;
 }) {
   const money = bookingMoney(diver, bookingId);
@@ -44,9 +46,11 @@ export function BookingMoneyCell({
           same pair of helpers. This used to be a flat grey pill that gave
           "Unpaid", "Paid" and "Refunded" one non-answer, sitting a few rows
           from the real badges the same page renders. */}
-      <Badge tone={bookingMoneyStatusTone(money)} className="whitespace-nowrap">
-        {statusKey ? t(statusKey) : t("divers.payments.noOrder")}
-      </Badge>
+      {statusKey || showNoOrderBadge ? (
+        <Badge tone={bookingMoneyStatusTone(money)} className="whitespace-nowrap">
+          {statusKey ? t(statusKey) : t("divers.payments.noOrder")}
+        </Badge>
+      ) : null}
       {money.order ? (
         <Link
           href={`/shop/${shopSlug}/orders/${money.order.order.id}`}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 
 /** One role card's full content, resolved server-side (icon/name are data, the rest is translated copy). */
@@ -130,7 +131,8 @@ export function DemoBanner({
               className: "shrink-0",
             })}
           >
-            {copy.switchRole} {isExpanded ? "▲" : "▼"}
+            {copy.switchRole}
+            <DiveDayIcon name="arrow-down" className={`size-3 ${isExpanded ? "rotate-180" : ""}`} />
           </button>
         </div>
 

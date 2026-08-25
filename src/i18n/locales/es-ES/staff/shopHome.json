@@ -78,6 +78,7 @@
   "firstRun": {
     "heading": "Prepara tu centro",
     "subtitle": "{count, plural, one {# paso} other {# pasos}} y los buceadores podrán reservar.",
+    "progress": "{done} de {total, plural, one {# completado} other {# completados}}",
     "contactTitle": "Añade tus datos de contacto",
     "contactBody": "Teléfono y correo para que los buceadores — y DiveDay — puedan contactarte.",
     "contactAction": "Añadir datos de contacto",

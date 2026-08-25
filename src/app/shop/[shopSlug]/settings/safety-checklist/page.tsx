@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -102,7 +103,7 @@ export default async function SafetyChecklistPage({
                     aria-label={t("settings.safetyChecklist.moveUp")}
                     className={buttonClass({ variant: "ghost", size: "sm" })}
                   >
-                    ↑
+                    <DiveDayIcon name="arrow-up" className="size-4" />
                   </button>
                 </form>
                 <form action={moveChecklistItemAction.bind(null, shopSlug)}>
@@ -114,7 +115,7 @@ export default async function SafetyChecklistPage({
                     aria-label={t("settings.safetyChecklist.moveDown")}
                     className={buttonClass({ variant: "ghost", size: "sm" })}
                   >
-                    ↓
+                    <DiveDayIcon name="arrow-down" className="size-4" />
                   </button>
                 </form>
                 <form action={deleteChecklistItemAction.bind(null, shopSlug)}>

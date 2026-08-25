@@ -12,6 +12,7 @@ afterEach(() => {
 const COPY: FirstRunChecklistCopy = {
   heading: "Get your shop ready",
   subtitle: "Seven steps and divers can start booking.",
+  progress: "2 of 7 done",
   contactTitle: "Add your contact details",
   contactBody: "Phone and email so divers — and DiveDay — can reach you.",
   contactAction: "Add contact details",
@@ -137,7 +138,9 @@ describe("the step count", () => {
       />,
     );
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(FIRST_RUN_STEP_COUNT);
+    // Five rows contribute persisted progress; trip and schedule are guided
+    // actions and remain visible without pretending they can be checked off.
+    expect(screen.getAllByRole("listitem")).toHaveLength(FIRST_RUN_STEP_COUNT + 2);
   });
 });
 

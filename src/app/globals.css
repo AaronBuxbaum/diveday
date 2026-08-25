@@ -501,7 +501,7 @@ textarea {
    * title, date and dive plan off the sheet.
    */
   .trip-print-bundle :is(button, select, textarea, input) {
-    display: none !important;
+    display: none;
   }
 
   :root,
@@ -579,6 +579,52 @@ textarea {
 
 .rise-in {
   animation: rise-in 200ms var(--ease-out-soft) both;
+}
+
+/* Marketing sections reveal once, only after the browser has confirmed they
+   start below the first viewport. The client component leaves above-fold
+   content visible in the server HTML, so this is progressive enhancement. */
+.marketing-reveal-pending {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.marketing-reveal-visible {
+  animation: rise-in 220ms var(--ease-out-soft) both;
+}
+
+@keyframes marketing-device-arrive {
+  from {
+    opacity: 0.92;
+    transform: translateY(10px) rotate(0.35deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+
+@keyframes marketing-roll-call-settle {
+  from {
+    opacity: 0.72;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.marketing-hero-motion-active .marketing-roll-call-frame {
+  animation: marketing-device-arrive 520ms var(--ease-out-soft) both;
+}
+
+.marketing-hero-motion-active .marketing-roll-call-row {
+  animation: marketing-roll-call-settle 360ms var(--ease-out-soft) both;
+}
+
+.marketing-hero-motion-active .marketing-roll-call-row:nth-child(2) {
+  animation-delay: 120ms;
 }
 
 /* Toast exit — the inverse of rise-in, for a toast fading/settling down
@@ -994,6 +1040,16 @@ details[open]::details-content {
     animation: none !important;
     /* biome-ignore lint/complexity/noImportantStyles: must beat the class rule's own !important */
     background-image: none !important;
+  }
+
+  .marketing-reveal-pending,
+  .marketing-reveal-visible,
+  .marketing-hero-motion-active .marketing-roll-call-frame,
+  .marketing-hero-motion-active .marketing-roll-call-row {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced-motion must reveal progressive-enhancement content immediately */
+    animation: none !important;
+    opacity: 1;
+    transform: none;
   }
 }
 

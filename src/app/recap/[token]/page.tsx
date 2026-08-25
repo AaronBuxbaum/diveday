@@ -6,6 +6,7 @@ import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RecapMap } from "@/components/RecapMap";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
@@ -536,7 +537,7 @@ export default async function DiveRecapPage({
 
           <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-xs text-muted">
             <p className="flex items-center gap-1.5">
-              <span aria-hidden="true">✓</span>
+              <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
               <span>{t("recap.verifiedRecord", { shopName: shop.name })}</span>
             </p>
             <p className="font-medium text-foreground">
