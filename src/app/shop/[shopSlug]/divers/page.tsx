@@ -6,11 +6,12 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
 import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
 import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { canDeleteDiver, canImportShopData } from "@/lib/authz";
+import { canDeleteDiver, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { CertificationLevel } from "@/lib/readiness";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -94,18 +95,22 @@ export default async function DiversPage({
   const liveRoles = await loadActiveStaffRoles(db, shop.id, session.user.personId);
   const canDelete = liveRoles !== null && canDeleteDiver(liveRoles);
   const canImport = liveRoles !== null && canImportShopData(liveRoles);
+  const canMerge = liveRoles !== null && canMergeDiver(liveRoles);
   const requested = isDiverFilter(filterParam) ? filterParam : "all";
   const filter = requested === "removed" && !canDelete ? "all" : requested;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a search that narrows the roster never strands the reader on a
   // page the new result set does not have.
-  const diverPage = await listDiverSummaries(db, shop.id, {
-    query,
-    page: Number.parseInt(page ?? "", 10),
-    filter,
-    // "Diving today" is the shop's own calendar day, not the server's.
-    timeZone: shop.timezone,
-  });
+  const [diverPage, possibleDuplicateIds] = await Promise.all([
+    listDiverSummaries(db, shop.id, {
+      query,
+      page: Number.parseInt(page ?? "", 10),
+      filter,
+      // "Diving today" is the shop's own calendar day, not the server's.
+      timeZone: shop.timezone,
+    }),
+    canMerge ? listDiverMergeDuplicateIds(db, shop.id) : Promise.resolve([]),
+  ]);
   /** The roster's URL with the search and view kept and only `page` swapped. */
   const pageHref = (target: number) => {
     const search = new URLSearchParams();
@@ -188,6 +193,7 @@ export default async function DiversPage({
         shopSlug={shopSlug}
         query={query}
         filter={filter}
+        possibleDuplicateIds={possibleDuplicateIds}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         canRestore={canDelete}
         quickAddAction={createDiverFromSearchAction}
@@ -233,6 +239,7 @@ export default async function DiversPage({
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderLevel: t("divers.list.tableHeaderLevel"),
           tableHeaderAttention: t("divers.list.tableHeaderAttention"),
+          possibleDuplicateLabel: t("divers.list.possibleDuplicateLabel"),
         }}
       />
     </main>

@@ -61,7 +61,7 @@ export function CaptainPhoneFrame({
 }) {
   return (
     <div
-      className={`rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5 shadow-2xl shadow-device-frame/20 ${className}`}
+      className={`marketing-roll-call-frame rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5 shadow-2xl shadow-device-frame/20 ${className}`}
     >
       <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-muted/50" />
       <MarketingMockup label={label} className="rounded-[1.9rem] border-0">

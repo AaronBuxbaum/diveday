@@ -139,7 +139,7 @@ export function RentalFit({
           <FieldActions>
             <SubmitButton
               pendingLabel={t("divers.rentalFit.saving")}
-              className={buttonClass({ size: "lg" })}
+              className={buttonClass({ variant: "secondary", size: "lg" })}
             >
               {t("divers.rentalFit.saveRentalFit")}
             </SubmitButton>

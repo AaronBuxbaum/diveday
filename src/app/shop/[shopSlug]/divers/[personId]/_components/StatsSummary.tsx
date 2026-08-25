@@ -58,12 +58,10 @@ export function StatsSummary({
   diver,
   shop,
   locale,
-  notesCount,
 }: {
   diver: DiverProfile;
   shop: Shop;
   locale: string;
-  notesCount: number;
 }) {
   const t = staffTranslator(locale);
   const profile = diver.rentalFit;
@@ -102,7 +100,6 @@ export function StatsSummary({
               : null
         }
       />
-      <StatCard label={t("divers.stats.notes")} value={notesCount} detail={null} />
       <StatCard
         label={t("divers.stats.rentalFit")}
         // Three states, not two. "Saved" used to mean nothing more than "a row

@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
+import { MarketingHeroMotion, MarketingSectionMotion } from "@/components/MarketingReveal";
 import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,
@@ -175,6 +176,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
 
   return (
     <main className="flex-1">
+      <MarketingSectionMotion />
       <section className="border-b border-border">
         <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
@@ -326,11 +328,13 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               it. */}
           <div className="grid gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-center">
             <div className="order-2 lg:order-1">
-              <CaptainPhoneFrame
-                label={t("marketing.product.captainPhoneLabel")}
-                locale={locale}
-                className="mx-auto max-w-sm"
-              />
+              <MarketingHeroMotion>
+                <CaptainPhoneFrame
+                  label={t("marketing.product.captainPhoneLabel")}
+                  locale={locale}
+                  className="mx-auto max-w-sm"
+                />
+              </MarketingHeroMotion>
             </div>
             <div className="order-1 lg:order-2">
               <ChapterMarker mark={chapter.dock} />

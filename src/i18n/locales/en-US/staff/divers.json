@@ -2,10 +2,12 @@
   "subNav": {
     "ariaLabel": "Diver record",
     "cards": "Certifications",
+    "specialty": "Specialty certifications",
     "waiver": "Waiver",
     "notes": "Notes",
     "fit": "Fit",
     "payments": "Payments",
+    "bookActivity": "Book activity",
     "trips": "Trips",
     "history": "History",
     "activity": "Activity"
@@ -148,6 +150,7 @@
     "tableHeaderPerson": "Person",
     "tableHeaderLevel": "Level",
     "tableHeaderAttention": "Needs attention",
+    "possibleDuplicateLabel": "Possible duplicate",
     "noCertificationLevel": "No current certification",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
@@ -207,6 +210,20 @@
     "restore": "Restore diver",
     "restoring": "Restoring…",
     "restoreRestricted": "Only owners and managers can restore a diver."
+  },
+  "merge": {
+    "heading": "Possible duplicate records",
+    "description": "These active diver records look like the same person. Choose which record survives; bookings, certifications, waivers, rental fit, notes, payments, and prior visits move to it.",
+    "warning": "This is an explicit owner/manager action. The other row is deleted and kept as a pointer; a shared trip or conflicting history is refused.",
+    "survivorLabel": "Choose the record to keep",
+    "keepThis": "Keep {name} (this record)",
+    "keepCandidate": "Keep {name}",
+    "samePhone": "Same phone number",
+    "sameName": "Same normalized name",
+    "noContact": "No contact details",
+    "confirm": "Merge these diver records? Choose the survivor carefully. The other record will be deleted and its history moved.",
+    "submit": "Merge records",
+    "pending": "Merging…"
   },
   "erase": {
     "heading": "Erase personal data",
@@ -367,7 +384,16 @@
     "notAuthorizedCards": "Your account can't change certifications for this shop any more. Ask an owner or manager to check your access.",
     "noteAdded": "Diver note added.",
     "noteDeleted": "Diver note deleted.",
-    "notAuthorizedNotes": "Your account can’t change this diver’s notes for this shop any more. Ask an owner or manager to check your access."
+    "notAuthorizedNotes": "Your account can’t change this diver’s notes for this shop any more. Ask an owner or manager to check your access.",
+    "merged": "Diver records merged. The selected record is now the survivor.",
+    "notAuthorizedMerge": "Merging diver records is limited to owners and managers — ask one of them to do it.",
+    "mergeInvalid": "Choose one of the possible duplicate records and try again.",
+    "mergeAnonymized": "These records cannot be merged because one has already been erased.",
+    "mergeAlreadyMerged": "One of these records has already been merged. Refresh the page and choose an active record.",
+    "mergeAlreadyRemoved": "One of these records is deleted. Restore it before merging.",
+    "mergeStaffRecord": "Staff or crew records cannot be merged with a diver record.",
+    "mergeBookingConflict": "These records are both booked on the same trip. Resolve that booking first; nothing was moved.",
+    "mergeRecordConflict": "These records have conflicting history that cannot be combined safely. Nothing was moved."
   },
   "export": {
     "downloadButton": {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 /** Gap between the trigger and the panel, and the panel's margin to the viewport edge. */
 const PANEL_GAP = 8;
@@ -140,9 +141,7 @@ export function InfoHint({
       >
         {/* An icon rather than a "?" glyph: a text marker is copy, and copy
             belongs in a message bundle. This one carries no language at all. */}
-        <svg viewBox="0 0 16 16" aria-hidden="true" className="size-3 shrink-0 fill-current">
-          <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm0 3.4a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2ZM9.2 12H6.8a.7.7 0 0 1 0-1.4h.5V8.2h-.4a.7.7 0 0 1 0-1.4h1.8v3.8h.5a.7.7 0 0 1 0 1.4Z" />
-        </svg>
+        <DiveDayIcon name="info" className="size-3 shrink-0" />
       </button>
       <span
         id={id}

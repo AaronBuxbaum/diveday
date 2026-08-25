@@ -12,6 +12,7 @@ afterEach(() => {
 const COPY: FirstRunChecklistCopy = {
   heading: "Get your shop ready",
   subtitle: "Seven steps and divers can start booking.",
+  progress: "2 of 7 done",
   contactTitle: "Add your contact details",
   contactBody: "Phone and email so divers — and DiveDay — can reach you.",
   contactAction: "Add contact details",

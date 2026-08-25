@@ -222,15 +222,11 @@ export function PaymentsSection({
         {paymentsConnected ? (
           <Link
             href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
-            className={buttonClass()}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("divers.payments.newPayment")}
           </Link>
-        ) : (
-          <Link href={`/shop/${shopSlug}/settings#money`} className={buttonClass()}>
-            {t("shared.payments.connect")}
-          </Link>
-        )}
+        ) : null}
       </div>
 
       {/* Beside this section's own controls. The refund buttons live per row
@@ -239,11 +235,7 @@ export function PaymentsSection({
           looking at. */}
       <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
 
-      {orders.length === 0 ? (
-        <p className={sectionCardClass({ padding: "lg", className: "mt-4 text-sm text-muted" })}>
-          {t("divers.payments.noPaymentsYet")}
-        </p>
-      ) : (
+      {orders.length === 0 ? null : (
         <>
           <ul
             className={sectionCardClass({

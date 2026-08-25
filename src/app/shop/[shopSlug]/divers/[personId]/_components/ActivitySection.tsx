@@ -34,6 +34,15 @@ export function ActivitySection({
   timezone: string;
 }) {
   const t = staffTranslator(locale);
+  if (page.total === 0) {
+    return (
+      <section className="mt-10" aria-labelledby="activity-heading">
+        <h2 id="activity-heading" className="text-lg font-semibold">
+          {t("divers.activity.heading")}
+        </h2>
+      </section>
+    );
+  }
   return (
     <SectionCard title={t("divers.activity.heading")} className="mt-10">
       <ActivityLog

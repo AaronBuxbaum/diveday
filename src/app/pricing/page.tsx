@@ -5,8 +5,10 @@ import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
+import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -197,6 +199,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
         }}
       />
       <main className="flex-1">
+        <MarketingSectionMotion />
         {/* The price is the hero. A pricing page's arriving question is "what
             does it cost and what's the catch", so the first composition
             carries the whole answer in one piece: the plan, the headline, the
@@ -268,9 +271,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <ul className="mt-5 grid gap-x-10 gap-y-3 leading-6 sm:grid-cols-2">
                 {earlyAccessPrice.includedKeys.map((item) => (
                   <li key={item} className="flex gap-3">
-                    <span aria-hidden="true" className="font-semibold text-primary">
-                      ✓
-                    </span>
+                    <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
                     <span className="text-muted">{t(item)}</span>
                   </li>
                 ))}

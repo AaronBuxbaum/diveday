@@ -1,3 +1,4 @@
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -49,7 +50,10 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
           <div className="mt-2 space-y-2">
             {/* i18n-exempt: sample diver names used only in marketing mockups */}
             {["Priya Sharma", "Tom Okafor"].map((name) => (
-              <div key={name} className="rounded-lg border border-border bg-surface p-3">
+              <div
+                key={name}
+                className="marketing-roll-call-row rounded-lg border border-border bg-surface p-3"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold">{name}</p>
@@ -427,21 +431,18 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
                 t("fallback.nightBefore.waiver"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
               [
                 t("fallback.nightBefore.cert"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
               [
                 t("fallback.nightBefore.payment"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
-            ].map(([label, status, tone, glyph]) => (
+            ].map(([label, status, tone]) => (
               <div
                 key={label}
                 className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
@@ -450,7 +451,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
                 <span
                   className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
                 >
-                  <span>{glyph}</span> {status}
+                  <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
                 </span>
               </div>
             ))}
@@ -496,27 +497,23 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
                 t("fallback.shopPrep.gearStaged"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
               [
                 t("fallback.shopPrep.tanksReady"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
               [
                 t("fallback.shopPrep.crewAssigned"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
               [
                 t("fallback.shopPrep.manifestReady"),
                 t("fallback.recap.completed"),
                 "text-success bg-success-tint",
-                "✓",
               ],
-            ].map(([label, status, tone, glyph]) => (
+            ].map(([label, status, tone]) => (
               <div
                 key={label}
                 className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5"
@@ -525,7 +522,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
                 <span
                   className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
                 >
-                  <span>{glyph}</span> {status}
+                  <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
                 </span>
               </div>
             ))}

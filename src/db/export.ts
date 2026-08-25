@@ -932,6 +932,12 @@ export async function loadShopExportBundleInput(
             // and would happily prompt staff to "complete" the record.
             "anonymized_at",
             "anonymized_by_person_id",
+            // A merged-away row remains in the normalized export as a
+            // redirect, so an audit or destination import can preserve the
+            // original person id without resurrecting the duplicate.
+            "merged_into_person_id",
+            "merged_at",
+            "merged_by_person_id",
             "created_at",
           ],
           rows: peopleRows.map((row) => [
@@ -952,6 +958,9 @@ export async function loadShopExportBundleInput(
             row.deletedAt,
             row.anonymizedAt,
             row.anonymizedByPersonId,
+            row.mergedIntoPersonId,
+            row.mergedAt,
+            row.mergedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["people.csv"],

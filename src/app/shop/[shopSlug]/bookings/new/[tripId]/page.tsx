@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import {
   type BookingRequestCardItem,
   BookingRequestContext,
@@ -174,7 +175,8 @@ export default async function NewBookingDiverPage({
         href={`/shop/${shopSlug}/bookings/new${requestQuery}`}
         className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
       >
-        ← {t("bookings.new.backToPicker")}
+        <DiveDayIcon name="arrow-left" className="size-4" />
+        {t("bookings.new.backToPicker")}
       </Link>
 
       {banner ? (

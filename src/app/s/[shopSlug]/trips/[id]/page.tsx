@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
@@ -202,7 +203,8 @@ export default async function TripDetailPage({
               href={publicSchedulePath(shopSlug)}
               className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
             >
-              ← {t("trip.backToAllTrips")}
+              <DiveDayIcon name="arrow-left" className="size-4" />
+              {t("trip.backToAllTrips")}
             </Link>
           )}
           <CancelledTripNotice
@@ -413,7 +415,8 @@ export default async function TripDetailPage({
             href={publicSchedulePath(shopSlug)}
             className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
           >
-            ← {t("trip.backToAllTrips")}
+            <DiveDayIcon name="arrow-left" className="size-4" />
+            {t("trip.backToAllTrips")}
           </Link>
         )}
 

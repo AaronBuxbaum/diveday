@@ -55,7 +55,15 @@ export function UpcomingTripsSection({
 }) {
   const t = staffTranslator(locale);
   const upcoming = upcomingBookings(diver.bookings, now);
-  if (upcoming.length === 0) return null;
+  if (upcoming.length === 0) {
+    return (
+      <section className="mt-10" aria-labelledby="upcoming-trips-heading">
+        <h2 id="upcoming-trips-heading" className="text-lg font-semibold">
+          {t("divers.upcoming.heading")}
+        </h2>
+      </section>
+    );
+  }
   return (
     <section className="mt-8" aria-labelledby="upcoming-trips-heading">
       <h2 id="upcoming-trips-heading" className="text-lg font-semibold">

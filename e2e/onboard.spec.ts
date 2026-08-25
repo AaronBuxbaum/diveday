@@ -28,6 +28,8 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText("Schedule your first trip")).toBeVisible();
   await expect(page.getByText("Share your public schedule")).toBeVisible();
   await expect(page.getByText("Connect Stripe (optional)")).toBeVisible();
+  await expect(page.getByText("0 of 7 done")).toBeVisible();
+  await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   // A brand-new shop has completed none of the steps yet.
   await expect(page.getByText("Done", { exact: true })).toHaveCount(0);
 
@@ -60,6 +62,8 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Contact details on file.")).toBeVisible();
+  await expect(page.getByText("1 of 7 done")).toBeVisible();
+  await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.getByText("Add your first dive site")).toBeVisible();
 
   // The schedule-link step always offers the link, independent of "done" state.

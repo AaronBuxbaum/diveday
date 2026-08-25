@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BoardingBar } from "@/components/BoardingBar";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 export type TripPulseFact = {
   /** The whole sentence — "1 diver can’t board yet" — never a bare count. */
@@ -150,7 +151,8 @@ export function TripPulse({
                 fact.tone === "danger" ? "text-danger" : "text-primary"
               }`}
             >
-              {fact.text}&nbsp;<span aria-hidden="true">›</span>
+              {fact.text}
+              <DiveDayIcon name="chevron-right" className="ms-1 size-4" />
             </Link>
           ))}
         </div>

@@ -159,6 +159,7 @@ export async function updateDiver(
           eq(people.id, input.personId),
           eq(people.shopId, input.shopId),
           isNull(people.deletedAt),
+          isNull(people.mergedIntoPersonId),
         ),
       )
       .returning();
@@ -183,7 +184,14 @@ export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
   const [person] = await db
     .update(people)
     .set({ deletedAt: nowDate() })
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        isNull(people.mergedIntoPersonId),
+      ),
+    )
     .returning({ id: people.id });
   return Boolean(person);
 }
@@ -212,6 +220,7 @@ export async function restoreDiver(db: AppDb, shopId: string, personId: string) 
           eq(people.shopId, shopId),
           isNotNull(people.deletedAt),
           isNull(people.anonymizedAt),
+          isNull(people.mergedIntoPersonId),
         ),
       )
       .returning({ id: people.id });

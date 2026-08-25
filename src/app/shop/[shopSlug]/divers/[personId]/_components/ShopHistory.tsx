@@ -166,11 +166,7 @@ export function ShopHistory({
           {t("divers.history.importedVisitsText", { count: imported })}
         </p>
       ) : null}
-      {history.length === 0 ? (
-        <p className={sectionCardClass({ padding: "lg", className: "mt-4 text-sm text-muted" })}>
-          {t("divers.history.noTripsYet")}
-        </p>
-      ) : (
+      {history.length === 0 ? null : (
         <>
           <ul
             className={sectionCardClass({

@@ -213,6 +213,47 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.notAuthorizedNotes",
   },
 
+  // Explicit duplicate resolution. A successful merge lands on the survivor,
+  // where the candidate panel may no longer render, so its confirmation is a
+  // page notice; refusals stay beside the survivor-choice control.
+  merged: { form: "page", tone: "success", key: "divers.notices.merged" },
+  "not-authorized-merge": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedMerge",
+  },
+  "merge-invalid": { form: "merge", tone: "danger", key: "divers.notices.mergeInvalid" },
+  "merge-anonymized": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAnonymized",
+  },
+  "merge-already-merged": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAlreadyMerged",
+  },
+  "merge-already-removed": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAlreadyRemoved",
+  },
+  "merge-staff-record": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeStaffRecord",
+  },
+  "merge-booking-conflict": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeBookingConflict",
+  },
+  "merge-record-conflict": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeRecordConflict",
+  },
+
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.
   booked: { form: "book-activity", tone: "success", key: "divers.notices.booked" },
@@ -317,6 +358,7 @@ const DIVER_FORMS = new Set([
   "payments",
   "book-activity",
   "notes",
+  "merge",
   "remove",
   "restore",
   "erase",

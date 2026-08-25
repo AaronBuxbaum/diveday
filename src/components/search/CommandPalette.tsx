@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
-import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
@@ -658,8 +658,12 @@ export function CommandPalette({
                   className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-5 py-2.5 text-xs text-muted"
                 >
                   <span className="inline-flex items-center gap-1.5">
-                    <kbd className={hintKeyClass}>↑</kbd>
-                    <kbd className={hintKeyClass}>↓</kbd>
+                    <kbd className={hintKeyClass}>
+                      <DiveDayIcon name="arrow-up" className="size-3" />
+                    </kbd>
+                    <kbd className={hintKeyClass}>
+                      <DiveDayIcon name="arrow-down" className="size-3" />
+                    </kbd>
                     {copy.hintMove}
                   </span>
                   <span className="inline-flex items-center gap-1.5">

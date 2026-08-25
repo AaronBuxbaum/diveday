@@ -7,6 +7,7 @@ import { AgencyTabs } from "@/components/AgencyTabs";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -206,12 +207,9 @@ export default async function CoursesPage({
                       className="font-semibold text-foreground after:absolute after:inset-0 group-hover:text-primary focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
                     >
                       {course.title}
-                      {/* The arrow is CSS `content`, not a text node: specs locate
-                      this row by the title's exact text, and a DOM arrow would
-                      make the link read "Rescue Diver →" to them. */}
-                      <span
-                        aria-hidden="true"
-                        className="ml-1 opacity-0 transition-opacity before:content-['→'] group-hover:opacity-100"
+                      <DiveDayIcon
+                        name="arrow-right"
+                        className="ml-1 inline-block size-4 align-[-0.15em] opacity-0 transition-opacity group-hover:opacity-100"
                       />
                     </Link>
                     {course.isActive ? null : (

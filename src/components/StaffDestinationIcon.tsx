@@ -1,7 +1,132 @@
 // i18n-exempt-file: pure SVG artwork — every node is aria-hidden path data,
 // no words; the accessible name comes from the destination-label record the
 // rendering surface resolves from the staff bundle.
+import type { ReactNode } from "react";
 import type { StaffDestinationId } from "@/lib/staff-destinations";
+
+export type DisclosureCaretDirection = "right" | "down";
+export type WaiverActionIconName = "email" | "text" | "link" | "paper";
+export type WaiverDeliveryMarkName = "sent" | "copied" | "failed" | "unavailable";
+export type DiveDaySharedIconName =
+  | "caret"
+  | "info"
+  | "empty"
+  | "globe"
+  | "check"
+  | "pending"
+  | "arrow-right"
+  | "arrow-left"
+  | "arrow-up"
+  | "arrow-down"
+  | "chevron-left"
+  | "chevron-right"
+  | "more"
+  | `waiver-action-${WaiverActionIconName}`
+  | `waiver-mark-${WaiverDeliveryMarkName}`;
+
+const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNode> = {
+  info: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 5.1a1.65 1.65 0 1 0 0 3.3 1.65 1.65 0 0 0 0-3.3ZM13.8 18H10.2a1.05 1.05 0 0 1 0-2.1h.75v-3.6h-.6a1.05 1.05 0 0 1 0-2.1h2.7v5.7h.75a1.05 1.05 0 0 1 0 2.1Z"
+    />
+  ),
+  empty: (
+    <>
+      <circle cx="12" cy="15" r="3" />
+      <circle cx="8.5" cy="7.2" r="1.8" />
+      <circle cx="15.7" cy="9" r="1.2" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" />
+    </>
+  ),
+  check: <path d="m5 12.5 4.5 4.5L19 7" />,
+  pending: <circle cx="12" cy="12" r="7" strokeDasharray="2.5 2.5" />,
+  "arrow-right": (
+    <>
+      <path d="M4 12h15" />
+      <path d="m13 6 6 6-6 6" />
+    </>
+  ),
+  "arrow-left": (
+    <>
+      <path d="M20 12H5" />
+      <path d="m11 6-6 6 6 6" />
+    </>
+  ),
+  "arrow-up": (
+    <>
+      <path d="M12 20V5" />
+      <path d="m6 11 6-6 6 6" />
+    </>
+  ),
+  "arrow-down": (
+    <>
+      <path d="M12 4v15" />
+      <path d="m6 13 6 6 6-6" />
+    </>
+  ),
+  "chevron-left": <path d="m15 6-6 6 6 6" />,
+  "chevron-right": <path d="m9 6 6 6-6 6" />,
+  more: (
+    <>
+      <circle cx="6" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="12" r="1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  "waiver-action-email": (
+    <>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="m21 7-8.47 5.38a1 1 0 0 1-1.06 0L3 7" />
+    </>
+  ),
+  "waiver-action-text": (
+    <>
+      <path d="M20 4H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2v4l4.5-4H20a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+      <path d="M7.5 9.5h9" />
+      <path d="M7.5 13h5.5" />
+    </>
+  ),
+  "waiver-action-link": (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </>
+  ),
+  "waiver-action-paper": (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="m8.5 15 1.75 1.75L14 13" />
+    </>
+  ),
+  "waiver-mark-sent": <path d="m5 12.5 4.5 4.5L19 7" />,
+  "waiver-mark-copied": (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V6a1 1 0 0 1 1-1h9" />
+    </>
+  ),
+  "waiver-mark-failed": (
+    <>
+      <path d="m6 6 12 12" />
+      <path d="m18 6-12 12" />
+    </>
+  ),
+  "waiver-mark-unavailable": <path d="M5 12h14" />,
+};
+
+const CARET_PATHS: Record<DisclosureCaretDirection, string> = {
+  right: "m9 6 6 6-6 6",
+  down: "m6 9 6 6 6-6",
+};
 
 /**
  * One stroke icon per staff destination, for the surfaces that show the
@@ -18,7 +143,7 @@ import type { StaffDestinationId } from "@/lib/staff-destinations";
  * the fallback still stands: a destination added tomorrow renders a neutral dot
  * rather than crashing, which is visible enough to notice and harmless to ship.
  */
-const ICON_PATHS: Partial<Record<StaffDestinationId, React.ReactNode>> = {
+const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
   // The day itself: a sun over the horizon line.
   today: (
     <>
@@ -203,6 +328,50 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, React.ReactNode>> = {
   ),
 };
 
+/**
+ * The rest of DiveDay's small marks belong to the same 24px drawn family as
+ * staff destinations. Keeping the SVG root here means a caret, empty-state
+ * bubble, info hint, language globe, and waiver mark cannot drift into their
+ * own viewBox or stroke grammar in another component.
+ */
+export function DiveDayIcon({
+  name,
+  className = "size-4",
+  direction = "right",
+  strokeWidth = 1.8,
+}: {
+  name: StaffDestinationId | DiveDaySharedIconName;
+  className?: string;
+  direction?: DisclosureCaretDirection;
+  strokeWidth?: number;
+}) {
+  const isCaret = name === "caret";
+  const path = isCaret ? (
+    <path d={CARET_PATHS[direction]} />
+  ) : name in ICON_PATHS ? (
+    (ICON_PATHS[name as StaffDestinationId] ?? <circle cx="12" cy="12" r="4" />)
+  ) : (
+    SHARED_ICON_PATHS[name as Exclude<DiveDaySharedIconName, "caret">]
+  );
+  const isFilled = name === "info";
+  const isEmpty = name === "empty";
+  const isMark = name.startsWith("waiver-mark-");
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill={isFilled ? "none" : "none"}
+      stroke={isFilled ? "none" : "currentColor"}
+      strokeWidth={isMark ? 2.4 : isCaret ? 2.5 : isEmpty ? 1.5 : strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {path}
+    </svg>
+  );
+}
+
 export function StaffDestinationIcon({
   id,
   className = "size-6",
@@ -210,18 +379,5 @@ export function StaffDestinationIcon({
   id: StaffDestinationId;
   className?: string;
 }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      {ICON_PATHS[id] ?? <circle cx="12" cy="12" r="4" />}
-    </svg>
-  );
+  return <DiveDayIcon name={id} className={className} />;
 }

@@ -78,6 +78,7 @@
   "firstRun": {
     "heading": "Get your shop ready",
     "subtitle": "{count, plural, one {# step} other {# steps}} and divers can start booking.",
+    "progress": "{done} of {total} done",
     "contactTitle": "Add your contact details",
     "contactBody": "Phone and email so divers — and DiveDay — can reach you.",
     "contactAction": "Add contact details",

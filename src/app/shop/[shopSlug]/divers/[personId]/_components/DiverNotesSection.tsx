@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { sectionCardClass } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import type { listDiverRecordNotes } from "@/db/operations";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -29,17 +29,20 @@ export function DiverNotesSection({
 }) {
   const t = staffTranslator(locale);
   return (
-    <SectionCard
-      title={t("divers.notes.heading")}
-      description={t("divers.notes.description")}
-      className="mt-10"
-    >
+    <section className="mt-10" aria-labelledby="notes-heading">
+      <h2 id="notes-heading" className="text-lg font-semibold">
+        {t("divers.notes.heading")}
+      </h2>
+      <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.notes.description")}</p>
       {notes.length > 0 ? (
         <ol className="grid gap-3">
           {notes.map(({ note, authorName, tripId, tripTitle, tripStartsAt }) => (
             <li
               key={note.id}
-              className="flex items-start justify-between gap-3 rounded-lg bg-surface-sunken px-3 py-3"
+              className={sectionCardClass({
+                padding: "md",
+                className: "flex items-start justify-between gap-3 bg-surface-sunken shadow-none",
+              })}
             >
               <div className="min-w-0">
                 <p className="whitespace-pre-wrap text-base">{note.body}</p>
@@ -80,11 +83,9 @@ export function DiverNotesSection({
             </li>
           ))}
         </ol>
-      ) : (
-        <p className="text-base text-muted">{t("divers.notes.empty")}</p>
-      )}
+      ) : null}
 
-      <div className="mt-5 border-t border-border pt-5">
+      <div className={`${notes.length > 0 ? "mt-5 border-t border-border pt-5" : "mt-4"}`}>
         <PrivateNoteForm
           action={addDiverNoteAction.bind(null, shopSlug, personId)}
           resetKey={notes.length}
@@ -99,6 +100,6 @@ export function DiverNotesSection({
           <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
         </FieldActions>
       </div>
-    </SectionCard>
+    </section>
   );
 }

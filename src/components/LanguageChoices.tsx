@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 /** One language on offer: its tag, and its own name for itself. */
 export type LanguageChoice = { locale: string; label: string };
@@ -80,7 +81,7 @@ export function LanguageChoices({
                 inert placeholder keeps every label on one left edge. */}
             {list ? (
               <span aria-hidden="true" className="w-3 shrink-0 text-primary">
-                {active ? "✓" : ""}
+                {active ? <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> : null}
               </span>
             ) : null}
             {choice.label}

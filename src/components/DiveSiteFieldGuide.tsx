@@ -1,3 +1,4 @@
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import type { MarineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -84,9 +85,7 @@ export function DiveSiteFieldGuide({
 
       {tips.length ? (
         <aside className="mt-7 flex gap-3 rounded-xl bg-primary-tint p-4">
-          <span aria-hidden="true" className="text-xl">
-            ◌
-          </span>
+          <DiveDayIcon name="pending" className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
             <h4 className="font-semibold">{tipsHeading || t("site.seeMoreHeading")}</h4>
             <p className="mt-1 text-sm leading-relaxed text-muted">{tips.slice(0, 2).join(" ")}</p>

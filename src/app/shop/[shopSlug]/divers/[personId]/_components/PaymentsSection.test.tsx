@@ -189,7 +189,8 @@ describe("PaymentsSection lists money, not bookings", () => {
       />,
     );
     expect(screen.queryByText("Saturday reef charter")).not.toBeInTheDocument();
-    expect(screen.getByText(/No payments yet/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Payments" })).toBeInTheDocument();
+    expect(screen.queryByText(/No payments yet/)).not.toBeInTheDocument();
   });
 
   it("renders every order with no disclosure when at or under the preview count", () => {
@@ -222,13 +223,10 @@ describe("PaymentsSection lists money, not bookings", () => {
  * button from reading as broken.
  */
 describe("PaymentsSection with no connected payment account", () => {
-  it("offers to connect payments instead of linking at the order door", () => {
+  it("does not turn the diver record into a payment-settings door", () => {
     renderOrders(1, false);
 
-    expect(screen.getByRole("link", { name: "Connect payments" })).toHaveAttribute(
-      "href",
-      "/shop/reef-shop/settings#money",
-    );
+    expect(screen.queryByRole("link", { name: "Connect payments" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "New payment" })).not.toBeInTheDocument();
   });
 

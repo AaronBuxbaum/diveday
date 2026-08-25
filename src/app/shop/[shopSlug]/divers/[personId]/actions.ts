@@ -8,11 +8,13 @@ import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
   canPersonErasePersonalData,
+  canPersonMergeDiver,
   canPersonOverrideGearRequest,
   canPersonRefund,
   loadActiveStaffRoles,
 } from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
+import { mergeDiverRecords } from "@/db/diver-merge";
 import {
   deleteDiver,
   getDiverProfile,
@@ -174,6 +176,7 @@ const FORM_ANCHORS: Record<string, string> = {
   remove: "#remove-heading",
   restore: "#removed-heading",
   erase: "#erase-heading",
+  merge: "#merge-heading",
   // `details` sits under the header, which is where a redirect lands anyway.
 };
 
@@ -938,6 +941,56 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
           ? "refund-needs-reconciliation"
           : "refund-failed";
   revalidateAndRedirect(base, backTo(base, notice, "payments"));
+}
+
+/**
+ * Merge the route's diver with one of its explicitly surfaced candidates.
+ * The posted survivor id is untrusted and the domain transaction checks the
+ * shop, active state, diver role, booking collision, and live owner/manager
+ * authorization again before moving anything.
+ */
+export async function mergeDiverAction(shopSlug: string, personId: string, formData: FormData) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-merge",
+    "merge",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  if (!(await canPersonMergeDiver(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-merge"));
+    return;
+  }
+  const survivorId = uuidParam(String(formData.get("survivorId") ?? ""));
+  if (!survivorId) {
+    revalidateAndRedirect(base, backTo(base, "merge-invalid", "merge"));
+    return;
+  }
+
+  const result = await mergeDiverRecords({
+    db,
+    shopId: staff.user.shopId,
+    personId,
+    survivorId,
+    actorPersonId: staff.user.personId,
+  });
+  if (!result.ok) {
+    const notice =
+      result.reason === "not_authorized"
+        ? "not-authorized-merge"
+        : result.reason === "not_found"
+          ? "merge-invalid"
+          : `merge-${result.reason}`;
+    revalidateAndRedirect(
+      base,
+      backTo(base, notice, notice === "not-authorized-merge" ? undefined : "merge"),
+    );
+    return;
+  }
+
+  const survivorBase = shopPath(staff.user.shopSlug, "divers", result.survivorId);
+  revalidateAndRedirect(survivorBase, noticeUrl(survivorBase, "merged"));
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {

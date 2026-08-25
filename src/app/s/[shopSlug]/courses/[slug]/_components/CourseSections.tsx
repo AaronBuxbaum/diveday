@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -307,9 +308,7 @@ export function CourseIncludes({
             <ul className="mt-3 grid gap-2 text-sm">
               {includes.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span aria-hidden="true" className="text-success">
-                    ✓
-                  </span>
+                  <DiveDayIcon name="check" className="mt-0.5 size-4 shrink-0 text-success" />
                   <span>{item}</span>
                 </li>
               ))}

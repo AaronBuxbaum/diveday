@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { useExitAnimation } from "@/components/useExitAnimation";
@@ -117,12 +118,11 @@ export function ShopIdentityMenu({
         <span className="min-w-0 truncate">{shopName}</span>
         {/* The one visual cue that the identity block opens: a small caret,
             rotating with state (transform-only, ≤250ms, principle 5). */}
-        <span
-          aria-hidden="true"
-          className={`text-xs text-muted transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          ▾
-        </span>
+        <DiveDayIcon
+          name="caret"
+          direction="down"
+          className={`size-3 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {mounted ? (
         <div

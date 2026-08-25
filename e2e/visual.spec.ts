@@ -19,8 +19,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and twenty-six key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 504 screenshots per run (see
+ * Visual regression coverage. A hundred and fifty-seven key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 628 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -36,7 +36,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * trip-packet, and departure-log pages as they render for the printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
- * once, at a US-Letter width, via `capturePrint()`. That brings the run to 508
+ * once, at a US-Letter width, via `capturePrint()`. That brings the run to 632
  * screenshots.
  *
  * ## One surface, one `test()`
@@ -2498,6 +2498,34 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
         await capture(page, "diver-profile", scheme);
+      });
+
+      /**
+       * The explicit duplicate-resolution surface: create a second record for
+       * a seeded diver, then photograph the owner/manager's survivor choice.
+       * This keeps the warning, match reasons, radio controls, and one primary
+       * merge action in the visual suite without making the demo seed itself a
+       * duplicate. The per-test reset removes the temporary record afterward.
+       */
+      test(`a possible duplicate record renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/divers/new");
+        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.getByLabel("Full name").fill("Priya Sharma");
+        await page.getByLabel("Email").fill("priya.duplicate@example.com");
+        await page.getByLabel("Phone").fill("+1 305 555 0999");
+        await page.getByRole("button", { name: "Add diver", exact: true }).click();
+        await page
+          .getByRole("heading", {
+            name: "Did you mean one of these existing potential matches?",
+          })
+          .waitFor();
+        await page.getByRole("button", { name: "Create new diver anyway" }).click();
+        await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        await page.getByRole("heading", { name: "Possible duplicate records" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-merge", scheme);
       });
 
       /**

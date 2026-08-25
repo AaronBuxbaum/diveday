@@ -177,6 +177,15 @@ export function canDeleteDiver(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * Merge two diver records — a reversible-in-the-database identity decision
+ * that moves operational history, so it has the same owner/manager boundary
+ * as deleting a roster record (issue #730).
+ */
+export function canMergeDiver(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Erase a diver: destroy their identifying and medical data across the shop and
  * re-seal their signed releases as evidence skeletons
  * (ADR 20260802-diver-data-erasure). Deliberately **stricter** than

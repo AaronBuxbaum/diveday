@@ -12,6 +12,7 @@ import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
+import { DiveDayIcon, type DiveDaySharedIconName } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TokenPageHeader } from "@/components/TokenPageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -112,30 +113,35 @@ type RowState = ChecklistState | "optional";
 
 const STATE_STYLE: Record<
   RowState,
-  { glyph: string; word: DiverMessageKey; box: string; text: string }
+  {
+    icon: Exclude<DiveDaySharedIconName, `waiver-${string}` | "caret">;
+    word: DiverMessageKey;
+    box: string;
+    text: string;
+  }
 > = {
   // `-strong` on the success pair: the raw light-palette hue reads 4.39:1 on
   // its own 10% fill, under AA (docs/design/forms-and-controls.md).
   done: {
-    glyph: "✓",
+    icon: "check",
     word: "ready.stateDone",
     box: "bg-success-tint text-success-strong",
     text: "text-success-strong",
   },
   action: {
-    glyph: "→",
+    icon: "arrow-right",
     word: "ready.stateAction",
     box: "bg-primary-tint text-primary",
     text: "text-primary",
   },
   waiting: {
-    glyph: "•",
+    icon: "pending",
     word: "ready.stateWaiting",
     box: "bg-surface-sunken text-muted",
     text: "text-muted",
   },
   optional: {
-    glyph: "•",
+    icon: "pending",
     word: "ready.stateOptional",
     box: "bg-surface-sunken text-muted",
     text: "text-muted",
@@ -168,7 +174,11 @@ function ChecklistRow({
         aria-hidden="true"
         className={`grid size-10 shrink-0 place-items-center rounded-xl text-lg font-bold ${style.box}`}
       >
-        {style.glyph}
+        <DiveDayIcon
+          name={style.icon}
+          className={style.icon === "arrow-right" ? "size-5" : "size-4"}
+          strokeWidth={style.icon === "arrow-right" ? 1.8 : 2}
+        />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">

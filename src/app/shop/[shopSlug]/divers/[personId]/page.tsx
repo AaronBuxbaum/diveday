@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JumpNav } from "@/components/JumpNav";
 import { UndoToast } from "@/components/UndoToast";
 import {
   canPersonDeleteDiver,
   canPersonErasePersonalData,
+  canPersonMergeDiver,
   canPersonOverrideGearRequest,
   canPersonRefund,
 } from "@/db/authz";
+import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
@@ -27,6 +29,7 @@ import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
 import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
+import { MergeDiver } from "./_components/MergeDiver";
 import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
@@ -96,6 +99,12 @@ export default async function DiverDetailPage({
     ? await getDiverProfile(db, shop.id, personId, { includeRemoved: true })
     : null;
   if (!shop || !diver) notFound();
+  // A merged-away record is intentionally still a pointer, not a second
+  // profile. Follow it before loading any of the old record's sections so a
+  // stale bookmark cannot make a staffer act on the source row again.
+  if (diver.person.mergedIntoPersonId) {
+    redirect(`/shop/${shopSlug}/divers/${diver.person.mergedIntoPersonId}`);
+  }
   const removed = Boolean(diver.person.deletedAt);
   // Refunds and diver deletion are owner/manager only (H-14, ADR
   // 20260724-role-authorization); hide those controls from other staff. The
@@ -107,6 +116,7 @@ export default async function DiverDetailPage({
   const [
     canRefund,
     canDelete,
+    canMerge,
     canOverrideFit,
     canErase,
     canExport,
@@ -116,6 +126,7 @@ export default async function DiverDetailPage({
   ] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
+    canPersonMergeDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
     canPersonErasePersonalData(db, shop.id, session.user.personId),
     // Same owner/manager gate the shop-wide export uses (issue #726) — a
@@ -130,6 +141,8 @@ export default async function DiverDetailPage({
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
   ]);
+  const mergeCandidates =
+    canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
   // `orders/new` refuses outright without a payable account, so the Payments
   // section offers "Connect payments" rather than invoice buttons that bounce.
   const paymentsConnected = canAcceptPayments(stripeAccount);
@@ -224,6 +237,16 @@ export default async function DiverDetailPage({
       ) : (
         <NoticeBanner notice={pageNotice} shopSlug={shopSlug} locale={locale} />
       )}
+      {canMerge && !removed ? (
+        <MergeDiver
+          diver={diver}
+          candidates={mergeCandidates}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          status={noticeForForm(diverNotice, "merge")}
+        />
+      ) : null}
       {/* Above the stat cards, not below them: on a 390px phone those three
           cards stack, and a row sitting under them lands ~1,150px down — a spine
           you have to scroll to find is not a spine. */}
@@ -232,7 +255,7 @@ export default async function DiverDetailPage({
         items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
-      <StatsSummary diver={diver} shop={shop} locale={locale} notesCount={notes.length} />
+      <StatsSummary diver={diver} shop={shop} locale={locale} />
       <DiverSection id="waiver">
         <WaiverSection
           diver={diver}
@@ -251,6 +274,8 @@ export default async function DiverDetailPage({
           shop={shop}
           status={cardsStatus}
         />
+      </DiverSection>
+      <DiverSection id="specialty">
         <SpecialtyCards
           diver={diver}
           shopSlug={shopSlug}
@@ -286,7 +311,7 @@ export default async function DiverDetailPage({
           status={noticeForForm(diverNotice, "payments")}
         />
       </DiverSection>
-      <DiverSection id="trips">
+      <DiverSection id="book-activity">
         {/* No new bookings for a removed diver: seating one would walk them
             straight back onto a manifest and a prep list without anybody
             deciding to restore them. Their existing trips still show — removal
@@ -302,6 +327,8 @@ export default async function DiverDetailPage({
             status={noticeForForm(diverNotice, "book-activity")}
           />
         )}
+      </DiverSection>
+      <DiverSection id="trips">
         <UpcomingTripsSection
           diver={diver}
           shop={shop}

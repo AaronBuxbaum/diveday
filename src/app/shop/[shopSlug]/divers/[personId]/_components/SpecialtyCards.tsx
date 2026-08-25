@@ -53,7 +53,9 @@ export function SpecialtyCards({
           <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
         <details className="relative ml-auto shrink-0">
-          <summary className={`${buttonClass()} list-none [&::-webkit-details-marker]:hidden`}>
+          <summary
+            className={`${buttonClass({ variant: "secondary" })} list-none [&::-webkit-details-marker]:hidden`}
+          >
             {t("divers.specialty.addSpecialty")}
           </summary>
           {/* z-20, matching the certification panel above it and every other

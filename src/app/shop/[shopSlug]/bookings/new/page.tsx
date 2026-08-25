@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import {
   type BookingRequestCardItem,
   BookingRequestContext,
@@ -183,7 +184,8 @@ export default async function NewBookingPage({
         href={`/shop/${shopSlug}/schedule/board`}
         className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
       >
-        ← {t("bookings.new.backToBoard")}
+        <DiveDayIcon name="arrow-left" className="size-4" />
+        {t("bookings.new.backToBoard")}
       </Link>
 
       {selectedRequest ? (

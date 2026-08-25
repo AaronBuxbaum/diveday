@@ -2,10 +2,12 @@
   "subNav": {
     "ariaLabel": "Ficha del buceador",
     "cards": "Titulaciones",
+    "specialty": "Certificaciones de especialidad",
     "waiver": "Exención",
     "notes": "Notas",
     "fit": "Tallas",
     "payments": "Pagos",
+    "bookActivity": "Reservar actividad",
     "trips": "Salidas",
     "history": "Historial",
     "activity": "Actividad"
@@ -148,6 +150,7 @@
     "tableHeaderPerson": "Persona",
     "tableHeaderLevel": "Nivel",
     "tableHeaderAttention": "Requiere atención",
+    "possibleDuplicateLabel": "Posible duplicado",
     "noCertificationLevel": "Sin certificación vigente",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
@@ -207,6 +210,20 @@
     "restore": "Restaurar buceador",
     "restoring": "Restaurando…",
     "restoreRestricted": "Solo propietarios y gerentes pueden restaurar a un buceador."
+  },
+  "merge": {
+    "heading": "Posibles registros duplicados",
+    "description": "Estos registros activos parecen ser de la misma persona. Elige cuál sobrevive; las reservas, certificaciones, liberaciones, ajuste de alquiler, notas, pagos y visitas anteriores pasarán a ese registro.",
+    "warning": "Esta es una acción explícita de propietario o gerente. La otra fila se elimina y conserva un enlace al registro superviviente; una salida compartida o un historial en conflicto se rechaza.",
+    "survivorLabel": "Elige el registro que se conserva",
+    "keepThis": "Conservar {name} (este registro)",
+    "keepCandidate": "Conservar {name}",
+    "samePhone": "Mismo número de teléfono",
+    "sameName": "Mismo nombre normalizado",
+    "noContact": "Sin datos de contacto",
+    "confirm": "¿Fusionar estos registros de buceador? Elige con cuidado el superviviente. El otro registro se eliminará y su historial pasará a él.",
+    "submit": "Fusionar registros",
+    "pending": "Fusionando…"
   },
   "erase": {
     "heading": "Borrar datos personales",
@@ -367,7 +384,16 @@
     "notAuthorizedCards": "Tu cuenta ya no puede modificar certificaciones en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "noteAdded": "Nota del buceador añadida.",
     "noteDeleted": "Nota del buceador eliminada.",
-    "notAuthorizedNotes": "Tu cuenta ya no puede cambiar las notas de este buceador en este centro. Pide a un propietario o gerente que revise tu acceso."
+    "notAuthorizedNotes": "Tu cuenta ya no puede cambiar las notas de este buceador en este centro. Pide a un propietario o gerente que revise tu acceso.",
+    "merged": "Registros de buceador fusionados. El registro elegido ahora es el superviviente.",
+    "notAuthorizedMerge": "Fusionar registros de buceadores está limitado a propietarios y gerentes; pide a uno de ellos que lo haga.",
+    "mergeInvalid": "Elige uno de los posibles registros duplicados e inténtalo de nuevo.",
+    "mergeAnonymized": "Estos registros no se pueden fusionar porque uno ya fue borrado.",
+    "mergeAlreadyMerged": "Uno de estos registros ya se fusionó. Actualiza la página y elige un registro activo.",
+    "mergeAlreadyRemoved": "Uno de estos registros está eliminado. Restáuralo antes de fusionar.",
+    "mergeStaffRecord": "Los registros de personal o tripulación no se pueden fusionar con un registro de buceador.",
+    "mergeBookingConflict": "Ambos registros tienen una reserva en la misma salida. Resuelve primero esa reserva; no se movió nada.",
+    "mergeRecordConflict": "Estos registros tienen un historial en conflicto que no se puede combinar con seguridad. No se movió nada."
   },
   "export": {
     "downloadButton": {
