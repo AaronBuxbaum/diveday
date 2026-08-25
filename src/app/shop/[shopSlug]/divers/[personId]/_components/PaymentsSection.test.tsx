@@ -218,15 +218,17 @@ describe("PaymentsSection lists money, not bookings", () => {
 
 /**
  * `orders/new` refuses to open at all until the shop can accept payments, so a
- * day-one shop's "New payment" button went nowhere and said nothing. Hiding it
- * is a courtesy — the page still re-checks — but the courtesy is what stops a
- * button from reading as broken.
+ * day-one shop's "New payment" button went nowhere and said nothing. The
+ * section now offers the one settings door that fixes that state.
  */
 describe("PaymentsSection with no connected payment account", () => {
-  it("does not turn the diver record into a payment-settings door", () => {
+  it("offers the payment-settings door instead of a dead new-payment button", () => {
     renderOrders(1, false);
 
-    expect(screen.queryByRole("link", { name: "Connect payments" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Connect payments" })).toHaveAttribute(
+      "href",
+      "/shop/reef-shop/settings#money",
+    );
     expect(screen.queryByRole("link", { name: "New payment" })).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -226,7 +227,9 @@ export function PaymentsSection({
           >
             {t("divers.payments.newPayment")}
           </Link>
-        ) : null}
+        ) : (
+          <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
+        )}
       </div>
 
       {/* Beside this section's own controls. The refund buttons live per row
