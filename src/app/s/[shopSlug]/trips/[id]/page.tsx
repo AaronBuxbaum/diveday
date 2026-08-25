@@ -201,7 +201,7 @@ export default async function TripDetailPage({
           {isEmbed ? null : (
             <Link
               href={publicSchedulePath(shopSlug)}
-              className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               <DiveDayIcon name="arrow-left" className="size-4" />
               {t("trip.backToAllTrips")}
@@ -413,7 +413,7 @@ export default async function TripDetailPage({
         {isEmbed ? null : (
           <Link
             href={publicSchedulePath(shopSlug)}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+            className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
             <DiveDayIcon name="arrow-left" className="size-4" />
             {t("trip.backToAllTrips")}

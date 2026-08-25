@@ -75,15 +75,17 @@ async function hasPersonRow(
   tableName: string,
   shopId: string,
   personId: string,
-  shopScoped = true,
 ): Promise<boolean> {
-  const result = shopScoped
-    ? await db.execute(
-        sql`select 1 from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${shopId} and "person_id" = ${personId} limit 1`,
-      )
-    : await db.execute(
-        sql`select 1 from ${sql.raw(quotedTable(tableName))} where "person_id" = ${personId} limit 1`,
-      );
+  const result = await db.execute(
+    sql`select 1 from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${shopId} and "person_id" = ${personId} limit 1`,
+  );
+  return result.rows.length > 0;
+}
+
+async function hasPersonOnlyRow(db: DbExecutor, tableName: string, personId: string) {
+  const result = await db.execute(
+    sql`select 1 from ${sql.raw(quotedTable(tableName))} where "person_id" = ${personId} limit 1`,
+  );
   return result.rows.length > 0;
 }
 
@@ -173,7 +175,7 @@ export async function listDiverMergeCandidates(
  */
 export async function listDiverMergeDuplicateIds(db: AppDb, shopId: string): Promise<string[]> {
   const rows = await db
-    .select({ person: people })
+    .select({ id: people.id, fullName: people.fullName, phone: people.phone })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
@@ -189,7 +191,7 @@ export async function listDiverMergeDuplicateIds(db: AppDb, shopId: string): Pro
 
   const phones = new Map<string, string[]>();
   const names = new Map<string, string[]>();
-  for (const { person } of rows) {
+  for (const person of rows) {
     const phone = phoneDigits(person.phone ?? "");
     if (phone.length >= MIN_PHONE_SEARCH_DIGITS) {
       phones.set(phone, [...(phones.get(phone) ?? []), person.id]);
@@ -314,10 +316,10 @@ export async function mergeDiverRecords(input: {
         }
       }
       for (const tableName of STAFF_PERSON_ONLY_TABLES) {
-        if (await hasPersonRow(tx, tableName, input.shopId, source.id, false)) {
+        if (await hasPersonOnlyRow(tx, tableName, source.id)) {
           return { ok: false, reason: "staff_record" };
         }
-        if (await hasPersonRow(tx, tableName, input.shopId, survivor.id, false)) {
+        if (await hasPersonOnlyRow(tx, tableName, survivor.id)) {
           return { ok: false, reason: "staff_record" };
         }
       }
@@ -326,6 +328,16 @@ export async function mergeDiverRecords(input: {
       const mergedSpokenLanguages = [
         ...new Set([...survivor.spokenLanguages, ...source.spokenLanguages]),
       ];
+      await tx
+        .update(people)
+        .set({
+          deletedAt: mergedAt,
+          mergedIntoPersonId: survivor.id,
+          mergedAt,
+          mergedByPersonId: input.actorPersonId,
+        })
+        .where(eq(people.id, source.id));
+
       await tx
         .update(people)
         .set({
@@ -359,16 +371,6 @@ export async function mergeDiverRecords(input: {
           sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}`,
         );
       }
-
-      await tx
-        .update(people)
-        .set({
-          deletedAt: mergedAt,
-          mergedIntoPersonId: survivor.id,
-          mergedAt,
-          mergedByPersonId: input.actorPersonId,
-        })
-        .where(eq(people.id, source.id));
 
       return { ok: true, survivorId: survivor.id, mergedPersonId: source.id };
     });

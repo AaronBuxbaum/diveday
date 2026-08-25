@@ -50,6 +50,27 @@ async function mergeFixtures() {
 }
 
 describe("diver record merge", () => {
+  it("moves a source-only email onto an email-less survivor", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db.update(people).set({ email: null }).where(eq(people.id, survivor.id));
+    await db.update(people).set({ email: "source@example.com" }).where(eq(people.id, source.id));
+
+    const result = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    expect(result).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+    const [mergedSurvivor] = await db
+      .select({ email: people.email })
+      .from(people)
+      .where(eq(people.id, survivor.id));
+    expect(mergedSurvivor?.email).toBe("source@example.com");
+  });
+
   it("surfaces narrow same-name and same-phone candidates", async () => {
     const { db, shop, source, survivor } = await mergeFixtures();
     const candidates = await listDiverMergeCandidates(db, shop.id, source.id);

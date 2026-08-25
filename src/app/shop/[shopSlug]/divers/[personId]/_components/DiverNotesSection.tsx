@@ -35,7 +35,7 @@ export function DiverNotesSection({
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.notes.description")}</p>
       {notes.length > 0 ? (
-        <ol className="grid gap-3">
+        <ol className="mt-4 grid gap-3">
           {notes.map(({ note, authorName, tripId, tripTitle, tripStartsAt }) => (
             <li
               key={note.id}

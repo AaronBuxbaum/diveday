@@ -135,6 +135,7 @@ export function UpcomingTripsSection({
               shopSlug={shopSlug}
               personId={personId}
               paymentsConnected={paymentsConnected}
+              showNoOrderBadge={false}
               t={t}
             />
           </li>

@@ -138,7 +138,9 @@ describe("the step count", () => {
       />,
     );
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(FIRST_RUN_STEP_COUNT);
+    // Five rows contribute persisted progress; trip and schedule are guided
+    // actions and remain visible without pretending they can be checked off.
+    expect(screen.getAllByRole("listitem")).toHaveLength(FIRST_RUN_STEP_COUNT + 2);
   });
 });
 

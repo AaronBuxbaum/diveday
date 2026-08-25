@@ -121,7 +121,7 @@ export default async function WalkInPage({
       />
       <Link
         href={`/shop/${shopSlug}/check-in`}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         <DiveDayIcon name="arrow-left" className="size-4" />
         {t("checkIn.walkIn.backToQueue")}

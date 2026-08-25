@@ -120,13 +120,10 @@ function CopyScheduleLinkButton({
 }
 
 /**
- * A new, real shop's Today is otherwise an empty work queue — nothing to
- * crew, nothing to check divers into. This replaces that blank landing with
- * the five things that actually get a shop from "just signed up" to "divers
- * can book": contact details, a dive site, a trip, the link that sells it,
- * and (optional) taking payment online. Each step's done-state comes from a
- * real query, never a dismiss-and-forget flag, so it reflects the shop's
- * actual progress on every visit.
+ * A new, real shop's Today is otherwise an empty work queue. This replaces
+ * that blank landing with five persisted setup checks plus two guided actions
+ * (schedule a trip and share its public link). Each completion state comes
+ * from a real query, never a dismiss-and-forget flag.
  */
 export function FirstRunChecklist({
   shopSlug,

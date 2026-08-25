@@ -182,7 +182,7 @@ export default async function NewBookingPage({
       <ShopPageHeader eyebrow={t("bookings.new.eyebrow")} title={t("bookings.new.title")} />
       <Link
         href={`/shop/${shopSlug}/schedule/board`}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         <DiveDayIcon name="arrow-left" className="size-4" />
         {t("bookings.new.backToBoard")}

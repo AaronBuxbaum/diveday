@@ -25,8 +25,12 @@ export function MergeDiver({
   locale: string;
   status?: DiverNotice;
 }) {
-  if (candidates.length === 0) return null;
   const t = staffTranslator(locale);
+  if (candidates.length === 0) {
+    return (
+      <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-6" />
+    );
+  }
   const options = [
     {
       id: diver.person.id,

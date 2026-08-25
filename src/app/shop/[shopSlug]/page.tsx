@@ -270,18 +270,14 @@ async function TodayBody({
   const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
     ? await Promise.all([listDiveSites(db, shop.id), getShopStripeAccount(db, shop.id)])
     : [null, null];
-  // A first-run shop gets one quiet progress fact, derived from the same
-  // records that settle the rows below. The schedule row is an action rather
-  // than a persisted completion state, so the denominator stays the full
-  // seven-step orientation and never claims that copying a link made a trip
-  // bookable.
+  // A first-run shop gets one quiet progress fact, derived from persisted
+  // records. The trip and public-link rows are guided actions, not completion
+  // states, so they are intentionally excluded from the progress total.
   const firstRunDoneCount = [
     Boolean(shop.contactEmail || shop.contactPhone),
     Boolean(shop.tagline || shop.description || shop.logoUrl),
     Boolean(shop.unitsConfirmedAt),
     Boolean(firstRunDiveSites?.length),
-    false,
-    false,
     canAcceptPayments(firstRunStripeAccount),
   ].filter(Boolean).length;
   const showOrientation =

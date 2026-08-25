@@ -51,14 +51,34 @@ export function MarketingReveal({
 
 /** Gives the first-screen roll-call mockup one calm arrival and a tiny row settle. */
 export function MarketingHeroMotion({ children }: { children: ReactNode }) {
+  const elementRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
 
   useLayoutEffect(() => {
-    setActive(true);
+    const element = elementRef.current;
+    if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setActive(true);
+      return;
+    }
+    if (element.getBoundingClientRect().top <= window.innerHeight) {
+      setActive(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setActive(true);
+        observer.disconnect();
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.01 },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
 
   return (
     <div
+      ref={elementRef}
       className={
         active ? "marketing-hero-motion marketing-hero-motion-active" : "marketing-hero-motion"
       }
