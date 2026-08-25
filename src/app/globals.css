@@ -501,7 +501,7 @@ textarea {
    * title, date and dive plan off the sheet.
    */
   .trip-print-bundle :is(button, select, textarea, input) {
-    display: none !important;
+    display: none;
   }
 
   :root,

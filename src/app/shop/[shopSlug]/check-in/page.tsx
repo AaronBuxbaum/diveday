@@ -364,34 +364,32 @@ export default async function CheckInPage({
               }
               body={query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
               action={
-                <>
-                  {query ? (
-                    <Link
-                      href={`/shop/${shopSlug}/check-in`}
-                      scroll={false}
-                      className={buttonClass({
-                        variant: "secondary",
-                        size: "sm",
-                        className: "mt-4",
-                      })}
-                    >
-                      {t("checkIn.emptyClearSearch")}
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/shop/${shopSlug}/schedule/board`}
-                      className={buttonClass({
-                        variant: upcomingDepartures > 0 ? "secondary" : "primary",
-                        size: "sm",
-                        className: "mt-4",
-                      })}
-                    >
-                      {upcomingDepartures > 0
-                        ? t("checkIn.emptyViewSchedule")
-                        : t("checkIn.emptyScheduleDeparture")}
-                    </Link>
-                  )}
-                </>
+                query ? (
+                  <Link
+                    href={`/shop/${shopSlug}/check-in`}
+                    scroll={false}
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "sm",
+                      className: "mt-4",
+                    })}
+                  >
+                    {t("checkIn.emptyClearSearch")}
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/shop/${shopSlug}/schedule/board`}
+                    className={buttonClass({
+                      variant: upcomingDepartures > 0 ? "secondary" : "primary",
+                      size: "sm",
+                      className: "mt-4",
+                    })}
+                  >
+                    {upcomingDepartures > 0
+                      ? t("checkIn.emptyViewSchedule")
+                      : t("checkIn.emptyScheduleDeparture")}
+                  </Link>
+                )
               }
             />
           ) : cleared ? (

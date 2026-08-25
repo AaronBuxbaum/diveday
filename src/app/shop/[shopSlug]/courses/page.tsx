@@ -173,16 +173,14 @@ export default async function CoursesPage({
           title={st("courses.list.emptyTitle")}
           body={st("courses.list.emptyBody")}
           action={
-            <>
-              {canSchedule ? (
-                <Link
-                  href={`/shop/${shopSlug}/schedule/board`}
-                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                >
-                  {st("courses.list.emptyAction")}
-                </Link>
-              ) : null}
-            </>
+            canSchedule ? (
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {st("courses.list.emptyAction")}
+              </Link>
+            ) : null
           }
           className="mt-6"
         />

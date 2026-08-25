@@ -141,14 +141,12 @@ export default async function WalkInPage({
             <EmptyState
               title={t("checkIn.walkIn.tripEmpty")}
               action={
-                <>
-                  <Link
-                    href={`/shop/${shopSlug}/schedule/board`}
-                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                  >
-                    {t("checkIn.walkIn.tripEmptyAction")}
-                  </Link>
-                </>
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board`}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                >
+                  {t("checkIn.walkIn.tripEmptyAction")}
+                </Link>
               }
               className="mt-2"
             />

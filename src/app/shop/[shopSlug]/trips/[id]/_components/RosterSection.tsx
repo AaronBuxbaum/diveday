@@ -442,13 +442,11 @@ export function RosterSection({
           title={t("trips.roster.emptyHeading")}
           body={t("trips.roster.noBookings")}
           action={
-            <>
-              {canAddDivers ? (
-                <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
-                  {t("trips.roster.emptyAction")}
-                </a>
-              ) : null}
-            </>
+            canAddDivers ? (
+              <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
+                {t("trips.roster.emptyAction")}
+              </a>
+            ) : null
           }
           className="mt-4"
         />
@@ -460,15 +458,13 @@ export function RosterSection({
           title={t("trips.roster.filterEmptyHeading")}
           body={t("trips.roster.noneMatchFilter")}
           action={
-            <>
-              <Link
-                href={filterChipHref("all")}
-                scroll={false}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-              >
-                {t("trips.roster.filterEmptyAction", { count: filterCounts.all })}
-              </Link>
-            </>
+            <Link
+              href={filterChipHref("all")}
+              scroll={false}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("trips.roster.filterEmptyAction", { count: filterCounts.all })}
+            </Link>
           }
           className="mt-4"
         />

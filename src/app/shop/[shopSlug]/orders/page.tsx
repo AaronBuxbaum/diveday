@@ -555,30 +555,28 @@ export default async function OrdersIndexPage({
                 : t("orders.index.emptyNoPayments")
           }
           action={
-            <>
-              {hasFilters ? (
-                <Link
-                  href={`/shop/${shopSlug}/orders`}
-                  scroll={false}
-                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                >
-                  {t("orders.index.filters.clear")}
-                </Link>
-              ) : paymentsConnected ? (
-                <Link
-                  href={`/shop/${shopSlug}/orders/new`}
-                  className={buttonClass({ className: "mt-4" })}
-                >
-                  {t("orders.index.newOrder")}
-                </Link>
-              ) : (
-                <PaymentsConnectCta
-                  shopSlug={shopSlug}
-                  label={t("shared.payments.connect")}
-                  className="mt-4"
-                />
-              )}
-            </>
+            hasFilters ? (
+              <Link
+                href={`/shop/${shopSlug}/orders`}
+                scroll={false}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("orders.index.filters.clear")}
+              </Link>
+            ) : paymentsConnected ? (
+              <Link
+                href={`/shop/${shopSlug}/orders/new`}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {t("orders.index.newOrder")}
+              </Link>
+            ) : (
+              <PaymentsConnectCta
+                shopSlug={shopSlug}
+                label={t("shared.payments.connect")}
+                className="mt-4"
+              />
+            )
           }
           className="mt-8"
         />

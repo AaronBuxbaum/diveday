@@ -208,29 +208,27 @@ export default async function DiveSitesPage({
           title={query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
           body={t("diveSites.list.emptyBody")}
           action={
-            <>
-              {query || librarySize > 0 ? null : (
-                // The only place these two doors exist on an empty library: the
-                // header drops its actions when the library is empty precisely so
-                // this card owns them, and a shop reading "start with a site your
-                // crew knows well" can start from that sentence.
-                <div className="mt-4 flex flex-wrap justify-center gap-3">
-                  <Link
-                    href={`/shop/${shopSlug}/dive-sites/new`}
-                    className={buttonClass({ className: "rounded-xl" })}
-                  >
-                    <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
-                  </Link>
-                  <Link
-                    href={catalogHref}
-                    scroll={false}
-                    className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
-                  >
-                    {t("diveSites.list.browseTemplates")}
-                  </Link>
-                </div>
-              )}
-            </>
+            query || librarySize > 0 ? null : (
+              // The only place these two doors exist on an empty library: the
+              // header drops its actions when the library is empty precisely so
+              // this card owns them, and a shop reading "start with a site your
+              // crew knows well" can start from that sentence.
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <Link
+                  href={`/shop/${shopSlug}/dive-sites/new`}
+                  className={buttonClass({ className: "rounded-xl" })}
+                >
+                  <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+                </Link>
+                <Link
+                  href={catalogHref}
+                  scroll={false}
+                  className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+                >
+                  {t("diveSites.list.browseTemplates")}
+                </Link>
+              </div>
+            )
           }
           className="mt-4"
         />

@@ -228,14 +228,12 @@ export default async function NewBookingPage({
             <EmptyState
               title={t("bookings.new.tripEmpty")}
               action={
-                <>
-                  <Link
-                    href={`/shop/${shopSlug}/schedule/board`}
-                    className={buttonClass({ className: "mt-4" })}
-                  >
-                    {t("bookings.new.tripEmptyAction")}
-                  </Link>
-                </>
+                <Link
+                  href={`/shop/${shopSlug}/schedule/board`}
+                  className={buttonClass({ className: "mt-4" })}
+                >
+                  {t("bookings.new.tripEmptyAction")}
+                </Link>
               }
               className="mt-2"
             />

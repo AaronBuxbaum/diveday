@@ -27,9 +27,7 @@ export function MergeDiver({
 }) {
   const t = staffTranslator(locale);
   if (candidates.length === 0) {
-    return (
-      <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-6" />
-    );
+    return <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-6" />;
   }
   const options = [
     {

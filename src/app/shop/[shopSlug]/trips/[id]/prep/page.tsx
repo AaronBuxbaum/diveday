@@ -230,14 +230,12 @@ export default async function TripPrepPage({
           title={t("trips.prep.emptyHeading")}
           body={t("trips.prep.noDivers")}
           action={
-            <>
-              <Link
-                href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-                className={buttonClass({ className: "mt-4" })}
-              >
-                {t("trips.prep.emptyAction")}
-              </Link>
-            </>
+            <Link
+              href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("trips.prep.emptyAction")}
+            </Link>
           }
         />
       ) : (
@@ -499,18 +497,16 @@ export default async function TripPrepPage({
                     : t("trips.prep.nothingToPullOwnKit")
                 }
                 action={
-                  <>
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-                      className={buttonClass({
-                        variant: "secondary",
-                        size: "sm",
-                        className: "mt-4",
-                      })}
-                    >
-                      {t("trips.prep.rentalKitEmptyAction")}
-                    </Link>
-                  </>
+                  <Link
+                    href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "sm",
+                      className: "mt-4",
+                    })}
+                  >
+                    {t("trips.prep.rentalKitEmptyAction")}
+                  </Link>
                 }
                 className="mt-3"
               />
