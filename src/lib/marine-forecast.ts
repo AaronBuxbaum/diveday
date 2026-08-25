@@ -1,4 +1,4 @@
-import { nowDate } from "./clock";
+import { nowDate, nowMs } from "./clock";
 /** Open-Meteo supplies sea-surface temperature only ten days ahead. */
 export const AUTOMATED_FORECAST_WINDOW_DAYS = 10;
 
@@ -37,6 +37,22 @@ export type AutomatedSurfaceConditions = {
   wavePeriodSeconds: number | null;
 };
 
+export type AutomatedWind = {
+  speedKnots: number;
+  gustsKnots: number | null;
+  direction: CardinalDirection | null;
+};
+
+export type AutomatedCurrent = {
+  velocityKnots: number;
+  direction: CardinalDirection | null;
+};
+
+export type AutomatedSun = {
+  sunrise: Date | null;
+  sunset: Date | null;
+};
+
 /**
  * How the sea will *read* to a diver, as a code.
  *
@@ -60,6 +76,39 @@ export const SEA_STATES = [
   "very_rough",
 ] as const;
 export type SeaState = (typeof SEA_STATES)[number];
+
+export const WIND_STATES = [
+  "calm_wind",
+  "light_breeze",
+  "breezy",
+  "windy",
+  "gale_warning",
+] as const;
+export type WindState = (typeof WIND_STATES)[number];
+
+/**
+ * Turns wind speed (knots) into a diver-facing reading.
+ * Informs recreational divers of ride and surface comfort.
+ */
+export function windReading(wind: AutomatedWind | null): WindState | null {
+  if (!wind) return null;
+  if (wind.speedKnots < 7) return "calm_wind";
+  if (wind.speedKnots < 15) return "light_breeze";
+  if (wind.speedKnots < 22) return "breezy";
+  if (wind.speedKnots < 28) return "windy";
+  return "gale_warning";
+}
+
+/** Threshold in knots for high-wind advisories in Today queue (issue #722). */
+export const HIGH_WIND_THRESHOLD_KNOTS = 22;
+
+export function isHighWind(wind: AutomatedWind | null): boolean {
+  if (!wind) return false;
+  return (
+    wind.speedKnots >= HIGH_WIND_THRESHOLD_KNOTS ||
+    (wind.gustsKnots !== null && wind.gustsKnots >= 26)
+  );
+}
 
 /**
  * Significant wave height (metres) at or above which each band starts, in the
@@ -140,9 +189,32 @@ export function seaStateReading(surface: AutomatedSurfaceConditions | null): Sea
 export type AutomatedMarineForecast = {
   waterTemperatureC: number | null;
   surface: AutomatedSurfaceConditions | null;
+  wind: AutomatedWind | null;
+  current: AutomatedCurrent | null;
+  sun: AutomatedSun | null;
   source: "Open-Meteo marine forecast";
   validAt: Date;
 };
+
+const AUTOMATED_FORECAST_CACHE_TTL_MS = 5 * 60 * 1_000;
+const AUTOMATED_FORECAST_CACHE_MAX_ENTRIES = 256;
+type CachedForecast = { expiresAt: number; value: AutomatedMarineForecast };
+const forecastCaches = new WeakMap<Fetcher, Map<string, CachedForecast>>();
+
+function forecastCacheFor(fetcher: Fetcher) {
+  const existing = forecastCaches.get(fetcher);
+  if (existing) return existing;
+  const created = new Map<string, CachedForecast>();
+  forecastCaches.set(fetcher, created);
+  return created;
+}
+
+function forecastCacheKey(point: ForecastPoint, startsAt: Date) {
+  // The provider publishes hourly values. Rounding the departure to that same
+  // granularity lets several trips at one site share one provider response
+  // without making a forecast for a different hour look current.
+  return `${point.latitude}:${point.longitude}:${Math.floor(startsAt.getTime() / 3_600_000)}`;
+}
 
 export type CrewPrediction = {
   conditionsSummary: string | null;
@@ -167,6 +239,22 @@ type MarineResponse = {
     wave_height?: unknown;
     wave_period?: unknown;
     wave_direction?: unknown;
+    ocean_current_velocity?: unknown;
+    ocean_current_direction?: unknown;
+  };
+};
+
+type WeatherResponse = {
+  hourly?: {
+    time?: unknown;
+    wind_speed_10m?: unknown;
+    wind_gusts_10m?: unknown;
+    wind_direction_10m?: unknown;
+  };
+  daily?: {
+    time?: unknown;
+    sunrise?: unknown;
+    sunset?: unknown;
   };
 };
 
@@ -206,7 +294,7 @@ function closestForecastIndex(times: unknown, target: Date) {
  * lives in an ICU template two modules away, which is how a future reader
  * "fixes" it to the wrong one (dive-domain-expert review, 2026-08-06).
  */
-function cardinalDirection(degrees: number): CardinalDirection {
+export function cardinalDirection(degrees: number): CardinalDirection {
   const index = Math.round(degrees / 45);
   // `%` alone keeps the sign of a negative dividend, and Open-Meteo has been
   // seen returning a small negative bearing rather than clamping to [0, 360).
@@ -232,8 +320,10 @@ function surfaceConditions(
 }
 
 /**
- * Returns a planning forecast without persisting it. A fresh request on each dynamic page render
- * keeps the automatic fallback separate from the crew's dated, published briefing.
+ * Returns a planning forecast without persisting it to a trip. A short-lived
+ * in-process cache avoids asking Open-Meteo twice for the same site/hour while
+ * keeping the automatic fallback separate from the crew's dated, published
+ * briefing.
  */
 export async function fetchAutomatedMarineForecast(
   point: ForecastPoint,
@@ -244,42 +334,126 @@ export async function fetchAutomatedMarineForecast(
   // third-party forecast. Passing an explicit fetcher still exercises the adapter in unit tests.
   if (process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" && fetcher === fetch) return null;
 
-  const params = new URLSearchParams({
+  const cache = forecastCacheFor(fetcher);
+  const key = forecastCacheKey(point, startsAt);
+  const cached = cache.get(key);
+  if (cached) {
+    if (cached.expiresAt > nowMs()) return cached.value;
+    cache.delete(key);
+  }
+
+  const marineParams = new URLSearchParams({
     latitude: String(point.latitude),
     longitude: String(point.longitude),
-    hourly: "sea_surface_temperature,wave_height,wave_period,wave_direction",
+    hourly:
+      "sea_surface_temperature,wave_height,wave_period,wave_direction,ocean_current_velocity,ocean_current_direction",
+    forecast_days: String(AUTOMATED_FORECAST_WINDOW_DAYS),
+    timeformat: "unixtime",
+  });
+
+  const weatherParams = new URLSearchParams({
+    latitude: String(point.latitude),
+    longitude: String(point.longitude),
+    hourly: "wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+    daily: "sunrise,sunset",
+    wind_speed_unit: "kn",
     forecast_days: String(AUTOMATED_FORECAST_WINDOW_DAYS),
     timeformat: "unixtime",
   });
 
   try {
-    const response = await fetcher(`https://marine-api.open-meteo.com/v1/marine?${params}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(4_000),
-    });
-    if (!response.ok) return null;
-    const payload = (await response.json()) as MarineResponse;
-    const hourly = payload.hourly;
-    if (!hourly) return null;
-    const index = closestForecastIndex(hourly.time, startsAt);
+    const [marineRes, weatherRes] = await Promise.all([
+      fetcher(`https://marine-api.open-meteo.com/v1/marine?${marineParams}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(4_000),
+      }).catch(() => null),
+      fetcher(`https://api.open-meteo.com/v1/forecast?${weatherParams}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(4_000),
+      }).catch(() => null),
+    ]);
+
+    const marinePayload = marineRes?.ok ? ((await marineRes.json()) as MarineResponse) : null;
+    const weatherPayload = weatherRes?.ok ? ((await weatherRes.json()) as WeatherResponse) : null;
+
+    if (!marinePayload?.hourly && !weatherPayload?.hourly) return null;
+
+    const hourlyTimes = marinePayload?.hourly?.time ?? weatherPayload?.hourly?.time;
+    const index = closestForecastIndex(hourlyTimes, startsAt);
     if (index === null) return null;
-    const unixTime = numberAt(hourly.time, index);
+    const unixTime = numberAt(hourlyTimes, index);
     if (unixTime === null) return null;
 
-    const temperature = numberAt(hourly.sea_surface_temperature, index);
-    const surface = surfaceConditions(
-      numberAt(hourly.wave_height, index),
-      numberAt(hourly.wave_period, index),
-      numberAt(hourly.wave_direction, index),
-    );
-    if (temperature === null && surface === null) return null;
+    let temperature: number | null = null;
+    let surface: AutomatedSurfaceConditions | null = null;
+    let current: AutomatedCurrent | null = null;
 
-    return {
+    if (marinePayload?.hourly) {
+      temperature = numberAt(marinePayload.hourly.sea_surface_temperature, index);
+      surface = surfaceConditions(
+        numberAt(marinePayload.hourly.wave_height, index),
+        numberAt(marinePayload.hourly.wave_period, index),
+        numberAt(marinePayload.hourly.wave_direction, index),
+      );
+      const currentVel = numberAt(marinePayload.hourly.ocean_current_velocity, index);
+      const currentDir = numberAt(marinePayload.hourly.ocean_current_direction, index);
+      if (currentVel !== null) {
+        const currentKnots = Math.round(currentVel * 0.54 * 10) / 10;
+        current = {
+          velocityKnots: currentKnots,
+          direction: currentDir === null ? null : cardinalDirection(currentDir),
+        };
+      }
+    }
+
+    let wind: AutomatedWind | null = null;
+    let sun: AutomatedSun | null = null;
+
+    if (weatherPayload?.hourly) {
+      const windSpeed = numberAt(weatherPayload.hourly.wind_speed_10m, index);
+      const windGusts = numberAt(weatherPayload.hourly.wind_gusts_10m, index);
+      const windDir = numberAt(weatherPayload.hourly.wind_direction_10m, index);
+      if (windSpeed !== null) {
+        wind = {
+          speedKnots: Math.round(windSpeed),
+          gustsKnots: windGusts === null ? null : Math.round(windGusts),
+          direction: windDir === null ? null : cardinalDirection(windDir),
+        };
+      }
+    }
+
+    if (weatherPayload?.daily) {
+      const dailyTimes = weatherPayload.daily.time;
+      const dailyIndex = closestForecastIndex(dailyTimes, startsAt);
+      if (dailyIndex !== null) {
+        const sunriseTime = numberAt(weatherPayload.daily.sunrise, dailyIndex);
+        const sunsetTime = numberAt(weatherPayload.daily.sunset, dailyIndex);
+        if (sunriseTime !== null || sunsetTime !== null) {
+          sun = {
+            sunrise: sunriseTime !== null ? new Date(sunriseTime * 1_000) : null,
+            sunset: sunsetTime !== null ? new Date(sunsetTime * 1_000) : null,
+          };
+        }
+      }
+    }
+
+    if (temperature === null && surface === null && wind === null && current === null) return null;
+
+    const forecast: AutomatedMarineForecast = {
       waterTemperatureC: temperature === null ? null : Math.round(temperature),
       surface,
+      wind,
+      current,
+      sun,
       source: "Open-Meteo marine forecast",
       validAt: new Date(unixTime * 1_000),
     };
+    if (cache.size >= AUTOMATED_FORECAST_CACHE_MAX_ENTRIES) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey) cache.delete(oldestKey);
+    }
+    cache.set(key, { expiresAt: nowMs() + AUTOMATED_FORECAST_CACHE_TTL_MS, value: forecast });
+    return forecast;
   } catch {
     return null;
   }

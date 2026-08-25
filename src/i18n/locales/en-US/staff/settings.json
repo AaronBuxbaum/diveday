@@ -14,6 +14,8 @@
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "contactSaved": "Contact details saved.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
+      "profileSaved": "Shop profile and branding saved.",
+      "profileInvalid": "Check your tagline, description, and logo file.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
       "addressInvalid": "That address couldn't be saved. Search again and pick your shop from the list.",
@@ -85,6 +87,22 @@
       "phoneHint": "(optional)",
       "submit": "Save contact details",
       "submitting": "Saving…"
+    },
+    "profile": {
+      "heading": "Shop profile & branding",
+      "description": "Tagline, about prose, and logo visible on your public schedule and search previews.",
+      "detail": "Give divers a clear sense of your shop, boat, crew, and diving style before they book.",
+      "tagline": "Tagline",
+      "taglinePlaceholder": "e.g. Diving Key Largo & the Florida Keys since 2012",
+      "descriptionLabel": "About your shop",
+      "descriptionPlaceholder": "A short introduction to your shop, boats, crew, or local diving...",
+      "logo": "Shop logo",
+      "logoHint": "PNG, JPG, or WebP. Square image recommended.",
+      "removeLogo": "Remove current logo",
+      "logoSet": "Logo uploaded",
+      "descriptionSet": "Description set",
+      "submitting": "Saving…",
+      "submit": "Save profile"
     },
     "address": {
       "heading": "Shop address",

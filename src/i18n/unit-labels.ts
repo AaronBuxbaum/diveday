@@ -1,7 +1,7 @@
 import type { CourseDepthFormat } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import { depthInUnit } from "@/lib/depth-units";
-import type { SeaState } from "@/lib/marine-forecast";
+import type { SeaState, WindState } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { temperatureInUnit } from "@/lib/temperature-units";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
@@ -104,4 +104,24 @@ export function seaStateText(
   state: SeaState,
 ): { label: string; detail: string } {
   return { label: t(SEA_STATE_KEYS[state]), detail: t(SEA_STATE_DETAIL_KEYS[state]) };
+}
+
+const WIND_STATE_KEYS: Record<WindState, DiverMessageKey> = {
+  calm_wind: "trip.windState.calm_wind",
+  light_breeze: "trip.windState.light_breeze",
+  breezy: "trip.windState.breezy",
+  windy: "trip.windState.windy",
+  gale_warning: "trip.windState.gale_warning",
+};
+
+const WIND_STATE_DETAIL_KEYS: Record<WindState, DiverMessageKey> = {
+  calm_wind: "trip.windStateDetail.calm_wind",
+  light_breeze: "trip.windStateDetail.light_breeze",
+  breezy: "trip.windStateDetail.breezy",
+  windy: "trip.windStateDetail.windy",
+  gale_warning: "trip.windStateDetail.gale_warning",
+};
+
+export function windText(t: DiverTranslator, state: WindState): { label: string; detail: string } {
+  return { label: t(WIND_STATE_KEYS[state]), detail: t(WIND_STATE_DETAIL_KEYS[state]) };
 }

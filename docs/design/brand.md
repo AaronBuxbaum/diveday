@@ -71,6 +71,11 @@ what DiveDay is and no reason to care. The general rule is the one in **Voice** 
 may be the actor when it acts on someone's behalf, and otherwise the shop's work stays in the
 foreground.
 
+**The staff app is the shop's operational tool, wearing the shop's identity.** In the staff header
+(`ShopNav` / `ShopIdentityMenu`), the shop's own logo — or its initials fallback in the primary square
+when no logo is uploaded — leads the masthead beside the shop's name. A shop runs its whole day inside
+DiveDay and should see its own identity leading the workspace rather than a permanent vendor mark.
+
 There is currently no separate production-ready wordmark asset in `public/`. For a vendor proof,
 use the mark with the word `DiveDay` set in Geist Semibold, or request a vector lockup derived from
 the implementation. Do not send a screenshot of the website as the artwork.

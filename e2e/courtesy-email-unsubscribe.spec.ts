@@ -26,6 +26,7 @@ test("a diver can self-serve unsubscribe from courtesy email (wait-list openings
   // now ("Nothing on a date that works?"), which legitimately asks for a
   // name and an email too, and getByLabel matches by substring.
   const waitList = page.locator("#last-minute-list");
+  await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Priya Nair");
   await waitList.getByLabel("Email").fill("priya.courtesy.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();

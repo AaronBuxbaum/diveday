@@ -11,11 +11,15 @@ afterEach(() => {
 
 const COPY: FirstRunChecklistCopy = {
   heading: "Get your shop ready",
-  subtitle: "Six steps and divers can start booking.",
+  subtitle: "Seven steps and divers can start booking.",
   contactTitle: "Add your contact details",
   contactBody: "Phone and email so divers — and DiveDay — can reach you.",
   contactAction: "Add contact details",
   contactDone: "Contact details on file.",
+  profileTitle: "Add your shop profile & branding",
+  profileBody: "A tagline, description, and logo for your public schedule.",
+  profileAction: "Set up profile",
+  profileDone: "Shop profile configured.",
   unitsTitle: "Check your currency and depth unit",
   unitsBody: "We started you on USD and feet from your timezone.",
   unitsAction: "Check units",
@@ -46,6 +50,7 @@ describe("FirstRunChecklist", () => {
         shopSlug="blue-mantis"
         scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={false}
+        profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
         stripeDone={false}
@@ -80,6 +85,7 @@ describe("FirstRunChecklist", () => {
         shopSlug="blue-mantis"
         scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={true}
+        profileDone={true}
         diveSiteCount={3}
         unitsDone={false}
         stripeDone={true}
@@ -88,8 +94,10 @@ describe("FirstRunChecklist", () => {
     );
 
     expect(screen.getByText("Contact details on file.")).toBeInTheDocument();
+    expect(screen.getByText("Shop profile configured.")).toBeInTheDocument();
     expect(screen.getByText("Stripe connected.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Add contact details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Set up profile" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect Stripe" })).not.toBeInTheDocument();
     // The trip step is never done at render time — the whole checklist only
     // renders while the shop has no upcoming departure.
@@ -121,6 +129,7 @@ describe("the step count", () => {
         shopSlug="blue-mantis"
         scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={false}
+        profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
         stripeDone={false}
@@ -139,6 +148,7 @@ describe("the units step", () => {
         shopSlug="blue-mantis"
         scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={false}
+        profileDone={false}
         diveSiteCount={0}
         unitsDone={false}
         stripeDone={false}
@@ -163,6 +173,7 @@ describe("the units step", () => {
         shopSlug="blue-mantis"
         scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={false}
+        profileDone={false}
         diveSiteCount={0}
         unitsDone
         stripeDone={false}

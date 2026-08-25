@@ -270,6 +270,9 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    tagline: text("tagline"),
+    description: text("description"),
+    logoUrl: text("logo_url"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1854,6 +1857,10 @@ export const bookings = pgTable(
     lastDivedBand: diveRecencyBand("last_dived_band"),
     /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
     groupPreference: text("group_preference"),
+    /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
+    hotelPickupLocation: text("hotel_pickup_location"),
+    /** Optional staff-set pickup time for this booking (e.g., "07:15"). */
+    pickupTime: text("pickup_time"),
     status: bookingStatus("status").notNull().default("booked"),
     /**
      * Set for the duration of one in-flight checkout attempt covering this
@@ -5767,6 +5774,7 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "certification_card",
   "waiver_document",
   "dive_site_photo",
+  "shop_logo",
 ]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [

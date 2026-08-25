@@ -83,6 +83,7 @@ import {
   saveCertificationFromReady,
   saveDiveRecencyFromReady,
   saveFitFromReady,
+  saveHotelPickupLocationFromReady,
   saveNitroxCertificationFromReady,
   saveNoteFromReady,
   saveSpecialtyFromReady,
@@ -1358,8 +1359,18 @@ export default async function DiverReadinessPage({
             {when} · {timeRange} · {relativeWhen}
           </p>
           {/* The one number that matters on the morning of the trip — a shade
-              stronger than the meta line above it, never shouting. */}
-          <p className="mt-1 text-base font-medium">{dockCallLine}</p>
+              stronger than the meta line above it, never shouting. When a hotel
+              pickup is scheduled, that time leads ahead of dock call. */}
+          {data.pickupTime ? (
+            <p className="mt-1 text-base font-medium">
+              {t("ready.hotelPickupHeaderLine", {
+                time: data.pickupTime,
+                location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
+              })}
+            </p>
+          ) : (
+            <p className="mt-1 text-base font-medium">{dockCallLine}</p>
+          )}
           {/* Put the day in a calendar, and send the trip to whoever is coming
               — the same ghost-weight row, in the same place under the masthead,
               as the public trip page carries. Nothing here competes with the
@@ -1644,6 +1655,48 @@ export default async function DiverReadinessPage({
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
                       {t("ready.saveNote")}
+                    </SubmitButton>
+                  </div>
+                </form>
+              }
+              t={t}
+            />
+            {/* **Where are you staying — lodging / hotel pickup.**
+                Optional free text for shops that run van transfers from hotels.
+                A diver answers once; staff can assign a pickup time. */}
+            <ChecklistRow
+              label={t("ready.hotelPickupLabel")}
+              state={data.hotelPickupLocation ? "done" : "optional"}
+              detail={
+                data.hotelPickupLocation
+                  ? data.pickupTime
+                    ? t("ready.hotelPickupDetailWithTime", {
+                        location: data.hotelPickupLocation,
+                        time: data.pickupTime,
+                      })
+                    : t("ready.hotelPickupDetail", { location: data.hotelPickupLocation })
+                  : null
+              }
+              action={
+                <form
+                  action={saveHotelPickupLocationFromReady.bind(null, token)}
+                  className="flex flex-col gap-3"
+                >
+                  <input
+                    type="text"
+                    name="hotelPickupLocation"
+                    maxLength={300}
+                    aria-label={t("ready.hotelPickupLabel")}
+                    placeholder={t("ready.hotelPickupPlaceholder")}
+                    defaultValue={data.hotelPickupLocation ?? ""}
+                    className={controlClass}
+                  />
+                  <div>
+                    <SubmitButton
+                      pendingLabel={t("common.saving")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("ready.saveHotelPickup")}
                     </SubmitButton>
                   </div>
                 </form>

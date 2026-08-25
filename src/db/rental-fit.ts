@@ -260,6 +260,8 @@ export async function listTripPrepDivers(
     wantsNitrox: row.booking.wantsNitrox,
     hasVerifiedNitroxCard: certified.has(row.person.id),
     lastDivedBand: row.booking.lastDivedBand,
+    hotelPickupLocation: row.booking.hotelPickupLocation,
+    pickupTime: row.booking.pickupTime,
   }));
 }
 

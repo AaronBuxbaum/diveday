@@ -182,6 +182,7 @@
     "waterTemperature": "Water temperature",
     "visibility": "Visibility",
     "surface": "Surface",
+    "wind": "Wind",
     "forecastCrewNote": "Forecast supplied by the crew; conditions can change.",
     "forecastUpdated": "Updated {when}.",
     "forecastUpdateUnavailable": "Update time unavailable.",
@@ -239,6 +240,20 @@
       "choppy": "A bumpy ride out. Worth taking something for seasickness if you're prone to it.",
       "rough": "Hard work on the boat, and getting in and out takes more care.",
       "very_rough": "Big, steep seas — demanding on the boat and getting in and out of the water. What that means for this trip is the crew's call."
+    },
+    "windState": {
+      "calm_wind": "Calm breeze",
+      "light_breeze": "Light breeze",
+      "breezy": "Breezy",
+      "windy": "Strong winds",
+      "gale_warning": "High winds"
+    },
+    "windStateDetail": {
+      "calm_wind": "Gentle air and easy boat handling.",
+      "light_breeze": "Pleasant conditions on the water.",
+      "breezy": "A breezy morning; expect some chop and motion on the boat.",
+      "windy": "Strong winds and a bumpy ride. The crew may adjust dive sites for sheltered water.",
+      "gale_warning": "High winds. The crew will assess conditions and make the final weather call."
     }
   },
   "booking": {
@@ -531,7 +546,23 @@
     "boatTrack": "Boat Track",
     "theDock": "The Dock",
     "reconstructedPath": "📍 Reconstructed boat path visiting {count, plural, one {# dive site} other {# dive sites}}",
-    "crewQuote": "“{words}”"
+    "crewQuote": "“{words}”",
+    "logbookHeading": "Dive log entry",
+    "logbookEyebrow": "Your keepsake",
+    "printRecord": "Print log entry",
+    "saveRecordHint": "Save or print this entry to keep in your logbook.",
+    "diverLabel": "Diver",
+    "dateLabel": "Date",
+    "vesselLabel": "Vessel",
+    "shoreOrCharter": "Shore dive",
+    "crewLabel": "Crew",
+    "unassignedCrew": "Shop crew",
+    "sitesLabel": "Sites & depths",
+    "maxDepthLabel": "Max depth: {depth}",
+    "visitMilestone": "Your {ordinal} dive day with {shopName}",
+    "visitMilestoneFirst": "Your 1st dive day with {shopName}",
+    "verifiedRecord": "Verified log entry from {shopName}",
+    "diveCountSummary": "{count, plural, one {# dive logged} other {# dives logged}}"
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
@@ -649,7 +680,14 @@
     "certMinimumLevel": "This trip is for {level} and above.",
     "saveNote": "Save note",
     "noteSaved": "Saved — the crew will see that.",
-    "noteUnavailable": "That did not save. Try again, or tell the crew on the day."
+    "noteUnavailable": "That did not save. Try again, or tell the crew on the day.",
+    "hotelPickupHeaderLine": "{time} pickup at {location}",
+    "hotelPickupLocationNotSet": "your hotel",
+    "hotelPickupLabel": "Where are you staying?",
+    "hotelPickupPlaceholder": "Hotel name, room, or landmark for morning pickup",
+    "hotelPickupDetail": "{location}",
+    "hotelPickupDetailWithTime": "{location} · Pickup at {time}",
+    "saveHotelPickup": "Save location"
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",
@@ -3097,7 +3135,9 @@
       "daySubject": "You sail tomorrow — {tripTitle}",
       "dayOpenerFirstTimer": "You dive with {shopName} tomorrow — here's everything you need for the day.",
       "dayOpenerReturning": "A quick reminder that {tripTitle} with {shopName} sails tomorrow.",
-      "arrival": "Aim to be at the dock by {time} — {dock} before we sail."
+      "arrival": "Aim to be at the dock by {time} — {dock} before we sail.",
+      "hotelPickupArrival": "Your morning pickup is scheduled for {time} at {location}.",
+      "hotelNotSet": "your hotel"
     },
     "tripRecap": {
       "subject": "Your dive with {shopName} — {tripTitle}",

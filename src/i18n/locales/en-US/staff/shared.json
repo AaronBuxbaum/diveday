@@ -263,7 +263,8 @@
       "emptyAction": "View the schedule",
       "needsYouHeading": "Needs you",
       "boatsClear": "Today's boats are all clear 🤙",
-      "itemsCount": "{count, plural, one {# item} other {# items}}"
+      "itemsCount": "{count, plural, one {# item} other {# items}}",
+      "withheldDeskWork": "{count, plural, one {# job for the front desk} other {# jobs for the front desk}}"
     },
     "resendConfirmation": {
       "resending": "Resending…",
@@ -318,6 +319,7 @@
       "instructorMissing": "Crew",
       "uncrewedDeparture": "No crew",
       "nitroxGate": "Nitrox",
+      "highWindAlert": "High wind",
       "divePrep": "Prep",
       "payment": "Payment",
       "emailDelivery": "Email",
@@ -405,6 +407,7 @@
       "noRollCall": "No roll call was run — {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is empty.",
       "missingFit": "{count, plural, one {# diver is} other {# divers are}} missing rental sizes, so the prep list is incomplete.",
       "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without verified certification — those tanks are planned as air.",
+      "highWindAlert": "Forecast calls for {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes { (gusts {gusts} kt)} other {}} — check conditions before sailing.",
       "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
       "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
       "overRatioIntro": "{booked} booked on this intro session, crew covers {capacity} — {perInstructor} per instructor for the open-water dive, and a certified assistant does not raise it. Only another instructor adds seats.",

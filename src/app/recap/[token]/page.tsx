@@ -16,10 +16,11 @@ import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { getReviewForBooking } from "@/db/reviews";
 import { tipPresetsMajor } from "@/db/tips";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
-import { formatShortDate } from "@/lib/format";
+import { formatOrdinal, formatShortDate } from "@/lib/format";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -30,6 +31,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
+import { PrintRecordButton } from "./PrintRecordButton";
 import { RecapShareButton } from "./RecapShareButton";
 import { ShareReviewButton } from "./ShareReviewButton";
 import { TipAmountPicker } from "./TipAmountPicker";
@@ -320,341 +322,479 @@ export default async function DiveRecapPage({
     trip.surfaceConditions ? { label: t("trip.surface"), value: trip.surfaceConditions } : null,
   ].filter((tile): tile is { label: string; value: string } => tile !== null);
   const diveCount = Math.max(trip.plannedDives, sites.length);
+  const visitCount = data.visitCount;
+  const visitMilestoneText =
+    visitCount > 1
+      ? t("recap.visitMilestone", {
+          ordinal: formatOrdinal(visitCount, locale),
+          shopName: shop.name,
+        })
+      : t("recap.visitMilestoneFirst", {
+          shopName: shop.name,
+        });
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-      <TokenPageHeader eyebrow={shop.name} title={trip.title}>
-        <p className="mt-1 text-base text-muted">{when}</p>
-        {/* Same share-then-clipboard-fallback affordance TripActions gives a
-            trip page — `recap-links.ts` already calls this link shareable,
-            this is what makes it actually be that (task 59). */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <RecapShareButton
-            shareTitle={trip.title}
-            shareText={t("recap.shareRecapText", { shop: shop.name })}
-            label={t("recap.shareRecap")}
-            copiedLabel={t("recap.linkCopied")}
-            copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
-            failedLabel={t("recap.linkCopyFailed")}
-          />
-        </div>
-      </TokenPageHeader>
-
-      {/* ——— Act I: relive. Memory before the ask — the coral moment, the
-          crew's words, the route, the water. Everything here is unboxed:
-          hierarchy comes from type and space, so the one accent card stays
-          the page's only loud object and the day itself does the talking. */}
-
-      <EarnedMoment
-        className="mt-8"
-        eyebrow={t("recap.eyebrow")}
-        title={t("recap.greeting", { name: firstName })}
-      >
-        <p>
-          {where
-            ? t("recap.loggedAt", { count: diveCount, where })
-            : t("recap.loggedToday", { count: diveCount })}{" "}
-          {t("recap.hopeWaterTreatedYou")}
-        </p>
-      </EarnedMoment>
-
-      {/* The crew's own words carry themselves — a pull-quote, not a boxed
-          panel. The primary-tinted kicker is its only ornament. */}
-      {shoutout ? (
-        <section className="mt-10">
-          <Kicker tone="primary">{t("recap.fromYourCrew")}</Kicker>
-          {/* The quote glyphs come from the bundle, not this component — each
-              locale sets its own convention (es-ES/README.md keeps “ ”). */}
-          <blockquote className="mt-3 text-xl leading-relaxed font-medium text-pretty">
-            {t("recap.crewQuote", { words: shoutout })}
-          </blockquote>
-        </section>
-      ) : null}
-
-      {/* The day's route: the map draws the charter path, and the itinerary
-          line beneath continues it — one dot per stop, no card per site. */}
-      {sites.length ? (
-        <section className="mt-10">
-          <Kicker>{t("recap.whereYouDived")}</Kicker>
-          <RecapMap
-            sites={sites}
-            copy={{
-              mapAriaLabel: t("recap.mapAriaLabel"),
-              charterPath: t("recap.charterPath"),
-              boatTrack: t("recap.boatTrack"),
-              theDock: t("recap.theDock"),
-              reconstructedPath: t("recap.reconstructedPath", { count: sites.length }),
-            }}
-          />
-          <ol className="mt-6 ml-1.5 space-y-6 border-l-2 border-border pl-6">
-            {sites.map((site) => (
-              <SiteStop key={site.name} site={site} lookForLabel={t("recap.lookFor")} />
-            ))}
-          </ol>
-        </section>
-      ) : null}
-
-      {/* Conditions as a quiet stat row — facts, not tiles. */}
-      {conditions.length ? (
-        <section className="mt-10">
-          <Kicker>{t("recap.conditionsOnTheDay")}</Kicker>
-          <dl className="mt-4 flex flex-wrap gap-x-10 gap-y-4">
-            {conditions.map((fact) => (
-              <div key={fact.label}>
-                <dt className="text-sm text-muted">{fact.label}</dt>
-                <dd className="mt-0.5 text-lg font-semibold tracking-tight">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ) : null}
-
-      {/* ——— Act II: the one ask. The review is the page's single bordered
-          card and its single primary action — it's one tap, it stays on this
-          page, and it's the only review a diver can leave that DiveDay can
-          prove came from someone who was actually on the boat. It is the
-          shared card now, at `padding="lg"` — a card someone works inside —
-          rather than a geometry of its own hand-matched to the EarnedMoment
-          above it; both are on their way to the one spelling. */}
-      <SectionCard
-        padding="lg"
-        className="mt-12 sm:mt-14"
-        title={t("reviews.askHeading")}
-        description={t("reviews.askBody")}
-      >
-        {reviewNotice ? (
-          <FormStatus tone={reviewNotice.tone}>{reviewNotice.text}</FormStatus>
-        ) : null}
-        {ownReview ? (
-          <p className="mt-3 text-sm text-muted">
-            {t("reviews.yourRating", { rating: ownReview.rating })}
-          </p>
-        ) : null}
-        <form action={submitReviewAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
-          <StarRatingInput
-            legend={t("reviews.ratingLegend")}
-            optionLabels={Object.fromEntries(
-              REVIEW_RATINGS.map((rating) => [rating, t("reviews.ratingOption", { rating })]),
-            )}
-            defaultValue={ownReview?.rating}
-          />
-          <label htmlFor="review-comment" className="text-sm font-medium">
-            {t("reviews.commentLabel")}
-          </label>
-          <p id="review-comment-hint" className="text-xs text-muted">
-            {t("reviews.commentModerationHint")}
-          </p>
-          <textarea
-            id="review-comment"
-            name="comment"
-            rows={3}
-            maxLength={MAX_REVIEW_COMMENT_LENGTH}
-            defaultValue={ownReview?.comment ?? ""}
-            placeholder={t("reviews.commentPlaceholder")}
-            aria-describedby="review-comment-hint"
-            className={controlClass}
-          />
-          <div>
-            {/* One primary at a time: the moment a strong rating lands and
-                the carry-it-to-Google CTA appears below, this submit steps
-                back to secondary so the page still points at exactly one
-                next action (principle #8). */}
-            <SubmitButton
-              pendingLabel={t("reviews.submitting")}
-              className={buttonClass({
-                variant: externalReviewUrl ? "secondary" : "primary",
-                size: "cta",
-              })}
-            >
-              {t("reviews.submit")}
-            </SubmitButton>
-          </div>
-        </form>
-
-        {/* The one review ask left: a strong rating just landed, so offer to
-            carry it further instead of stacking a second, separately-worded
-            ask underneath (task 57). */}
-        {externalReviewUrl ? (
-          <div className="mt-4 border-t border-border pt-4">
-            <h3 className="text-base font-semibold">{t("recap.externalReviewHeading")}</h3>
-            <p className="mt-1 text-sm text-muted">
-              {ownReview?.comment
-                ? t("recap.externalReviewBody", { shop: shop.name })
-                : t("recap.externalReviewBodyNoComment", { shop: shop.name })}
-            </p>
-            <ShareReviewButton
-              reviewUrl={externalReviewUrl}
-              comment={ownReview?.comment ?? null}
-              cta={t("recap.externalReviewCta")}
-              copiedLabel={t("recap.commentCopied")}
+    <DiverIntlProvider
+      locale={locale}
+      timeZone={shop.timezone}
+      namespaces={["recap", "common", "booking", "reviews", "trip"]}
+    >
+      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+        <TokenPageHeader eyebrow={shop.name} title={trip.title}>
+          <p className="mt-1 text-base text-muted">{when}</p>
+          {/* Same share-then-clipboard-fallback affordance TripActions gives a
+              trip page — `recap-links.ts` already calls this link shareable,
+              this is what makes it actually be that (task 59). */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 print:hidden">
+            <RecapShareButton
+              shareTitle={trip.title}
+              shareText={t("recap.shareRecapText", { shop: shop.name })}
+              label={t("recap.shareRecap")}
+              copiedLabel={t("recap.linkCopied")}
+              copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
+              failedLabel={t("recap.linkCopyFailed")}
             />
           </div>
-        ) : null}
-      </SectionCard>
+        </TokenPageHeader>
 
-      {/* ——— Act III: quiet follows. Real affordances at secondary weight —
-          hairline-topped sections, never rival cards to the one ask above. */}
+        {/* ——— Act I: relive. Memory before the ask — the coral moment, the
+            crew's words, the route, the water. Everything here is unboxed:
+            hierarchy comes from type and space, so the one accent card stays
+            the page's only loud object and the day itself does the talking. */}
 
-      {showTipSection ? (
-        <section className="mt-10 border-t border-border pt-8">
-          <h2 className="text-base font-semibold">{t("recap.tipCrew")}</h2>
-          {tipNotice ? (
-            <FormStatus tone={tipNotice.tone} className="mt-3">
-              {t(tipNotice.key)}
-            </FormStatus>
-          ) : null}
-          {tip?.status === "paid" ? (
-            <p className="mt-1 text-base text-muted">{t("recap.tipPaid", { shop: shop.name })}</p>
-          ) : tipParam === "paid" ? (
-            // Stripe already redirected the diver back with `?tip=paid`, but the
-            // webhook that flips `tip.status` to "paid" can lag a few seconds —
-            // never re-show the payment form or a stale checkout link in that
-            // window, which would read as "you still need to pay."
-            <p className="mt-1 text-base text-muted">{t("recap.tipConfirming")}</p>
-          ) : tip?.status === "pending" && tip.checkoutUrl ? (
-            <>
-              <p className="mt-1 text-base text-muted">
-                {t("recap.tipAllGoes", { shop: shop.name })}
-              </p>
-              <a
-                href={tip.checkoutUrl}
-                className={buttonClass({ variant: "secondary", size: "cta", className: "mt-4" })}
-              >
-                {t("recap.tipFinish", {
-                  // `minorToMajor`, never a literal 100 — a ¥3,000 tip is
-                  // whole yen and dividing it would offer to pay ¥30.
-                  amount: cachedFormatter("num", Intl.NumberFormat, locale, {
-                    style: "currency",
-                    currency: currency.toUpperCase(),
-                    maximumFractionDigits: 0,
-                  }).format(minorToMajor(tip.amountCents, currency)),
-                })}
-              </a>
-            </>
-          ) : canTip ? (
-            <>
-              <p className="mt-1 text-base text-muted">
-                {t("recap.tipAllGoes", { shop: shop.name })}
-              </p>
-              <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
-                <TipAmountPicker
-                  presets={tipPresets}
-                  defaultPreset={tipPresets[1]}
-                  currencySymbol={symbol}
-                  legend={t("recap.tipAmountLegend")}
-                  otherPlaceholder={t("recap.otherTipPlaceholder")}
-                  otherAriaLabel={t("recap.otherTipAriaLabel")}
-                />
-                <div>
-                  <SubmitButton
-                    pendingLabel={t("booking.headingToPayment")}
-                    className={buttonClass({ variant: "secondary", size: "cta" })}
-                  >
-                    {t("recap.tipLeave")}
-                  </SubmitButton>
-                </div>
-              </form>
-            </>
-          ) : null}
-        </section>
-      ) : null}
+        <EarnedMoment
+          className="mt-8"
+          eyebrow={t("recap.eyebrow")}
+          title={t("recap.greeting", { name: firstName })}
+        >
+          <p>
+            {where
+              ? t("recap.loggedAt", { count: diveCount, where })
+              : t("recap.loggedToday", { count: diveCount })}{" "}
+            {t("recap.hopeWaterTreatedYou")}
+          </p>
+        </EarnedMoment>
 
-      <section className="mt-10 border-t border-border pt-8">
-        <h2 className="text-base font-semibold">{t("recap.yourPhotos")}</h2>
-        <p className="mt-1 text-base text-muted">{t("recap.photosBody", { shop: shop.name })}</p>
-
-        {photoNotice ? (
-          <FormStatus tone={photoNotice.tone} className="mt-3">
-            {photoNotice.key === "recap.photoLimit"
-              ? t(photoNotice.key, { max: MAX_RECAP_PHOTOS_PER_BOOKING })
-              : t(photoNotice.key)}
-          </FormStatus>
+        {/* The crew's own words carry themselves — a pull-quote, not a boxed
+            panel. The primary-tinted kicker is its only ornament. */}
+        {shoutout ? (
+          <section className="mt-10">
+            <Kicker tone="primary">{t("recap.fromYourCrew")}</Kicker>
+            {/* The quote glyphs come from the bundle, not this component — each
+                locale sets its own convention (es-ES/README.md keeps “ ”). */}
+            <blockquote className="mt-3 text-xl leading-relaxed font-medium text-pretty">
+              {t("recap.crewQuote", { words: shoutout })}
+            </blockquote>
+          </section>
         ) : null}
 
-        {photos.length ? (
-          <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {photos.map((image) => (
-              <li key={image.id} className="overflow-hidden rounded-xl border border-border">
-                <div className="relative aspect-square w-full">
-                  {/* Diver photos always come from the blob store (storeRecapImage), so the
-                      remotePatterns entry in next.config.ts covers every url here. */}
-                  <Image
-                    src={image.imageUrl}
-                    alt={image.caption ?? t("recap.photoAlt", { trip: trip.title })}
-                    fill
-                    sizes="(min-width: 640px) 33vw, 50vw"
-                    className="object-cover"
-                  />
-                </div>
-                {image.caption ? (
-                  <p className="px-2 py-1.5 text-xs text-muted">{image.caption}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {atPhotoLimit ? (
-          <p className="mt-4 text-sm text-muted">{t("recap.photoLimitReached")}</p>
-        ) : (
-          <form
-            action={uploadRecapPhotoAction.bind(null, token)}
-            className="mt-4 flex flex-col gap-3"
-          >
-            {/* No separate caption: the control's own button *is* "Add a photo",
-                so a label above it saying the same thing was a second reading
-                of one instruction. */}
-            <ImageFileInput
-              name="photo"
-              required
-              multiple
-              maxFiles={remainingPhotoSlots}
+        {/* The day's route: the map draws the charter path, and the itinerary
+            line beneath continues it — one dot per stop, no card per site. */}
+        {sites.length ? (
+          <section className="mt-10">
+            <Kicker>{t("recap.whereYouDived")}</Kicker>
+            <RecapMap
+              sites={sites}
               copy={{
-                choose: t("recap.addAPhoto"),
-                chooseAnother: t("recap.addAnotherPhoto"),
-                wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
-                tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                tooMany: t("recap.photoTooMany", { max: remainingPhotoSlots }),
+                mapAriaLabel: t("recap.mapAriaLabel"),
+                charterPath: t("recap.charterPath"),
+                boatTrack: t("recap.boatTrack"),
+                theDock: t("recap.theDock"),
+                reconstructedPath: t("recap.reconstructedPath", { count: sites.length }),
               }}
             />
-            <input
-              type="text"
-              name="caption"
-              maxLength={140}
-              placeholder={t("recap.captionLabel")}
+            <ol className="mt-6 ml-1.5 space-y-6 border-l-2 border-border pl-6">
+              {sites.map((site) => (
+                <SiteStop key={site.name} site={site} lookForLabel={t("recap.lookFor")} />
+              ))}
+            </ol>
+          </section>
+        ) : null}
+
+        {/* Conditions as a quiet stat row — facts, not tiles. */}
+        {conditions.length ? (
+          <section className="mt-10">
+            <Kicker>{t("recap.conditionsOnTheDay")}</Kicker>
+            <dl className="mt-4 flex flex-wrap gap-x-10 gap-y-4">
+              {conditions.map((fact) => (
+                <div key={fact.label}>
+                  <dt className="text-sm text-muted">{fact.label}</dt>
+                  <dd className="mt-0.5 text-lg font-semibold tracking-tight">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : null}
+
+        {/* ——— Keepsake: the dive log entry. The authentic artefact a diver
+            keeps for their logbook — printable, signed with the shop's identity,
+            carrying vessel, crew, conditions, depths, and milestone visit line. */}
+        <section
+          aria-labelledby="logbook-record-heading"
+          className="mt-12 rounded-2xl border-2 border-dashed border-primary/40 bg-surface p-6 shadow-xs sm:p-8 print:mt-6 print:border-foreground print:p-6 print:shadow-none"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {shop.logoUrl ? (
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border">
+                  <Image
+                    src={shop.logoUrl}
+                    alt={shop.name}
+                    width={40}
+                    height={40}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : null}
+              <div>
+                <p className="text-xs font-semibold tracking-wider text-primary uppercase">
+                  {t("recap.logbookEyebrow")}
+                </p>
+                <h2 id="logbook-record-heading" className="text-xl font-bold tracking-tight">
+                  {t("recap.logbookHeading")}
+                </h2>
+              </div>
+            </div>
+            <div className="print:hidden">
+              <PrintRecordButton label={t("recap.printRecord")} />
+            </div>
+          </div>
+
+          <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary-tint px-2.5 py-1 text-xs font-semibold text-primary">
+            <span aria-hidden="true">🤿</span>
+            <span>{visitMilestoneText}</span>
+          </div>
+
+          <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="border-t border-border pt-3">
+              <dt className="text-xs font-medium text-muted">{t("recap.diverLabel")}</dt>
+              <dd className="mt-0.5 text-base font-semibold">{diverName}</dd>
+            </div>
+            <div className="border-t border-border pt-3">
+              <dt className="text-xs font-medium text-muted">{t("recap.dateLabel")}</dt>
+              <dd className="mt-0.5 text-base font-semibold">{when}</dd>
+            </div>
+            <div className="border-t border-border pt-3">
+              <dt className="text-xs font-medium text-muted">{t("recap.vesselLabel")}</dt>
+              <dd className="mt-0.5 text-base font-semibold">
+                {trip.boatName ?? t("recap.shoreOrCharter")}
+              </dd>
+            </div>
+            <div className="border-t border-border pt-3">
+              <dt className="text-xs font-medium text-muted">{t("recap.crewLabel")}</dt>
+              <dd className="mt-0.5 text-base font-semibold">
+                {trip.crew.length > 0 ? trip.crew.join(", ") : t("recap.unassignedCrew")}
+              </dd>
+            </div>
+          </dl>
+
+          {sites.length > 0 ? (
+            <div className="mt-6 border-t border-border pt-4">
+              <h3 className="text-xs font-medium text-muted">{t("recap.sitesLabel")}</h3>
+              <ul className="mt-2 space-y-3">
+                {sites.map((site) => {
+                  const depthValue =
+                    typeof site.maxDepthMeters === "number"
+                      ? depthText(t, site.maxDepthMeters, shop.depthUnit)
+                      : site.depthRange;
+                  return (
+                    <li
+                      key={site.name}
+                      className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-surface-sunken p-3"
+                    >
+                      <div>
+                        <span className="font-semibold text-foreground">{site.name}</span>
+                        {site.locationName ? (
+                          <span className="ms-2 text-xs text-muted">{site.locationName}</span>
+                        ) : null}
+                      </div>
+                      {depthValue ? (
+                        <span className="text-xs font-medium text-primary">
+                          {t("recap.maxDepthLabel", { depth: depthValue })}
+                        </span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          {conditions.length > 0 ? (
+            <dl className="mt-4 border-t border-border pt-3">
+              <dt className="text-xs font-medium text-muted">{t("recap.conditionsOnTheDay")}</dt>
+              <dd className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm font-medium">
+                {conditions.map((c) => (
+                  <span key={c.label}>
+                    <span className="text-muted">{c.label}:</span>{" "}
+                    <span className="font-semibold">{c.value}</span>
+                  </span>
+                ))}
+              </dd>
+            </dl>
+          ) : null}
+
+          <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-xs text-muted">
+            <p className="flex items-center gap-1.5">
+              <span aria-hidden="true">✓</span>
+              <span>{t("recap.verifiedRecord", { shopName: shop.name })}</span>
+            </p>
+            <p className="font-medium text-foreground">
+              {t("recap.diveCountSummary", { count: diveCount })}
+            </p>
+          </div>
+        </section>
+
+        {/* ——— Act II: the one ask. The review is the page's single bordered
+            card and its single primary action — it's one tap, it stays on this
+            page, and it's the only review a diver can leave that DiveDay can
+            prove came from someone who was actually on the boat. It is the
+            shared card now, at `padding="lg"` — a card someone works inside —
+            rather than a geometry of its own hand-matched to the EarnedMoment
+            above it; both are on their way to the one spelling. */}
+        <SectionCard
+          padding="lg"
+          className="mt-12 sm:mt-14 print:hidden"
+          title={t("reviews.askHeading")}
+          description={t("reviews.askBody")}
+        >
+          {reviewNotice ? (
+            <FormStatus tone={reviewNotice.tone}>{reviewNotice.text}</FormStatus>
+          ) : null}
+          {ownReview ? (
+            <p className="mt-3 text-sm text-muted">
+              {t("reviews.yourRating", { rating: ownReview.rating })}
+            </p>
+          ) : null}
+          <form action={submitReviewAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
+            <StarRatingInput
+              legend={t("reviews.ratingLegend")}
+              optionLabels={Object.fromEntries(
+                REVIEW_RATINGS.map((rating) => [rating, t("reviews.ratingOption", { rating })]),
+              )}
+              defaultValue={ownReview?.rating}
+            />
+            <label htmlFor="review-comment" className="text-sm font-medium">
+              {t("reviews.commentLabel")}
+            </label>
+            <p id="review-comment-hint" className="text-xs text-muted">
+              {t("reviews.commentModerationHint")}
+            </p>
+            <textarea
+              id="review-comment"
+              name="comment"
+              rows={3}
+              maxLength={MAX_REVIEW_COMMENT_LENGTH}
+              defaultValue={ownReview?.comment ?? ""}
+              placeholder={t("reviews.commentPlaceholder")}
+              aria-describedby="review-comment-hint"
               className={controlClass}
             />
             <div>
+              {/* One primary at a time: the moment a strong rating lands and
+                the carry-it-to-Google CTA appears below, this submit steps
+                back to secondary so the page still points at exactly one
+                next action (principle #8). */}
               <SubmitButton
-                pendingLabel={t("recap.addingPhoto")}
-                className={buttonClass({ variant: "secondary", className: "self-start" })}
+                pendingLabel={t("reviews.submitting")}
+                className={buttonClass({
+                  variant: externalReviewUrl ? "secondary" : "primary",
+                  size: "cta",
+                })}
               >
-                {t("recap.addToMyRecap")}
+                {t("reviews.submit")}
               </SubmitButton>
             </div>
           </form>
-        )}
-      </section>
 
-      {/* ——— Coda: the soft landing. Centered and muted — an invitation on
-          the way out, not another ask. */}
-      <footer className="mt-14 border-t border-border pt-10 text-center">
-        <h2 className="text-base font-semibold">{t("recap.bringABuddy")}</h2>
-        <p className="mx-auto mt-1 max-w-md text-base text-muted">{t("recap.buddyBody")}</p>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href={publicSchedulePath(shop.slug)}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("recap.seeWhatsNext")}
-          </Link>
-          {shop.contactEmail ? (
-            <a href={`mailto:${shop.contactEmail}`} className={buttonClass({ variant: "ghost" })}>
-              {t("recap.messageTheShop")}
-            </a>
+          {/* The one review ask left: a strong rating just landed, so offer to
+            carry it further instead of stacking a second, separately-worded
+            ask underneath (task 57). */}
+          {externalReviewUrl ? (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-base font-semibold">{t("recap.externalReviewHeading")}</h3>
+              <p className="mt-1 text-sm text-muted">
+                {ownReview?.comment
+                  ? t("recap.externalReviewBody", { shop: shop.name })
+                  : t("recap.externalReviewBodyNoComment", { shop: shop.name })}
+              </p>
+              <ShareReviewButton
+                reviewUrl={externalReviewUrl}
+                comment={ownReview?.comment ?? null}
+                cta={t("recap.externalReviewCta")}
+                copiedLabel={t("recap.commentCopied")}
+              />
+            </div>
           ) : null}
-        </div>
-      </footer>
-    </main>
+        </SectionCard>
+
+        {/* ——— Act III: quiet follows. Real affordances at secondary weight —
+          hairline-topped sections, never rival cards to the one ask above. */}
+
+        {showTipSection ? (
+          <section className="mt-10 border-t border-border pt-8 print:hidden">
+            <h2 className="text-base font-semibold">{t("recap.tipCrew")}</h2>
+            {tipNotice ? (
+              <FormStatus tone={tipNotice.tone} className="mt-3">
+                {t(tipNotice.key)}
+              </FormStatus>
+            ) : null}
+            {tip?.status === "paid" ? (
+              <p className="mt-1 text-base text-muted">{t("recap.tipPaid", { shop: shop.name })}</p>
+            ) : tipParam === "paid" ? (
+              // Stripe already redirected the diver back with `?tip=paid`, but the
+              // webhook that flips `tip.status` to "paid" can lag a few seconds —
+              // never re-show the payment form or a stale checkout link in that
+              // window, which would read as "you still need to pay."
+              <p className="mt-1 text-base text-muted">{t("recap.tipConfirming")}</p>
+            ) : tip?.status === "pending" && tip.checkoutUrl ? (
+              <>
+                <p className="mt-1 text-base text-muted">
+                  {t("recap.tipAllGoes", { shop: shop.name })}
+                </p>
+                <a
+                  href={tip.checkoutUrl}
+                  className={buttonClass({ variant: "secondary", size: "cta", className: "mt-4" })}
+                >
+                  {t("recap.tipFinish", {
+                    // `minorToMajor`, never a literal 100 — a ¥3,000 tip is
+                    // whole yen and dividing it would offer to pay ¥30.
+                    amount: cachedFormatter("num", Intl.NumberFormat, locale, {
+                      style: "currency",
+                      currency: currency.toUpperCase(),
+                      maximumFractionDigits: 0,
+                    }).format(minorToMajor(tip.amountCents, currency)),
+                  })}
+                </a>
+              </>
+            ) : canTip ? (
+              <>
+                <p className="mt-1 text-base text-muted">
+                  {t("recap.tipAllGoes", { shop: shop.name })}
+                </p>
+                <form
+                  action={startTipAction.bind(null, token)}
+                  className="mt-4 flex flex-col gap-3"
+                >
+                  <TipAmountPicker
+                    presets={tipPresets}
+                    defaultPreset={tipPresets[1]}
+                    currencySymbol={symbol}
+                    legend={t("recap.tipAmountLegend")}
+                    otherPlaceholder={t("recap.otherTipPlaceholder")}
+                    otherAriaLabel={t("recap.otherTipAriaLabel")}
+                  />
+                  <div>
+                    <SubmitButton
+                      pendingLabel={t("booking.headingToPayment")}
+                      className={buttonClass({ variant: "secondary", size: "cta" })}
+                    >
+                      {t("recap.tipLeave")}
+                    </SubmitButton>
+                  </div>
+                </form>
+              </>
+            ) : null}
+          </section>
+        ) : null}
+
+        <section className="mt-10 border-t border-border pt-8">
+          <h2 className="text-base font-semibold">{t("recap.yourPhotos")}</h2>
+          <p className="mt-1 text-base text-muted">{t("recap.photosBody", { shop: shop.name })}</p>
+
+          {photoNotice ? (
+            <FormStatus tone={photoNotice.tone} className="mt-3">
+              {photoNotice.key === "recap.photoLimit"
+                ? t(photoNotice.key, { max: MAX_RECAP_PHOTOS_PER_BOOKING })
+                : t(photoNotice.key)}
+            </FormStatus>
+          ) : null}
+
+          {photos.length ? (
+            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {photos.map((image) => (
+                <li key={image.id} className="overflow-hidden rounded-xl border border-border">
+                  <div className="relative aspect-square w-full">
+                    {/* Diver photos always come from the blob store (storeRecapImage), so the
+                      remotePatterns entry in next.config.ts covers every url here. */}
+                    <Image
+                      src={image.imageUrl}
+                      alt={image.caption ?? t("recap.photoAlt", { trip: trip.title })}
+                      fill
+                      sizes="(min-width: 640px) 33vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
+                  {image.caption ? (
+                    <p className="px-2 py-1.5 text-xs text-muted">{image.caption}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {atPhotoLimit ? (
+            <p className="mt-4 text-sm text-muted">{t("recap.photoLimitReached")}</p>
+          ) : (
+            <form
+              action={uploadRecapPhotoAction.bind(null, token)}
+              className="mt-4 flex flex-col gap-3 print:hidden"
+            >
+              {/* No separate caption: the control's own button *is* "Add a photo",
+                so a label above it saying the same thing was a second reading
+                of one instruction. */}
+              <ImageFileInput
+                name="photo"
+                required
+                multiple
+                maxFiles={remainingPhotoSlots}
+                copy={{
+                  choose: t("recap.addAPhoto"),
+                  chooseAnother: t("recap.addAnotherPhoto"),
+                  wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
+                  tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                  tooMany: t("recap.photoTooMany", { max: remainingPhotoSlots }),
+                }}
+              />
+              <input
+                type="text"
+                name="caption"
+                maxLength={140}
+                placeholder={t("recap.captionLabel")}
+                className={controlClass}
+              />
+              <div>
+                <SubmitButton
+                  pendingLabel={t("recap.addingPhoto")}
+                  className={buttonClass({ variant: "secondary", className: "self-start" })}
+                >
+                  {t("recap.addToMyRecap")}
+                </SubmitButton>
+              </div>
+            </form>
+          )}
+        </section>
+
+        {/* ——— Coda: the soft landing. Centered and muted — an invitation on
+          the way out, not another ask. */}
+        <footer className="mt-14 border-t border-border pt-10 text-center print:hidden">
+          <h2 className="text-base font-semibold">{t("recap.bringABuddy")}</h2>
+          <p className="mx-auto mt-1 max-w-md text-base text-muted">{t("recap.buddyBody")}</p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={publicSchedulePath(shop.slug)}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("recap.seeWhatsNext")}
+            </Link>
+            {shop.contactEmail ? (
+              <a href={`mailto:${shop.contactEmail}`} className={buttonClass({ variant: "ghost" })}>
+                {t("recap.messageTheShop")}
+              </a>
+            ) : null}
+          </div>
+        </footer>
+      </main>
+    </DiverIntlProvider>
   );
 }

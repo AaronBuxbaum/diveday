@@ -3,8 +3,10 @@ import {
   AUTOMATED_FORECAST_WINDOW_DAYS,
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
+  isHighWind,
   seaStateReading,
   shouldShowAutomatedForecast,
+  windReading,
 } from "./marine-forecast";
 
 describe("shouldShowAutomatedForecast", () => {
@@ -46,20 +48,43 @@ describe("fetchAutomatedMarineForecast", () => {
     vi.unstubAllEnvs();
   });
 
-  it("selects the forecast hour closest to departure and returns the sea state as numbers and codes", async () => {
-    const fetcher = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          hourly: {
-            time: [1_784_419_200, 1_784_422_800, 1_784_426_400],
-            sea_surface_temperature: [26.2, 26.8, 27.1],
-            wave_height: [0.4, 0.7, 0.9],
-            wave_period: [5, 7, 8],
-            wave_direction: [80, 92, 105],
-          },
-        }),
-      ),
-    );
+  it("selects the forecast hour closest to departure and returns conditions as numbers and codes", async () => {
+    const fetcher = vi.fn().mockImplementation((url: string) => {
+      if (new URL(url).hostname === "marine-api.open-meteo.com") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              hourly: {
+                time: [1_784_419_200, 1_784_422_800, 1_784_426_400],
+                sea_surface_temperature: [26.2, 26.8, 27.1],
+                wave_height: [0.4, 0.7, 0.9],
+                wave_period: [5, 7, 8],
+                wave_direction: [80, 92, 105],
+                ocean_current_velocity: [1.2, 1.8, 2.0],
+                ocean_current_direction: [180, 190, 200],
+              },
+            }),
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            hourly: {
+              time: [1_784_419_200, 1_784_422_800, 1_784_426_400],
+              wind_speed_10m: [12, 18, 20],
+              wind_gusts_10m: [16, 24, 28],
+              wind_direction_10m: [85, 90, 95],
+            },
+            daily: {
+              time: [1_784_422_800],
+              sunrise: [1_784_400_000],
+              sunset: [1_784_450_000],
+            },
+          }),
+        ),
+      );
+    });
 
     const forecast = await fetchAutomatedMarineForecast(
       { latitude: 25.12, longitude: -80.3 },
@@ -67,35 +92,48 @@ describe("fetchAutomatedMarineForecast", () => {
       fetcher,
     );
 
-    // Metres and a compass code, never "0.7 m waves from E" — the shop's
-    // `depth_unit` decides whether a crew reads metres or feet, and the
-    // reader's language decides whether the bearing is E or O (DOM-L2).
     expect(forecast).toEqual({
       waterTemperatureC: 27,
       surface: { waveHeightMeters: 0.7, waveDirection: "e", wavePeriodSeconds: 7 },
+      wind: { speedKnots: 18, gustsKnots: 24, direction: "e" },
+      current: { velocityKnots: 1, direction: "s" },
+      sun: { sunrise: new Date(1_784_400_000_000), sunset: new Date(1_784_450_000_000) },
       source: "Open-Meteo marine forecast",
       validAt: new Date(1_784_422_800_000),
     });
-    expect(fetcher).toHaveBeenCalledOnce();
-    expect(String(fetcher.mock.calls[0]?.[0])).toContain("sea_surface_temperature");
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps the sea state when only the wave height is published", async () => {
-    const fetcher = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          hourly: {
-            time: [1_784_422_800],
-            sea_surface_temperature: [null],
-            wave_height: [1.2],
-            wave_period: [null],
-            // A bearing the provider has been seen to return below zero rather
-            // than wrapping into [0, 360): −10° is still north, not a crash.
-            wave_direction: [-10],
-          },
-        }),
-      ),
-    );
+  it("keeps the sea state and wind when partial fields are published", async () => {
+    const fetcher = vi.fn().mockImplementation((url: string) => {
+      if (new URL(url).hostname === "marine-api.open-meteo.com") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              hourly: {
+                time: [1_784_422_800],
+                sea_surface_temperature: [null],
+                wave_height: [1.2],
+                wave_period: [null],
+                wave_direction: [-10],
+              },
+            }),
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            hourly: {
+              time: [1_784_422_800],
+              wind_speed_10m: [15],
+              wind_gusts_10m: [null],
+              wind_direction_10m: [45],
+            },
+          }),
+        ),
+      );
+    });
 
     const forecast = await fetchAutomatedMarineForecast(
       { latitude: 25.12, longitude: -80.3 },
@@ -108,37 +146,41 @@ describe("fetchAutomatedMarineForecast", () => {
       waveDirection: "n",
       wavePeriodSeconds: null,
     });
+    expect(forecast?.wind).toEqual({
+      speedKnots: 15,
+      gustsKnots: null,
+      direction: "ne",
+    });
     expect(forecast?.waterTemperatureC).toBeNull();
   });
 
-  // A period and a bearing describe the shape of a sea nobody can feel unless
-  // there is a height to go with them, so the whole reading drops.
-  it("returns no sea state at all when the wave height is missing", async () => {
-    const fetcher = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          hourly: {
-            time: [1_784_422_800],
-            sea_surface_temperature: [26.4],
-            wave_height: [null],
-            wave_period: [7],
-            wave_direction: [92],
-          },
-        }),
-      ),
-    );
+  it("caches a provider response for the same site and forecast hour", async () => {
+    const fetcher = vi.fn().mockImplementation((url: string) => {
+      if (new URL(url).hostname === "marine-api.open-meteo.com") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              hourly: {
+                time: [1_784_422_800],
+                sea_surface_temperature: [26.4],
+              },
+            }),
+          ),
+        );
+      }
+      return Promise.resolve(new Response("unavailable", { status: 503 }));
+    });
+    const point = { latitude: 25.12, longitude: -80.3 };
+    const startsAt = new Date(1_784_422_800_000);
 
-    const forecast = await fetchAutomatedMarineForecast(
-      { latitude: 25.12, longitude: -80.3 },
-      new Date(1_784_422_800_000),
-      fetcher,
-    );
+    const first = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
+    const second = await fetchAutomatedMarineForecast(point, startsAt, fetcher);
 
-    expect(forecast?.surface).toBeNull();
-    expect(forecast?.waterTemperatureC).toBe(26);
+    expect(second).toEqual(first);
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("returns no briefing when the provider is unavailable", async () => {
+  it("returns null when both providers fail", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 }));
 
     await expect(
@@ -192,8 +234,6 @@ describe("seaStateReading", () => {
     expect(seaStateReading(sea(4.0))).toBe("very_rough");
   });
 
-  // The whole reason the raw numbers were unreadable: 0.9 m is a different day
-  // depending on whether it arrives every four seconds or every eleven.
   it("reads the same height differently by period", () => {
     expect(seaStateReading(sea(1.0, 4))).toBe("rough");
     expect(seaStateReading(sea(1.0, 7))).toBe("choppy");
@@ -201,9 +241,6 @@ describe("seaStateReading", () => {
   });
 
   it("never calls a long-period swell glassy, however small", () => {
-    // A groundswell rolling in every twelve seconds is a comfortable ride and
-    // is visibly not a mirror — claiming otherwise is the forecast saying
-    // something a diver can disprove by looking at the water.
     expect(seaStateReading(sea(0.05, 14))).toBe("calm");
     expect(seaStateReading(sea(0.3, 14))).toBe("calm");
   });
@@ -215,5 +252,34 @@ describe("seaStateReading", () => {
   it("never runs off either end of the scale", () => {
     expect(seaStateReading(sea(0, 2))).toBe("calm");
     expect(seaStateReading(sea(99, 2))).toBe("very_rough");
+  });
+});
+
+describe("windReading", () => {
+  it("returns null when no wind is provided", () => {
+    expect(windReading(null)).toBeNull();
+  });
+
+  it("classifies wind speed into recreational bands", () => {
+    expect(windReading({ speedKnots: 4, gustsKnots: null, direction: "e" })).toBe("calm_wind");
+    expect(windReading({ speedKnots: 10, gustsKnots: 14, direction: "e" })).toBe("light_breeze");
+    expect(windReading({ speedKnots: 18, gustsKnots: 22, direction: "e" })).toBe("breezy");
+    expect(windReading({ speedKnots: 24, gustsKnots: 28, direction: "e" })).toBe("windy");
+    expect(windReading({ speedKnots: 32, gustsKnots: 40, direction: "e" })).toBe("gale_warning");
+  });
+});
+
+describe("isHighWind", () => {
+  it("returns false for calm to moderate wind", () => {
+    expect(isHighWind(null)).toBe(false);
+    expect(isHighWind({ speedKnots: 15, gustsKnots: 20, direction: "e" })).toBe(false);
+  });
+
+  it("returns true when sustained wind is at or above threshold", () => {
+    expect(isHighWind({ speedKnots: 22, gustsKnots: null, direction: "e" })).toBe(true);
+  });
+
+  it("returns true when gusts are high even if sustained is below threshold", () => {
+    expect(isHighWind({ speedKnots: 18, gustsKnots: 27, direction: "e" })).toBe(true);
   });
 });

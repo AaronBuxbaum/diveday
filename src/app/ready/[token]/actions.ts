@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
-import { selfCancelBooking, setBookingLastDived } from "@/db/bookings";
+import { selfCancelBooking, setBookingHotelPickup, setBookingLastDived } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
@@ -140,6 +140,24 @@ export async function saveNoteFromReady(token: string, formData: FormData) {
     note: parsed.data.note,
   });
   revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=note" : "error=note"}`);
+}
+
+const hotelPickupSchema = z.object({
+  hotelPickupLocation: z.string().trim().max(300),
+});
+
+export async function saveHotelPickupLocationFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = hotelPickupSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=pickup`);
+  const location = parsed.data.hotelPickupLocation || null;
+  const saved = await setBookingHotelPickup(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    hotelPickupLocation: location,
+  });
+  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=pickup" : "error=pickup"}`);
 }
 
 const fitSchema = z.object({

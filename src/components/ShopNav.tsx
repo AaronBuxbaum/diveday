@@ -64,6 +64,7 @@ function destinationTitlesFor(t: (key: StaffMessageKey) => string): StaffDestina
 export function ShopNav({
   shopSlug,
   shopName,
+  logoUrl,
   boatBoardingHref,
   navGates,
   navCounts,
@@ -73,6 +74,7 @@ export function ShopNav({
 }: {
   shopSlug: string;
   shopName: string;
+  logoUrl?: string;
   /** Today's next departure's boarding, when the shop has a boat out today. */
   boatBoardingHref?: string;
   /** Owner/manager surfaces (H-14) to hide from the nav and search for everyone else. */
@@ -142,6 +144,7 @@ export function ShopNav({
           <div className="flex min-w-0 flex-1 lg:order-1 lg:flex-initial">
             <ShopIdentityMenu
               shopName={shopName}
+              logoUrl={logoUrl}
               signOutAction={signOutAction}
               locale={locale}
               languages={languages}

@@ -35,6 +35,8 @@
     "certifyFailed": "Eso no se guardó — comprueba que sigue en esta salida y que elegiste el nivel, luego inténtalo de nuevo.",
     "contactSaved": "Contacto de emergencia guardado.",
     "contactIncomplete": "Un contacto necesita nombre y teléfono antes de que la tripulación pueda localizar a alguien de verdad.",
+    "pickupSaved": "Detalles de recogida en el hotel actualizados.",
+    "pickupInvalid": "Comprueba la hora de recogida y el alojamiento e inténtalo de nuevo.",
     "diverInvalid": "Introduce un nombre y un correo válido para añadir un buceador.",
     "diverFull": "Esa salida está llena — añádelo a la lista de espera en su lugar.",
     "diverWaitlistAvailable": "Hay plazas en esta salida — añádelo a la salida en lugar de a la lista de espera.",
@@ -166,7 +168,11 @@
     "editPublished": "Editar la predicción de la tripulación",
     "holdOnSummary": "La pausa por condiciones está activa — las nuevas reservas están en pausa",
     "publishedAt": "Publicada {date}",
-    "visibilityFact": "{value} de visibilidad"
+    "visibilityFact": "{value} de visibilidad",
+    "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (rachas {gusts} kt)} other {}}",
+    "automatedCurrent": "Corriente {velocity} kt {direction}",
+    "automatedSun": "Amanecer {sunrise} · Puesta {sunset}",
+    "automatedOutlookHeading": "Previsión automatizada"
   },
   "crew": {
     "heading": "Tripulación",
@@ -409,7 +415,17 @@
     "sharedOnCard": "{count, plural, one {# bloqueo} other {# bloqueos}} en común con otros buceadores — indicados arriba.",
     "reviewCertificationsLink": "Revisar certificaciones →",
     "depthChip": "Aviso de profundidad",
-    "blockersReferenceHeading": "Bloqueos"
+    "blockersReferenceHeading": "Bloqueos",
+    "hotelPickupHeading": "Recogida en hotel",
+    "hotelNotSpecified": "Alojamiento no indicado",
+    "noPickupScheduled": "Sin recogida programada",
+    "editPickup": "Editar recogida",
+    "setPickup": "Definir recogida",
+    "pickupLocationLabel": "Alojamiento / Hotel",
+    "pickupLocationPlaceholder": "Hotel o punto de referencia",
+    "pickupTimeLabel": "Hora de recogida",
+    "savePickup": "Guardar recogida",
+    "saving": "Guardando…"
   },
   "celebrations": {
     "heading": "Celebraciones",
@@ -507,7 +523,14 @@
     "emptyAction": "Abrir la lista de buceadores",
     "rentalKitEmptyOwnKitHeading": "No hay equipo que preparar",
     "rentalKitEmptyNeedsSortingHeading": "No hay equipo que preparar — todavía",
-    "rentalKitEmptyAction": "Abrir la lista de buceadores"
+    "rentalKitEmptyAction": "Abrir la lista de buceadores",
+    "hotelPickupsHeading": "Recogidas en hoteles",
+    "hotelPickupsCount": "{count, plural, one {# recogida} other {# recogidas}}",
+    "hotelPickupsDescription": "Orden de la furgoneta para las recogidas matinales.",
+    "pickupTimeColumn": "Hora de recogida",
+    "pickupHotelColumn": "Hotel / Alojamiento",
+    "pickupDiverColumn": "Buceador",
+    "pickupTimeUnset": "Sin programar"
   },
   "guests": {
     "cancelledBadge": "Cancelada",

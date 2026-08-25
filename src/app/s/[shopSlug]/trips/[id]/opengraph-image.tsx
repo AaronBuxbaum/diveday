@@ -83,7 +83,13 @@ export default async function TripOpenGraphImage({
   // sentence, and this card is posted by a dive shop to its own audience.
   return new ImageResponse(
     <div style={CARD_STYLE}>
-      <div style={{ display: "flex", fontSize: 34, fontWeight: 600 }}>{shop.name}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        {shop.logoUrl ? (
+          // biome-ignore lint/performance/noImgElement: ImageResponse needs a direct remote image
+          <img src={shop.logoUrl} alt="" width="64" height="64" style={{ objectFit: "cover" }} />
+        ) : null}
+        <div style={{ display: "flex", fontSize: 34, fontWeight: 600 }}>{shop.name}</div>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div
           style={{

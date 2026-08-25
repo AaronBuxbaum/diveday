@@ -12,7 +12,7 @@ import { createBoat, deleteBoat, updateBoat } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
-import { retryMediaDeletion } from "@/db/media-deletions";
+import { queueAndAttemptMediaDeletion, retryMediaDeletion } from "@/db/media-deletions";
 import { maxLineItemUnitAmountCents } from "@/db/orders";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
 import {
@@ -26,6 +26,7 @@ import {
   setShopDockDayRhythm,
   setShopEmergencyReference,
   setShopPackingList,
+  setShopProfile,
   setShopRentalItems,
   setShopRentalPricing,
   setShopReviewUrl,
@@ -75,6 +76,7 @@ import {
 import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { storeShopLogoImage } from "@/lib/storage";
 import { timeZoneAnchor } from "@/lib/timezones";
 import { uuidParam } from "@/lib/uuid";
 
@@ -531,6 +533,68 @@ export async function saveAddressAction(formData: FormData): Promise<{ ok: true 
   // into a full route navigation; the component already has the exact fields
   // that were just persisted.
   return { ok: true };
+}
+
+const profileSchema = z.object({
+  tagline: z.string().trim().max(120),
+  description: z.string().trim().max(1000),
+});
+
+/**
+ * Shop profile & branding — tagline, about/description, and brand logo.
+ */
+export async function saveProfileAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const parsed = profileSchema.safeParse({
+    tagline: String(formData.get("tagline") ?? "").trim(),
+    description: String(formData.get("description") ?? "").trim(),
+  });
+  if (!parsed.success) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+
+  const db = await getDb();
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+
+  const logoFile = formData.get("logoFile");
+  const removeLogo = formData.get("removeLogo") === "true";
+
+  let logoUrl: string | null | undefined;
+
+  if (removeLogo) {
+    logoUrl = null;
+  } else if (logoFile instanceof File && logoFile.size > 0) {
+    const stored = await storeShopLogoImage({
+      filename: logoFile.name,
+      contentType: logoFile.type,
+      bytes: await logoFile.arrayBuffer(),
+    });
+    if (stored.status === "stored") {
+      logoUrl = stored.url;
+    } else {
+      redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+    }
+  }
+
+  await setShopProfile(db, session.user.shopId, {
+    tagline: parsed.data.tagline,
+    description: parsed.data.description,
+    ...(logoUrl !== undefined ? { logoUrl } : {}),
+  });
+
+  if (logoUrl !== undefined && shop.logoUrl && shop.logoUrl !== logoUrl) {
+    await queueAndAttemptMediaDeletion(db, {
+      shopId: session.user.shopId,
+      kind: "shop_logo",
+      url: shop.logoUrl,
+    });
+  }
+
+  revalidatePath(`/s/${session.user.shopSlug}`);
+  revalidatePath(settings);
+  revalidateAndRedirect(settings, noticeUrl(settings, "profile-saved", { saved: "profile" }));
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */

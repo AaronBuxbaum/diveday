@@ -53,6 +53,7 @@ export function ShopPageHeader({
   description,
   meta,
   actions,
+  brand,
   /** "end" bottom-aligns actions with the title block, right for a static
    * button/print row. Use "start" when actions can grow much taller than the
    * title — an expandable form — so opening it doesn't drag the title down. */
@@ -72,8 +73,15 @@ export function ShopPageHeader({
   description?: string;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Optional shop-owned identity shown above a public booking header. */
+  brand?: {
+    logoUrl?: string | null;
+    tagline?: string | null;
+    description?: string | null;
+  };
   align?: "start" | "end";
 }) {
+  const hasBrand = Boolean(brand?.logoUrl || brand?.tagline || brand?.description);
   return (
     <header className="mb-8">
       <div
@@ -82,6 +90,26 @@ export function ShopPageHeader({
         }`}
       >
         <div className="min-w-0">
+          {hasBrand ? (
+            <div className="mb-5 flex items-start gap-3">
+              {brand?.logoUrl ? (
+                // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
+                <img
+                  src={brand.logoUrl}
+                  alt=""
+                  className="size-14 shrink-0 rounded-2xl border border-border bg-surface object-cover shadow-xs"
+                />
+              ) : null}
+              <div className="min-w-0">
+                {brand?.tagline ? (
+                  <p className="text-base font-medium text-foreground/90">{brand.tagline}</p>
+                ) : null}
+                {brand?.description ? (
+                  <p className="mt-1 max-w-2xl text-sm text-muted">{brand.description}</p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           {eyebrow && eyebrowHref ? (
             <EyebrowBackLink href={eyebrowHref}>{eyebrow}</EyebrowBackLink>
           ) : eyebrow ? (

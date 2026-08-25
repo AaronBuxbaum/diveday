@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDivePrepChecklist,
+  buildHotelPickupList,
   isPrepGrouping,
   type PrepDiver,
   type RentalFit,
@@ -706,5 +707,73 @@ describe("the packing-list grouping in the URL", () => {
     expect(isPrepGrouping("divers")).toBe(false);
     expect(isPrepGrouping("Item")).toBe(false);
     expect(isPrepGrouping(undefined)).toBe(false);
+  });
+});
+
+describe("buildHotelPickupList", () => {
+  it("returns an empty list when no divers have lodging/hotel pickups requested", () => {
+    const divers = [
+      diver({ bookingId: "b1", fullName: "Alice" }),
+      diver({ bookingId: "b2", fullName: "Bob", hotelPickupLocation: null }),
+      diver({ bookingId: "b3", fullName: "Charlie", hotelPickupLocation: "   " }),
+    ];
+    expect(buildHotelPickupList(divers)).toEqual([]);
+  });
+
+  it("extracts and sorts hotel pickups by scheduled time then hotel location", () => {
+    const divers = [
+      diver({
+        bookingId: "b1",
+        fullName: "Late Diver",
+        hotelPickupLocation: "Hilton Resort",
+        pickupTime: "07:45",
+      }),
+      diver({
+        bookingId: "b2",
+        fullName: "Untimed Diver",
+        hotelPickupLocation: "Bay View Hotel",
+        pickupTime: null,
+      }),
+      diver({
+        bookingId: "b3",
+        fullName: "Early Diver",
+        hotelPickupLocation: "Sunset Palms",
+        pickupTime: "07:15",
+      }),
+      diver({
+        bookingId: "b4",
+        fullName: "Mid Diver",
+        hotelPickupLocation: "Aqua Lodge",
+        pickupTime: "07:30",
+      }),
+    ];
+
+    const result = buildHotelPickupList(divers);
+    expect(result).toEqual([
+      {
+        bookingId: "b3",
+        diverName: "Early Diver",
+        hotelPickupLocation: "Sunset Palms",
+        pickupTime: "07:15",
+      },
+      {
+        bookingId: "b4",
+        diverName: "Mid Diver",
+        hotelPickupLocation: "Aqua Lodge",
+        pickupTime: "07:30",
+      },
+      {
+        bookingId: "b1",
+        diverName: "Late Diver",
+        hotelPickupLocation: "Hilton Resort",
+        pickupTime: "07:45",
+      },
+      {
+        bookingId: "b2",
+        diverName: "Untimed Diver",
+        hotelPickupLocation: "Bay View Hotel",
+        pickupTime: null,
+      },
+    ]);
   });
 });

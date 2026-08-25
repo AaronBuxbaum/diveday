@@ -50,6 +50,11 @@ export function TripHeader({
       <ShopPageHeader
         eyebrow={shop.name}
         title={trip.title}
+        brand={{
+          logoUrl: shop.logoUrl,
+          tagline: shop.tagline,
+          description: shop.description,
+        }}
         meta={
           <>
             {/* The one line on the one page where a diver decides to buy a

@@ -20,6 +20,11 @@
   "checkingIn": "Registrando…",
   "sendFailed": "No se envió: toca la fila otra vez.",
   "offlineLabel": "Sin conexión: este listado puede estar desactualizado",
+  "pullToRefresh": {
+    "pulling": "Desliza hacia abajo para sincronizar…",
+    "release": "Suelta para sincronizar",
+    "refreshing": "Sincronizando…"
+  },
   "checkedInCheck": "Registrado ☑️",
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",

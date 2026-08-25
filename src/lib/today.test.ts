@@ -4,6 +4,7 @@ import {
   anyBoatIsIn,
   collapseDiverActions,
   diverBlockerAction,
+  filterActionsForRoles,
   getSeasonalBriefing,
   getTimeOfDayGreeting,
   groupActions,
@@ -694,5 +695,54 @@ describe("roll-call gap ranking (DOM-H3)", () => {
     expect(rollCallGapUrgency("after_dive_uncounted", true)).toBe("soon");
     expect(rollCallGapUrgency("missing_crew", true)).toBe("soon");
     expect(rollCallGapUrgency("crew_uncounted", true)).toBe("soon");
+  });
+});
+
+describe("filterActionsForRoles", () => {
+  const sampleActions = [
+    action({ id: "1", kind: "roll_call_missing_diver" }),
+    action({ id: "2", kind: "dive_prep" }),
+    action({ id: "3", kind: "nitrox_gate" }),
+    action({ id: "4", kind: "certification" }),
+    action({ id: "5", kind: "waiver" }),
+    action({ id: "6", kind: "payment" }),
+    action({ id: "7", kind: "last_minute_fill" }),
+    action({ id: "8", kind: "gear_due_back" }),
+  ];
+
+  it("shows all actions to an owner with zero withheld", () => {
+    const result = filterActionsForRoles(sampleActions, ["owner"]);
+    expect(result.visibleActions).toHaveLength(8);
+    expect(result.withheldCount).toBe(0);
+  });
+
+  it("shows all actions to a manager with zero withheld", () => {
+    const result = filterActionsForRoles(sampleActions, ["manager"]);
+    expect(result.visibleActions).toHaveLength(8);
+    expect(result.withheldCount).toBe(0);
+  });
+
+  it("filters out clerical and commercial rows for a captain", () => {
+    const result = filterActionsForRoles(sampleActions, ["captain"]);
+    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
+    expect(result.withheldCount).toBe(4);
+  });
+
+  it("filters out clerical and commercial rows for a divemaster", () => {
+    const result = filterActionsForRoles(sampleActions, ["divemaster"]);
+    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
+    expect(result.withheldCount).toBe(4);
+  });
+
+  it("shows certs and waivers to an instructor but withholds payment and deals", () => {
+    const result = filterActionsForRoles(sampleActions, ["instructor"]);
+    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
+    expect(result.withheldCount).toBe(2);
+  });
+
+  it("shows the union for a person holding multiple roles", () => {
+    const result = filterActionsForRoles(sampleActions, ["captain", "instructor"]);
+    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
+    expect(result.withheldCount).toBe(2);
   });
 });

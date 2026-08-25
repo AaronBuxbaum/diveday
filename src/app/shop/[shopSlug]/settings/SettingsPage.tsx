@@ -81,6 +81,7 @@ import {
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
   savePackingAction,
+  saveProfileAction,
   saveRentalItemsAction,
   saveRentalPricingAction,
   saveReviewUrlAction,
@@ -125,6 +126,8 @@ function noticeMessages(
     },
     "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
     "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
+    "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
+    "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
     "address-saved": { tone: "success", text: t("settings.main.notice.addressSaved") },
     "address-removed": { tone: "success", text: t("settings.main.notice.addressRemoved") },
     "address-invalid": { tone: "danger", text: t("settings.main.notice.addressInvalid") },
@@ -374,6 +377,7 @@ export function SettingsGroup({
 const SECTION_IDS = [
   "timezone",
   "contact",
+  "profile",
   "address",
   "reviewLink",
   "searchListing",
@@ -531,6 +535,14 @@ export default async function SettingsPage({
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
   const contactValue = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
+  const profileValue =
+    [
+      shop.tagline,
+      shop.description ? t("settings.main.profile.descriptionSet") : null,
+      shop.logoUrl ? t("settings.main.profile.logoSet") : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || notSet;
   const addressValue =
     [shop.addressStreet, shop.addressLocality].filter(Boolean).join(", ") || notSet;
   const reviewLinkValue = (() => {
@@ -736,6 +748,75 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.contact.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            <SettingsRow
+              heading={t("settings.main.profile.heading")}
+              value={profileValue}
+              description={t("settings.main.profile.description")}
+              detail={t("settings.main.profile.detail")}
+              open={activeSection === "profile"}
+              openOnHash="profile"
+              anchorId="profile"
+            >
+              <SectionNotice banner={banner} section="profile" active={activeSection} />
+              <FieldGrid as="form" action={saveProfileAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.profile.tagline")}>
+                  <input
+                    name="tagline"
+                    type="text"
+                    maxLength={120}
+                    defaultValue={shop.tagline ?? ""}
+                    placeholder={t("settings.main.profile.taglinePlaceholder")}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("settings.main.profile.descriptionLabel")}>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    maxLength={1000}
+                    defaultValue={shop.description ?? ""}
+                    placeholder={t("settings.main.profile.descriptionPlaceholder")}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field
+                  label={t("settings.main.profile.logo")}
+                  hint={t("settings.main.profile.logoHint")}
+                >
+                  <div className="flex flex-col gap-3">
+                    {shop.logoUrl ? (
+                      <div className="flex items-center gap-4">
+                        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo */}
+                        <img
+                          src={shop.logoUrl}
+                          alt=""
+                          className="size-16 rounded-2xl border border-border bg-surface object-cover shadow-xs"
+                        />
+                        <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
+                          <input type="checkbox" name="removeLogo" value="true" />
+                          <span>{t("settings.main.profile.removeLogo")}</span>
+                        </label>
+                      </div>
+                    ) : null}
+                    <input
+                      name="logoFile"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="text-sm file:me-3 file:rounded-xl file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
+                    />
+                  </div>
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.profile.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.profile.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

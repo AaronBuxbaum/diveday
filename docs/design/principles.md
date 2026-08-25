@@ -9,6 +9,10 @@ Nothing charms like instant. Navigation feels immediate (prefetch, server compon
 are optimistic where safe; loading states are skeletons shaped like the content, not spinners.
 If an interaction needs a spinner for more than a beat, redesign the interaction.
 
+**Optimistic mutations earn their keep on three conditions: reversible, screen-local, and high frequency.**
+Counter check-in (`CheckInActionForm`) is optimistic: it is staff-local at the front desk, high frequency during morning check-in rushes, and carries an immediate undo path.
+In contrast, **roll call on the manifest remains strictly non-optimistic**: marking a diver aboard without confirmed server/store commit is how a boat sails with a ghost count. Safety-critical head counts require verified persistence before settling state.
+
 ## 2. Pass the dock test
 
 Primary flows work one-handed on a phone, in glare, with wet fingers: touch targets ≥ 44 px,
@@ -41,6 +45,15 @@ per device, beside boat mode, because `prefers-reduced-motion` is about animatio
 reach vibration ([accessibility-tradeoffs.md](accessibility-tradeoffs.md)). One module,
 `src/components/haptics.ts`, holds the availability check, the preference and the platform note, so
 none of this has to be rediscovered at a call site.
+
+**Gestures are strictly limited to where they earn their keep.**
+The app is tap-first; precision swipe and drag gestures are avoided unless they provide clear ergonomic value over small controls in the field. Exactly two gestures exist:
+1. **Buddy pairing drag** (`BuddyDragGroups`): drag a diver onto a buddy to form a pair, backing the exact same form checkboxes.
+2. **Pull-to-refresh** (`PullToRefresh`): pulling down at the top of the offline manifest (`OfflineManifestView`) or check-in queue to force a sync without hunting for a small text button on a sunny dock.
+
+Both share the exact same contract: unified touch + pointer events (zero third-party gesture libraries), visual progress feedback with resistance dampening, cancel curves when released below threshold, and zero interference with ordinary vertical scrolling.
+A directional swipe never commits a head-count change; only the explicit check-in tap/re-tap or
+roll-call tap changes that count.
 
 ## 3. Calm surfaces, earned moments of joy
 

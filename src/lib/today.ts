@@ -76,6 +76,7 @@ export type TodayActionKind =
   | "requirements"
   | "dive_prep"
   | "nitrox_gate"
+  | "high_wind_alert"
   | "instructor_missing"
   | "uncrewed_departure"
   | "crew_below_target"
@@ -137,52 +138,122 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // crew editor if it has anyone free to roster.
   uncrewed_departure: 11,
   nitrox_gate: 12,
+  high_wind_alert: 13,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
   // deliberately sits far below the after-dive kinds above. Collapsing the
   // two into one row is what turns the red row into wallpaper (DOM-H3).
-  roll_call_departure_open: 13,
-  roll_call_not_started: 14,
-  dive_prep: 15,
-  payment: 16,
-  email_delivery: 17,
-  waitlist_seat: 18,
+  roll_call_departure_open: 14,
+  roll_call_not_started: 15,
+  dive_prep: 16,
+  payment: 17,
+  email_delivery: 18,
+  waitlist_seat: 19,
   // A revenue opportunity, not anything blocking or dock-settleable — ranks
   // with the other purely-commercial rows.
-  last_minute_fill: 19,
+  last_minute_fill: 20,
   // Dock-settleable and never a boarding blocker, so it rides near the bottom.
-  emergency_contact: 20,
+  emergency_contact: 21,
   // Below-target crewing (issue #732): `divemasterRatioGap`'s own docblock
   // is explicit that the target "binds nothing" and is advice a shop may act
   // on or not, unlike `uncrewed_departure` above, which describes a
   // departure with nobody in the water at all. Ranked with the other purely
   // advisory, non-blocking rows so it reads as a nudge, not a problem.
-  crew_below_target: 21,
+  crew_below_target: 22,
   // Platform-health chores (task 157) — never a departure blocker, so they
   // sink below every per-diver row when severity is what breaks a tie.
-  stuck_payment_operation: 22,
-  failed_photo_deletion: 23,
+  stuck_payment_operation: 23,
+  failed_photo_deletion: 24,
   // Somebody is owed their money back for a departure the shop called off.
   // Ranked above the other two platform-health rows: a diver is waiting on
   // this one, and has already been told the shop would be in touch.
-  owed_refund: 24,
+  owed_refund: 25,
   // Divers said something worth publishing; nothing sails or refunds on it.
-  reviews_pending: 25,
+  reviews_pending: 26,
   // The gear register's rows (ADR 20260815-minimal-gear-register). All
   // counter work, never a boarding blocker — a unit that never came home
   // outranks one due back tonight, and both outrank a bench clock, because
   // that is the order the desk actually chases them in.
-  gear_overdue: 26,
-  gear_due_back: 27,
-  gear_service_due: 28,
+  gear_overdue: 27,
+  gear_due_back: 28,
+  gear_service_due: 29,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 29,
+  units_unconfirmed: 30,
 };
+
+/**
+ * Audience per TodayActionKind (issue #715).
+ * Declares which roles act on each kind:
+ * - In-water, roll call, dock gear, and prep rows are for all staff.
+ * - Instructional staffing, requirements, certs, and waivers are for instructors, owners, and managers.
+ * - Front-desk, commercial, financial, and back-office rows are for owners and managers.
+ */
+export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
+  roll_call_missing_diver: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  roll_call_missing_crew: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  roll_call_unfinished: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  roll_call_crew_unfinished: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  roll_call_departure_open: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  roll_call_not_started: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  dive_prep: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  nitrox_gate: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  high_wind_alert: ["owner", "manager", "instructor", "divemaster", "captain"],
+  uncrewed_departure: ["owner", "manager", "instructor", "divemaster", "captain"],
+  crew_below_target: ["owner", "manager", "instructor", "divemaster", "captain"],
+  instructor_missing: ["owner", "manager", "instructor"],
+  medical_review: ["owner", "manager", "instructor"],
+  identity: ["owner", "manager", "instructor"],
+  certification: ["owner", "manager", "instructor"],
+  requirements: ["owner", "manager", "instructor"],
+  waiver: ["owner", "manager", "instructor"],
+  emergency_contact: ["owner", "manager"],
+  payment: ["owner", "manager"],
+  readiness_unavailable: ["owner", "manager"],
+  waitlist_seat: ["owner", "manager"],
+  last_minute_fill: ["owner", "manager"],
+  email_delivery: ["owner", "manager"],
+  stuck_payment_operation: ["owner", "manager"],
+  failed_photo_deletion: ["owner", "manager"],
+  owed_refund: ["owner", "manager"],
+  reviews_pending: ["owner", "manager"],
+  gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  units_unconfirmed: ["owner", "manager"],
+};
+
+/**
+ * Filters the action queue for the viewer's roles, taking the union for multi-role staff.
+ * Owners and managers see everything with zero withheld.
+ */
+export function filterActionsForRoles(
+  actions: readonly TodayAction[],
+  roles?: readonly Role[],
+): { visibleActions: TodayAction[]; withheldCount: number } {
+  if (!roles || roles.length === 0 || roles.includes("owner") || roles.includes("manager")) {
+    return { visibleActions: [...actions], withheldCount: 0 };
+  }
+  const roleSet = new Set(roles);
+  const visibleActions: TodayAction[] = [];
+  let withheldCount = 0;
+
+  for (const action of actions) {
+    const audience = KIND_AUDIENCE[action.kind];
+    const canSee = audience ? audience.some((r) => roleSet.has(r)) : true;
+    if (canSee) {
+      visibleActions.push(action);
+    } else {
+      withheldCount += 1;
+    }
+  }
+
+  return { visibleActions, withheldCount };
+}
 
 /**
  * The chip that labels each row. Tone only — the word itself lives in
@@ -211,6 +282,7 @@ export const ACTION_KIND_META = {
   // water yet, but it is not paperwork either.
   uncrewed_departure: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
+  high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },
   payment: { tone: "neutral" },
   email_delivery: { tone: "neutral" },

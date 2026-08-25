@@ -36,6 +36,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   instructor_missing: "shared.today.actionKind.instructorMissing",
   uncrewed_departure: "shared.today.actionKind.uncrewedDeparture",
   nitrox_gate: "shared.today.actionKind.nitroxGate",
+  high_wind_alert: "shared.today.actionKind.highWindAlert",
   dive_prep: "shared.today.actionKind.divePrep",
   payment: "shared.today.actionKind.payment",
   email_delivery: "shared.today.actionKind.emailDelivery",
@@ -193,6 +194,21 @@ export function missingFitDetailText(t: StaffTranslator, count: number): string 
 
 export function ungatedNitroxDetailText(t: StaffTranslator, count: number): string {
   return t("shared.today.detail.ungatedNitrox", { count });
+}
+
+export function highWindAlertDetailText(
+  t: StaffTranslator,
+  speed: number,
+  gusts: number | null,
+  direction: string | null,
+): string {
+  return t("shared.today.detail.highWindAlert", {
+    speed,
+    gusts: gusts ?? 0,
+    hasGusts: gusts !== null && gusts > speed ? "yes" : "no",
+    direction: direction ?? "",
+    hasDirection: direction ? "yes" : "no",
+  });
 }
 
 export function instructorMissingDetailText(t: StaffTranslator): string {

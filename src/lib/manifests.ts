@@ -152,6 +152,12 @@ export type ManifestDiverInput = {
    * it).
    */
   medicalWaiver?: MedicalWaiverMark | null;
+  /**
+   * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
+   */
+  hotelPickupLocation?: string | null;
+  /** Staff-set pickup time for this booking (e.g. "07:15"). */
+  pickupTime?: string | null;
   rollCall?: RollCallRecord;
   /**
    * The buddy team staff put this diver on, when they did

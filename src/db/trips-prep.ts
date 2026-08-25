@@ -1,30 +1,16 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { buildDivePrepChecklist, rentalFitLine } from "@/lib/dive-prep";
+import {
+  buildDivePrepChecklist,
+  buildHotelPickupList,
+  type HotelPickupRun,
+  rentalFitLine,
+} from "@/lib/dive-prep";
 import { tripReservationWindow } from "@/lib/gear";
 import type { AppDb } from "./client";
 import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "./gear";
 import { listTripPrepDivers } from "./rental-fit";
 import { getTripCrewIds, getTripWithBooked, listStaff } from "./trips";
-
-/**
- * Everything the trip's Prep page is about, in one call — the pattern
- * `getTripManifests` already validates for Manifest and `getIncidentExport` for
- * Log. Prep, Overview and Guests each hand-assembled their own fan-out and then
- * derived on top of it, which put the join/filter/map that builds a `src/lib`
- * function's arguments outside every test: the `src/lib` modules themselves are
- * thoroughly unit-tested, and the four statements that decide what to pass them
- * were covered only by Playwright.
- *
- * **Takes the shop row rather than a shop id.** `getTripManifests` re-reads the
- * shop it was handed an id for, which is one of the duplicate round-trips issue
- * #632 counts; the caller has already resolved that row through
- * `requireShopSurface` before it can pick a locale, so asking for it here costs
- * nothing and removes a read instead of adding one.
- *
- * Returns `null` when the trip is absent so the page keeps its own `notFound()`.
- * Everything it returns is data — the words stay in the page (AGENTS.md).
- */
 
 export type TripPrepShop = {
   id: string;
@@ -35,6 +21,7 @@ export type TripPrepShop = {
 export type TripPrep = {
   trip: NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
   checklist: ReturnType<typeof buildDivePrepChecklist>;
+  hotelPickups: HotelPickupRun[];
   /** Zero means the shop has no gear register at all, and none of it renders. */
   gearFleetTotal: number;
   /** Units free for this departure's whole window, bucketed by kind. */
@@ -86,6 +73,8 @@ export async function getTripPrep(
     offeredKinds: shop.rentalItems,
   });
 
+  const hotelPickups = buildHotelPickupList(divers);
+
   // The gear register's half of the page (ADR 20260815-minimal-gear-register).
   // Opt-in by presence: a shop with no units on the register sees none of it.
   const gearFleetTotal = [...fleetByKind.values()].reduce((sum, value) => sum + value, 0);
@@ -117,5 +106,5 @@ export async function getTripPrep(
     })
     .filter((row) => row.assigned.length > 0 || row.wanted.length > 0);
 
-  return { trip, checklist, gearFleetTotal, freeByKind, assignmentRows };
+  return { trip, checklist, hotelPickups, gearFleetTotal, freeByKind, assignmentRows };
 }

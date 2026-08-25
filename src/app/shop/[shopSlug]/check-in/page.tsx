@@ -35,6 +35,7 @@ import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-noti
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
 import { counterBlockerDisclosure } from "./blocker-disclosure";
 import { CheckInActionForm } from "./CheckInActionForm";
+import { CheckInQueueRefresh } from "./CheckInQueueRefresh";
 import { CheckInSearch } from "./CheckInSearch";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -322,390 +323,402 @@ export default async function CheckInPage({
         }}
       />
 
-      <section aria-label={t("checkIn.queueAriaLabel")} className="mt-8">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          {/* The heading *is* the scope — "Ready at the counter" sat above a
+      <CheckInQueueRefresh
+        copy={{
+          pulling: t("checkIn.pullToRefresh.pulling"),
+          release: t("checkIn.pullToRefresh.release"),
+          refreshing: t("checkIn.pullToRefresh.refreshing"),
+        }}
+      >
+        <section aria-label={t("checkIn.queueAriaLabel")} className="mt-8">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            {/* The heading *is* the scope — "Ready at the counter" sat above a
               list that includes everyone blocked, with a second line under it
               naming what the list actually held. One honest line instead of a
               slogan plus its correction. */}
-          <h2 className="text-lg font-semibold">
-            {query ? t("checkIn.searchResultsFor", { query }) : t("checkIn.todaysDepartures")}
-          </h2>
-          {/* A count is a fact, not an alert (design principle 9) — quiet
+            <h2 className="text-lg font-semibold">
+              {query ? t("checkIn.searchResultsFor", { query }) : t("checkIn.todaysDepartures")}
+            </h2>
+            {/* A count is a fact, not an alert (design principle 9) — quiet
               tabular text, so a pill on this page always means the
               exceptional state (Blocked, Boarded). */}
-          <p className="text-sm font-medium text-muted tabular-nums">
-            {t("checkIn.diverCount", { count: queue.length })}
-          </p>
-        </div>
-
-        {queue.length === 0 && !(query && otherMatchingDivers.length > 0) ? (
-          // "No one matches that scan" is true of a search that found nobody
-          // and false of a counter that has nothing to show — on day one it
-          // blamed the staffer's typing for an empty schedule. Three states,
-          // each with the door that actually helps: widen the search, wait for
-          // the boat, or put a departure on the board.
-          <EmptyState
-            titleAs="h3"
-            title={
-              query
-                ? t("checkIn.emptyTitle")
-                : upcomingDepartures > 0
-                  ? t("checkIn.emptyQuietTitle")
-                  : t("checkIn.emptyNoTripsTitle")
-            }
-            body={query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
-            action={
-              <>
-                {query ? (
-                  <Link
-                    href={`/shop/${shopSlug}/check-in`}
-                    scroll={false}
-                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-                  >
-                    {t("checkIn.emptyClearSearch")}
-                  </Link>
-                ) : (
-                  <Link
-                    href={`/shop/${shopSlug}/schedule/board`}
-                    className={buttonClass({
-                      variant: upcomingDepartures > 0 ? "secondary" : "primary",
-                      size: "sm",
-                      className: "mt-4",
-                    })}
-                  >
-                    {upcomingDepartures > 0
-                      ? t("checkIn.emptyViewSchedule")
-                      : t("checkIn.emptyScheduleDeparture")}
-                  </Link>
-                )}
-              </>
-            }
-          />
-        ) : cleared ? (
-          // The counter's finish line is an earned moment (design principle 3):
-          // the `rise-in` entrance is the confirmation-panel motion, and the
-          // door onward is Today — where the day continues once nobody is
-          // waiting at the desk.
-          <div className="rise-in rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
-            <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
-            <Link
-              href={`/shop/${shopSlug}`}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {t("checkIn.clearedAction")}
-            </Link>
+            <p className="text-sm font-medium text-muted tabular-nums">
+              {t("checkIn.diverCount", { count: queue.length })}
+            </p>
           </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {departures.map((departure) => {
-              const { first } = departure;
-              const checkedInCount = departure.rows.filter(
-                (row) => row.bookingStatus === "checked_in",
-              ).length;
-              const allAboard = checkedInCount === departure.rows.length;
-              return (
-                <SectionCard
-                  as="div"
-                  key={departure.tripId}
-                  padding="none"
-                  className="overflow-hidden"
-                >
-                  <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
-                    <div className="min-w-0">
-                      <h3 id={`departure-${departure.tripId}`} className="font-semibold">
-                        {/* Primary ink, not hover-revealed: on a phone there is
+
+          {queue.length === 0 && !(query && otherMatchingDivers.length > 0) ? (
+            // "No one matches that scan" is true of a search that found nobody
+            // and false of a counter that has nothing to show — on day one it
+            // blamed the staffer's typing for an empty schedule. Three states,
+            // each with the door that actually helps: widen the search, wait for
+            // the boat, or put a departure on the board.
+            <EmptyState
+              titleAs="h3"
+              title={
+                query
+                  ? t("checkIn.emptyTitle")
+                  : upcomingDepartures > 0
+                    ? t("checkIn.emptyQuietTitle")
+                    : t("checkIn.emptyNoTripsTitle")
+              }
+              body={query ? t("checkIn.emptyDescription") : t("checkIn.emptyQuietDescription")}
+              action={
+                <>
+                  {query ? (
+                    <Link
+                      href={`/shop/${shopSlug}/check-in`}
+                      scroll={false}
+                      className={buttonClass({
+                        variant: "secondary",
+                        size: "sm",
+                        className: "mt-4",
+                      })}
+                    >
+                      {t("checkIn.emptyClearSearch")}
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/shop/${shopSlug}/schedule/board`}
+                      className={buttonClass({
+                        variant: upcomingDepartures > 0 ? "secondary" : "primary",
+                        size: "sm",
+                        className: "mt-4",
+                      })}
+                    >
+                      {upcomingDepartures > 0
+                        ? t("checkIn.emptyViewSchedule")
+                        : t("checkIn.emptyScheduleDeparture")}
+                    </Link>
+                  )}
+                </>
+              }
+            />
+          ) : cleared ? (
+            // The counter's finish line is an earned moment (design principle 3):
+            // the `rise-in` entrance is the confirmation-panel motion, and the
+            // door onward is Today — where the day continues once nobody is
+            // waiting at the desk.
+            <div className="rise-in rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
+              <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
+              <Link
+                href={`/shop/${shopSlug}`}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("checkIn.clearedAction")}
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {departures.map((departure) => {
+                const { first } = departure;
+                const checkedInCount = departure.rows.filter(
+                  (row) => row.bookingStatus === "checked_in",
+                ).length;
+                const allAboard = checkedInCount === departure.rows.length;
+                return (
+                  <SectionCard
+                    as="div"
+                    key={departure.tripId}
+                    padding="none"
+                    className="overflow-hidden"
+                  >
+                    <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
+                      <div className="min-w-0">
+                        <h3 id={`departure-${departure.tripId}`} className="font-semibold">
+                          {/* Primary ink, not hover-revealed: on a phone there is
                             no hover, and this is the door to the boat's
                             manifest. */}
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
-                          className={`${tapTargetLinkClass} text-primary hover:underline`}
-                        >
-                          {first.tripTitle}
-                        </Link>
-                      </h3>
-                      <p className="mt-0.5 text-sm text-muted">
-                        {formatShortDate(first.startsAt, locale, shop.timezone)} ·{" "}
-                        {formatTimeRange(first.startsAt, first.endsAt, locale, shop.timezone)}
-                      </p>
-                    </div>
-                    {/* Not color alone: the count itself says how far along the
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
+                            className={`${tapTargetLinkClass} text-primary hover:underline`}
+                          >
+                            {first.tripTitle}
+                          </Link>
+                        </h3>
+                        <p className="mt-0.5 text-sm text-muted">
+                          {formatShortDate(first.startsAt, locale, shop.timezone)} ·{" "}
+                          {formatTimeRange(first.startsAt, first.endsAt, locale, shop.timezone)}
+                        </p>
+                      </div>
+                      {/* Not color alone: the count itself says how far along the
                         boat is; the success ink only underlines a finished one. */}
-                    <p
-                      className={`text-sm font-medium tabular-nums ${allAboard ? "text-success" : "text-muted"}`}
-                    >
-                      {t("checkIn.departureProgress", {
-                        checkedIn: checkedInCount,
-                        total: departure.rows.length,
-                      })}
-                    </p>
-                  </header>
-                  <div className="divide-y divide-border">
-                    {departure.rows.map((row) => {
-                      const ready = row.readiness.status === "ready";
-                      const checkedIn = row.bookingStatus === "checked_in";
-                      const fix = ready
-                        ? null
-                        : blockerFixFor(
-                            row.readiness.blockers,
-                            {
-                              shopSlug,
-                              tripId: row.tripId,
-                              personId: row.personId,
-                              bookingId: row.bookingId,
-                              fullName: row.personName,
-                            },
-                            t,
-                          );
-                      // Who this row is: the name, the one exceptional badge
-                      // (boarded on the manifest), and — only where two visible
-                      // divers share a name — the quiet email that tells them
-                      // apart. One builder for all three row states so they can
-                      // never drift apart: the blocked row passes a name wrapped
-                      // in its record link, the tappable rows pass the plain name
-                      // (their tap is spoken for).
-                      const showEmail = nameIsAmbiguous(row.personName);
-                      const identityFor = (name: React.ReactNode) => (
-                        <>
-                          <span className="flex flex-wrap items-center gap-2">
-                            {name}
-                            {/* The check-in queue's own description promises this
+                      <p
+                        className={`text-sm font-medium tabular-nums ${allAboard ? "text-success" : "text-muted"}`}
+                      >
+                        {t("checkIn.departureProgress", {
+                          checkedIn: checkedInCount,
+                          total: departure.rows.length,
+                        })}
+                      </p>
+                    </header>
+                    <div className="divide-y divide-border">
+                      {departure.rows.map((row) => {
+                        const ready = row.readiness.status === "ready";
+                        const checkedIn = row.bookingStatus === "checked_in";
+                        const fix = ready
+                          ? null
+                          : blockerFixFor(
+                              row.readiness.blockers,
+                              {
+                                shopSlug,
+                                tripId: row.tripId,
+                                personId: row.personId,
+                                bookingId: row.bookingId,
+                                fullName: row.personName,
+                              },
+                              t,
+                            );
+                        // Who this row is: the name, the one exceptional badge
+                        // (boarded on the manifest), and — only where two visible
+                        // divers share a name — the quiet email that tells them
+                        // apart. One builder for all three row states so they can
+                        // never drift apart: the blocked row passes a name wrapped
+                        // in its record link, the tappable rows pass the plain name
+                        // (their tap is spoken for).
+                        const showEmail = nameIsAmbiguous(row.personName);
+                        const identityFor = (name: React.ReactNode) => (
+                          <>
+                            <span className="flex flex-wrap items-center gap-2">
+                              {name}
+                              {/* The check-in queue's own description promises this
                                 split — check-in is arrival, boarding is confirmed
                                 on the manifest — but the queue never actually
                                 showed it (task 149, UX persona lens 17). */}
-                            {row.boarded ? (
-                              <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
-                            ) : null}
-                          </span>
-                          {showEmail && row.email ? (
-                            <span className="mt-0.5 block truncate text-sm text-muted">
-                              {row.email}
+                              {row.boarded ? (
+                                <Badge tone="primary">{t("checkIn.boardedBadge")}</Badge>
+                              ) : null}
                             </span>
-                          ) : null}
-                        </>
-                      );
-                      const identity = identityFor(
-                        <span className="block font-semibold">{row.personName}</span>,
-                      );
-                      // One line per person, one tap — the same roll-call
-                      // grammar the manifest and the Today queue speak. The
-                      // whole row is the control: tapping it checks the diver
-                      // in, and tapping the settled row again undoes it
-                      // (design principle 7's re-tap, so a mis-tap at a busy
-                      // counter costs one more tap, never a confirm dialog).
-                      // The left rule + trailing words carry the state — never
-                      // color alone — and the wall of identical primary
-                      // "Check in" buttons this replaces is gone (principle 8).
-                      return (
-                        <article
-                          key={row.bookingId}
-                          data-testid={`check-in-card-${row.bookingId}`}
-                          className={`border-l-4 ${
-                            checkedIn
-                              ? CHECK_IN_ROW_TONE.checkedIn
-                              : ready
-                                ? CHECK_IN_ROW_TONE.awaiting
-                                : CHECK_IN_ROW_TONE.blocked
-                          }`}
-                        >
-                          {ready && !checkedIn ? (
-                            <CheckInActionForm
-                              action={checkInAction.bind(null, shopSlug)}
-                              bookingId={row.bookingId}
-                              sendFailedLabel={t("checkIn.sendFailed")}
-                              ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
-                              className="hover:bg-surface-sunken/60"
-                              trailing={
-                                <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-primary">
-                                  {t("checkIn.checkInButton")}
-                                  {/* The empty half of the roll-call check: a
+                            {showEmail && row.email ? (
+                              <span className="mt-0.5 block truncate text-sm text-muted">
+                                {row.email}
+                              </span>
+                            ) : null}
+                          </>
+                        );
+                        const identity = identityFor(
+                          <span className="block font-semibold">{row.personName}</span>,
+                        );
+                        // One line per person, one tap — the same roll-call
+                        // grammar the manifest and the Today queue speak. The
+                        // whole row is the control: tapping it checks the diver
+                        // in, and tapping the settled row again undoes it
+                        // (design principle 7's re-tap, so a mis-tap at a busy
+                        // counter costs one more tap, never a confirm dialog).
+                        // The left rule + trailing words carry the state — never
+                        // color alone — and the wall of identical primary
+                        // "Check in" buttons this replaces is gone (principle 8).
+                        return (
+                          <article
+                            key={row.bookingId}
+                            data-testid={`check-in-card-${row.bookingId}`}
+                            className={`border-l-4 ${
+                              checkedIn
+                                ? CHECK_IN_ROW_TONE.checkedIn
+                                : ready
+                                  ? CHECK_IN_ROW_TONE.awaiting
+                                  : CHECK_IN_ROW_TONE.blocked
+                            }`}
+                          >
+                            {ready && !checkedIn ? (
+                              <CheckInActionForm
+                                action={checkInAction.bind(null, shopSlug)}
+                                bookingId={row.bookingId}
+                                sendFailedLabel={t("checkIn.sendFailed")}
+                                ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
+                                className="hover:bg-surface-sunken/60"
+                                trailing={
+                                  <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-primary">
+                                    {t("checkIn.checkInButton")}
+                                    {/* The empty half of the roll-call check: a
                                       circle waiting to be ticked, so the row
                                       reads as a checklist line, not a link. */}
-                                  <span className="size-5 rounded-full border-2 border-current" />
-                                </span>
-                              }
-                              pendingTrailing={
-                                // The circle stays put while the word changes,
-                                // so the row's right edge never jumps on the
-                                // one interaction this surface repeats all day.
-                                <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-muted">
-                                  {t("checkIn.checkingIn")}
-                                  <span className="size-5 rounded-full border-2 border-current opacity-40" />
-                                </span>
-                              }
-                            >
-                              {identity}
-                            </CheckInActionForm>
-                          ) : checkedIn ? (
-                            <CheckInActionForm
-                              action={undoCheckInAction.bind(null, shopSlug)}
-                              bookingId={row.bookingId}
-                              sendFailedLabel={t("checkIn.sendFailed")}
-                              ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
-                              className="hover:bg-success/15"
-                              trailing={
-                                // `-strong`, because this sits *on* the boarded
-                                // row's own `bg-success/10`: the raw hue on its
-                                // own tint measures 4.38:1 (issue #793).
-                                <span className="text-base font-semibold whitespace-nowrap text-success-strong">
-                                  {t("checkIn.checkedInCheck")}
-                                </span>
-                              }
-                              pendingTrailing={
-                                <span className="text-base font-semibold whitespace-nowrap text-muted">
-                                  {t("checkIn.undoing")}
-                                </span>
-                              }
-                            >
-                              {identity}
-                            </CheckInActionForm>
-                          ) : (
-                            <div className="px-4 py-3 sm:px-5">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  {/* Only the blocked row keeps a name link — its
+                                    <span className="size-5 rounded-full border-2 border-current" />
+                                  </span>
+                                }
+                                pendingTrailing={
+                                  // The circle stays put while the word changes,
+                                  // so the row's right edge never jumps on the
+                                  // one interaction this surface repeats all day.
+                                  <span className="flex items-center gap-2 text-base font-semibold whitespace-nowrap text-muted">
+                                    {t("checkIn.checkingIn")}
+                                    <span className="size-5 rounded-full border-2 border-current opacity-40" />
+                                  </span>
+                                }
+                              >
+                                {identity}
+                              </CheckInActionForm>
+                            ) : checkedIn ? (
+                              <CheckInActionForm
+                                action={undoCheckInAction.bind(null, shopSlug)}
+                                bookingId={row.bookingId}
+                                sendFailedLabel={t("checkIn.sendFailed")}
+                                ariaLabel={t("checkIn.undoAriaLabel", { name: row.personName })}
+                                className="hover:bg-success/15"
+                                trailing={
+                                  // `-strong`, because this sits *on* the boarded
+                                  // row's own `bg-success/10`: the raw hue on its
+                                  // own tint measures 4.38:1 (issue #793).
+                                  <span className="text-base font-semibold whitespace-nowrap text-success-strong">
+                                    {t("checkIn.checkedInCheck")}
+                                  </span>
+                                }
+                                pendingTrailing={
+                                  <span className="text-base font-semibold whitespace-nowrap text-muted">
+                                    {t("checkIn.undoing")}
+                                  </span>
+                                }
+                              >
+                                {identity}
+                              </CheckInActionForm>
+                            ) : (
+                              <div className="px-4 py-3 sm:px-5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    {/* Only the blocked row keeps a name link — its
                                       job is the fix, and the diver's record is one
                                       of the doors. Primary ink at rest, not
                                       hover-revealed: on a phone there is no hover,
                                       and an invisible link is no door at all. */}
-                                  {identityFor(
-                                    <Link
-                                      href={`/shop/${shopSlug}/divers/${row.personId}`}
-                                      className={`${tapTargetLinkClass} font-semibold text-primary hover:underline`}
-                                    >
-                                      {row.personName}
-                                    </Link>,
-                                  )}
-                                </div>
-                                {/* The one readiness vocabulary and tone
+                                    {identityFor(
+                                      <Link
+                                        href={`/shop/${shopSlug}/divers/${row.personId}`}
+                                        className={`${tapTargetLinkClass} font-semibold text-primary hover:underline`}
+                                      >
+                                        {row.personName}
+                                      </Link>,
+                                    )}
+                                  </div>
+                                  {/* The one readiness vocabulary and tone
                                     (src/i18n/readiness-labels.ts) — for a blocked
                                     diver the badge is the state. */}
-                                <Badge tone={readinessStatusTone(row.readiness.status)}>
-                                  {readinessStatusText(t, row.readiness.status)}
-                                </Badge>
-                              </div>
-                              {/* The one blocked-diver presentation, shared with the
+                                  <Badge tone={readinessStatusTone(row.readiness.status)}>
+                                    {readinessStatusText(t, row.readiness.status)}
+                                  </Badge>
+                                </div>
+                                {/* The one blocked-diver presentation, shared with the
                                   by-departure view (src/components/today/BlockedDiverRow.tsx).
                                   It shows *every* blocker: this card used to stop at three
                                   and count the rest, on the one surface where the diver is
                                   standing in front of the staffer asking what else is
                                   needed. */}
-                              <BlockedDiverRow
-                                layout="below"
-                                shopSlug={shopSlug}
-                                surface="check_in"
-                                waiverCopy={waiverSendCopy(t)}
-                                blockers={row.readiness.blockers}
-                                fix={fix}
-                                // Behind a tap on this surface alone, and only
-                                // as far as the tap earns: what waits behind it
-                                // is the queue reading a diver's outstanding
-                                // payment over a shoulder (#716), not the fact
-                                // that a waiver is unsigned. So a single
-                                // sayable reason sits open on the row and the
-                                // rest name their first one in the summary
-                                // (#759). The badge above is untouched and
-                                // still says Blocked in danger tone.
-                                collapseReasons={
-                                  counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined
-                                }
-                                t={t}
-                                extra={
-                                  // A diver at the counter with a signed paper release in
-                                  // hand: record it here rather than sending them (and the
-                                  // staffer) off to the trip's guest list for the one
-                                  // control that clears this blocker. Offered on the same
-                                  // condition the roster uses — a waiver still to come —
-                                  // and kept under the primary "send the link" action,
-                                  // because attesting to paper is the fallback.
-                                  fix?.sendsWaiver ? (
-                                    <PaperWaiverControl
-                                      action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
-                                      bookingId={row.bookingId}
-                                      copy={paperWaiverCopy(t)}
-                                      className="mt-2"
-                                    />
-                                  ) : null
-                                }
-                              />
-                            </div>
-                          )}
-                        </article>
-                      );
-                    })}
-                  </div>
-                </SectionCard>
-              );
-            })}
-          </div>
-        )}
-
-        {otherMatchingDivers.length > 0 ? (
-          <div className="mt-8">
-            <div className="mb-3">
-              <h3 className="text-lg font-semibold">{t("checkIn.otherDiversHeading")}</h3>
-              <p className="text-sm text-muted">{t("checkIn.otherDiversDescription")}</p>
-            </div>
-            <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-              {otherMatchingDivers.map((diver) => (
-                <li
-                  key={diver.id}
-                  className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/shop/${shopSlug}/divers/${diver.id}`}
-                      className={`${tapTargetLinkClass} font-medium text-foreground hover:underline`}
-                    >
-                      {diver.fullName}
-                    </Link>
-                    <p className="text-sm text-muted">
-                      {[diver.email, diver.phone].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  {openDepartures.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      {openDepartures.map((departure) => (
-                        <form
-                          key={departure.tripId}
-                          action={seatExistingDiverAction.bind(null, "walk-in", shopSlug)}
-                        >
-                          <input type="hidden" name="personId" value={diver.id} />
-                          <input type="hidden" name="tripId" value={departure.tripId} />
-                          <SubmitButton
-                            pendingLabel={t("checkIn.addingToDeparture")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                            ariaLabel={t("checkIn.addToDepartureFor", {
-                              departure: departure.title,
-                            })}
-                          >
-                            {t("checkIn.addToDepartureFor", { departure: departure.title })}
-                          </SubmitButton>
-                        </form>
-                      ))}
+                                <BlockedDiverRow
+                                  layout="below"
+                                  shopSlug={shopSlug}
+                                  surface="check_in"
+                                  waiverCopy={waiverSendCopy(t)}
+                                  blockers={row.readiness.blockers}
+                                  fix={fix}
+                                  // Behind a tap on this surface alone, and only
+                                  // as far as the tap earns: what waits behind it
+                                  // is the queue reading a diver's outstanding
+                                  // payment over a shoulder (#716), not the fact
+                                  // that a waiver is unsigned. So a single
+                                  // sayable reason sits open on the row and the
+                                  // rest name their first one in the summary
+                                  // (#759). The badge above is untouched and
+                                  // still says Blocked in danger tone.
+                                  collapseReasons={
+                                    counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined
+                                  }
+                                  t={t}
+                                  extra={
+                                    // A diver at the counter with a signed paper release in
+                                    // hand: record it here rather than sending them (and the
+                                    // staffer) off to the trip's guest list for the one
+                                    // control that clears this blocker. Offered on the same
+                                    // condition the roster uses — a waiver still to come —
+                                    // and kept under the primary "send the link" action,
+                                    // because attesting to paper is the fallback.
+                                    fix?.sendsWaiver ? (
+                                      <PaperWaiverControl
+                                        action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
+                                        bookingId={row.bookingId}
+                                        copy={paperWaiverCopy(t)}
+                                        className="mt-2"
+                                      />
+                                    ) : null
+                                  }
+                                />
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
                     </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {query ? (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-surface-sunken/40 p-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">{t("checkIn.addWalkInAction", { query })}</p>
+                  </SectionCard>
+                );
+              })}
             </div>
-            <Link
-              href={`/shop/${shopSlug}/check-in/walk-in?diverq=${encodeURIComponent(query)}`}
-              aria-label={t("checkIn.addWalkInAction", { query })}
-              className={buttonClass({ size: "sm" })}
-            >
-              {t("checkIn.walkInAction")}
-            </Link>
-          </div>
-        ) : null}
-      </section>
+          )}
+
+          {otherMatchingDivers.length > 0 ? (
+            <div className="mt-8">
+              <div className="mb-3">
+                <h3 className="text-lg font-semibold">{t("checkIn.otherDiversHeading")}</h3>
+                <p className="text-sm text-muted">{t("checkIn.otherDiversDescription")}</p>
+              </div>
+              <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+                {otherMatchingDivers.map((diver) => (
+                  <li
+                    key={diver.id}
+                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${diver.id}`}
+                        className={`${tapTargetLinkClass} font-medium text-foreground hover:underline`}
+                      >
+                        {diver.fullName}
+                      </Link>
+                      <p className="text-sm text-muted">
+                        {[diver.email, diver.phone].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    {openDepartures.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                        {openDepartures.map((departure) => (
+                          <form
+                            key={departure.tripId}
+                            action={seatExistingDiverAction.bind(null, "walk-in", shopSlug)}
+                          >
+                            <input type="hidden" name="personId" value={diver.id} />
+                            <input type="hidden" name="tripId" value={departure.tripId} />
+                            <SubmitButton
+                              pendingLabel={t("checkIn.addingToDeparture")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                              ariaLabel={t("checkIn.addToDepartureFor", {
+                                departure: departure.title,
+                              })}
+                            >
+                              {t("checkIn.addToDepartureFor", { departure: departure.title })}
+                            </SubmitButton>
+                          </form>
+                        ))}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {query ? (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-surface-sunken/40 p-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t("checkIn.addWalkInAction", { query })}</p>
+              </div>
+              <Link
+                href={`/shop/${shopSlug}/check-in/walk-in?diverq=${encodeURIComponent(query)}`}
+                aria-label={t("checkIn.addWalkInAction", { query })}
+                className={buttonClass({ size: "sm" })}
+              >
+                {t("checkIn.walkInAction")}
+              </Link>
+            </div>
+          ) : null}
+        </section>
+      </CheckInQueueRefresh>
     </main>
   );
 }

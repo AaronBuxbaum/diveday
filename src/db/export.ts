@@ -737,6 +737,9 @@ export async function loadShopExportBundleInput(
             // bundle is also the *backup*: a shop that opted out and later
             // restored from one must not come back published.
             "search_listing_opt_out_at",
+            "tagline",
+            "description",
+            "logo_url",
             "created_at",
           ],
           rows: [
@@ -774,6 +777,9 @@ export async function loadShopExportBundleInput(
               shop.sendWindowStartHour,
               shop.sendWindowEndHour,
               shop.searchListingOptOutAt,
+              shop.tagline,
+              shop.description,
+              shop.logoUrl,
               shop.createdAt,
             ],
           ],
@@ -1367,6 +1373,8 @@ export async function loadShopExportBundleInput(
             // export a party of six and get back six unrelated singles.
             "party_lead_booking_id",
             "claimed_at",
+            "hotel_pickup_location",
+            "pickup_time",
             "payment_status",
             "payment_amount_cents",
             "payment_currency",
@@ -1389,6 +1397,8 @@ export async function loadShopExportBundleInput(
               row.lastDivedBand,
               row.partyLeadBookingId,
               row.claimedAt,
+              row.hotelPickupLocation,
+              row.pickupTime,
               payment?.status ?? "unpaid",
               payment?.amountCents,
               payment?.currency,

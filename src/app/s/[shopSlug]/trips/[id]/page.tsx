@@ -94,14 +94,24 @@ export async function generateMetadata({
   const locale = await requestLocale(shop.defaultLocale);
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const title = `${trip.title} — ${when} · ${shop.name}`;
-  const description = trip.description ?? `Book ${trip.title} with ${shop.name} on ${when}.`;
+  const description =
+    trip.description ??
+    shop.description ??
+    shop.tagline ??
+    `Book ${trip.title} with ${shop.name} on ${when}.`;
   const canonical = publicTripPath(shop.slug, trip.id);
   return {
     title,
     description,
     alternates: { canonical },
     robots: shopSearchListingRobots(shop.searchListingOptOutAt),
-    openGraph: { ...openGraphSite, title, description, url: canonical },
+    openGraph: {
+      ...openGraphSite,
+      title,
+      description,
+      url: canonical,
+      ...(shop.logoUrl ? { images: [{ url: shop.logoUrl, alt: `${shop.name} logo` }] } : {}),
+    },
   };
 }
 

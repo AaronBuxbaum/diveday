@@ -24,7 +24,11 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   test.setTimeout(45_000);
 
   await page.goto("/s/blue-mantis");
-  await expect(page.getByRole("heading", { name: "Nothing on a date that works?" })).toBeVisible();
+  const dateRequest = page.locator("#request-a-date");
+  await expect(
+    dateRequest.getByRole("heading", { name: "Nothing on a date that works?" }),
+  ).toBeVisible();
+  await dateRequest.locator("summary").click();
 
   // The request is about *something*: with no course in the URL, the form asks,
   // and refuses to send until it is answered.
@@ -42,6 +46,7 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // A second diver whose *first* choice is the later day — so the earlier
   // group holds them only as a fallback, and the later one as a firm ask.
   await page.goto("/s/blue-mantis");
+  await page.locator("#request-a-date summary").click();
   await page.getByLabel("What would you like to dive?").fill("A shallow reef morning");
   await page.getByLabel("Your email").fill("reef.fan.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("lapsed");
@@ -80,6 +85,7 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
 
 test("a request with no date at all sits in its own group at the foot", async ({ page }) => {
   await page.goto("/s/blue-mantis");
+  await page.locator("#request-a-date summary").click();
   await page.getByLabel("What would you like to dive?").fill("Whatever runs in October");
   await page.getByLabel("Your phone").fill("+1 305 555 0777");
   await page.getByLabel("Where you are up to").selectOption("never");
@@ -124,6 +130,7 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   test.setTimeout(45_000);
 
   await page.goto("/s/blue-mantis");
+  await page.locator("#request-a-date summary").click();
   await page.getByLabel("What would you like to dive?").fill("A drift along the wall");
   await page.getByLabel("Your name").fill("Nadia Okonkwo");
   await page.getByLabel("Your email").fill("drift.fan.e2e@example.com");

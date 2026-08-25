@@ -118,6 +118,15 @@ function DiverFacts({
           </span>
         </p>
       ) : null}
+      {diver.hotelPickupLocation ? (
+        <p>
+          <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
+          <span className="mt-0.5 block text-muted">
+            {diver.hotelPickupLocation}
+            {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
+          </span>
+        </p>
+      ) : null}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">
@@ -426,6 +435,15 @@ export function DiverRollCall({
                         call. */}
                     {diver.checkedIn ? (
                       <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
+                    ) : null}
+                    {diver.hotelPickupLocation ? (
+                      <Badge tone="neutral">
+                        <span aria-hidden="true">🏨</span>
+                        <span className="ms-1">
+                          {diver.hotelPickupLocation}
+                          {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
+                        </span>
+                      </Badge>
                     ) : null}
                     {/* The captain reading the boarding list has no other way
                         to know a booked diver is 12 (H-21). Words, not colour

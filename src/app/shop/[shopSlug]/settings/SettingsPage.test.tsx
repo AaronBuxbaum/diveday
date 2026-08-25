@@ -204,6 +204,13 @@ describe("the units card", () => {
     expect(names).toContain("temperatureUnit");
     expect(names).toContain("currency");
   });
+
+  it("renders shop profile fields for tagline, description, and logo", async () => {
+    const element = await renderSettings("owner");
+    const names = inputNamesIn(element);
+    expect(names).toContain("tagline");
+    expect(names).toContain("logoFile");
+  });
 });
 
 /*

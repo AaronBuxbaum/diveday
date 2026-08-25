@@ -218,6 +218,29 @@ describe("shopJsonLd", () => {
     expect(shopJsonLd(shop, ORIGIN, null, []).review).toBeUndefined();
   });
 
+  it("publishes description and image when provided", () => {
+    const brandedShop: ShopForStructuredData = {
+      ...shop,
+      tagline: "Diving the Florida Keys",
+      description: "A friendly, family-owned dive operation.",
+      logoUrl: "https://diveday.example/storage/shop-logos/logo.webp",
+    };
+    const graph = shopJsonLd(brandedShop, ORIGIN);
+    expect(graph.description).toBe("A friendly, family-owned dive operation.");
+    expect(graph.image).toBe("https://diveday.example/storage/shop-logos/logo.webp");
+  });
+
+  it("falls back to tagline for description when description is unset", () => {
+    const taglineOnlyShop: ShopForStructuredData = {
+      ...shop,
+      tagline: "Diving the Florida Keys",
+      description: null,
+    };
+    const graph = shopJsonLd(taglineOnlyShop, ORIGIN);
+    expect(graph.description).toBe("Diving the Florida Keys");
+    expect(graph.image).toBeUndefined();
+  });
+
   it("publishes a review array only when reviews are passed", () => {
     const graph = shopJsonLd(shop, ORIGIN, null, [review]);
     expect(graph.review).toEqual([

@@ -315,3 +315,23 @@ export function weekdayNames(locale = "en-US", width: "short" | "narrow" = "shor
   });
   return Array.from({ length: 7 }, (_, day) => format.format(new Date(Date.UTC(2024, 0, 7 + day))));
 }
+
+/**
+ * Localized ordinal representation (e.g. 1st, 2nd, 3rd, 4th in English; 1.º, 2.º, 4.º in Spanish).
+ */
+export function formatOrdinal(count: number, locale = "en-US"): string {
+  if (locale.startsWith("es")) {
+    return `${count}.º`;
+  }
+  const suffixes: Record<string, string> = {
+    one: "st",
+    two: "nd",
+    few: "rd",
+    other: "th",
+  };
+  const rule = cachedFormatter("ordinal", Intl.PluralRules, locale, { type: "ordinal" }).select(
+    count,
+  );
+  const suffix = suffixes[rule] ?? "th";
+  return `${count}${suffix}`;
+}

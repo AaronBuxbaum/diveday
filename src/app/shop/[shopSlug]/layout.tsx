@@ -214,6 +214,7 @@ export default async function ShopLayout({
         <ShopNav
           shopSlug={shopSlug}
           shopName={shop.name}
+          logoUrl={shop.logoUrl ?? undefined}
           boatBoardingHref={boatBoardingHref}
           navGates={{
             waivers: canManageWaiverTemplates(session.user.roles),

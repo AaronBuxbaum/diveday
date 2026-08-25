@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { DiveCertificationField } from "@/components/DiveDeclarationFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { joinLastMinuteListAction, type LastMinuteListFormState } from "../actions";
 
@@ -23,6 +23,11 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
     joinLastMinuteListAction.bind(null, shopSlug),
     INITIAL_STATE,
   );
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (window.location.hash === "#last-minute-list") setOpen(true);
+  }, []);
 
   if (state.success) {
     return (
@@ -37,14 +42,17 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   }
 
   return (
-    <SectionCard
+    <details
       id="last-minute-list"
-      padding="lg"
-      className="mt-10"
-      title={t("lastMinute.heading")}
-      description={t("lastMinute.body")}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className={sectionCardClass({ padding: "lg", className: "mt-6" })}
     >
-      <p className="text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
+      <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
+        <h2 className="text-lg font-semibold">{t("lastMinute.heading")}</h2>
+      </summary>
+      <p className="mt-2 text-sm text-muted">{t("lastMinute.body")}</p>
+      <p className="mt-1 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
           <Field label={t("common.name")}>
@@ -96,6 +104,6 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
           <FormStatus tone="danger">{state.error}</FormStatus>
         </div>
       </form>
-    </SectionCard>
+    </details>
   );
 }

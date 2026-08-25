@@ -144,6 +144,10 @@ type TripReminderEmailInput = {
   lead: "week" | "day";
   /** Minutes before departure to be at the dock; the shop's call, default 30. */
   dockCallMinutes?: number;
+  /** Optional hotel pickup time set by staff (e.g. "07:15"). */
+  pickupTime?: string | null;
+  /** Optional hotel name / lodging location provided by diver. */
+  hotelPickupLocation?: string | null;
   /** The diver's own outstanding items, as codes — resolved via `reminderActionText`. */
   outstanding?: ReminderActionCode[];
   /** True when a medical answer may need a doctor's sign-off before boarding. */
@@ -170,53 +174,44 @@ export type TripConditionsHoldEmailInput = {
  * document can't reference globals.css custom properties any more than
  * `icon.tsx`'s `ImageResponse` can (see that file's own comment).
  */
-const BRAND_PRIMARY_COLOR = "#0e7490";
+const BRAND_PRIMARY_COLOR = "#008080";
+const BRAND_PAGE_COLOR = "#FAF9F6";
+const BRAND_INK_COLOR = "#0C2A35";
+const BRAND_CONTAINER_COLOR = "#FFFFFF";
+const BRAND_BORDER_COLOR = "#E5E7EB";
 
 /**
  * The dark half of the same palette, from `docs/design/brand.md`'s core
  * identity table: open ocean as the page, deep-sea ink's dark value as the
  * reading colour, lagoon's dark value as the action colour, and the app's own
- * dark `--surface` for a lifted panel. Duplicated here for the same reason the
- * light one above is.
+ * dark `--surface` for a lifted panel.
  */
 const DARK_PAGE_COLOR = "#071720";
 const DARK_INK_COLOR = "#e9f3f4";
 const DARK_PRIMARY_COLOR = "#22d3ee";
 const DARK_PANEL_COLOR = "#0d222d";
+const DARK_BORDER_COLOR = "#1e3a47";
+
+const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#071720!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
 
 /**
- * **The dark values the `color-scheme` declaration promises.**
- *
- * `color-scheme: light dark` is not a hint — it tells Apple Mail and Outlook to
- * stop applying their own inversion because the message handles both schemes
- * itself. This document said that and then supplied light colours only, so a
- * client that believed it left grey-on-grey in a dark inbox, and a partially
- * inverting one could land `#111827` ink on its own dark chrome (issue #771).
- *
- * A media query cannot live in a `style` attribute, so the flipping half has to
- * be a classed rule in an embedded stylesheet. The inline light values stay
- * exactly where they were and are still what a client that strips `<style>`
- * renders — which is why every rule here is `!important`: an inline declaration
- * outranks any stylesheet rule that is not.
+ * Bulletproof email call-to-action button, table-wrapped to render consistently
+ * across Outlook, Apple Mail, Gmail, and mobile clients.
  */
-const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
+export function emailButton(url: string, label: string): string {
+  return `<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 24px 0;"><tr><td align="center" style="border-radius: 12px; background-color: ${BRAND_PRIMARY_COLOR};"><a href="${escapeHtml(url)}" target="_blank" class="dd-btn" style="display: inline-block; padding: 12px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff !important; text-decoration: none; border-radius: 12px; background-color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(label)}</a></td></tr></table>`;
+}
 
 /**
  * Wraps a template's inner body fragment in a real HTML document — doctype,
- * `<html lang>`, a viewport meta tag, and a max-width container, none of
- * which any individual template had before (they returned bare `<p>` soup
- * delivered as-is). Kept deliberately plain: inline styles carry the whole
- * light rendering and the one embedded stylesheet carries nothing but the dark
- * overrides (see `EMAIL_HEAD_STYLE`) — no external stylesheet or font, so it
- * stays deliverability-safe. The shop name renders as a small text header —
- * never a logo image, matching the "no image-heavy layouts" rule for
- * transactional mail.
+ * `<html lang>`, a viewport meta tag, the brand palette from `docs/design/brand.md`,
+ * and inlined bubble mark beside the shop name.
  */
 export function wrapEmailHtml(
   bodyHtml: string,
   options: { shopName: string; locale: string },
 ): string {
-  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: #f3f4f6; color: #111827; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><p class="dd-shop" style="margin: 0 0 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;"><table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr><td style="vertical-align: middle;"><svg width="24" height="24" viewBox="0 0 24 24" style="display: block; margin-right: 10px;" aria-hidden="true"><circle cx="7" cy="17" r="5" fill="#008080" /><circle cx="15.5" cy="9" r="3.4" fill="#008080" opacity="0.75" /><circle cx="19.5" cy="4.5" r="2" fill="#ff6b6b" /></svg></td><td style="vertical-align: middle;"><p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p></td></tr></table><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></div></body></html>`;
 }
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
@@ -242,7 +237,7 @@ export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): No
   return {
     subject: t("notifications.tripConditionsHold.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}${detailText}\n\n${seeUpdate}:\n${input.tripUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${detailHtml}<p><a href="${escapeHtml(input.tripUrl)}">${seeUpdate}</a></p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${detailHtml}${emailButton(input.tripUrl, seeUpdate)}`,
   };
 }
 
@@ -306,7 +301,7 @@ export function tripMinimumNotMetEmail(input: TripMinimumNotMetEmailInput): Noti
   return {
     subject: t("notifications.tripMinimumNotMet.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}<p><a href="${escapeHtml(input.scheduleUrl)}">${findAnother}</a></p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
   };
 }
 
@@ -380,7 +375,7 @@ export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmai
     return {
       subject: t("notifications.tripBlowout.subject", { tripTitle: input.tripTitle }),
       text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${money}\n\n${noAlternatives}\n${seeSchedule}:\n${input.scheduleUrl}\n`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(noAlternatives)}</p><p><a href="${escapeHtml(input.scheduleUrl)}">${seeSchedule}</a></p>`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(noAlternatives)}</p>${emailButton(input.scheduleUrl, seeSchedule)}`,
     };
   }
 
@@ -400,7 +395,7 @@ export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmai
   return {
     subject: t("notifications.tripBlowout.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${money}\n\n${intro}\n${listText}\n\n${seeSchedule}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(intro)}</p>${listHtml}<p><a href="${escapeHtml(input.scheduleUrl)}">${seeSchedule}</a></p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(intro)}</p>${listHtml}${emailButton(input.scheduleUrl, seeSchedule)}`,
   };
 }
 
@@ -490,9 +485,7 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const shop = escapeHtml(input.shopName);
   const trackWhatsLeft = t("notifications.common.trackWhatsLeft");
   const readyText = input.readinessUrl ? `\n\n${trackWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
-  const readyHtml = input.readinessUrl
-    ? `<p><a href="${escapeHtml(input.readinessUrl)}">${trackWhatsLeft}</a>.</p>`
-    : "";
+  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, trackWhatsLeft) : "";
 
   const dock = dockCallPhrase(t, input.dockCallMinutes);
   const packingItems = (input.packingList ?? []).map((item) => item.trim()).filter(Boolean);
@@ -529,7 +522,6 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const url = escapeHtml(input.bookingUrl);
 
   const body = t("notifications.waitlistInvite.body", {
     tripTitle: input.tripTitle,
@@ -547,7 +539,7 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   return {
     subject: t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.waitlistInvite.claimLink")}</a></p><p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -557,7 +549,6 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const url = escapeHtml(input.bookingUrl);
   const body = t("notifications.tripInvitation.body", {
     shopName: input.shopName,
     tripTitle: input.tripTitle,
@@ -578,7 +569,7 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
       tripTitle: input.tripTitle,
     }),
     text: [greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n"),
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p><p><a href="${url}">${link}</a></p>`,
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p>${emailButton(input.bookingUrl, link)}`,
   };
 }
 
@@ -594,7 +585,6 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const expires = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const url = escapeHtml(input.bookingUrl);
   const code = escapeHtml(input.code);
 
   const body = t("notifications.lastMinuteDeal.body", {
@@ -621,7 +611,7 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
       tripTitle: input.tripTitle,
     }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p><p><a href="${url}">${t("notifications.lastMinuteDeal.bookLink", { tripTitle: title })}</a></p><p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p>${emailButton(input.bookingUrl, t("notifications.lastMinuteDeal.bookLink", { tripTitle: title }))}<p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -635,7 +625,6 @@ export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): Notifi
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
-  const url = escapeHtml(input.checkoutUrl);
 
   const body = t("notifications.checkoutRecovery.body", {
     tripTitle: input.tripTitle,
@@ -654,7 +643,7 @@ export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): Notifi
   return {
     subject: t("notifications.checkoutRecovery.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greetingGeneric")}\n\n${body}\n\n${date}\n${time}\n\n${pickUp}:\n${input.checkoutUrl}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greetingGeneric")}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.checkoutRecovery.finishPaying")}</a></p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    html: `<p>${t("notifications.common.greetingGeneric")}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.checkoutUrl, t("notifications.checkoutRecovery.finishPaying"))}<p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -667,9 +656,7 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
   const shop = escapeHtml(input.shopName);
   const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
   const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
-  const readyHtml = input.readinessUrl
-    ? `<p><a href="${escapeHtml(input.readinessUrl)}">${seeWhatsLeft}</a>.</p>`
-    : "";
+  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
   // Name the diver's own outstanding items — the last automated chance to clear
   // a waiver or medical that would keep them off the boat (dive-domain review).
   const todo = outstandingLines(t, input.outstanding, input.medicalReview);
@@ -682,7 +669,12 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
     const dockMinutes = input.dockCallMinutes ?? 30;
     const arriveBy = new Date(input.startsAt.getTime() - dockMinutes * 60_000);
     const arrivalClock = formatTime(arriveBy, input.locale, input.timezone);
-    const arrivalLine = t("notifications.tripReminder.arrival", { time: arrivalClock, dock });
+    const arrivalLine = input.pickupTime
+      ? t("notifications.tripReminder.hotelPickupArrival", {
+          time: input.pickupTime,
+          location: input.hotelPickupLocation ?? t("notifications.tripReminder.hotelNotSet"),
+        })
+      : t("notifications.tripReminder.arrival", { time: arrivalClock, dock });
     const brief = briefSections(t, input.brief, arrivalLine);
     const opener = input.brief?.firstTimerNote
       ? t("notifications.tripReminder.dayOpenerFirstTimer", { shopName: input.shopName })
@@ -741,7 +733,6 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
-  const url = escapeHtml(input.recapUrl);
   const sites = (input.sites ?? []).map((site) => site.trim()).filter(Boolean);
   // Name the sites they dived when we know them — the recap is warmer when it
   // remembers the day rather than nudging generically.
@@ -774,7 +765,7 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
       tripTitle: input.tripTitle,
     }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p><p><a href="${url}">${seeRecap}</a>.</p><p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p>${emailButton(input.recapUrl, seeRecap)}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -793,7 +784,6 @@ export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const shop = escapeHtml(input.shopName);
-  const url = escapeHtml(input.signInUrl);
 
   const body = t("notifications.welcome.body", { shopName: input.shopName });
   const bodyHtml = t("notifications.welcome.body", { shopName: `<strong>${shop}</strong>` });
@@ -803,7 +793,7 @@ export function welcomeEmail(input: WelcomeEmailInput): NotificationEmail {
   return {
     subject: t("notifications.welcome.subject", { shopName: input.shopName }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${signIn}:\n${input.signInUrl}\n\n${footer}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${signIn}</a>.</p><p>${footer}</p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.signInUrl, signIn)}<p>${footer}</p>`,
   };
 }
 
@@ -939,14 +929,13 @@ export function verifyAccountEmail(input: VerifyAccountEmailInput): Notification
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
-  const url = escapeHtml(input.verifyUrl);
   const confirm = t("notifications.verifyAccount.confirm");
   const expiry = t("notifications.verifyAccount.expiry", { expiresAt });
 
   return {
     subject: t("notifications.verifyAccount.subject"),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${confirm}:\n${input.verifyUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p><a href="${url}">${confirm}</a>.</p><p>${t("notifications.verifyAccount.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${emailButton(input.verifyUrl, confirm)}<p>${t("notifications.verifyAccount.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -969,7 +958,6 @@ export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmai
   );
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
   const shop = escapeHtml(input.shopName);
-  const url = escapeHtml(input.inviteUrl);
 
   const body = t("notifications.staffInvite.body", {
     inviterName: input.inviterName,
@@ -990,7 +978,7 @@ export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmai
       shopName: input.shopName,
     }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${setPassword}:\n${input.inviteUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${setPassword}</a>.</p><p>${t("notifications.staffInvite.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.inviteUrl, setPassword)}<p>${t("notifications.staffInvite.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1006,7 +994,6 @@ export function passwordResetEmail(input: PasswordResetEmailInput): Notification
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.ownerName, t("notifications.common.genericName"));
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
-  const url = escapeHtml(input.resetUrl);
   const body = t("notifications.passwordReset.body");
   const choose = t("notifications.passwordReset.choose");
   const expiry = t("notifications.passwordReset.expiry", { expiresAt });
@@ -1014,7 +1001,7 @@ export function passwordResetEmail(input: PasswordResetEmailInput): Notification
   return {
     subject: t("notifications.passwordReset.subject"),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${choose}:\n${input.resetUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${body} <a href="${url}">${choose}</a>.</p><p>${t("notifications.passwordReset.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${body}</p>${emailButton(input.resetUrl, choose)}<p>${t("notifications.passwordReset.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1055,7 +1042,6 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
   const tripTitle = input.tripTitle?.trim();
   const title = tripTitle ? escapeHtml(tripTitle) : null;
   const shop = escapeHtml(input.shopName);
-  const url = escapeHtml(input.completionUrl);
 
   const body = tripTitle
     ? t("notifications.waiverRequest.body", {
@@ -1079,7 +1065,7 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
   return {
     subject,
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${completeLink}</a></p><p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(input.completionUrl, completeLink)}<p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 
@@ -1113,9 +1099,10 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
       "notifications.readinessLink.expiry",
       { expiresAt },
     )}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${escapeHtml(
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(
       input.readinessUrl,
-    )}">${openLink}</a></p><p>${t("notifications.readinessLink.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+      openLink,
+    )}<p>${t("notifications.readinessLink.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
   };
 }
 

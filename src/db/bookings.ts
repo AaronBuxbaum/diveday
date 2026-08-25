@@ -1294,6 +1294,53 @@ export async function setBookingLastDived(
   return Boolean(updated);
 }
 
+export async function setBookingHotelPickup(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; hotelPickupLocation: string | null },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ hotelPickupLocation: input.hotelPickupLocation })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
+}
+
+export async function setBookingPickupDetails(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    pickupTime: string | null;
+    hotelPickupLocation?: string | null;
+  },
+): Promise<boolean> {
+  const values: { pickupTime: string | null; hotelPickupLocation?: string | null } = {
+    pickupTime: input.pickupTime,
+  };
+  if (input.hotelPickupLocation !== undefined) {
+    values.hotelPickupLocation = input.hotelPickupLocation;
+  }
+  const [updated] = await db
+    .update(bookings)
+    .set(values)
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
+}
+
 /**
  * Staff confirm a flagged booking really is the person it was attached to
  * (H-13): clears `identity_unconfirmed_at`, which drops the readiness blocker.

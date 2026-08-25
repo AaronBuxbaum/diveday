@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
@@ -17,11 +18,13 @@ import {
   smsRecipient,
 } from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
+import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import { maySendNow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
+import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import {
@@ -33,6 +36,7 @@ import {
   bookings,
   notificationDeliveries,
   people,
+  priorVisits,
   recapPhotos,
   shops,
   tripRecapPhotos,
@@ -41,6 +45,7 @@ import {
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
+import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -64,12 +69,15 @@ export type RecapSite = {
   marineLife: string | null;
   forecastLatitude: number | null;
   forecastLongitude: number | null;
+  maxDepthMeters?: number | null;
+  depthRange?: string | null;
 };
 
 export type RecapPageData = {
   shop: {
     name: string;
     slug: string;
+    logoUrl: string | null;
     timezone: string;
     defaultLocale: string;
     contactEmail: string | null;
@@ -93,6 +101,8 @@ export type RecapPageData = {
     waterTemperatureC: number | null;
     visibilityMeters: number | null;
     surfaceConditions: string | null;
+    boatName: string | null;
+    crew: string[];
   };
   diverName: string;
   sites: RecapSite[];
@@ -118,6 +128,8 @@ export type RecapPageData = {
     amountCents: number;
     checkoutUrl: string | null;
   } | null;
+  /** How many dive days this diver has with this shop, merging native bookings and imported visits. */
+  visitCount: number;
 };
 
 /** How many photos one booking may attach — a memory strip, not a media host. */
@@ -148,11 +160,13 @@ export async function getRecapPageData(
     .select({
       shopId: bookings.shopId,
       tripId: bookings.tripId,
+      personId: bookings.personId,
       status: bookings.status,
       diverName: people.fullName,
       diverEmail: people.email,
       shopName: shops.name,
       slug: shops.slug,
+      logoUrl: shops.logoUrl,
       timezone: shops.timezone,
       defaultLocale: shops.defaultLocale,
       contactEmail: shops.contactEmail,
@@ -178,7 +192,41 @@ export async function getRecapPageData(
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
 
-  const dives = await listTripDives(db, row.shopId, row.tripId);
+  const [dives, boat, crewMap, nativeBookings, priorVisitRows, photos, stripeAccount, latestTip] =
+    await Promise.all([
+      listTripDives(db, row.shopId, row.tripId),
+      trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
+      tripCrewByTrip(db, row.shopId, [row.tripId]),
+      db
+        .select({
+          id: bookings.id,
+          startsAt: trips.startsAt,
+        })
+        .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(
+          and(
+            eq(bookings.shopId, row.shopId),
+            eq(bookings.personId, row.personId),
+            ne(bookings.status, "cancelled"),
+            ne(bookings.status, "no_show"),
+            liveTrip(),
+            lte(trips.startsAt, trip.startsAt),
+          ),
+        ),
+      db
+        .select({
+          id: priorVisits.id,
+          visitedOn: priorVisits.visitedOn,
+          statusLabel: priorVisits.statusLabel,
+        })
+        .from(priorVisits)
+        .where(and(eq(priorVisits.shopId, row.shopId), eq(priorVisits.personId, row.personId))),
+      listRecapPhotosForBooking(db, bookingId, row.tripId),
+      getShopStripeAccount(db, row.shopId),
+      getLatestTipForBooking(db, row.shopId, bookingId),
+    ]);
+
   const sites: RecapSite[] = [];
   const seen = new Set<string>();
   for (const { diveSite } of dives) {
@@ -190,14 +238,23 @@ export async function getRecapPageData(
       marineLife: diveSite.marineLife,
       forecastLatitude: diveSite.forecastLatitude,
       forecastLongitude: diveSite.forecastLongitude,
+      maxDepthMeters: diveSite.maxDepthMeters,
+      depthRange: diveSite.depthRange,
     });
   }
 
-  const [photos, stripeAccount, latestTip] = await Promise.all([
-    listRecapPhotosForBooking(db, bookingId, row.tripId),
-    getShopStripeAccount(db, row.shopId),
-    getLatestTipForBooking(db, row.shopId, bookingId),
-  ]);
+  const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
+  const effectivePriorVisits = priorVisitRows.filter(
+    (v) => priorVisitStanding(v.statusLabel) !== "did_not_happen" && v.visitedOn <= tripLocalDay,
+  );
+  const mergedHistory = mergeShopHistory(nativeBookings, effectivePriorVisits, {
+    bookingStartsAt: (b) => b.startsAt,
+    visitedOn: (v) => v.visitedOn,
+    timezone: row.timezone,
+  });
+  const visitCount = Math.max(1, mergedHistory.length);
+  const crew = (crewMap.get(row.tripId) ?? []).map((c) => c.name);
+
   // A still-pending tip's local status is a lead, not proof — a delayed or
   // missed webhook must never leave the page offering a dead Checkout link,
   // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
@@ -211,6 +268,7 @@ export async function getRecapPageData(
     shop: {
       name: row.shopName,
       slug: row.slug,
+      logoUrl: row.logoUrl,
       timezone: row.timezone,
       defaultLocale: row.defaultLocale,
       contactEmail: row.contactEmail,
@@ -227,6 +285,8 @@ export async function getRecapPageData(
       waterTemperatureC: trip.waterTemperatureC,
       visibilityMeters: trip.visibilityMeters,
       surfaceConditions: trip.surfaceConditions,
+      boatName: boat?.name ?? null,
+      crew,
     },
     diverName: row.diverName,
     sites,
@@ -246,6 +306,7 @@ export async function getRecapPageData(
           checkoutUrl: tip.checkoutUrl,
         }
       : null,
+    visitCount,
   };
 }
 

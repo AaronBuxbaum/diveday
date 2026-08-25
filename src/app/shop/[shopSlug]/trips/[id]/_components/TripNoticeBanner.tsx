@@ -85,6 +85,8 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
+  "pickup-saved": { form: "roster", tone: "success", key: "trips.notices.pickupSaved" },
+  "pickup-invalid": { form: "roster", tone: "danger", key: "trips.notices.pickupInvalid" },
   "booking-restore-full": {
     form: "roster",
     tone: "danger",
