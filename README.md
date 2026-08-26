@@ -11,7 +11,7 @@ agents that encode how work gets done here.
 
 ## Quickstart
 
-Requires Node 24 and pnpm 11.21.0 (the repository pins both the runtime major and
+Requires Node 24 and pnpm 11.24.0 (the repository pins both the runtime major and
 the package-manager version).
 
 ```bash

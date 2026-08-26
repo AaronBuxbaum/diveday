@@ -5,7 +5,7 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@11.21.0",
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "pnpm build:sw && next dev",
     "build": "pnpm build:sw && next build",
