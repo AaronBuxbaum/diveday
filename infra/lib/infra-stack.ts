@@ -80,6 +80,7 @@ const MCP_READONLY_LOCAL_USER_NAME = "diveday-mcp-readonly-local";
 const MCP_READONLY_CLOUD_USER_NAME = "diveday-mcp-readonly-cloud";
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
 const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
+const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 
 /**
@@ -1084,6 +1085,59 @@ exports.handler = async (event) => {
     envValues.PLATFORM_BACKUP_AWS_REGION = this.region;
     envValues.PLATFORM_BACKUP_AWS_ACCESS_KEY_ID = backupUploaderKey.id;
     envValues.PLATFORM_BACKUP_AWS_SECRET_ACCESS_KEY = backupUploaderKey.secret;
+
+    // 11b. Media object storage (AWS-8): S3 bucket for course photos, diver recap
+    // photos, dive site imagery, and shop logos -- replacing Vercel Blob with an S3
+    // bucket inside the DiveDay AWS account.
+    const mediaBucketName = this.node.tryGetContext("mediaBucketName") || "diveday-media";
+
+    const mediaBucket = new s3.Bucket(this, "MediaStorageBucket", {
+      bucketName: mediaBucketName,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+          allowedOrigins: ["*"],
+          allowedHeaders: ["*"],
+          maxAge: 86400,
+        },
+      ],
+      lifecycleRules: [
+        {
+          id: "abort-incomplete-media-uploads",
+          enabled: true,
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+        },
+      ],
+    });
+
+    const mediaUploaderUser = new iam.User(this, "MediaUploaderUser", {
+      userName: MEDIA_UPLOADER_USER_NAME,
+    });
+
+    mediaUploaderUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ManageMediaObjectsOnly",
+        actions: ["s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
+        resources: [mediaBucket.arnForObjects("*")],
+      }),
+    );
+
+    new cdk.CfnOutput(this, "MediaBucketName", {
+      value: mediaBucket.bucketName,
+      description:
+        "Destination bucket for media uploads (course photos, recaps, dive sites, shop logos). S3-managed, private, RETAIN -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
+    });
+
+    const mediaUploaderKey = mintAccessKey("MediaUploaderUserAccessKey", mediaUploaderUser);
+    envValues.MEDIA_BUCKET_NAME = mediaBucket.bucketName;
+    envValues.MEDIA_AWS_REGION = this.region;
+    envValues.MEDIA_AWS_ACCESS_KEY_ID = mediaUploaderKey.id;
+    envValues.MEDIA_AWS_SECRET_ACCESS_KEY = mediaUploaderKey.secret;
+    envValues.MEDIA_PUBLIC_URL_BASE = `https://${mediaBucket.bucketName}.s3.${this.region}.amazonaws.com`;
 
     // 12. Address lookup for the settings address card - see ADR
     // 20260804-aws-location-address-lookup, amended by ADR

@@ -35,8 +35,8 @@ history we cannot produce.
 | Store | What's in it | Primary recovery | Secondary copy |
 | --- | --- | --- | --- |
 | Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump in `diveday-database-dumps` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles in `diveday-backups` under `exports/` |
-| Vercel Blob (`*.public.blob.vercel-storage.com`) | Certification card photos, recap photos, course/dive-site media, imported waiver source documents | None built in — Vercel Blob has no PITR and no versioning | The `photos/` directory inside each export bundle (see the gap below) |
-| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, Stripe/AWS SES/Twilio keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
+| AWS S3 Media Bucket (`diveday-media`) | Recap photos, course/dive-site media, shop logos, imported waiver source documents | S3-managed storage (versioned/retained) | The `photos/` directory inside each export bundle (see the gap below) |
+| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, Stripe/AWS keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
 
 ## 1. Neon point-in-time recovery
 
@@ -268,7 +268,7 @@ It answers `{"status":"ok"|"stale"|"empty"|"never_run"|"census_missing"|"incompl
 only emails on the last five.
 
 > `TODO(owner)` — **Record where production secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`,
-> `BLOB_READ_WRITE_TOKEN`, and the Stripe/AWS SES/Twilio keys exist only in Vercel's project settings.
+> and the Stripe/AWS SES/Twilio keys exist only in Vercel's project settings.
 > Losing the Vercel account loses them, and `AUTH_SECRET` in particular is not regenerable without
 > invalidating every outstanding session and every `recap-links.ts`-signed token. Name the password
 > manager or vault holding them, and the date last verified.

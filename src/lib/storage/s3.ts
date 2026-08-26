@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
+import { nowDate } from "../clock";
 import type { ImageStorageProvider, ImageUpload, StoredImage } from "./index";
 
 const SERVICE = "s3";
@@ -54,7 +55,7 @@ export function signS3Request(input: {
   region: string;
   now?: Date;
 }): Record<string, string> {
-  const now = input.now ?? new Date();
+  const now = input.now ?? nowDate();
   const dateTime = amzDate(now);
   const date = dateTime.slice(0, 8);
 

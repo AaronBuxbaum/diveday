@@ -27,7 +27,7 @@ export const PROVIDER_INVENTORY = [
     tier: "Pro (1 seat)",
     monthlyBaseUsd: 20.0,
     variableElements:
-      "Build concurrency ($40/slot), Serverless GB-hrs, Egress over 1TB, Blob storage",
+      "Build concurrency ($40/slot), Serverless GB-hrs, Egress over 1TB (Blob storage retired)",
     overflowBehavior: "bills_overage",
     guardrail: "vercel_spend ($60.00/mo)",
   },
@@ -41,9 +41,10 @@ export const PROVIDER_INVENTORY = [
   },
   {
     provider: "AWS",
-    tier: "CDK Stack (21 subsystems)",
+    tier: "CDK Stack (22 subsystems)",
     monthlyBaseUsd: 1.2, // Secrets Manager floor ($0.40 * 3) + CloudWatch
-    variableElements: "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, S3, CodeBuild",
+    variableElements:
+      "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, S3 (backups & media), CodeBuild",
     overflowBehavior: "alert_only",
     guardrail: "AWS::Budgets::Budget ($30.00/mo) + Cost Anomaly Detection",
   },
@@ -65,37 +66,37 @@ export const PROVIDER_INVENTORY = [
   },
   {
     provider: "Stripe",
-    tier: "Connect Standard",
+    tier: "Connect",
     monthlyBaseUsd: 0.0,
-    variableElements: "2.9% + $0.30 per transaction (proportional to revenue)",
-    overflowBehavior: "bills_overage",
-    guardrail: "none (revenue aligned)",
+    variableElements: "2.9% + 30¢ per successful card charge",
+    overflowBehavior: "bills_per_transaction",
+    guardrail: "payout_reconciliation",
   },
 ];
 
+/** Documented architecture and cost vulnerability matrix. */
 export const ARCHITECTURAL_RISKS = [
   {
     id: "W-1",
     name: "Manifest SSE on Serverless",
     severity: "High",
-    impact: "Boat tablet roll call disconnections and heavy serverless GB-hour compute usage",
-    remedy:
-      "Migrate long-lived SSE to dedicated container (ECS Fargate via AWS-5) or WebSocket gateway",
+    impact:
+      "MaxDuration=300s connections cause reconnect storms on cellular links and high GB-hr serverless spend",
+    remedy: "Migrate long-lived manifest streams to AWS AppSync or ECS Fargate (AWS-5)",
   },
   {
     id: "W-2",
-    name: "Neon Free Tier Suspension",
+    name: "Neon Free Tier Compute Exhaustion",
     severity: "Critical",
-    impact:
-      "Endpoint suspended when CU limit reached; instant total outage for bookings & staff portals",
-    remedy: "Upgrade Neon to paid Launch plan ($19/mo) prior to onboarding first live shop",
+    impact: "Endpoint suspended upon exceeding 300 CU-hrs; total outage of booking and staff app",
+    remedy: "Upgrade to Neon Launch ($19/mo) or provision AWS RDS Aurora Serverless v2 (AWS-4)",
   },
   {
     id: "W-3",
     name: "Internal-Only Observability",
     severity: "High",
-    impact: "If Vercel or Neon suffers an outage, in-app error reporting and alarms die with it",
-    remedy: "Deploy AWS-1 CloudWatch Synthetics Heartbeat Canary in independent AWS region",
+    impact: "Platform outage silences in-app Sentry/monitors; no outside-in status alarm",
+    remedy: "Deploy AWS CloudWatch Synthetics heartbeat canary (AWS-1)",
   },
   {
     id: "W-4",
@@ -108,12 +109,10 @@ export const ARCHITECTURAL_RISKS = [
   },
   {
     id: "W-5",
-    name: "Media & Scans in Third-Party Blob Storage",
-    severity: "Medium",
-    impact:
-      "Recap photos, course media, and waiver scans in Vercel Blob cost 6.5x more than S3 and fragment residency",
-    remedy:
-      "Execute AWS-8 (S3 Image Storage Provider with signed CloudFront URLs to eliminate Vercel Blob)",
+    name: "Media Storage in AWS S3 (Resolved)",
+    severity: "Low",
+    impact: "Vercel Blob eliminated; media and waiver scans stored in S3 (AWS-8 delivered)",
+    remedy: "S3 Image Storage Provider active with scoped IAM uploader credentials",
   },
   {
     id: "W-6",
@@ -183,8 +182,8 @@ export function generateCostReport(env = getEnvironment()) {
       {
         priority: "P3",
         action:
-          "Migrate media & waiver scans from Vercel Blob to S3 (AWS-8) to eliminate Vercel Blob dependency",
-        vulnerabilityRef: "W-5",
+          "Configure Upstash Redis or deploy AWS WAF edge rate limiting (AWS-10) for durable token buckets",
+        vulnerabilityRef: "W-6",
       },
     ],
   };

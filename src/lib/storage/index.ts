@@ -1,11 +1,6 @@
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES, PDF_CONTENT_TYPE } from "./limits";
 import { processImage } from "./process-image";
-import {
-  deleteS3Image,
-  s3ImageStorageProvider,
-  s3StorageConfigSchema,
-  type S3StorageConfig,
-} from "./s3";
+import { deleteS3Image, s3ImageStorageProvider, s3StorageConfigSchema } from "./s3";
 
 /**
  * The image-storage seam. The provider lives behind one entry point so upload
@@ -50,7 +45,7 @@ type StorageEnvironment = Readonly<Record<string, string | undefined>>;
  * directly without pulling in `sharp` via this module's `process-image.ts` import.
  */
 export { isManagedBlobUrl, isManagedStorageUrl } from "./blob-host";
-export { s3ImageStorageProvider, deleteS3Image, type S3StorageConfig } from "./s3";
+export { deleteS3Image, type S3StorageConfig, s3ImageStorageProvider } from "./s3";
 
 /** Every accepted upload is re-encoded to JPEG (`processImage`); keep the stored name honest. */
 function withJpegExtension(filename: string): string {

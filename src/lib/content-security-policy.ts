@@ -238,7 +238,7 @@ export function reportOnlyPolicy(options: CspOptions): string {
     ["style-src", ["'self'", "'unsafe-inline'"]],
     // `data:` for the inlined placeholders `next/image` emits, `blob:` for the
     // offline manifest's own cached photos.
-    ["img-src", ["'self'", "data:", "blob:", BLOB_IMAGE_HOST]],
+    ["img-src", ["'self'", "data:", "blob:", ...MEDIA_IMAGE_HOSTS]],
     ["font-src", ["'self'"]],
     [
       "connect-src",

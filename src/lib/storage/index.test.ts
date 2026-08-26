@@ -5,6 +5,7 @@ import {
   deleteStoredImageTracked,
   imageStorageProviderFromEnvironment,
   isManagedBlobUrl,
+  isManagedStorageUrl,
   MAX_COURSE_IMAGE_BYTES,
   storeCourseImage,
   storeImportReceiptDocument,
@@ -31,8 +32,15 @@ function upload(overrides: Partial<Parameters<typeof storeCourseImage>[0]> = {})
   };
 }
 
+const mockS3Env = {
+  MEDIA_BUCKET_NAME: "diveday-media",
+  MEDIA_AWS_REGION: "us-east-1",
+  MEDIA_AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE",
+  MEDIA_AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+};
+
 describe("image storage seam (the pipeline every upload wrapper shares)", () => {
-  it("returns not_configured when no storage token is set", async () => {
+  it("returns not_configured when no storage credentials are set", async () => {
     const provider = imageStorageProviderFromEnvironment({}, vi.fn());
     expect(await storeCourseImage(upload(), provider)).toEqual({ status: "not_configured" });
   });
@@ -68,26 +76,26 @@ describe("image storage seam (the pipeline every upload wrapper shares)", () => 
     expect(provider.upload).not.toHaveBeenCalled();
   });
 
-  it("uploads to Vercel Blob and returns the durable URL", async () => {
+  it("uploads to AWS S3 and returns the durable URL", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ url: "https://blob.example/courses/abc-reef-course.jpg" }),
+      status: 200,
     });
     const provider = imageStorageProviderFromEnvironment(
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     const result = await storeCourseImage(upload(), provider);
-    expect(result).toEqual({
-      status: "stored",
-      url: "https://blob.example/courses/abc-reef-course.jpg",
-    });
+    expect(result.status).toBe("stored");
+    if (result.status === "stored") {
+      expect(result.url).toContain("https://diveday-media.s3.us-east-1.amazonaws.com/courses/");
+      expect(result.url).toContain(".jpg");
+    }
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(String(url)).toContain("https://blob.vercel-storage.com/courses/");
-    expect(String(url)).toContain(".jpg");
-    expect(init.headers.authorization).toBe("Bearer test-token");
-    // The re-encoded output content-type (CR-012), not whatever the caller claimed.
-    expect(init.headers["x-content-type"]).toBe("image/jpeg");
+    expect(String(url)).toContain("https://diveday-media.s3.us-east-1.amazonaws.com/courses/");
+    expect(init.method).toBe("PUT");
+    expect(init.headers.authorization).toContain("AWS4-HMAC-SHA256");
+    expect(init.headers["content-type"]).toBe("image/jpeg");
   });
 
   it("re-encodes even a PNG upload to JPEG before it reaches the provider (CR-012)", async () => {
@@ -98,10 +106,10 @@ describe("image storage seam (the pipeline every upload wrapper shares)", () => 
       .toBuffer();
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ url: "https://blob.example/courses/abc-reef-course.jpg" }),
+      status: 200,
     });
     const provider = imageStorageProviderFromEnvironment(
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     await storeCourseImage(
@@ -109,13 +117,13 @@ describe("image storage seam (the pipeline every upload wrapper shares)", () => 
       provider,
     );
     const [, init] = fetchImpl.mock.calls[0];
-    expect(init.headers["x-content-type"]).toBe("image/jpeg");
+    expect(init.headers["content-type"]).toBe("image/jpeg");
   });
 
   it("fails closed when the provider responds with an error", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500 });
     const provider = imageStorageProviderFromEnvironment(
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     expect(await storeCourseImage(upload(), provider)).toEqual({ status: "failed" });
@@ -124,10 +132,10 @@ describe("image storage seam (the pipeline every upload wrapper shares)", () => 
   it("keys every upload with a CSPRNG suffix, never a colliding or guessable one", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ url: "https://blob.example/courses/x-reef-course.jpg" }),
+      status: 200,
     });
     const provider = imageStorageProviderFromEnvironment(
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     const pathnames: string[] = [];
@@ -145,43 +153,47 @@ describe("image storage seam (the pipeline every upload wrapper shares)", () => 
 });
 
 describe("deleteStoredImage (best-effort cleanup)", () => {
-  it("no-ops without a token", async () => {
+  it("no-ops without credentials", async () => {
     const fetchImpl = vi.fn();
-    await deleteStoredImage("https://blob/x.jpg", {}, fetchImpl as unknown as typeof fetch);
+    await deleteStoredImage(
+      "https://diveday-media.s3.amazonaws.com/x.jpg",
+      {},
+      fetchImpl as unknown as typeof fetch,
+    );
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("posts the blob URL to the delete endpoint when a token is set", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: true });
+  it("issues SigV4 DELETE request when credentials are set", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 204 });
     await deleteStoredImage(
-      "https://blob/x.jpg",
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      "https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(String(url)).toContain("/delete");
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ urls: ["https://blob/x.jpg"] });
+    expect(String(url)).toBe("https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg");
+    expect(init.method).toBe("DELETE");
+    expect(init.headers.authorization).toContain("AWS4-HMAC-SHA256");
   });
 
   it("swallows a provider error — cleanup never throws", async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
     await expect(
       deleteStoredImage(
-        "https://blob/x.jpg",
-        { BLOB_READ_WRITE_TOKEN: "test-token" },
+        "https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+        mockS3Env,
         fetchImpl as unknown as typeof fetch,
       ),
     ).resolves.toBeUndefined();
   });
 });
 
-describe("deleteStoredImageTracked (CR-012)", () => {
-  it("reports success without a token — nothing was ever stored to leave behind", async () => {
+describe("deleteStoredImageTracked", () => {
+  it("reports success without credentials — nothing was ever stored to leave behind", async () => {
     const fetchImpl = vi.fn();
     expect(
       await deleteStoredImageTracked(
-        "https://blob/x.jpg",
+        "https://diveday-media.s3.amazonaws.com/x.jpg",
         {},
         fetchImpl as unknown as typeof fetch,
       ),
@@ -189,12 +201,12 @@ describe("deleteStoredImageTracked (CR-012)", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("reports success when the provider confirms the delete", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: true });
+  it("reports success when the provider confirms the delete (204)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 204 });
     expect(
       await deleteStoredImageTracked(
-        "https://blob/x.jpg",
-        { BLOB_READ_WRITE_TOKEN: "test-token" },
+        "https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+        mockS3Env,
         fetchImpl as unknown as typeof fetch,
       ),
     ).toEqual({ ok: true });
@@ -203,8 +215,8 @@ describe("deleteStoredImageTracked (CR-012)", () => {
   it("reports failure with a reason when the provider responds with an error", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 500 });
     const result = await deleteStoredImageTracked(
-      "https://blob/x.jpg",
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      "https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     expect(result.ok).toBe(false);
@@ -214,8 +226,8 @@ describe("deleteStoredImageTracked (CR-012)", () => {
   it("reports failure with a reason on a network error, instead of throwing", async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network unreachable"));
     const result = await deleteStoredImageTracked(
-      "https://blob/x.jpg",
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      "https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+      mockS3Env,
       fetchImpl as unknown as typeof fetch,
     );
     expect(result.ok).toBe(false);
@@ -223,8 +235,19 @@ describe("deleteStoredImageTracked (CR-012)", () => {
   });
 });
 
-describe("isManagedBlobUrl (CR-012 review finding)", () => {
-  it("recognizes a genuine Vercel Blob public object URL", () => {
+describe("isManagedStorageUrl / isManagedBlobUrl", () => {
+  it("recognizes AWS S3 media URLs", () => {
+    expect(
+      isManagedStorageUrl("https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg"),
+    ).toBe(true);
+    expect(isManagedBlobUrl("https://diveday-media.s3.amazonaws.com/courses/x.jpg")).toBe(true);
+  });
+
+  it("recognizes CloudFront media URLs", () => {
+    expect(isManagedStorageUrl("https://d1234.cloudfront.net/courses/x.jpg")).toBe(true);
+  });
+
+  it("recognizes legacy Vercel Blob public object URLs for backward compatibility", () => {
     expect(isManagedBlobUrl("https://abc123.public.blob.vercel-storage.com/courses/x.jpg")).toBe(
       true,
     );
@@ -234,12 +257,8 @@ describe("isManagedBlobUrl (CR-012 review finding)", () => {
     expect(isManagedBlobUrl("/dive-sites/reef.jpg")).toBe(false);
   });
 
-  it("rejects a legacy pasted external URL — the provider never stored it", () => {
+  it("rejects an external URL — the provider never stored it", () => {
     expect(isManagedBlobUrl("https://example.com/photo.jpg")).toBe(false);
-  });
-
-  it("rejects the Blob API host itself — that's for PUT/delete requests, not object URLs", () => {
-    expect(isManagedBlobUrl("https://blob.vercel-storage.com/courses/x.jpg")).toBe(false);
   });
 
   it("fails closed on an unparseable URL instead of throwing", () => {
@@ -252,13 +271,19 @@ describe("import document storage — images and PDFs", () => {
 
   it("stores a PDF as-is, bypassing the image pipeline, with an application/pdf type and .pdf name", async () => {
     const provider = {
-      upload: vi.fn().mockResolvedValue({ status: "stored", url: "https://blob.example/x.pdf" }),
+      upload: vi.fn().mockResolvedValue({
+        status: "stored",
+        url: "https://diveday-media.s3.amazonaws.com/x.pdf",
+      }),
     };
     const result = await storeImportWaiverDocument(
       { filename: "waiver.pdf", contentType: "application/pdf", bytes: fakePdf },
       provider,
     );
-    expect(result).toEqual({ status: "stored", url: "https://blob.example/x.pdf" });
+    expect(result).toEqual({
+      status: "stored",
+      url: "https://diveday-media.s3.amazonaws.com/x.pdf",
+    });
     expect(provider.upload).toHaveBeenCalledTimes(1);
     const arg = provider.upload.mock.calls[0][0];
     expect(arg.contentType).toBe("application/pdf");
@@ -270,15 +295,19 @@ describe("import document storage — images and PDFs", () => {
 
   it("stores an imported receipt through the same safe document path under its own namespace", async () => {
     const provider = {
-      upload: vi
-        .fn()
-        .mockResolvedValue({ status: "stored", url: "https://blob.example/receipt.pdf" }),
+      upload: vi.fn().mockResolvedValue({
+        status: "stored",
+        url: "https://diveday-media.s3.amazonaws.com/receipt.pdf",
+      }),
     };
     const result = await storeImportReceiptDocument(
       { filename: "receipt.pdf", contentType: "application/pdf", bytes: fakePdf },
       provider,
     );
-    expect(result).toEqual({ status: "stored", url: "https://blob.example/receipt.pdf" });
+    expect(result).toEqual({
+      status: "stored",
+      url: "https://diveday-media.s3.amazonaws.com/receipt.pdf",
+    });
     expect(provider.upload).toHaveBeenCalledTimes(1);
     expect(provider.upload.mock.calls[0][0]).toMatchObject({
       contentType: "application/pdf",
@@ -312,13 +341,19 @@ describe("import document storage — images and PDFs", () => {
 
   it("still takes the image path for an image document (re-encoded to JPEG)", async () => {
     const provider = {
-      upload: vi.fn().mockResolvedValue({ status: "stored", url: "https://blob.example/x.jpg" }),
+      upload: vi.fn().mockResolvedValue({
+        status: "stored",
+        url: "https://diveday-media.s3.amazonaws.com/x.jpg",
+      }),
     };
     const result = await storeImportWaiverDocument(
       { filename: "scan.jpg", contentType: "image/jpeg", bytes: realJpeg },
       provider,
     );
-    expect(result).toEqual({ status: "stored", url: "https://blob.example/x.jpg" });
+    expect(result).toEqual({
+      status: "stored",
+      url: "https://diveday-media.s3.amazonaws.com/x.jpg",
+    });
     const arg = provider.upload.mock.calls[0][0];
     expect(arg.contentType).toBe("image/jpeg");
     expect(arg.filename).toMatch(/\.jpg$/);
