@@ -24,6 +24,16 @@ on fins because the old row did not say which half it identified; staff can edit
 record when the physical labels are known. Register-only vocabulary remains separate from rental
 catalog and pricing vocabulary.
 
+## Alternatives considered
+
+- **Split the public rental fit question into separate mask and fins questions** — rejected because
+  the combined prompt reduces checkout friction and divers typically select or decline the package
+  together.
+- **Keep `mask_fins` as a single register kind with partial allocation flags** — rejected because
+  masks and fins have independent physical lifecycles, service histories, serial numbers, and counts.
+- **Require paired mask-and-fins gear sets in inventory** — rejected because dive shops frequently
+  replace, size, or service masks and fins independently.
+
 ## Consequences
 
 - Existing fit answers, rental prices, and public copy do not change.

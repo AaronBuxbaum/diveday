@@ -704,6 +704,7 @@ export async function loadShopExportBundleInput(
             // `*_cents` column is a count of *this* currency's minor unit, and
             // a bare 13000 is $130.00 or ¥13,000 depending on it.
             "currency",
+            "tax_enabled",
             "medical_jurisdiction",
             "depth_unit",
             "temperature_unit",
@@ -763,6 +764,7 @@ export async function loadShopExportBundleInput(
               shop.timezone,
               shop.defaultLocale,
               shop.currency,
+              shop.taxEnabled,
               shop.jurisdiction,
               shop.depthUnit,
               shop.temperatureUnit,
@@ -1614,6 +1616,8 @@ export async function loadShopExportBundleInput(
             "currency",
             "amount_per_diver_cents",
             "total_cents",
+            "tax_enabled",
+            "tax_cents",
             "settled_total_cents",
             "is_deposit",
             "abandoned_recovery_sent_at",
@@ -1637,6 +1641,8 @@ export async function loadShopExportBundleInput(
             row.currency,
             row.amountPerDiverCents,
             row.totalCents,
+            row.taxEnabled,
+            row.taxCents,
             row.settledTotalCents,
             row.isDeposit,
             row.abandonedRecoverySentAt,
@@ -1656,6 +1662,7 @@ export async function loadShopExportBundleInput(
             "person_name",
             "trip_cents",
             "gear_cents",
+            "tax_cents",
           ],
           rows: checkoutBookingRows.map((row) => {
             const personId = bookingPerson.get(row.bookingId) ?? null;
@@ -1666,6 +1673,7 @@ export async function loadShopExportBundleInput(
               personId ? personName.get(personId) : null,
               row.tripCents,
               row.gearCents,
+              row.taxCents,
             ];
           }),
           note: EXPORT_FILE_NOTES["booking_checkout_bookings.csv"],
@@ -2313,6 +2321,7 @@ export async function loadShopExportBundleInput(
             "status",
             "currency",
             "total_cents",
+            "tax_cents",
             "amount_paid_cents",
             "refunded_cents",
             "description",
@@ -2335,6 +2344,7 @@ export async function loadShopExportBundleInput(
             row.status,
             row.currency,
             row.totalCents,
+            row.taxCents,
             row.amountPaidCents,
             row.refundedCents,
             row.description,

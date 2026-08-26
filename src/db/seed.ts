@@ -20,6 +20,7 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  closeoutLeftoverDecisions,
   courseInquiries,
   courses,
   dayCloseouts,
@@ -81,6 +82,7 @@ import {
   tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
+  waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -863,6 +865,7 @@ export async function resetDemoSchedule(
   // people purge below — and clearing it at all is what keeps the close-out
   // surface deterministic between specs: a day one test closed must read as
   // open again for the next test's fixture (ADR 20260804-day-closeout).
+  await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // The gear register, children first: reservations reference gear_items and
@@ -1150,6 +1153,7 @@ export async function resetDemoSchedule(
     .from(waiverTemplates)
     .where(eq(waiverTemplates.shopId, shopId))
     .limit(1);
+  await db.delete(waiverMaterialityDecisions).where(eq(waiverMaterialityDecisions.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
   await db.insert(waiverTemplates).values({
     shopId,

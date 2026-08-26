@@ -54,7 +54,7 @@ describe("seeded waiver template history", () => {
     expect(completed.length).toBeGreaterThan(0);
     for (const record of completed) {
       expect(record.templateVersion).toBe(current.version);
-      expect(isCompletedWaiverCurrent(record, current.version)).toBe(true);
+      expect(isCompletedWaiverCurrent(record, current.materialGeneration)).toBe(true);
     }
   });
 });

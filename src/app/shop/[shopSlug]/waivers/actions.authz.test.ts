@@ -61,9 +61,10 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
   );
 }
 
-function withBody(body: string) {
+function withBody(body: string, material: "material" | "non-material" = "material") {
   const formData = new FormData();
   formData.set("body", body);
+  formData.set("material", material);
   return formData;
 }
 
@@ -134,6 +135,20 @@ describe("publishing a waiver template", () => {
     // what earlier signatures were given against.
     expect(after?.version).toBe((before?.version ?? 0) + 1);
     // ...and the shop's own name for its release survives the edit.
+    expect(after?.title).toBe(before?.title);
+  });
+
+  it("lets an owner publish a non-material version without forcing resigning", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => saveWaiverAction(withBody(NEW_BODY, "non-material")));
+
+    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=saved`);
+    const after = await currentTemplate(db, shop.id);
+    expect(after?.body).toBe(NEW_BODY);
+    expect(after?.version).toBe((before?.version ?? 0) + 1);
     expect(after?.title).toBe(before?.title);
   });
 

@@ -142,6 +142,7 @@ describe("invoice events", () => {
       "in_1QsAVeLkdIwHu7ixKmNpQrSt",
       24_000,
       ACCOUNT,
+      0,
     );
   });
 
@@ -163,7 +164,13 @@ describe("checkout session events", () => {
     // The handler must hand the *settled* figure to the split, or one party
     // member's refund later reverses money that never arrived (PAY-H1/H2).
     expect((await deliver("checkout.session.completed")).status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, SESSION_ID, ACCOUNT, 32_400);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
+      FAKE_DB,
+      SESSION_ID,
+      ACCOUNT,
+      32_400,
+      0,
+    );
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 
@@ -193,12 +200,19 @@ describe("checkout session events", () => {
       SESSION_ID,
       ACCOUNT,
       undefined,
+      0,
     );
   });
 
   it("checkout.session.async_payment_succeeded settles a delayed-notification payment", async () => {
     expect((await deliver("checkout.session.async_payment_succeeded")).status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, SESSION_ID, ACCOUNT, 36_000);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
+      FAKE_DB,
+      SESSION_ID,
+      ACCOUNT,
+      36_000,
+      0,
+    );
   });
 
   it("checkout.session.async_payment_failed releases the pending state without touching money", async () => {

@@ -16,6 +16,7 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
+  closeoutLeftoverDecisions,
   courseInquiries,
   courses,
   dayCloseouts,
@@ -83,6 +84,7 @@ import {
   tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
+  waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -162,6 +164,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
   // before both parents below (ADR 20260804-day-closeout).
+  await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
@@ -245,6 +248,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
+  await db.delete(waiverMaterialityDecisions).where(eq(waiverMaterialityDecisions.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
   await db.delete(boats).where(eq(boats.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));

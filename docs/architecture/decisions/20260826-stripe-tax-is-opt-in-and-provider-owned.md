@@ -28,6 +28,16 @@ The monthly report presents verified tax as its own line and subtracts it from n
 history has no Stripe Tax evidence and therefore contributes no fabricated tax amount. Turning tax
 off changes future charges only; existing evidence remains unchanged.
 
+## Alternatives considered
+
+- **Maintain internal tax rate tables and jurisdiction rules** — rejected because rate rules change
+  frequently across local jurisdictions and maintaining them internally would add massive compliance
+  and maintenance overhead.
+- **Support inclusive tax pricing locally** — rejected because advertised prices across dive operations
+  are predominantly pre-tax, and exclusive calculation directly leverages Stripe Tax line-item calculations.
+- **Require manual tax entry during checkout or invoicing** — rejected because automated provider-side
+  calculation guarantees accuracy and consistency without burdening staff at point of sale.
+
 ## Consequences
 
 - A diver sees Stripe's own tax line on a tax-enabled hosted Checkout page.
