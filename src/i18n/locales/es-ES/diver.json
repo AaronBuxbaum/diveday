@@ -1,4 +1,18 @@
 {
+  "conservation": {
+    "commitmentsHeading": "Compromisos de conservación",
+    "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
+    "commitments": {
+      "green_fins_member": "Miembro de Green Fins",
+      "padi_aware_partner": "Socio de PADI AWARE",
+      "mooring_buoys_only": "Solo boyas de amarre",
+      "no_touch_policy": "Política de no tocar el arrecife",
+      "no_gloves_policy": "Política de no usar guantes",
+      "reef_cleanup_dives": "Inmersiones de limpieza de arrecifes",
+      "lionfish_containment": "Control de pez león",
+      "coral_nursery_support": "Apoyo a viveros de coral"
+    }
+  },
   "common": {
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
@@ -172,6 +186,7 @@
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitePlanningGuide": "Es una guía de planificación, no una titulación ni una autorización de seguridad.",
     "siteHowItUnfolds": "Cómo se desarrolla la inmersión",
+    "siteConservationHeading": "Nota de conservación",
     "siteWhatToLookFor": "Qué buscar ahí abajo",
     "siteLandmarkCount": "{count, plural, one {# referencia} other {# referencias}}",
     "siteSpeciesCount": "{count, plural, one {# especie} other {# especies}}",

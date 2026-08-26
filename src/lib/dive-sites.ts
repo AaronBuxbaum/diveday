@@ -113,6 +113,7 @@ export const diveSiteFormSchema = z.object({
     z.enum(["welcoming", "demanding", "unknown"]).nullable(),
   ),
   fitNote: z.string().trim().max(400).optional().default(""),
+  conservationNote: z.string().trim().max(1_200).optional().default(""),
   fieldGuideTipsHeading: z.string().trim().max(80).optional().default(""),
   /**
    * Landmarks and field-guide species arrive as one JSON string each, from

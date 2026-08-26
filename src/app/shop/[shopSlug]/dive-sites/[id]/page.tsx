@@ -97,6 +97,7 @@ const TEMPLATE_FIELD_KEYS: Record<DiveSiteTemplateField, StaffMessageKey> = {
   divePlan: "diveSites.edit.templateUpdates.fields.divePlan",
   fitTone: "diveSites.edit.templateUpdates.fields.fitTone",
   fitNote: "diveSites.edit.templateUpdates.fields.fitNote",
+  conservationNote: "diveSites.edit.templateUpdates.fields.conservationNote",
   fieldGuideTipsHeading: "diveSites.edit.templateUpdates.fields.fieldGuideTipsHeading",
   landmarks: "diveSites.edit.templateUpdates.fields.landmarks",
   minimumCertificationLevel: "diveSites.edit.templateUpdates.fields.minimumCertificationLevel",

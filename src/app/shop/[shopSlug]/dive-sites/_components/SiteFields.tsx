@@ -49,6 +49,7 @@ export type SiteFieldValues = {
   divePlan: string | null;
   fitTone: DiveSiteFitTone | null;
   fitNote: string | null;
+  conservationNote: string | null;
   fieldGuideTipsHeading: string | null;
   landmarks: DiveSiteLandmark[];
   /** The catalog slugs this site's field guide shows, in order. */
@@ -418,6 +419,19 @@ export function SiteFields({
             maxLength={1200}
             defaultValue={values?.divePlan ?? ""}
             placeholder={t("diveSites.form.divePlanPlaceholder")}
+            className={controlClass}
+          />
+        </Field>
+        <Field
+          label={t("diveSites.form.conservationNoteLabel")}
+          hint={t("diveSites.form.optionalHint")}
+        >
+          <textarea
+            name="conservationNote"
+            rows={3}
+            maxLength={1200}
+            defaultValue={values?.conservationNote ?? ""}
+            placeholder={t("diveSites.form.conservationNotePlaceholder")}
             className={controlClass}
           />
         </Field>

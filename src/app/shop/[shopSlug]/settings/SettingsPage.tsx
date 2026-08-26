@@ -41,6 +41,7 @@ import {
 } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
+import { CONSERVATION_COMMITMENT_CODES } from "@/lib/conservation-commitments";
 import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
@@ -76,6 +77,7 @@ import {
   refreshAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
+  saveConservationCommitmentsAction,
   saveContactAction,
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
@@ -138,6 +140,8 @@ function noticeMessages(
     "review-url-invalid": { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
     "search-listing-on": { tone: "success", text: t("settings.main.notice.searchListingOn") },
     "search-listing-off": { tone: "success", text: t("settings.main.notice.searchListingOff") },
+    "conservation-saved": { tone: "success", text: t("settings.main.notice.conservationSaved") },
+    "conservation-invalid": { tone: "danger", text: t("settings.main.notice.conservationInvalid") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
     "connect-failed": { tone: "danger", text: t("settings.main.notice.connectFailed") },
     "not-configured": { tone: "warning", text: t("settings.main.notice.notConfigured") },
@@ -384,6 +388,7 @@ const SECTION_IDS = [
   "address",
   "reviewLink",
   "searchListing",
+  "conservation",
   "packing",
   "dockCall",
   "sendWindow",
@@ -557,6 +562,10 @@ export default async function SettingsPage({
       return shop.reviewUrl;
     }
   })();
+  const conservationValue =
+    shop.conservationCommitments.length > 0
+      ? t("settings.main.conservation.value", { count: shop.conservationCommitments.length })
+      : notSet;
   const packingValue =
     shop.packingList.length > 0
       ? t("settings.main.packing.value", { count: shop.packingList.length })
@@ -943,6 +952,47 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.searchListing.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            <SettingsRow
+              heading={t("settings.main.conservation.heading")}
+              value={conservationValue}
+              description={t("settings.main.conservation.description")}
+              detail={t("settings.main.conservation.detail")}
+              open={activeSection === "conservation"}
+              openOnHash="conservation"
+              anchorId="conservation"
+            >
+              <SectionNotice banner={banner} section="conservation" active={activeSection} />
+              <FieldGrid
+                as="form"
+                action={saveConservationCommitmentsAction}
+                columns={1}
+                className="mt-4"
+              >
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {CONSERVATION_COMMITMENT_CODES.map((code) => (
+                    <label key={code} className="flex min-h-11 items-center gap-3 text-sm">
+                      <input
+                        name="commitment"
+                        type="checkbox"
+                        value={code}
+                        defaultChecked={shop.conservationCommitments.includes(code)}
+                        className="size-4 accent-primary"
+                      />
+                      {t(`settings.main.conservation.commitments.${code}`)}
+                    </label>
+                  ))}
+                </div>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.conservation.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.conservation.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

@@ -136,4 +136,20 @@ describe("naming the region", () => {
     );
     expect(list.container.querySelector("li")?.hasAttribute("aria-labelledby")).toBe(false);
   });
+
+  it("preserves aria-label when passed explicitly", () => {
+    const { container: kebabContainer } = render(
+      <SectionCard aria-label="Conservation commitments">body</SectionCard>,
+    );
+    expect(kebabContainer.querySelector("section")?.getAttribute("aria-label")).toBe(
+      "Conservation commitments",
+    );
+
+    const { container: camelContainer } = render(
+      <SectionCard ariaLabel="Conservation commitments">body</SectionCard>,
+    );
+    expect(camelContainer.querySelector("section")?.getAttribute("aria-label")).toBe(
+      "Conservation commitments",
+    );
+  });
 });

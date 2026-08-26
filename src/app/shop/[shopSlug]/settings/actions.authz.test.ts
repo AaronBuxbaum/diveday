@@ -47,6 +47,7 @@ const {
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveAddressAction,
+  saveConservationCommitmentsAction,
   saveDockDayRhythmAction,
   savePackingAction,
   saveTaxAction,
@@ -383,5 +384,30 @@ describe("the data-compliance queue actions", () => {
     await dischargeProcessorErasureAction(new FormData());
 
     expect(await erasureStatus(db, shop.id, obligationId)).toBe("owed");
+  });
+});
+
+describe("saving conservation commitments", () => {
+  it("refuses a captain outright — settings are owner/manager work", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const formData = new FormData();
+    formData.append("commitment", "green_fins_member");
+
+    await expect(saveConservationCommitmentsAction(formData)).rejects.toThrow(/REDIRECT/);
+    const updated = await getShopById(db, shop.id);
+    expect(updated?.conservationCommitments).toEqual([]);
+  });
+
+  it("lets an owner update conservation commitments", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.append("commitment", "green_fins_member");
+    formData.append("commitment", "mooring_buoys_only");
+
+    await expect(saveConservationCommitmentsAction(formData)).rejects.toThrow(/REDIRECT/);
+    const updated = await getShopById(db, shop.id);
+    expect(updated?.conservationCommitments).toEqual(["green_fins_member", "mooring_buoys_only"]);
   });
 });

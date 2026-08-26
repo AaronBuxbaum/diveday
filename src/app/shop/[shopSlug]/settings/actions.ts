@@ -19,6 +19,7 @@ import {
   getShopById,
   markShopUnitsConfirmed,
   setShopAddress,
+  setShopConservationCommitments,
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
@@ -48,6 +49,7 @@ import {
   isLookupWorthy,
   toFilterCountry,
 } from "@/lib/address-lookup";
+import { parseConservationCommitments } from "@/lib/conservation-commitments";
 import { validateDivePackage } from "@/lib/dive-packages";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
@@ -199,6 +201,22 @@ export async function savePackingAction(formData: FormData) {
   }
   await setShopPackingList(await getDb(), session.user.shopId, packingList);
   revalidateAndRedirect(settings, noticeUrl(settings, "packing-saved", { saved: "packing" }));
+}
+
+/**
+ * Saves the shop's self-reported conservation commitments.
+ */
+export async function saveConservationCommitmentsAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const rawCommitments = formData.getAll("commitment");
+  const commitments = parseConservationCommitments(rawCommitments);
+  await setShopConservationCommitments(await getDb(), session.user.shopId, commitments);
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "conservation-saved", { saved: "conservation" }),
+  );
 }
 
 /**
