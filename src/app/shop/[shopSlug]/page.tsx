@@ -86,6 +86,7 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "backup-not-authorized": "shopHome.notice.backupNotAuthorized",
   "whatsapp-not-authorized": "shopHome.notice.whatsappNotAuthorized",
   "promos-not-authorized": "shopHome.notice.promosNotAuthorized",
+  "integrations-not-authorized": "shopHome.notice.integrationsNotAuthorized",
 };
 
 export const metadata: Metadata = {

@@ -20,7 +20,8 @@ test.describe("shop integrations settings", () => {
     await expect(page.getByRole("heading", { name: "Shopify" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Zapier" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Not configured", exact: true })).toHaveCount(3);
+    await expect(page.getByRole("button", { name: "Not configured", exact: true })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "Connect Zapier" })).toBeVisible();
   });
 
   test("is reachable from the data and integrations settings group", { tag: READ_ONLY }, async ({

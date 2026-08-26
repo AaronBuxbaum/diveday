@@ -104,7 +104,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
 
   // The destructive tail is deliberately not a sub-nav target: deleting a
   // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(8);
+  await expect(subNav.getByRole("link")).toHaveCount(10);
   await expect(subNav.getByRole("link", { name: /Erase|Delete/ })).toHaveCount(0);
 });
 
