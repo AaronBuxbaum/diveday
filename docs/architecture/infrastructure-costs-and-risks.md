@@ -53,10 +53,8 @@ DiveDay runs Next.js 16 (App Router with Partial Prerendering and streaming SSR)
   - *The major multiplier:* The boat manifest SSE stream (`/shop/[slug]/trips/[id]/manifest/stream`) sets `maxDuration = 300` (5 minutes) and holds serverless execution open continuously while boat crew tablets are active.
 - **Fast Data Transfer (Egress Bandwidth)**:
   - 1 TB included on Pro; $0.15/GB thereafter. Public dive schedules and rich media can increase egress.
-- **Vercel Blob Storage**:
-  - Stores course page media, post-trip recap photos, dive site briefing imagery, shop logos, and imported waiver scans. (Diver certification card uploads were retired in ADR 20260811-retire-the-digital-card; verification uses agency credential lookup rather than plastic card photos).
-  - $0.15/GB-month storage, $0.05 per 1,000 upload operations, $0.002 per 1,000 read operations.
-  - Can be fully eliminated by switching the storage seam provider to AWS S3 (AWS-8).
+- **Vercel Blob Storage (Retired)**:
+  - Vercel Blob has been completely eliminated (AWS-8 delivered 2026-08-26). All media (course media, recap photos, dive site imagery, shop logos, imported waiver scans) is stored in AWS S3 (`diveday-media`) with scoped IAM credentials.
 - **Vercel Analytics & Speed Insights**:
   - Included basic tier or $10–$20/mo add-ons if event volumes exceed allowances.
 
@@ -221,10 +219,9 @@ AWS houses 21 distinct infrastructure subsystems managed via AWS CDK:
 - **Reliability Impact:** Any non-additive migration (e.g. column drop or type change) breaks live traffic until the new build finishes deploying.
 - **Remedy:** Enforce strict expand/contract migration discipline (guarded by `scripts/check-migrations.mjs`). For full AWS hosting ([AWS-14](aws-migration-dossier.md#aws-14--deploy-pipeline-migrations-and-rollback)), move migrations to a dedicated pre-deploy ECS task.
 
-#### W-5: Media and Scanned Documents in Third-Party Blob Storage
-- **The Issue:** Diver recap memories, course media, and imported waiver scans reside in Vercel Blob rather than DiveDay's AWS system of record. (Certification card uploads were retired in ADR 20260811-retire-the-digital-card).
-- **Cost & Privacy Impact:** Storage is 6.5x more expensive ($0.15/GB in Vercel Blob vs $0.023/GB in AWS S3 standard) and fragments customer assets across multiple vendor boundaries.
-- **Remedy:** Execute [AWS-8](aws-migration-dossier.md#aws-8--object-storage-vercel-blob--s3--cloudfront-independent-of-aws-5) (migrate to S3 + CloudFront with signed URLs for sensitive scans and public URLs for course media).
+#### W-5: Media Storage in AWS S3 (Resolved)
+- **Resolution:** Vercel Blob has been completely removed and replaced by AWS S3 (`diveday-media` bucket + `diveday-media-uploader` IAM User).
+- **Cost & Privacy Impact:** Reduces storage costs from $0.15/GB (Vercel Blob) to $0.023/GB (AWS S3) and consolidates media assets within DiveDay's AWS system of record. (Delivered 2026-08-26 via AWS-8).
 
 #### W-6: In-Memory Rate Limiting
 - **The Issue:** Upstash Redis is currently unconfigured (`RateLimitStore` falls back to an in-memory token bucket in `src/lib/rate-limit.ts`).

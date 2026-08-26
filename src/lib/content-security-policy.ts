@@ -72,12 +72,14 @@ export const CSP_REPORT_PATH = "/api/csp-report";
 const REPORT_GROUP = "csp";
 
 /**
- * Vercel Blob, where every photo this app stores lands — the same host pattern
- * `next.config.ts`'s `images.remotePatterns` allows, stated again here because
- * a `<img>` that bypasses the optimizer (a legacy dive-site URL, an
- * `unoptimized` render) still fetches from it directly.
+ * Media image hosts: AWS S3 and CloudFront distributions, plus legacy Vercel Blob.
  */
-const BLOB_IMAGE_HOST = "https://*.public.blob.vercel-storage.com";
+const MEDIA_IMAGE_HOSTS = [
+  "https://*.s3.amazonaws.com",
+  "https://*.s3.*.amazonaws.com",
+  "https://*.cloudfront.net",
+  "https://*.public.blob.vercel-storage.com",
+];
 
 /**
  * The map `/ready`, the public trip page's dive briefing and the staff
@@ -236,7 +238,7 @@ export function reportOnlyPolicy(options: CspOptions): string {
     ["style-src", ["'self'", "'unsafe-inline'"]],
     // `data:` for the inlined placeholders `next/image` emits, `blob:` for the
     // offline manifest's own cached photos.
-    ["img-src", ["'self'", "data:", "blob:", BLOB_IMAGE_HOST]],
+    ["img-src", ["'self'", "data:", "blob:", ...MEDIA_IMAGE_HOSTS]],
     ["font-src", ["'self'"]],
     [
       "connect-src",

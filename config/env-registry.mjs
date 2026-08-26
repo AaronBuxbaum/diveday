@@ -478,6 +478,47 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "Media object storage for course photos, recap memories, dive site maps, and",
+      "shop logos (AWS-8, docs/architecture/aws-migration-dossier.md). Replaces Vercel",
+      "Blob with an S3 bucket in the DiveDay AWS account. The diveday-media-uploader",
+      "IAM user (infra/lib/infra-stack.ts S22) holds scoped PutObject and DeleteObject",
+      "permissions on the media bucket.",
+    ],
+    keys: [
+      {
+        key: "MEDIA_BUCKET_NAME",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "image uploads report not_configured and fall back to local dev stubs",
+      },
+      {
+        key: "MEDIA_AWS_REGION",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as MEDIA_BUCKET_NAME",
+      },
+      {
+        key: "MEDIA_AWS_ACCESS_KEY_ID",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as MEDIA_BUCKET_NAME",
+      },
+      {
+        key: "MEDIA_AWS_SECRET_ACCESS_KEY",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as MEDIA_BUCKET_NAME",
+      },
+      {
+        key: "MEDIA_PUBLIC_URL_BASE",
+        from: "stack",
+        targets: LOCAL_AND_VERCEL,
+        absent: "uses the direct S3 virtual-hosted bucket endpoint",
+      },
+    ],
+  },
+  {
+    doc: [
       "DiveDay's own scheduled logical export -- the platform recovery layer, not the",
       "per-shop one (ADR 20260812-platform-backup-runner,",
       "docs/engineering/backup-and-restore-runbook.md S2). GET /api/cron/platform-backup",

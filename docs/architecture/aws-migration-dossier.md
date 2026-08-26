@@ -229,27 +229,15 @@ the Aurora floor, the manifest connection ceiling actually being hit in producti
 requirement that the database not be reachable from the public internet. Absent one of those, Neon
 is currently both cheaper and better at the thing we most need it to be good at.
 
-### AWS-8 — Object storage: Vercel Blob → S3 + CloudFront *(independent of AWS-5)*
+### AWS-8 — Object storage: Vercel Blob → S3 + CloudFront *(Delivered 2026-08-26)*
 
-**The best benefit-to-risk ratio on this entire list, and it can go first.**
+**Status: Delivered.** Vercel Blob has been completely removed and replaced by AWS S3 (`MediaStorageBucket` + `diveday-media-uploader` IAM User with SigV4 signed requests in `src/lib/storage/s3.ts`).
 
-The seam is already provider-shaped: one `ImageStorageProvider` interface in `src/lib/storage/`, one
-hostname suffix in `blob-host.ts`, one `remotePatterns` entry in `next.config.ts`. S3 buckets and
-the IAM conventions to reach them already exist in the stack.
+The seam is provider-neutral: `ImageStorageProvider` in `src/lib/storage/`, `isManagedStorageUrl` in `blob-host.ts`, and S3 `remotePatterns` in `next.config.ts`. S3 bucket `diveday-media` and the scoped IAM uploader credential exist in the stack.
 
-**Buys:** certification card photos are *diver evidence* — PII, adjacent to medical flags — and they
-currently sit in a third party's storage rather than in the account we already treat as the system
-of record. Moving them consolidates the data-protection story that
-[HD-11](../product/human-decisions.md#decision-register) and the export/erasure work already
-depend on.
+**Buys:** Moves all media assets (course media, recap memories, dive site briefing imagery, shop logos, imported waiver scans) into DiveDay's AWS system of record. Cuts storage cost by 6.5x ($0.023/GB in S3 vs $0.15/GB in Blob) and eliminates Vercel Blob as a vendor dependency. Diver certification card uploads were retired in ADR 20260811-retire-the-digital-card.
 
-**Work: 2–4 days** — an S3 provider implementation, a URL scheme (CloudFront with signed URLs for
-cards, public for course media), a one-time object migration, and the `next/image` sourcing change.
-
-**Risk:** the stored value is a durable URL in `*_image_url` columns, so existing rows must keep
-resolving. Dual-read during migration, not a flag day.
-
-**Recommendation: yes, and schedule it independently of the hosting question.**
+**Completed:** S3 provider implementation (`s3ImageStorageProvider` + `deleteS3Image`), environment registry configuration (`MEDIA_*`), CSP & `next/image` allowlists, and CDK stack bucket provisioning.
 
 ### AWS-9 — Scheduled jobs: Vercel Cron → EventBridge Scheduler *(independent of AWS-5)*
 

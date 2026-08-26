@@ -169,8 +169,10 @@ describe("the report-only half", () => {
     // globals.css sets a background-image from a data: URI, which CSS resolves
     // against img-src rather than style-src.
     expect(imgSrc).toContain("data:");
-    // next/image emits raw blob URLs whenever the optimizer is bypassed —
-    // which every e2e build does (`unoptimized: isE2EBuild`).
+    // Media image hosts: AWS S3 and CloudFront.
+    expect(imgSrc).toContain("https://*.s3.amazonaws.com");
+    expect(imgSrc).toContain("https://*.s3.*.amazonaws.com");
+    expect(imgSrc).toContain("https://*.cloudfront.net");
     expect(imgSrc).toContain("https://*.public.blob.vercel-storage.com");
   });
 });
