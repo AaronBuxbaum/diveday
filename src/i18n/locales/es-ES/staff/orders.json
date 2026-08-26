@@ -6,6 +6,7 @@
     "notice": {
       "invalid": "Elige un cliente y al menos una línea con un importe.",
       "notConnected": "Conecta una cuenta de Stripe en los ajustes del centro antes de crear un pedido.",
+      "taxLocationRequired": "Los impuestos están activados. Añade la dirección de facturación del cliente antes de enviar esta factura.",
       "stripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
       "fallback": "No se pudo crear ese pedido."
     },
@@ -17,6 +18,15 @@
     "noteLabel": "Nota del pedido",
     "noteHint": "(opcional)",
     "notePlaceholder": "p. ej. Salida de dos inmersiones + equipo de alquiler",
+    "taxLocationLegend": "Dirección de facturación del cliente",
+    "taxLocationHint": "Stripe Tax usa esta ubicación para calcular la factura. Se envía a tu cuenta de Stripe conectada y no se guarda en DiveDay.",
+    "addressLine1": "Dirección",
+    "addressLine2": "Línea de dirección 2",
+    "city": "Ciudad",
+    "region": "Estado o región",
+    "postalCode": "Código postal",
+    "country": "Código de país",
+    "countryPlaceholder": "US",
     "lineItemsLegend": "Líneas del pedido",
     "lineItemKindAria": "Tipo de la línea {number}",
     "lineItemDescriptionPlaceholder": "Descripción",

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { orders } from "@/db/schema";
+import { setShopTaxEnabled } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { seededShopContext } from "@/test/db";
 import {
@@ -150,5 +151,18 @@ describe("raising an invoice", () => {
     // captain never sees this notice, which is the point: the two refusals are
     // distinguishable, and only one of them is about authorization.
     expect(to).toBe(`/shop/${shop.slug}/orders/new?notice=stripe-failed`);
+  });
+
+  it("requires a billing location before a tax-enabled invoice can be sent", async () => {
+    const { db, shop, owner } = await context();
+    const customer = await seededCustomer(db, shop.id);
+    await setShopTaxEnabled(db, shop.id, true);
+    signIn(shop, owner);
+    const before = await orderCount(db, shop.id);
+
+    const to = await redirectedTo(() => createOrderAction(invoiceFor(customer)));
+
+    expect(to).toBe(`/shop/${shop.slug}/orders/new?notice=tax-location-required`);
+    expect(await orderCount(db, shop.id)).toBe(before);
   });
 });

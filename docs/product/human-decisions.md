@@ -109,6 +109,12 @@ but still may need validation; **Validated** has the stated evidence.
 | H-57 | Implemented | Product owner | How should close-out leftovers be resolved before the day is closed? (Issue #762.) | One durable choice per current leftover, with an accountable actor, immediate persistence, and a reversible correction that does not rewrite the close-out trail. | **Decided 2026-08-22 (Aaron Buxbaum):** carry each leftover forward once by default; staff may dismiss a row independently; save the choice immediately and offer Undo; closing the day no longer owns those decisions, and the append-only close-out snapshot remains the record of what was outstanding. |
 | H-58 | Chosen | Product owner | Issue #729 asks whether DiveDay should surface conservation commitments. | Record whether to ship a site-level conservation note and/or coded shop commitments, while keeping every statement explicitly the shop's claim and never DiveDay's verification. | **Decided 2026-08-22 (Aaron Buxbaum):** ship both, in sequence: site-level note first, then coded shop commitments. Option 3 (recap) remains out of scope until executed-dive records exist. The implementation must use localized codes and pass the marketing claims policy; pilot interviews should confirm shops will maintain the data. |
 
+**H-07 mechanism update (2026-08-26):** Stripe Tax is now the implemented, per-shop opt-in
+mechanism for sales tax/VAT on booking Checkout and staff invoices. Listed prices remain pre-tax;
+tax is exclusive, shown to the diver, retained as provider evidence, and reported separately from
+net revenue. The tax portion of H-07 remains open for accountant/legal confirmation of
+applicability, registrations, remittance, and the treatment of deposits and fares.
+
 ## Human verification queue
 
 | ID | Status | Human owner | Work to perform | Evidence of completion |

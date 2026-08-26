@@ -210,11 +210,11 @@
     },
     "tax": {
       "heading": "Impuestos (IVA y ventas)",
-      "description": "Añade IVA, impuestos sobre las ventas y otros impuestos similares a cada pago de Stripe.",
-      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuración de impuestos de tu cuenta conectada y la ubicación del cliente. Desactívalo si gestionas los impuestos por tu cuenta.",
+      "description": "Añade IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
+      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuración de impuestos de tu cuenta conectada y la ubicación del cliente. Las propinas posteriores al viaje son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
       "enabledValue": "Activados",
       "disabledValue": "Desactivados",
-      "checkboxLabel": "Usar Stripe Tax para los pagos nuevos",
+      "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
       "submit": "Guardar configuración de impuestos",
       "submitting": "Guardando…"
     },

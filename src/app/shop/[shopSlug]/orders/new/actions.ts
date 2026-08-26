@@ -6,9 +6,13 @@ import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createOrder, type NewOrderLineItem } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
-import { getShopCurrency } from "@/db/stripe-accounts";
+import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import {
+  type InvoiceCustomerAddress,
+  isUsableInvoiceCustomerAddress,
+} from "@/lib/payments/invoicing";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { LINE_ITEM_ROWS } from "./order-form";
@@ -29,6 +33,18 @@ const orderDescriptionSchema = z.string().trim().max(200);
 // Sourced from the pg enum, not a hand-typed literal list, so it can never
 // drift from what the database will actually accept.
 const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
+const customerAddressSchema = z.object({
+  line1: z.string().trim().max(200),
+  line2: z.string().trim().max(200),
+  city: z.string().trim().max(100),
+  state: z.string().trim().max(100),
+  postalCode: z.string().trim().max(30),
+  country: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/)
+    .transform((value) => value.toUpperCase()),
+});
 
 /**
  * Raise an invoice for a diver.
@@ -79,6 +95,22 @@ export async function createOrderAction(formData: FormData) {
   // 500000 (docs ADR 20260731-shop-currency). `createOrder` reads the same
   // shop setting for the invoice itself, so the two can't disagree.
   const currency = await getShopCurrency(db, session.user.shopId);
+  const taxEnabled = await getShopTaxEnabled(db, session.user.shopId);
+  let customerAddress: InvoiceCustomerAddress | undefined;
+  if (taxEnabled) {
+    const parsedAddress = customerAddressSchema.safeParse({
+      line1: String(formData.get("customerAddressLine1") ?? ""),
+      line2: String(formData.get("customerAddressLine2") ?? ""),
+      city: String(formData.get("customerAddressCity") ?? ""),
+      state: String(formData.get("customerAddressRegion") ?? ""),
+      postalCode: String(formData.get("customerAddressPostalCode") ?? ""),
+      country: String(formData.get("customerAddressCountry") ?? ""),
+    });
+    if (!parsedAddress.success || !isUsableInvoiceCustomerAddress(parsedAddress.data)) {
+      redirect(noticeUrl(newOrder, "tax-location-required"));
+    }
+    customerAddress = parsedAddress.data;
+  }
 
   const lineItems: NewOrderLineItem[] = [];
   for (let i = 0; i < LINE_ITEM_ROWS; i++) {
@@ -112,6 +144,7 @@ export async function createOrderAction(formData: FormData) {
     createdByPersonId: session.user.personId,
     bookingId,
     description,
+    customerAddress,
     lineItems,
   });
 

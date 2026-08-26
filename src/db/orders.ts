@@ -1,7 +1,12 @@
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor } from "@/lib/money";
-import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
+import {
+  type InvoiceCustomerAddress,
+  type InvoicingProvider,
+  invoicingProviderFromEnvironment,
+  isUsableInvoiceCustomerAddress,
+} from "@/lib/payments/invoicing";
 import { canPersonManageOrders } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
@@ -66,11 +71,21 @@ export type NewOrderInput = {
   bookingId?: string | null;
   description?: string | null;
   lineItems: NewOrderLineItem[];
+  /** Billing location sent to Stripe when this shop has tax enabled. */
+  customerAddress?: InvoiceCustomerAddress;
 };
 
 export type CreateOrderOutcome =
   | { ok: true; order: Order }
-  | { ok: false; reason: "not_authorized" | "not_connected" | "invalid" | "stripe_failed" };
+  | {
+      ok: false;
+      reason:
+        | "not_authorized"
+        | "not_connected"
+        | "invalid"
+        | "tax_location_required"
+        | "stripe_failed";
+    };
 
 // Defense-in-depth bounds (CR-016) matching the action-layer zod schema in
 // src/app/shop/[shopSlug]/orders/new/actions.ts, so a caller that bypasses that
@@ -151,6 +166,9 @@ export async function createOrder(
   // what was billed and must survive a later change to the shop setting.
   const currency = await getShopCurrency(db, input.shopId);
   const taxEnabled = await getShopTaxEnabled(db, input.shopId);
+  if (taxEnabled && !isUsableInvoiceCustomerAddress(input.customerAddress)) {
+    return { ok: false, reason: "tax_location_required" };
+  }
   const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
   if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
     return { ok: false, reason: "invalid" };
@@ -202,6 +220,7 @@ export async function createOrder(
     customerName: customer.fullName,
     currency,
     taxEnabled,
+    customerAddress: input.customerAddress,
     lineItems: input.lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,

@@ -189,7 +189,13 @@ export function stripeCheckoutProvider(
           cancel_url: request.cancelUrl,
           customer_email: request.customerEmail,
         });
-        if (request.taxEnabled) form.set("automatic_tax[enabled]", "true");
+        if (request.taxEnabled) {
+          form.set("automatic_tax[enabled]", "true");
+          // Stripe Tax needs a customer location. Checkout collects the
+          // billing address when this is required, so the tax line is based on
+          // a stated address rather than an unavailable server-side guess.
+          form.set("billing_address_collection", "required");
+        }
         request.lineItems.forEach((line, index) => {
           form.set(`line_items[${index}][price_data][currency]`, request.currency);
           form.set(`line_items[${index}][price_data][product_data][name]`, line.description);

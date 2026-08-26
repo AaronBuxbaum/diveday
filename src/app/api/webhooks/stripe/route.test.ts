@@ -151,7 +151,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 0);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, null);
   });
 
   it("tries test webhook secret if live webhook secret fails, and succeeds if test secret matches", async () => {
@@ -166,7 +166,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 0);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, null);
   });
 
   it("ignores (200, no state change) a checkout.session.completed signed by the live secret but claiming livemode:false", async () => {
@@ -244,10 +244,12 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     const response = await post({
       id: "evt_1",
       type: "invoice.paid",
-      data: { object: { id: "in_123", amount_paid: 4500 } },
+      data: {
+        object: { id: "in_123", amount_paid: 4500, total_tax_amounts: [{ amount: 450 }] },
+      },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 0);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 450);
   });
 
   it("invoice.paid defaults amount to 0 when Stripe omits it", async () => {
@@ -257,7 +259,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined, 0);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined, null);
   });
 
   it("invoice.voided marks the order void", async () => {
@@ -278,7 +280,13 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, "acct_123", 0);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(
+      FAKE_DB,
+      "in_123",
+      4500,
+      "acct_123",
+      null,
+    );
   });
 
   it("checkout.session.completed with payment_status paid marks the checkout paid", async () => {
@@ -1008,7 +1016,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       "in_retry",
       4500,
       undefined,
-      0,
+      null,
     );
   });
 

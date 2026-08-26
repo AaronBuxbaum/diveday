@@ -210,11 +210,11 @@
     },
     "tax": {
       "heading": "Sales tax & VAT",
-      "description": "Add sales tax, VAT, and similar taxes to every Stripe payment.",
-      "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Stripe uses your connected account's tax settings and the customer's location. Turn this off if you handle tax yourself.",
+      "description": "Add sales tax, VAT, and similar taxes to new booking payments and staff invoices through Stripe.",
+      "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Stripe uses your connected account's tax settings and the customer's location. Post-trip tips are separate and are not affected by this setting. Turn this off if you handle tax yourself.",
       "enabledValue": "On",
       "disabledValue": "Off",
-      "checkboxLabel": "Use Stripe Tax for new payments",
+      "checkboxLabel": "Use Stripe Tax for new booking and invoice payments",
       "submit": "Save tax setting",
       "submitting": "Saving…"
     },

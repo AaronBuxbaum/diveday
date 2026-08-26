@@ -8,7 +8,8 @@ import { cancelBooking, createBookingParty } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";
 import { startBookingCheckout } from "./checkouts";
 import { setBookingPayment } from "./payments";
-import { bookingCheckouts, bookings, people, trips } from "./schema";
+import { bookingCheckoutBookings, bookingCheckouts, bookings, people, trips } from "./schema";
+import { setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -65,8 +66,21 @@ const alreadyPaid: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
   },
 });
 
+const alreadyPaidWithTax: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
+  status: "ok",
+  session: {
+    stripeSessionId: "cs_1",
+    stripeStatus: "complete",
+    paymentStatus: "paid",
+    checkoutUrl: null,
+    amountTotalCents: 19_800,
+    taxAmountCents: 1_800,
+    expiresAt: null,
+  },
+});
+
 /** A connected shop, one priced future trip, one pending checkout `hoursAgo` old. */
-async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1) {
+async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1, taxEnabled = false) {
   const { db, shop } = await seededShopContext();
   await upsertShopStripeAccount(db, shop.id, "acct_test");
   await setShopStripeAccountStatus(db, "acct_test", {
@@ -88,6 +102,7 @@ async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1) {
     plannedDives: reef.plannedDives,
     priceCents: 18_000,
   });
+  if (taxEnabled) await setShopTaxEnabled(db, shop.id, true);
   const party = await createBookingParty(
     db,
     partySize === 2
@@ -295,6 +310,33 @@ describe("sendDueCheckoutRecoveries", () => {
       .from(bookingCheckouts)
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.status).toBe("completed");
+  });
+
+  it("keeps Stripe tax when recovery resolves a paid tax-enabled checkout", async () => {
+    const { db, checkoutId, bookingIds } = await pendingCheckoutContext(3, 1, true);
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(alreadyPaidWithTax),
+    });
+
+    expect(summary).toMatchObject({ sent: 0, resolved: 1 });
+    const [checkout] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(checkout?.taxCents).toBe(1_800);
+    const [bookingTax] = await db
+      .select({ taxCents: bookingCheckoutBookings.taxCents })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.checkoutId, checkoutId),
+          eq(bookingCheckoutBookings.bookingId, bookingIds[0] ?? ""),
+        ),
+      );
+    expect(bookingTax?.taxCents).toBe(1_800);
   });
 
   it("never sends when Stripe can't be reached to reconcile — the ambiguous case is not license to send", async () => {

@@ -37,7 +37,7 @@ import {
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { orders, paymentOperationIntents } from "./schema";
-import { setShopCurrency } from "./shops";
+import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -175,6 +175,97 @@ describe("orders", () => {
       fakeInvoicing(),
     );
     expect(result).toEqual({ ok: false, reason: "not_connected" });
+  });
+
+  it("requires and passes a billing location when tax is enabled", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    await setShopTaxEnabled(db, shop.id, true);
+    const seen: CreateInvoiceRequest[] = [];
+    const invoicing = fakeInvoicing({
+      async createInvoice(request) {
+        seen.push(request);
+        return fakeInvoicing().createInvoice(request);
+      },
+    });
+
+    expect(
+      await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: staff,
+          lineItems,
+        },
+        invoicing,
+      ),
+    ).toEqual({ ok: false, reason: "tax_location_required" });
+    expect(seen).toHaveLength(0);
+
+    const customerAddress = {
+      line1: "1 Harbor Way",
+      city: "Key West",
+      state: "FL",
+      postalCode: "33040",
+      country: "US",
+    };
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        customerAddress,
+        lineItems,
+      },
+      invoicing,
+    );
+    expect(result.ok).toBe(true);
+    expect(seen[0]?.taxEnabled).toBe(true);
+    expect(seen[0]?.customerAddress).toEqual(customerAddress);
+  });
+
+  it("preserves recorded tax when a paid webhook has no tax evidence", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    await setShopTaxEnabled(db, shop.id, true);
+    const invoicing = fakeInvoicing({
+      async createInvoice(request) {
+        const created = await fakeInvoicing().createInvoice(request);
+        if (created.status !== "created") throw new Error("expected invoice creation to succeed");
+        return { ...created, totalCents: created.totalCents + 1_800, taxCents: 1_800 };
+      },
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        customerAddress: {
+          line1: "1 Harbor Way",
+          city: "Key West",
+          state: "FL",
+          postalCode: "33040",
+          country: "US",
+        },
+        lineItems,
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    expect(result.order.taxCents).toBe(1_800);
+
+    const paid = await markOrderPaidByInvoiceId(
+      db,
+      result.order.stripeInvoiceId,
+      result.order.totalCents,
+      undefined,
+      null,
+    );
+    expect(paid?.taxCents).toBe(1_800);
   });
 
   it("rejects an order with no line items or an unknown customer", async () => {

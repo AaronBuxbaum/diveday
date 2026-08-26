@@ -6,6 +6,7 @@
     "notice": {
       "invalid": "Pick a customer and at least one line item with an amount.",
       "notConnected": "Connect a Stripe account in Shop settings before creating an order.",
+      "taxLocationRequired": "Tax is enabled. Add the customer's billing address before sending this invoice.",
       "stripeFailed": "Stripe couldn't create that invoice. Try again in a moment.",
       "fallback": "That order couldn't be created."
     },
@@ -17,6 +18,15 @@
     "noteLabel": "Order note",
     "noteHint": "(optional)",
     "notePlaceholder": "e.g. Two-tank reef trip + rental set",
+    "taxLocationLegend": "Customer billing address",
+    "taxLocationHint": "Stripe Tax uses this location to calculate the invoice. It is sent to your connected Stripe account and is not stored in DiveDay.",
+    "addressLine1": "Address",
+    "addressLine2": "Address line 2",
+    "city": "City",
+    "region": "State / region",
+    "postalCode": "Postal code",
+    "country": "Country code",
+    "countryPlaceholder": "US",
     "lineItemsLegend": "Line items",
     "lineItemKindAria": "Line item {number} kind",
     "lineItemDescriptionPlaceholder": "Description",

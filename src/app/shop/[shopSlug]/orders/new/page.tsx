@@ -50,6 +50,7 @@ type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
 const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   invalid: "orders.new.notice.invalid",
   "not-connected": "orders.new.notice.notConnected",
+  "tax-location-required": "orders.new.notice.taxLocationRequired",
   "stripe-failed": "orders.new.notice.stripeFailed",
 };
 
@@ -216,6 +217,77 @@ export default async function NewOrderPage({
               />
             </Field>
           </FieldGrid>
+
+          {shop.taxEnabled ? (
+            <fieldset className="rounded-lg border border-border p-4">
+              <legend className="px-1 text-sm font-medium">
+                {t("orders.new.taxLocationLegend")}
+              </legend>
+              <p className="mt-1 text-sm text-muted">{t("orders.new.taxLocationHint")}</p>
+              <FieldGrid columns={2} className="mt-4">
+                <Field label={t("orders.new.addressLine1")} className="sm:col-span-2">
+                  <input
+                    type="text"
+                    name="customerAddressLine1"
+                    required
+                    autoComplete="billing address-line1"
+                    maxLength={200}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("orders.new.addressLine2")} hint={t("orders.new.noteHint")}>
+                  <input
+                    type="text"
+                    name="customerAddressLine2"
+                    autoComplete="billing address-line2"
+                    maxLength={200}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("orders.new.city")}>
+                  <input
+                    type="text"
+                    name="customerAddressCity"
+                    required
+                    autoComplete="billing address-level2"
+                    maxLength={100}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("orders.new.region")} hint={t("orders.new.noteHint")}>
+                  <input
+                    type="text"
+                    name="customerAddressRegion"
+                    autoComplete="billing address-level1"
+                    maxLength={100}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("orders.new.postalCode")}>
+                  <input
+                    type="text"
+                    name="customerAddressPostalCode"
+                    required
+                    autoComplete="billing postal-code"
+                    maxLength={30}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("orders.new.country")}>
+                  <input
+                    type="text"
+                    name="customerAddressCountry"
+                    required
+                    autoComplete="billing country"
+                    maxLength={2}
+                    pattern="[A-Za-z]{2}"
+                    placeholder={t("orders.new.countryPlaceholder")}
+                    className={`${controlClass} uppercase`}
+                  />
+                </Field>
+              </FieldGrid>
+            </fieldset>
+          ) : null}
 
           <fieldset className="flex flex-col gap-3">
             <legend className="text-sm font-medium">{t("orders.new.lineItemsLegend")}</legend>

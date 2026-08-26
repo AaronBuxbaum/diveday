@@ -13,6 +13,39 @@ export type InvoiceLineItem = {
   unitAmountCents: number;
 };
 
+/** A billing location Stripe Tax can use for a staff-created invoice. */
+export type InvoiceCustomerAddress = {
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  postalCode: string;
+  country: string;
+};
+
+/**
+ * Stripe needs a recognized customer location before it can finalize a
+ * tax-enabled invoice. Keep the validation shared by the provider and domain
+ * caller so a direct caller cannot bypass the form's location requirement.
+ */
+export function isUsableInvoiceCustomerAddress(
+  address: InvoiceCustomerAddress | undefined,
+): address is InvoiceCustomerAddress {
+  if (!address) return false;
+  const country = address.country.trim();
+  return (
+    /^[A-Za-z]{2}$/.test(country) &&
+    address.line1.trim().length > 0 &&
+    address.line1.length <= 200 &&
+    (address.line2?.length ?? 0) <= 200 &&
+    address.city.trim().length > 0 &&
+    address.city.length <= 100 &&
+    (address.state?.length ?? 0) <= 100 &&
+    address.postalCode.trim().length > 0 &&
+    address.postalCode.length <= 30
+  );
+}
+
 export type CreateInvoiceRequest = {
   stripeAccountId: string;
   customerEmail: string;
@@ -23,6 +56,8 @@ export type CreateInvoiceRequest = {
   daysUntilDue?: number;
   /** Opt-in Stripe Tax. When enabled, every invoice item is tax-exclusive. */
   taxEnabled?: boolean;
+  /** Sent to Stripe's Customer object for tax calculation; never stored locally. */
+  customerAddress?: InvoiceCustomerAddress;
   /**
    * Deterministic per-attempt key (`idempotencyKeyFor`,
    * src/db/payment-operations.ts). Invoice creation is several POSTs
@@ -252,12 +287,29 @@ export function stripeInvoicingProvider(
 
   return {
     async createInvoice(request) {
+      if (request.taxEnabled && !isUsableInvoiceCustomerAddress(request.customerAddress)) {
+        return { status: "failed" };
+      }
       try {
         const key = request.idempotencyKey;
+        const customerForm = new URLSearchParams({
+          email: request.customerEmail,
+          name: request.customerName,
+        });
+        const address = request.customerAddress;
+        if (address) {
+          customerForm.set("address[line1]", address.line1.trim());
+          if (address.line2?.trim()) customerForm.set("address[line2]", address.line2.trim());
+          customerForm.set("address[city]", address.city.trim());
+          if (address.state?.trim()) customerForm.set("address[state]", address.state.trim());
+          customerForm.set("address[postal_code]", address.postalCode.trim());
+          customerForm.set("address[country]", address.country.trim().toUpperCase());
+        }
+        if (request.taxEnabled) customerForm.set("tax[validate_location]", "immediately");
         const customerResponse = await post(
           request.stripeAccountId,
           "/customers",
-          new URLSearchParams({ email: request.customerEmail, name: request.customerName }),
+          customerForm,
           `${key}:customer`,
         );
         if (!customerResponse.ok) return { status: "failed" };

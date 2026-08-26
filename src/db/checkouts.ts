@@ -354,7 +354,12 @@ export async function startBookingCheckout(
           // (docs ADR 20260731-shop-currency).
           currency,
           taxEnabled,
-          taxCents: session.taxAmountCents,
+          // The tax on a newly-created Checkout can be provisional: Stripe may
+          // not know the customer's location until the hosted page is
+          // completed. Only a paid-session response is tax evidence, so do not
+          // let an initial zero prevent the completion webhook from recording
+          // the final amount.
+          taxCents: null,
           amountPerDiverCents,
           totalCents,
           isDeposit: charge.isDeposit,
