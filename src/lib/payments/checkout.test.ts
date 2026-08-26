@@ -72,18 +72,27 @@ describe("stripe checkout provider", () => {
         status: "open",
         payment_status: "unpaid",
         url: "https://checkout.stripe.com/c/pay/cs_taxed",
-        amount_total: 37_800,
-        total_details: { amount_tax: 1_800 },
+        amount_total: 42_000,
+        total_details: { amount_tax: 2_000 },
         expires_at: 1_790_000_000,
       }),
     );
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    const result = await provider.createCheckoutSession({ ...request, taxEnabled: true });
+    const result = await provider.createCheckoutSession({
+      ...request,
+      lineItems: [
+        ...request.lineItems,
+        { description: "Rental gear", unitAmountCents: 4_000, quantity: 1 },
+      ],
+      taxEnabled: true,
+    });
 
-    expect(result).toMatchObject({ status: "created", taxAmountCents: 1_800 });
+    expect(result).toMatchObject({ status: "created", taxAmountCents: 2_000 });
     const form = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
     expect(form.get("automatic_tax[enabled]")).toBe("true");
+    expect(form.get("billing_address_collection")).toBe("required");
     expect(form.get("line_items[0][price_data][tax_behavior]")).toBe("exclusive");
+    expect(form.get("line_items[1][price_data][tax_behavior]")).toBe("exclusive");
   });
 
   it("creates one Stripe line item per entry in lineItems", async () => {

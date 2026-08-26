@@ -7,6 +7,7 @@ import {
   type SpendableEntitlement,
   spendableCount,
 } from "@/lib/dive-packages";
+import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
 import { divePackageEntitlements, divePackages, orderLineItems, orders } from "./schema";
 
@@ -369,6 +370,8 @@ export async function sellDivePackage(
     soldByPersonId: string;
     /** The invoice line's wording, composed by the caller from its bundle. */
     description: string;
+    /** Billing location passed to Stripe when this shop has tax enabled. */
+    customerAddress?: InvoiceCustomerAddress;
     now?: Date;
   },
 ): Promise<
@@ -380,6 +383,7 @@ export async function sellDivePackage(
         | "not_authorized"
         | "not_connected"
         | "invalid"
+        | "tax_location_required"
         | "stripe_failed"
         | "payment_pending";
     }
@@ -403,6 +407,7 @@ export async function sellDivePackage(
     personId: input.personId,
     createdByPersonId: input.soldByPersonId,
     description: input.description,
+    customerAddress: input.customerAddress,
     lineItems: [
       {
         kind: "dive_package",

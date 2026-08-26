@@ -45,9 +45,9 @@ const checkoutSessionObjectSchema = z.object({
     .optional(),
 });
 
-function invoiceTaxCents(invoice: z.infer<typeof invoiceObjectSchema>): number {
-  const amounts = invoice.total_tax_amounts ?? invoice.total_taxes ?? [];
-  return amounts.reduce((total, entry) => total + entry.amount, 0);
+function invoiceTaxCents(invoice: z.infer<typeof invoiceObjectSchema>): number | null {
+  const amounts = invoice.total_tax_amounts ?? invoice.total_taxes;
+  return amounts ? amounts.reduce((total, entry) => total + entry.amount, 0) : null;
 }
 
 const accountObjectSchema = z.object({

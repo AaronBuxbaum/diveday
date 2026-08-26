@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, trips } from "@/db/schema";
-import { getShopBySlug } from "@/db/shops";
+import { getShopBySlug, setShopTaxEnabled } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import { seededTestDb } from "@/test/db";
-import { hiddenInputNamesIn } from "@/test/jsx-inspect";
+import { hiddenInputNamesIn, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 
 // Same mocking shape as ../page.test.tsx: the page is invoked directly,
@@ -64,7 +64,7 @@ async function shopThatCanBill() {
       roles: owner.roles,
     },
   });
-  return { bookingId: booking.id };
+  return { bookingId: booking.id, db, shop };
 }
 
 function renderWith(searchParams: Record<string, string> = {}) {
@@ -95,5 +95,27 @@ describe("the prefill ids", () => {
     await shopThatCanBill();
     // The blank order form a staffer can still use — never a thrown query.
     expect(hiddenInputNamesIn(await renderWith({ bookingId: "nope" }))).not.toContain("bookingId");
+  });
+});
+
+describe("the tax location form", () => {
+  it("keeps billing location fields off when tax is disabled", async () => {
+    await shopThatCanBill();
+    expect(inputNamesIn(await renderWith())).not.toContain("customerAddressLine1");
+  });
+
+  it("shows billing location fields when tax is enabled", async () => {
+    const { db, shop } = await shopThatCanBill();
+    await setShopTaxEnabled(db, shop.id, true);
+
+    const names = inputNamesIn(await renderWith());
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "customerAddressLine1",
+        "customerAddressCity",
+        "customerAddressPostalCode",
+        "customerAddressCountry",
+      ]),
+    );
   });
 });

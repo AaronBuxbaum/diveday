@@ -71,8 +71,9 @@ recording a choice, not building anything:
 
 - **H-07 remainder:** guidance values for deposits and cancellation windows (DiveDay ships no
   defaults — [deposit/cancellation ADR](../../architecture/decisions/20260721-deposit-cancellation-policy.md)),
-  tax treatment on trip payments, whether a platform fee ever exists, whether unpaid bookings
-  auto-expire, and percentage deposits (mechanism deferred by owner request).
+  accountant/legal confirmation of tax applicability, registrations, remittance, and the treatment
+  of deposits and fares, whether a platform fee ever exists, whether unpaid bookings auto-expire,
+  and percentage deposits (mechanism deferred by owner request).
 - **H-12 remainder:** billing cadence (monthly card on file is the obvious default), the
   invoice/receipt mechanism for DiveDay's own subscription (likely Stripe Billing on DiveDay's
   **own** account — a separate thing from Connect; if built, it needs an ADR and a roadmap

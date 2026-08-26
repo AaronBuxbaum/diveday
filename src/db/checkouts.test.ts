@@ -18,7 +18,7 @@ import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
-import { setShopCurrency } from "./shops";
+import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -194,6 +194,40 @@ describe("startBookingCheckout", () => {
     expect(seen.requests[0]?.lineItems[0]?.description).toBe(`FULL:${reef.title}`);
     // Snapshotted onto the row that is evidence of what the diver was asked for.
     expect(outcome.checkout.currency).toBe("eur");
+  });
+
+  it("waits for completed-session evidence before recording Checkout tax", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopTaxEnabled(db, shop.id, true);
+
+    // Stripe can return a provisional zero before the hosted Checkout has the
+    // customer's location. That value must not mask the positive amount on the
+    // completed-session webhook.
+    const inner = fakeCheckout();
+    const provider = fakeCheckout({
+      async createCheckoutSession(request) {
+        const session = await inner.createCheckoutSession(request);
+        return { ...session, taxAmountCents: 0 };
+      },
+    });
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.taxEnabled).toBe(true);
+    expect(outcome.checkout.taxCents).toBeNull();
+
+    const completed = await markCheckoutPaidBySessionId(
+      db,
+      outcome.checkout.stripeSessionId,
+      undefined,
+      REEF_PRICE_CENTS * 2 + 3_600,
+      3_600,
+    );
+    expect(completed?.taxCents).toBe(3_600);
   });
 
   it("labels a deposit through the caller's deposit branch", async () => {

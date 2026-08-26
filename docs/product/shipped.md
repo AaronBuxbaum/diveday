@@ -1352,8 +1352,10 @@ archived.
   account, degrading to staff-run everywhere else
   ([automated-cancellation-refund](../architecture/decisions/20260721-automated-cancellation-refund.md)).
 
-> The deposit/window **values**, percentage-vs-flat deposits, tax, and any platform fee remain
-> open policy — H-07 in [human-decisions.md](human-decisions.md).
+> The deposit/window **values**, percentage-vs-flat deposits, legal/accounting tax policy, and any
+> platform fee remain open policy — H-07 in [human-decisions.md](human-decisions.md). Stripe Tax
+> collection now ships as an opt-in, provider-owned mechanism; the connected-account setup and
+> legal/accounting obligations still require their named owners.
 
 ## Rental fit and trip prep (M5)
 

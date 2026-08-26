@@ -105,13 +105,42 @@ describe("stripe invoicing provider", () => {
       ok({ id: "in_taxed", status: "open", total: 24_200 }),
     ]);
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    const result = await provider.createInvoice({ ...request, taxEnabled: true });
+    const result = await provider.createInvoice({
+      ...request,
+      taxEnabled: true,
+      customerAddress: {
+        line1: "1 Harbor Way",
+        city: "Key West",
+        state: "FL",
+        postalCode: "33040",
+        country: "US",
+      },
+    });
 
     expect(result).toMatchObject({ status: "created", totalCents: 24_200, taxCents: 2_200 });
-    const itemForm = new URLSearchParams(fetchImpl.mock.calls[1][1].body);
-    expect(itemForm.get("tax_behavior")).toBe("exclusive");
+    const customerForm = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(customerForm.get("address[line1]")).toBe("1 Harbor Way");
+    expect(customerForm.get("address[city]")).toBe("Key West");
+    expect(customerForm.get("address[state]")).toBe("FL");
+    expect(customerForm.get("address[postal_code]")).toBe("33040");
+    expect(customerForm.get("address[country]")).toBe("US");
+    expect(customerForm.get("tax[validate_location]")).toBe("immediately");
+    const firstItemForm = new URLSearchParams(fetchImpl.mock.calls[1][1].body);
+    const secondItemForm = new URLSearchParams(fetchImpl.mock.calls[2][1].body);
+    expect(firstItemForm.get("tax_behavior")).toBe("exclusive");
+    expect(secondItemForm.get("tax_behavior")).toBe("exclusive");
     const invoiceForm = new URLSearchParams(fetchImpl.mock.calls[3][1].body);
     expect(invoiceForm.get("automatic_tax[enabled]")).toBe("true");
+  });
+
+  it("refuses tax-enabled invoices without a customer location before calling Stripe", async () => {
+    const fetchImpl = vi.fn();
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+
+    expect(await provider.createInvoice({ ...request, taxEnabled: true })).toEqual({
+      status: "failed",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("fails if any step in the chain is not ok", async () => {

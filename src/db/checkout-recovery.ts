@@ -257,6 +257,7 @@ export async function sendDueCheckoutRecoveries(
         checkout.stripeSessionId,
         undefined,
         lookup.session.amountTotalCents,
+        lookup.session.taxAmountCents,
       );
       summary.resolved += 1;
       continue;
