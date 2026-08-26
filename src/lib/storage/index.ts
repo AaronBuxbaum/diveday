@@ -6,13 +6,14 @@ import { processImage } from "./process-image";
 /**
  * The image-storage seam. Like the notification seam, the provider lives behind
  * one entry point so upload flows stay testable without real storage
- * credentials (ADR 20260718-card-image-storage). The stored value is a
- * provider-neutral durable URL, matching the `*_image_url` columns.
+ * credentials. The stored value is a provider-neutral durable URL, matching
+ * the `*_image_url` / `*_url` columns.
  *
- * Two callers, one seam: certification card photos, which are evidence, and
- * course page media, which is marketing. They share validation because the
- * bytes are the same problem; they keep separate key prefixes so a diver's card
- * never lands in the same namespace as a published brochure photo.
+ * Callers share validation because the bytes are the same problem (re-encoding,
+ * EXIF stripping, size caps); they keep separate key prefixes so public brochure
+ * photos, shop logos, diver recap memories, and imported archival scans never
+ * land in the same namespace. (Certification card uploads were retired in ADR
+ * 20260811-retire-the-digital-card.)
  */
 export type StoredImage =
   | { status: "stored"; url: string }
@@ -20,7 +21,7 @@ export type StoredImage =
   | { status: "failed" };
 
 export type ImageUpload = {
-  /** Stable-ish key prefix, e.g. "cards"; a random suffix keeps names unique. */
+  /** Stable-ish key prefix, e.g. "courses", "recap"; a random suffix keeps names unique. */
   keyPrefix: string;
   filename: string;
   contentType: string;
@@ -58,7 +59,7 @@ function safeName(filename: string): string {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-");
-  return cleaned.replace(/^-+|-+$/g, "").slice(0, 80) || "card";
+  return cleaned.replace(/^-+|-+$/g, "").slice(0, 80) || "image";
 }
 
 /** Every accepted upload is re-encoded to JPEG (`processImage`); keep the stored name honest. */
@@ -193,9 +194,9 @@ export async function deleteStoredImage(
 }
 
 /**
- * Store a photo for a course page. Same validation as a card, its own key
- * prefix, and the caller decides what an unconfigured provider means — the
- * course editor keeps the page and reports that the photo did not upload.
+ * Store a photo for a course page. Same validation as other images, its own
+ * "courses" key prefix, and the caller decides what an unconfigured provider
+ * means — the course editor keeps the page and reports that the photo did not upload.
  */
 export async function storeCourseImage(
   upload: Omit<ImageUpload, "keyPrefix">,
@@ -206,8 +207,8 @@ export async function storeCourseImage(
 
 /**
  * Store a diver's post-trip recap photo. Same validation as the others, its own
- * `recap` key prefix so diver snapshots never share a namespace with evidence
- * or brochure media; the caller keeps the recap page working whether or not a
+ * `recap` key prefix so diver snapshots never share a namespace with marketing
+ * or imported media; the caller keeps the recap page working whether or not a
  * provider is configured.
  */
 export async function storeRecapImage(
@@ -245,7 +246,7 @@ export async function storeShopLogoImage(
 /**
  * Store a contact-import waiver or medical document scan. Its own
  * `import-waivers` key prefix so imported evidence never shares a namespace with
- * a card, brochure, or diver's own recap photo. Only called from the
+ * a brochure, shop logo, or diver's own recap photo. Only called from the
  * server-side commit path (`src/db/import.ts`), on a URL a staff member pasted
  * into an import row — never rendered from that raw URL directly (ADR
  * 20260724-import-waiver-acceptance).
@@ -273,7 +274,7 @@ export async function storeImportWaiverDocument(
  * Store a receipt document supplied by a contact import. This follows the
  * exact same byte validation and re-storage path as imported waiver evidence,
  * but its `import-receipts` namespace keeps financial source documents out of
- * waiver, card, and public-media storage. The caller is server-side and never
+ * waiver and public-media storage. The caller is server-side and never
  * renders the source URL directly.
  */
 export async function storeImportReceiptDocument(

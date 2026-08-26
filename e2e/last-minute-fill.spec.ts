@@ -188,7 +188,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
     .locator("li")
     .filter({ hasText: "Tess Alvarez" })
     .filter({ visible: true });
-  await expect(recipient).toContainText("Open Water — unconfirmed");
+  await expect(recipient).toContainText("Open Water — unverified");
 
   // And the send is still offered: informing, never gating. A filter here would
   // quietly stop the blast reaching everyone the shop has never carded, which

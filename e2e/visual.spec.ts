@@ -2619,7 +2619,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await openDiverProfile(page, "Nadia", "Nadia Petrov", "NP");
-        await page.getByText("Not certified yet — unconfirmed").waitFor();
+        await page.getByText("Not certified yet — unverified").waitFor();
         await capture(page, "diver-profile-not-certified", scheme);
       });
 
@@ -2747,7 +2747,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        await page.getByText("Open Water — unconfirmed").waitFor();
+        await page.getByText("Open Water — unverified").waitFor();
         await capture(page, "trip-guests-deal-recipients", scheme);
       });
 
@@ -2825,7 +2825,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
-        await page.getByText(/Open Water — unconfirmed/).waitFor();
+        await page.getByText(/Open Water — unverified/).waitFor();
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
 

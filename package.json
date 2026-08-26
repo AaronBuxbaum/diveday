@@ -62,6 +62,7 @@
     "env:manual": "node scripts/env-manual.mjs",
     "check:env": "node scripts/check-env.mjs",
     "check:repo": "node scripts/check-repo.mjs",
+    "cost:report": "node scripts/cost-report.mjs",
     "check": "pnpm check:repo && pnpm check:critical-text && pnpm lint && pnpm typecheck && pnpm test",
     "gates": "node scripts/gate-freshness.mjs",
     "perf:budget": "node scripts/perf-budget.mjs",

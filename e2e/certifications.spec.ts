@@ -218,12 +218,12 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   await page.goto("/shop/blue-mantis/divers?q=Nadia");
   await page.getByRole("link", { name: /Nadia Petrov/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Nadia Petrov" })).toBeVisible();
-  await expect(page.getByText("Not certified yet — unconfirmed", { exact: true })).toBeVisible();
+  await expect(page.getByText("Not certified yet — unverified", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "They didn't tell us that" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Cleared. This diver's record no longer says anything about certification",
   );
-  await expect(page.getByText("Not certified yet — unconfirmed", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Not certified yet — unverified", { exact: true })).toHaveCount(0);
 });
 
 /*
