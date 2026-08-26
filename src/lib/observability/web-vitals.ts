@@ -72,6 +72,29 @@ export const webVitalsBeaconSchema = z.object({
 export type WebVitalsBeacon = z.infer<typeof webVitalsBeaconSchema>;
 
 /**
+ * A settled staff mutation, measured in the browser from the tap through the
+ * server action's response. It deliberately carries no URL or record id: the
+ * action name is a bounded enum-like label, and the duration is the only
+ * number the observability question needs.
+ */
+export const mutationDurationBeaconSchema = z.object({
+  mutations: z
+    .array(
+      z.object({
+        action: z
+          .string()
+          .trim()
+          .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+        durationMs: z.number().finite().nonnegative().max(600_000),
+      }),
+    )
+    .min(1)
+    .max(10),
+});
+
+export type MutationDurationBeacon = z.infer<typeof mutationDurationBeaconSchema>;
+
+/**
  * Longest route a log line will carry. A real one is a fraction of this; the
  * cap is for the caller who supplies something else.
  */
@@ -146,4 +169,16 @@ export function webVitalsLogContext(
     context[`${vital.field}Rating`] = ratingFor(metric.name, metric.value);
   }
   return context;
+}
+
+/** Structured fields for the client mutation-duration metric filter. */
+export function mutationDurationLogContext(
+  mutation: MutationDurationBeacon["mutations"][number],
+): Record<string, string | number> {
+  return {
+    action: mutation.action,
+    // Millisecond precision below a tenth is noise in a network round trip and
+    // makes a metric point harder to read without changing the p75 meaning.
+    durationMs: Math.round(mutation.durationMs * 10) / 10,
+  };
 }

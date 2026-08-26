@@ -115,7 +115,7 @@ export function WaitlistSection({
                       this is the fact that decides whether the invite is a good
                       idea, and it must not be the thing that scrolls off a
                       phone-width row behind an email address. */}
-                  {/* Warning-toned when any part of it is only the diver's word,
+                  {/* Warning-toned when any part of it is unverified,
                       matching the imported specialty card's "on file, gate still
                       shut" treatment. A muted parenthetical was the only thing
                       separating a claim from a card the shop holds, and it is

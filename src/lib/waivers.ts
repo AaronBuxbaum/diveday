@@ -55,14 +55,16 @@ function signatureTime(record: WaiverRecord): number {
 /**
  * Whether a completed release still stands for a booking. It must be a clean
  * completion (never one parked in medical review), signed against the shop's
- * current template version (a later edit is different terms the diver never
- * agreed to), and inside the validity window. Applied uniformly — to the
+ * current material generation (a later material edit is different terms the
+ * diver never agreed to), and inside the validity window. Display versions may
+ * advance for a non-material correction without invalidating a signature.
+ * Applied uniformly — to the
  * booking's own record and to any carried from another booking — so a signature
  * that is stale or against superseded terms is never treated as current, whoever
  * it was signed for. Fails closed on anything missing.
  *
  * An `imported` record (ADR 20260724-import-waiver-acceptance) is exempt from
- * the template-version check: it was never signed against any version of this
+ * the template-generation check: it was never signed against any version of this
  * shop's own template, only snapshotted against the current one for reference,
  * so comparing versions would always — and wrongly — read it as stale. Its
  * `signedAt` is the diver's real acceptance date at the prior shop, so the
@@ -70,15 +72,18 @@ function signatureTime(record: WaiverRecord): number {
  */
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
-  currentTemplateVersion: number | null,
+  currentTemplateGeneration: number | null,
   now: Date = nowDate(),
 ): boolean {
   if (record.status !== "completed") return false;
   if (record.supersededAt) return false;
   if (
     record.signatureMethod !== "imported" &&
-    currentTemplateVersion !== null &&
-    record.templateVersion !== currentTemplateVersion
+    currentTemplateGeneration !== null &&
+    // `templateGeneration` is present on every new record; the fallback keeps
+    // pre-generation rows (and imported fixtures) readable during the
+    // expand/contract migration, where version 1 was generation 1.
+    (record.templateGeneration ?? record.templateVersion) !== currentTemplateGeneration
   ) {
     return false;
   }

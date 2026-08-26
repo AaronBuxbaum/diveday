@@ -7,12 +7,18 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "@/db/closeout";
+import {
+  CloseoutAcknowledgementRequired,
+  closeDay,
+  getDayCloseout,
+  recordLeftoverDecision,
+} from "@/db/closeout";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   addCrewRecapPhoto,
@@ -44,6 +50,7 @@ import {
   type CloseoutAdminTaskStatus,
   type CloseoutDeparture,
   type LeftoverDecision,
+  shopDayOf,
 } from "@/lib/closeout";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -92,9 +99,18 @@ export default async function CloseOutPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ closed?: string; noted?: string; notice?: string }>;
+  searchParams: Promise<{
+    closed?: string;
+    noted?: string;
+    notice?: string;
+    decision?: string;
+    decisionState?: string;
+  }>;
 }) {
-  const [{ shopSlug }, { closed, noted, notice }] = await Promise.all([params, searchParams]);
+  const [{ shopSlug }, { closed, noted, notice, decision, decisionState }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -127,14 +143,6 @@ export default async function CloseOutPage({
     const actionShop = await getShopById(actionDb, staff.user.shopId);
     if (!actionShop) redirect(shopPath(staff.user.shopSlug));
     const actionLocale = await requestLocale(actionShop.defaultLocale);
-    // `Object.create(null)`: the keys are form-supplied action ids, and a
-    // prototype-shaped key ("__proto__") must land nowhere.
-    const decisions: Record<string, LeftoverDecision> = Object.create(null);
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith("decision:") && (value === "carry" || value === "dismiss")) {
-        decisions[key.slice("decision:".length)] = value;
-      }
-    }
     const closeOut = shopPath(staff.user.shopSlug, "close-out");
     try {
       await closeDay(actionDb, {
@@ -142,7 +150,10 @@ export default async function CloseOutPage({
         shopSlug: staff.user.shopSlug,
         timeZone: actionShop.timezone,
         actorPersonId: staff.user.personId,
-        decisions,
+        // Per-row choices are persisted as soon as they are tapped. Keeping
+        // this final form choice-free means a stale close tab cannot overwrite
+        // a newer carry/dismiss decision.
+        decisions: {},
         acknowledged: formData.get("acknowledge") === "on",
         t: staffTranslator(actionLocale),
         locale: actionLocale,
@@ -155,6 +166,33 @@ export default async function CloseOutPage({
       throw error;
     }
     revalidateAndRedirect(`${closeOut}?closed=1`);
+  }
+
+  /** Persist one row's choice immediately; Undo appends the inverse choice. */
+  async function setLeftoverDecisionAction(
+    actionId: string,
+    decisionToWrite: LeftoverDecision,
+    _formData: FormData,
+  ) {
+    "use server";
+    const staff = await requireStaffSession();
+    const actionDb = await getDb();
+    const actionShop = await getShopById(actionDb, staff.user.shopId);
+    if (!actionShop) redirect(shopPath(staff.user.shopSlug));
+    const decidedAt = nowDate();
+    await recordLeftoverDecision(actionDb, {
+      shopId: actionShop.id,
+      shopDay: shopDayOf(decidedAt, actionShop.timezone),
+      actionId,
+      decision: decisionToWrite,
+      actorPersonId: staff.user.personId,
+      decidedAt,
+    });
+    const closeOut = shopPath(staff.user.shopSlug, "close-out");
+    revalidateAndRedirect(
+      closeOut,
+      `${closeOut}?decision=${encodeURIComponent(actionId)}&decisionState=${decisionToWrite}`,
+    );
   }
 
   /**
@@ -388,10 +426,32 @@ export default async function CloseOutPage({
    */
   const quietDay =
     state.shape === "no_departures" && state.adminTasks.length === 0 && state.tomorrow.total === 0;
+  const decisionTarget =
+    decisionState === "carry" || decisionState === "dismiss"
+      ? state.leftovers.find((action) => action.id === decision)
+      : undefined;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["closed", "noted", "notice"]} />
+      <FlashParams params={["closed", "noted", "notice", "decision", "decisionState"]} />
+      {decisionTarget && decisionState ? (
+        <UndoToast
+          message={t(
+            decisionState === "dismiss"
+              ? "closeout.leftovers.savedDismissed"
+              : "closeout.leftovers.savedCarried",
+            { subject: decisionTarget.subject },
+          )}
+          action={setLeftoverDecisionAction.bind(
+            null,
+            decisionTarget.id,
+            decisionState === "dismiss" ? "carry" : "dismiss",
+          )}
+          fields={{}}
+          pendingLabel={t("closeout.leftovers.undoing")}
+          undoLabel={t("closeout.leftovers.undo")}
+        />
+      ) : null}
       <ShopPageHeader
         // The nav's own word, not a second copy of it — `closeout.title` said
         // "Close-out" beside `shared.shopNavLinks.closeOut` saying "Close-out",
@@ -782,18 +842,21 @@ export default async function CloseOutPage({
         </section>
       ) : null}
 
-      <form action={closeDayAction}>
-        {quietDay ? null : (
-          <section aria-labelledby="closeout-leftovers-heading" className="mb-10">
-            <h2 id="closeout-leftovers-heading" className="text-lg font-semibold">
-              {t("closeout.leftovers.heading")}
-            </h2>
-            <p className="mt-1 text-sm text-muted">{t("closeout.leftovers.subtitle")}</p>
-            {state.leftovers.length === 0 ? (
-              <EmptyState title={t("closeout.leftovers.empty")} className="mt-4" />
-            ) : (
-              <ul className="mt-4 flex flex-col gap-3">
-                {state.leftovers.map((action) => (
+      {quietDay ? null : (
+        <section aria-labelledby="closeout-leftovers-heading" className="mb-10">
+          <h2 id="closeout-leftovers-heading" className="text-lg font-semibold">
+            {t("closeout.leftovers.heading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{t("closeout.leftovers.subtitle")}</p>
+          {state.leftovers.length === 0 ? (
+            <EmptyState title={t("closeout.leftovers.empty")} className="mt-4" />
+          ) : (
+            <ul className="mt-4 flex flex-col gap-3">
+              {state.leftovers.map((action) => {
+                const currentDecision = state.leftoverDecisions[action.id] ?? "carry";
+                const nextDecision: LeftoverDecision =
+                  currentDecision === "dismiss" ? "carry" : "dismiss";
+                return (
                   <SectionCard as="li" key={action.id} className="list-none">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
                       <div className="min-w-0">
@@ -807,54 +870,57 @@ export default async function CloseOutPage({
                           ) : null}
                         </div>
                         <p className="mt-1.5 text-muted">{action.detail}</p>
+                        <p className="mt-2 text-sm text-muted">
+                          {t(
+                            currentDecision === "dismiss"
+                              ? "closeout.leftovers.currentDismissed"
+                              : "closeout.leftovers.currentCarried",
+                          )}
+                        </p>
                       </div>
-                      <fieldset
-                        className="flex shrink-0 items-center gap-4"
-                        aria-label={t("closeout.leftovers.decisionLabel", {
-                          subject: action.subject,
-                        })}
+                      <form
+                        action={setLeftoverDecisionAction.bind(null, action.id, nextDecision)}
+                        className="shrink-0"
                       >
-                        <label className="flex min-h-11 items-center gap-2 text-sm">
-                          <input
-                            type="radio"
-                            name={`decision:${action.id}`}
-                            value="carry"
-                            defaultChecked
-                            className="size-4 shrink-0"
-                          />
-                          {t("closeout.leftovers.carry")}
-                        </label>
-                        <label className="flex min-h-11 items-center gap-2 text-sm">
-                          <input
-                            type="radio"
-                            name={`decision:${action.id}`}
-                            value="dismiss"
-                            className="size-4 shrink-0"
-                          />
-                          {t("closeout.leftovers.dismiss")}
-                        </label>
-                      </fieldset>
+                        <SubmitButton
+                          pendingLabel={t("closeout.leftovers.saving")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                          observabilityAction="closeout-leftover-decision"
+                        >
+                          {t(
+                            nextDecision === "dismiss"
+                              ? "closeout.leftovers.dismiss"
+                              : "closeout.leftovers.carry",
+                          )}
+                        </SubmitButton>
+                      </form>
                     </div>
                   </SectionCard>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
-        {/* On a quiet day the button stands on its own. A card titled "Close
+      {/* On a quiet day the button stands on its own. A card titled "Close
             the day" wrapping a button labelled "Close the day" is §9's "don't
             say what the control already says" — tolerable as one panel among
             several on a working page, and the whole page when it is the only
             thing left. `mustAcknowledge` is empty by construction here: the
             shape this branch tests means the day had no departures at all. */}
-        {quietDay ? (
-          <div className="mb-10">
-            <SubmitButton pendingLabel={t("closeout.close.button")} className={buttonClass()}>
-              {latest ? t("closeout.close.buttonAgain") : t("closeout.close.button")}
-            </SubmitButton>
-          </div>
-        ) : (
+      {quietDay ? (
+        <form action={closeDayAction} className="mb-10">
+          <SubmitButton
+            pendingLabel={t("closeout.close.button")}
+            className={buttonClass()}
+            observabilityAction="close-out"
+          >
+            {latest ? t("closeout.close.buttonAgain") : t("closeout.close.button")}
+          </SubmitButton>
+        </form>
+      ) : (
+        <form action={closeDayAction}>
           <SectionCard
             className="mb-10"
             padding="lg"
@@ -875,13 +941,17 @@ export default async function CloseOutPage({
               </label>
             ) : null}
             <div className="mt-4">
-              <SubmitButton pendingLabel={t("closeout.close.button")} className={buttonClass()}>
+              <SubmitButton
+                pendingLabel={t("closeout.close.button")}
+                className={buttonClass()}
+                observabilityAction="close-out"
+              >
                 {latest ? t("closeout.close.buttonAgain") : t("closeout.close.button")}
               </SubmitButton>
             </div>
           </SectionCard>
-        )}
-      </form>
+        </form>
+      )}
 
       {/* Tomorrow is a *handoff*, not a second queue. This section used to
           re-render tomorrow's `TodayAction` rows with none of Today's inline

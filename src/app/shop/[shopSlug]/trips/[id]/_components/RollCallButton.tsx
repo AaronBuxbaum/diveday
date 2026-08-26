@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useActionState, useEffect, useSyncExternalStore } from "react";
+import { type ReactNode, useActionState, useEffect, useRef, useSyncExternalStore } from "react";
 import { vibrate } from "@/components/haptics";
 import { NOTE_DRAFT_CHANGE_EVENT, pendingNoteDraft } from "@/lib/roll-call-note-draft";
 
@@ -64,6 +64,7 @@ export function RollCallButton({
   formClassName,
   noteDraftFor,
   copy,
+  observabilityAction,
 }: {
   action: RollCallAction;
   /**
@@ -110,9 +111,32 @@ export function RollCallButton({
    */
   noteDraftFor?: { bookingId: string; checkpoint: string };
   copy: RollCallButtonCopy;
+  /** Stable action label used by the app-wide mutation-duration reporter. */
+  observabilityAction?: string;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
   const unsavedNote = useUnsavedNote(noteDraftFor);
+  const startedAt = useRef<number | null>(null);
+  const sawPending = useRef(false);
+
+  useEffect(() => {
+    if (isPending) {
+      sawPending.current = true;
+      if (startedAt.current === null) startedAt.current = performance.now();
+      return;
+    }
+    if (!sawPending.current || startedAt.current === null) return;
+    const durationMs = Math.max(0, performance.now() - startedAt.current);
+    startedAt.current = null;
+    sawPending.current = false;
+    const actionName = observabilityAction ?? "roll-call";
+    if (typeof window === "undefined" || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(actionName)) return;
+    window.dispatchEvent(
+      new CustomEvent("diveday:mutation-settled", {
+        detail: { action: actionName, durationMs },
+      }),
+    );
+  }, [isPending, observabilityAction]);
 
   useEffect(() => {
     if (result) {

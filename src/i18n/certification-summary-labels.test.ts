@@ -11,7 +11,7 @@ import { staffTranslator } from "./staff-messages";
  * **The phrase a staffer reads beside a name before they mail a discount.**
  *
  * Two facts ride in it and they are deliberately carried by two different
- * things: whether anybody has *seen* a card (a tone, plus the "diver's word"
+ * things: whether anybody has *seen* a card (a tone, plus the "unverified"
  * words) and whether this person is *under the departure's bar* (words only).
  * Collapsing either into the other is what these assertions exist to stop —
  * the warning tone means exactly one thing (ADR 20260814-self-declared-cards)
@@ -38,7 +38,7 @@ describe("certificationSummaryText", () => {
 
   it("marks a claim nobody has checked, in words", () => {
     expect(certificationSummaryText(t, summary({ levelSelfDeclared: true }), "en-US")).toBe(
-      "Open Water — unconfirmed",
+      "Open Water — unverified",
     );
   });
 
@@ -55,14 +55,14 @@ describe("certificationSummaryText", () => {
   it("tells a stated 'no card' apart from an unanswered question", () => {
     expect(
       certificationSummaryText(t, summary({ level: null, noCertificationDeclared: true }), "en-US"),
-    ).toBe("Not certified yet — unconfirmed");
+    ).toBe("Not certified yet — unverified");
     expect(
       certificationSummaryText(
         tEs,
         summary({ level: null, noCertificationDeclared: true }),
         "es-ES",
       ),
-    ).toBe("Todavía sin certificación — sin confirmar");
+    ).toBe("Todavía sin certificación — sin verificar");
   });
 
   /**
@@ -96,7 +96,7 @@ describe("certificationSummaryText", () => {
         }),
         "en-US",
       ),
-    ).toBe("Not certified yet — unconfirmed, Nitrox — unconfirmed");
+    ).toBe("Not certified yet — unverified, Nitrox — unverified");
   });
 });
 
@@ -112,7 +112,7 @@ describe("certificationSummaryBelowRequirementText", () => {
   it("keeps the self-declared mark alongside it rather than replacing it", () => {
     expect(
       certificationSummaryBelowRequirementText(t, summary({ levelSelfDeclared: true }), "en-US"),
-    ).toBe("Open Water — unconfirmed · below this departure's minimum");
+    ).toBe("Open Water — unverified · below this departure's minimum");
   });
 
   it("says it in Spanish too", () => {
@@ -129,19 +129,19 @@ describe("certificationSummaryUnchecked", () => {
     expect(certificationSummaryUnchecked(summary())).toBe(false);
   });
 
-  it("is true when any part of the phrase is only the diver's word", () => {
+  it("is true when any part of the phrase is unverified", () => {
     expect(certificationSummaryUnchecked(summary({ levelSelfDeclared: true }))).toBe(true);
     expect(certificationSummaryUnchecked(summary({ nitrox: true, nitroxSelfDeclared: true }))).toBe(
       true,
     );
-    // "Not certified yet" is the diver's word too — and the row a staffer most
+    // "Not certified yet" is unverified too — and the row a staffer most
     // needs to catch before a certified charter goes out to it.
     expect(
       certificationSummaryUnchecked(summary({ level: null, noCertificationDeclared: true })),
     ).toBe(true);
   });
 
-  it("stops being the diver's word once a card the shop holds is on file", () => {
+  it("stops being unverified once a card the shop holds is on file", () => {
     // The stamp survives (provenance is history) but the phrase draws the card,
     // so the tone must not go on colouring words nobody is reading.
     expect(certificationSummaryUnchecked(summary({ noCertificationDeclared: true }))).toBe(false);

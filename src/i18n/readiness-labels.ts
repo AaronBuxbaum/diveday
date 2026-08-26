@@ -104,7 +104,7 @@ export const DIVER_CERTIFICATION_LEVEL_KEYS: Record<CertificationLevel, DiverMes
  * - Nothing on file → *"Level not said"*. Stated, never a blank: a gap on a row
  *   reads as a rendering bug, and "we don't know" is the honest and common
  *   answer on a marketing opt-in that asks optionally.
- * - The diver said they hold no card → *"Not certified yet — diver's word"*.
+ * - The diver said they hold no card → *"Not certified yet — unverified"*.
  *   The shape that was missing until 2026-08-15, and the reason it mattered:
  *   an uncertified joiner had to pick "Rather not say", which rendered as the
  *   line above and is what a certified regular who skipped the question gets —
@@ -157,7 +157,7 @@ export function certificationSummaryUnchecked(summary: CertificationSummaryShape
   if (!summary) return false;
   return (
     (summary.level !== null && summary.levelSelfDeclared) ||
-    // "Not certified yet" is the diver's word too, and it is the row a staffer
+    // "Not certified yet" is unverified too, and it is the row a staffer
     // most needs to catch before a two-tank charter goes out to it. It only
     // reads that way while no level has landed beside it — the phrase below
     // draws the level instead once one has, and the tone must not contradict
@@ -271,7 +271,7 @@ export const DIVER_DIVE_RECENCY_KEYS: Record<DiveRecencyBand, DiverMessageKey> =
  * beside a name — shorter, because they sit in a line of other facts rather
  * than in a select the diver is choosing from.
  *
- * Always rendered as the diver's word, never as a fact the shop established.
+ * Always rendered as unverified, never as a fact the shop established.
  * Nothing verifies this and nothing ever will, so a surface that showed it
  * plainly would be claiming an authority it does not have — the same rule the
  * self-declared card mark exists for.

@@ -13,6 +13,11 @@
   "confirm": {
     "message": "{count, plural, one {Publicar esto anula la firma de # buceador: vuelve a firmar antes de su próxima inmersión.} other {Publicar esto anula las firmas de # buceadores: todos vuelven a firmar antes de su próxima inmersión.}}",
     "boardingSoon": "{count, plural, one {# de ellos embarca en los próximos {days} días.} other {# de ellos embarcan en los próximos {days} días.}}",
+    "materialTrigger": "Publicar: renovar firmas",
+    "materialPublish": "Publicar como material",
+    "nonMaterialTrigger": "Publicar corrección de texto",
+    "nonMaterialMessage": "Esta versión mantiene vigentes las firmas existentes. Elige esta opción solo si el cambio no altera lo que aceptó el buceador.",
+    "nonMaterialPublish": "Publicar como no material",
     "publish": "Publicar nueva versión",
     "cancel": "Déjalo"
   },

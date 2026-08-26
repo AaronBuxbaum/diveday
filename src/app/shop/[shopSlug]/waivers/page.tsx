@@ -91,6 +91,18 @@ export default async function WaiverTemplatesPage({
           ? "neutral"
           : "success";
 
+  const materialityMessage = [
+    t("waiversStaff.confirm.message", { count: atRisk.divers }),
+    atRisk.boardingSoon > 0
+      ? t("waiversStaff.confirm.boardingSoon", {
+          count: atRisk.boardingSoon,
+          days: OPERATIONAL_HORIZON_DAYS,
+        })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   const editForm = (
     <form action={saveWaiverAction} className="flex flex-col gap-5">
       <FieldGrid columns={1} className="gap-y-5">
@@ -113,31 +125,26 @@ export default async function WaiverTemplatesPage({
             invalidates all of them at once and the number goes in front of the
             staffer rather than in the notice afterwards. */}
         {atRisk.divers > 0 ? (
-          <InlineConfirm
-            triggerLabel={t("waiversStaff.saveNewVersion")}
-            triggerClassName={buttonClass({ size: "lg" })}
-            // Two sentences, because they answer different questions. The
-            // lifetime number says what publishing costs; the operational one
-            // says which boat it lands on — and a shop that must publish a
-            // legally revised release will publish it either way, so the
-            // second is the one that changes what they do next (issue #790).
-            message={[
-              t("waiversStaff.confirm.message", { count: atRisk.divers }),
-              atRisk.boardingSoon > 0
-                ? t("waiversStaff.confirm.boardingSoon", {
-                    count: atRisk.boardingSoon,
-                    // From the constant the query itself uses, so the sentence
-                    // cannot drift from the window it describes.
-                    days: OPERATIONAL_HORIZON_DAYS,
-                  })
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            confirmLabel={t("waiversStaff.confirm.publish")}
-            cancelLabel={t("waiversStaff.confirm.cancel")}
-            pendingLabel={t("waiversStaff.pendingLabel")}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <InlineConfirm
+              triggerLabel={t("waiversStaff.confirm.materialTrigger")}
+              triggerClassName={buttonClass({ size: "lg" })}
+              message={materialityMessage}
+              confirmLabel={t("waiversStaff.confirm.materialPublish")}
+              cancelLabel={t("waiversStaff.confirm.cancel")}
+              pendingLabel={t("waiversStaff.pendingLabel")}
+              confirmFields={{ material: "material" }}
+            />
+            <InlineConfirm
+              triggerLabel={t("waiversStaff.confirm.nonMaterialTrigger")}
+              triggerClassName={buttonClass({ variant: "secondary", size: "lg" })}
+              message={t("waiversStaff.confirm.nonMaterialMessage")}
+              confirmLabel={t("waiversStaff.confirm.nonMaterialPublish")}
+              cancelLabel={t("waiversStaff.confirm.cancel")}
+              pendingLabel={t("waiversStaff.pendingLabel")}
+              confirmFields={{ material: "non-material" }}
+            />
+          </div>
         ) : (
           <SubmitButton
             pendingLabel={t("waiversStaff.pendingLabel")}

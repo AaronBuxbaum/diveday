@@ -630,7 +630,7 @@ describe("recordSelfDeclaredCards", () => {
      * write against.** A `dive-domain-expert` review found the two disagreeing:
      * the writer was refuted by all three card tables, the reader only by a
      * level — so a diver whose shop holds a verified *nitrox* card and no level
-     * card read as "Not certified yet — diver's word, Nitrox", warning-toned,
+     * card read as "Not certified yet — unverified, Nitrox", warning-toned,
      * and was lifted to the top of the send list. Nobody holds enriched air
      * without a level behind it; that is a sentence no instructor would write.
      */

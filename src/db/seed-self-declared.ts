@@ -12,7 +12,7 @@ import { recordSelfDeclaredCards } from "./self-declared-cards";
  * blue-mantis's last-minute list rendered *"Level not said"* — the one branch of
  * `certificationSummaryText` that carries no mark and no tone — so the warning
  * treatment, the "· below this departure's minimum" words and "Not certified yet
- * — diver's word" had only ever been rendered in jsdom. That is the exact shape
+ * — unverified" had only ever been rendered in jsdom. That is the exact shape
  * of a feature that ships inert: green unit tests over a safeguard nobody has
  * ever seen at a real width, in either theme.
  *

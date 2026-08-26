@@ -284,6 +284,7 @@ export async function seedBookings(
         templateId: waiverTemplate.id,
         templateTitle: waiverTemplate.title,
         templateVersion: waiverTemplate.version,
+        templateGeneration: waiverTemplate.materialGeneration,
         templateBody: waiverTemplate.body,
         // Never a real bearer token (nobody is meant to sign these seeded
         // links), but unique per shop row so a fleet of minted demo shops

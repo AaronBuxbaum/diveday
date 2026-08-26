@@ -41,9 +41,16 @@ export async function saveWaiverAction(formData: FormData) {
   const atRisk = await standingWaiverExposure(editor, staff.user.shopId);
   // No title: this form has no field for one, so a save cannot mean "rename"
   // and `saveWaiverTemplate` carries the shop's own forward.
+  const materialValue = formData.get("material");
+  if (atRisk.divers > 0 && materialValue !== "material" && materialValue !== "non-material") {
+    revalidateAndRedirect(waivers, noticeUrl(waivers, "invalid"));
+  }
+  const isMaterial = materialValue !== "non-material";
   const { versioned } = await saveWaiverTemplate(editor, {
     shopId: staff.user.shopId,
     body: parsed.data.body,
+    material: isMaterial,
+    actorPersonId: staff.user.personId,
   });
   if (!versioned) {
     // Nothing was written, so "Saved" would be a lie in the one direction that
@@ -52,7 +59,7 @@ export async function saveWaiverAction(formData: FormData) {
   }
   revalidateAndRedirect(
     waivers,
-    atRisk.divers > 0
+    atRisk.divers > 0 && isMaterial
       ? noticeUrl(waivers, "waiver-resigning", { count: atRisk.divers })
       : noticeUrl(waivers, "saved"),
   );

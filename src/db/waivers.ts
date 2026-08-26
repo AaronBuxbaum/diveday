@@ -42,6 +42,7 @@ import {
   trips,
   waiverDeliveries,
   type waiverDeliveryChannel,
+  waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -62,6 +63,10 @@ export type SaveWaiverTemplateInput = {
    */
   title?: string;
   body: string;
+  /** Explicit human answer for an edit that may affect existing signatures. */
+  material?: boolean;
+  /** Staff member who made the materiality assertion. Required by the UI path. */
+  actorPersonId?: string;
 };
 
 /**
@@ -323,12 +328,34 @@ export async function saveWaiverTemplate(
     if (current && current.title === title && current.body === body) {
       return { template: current, versioned: false };
     }
+    const material = input.material ?? true;
     const nextVersion = (current?.version ?? 0) + 1;
+    const materialGeneration = current ? current.materialGeneration + (material ? 1 : 0) : 1;
     const [template] = await tx
       .insert(waiverTemplates)
-      .values({ shopId: input.shopId, title, body, version: nextVersion })
+      .values({
+        shopId: input.shopId,
+        title,
+        body,
+        version: nextVersion,
+        materialGeneration,
+      })
       .returning();
     if (!template) throw new Error("saveWaiverTemplate: insert returned no row");
+    if (input.actorPersonId) {
+      const [actor] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+        .limit(1);
+      if (!actor) throw new Error("waiver materiality actor is not a person of this shop");
+      await tx.insert(waiverMaterialityDecisions).values({
+        shopId: input.shopId,
+        templateId: template.id,
+        material,
+        actorPersonId: input.actorPersonId,
+      });
+    }
     return { template, versioned: true };
   });
 }
@@ -397,7 +424,10 @@ export async function standingWaiverExposure(
   now: Date = nowDate(),
 ): Promise<StandingWaiverExposure> {
   const [current] = await db
-    .select({ version: waiverTemplates.version })
+    .select({
+      version: waiverTemplates.version,
+      materialGeneration: waiverTemplates.materialGeneration,
+    })
     .from(waiverTemplates)
     // Same reader shape as `saveWaiverTemplate` above, and for the same reason:
     // a count against a version readiness does not consider current is a
@@ -473,7 +503,7 @@ export async function standingWaiverExposure(
         // *not* imported and does apply the version check. These two exist to
         // agree; a bare `ne` is where they stop.
         or(isNull(waiverRecords.signatureMethod), ne(waiverRecords.signatureMethod, "imported")),
-        eq(waiverRecords.templateVersion, current.version),
+        eq(waiverRecords.templateGeneration, current.materialGeneration),
         // `signedAt ?? completedAt`, the same fallback `isCompletedWaiverCurrent`
         // applies, resolved in SQL so this stays one counting query.
         gt(sql`coalesce(${waiverRecords.signedAt}, ${waiverRecords.completedAt})`, signedAfter),
@@ -603,7 +633,7 @@ export async function issueWaiverRequest(
       : current.some(
           (record) =>
             record.status === "medical_review" ||
-            isCompletedWaiverCurrent(record, template.version, now),
+            isCompletedWaiverCurrent(record, template.materialGeneration, now),
         );
     if (alreadyStanding) {
       return { ok: false, reason: "already_completed" };
@@ -618,6 +648,7 @@ export async function issueWaiverRequest(
             record.expiresAt > now &&
             record.templateId === template.id &&
             record.templateVersion === template.version &&
+            record.templateGeneration === template.materialGeneration &&
             record.tokenSealed,
         )
       : undefined;
@@ -667,6 +698,7 @@ export async function issueWaiverRequest(
         templateId: template.id,
         templateTitle: template.title,
         templateVersion: template.version,
+        templateGeneration: template.materialGeneration,
         templateBody: template.body,
         tokenHash,
         tokenSealed: sealingKey ? sealSecret(token, sealingKey) : null,
@@ -1486,7 +1518,7 @@ async function standingWaiverRecord(
     shopId: string;
     bookingId: string | null;
     personId: string;
-    templateVersion: number;
+    templateGeneration: number;
     now: Date;
   },
 ) {
@@ -1512,7 +1544,7 @@ async function standingWaiverRecord(
   return held.find(
     (record) =>
       record.status === "medical_review" ||
-      isCompletedWaiverCurrent(record, input.templateVersion, input.now),
+      isCompletedWaiverCurrent(record, input.templateGeneration, input.now),
   );
 }
 
@@ -1592,7 +1624,7 @@ export async function recordInPersonWaiver(
       shopId: input.shopId,
       bookingId: signer.bookingId,
       personId: signer.personId,
-      templateVersion: template.version,
+      templateGeneration: template.materialGeneration,
       now,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
@@ -1631,6 +1663,7 @@ export async function recordInPersonWaiver(
         templateId: template.id,
         templateTitle: template.title,
         templateVersion: template.version,
+        templateGeneration: template.materialGeneration,
         templateBody: template.body,
         status: "completed",
         // No link is ever handed out for a paper record; a random unusable hash

@@ -37,6 +37,7 @@ import {
   buddyPairMembers,
   certificationLevel,
   certifications,
+  closeoutLeftoverDecisions,
   courseInquiries,
   courses,
   divePackageEntitlements,
@@ -84,6 +85,7 @@ import {
   trips,
   tripWaitlistEntries,
   userAccounts,
+  waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -525,6 +527,12 @@ export async function loadShopExportBundleInput(
         .where(eq(waiverTemplates.shopId, shopId))
         .orderBy(asc(waiverTemplates.title), asc(waiverTemplates.version));
 
+      const waiverMaterialityRows = await tx
+        .select()
+        .from(waiverMaterialityDecisions)
+        .where(eq(waiverMaterialityDecisions.shopId, shopId))
+        .orderBy(asc(waiverMaterialityDecisions.seq));
+
       const waiverRows = await tx
         .select()
         .from(waiverRecords)
@@ -565,6 +573,12 @@ export async function loadShopExportBundleInput(
           asc(gearReservations.createdAt),
           asc(gearReservations.id),
         );
+
+      const closeoutLeftoverDecisionRows = await tx
+        .select()
+        .from(closeoutLeftoverDecisions)
+        .where(eq(closeoutLeftoverDecisions.shopId, shopId))
+        .orderBy(asc(closeoutLeftoverDecisions.seq));
 
       const checklistItemRows = await tx
         .select()
@@ -622,7 +636,7 @@ export async function loadShopExportBundleInput(
       /**
        * **People a card the shop actually holds refutes** — the same three-table
        * test `listCertificationSummaries` applies before it will render "Not
-       * certified yet — diver's word", restated here rather than called because
+       * certified yet — unverified", restated here rather than called because
        * that reader takes an `inArray` of person ids and a long-lived shop's
        * lifetime roster would blow PostgreSQL's bind-parameter limit (the same
        * reason `personRoles` above is joined rather than filtered by id list).
@@ -1782,16 +1796,49 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "waiver_templates.csv",
-          header: ["id", "title", "version", "deleted_at", "created_at", "body"],
+          header: [
+            "id",
+            "title",
+            "version",
+            "material_generation",
+            "deleted_at",
+            "created_at",
+            "body",
+          ],
           rows: templateRows.map((row) => [
             row.id,
             row.title,
             row.version,
+            row.materialGeneration,
             row.deletedAt,
             row.createdAt,
             row.body,
           ]),
           note: EXPORT_FILE_NOTES["waiver_templates.csv"],
+        },
+        {
+          file: "waiver_materiality_decisions.csv",
+          header: [
+            "id",
+            "template_id",
+            "template_title",
+            "material",
+            "actor_person_id",
+            "actor_name",
+            "decided_at",
+            "seq",
+          ],
+          rows: waiverMaterialityRows.map((row) => [
+            row.id,
+            row.templateId,
+            templateRows.find((template) => template.id === row.templateId)?.title,
+            row.material,
+            row.actorPersonId,
+            personName.get(row.actorPersonId),
+            row.decidedAt,
+            row.seq,
+          ]),
+          note: EXPORT_FILE_NOTES["waiver_materiality_decisions.csv"],
         },
         {
           file: "waiver_records.csv",
@@ -1803,6 +1850,7 @@ export async function loadShopExportBundleInput(
             "template_id",
             "template_title",
             "template_version",
+            "template_generation",
             "status",
             "signed_name",
             "signature_method",
@@ -1837,6 +1885,7 @@ export async function loadShopExportBundleInput(
             row.templateId,
             row.templateTitle,
             row.templateVersion,
+            row.templateGeneration,
             row.status,
             row.signedName,
             row.signatureMethod,
@@ -1981,6 +2030,7 @@ export async function loadShopExportBundleInput(
             "gear_item_id",
             "gear_item_label",
             "booking_id",
+            "person_id",
             "person_name",
             "reserved_from",
             "reserved_until",
@@ -1990,13 +2040,15 @@ export async function loadShopExportBundleInput(
             "created_at",
           ],
           rows: gearReservationRows.map((row) => {
-            const personId = bookingPerson.get(row.bookingId);
+            const holderPersonId =
+              row.personId ?? (row.bookingId ? (bookingPerson.get(row.bookingId) ?? null) : null);
             return [
               row.id,
               row.gearItemId,
               gearItemLabel.get(row.gearItemId),
               row.bookingId,
-              personId ? personName.get(personId) : null,
+              row.personId,
+              holderPersonId ? personName.get(holderPersonId) : null,
               row.reservedFrom,
               row.reservedUntil,
               row.checkedOutAt,
@@ -2006,6 +2058,30 @@ export async function loadShopExportBundleInput(
             ];
           }),
           note: EXPORT_FILE_NOTES["gear_reservations.csv"],
+        },
+        {
+          file: "closeout_leftover_decisions.csv",
+          header: [
+            "id",
+            "shop_day",
+            "action_id",
+            "decision",
+            "actor_person_id",
+            "actor_name",
+            "decided_at",
+            "seq",
+          ],
+          rows: closeoutLeftoverDecisionRows.map((row) => [
+            row.id,
+            row.shopDay,
+            row.actionId,
+            row.decision,
+            row.actorPersonId,
+            personName.get(row.actorPersonId),
+            row.decidedAt,
+            row.seq,
+          ]),
+          note: EXPORT_FILE_NOTES["closeout_leftover_decisions.csv"],
         },
         {
           file: "pre_departure_checklist_items.csv",
@@ -3135,22 +3211,23 @@ export async function loadDiverExportBundleInput(
         .from(rentalFitProfiles)
         .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
 
-      const gearReservationRows = bookingIds.length
-        ? await tx
-            .select()
-            .from(gearReservations)
-            .where(
-              and(
-                eq(gearReservations.shopId, shopId),
-                inArray(gearReservations.bookingId, bookingIds),
-              ),
-            )
-            .orderBy(
-              asc(gearReservations.reservedFrom),
-              asc(gearReservations.createdAt),
-              asc(gearReservations.id),
-            )
-        : [];
+      const gearReservationRows = await tx
+        .select()
+        .from(gearReservations)
+        .where(
+          and(
+            eq(gearReservations.shopId, shopId),
+            or(
+              bookingIds.length ? inArray(gearReservations.bookingId, bookingIds) : undefined,
+              eq(gearReservations.personId, personId),
+            ),
+          ),
+        )
+        .orderBy(
+          asc(gearReservations.reservedFrom),
+          asc(gearReservations.createdAt),
+          asc(gearReservations.id),
+        );
       const gearItemIds = [...new Set(gearReservationRows.map((row) => row.gearItemId))];
       const gearItemRows = gearItemIds.length
         ? await tx
@@ -3628,6 +3705,7 @@ export async function loadDiverExportBundleInput(
             "id",
             "gear_item_label",
             "booking_id",
+            "person_id",
             "reserved_from",
             "reserved_until",
             "checked_out_at",
@@ -3638,6 +3716,7 @@ export async function loadDiverExportBundleInput(
             row.id,
             gearItemLabel.get(row.gearItemId),
             row.bookingId,
+            row.personId,
             row.reservedFrom,
             row.reservedUntil,
             row.checkedOutAt,
@@ -4043,6 +4122,12 @@ export async function loadShopExportCounts(
     "waiver_templates.csv": await countOf(
       db.select({ n: count() }).from(waiverTemplates).where(eq(waiverTemplates.shopId, shopId)),
     ),
+    "waiver_materiality_decisions.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(waiverMaterialityDecisions)
+        .where(eq(waiverMaterialityDecisions.shopId, shopId)),
+    ),
     "waiver_records.csv": await countOf(
       db.select({ n: count() }).from(waiverRecords).where(eq(waiverRecords.shopId, shopId)),
     ),
@@ -4057,6 +4142,12 @@ export async function loadShopExportCounts(
     ),
     "gear_reservations.csv": await countOf(
       db.select({ n: count() }).from(gearReservations).where(eq(gearReservations.shopId, shopId)),
+    ),
+    "closeout_leftover_decisions.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(closeoutLeftoverDecisions)
+        .where(eq(closeoutLeftoverDecisions.shopId, shopId)),
     ),
     "pre_departure_checklist_items.csv": await countOf(
       db

@@ -612,16 +612,16 @@ export default async function OrdersIndexPage({
                   <Td align="middle">
                     <RowLink
                       href={`/shop/${shopSlug}/orders/${row.order.id}`}
-                      className="font-medium text-foreground hover:text-primary hover:underline"
+                      className="text-base font-medium text-foreground hover:text-primary hover:underline sm:text-sm"
                     >
                       {row.person.fullName}
                     </RowLink>
-                    <div className="text-xs text-muted sm:hidden">
+                    <div className="text-base text-muted sm:hidden">
                       {row.trip?.title ?? row.order.description ?? ""}
                     </div>
                     {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
                   </Td>
-                  <Td muted hideBelow="sm" align="middle">
+                  <Td muted hideBelow="sm" align="middle" className="text-base sm:text-sm">
                     {row.trip?.title ?? row.order.description ?? "—"}
                   </Td>
                   {/* Settled rows leave the cell empty — "Paid" on 45 of 50
@@ -633,7 +633,7 @@ export default async function OrdersIndexPage({
                   <Td muted align="middle" className="whitespace-nowrap tabular-nums">
                     {formatShortDate(row.order.createdAt, locale, shop.timezone)}
                   </Td>
-                  <Td numeric align="middle">
+                  <Td numeric align="middle" className="text-base sm:text-sm">
                     {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
                   </Td>
                 </Tr>
@@ -679,19 +679,21 @@ export default async function OrdersIndexPage({
                     <Td align="middle">
                       <RowLink
                         href={`/shop/${shopSlug}/divers/${person.id}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
+                        className="text-base font-medium text-foreground hover:text-primary hover:underline sm:text-sm"
                       >
                         {person.fullName}
                       </RowLink>
                       <div className="mt-1 sm:hidden">
                         <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
                       </div>
-                      <div className="mt-1 text-xs text-muted sm:hidden">
+                      <div className="mt-1 text-base text-muted sm:hidden">
                         {history.title ?? history.sourceReference ?? "—"}
                       </div>
                     </Td>
                     <Td muted hideBelow="sm" align="middle">
-                      <div>{history.title ?? history.sourceReference ?? "—"}</div>
+                      <div className="text-base sm:text-sm">
+                        {history.title ?? history.sourceReference ?? "—"}
+                      </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                         <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
                         {history.sourceLabel ? <span>{history.sourceLabel}</span> : null}
@@ -730,7 +732,7 @@ export default async function OrdersIndexPage({
                     <Td muted align="middle" className="whitespace-nowrap tabular-nums">
                       {formatCalendarDate(history.occurredOn, locale)}
                     </Td>
-                    <Td numeric align="middle">
+                    <Td numeric align="middle" className="text-base sm:text-sm">
                       {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
                     </Td>
                   </Tr>

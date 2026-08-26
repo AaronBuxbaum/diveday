@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { languageEndonym, languageNameIn, localeEndonym } from "./language-labels";
+import {
+  languageEndonym,
+  languageEndonymList,
+  languageNameIn,
+  localeEndonym,
+} from "./language-labels";
 import { unsupportedLanguage } from "./negotiate";
 import { DIVER_LOCALES } from "./settings";
 
@@ -38,6 +43,12 @@ describe("languageNameIn", () => {
 
   it("answers null rather than echoing an unnamed code", () => {
     expect(languageNameIn("qtz", "en-US")).toBeNull();
+  });
+});
+
+describe("languageEndonymList", () => {
+  it("deduplicates endonyms and drops a tag the runtime cannot name", () => {
+    expect(languageEndonymList(["es", "ja", "es", "qtz"])).toEqual(["español", "日本語"]);
   });
 });
 

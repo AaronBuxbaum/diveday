@@ -153,9 +153,6 @@ export async function bookSpot(
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   const ip = await clientIp();
-  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
-    return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
-  }
 
   const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
   if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
@@ -284,7 +281,25 @@ export async function bookSpot(
     return parsed.success ? toDiveDeclaration(parsed.data) : null;
   });
 
-  // **The narrow net, beside the per-IP one taken at the top.** A completed
+  // One POST is one batched declaration write. Charge the IP bucket once for
+  // every declaration the transaction may persist, so a six-person party
+  // consumes six units rather than getting six writes for the price of one.
+  // A declaration-free booking still costs one unit, preserving the existing
+  // protection for repeated empty submissions. The loop is intentionally
+  // sequential: each `checkRateLimit` call is an atomic token-bucket take,
+  // and stopping on the first refusal avoids starting the database write.
+  const declarationCount = declaredByIndex.reduce(
+    (count, declaration) => count + (declarationFor(declaration) ? 1 : 0),
+    0,
+  );
+  const bookingCost = Math.max(1, declarationCount);
+  for (let unit = 0; unit < bookingCost; unit++) {
+    if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
+      return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
+    }
+  }
+
+  // **The narrow net, beside the count-scaled per-IP one above.** A completed
   // booking writes each diver's answer onto that diver's record, and
   // `RATE_LIMITS.booking` is keyed by IP — which on its own lets anyone who
   // knows a name and an email address spray claims onto that person's record

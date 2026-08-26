@@ -104,11 +104,18 @@
   },
   "leftovers": {
     "heading": "Today's leftovers",
-    "subtitle": "Open work from today. Carry it into tomorrow or dismiss it — the close-out remembers either choice.",
+    "subtitle": "Open work from today. It carries into tomorrow unless you dismiss it here.",
     "empty": "Nothing is left over from today.",
     "carry": "Carry to tomorrow",
     "dismiss": "Dismiss",
-    "decisionLabel": "What to do with {subject}"
+    "decisionLabel": "What to do with {subject}",
+    "currentCarried": "This will carry into tomorrow.",
+    "currentDismissed": "Dismissed for this close-out; it will still resurface if it remains open.",
+    "savedCarried": "{subject} will carry into tomorrow.",
+    "savedDismissed": "{subject} dismissed for this close-out.",
+    "saving": "Saving…",
+    "undo": "Undo",
+    "undoing": "Undoing…"
   },
   "tomorrow": {
     "heading": "Tomorrow, at a glance",

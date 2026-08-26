@@ -58,7 +58,13 @@ export async function seedMoreTrips(
     instructorId: string;
     captainId: string | undefined;
     divemasterId: string | undefined;
-    waiverTemplate: { id: string; title: string; version: number; body: string };
+    waiverTemplate: {
+      id: string;
+      title: string;
+      version: number;
+      materialGeneration: number;
+      body: string;
+    };
   },
 ): Promise<void> {
   const { customers, siteByName, courseRows, instructorId, captainId, divemasterId } = ctx;
@@ -667,6 +673,7 @@ export async function seedMoreTrips(
       templateId: ctx.waiverTemplate.id,
       templateTitle: ctx.waiverTemplate.title,
       templateVersion: ctx.waiverTemplate.version,
+      templateGeneration: ctx.waiverTemplate.materialGeneration,
       templateBody: ctx.waiverTemplate.body,
       tokenHash: `seed-extra-waiver-${shopId}-${extraWaiverToken}`,
       // Comfortably past the furthest trip seeded here (day 56).

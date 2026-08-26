@@ -988,7 +988,8 @@ async function listOpenReservations(
     .select({
       gearItemId: gearReservations.gearItemId,
       reservationId: gearReservations.id,
-      bookingId: gearReservations.bookingId,
+      // This reader is intentionally booking-only; the inner join is the shape guard, and `bookings.id` keeps that fact non-null in the type.
+      bookingId: bookings.id,
       reservedFrom: gearReservations.reservedFrom,
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
@@ -1179,7 +1180,8 @@ async function listItemReservationHistory(
   const rows = await db
     .select({
       reservationId: gearReservations.id,
-      bookingId: gearReservations.bookingId,
+      // A unit's historical booking row, not a future counter-rental reader.
+      bookingId: bookings.id,
       reservedFrom: gearReservations.reservedFrom,
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
@@ -1306,7 +1308,8 @@ export async function listTripGearAssignments(
   const rows = await db
     .select({
       reservationId: gearReservations.id,
-      bookingId: gearReservations.bookingId,
+      // This is the departure roster's booking-only view.
+      bookingId: bookings.id,
       kind: gearItems.kind,
       label: gearItems.label,
       size: gearItems.size,

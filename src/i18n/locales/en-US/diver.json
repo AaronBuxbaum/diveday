@@ -207,6 +207,7 @@
     "siteFitUnknownLabel": "Ask the crew about fit",
     "siteFitUnknownDetail": "The crew adapts the route to the group and the day.",
     "backToAllTrips": "All trips",
+    "languagesAboard": "Languages aboard: {languages}",
     "specialties": {
       "deep": "Deep",
       "wreck": "Wreck",

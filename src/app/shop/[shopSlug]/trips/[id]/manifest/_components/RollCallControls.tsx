@@ -259,6 +259,7 @@ export function RollCallControls({
           formClassName={AFFIRMATIVE_FORM_CLASS}
           noteDraftFor={noteDraftFor}
           copy={copy}
+          observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
         />
       ) : null}
       {/* The exception control. Most people board, so while nothing has been
@@ -330,6 +331,7 @@ export function RollCallControls({
         }
         formClassName={showBoardControl ? EXCEPTION_FORM_CLASS_PAIRED : EXCEPTION_FORM_CLASS_ALONE}
         copy={copy}
+        observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
       />
       {/* One row state still says how to take it back, and only one.
           Everywhere else the settled control speaks for itself: a button

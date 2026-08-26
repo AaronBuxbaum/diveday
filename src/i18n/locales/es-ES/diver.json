@@ -207,6 +207,7 @@
     "siteFitUnknownLabel": "Consulta a la tripulación",
     "siteFitUnknownDetail": "La tripulación adapta la ruta al grupo y al día.",
     "backToAllTrips": "Todas las salidas",
+    "languagesAboard": "Idiomas a bordo: {languages}",
     "specialties": {
       "deep": "Profundidad",
       "wreck": "Naufragios",

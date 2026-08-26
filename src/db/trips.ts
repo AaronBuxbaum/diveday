@@ -80,6 +80,7 @@ export {
   type TripConditionsPatch,
   type TripPatch,
   type TripSitePeek,
+  tripCrewSpokenLanguages,
   type UpdateTripOutcome,
   updateTrip,
   updateTripConditions,

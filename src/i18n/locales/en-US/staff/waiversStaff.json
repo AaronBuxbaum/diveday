@@ -13,6 +13,11 @@
   "confirm": {
     "message": "{count, plural, one {Publishing this voids the signature of # diver — they sign again before their next dive.} other {Publishing this voids the signatures of # divers — every one of them signs again before their next dive.}}",
     "boardingSoon": "{count, plural, one {# of them boards in the next {days} days.} other {# of them board in the next {days} days.}}",
+    "materialTrigger": "Publish — signatures need renewing",
+    "materialPublish": "Publish as material",
+    "nonMaterialTrigger": "Publish wording correction",
+    "nonMaterialMessage": "This version will keep existing signatures standing. Choose this only when the change does not alter what a diver agreed to.",
+    "nonMaterialPublish": "Publish as non-material",
     "publish": "Publish new version",
     "cancel": "Never mind"
   },

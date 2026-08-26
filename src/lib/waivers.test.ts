@@ -63,6 +63,7 @@ function completedWaiver(overrides: Partial<WaiverRecord> = {}): WaiverRecord {
     personId: "person-1",
     status: "completed",
     templateVersion: 1,
+    templateGeneration: 1,
     signedAt,
     completedAt: signedAt,
     supersededAt: null,
@@ -193,7 +194,11 @@ describe("effective waiver (sign once per diver)", () => {
   });
 
   it("does not carry a stale or wrong-version release — the booking still needs one", () => {
-    const staleVersion = completedWaiver({ templateVersion: 0, bookingId: "other" });
+    const staleVersion = completedWaiver({
+      templateVersion: 0,
+      templateGeneration: 0,
+      bookingId: "other",
+    });
     expect(effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] }))).toBeNull();
     // Falls through to not_sent, so staff are prompted to send a fresh link.
     expect(
@@ -279,7 +284,11 @@ describe("effective waiver (sign once per diver)", () => {
     });
     expect(effectiveWaiverForBooking(args({ bookingWaiver: staleOwn }))).toBeNull();
 
-    const oldVersionOwn = completedWaiver({ id: "own-v0", templateVersion: 0 });
+    const oldVersionOwn = completedWaiver({
+      id: "own-v0",
+      templateVersion: 0,
+      templateGeneration: 0,
+    });
     expect(effectiveWaiverForBooking(args({ bookingWaiver: oldVersionOwn }))).toBeNull();
 
     // A current own signature still stands.

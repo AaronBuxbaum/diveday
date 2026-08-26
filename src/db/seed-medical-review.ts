@@ -21,7 +21,13 @@ const DEMO_MEDICAL_REVIEW_EMAIL = "medical-review-demo@demo.invalid";
 export async function seedMedicalReview(
   db: DbExecutor,
   shopId: string,
-  waiverTemplate: { id: string; title: string; version: number; body: string },
+  waiverTemplate: {
+    id: string;
+    title: string;
+    version: number;
+    materialGeneration: number;
+    body: string;
+  },
   tripRows: (typeof trips.$inferSelect)[],
   /** The staffer this diver's card was checked by — see `reviewedBy`. */
   reviewerId: string,
@@ -103,6 +109,7 @@ export async function seedMedicalReview(
     templateId: waiverTemplate.id,
     templateTitle: waiverTemplate.title,
     templateVersion: waiverTemplate.version,
+    templateGeneration: waiverTemplate.materialGeneration,
     templateBody: waiverTemplate.body,
     status: "medical_review",
     tokenHash,

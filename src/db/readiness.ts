@@ -512,7 +512,7 @@ export async function issueShopCertification(
 
 /**
  * **What a staffer is looking at**, when the row they are verifying is only a
- * diver's word so far.
+ * unverified so far.
  *
  * Every other pending card got here because a staffer already held something
  * and typed its number, so one tap ("Mark certified") is the whole review. A
@@ -1216,7 +1216,7 @@ export async function listTripsReadiness(
           () => listSignedWaiversByPerson(db, shopId, personIds),
         ]);
 
-  const currentTemplateVersion = currentTemplate?.version ?? null;
+  const currentTemplateGeneration = currentTemplate?.materialGeneration ?? null;
 
   const certificationsByPerson = new Map<string, typeof certificationRows>();
   for (const certification of certificationRows) {
@@ -1250,7 +1250,7 @@ export async function listTripsReadiness(
     const effectiveWaiver = effectiveWaiverForBooking({
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
-      currentTemplateVersion,
+      currentTemplateVersion: currentTemplateGeneration,
       now,
     });
 

@@ -691,14 +691,14 @@
     "medicalReview": "Medical review"
   },
   "certificationSummary": {
-    "selfDeclared": "{value} — unconfirmed",
+    "selfDeclared": "{value} — unverified",
     "levelNotSaid": "Level not said",
-    "notCertified": "Not certified yet — unconfirmed",
+    "notCertified": "Not certified yet — unverified",
     "nitrox": "Nitrox",
     "belowRequirement": "{value} · below this departure's minimum"
   },
   "diveRecency": {
-    "lastDived": "Last dived {when} — diver’s word",
+    "lastDived": "Last dived {when} — unverified",
     "thisSeason": "this season",
     "withinAYear": "within the last year",
     "oneToFiveYears": "one to five years ago",

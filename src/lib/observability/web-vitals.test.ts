@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  mutationDurationBeaconSchema,
+  mutationDurationLogContext,
   normalizeBeaconPath,
   ratingFor,
   WEB_VITAL_NAMES,
@@ -185,5 +187,33 @@ describe("webVitalsLogContext", () => {
     expect(parse({ url: "/x", metrics: [{ name: "LCP", value: 10 }] })).not.toHaveProperty(
       "navigationType",
     );
+  });
+});
+
+describe("mutationDurationBeaconSchema", () => {
+  it("accepts bounded action duration samples and rounds the log value", () => {
+    const parsed = mutationDurationBeaconSchema.parse({
+      mutations: [{ action: "roll-call", durationMs: 120.26 }],
+    });
+    const mutation = parsed.mutations[0];
+    expect(mutation).toBeDefined();
+    if (!mutation) throw new Error("expected one mutation");
+    expect(mutationDurationLogContext(mutation)).toEqual({
+      action: "roll-call",
+      durationMs: 120.3,
+    });
+  });
+
+  it("rejects unbounded or identifying action labels", () => {
+    expect(
+      mutationDurationBeaconSchema.safeParse({
+        mutations: [{ action: "roll call", durationMs: 10 }],
+      }).success,
+    ).toBe(false);
+    expect(
+      mutationDurationBeaconSchema.safeParse({
+        mutations: [{ action: "x", durationMs: 700_000 }],
+      }).success,
+    ).toBe(false);
   });
 });

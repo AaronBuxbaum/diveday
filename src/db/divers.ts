@@ -850,7 +850,7 @@ export async function getDiverProfile(
      */
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(personId) ?? [],
-      currentTemplateVersion: waiverTemplate?.version ?? null,
+      currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
     }),
     waiverRequest,
     /**

@@ -424,7 +424,7 @@ async function recordNoCertification(
  *
  * Those forms resolve a person by shop + email, so for a diver the shop holds
  * no card for, anybody holding a name and an email address off any manifest can
- * mark them *"Not certified yet — diver's word"* on the send lists and in every
+ * mark them *"Not certified yet — unverified"* on the send lists and in every
  * CSV the shop exports from then on. Until this existed the only thing that
  * cleared it was owner-only erasure of the whole record.
  *
@@ -624,7 +624,7 @@ export type CertificationSummary = {
    * applies: any live card that is not itself a still-unsighted claim — a
    * level, a nitrox card, or a specialty — supersedes it. A reader that
    * suppressed the stamp on a *level* alone would put "Not certified yet —
-   * diver's word" beside a verified nitrox card, which is a sentence no
+   * unverified" beside a verified nitrox card, which is a sentence no
    * instructor would write and which the writer's own guard already refuses to
    * create (found in the 2026-08-15 `dive-domain-expert` review).
    *
@@ -776,7 +776,7 @@ export async function listCertificationSummaries(
   // The stamp is *ignored*, never deleted — and this is where ignoring happens,
   // on the same test the writer refuses to write against. Without it a diver
   // whose shop holds a verified nitrox card, or a Deep card, and no level card
-  // reads as "Not certified yet — diver's word", warning-toned, and is lifted
+  // reads as "Not certified yet — unverified", warning-toned, and is lifted
   // to the top of the send list over the departure's real risks.
   for (const id of carded) {
     const current = summaries.get(id);

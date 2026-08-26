@@ -30,6 +30,8 @@ import {
   filterPatternFor,
   LOG_SIGNALS,
   METRIC_NAMESPACE,
+  MUTATION_DURATION_SIGNAL,
+  mutationDurationFilterPattern,
   queryConstructIdFor,
   SAVED_LOG_QUERIES,
   WEB_VITAL_SIGNALS,
@@ -1275,6 +1277,19 @@ exports.handler = async (event) => {
       return metric.with({ label: signal.title });
     });
 
+    const mutationDurationFilter = new logs.MetricFilter(this, "MutationDurationFilter", {
+      logGroup: appLogGroup,
+      metricNamespace: METRIC_NAMESPACE,
+      metricName: MUTATION_DURATION_SIGNAL.metricName,
+      filterPattern: logs.FilterPattern.literal(mutationDurationFilterPattern()),
+      metricValue: `$.${MUTATION_DURATION_SIGNAL.field}`,
+      dimensions: { Action: "$.action" },
+    });
+    const mutationDurationMetric = mutationDurationFilter.metric({
+      statistic: "p75",
+      period: cdk.Duration.hours(1),
+    });
+
     // Amazon CloudWatch RUM: the session, geography, and device context the
     // metrics above cannot answer. The browser reaches it through a Cognito
     // identity pool, because `PutRumEvents` has to be callable by a visitor who
@@ -1401,6 +1416,12 @@ exports.handler = async (event) => {
         width: 12,
         height: 6,
       }),
+      new cloudwatch.GraphWidget({
+        title: MUTATION_DURATION_SIGNAL.title,
+        left: [mutationDurationMetric],
+        width: 24,
+        height: 6,
+      }),
     );
     observabilityDashboard.addWidgets(
       new cloudwatch.LogQueryWidget({
@@ -1412,6 +1433,19 @@ exports.handler = async (event) => {
           "stats pct(lcp, 75) as lcpP75, count(*) as views by route",
           "sort lcpP75 desc",
           "limit 20",
+        ],
+        width: 24,
+        height: 9,
+      }),
+      new cloudwatch.LogQueryWidget({
+        title: "Slowest mutations (p75)",
+        logGroupNames: [APP_LOG_GROUP_NAME],
+        queryLines: [
+          "fields @timestamp, action, durationMs",
+          '| filter event = "mutation_duration.reported" and ispresent(durationMs)',
+          "stats pct(durationMs, 75) as durationP75, count(*) as mutations by action",
+          "sort durationP75 desc",
+          "limit 40",
         ],
         width: 24,
         height: 9,

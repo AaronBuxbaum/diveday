@@ -53,11 +53,13 @@ const EXPECTED_FILES = [
   "roll_call_crew_events.csv",
   "buddy_pairs.csv",
   "waiver_templates.csv",
+  "waiver_materiality_decisions.csv",
   "waiver_records.csv",
   "rental_fit.csv",
   "gear_items.csv",
   "gear_service_events.csv",
   "gear_reservations.csv",
+  "closeout_leftover_decisions.csv",
   "pre_departure_checklist_items.csv",
   "pre_departure_check_events.csv",
   "prior_visits.csv",
@@ -119,11 +121,13 @@ const EXPORTED_TABLES = [
   "roll_call_crew_events",
   "buddy_pair_members",
   "waiver_templates",
+  "waiver_materiality_decisions",
   "waiver_records",
   "rental_fit_profiles",
   "gear_items",
   "gear_service_events",
   "gear_reservations",
+  "closeout_leftover_decisions",
   "pre_departure_checklist_items",
   "pre_departure_check_events",
   "prior_visits",
@@ -316,6 +320,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // which are both exported.
   buddy_pair_members: ["shop_id", "id"],
   waiver_templates: ["shop_id"],
+  waiver_materiality_decisions: ["shop_id"],
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
@@ -368,6 +373,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   gear_items: ["shop_id"],
   gear_service_events: ["shop_id"],
   gear_reservations: ["shop_id"],
+  closeout_leftover_decisions: ["shop_id"],
   pre_departure_checklist_items: ["shop_id"],
   pre_departure_check_events: ["shop_id"],
   prior_visits: [

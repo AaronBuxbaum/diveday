@@ -15,6 +15,7 @@ const record = {
   templateId: "00000000-0000-4000-8000-000000000004",
   templateTitle: "Release",
   templateVersion: 1,
+  templateGeneration: 1,
   templateBody: "I agree",
   status: "completed" as const,
   deliveryStatus: null,

@@ -17,6 +17,7 @@ import {
   shops,
   trips,
   userAccounts,
+  waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -1347,6 +1348,8 @@ describe("saving the waiver template", () => {
 
   async function signedContext() {
     const { db, shop, booking, person, template } = await waiverContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     await completeWaiver(db, issued.token, {
@@ -1354,7 +1357,7 @@ describe("saving the waiver template", () => {
       agreed: true,
       medicalAnswers: clearAnswers,
     });
-    return { db, shop, template };
+    return { db, shop, template, staff };
   }
 
   // The demo shop is not a toy fixture here: it carries ~170 signed releases on
@@ -1401,6 +1404,44 @@ describe("saving the waiver template", () => {
 
     expect(result.versioned).toBe(true);
     expect(result.template.version).toBe(template.version + 1);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(0);
+  });
+
+  it("keeps signatures current for an explicit non-material correction and records the actor", async () => {
+    const { db, shop, template, staff } = await signedContext();
+    const standing = (await standingWaiverExposure(db, shop.id, now)).divers;
+    expect(standing).toBeGreaterThan(0);
+    const result = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "A typo-fixed release that keeps the same promises and is long enough to publish.",
+      material: false,
+      actorPersonId: staff.person.id,
+    });
+    expect(result.template.version).toBe(template.version + 1);
+    expect(result.template.materialGeneration).toBe(template.materialGeneration);
+    expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(standing);
+    const [decision] = await db
+      .select()
+      .from(waiverMaterialityDecisions)
+      .where(eq(waiverMaterialityDecisions.templateId, result.template.id));
+    expect(decision).toMatchObject({
+      shopId: shop.id,
+      material: false,
+      actorPersonId: staff.person.id,
+    });
+  });
+
+  it("advances the material generation for an explicit material revision", async () => {
+    const { db, shop, template, staff } = await signedContext();
+    const result = await saveWaiverTemplate(db, {
+      shopId: shop.id,
+      title: template.title,
+      body: "A materially revised release with a changed promise that is long enough to publish.",
+      material: true,
+      actorPersonId: staff.person.id,
+    });
+    expect(result.template.materialGeneration).toBe(template.materialGeneration + 1);
     expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(0);
   });
 

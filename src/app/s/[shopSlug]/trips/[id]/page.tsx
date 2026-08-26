@@ -20,8 +20,10 @@ import {
   getWaitlistEntryForTrip,
   listTripDives,
   listTripScheduleDays,
+  tripCrewSpokenLanguages,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { languageEndonymList } from "@/i18n/language-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -32,6 +34,7 @@ import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import {
   fetchAutomatedMarineForecast,
   hasCrewPrediction,
@@ -175,12 +178,13 @@ export default async function TripDetailPage({
       manageHref={`/shop/${shopSlug}/trips/${tripId}`}
     />
   ) : null;
-  const [trip, tripDives, meetingDays] = await Promise.all([
+  const [trip, tripDives, meetingDays, crewLanguages] = await Promise.all([
     getTripWithBooked(db, shop.id, tripId),
     listTripDives(db, shop.id, tripId),
     // Shop-scoped by the query's own join on `trips.shop_id`, like every other
     // read on this page. A departure always has at least one of these rows.
     listTripScheduleDays(db, shop.id, tripId),
+    tripCrewSpokenLanguages(db, shop.id, tripId),
   ]);
   if (!trip) notFound();
   // A cancelled trip gets its own soft landing (task 13) rather than the same
@@ -216,6 +220,11 @@ export default async function TripDetailPage({
       </DiverIntlProvider>
     );
   }
+  const crewLanguageNames = languageEndonymList(crewLanguages);
+  const crewLanguagesLine =
+    crewLanguageNames.length === 0
+      ? null
+      : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
   const crewPrediction = hasCrewPrediction(trip);
   const forecastPoint =
     trip.diveSite &&
@@ -421,6 +430,11 @@ export default async function TripDetailPage({
         )}
 
         <TripHeader shop={shop} trip={trip} meetingDays={meetingDays} locale={locale} />
+        {crewLanguagesLine ? (
+          <p className="mt-3 text-sm text-muted">
+            {t("trip.languagesAboard", { languages: crewLanguagesLine })}
+          </p>
+        ) : null}
         {/* The one warning panel this page ever wears — the same shape as the
             conditions-changed panel below, on purpose. Two amber boxes with
             different radii and border weights read as two different systems
