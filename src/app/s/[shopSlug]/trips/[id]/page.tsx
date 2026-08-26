@@ -283,10 +283,13 @@ export default async function TripDetailPage({
   // Pay-at-booking is offered only when the shop's own Stripe account can
   // take a charge, the trip carries a price, and a canonical origin exists
   // for the return links; otherwise the flow is book-now-pay-later as before.
+  const passThroughFee = parsePassThroughFee(shop.passThroughFee);
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
-  const stripeAccount = perDiverPriceCents ? await getShopStripeAccount(db, shop.id) : null;
+  const payablePerDiverCents =
+    perDiverPriceCents === null ? null : perDiverPriceCents + (passThroughFee?.amountCents ?? 0);
+  const stripeAccount = payablePerDiverCents ? await getShopStripeAccount(db, shop.id) : null;
   const payAtBooking = Boolean(
-    perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
+    payablePerDiverCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
   // **What this trip asks of anybody**, read for every visitor rather than only
   // for a diver who already holds a seat. `requirement` used to be fetched
@@ -543,7 +546,7 @@ export default async function TripDetailPage({
             contactPhone={shop.contactPhone}
             rentalItems={shop.rentalItems}
             rentalPricing={shop.rentalPricing}
-            passThroughFee={parsePassThroughFee(shop.passThroughFee)}
+            passThroughFee={passThroughFee}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         )}

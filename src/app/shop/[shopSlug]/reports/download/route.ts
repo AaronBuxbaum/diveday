@@ -63,6 +63,10 @@ export async function GET(request: Request) {
     ["Metric", "This month"],
     [
       ["Net revenue", formatReportMoney(report.revenueCents, currency, shop.defaultLocale)],
+      [
+        "Pass-through collected",
+        formatReportMoney(report.passThroughCents ?? 0, currency, shop.defaultLocale),
+      ],
       ["Tax collected", formatReportMoney(report.taxCents, currency, shop.defaultLocale)],
       ["Tips", formatReportMoney(report.tipsCents, currency, shop.defaultLocale)],
       ["Bookings", report.seatsBooked],

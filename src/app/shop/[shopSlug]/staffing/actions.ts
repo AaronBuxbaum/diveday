@@ -11,6 +11,7 @@ import {
   reviewStaffCredential,
 } from "@/db/staff-credentials";
 import { createStaffShift, deleteStaffShift } from "@/db/staffing";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -38,8 +39,8 @@ const credentialSchema = z.object({
   name: z.string().trim().min(1).max(160),
   issuingBody: z.string().trim().max(160),
   identifier: z.string().trim().max(120),
-  issuedAt: z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),
-  renewsAt: z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),
+  issuedAt: z.string().refine((value) => value === "" || isValidCalendarDate(value)),
+  renewsAt: z.string().refine((value) => value === "" || isValidCalendarDate(value)),
 });
 
 async function requireStaffingManager() {

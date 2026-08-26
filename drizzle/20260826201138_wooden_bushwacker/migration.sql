@@ -66,10 +66,8 @@ CREATE TABLE "staff_credentials" (
 --> statement-breakpoint
 ALTER TABLE "booking_checkout_bookings" ADD COLUMN "pass_through_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "booking_checkouts" ADD COLUMN "pass_through_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "dive_sites" ADD COLUMN "conservation_note" text;--> statement-breakpoint
 ALTER TABLE "orders" ADD COLUMN "pass_through_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "shops" ADD COLUMN "pass_through_fee" jsonb DEFAULT 'null';--> statement-breakpoint
-ALTER TABLE "shops" ADD COLUMN "conservation_commitments" jsonb DEFAULT '[]' NOT NULL;--> statement-breakpoint
 CREATE INDEX "account_step_ups_session_purpose_idx" ON "account_step_ups" ("account_session_id","purpose","expires_at");--> statement-breakpoint
 CREATE INDEX "account_step_ups_account_expires_idx" ON "account_step_ups" ("user_account_id","expires_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "executed_dives_trip_number_live_unique" ON "executed_dives" ("trip_id","dive_number") WHERE "deleted_at" is null;--> statement-breakpoint

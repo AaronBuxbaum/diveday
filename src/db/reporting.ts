@@ -217,11 +217,16 @@ export async function getMonthlyReport(
       * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
+  const recoveredPassThroughCents = sql<string>`coalesce(sum(round(
+    ${bookingCheckoutBookings.passThroughCents}
+      * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
+      / nullif(${bookingCheckouts.totalCents}, 0)
+  )), 0)`;
   const [recoveredDeposits] = await db
     .select({
       total: recoveredDepositCents,
       tax: sum(bookingCheckoutBookings.taxCents),
-      passThrough: sum(bookingCheckoutBookings.passThroughCents),
+      passThrough: recoveredPassThroughCents,
     })
     .from(bookingCheckouts)
     .innerJoin(
@@ -351,11 +356,11 @@ export async function getMonthlyReport(
 
   // A paid staff invoice normally mirrors its collected total into
   // `booking_payments`, so the revenue query above deliberately excludes it.
-  // Its tax still belongs in the separate tax line, matched by providerRef so
-  // an unrelated manual payment on the same booking cannot subtract tax that
-  // was not part of the amount being reported.
-  const [invoiceBookingTax] = await db
-    .select({ total: sum(orders.taxCents) })
+  // Its tax and pass-through allocation still belong in separate report lines,
+  // matched by providerRef so an unrelated manual payment on the same booking
+  // cannot subtract amounts that were not part of the invoice being reported.
+  const [invoiceBookingAmounts] = await db
+    .select({ total: sum(orders.taxCents), passThrough: sum(orders.passThroughCents) })
     .from(orders)
     .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -445,12 +450,13 @@ export async function getMonthlyReport(
   const passThroughCents =
     Number(currentPassThrough?.total ?? 0) +
     Number(recoveredDeposits?.passThrough ?? 0) +
-    Number(invoiceRevenue?.passThrough ?? 0);
+    Number(invoiceRevenue?.passThrough ?? 0) +
+    Number(invoiceBookingAmounts?.passThrough ?? 0);
   const taxCents =
     Number(currentCheckoutTax?.total ?? 0) +
     Number(recoveredDeposits?.tax ?? 0) +
     Number(invoiceRevenue?.tax ?? 0) +
-    Number(invoiceBookingTax?.total ?? 0);
+    Number(invoiceBookingAmounts?.total ?? 0);
   const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
   const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
 

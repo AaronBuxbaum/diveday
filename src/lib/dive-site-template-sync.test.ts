@@ -18,6 +18,7 @@ const source = {
   currentNote: "Usually gentle.",
   divePlan: "Follow the ridge.",
   fitTone: "welcoming" as const,
+  conservationNote: "Use mooring buoys.",
   landmarks: [{ name: "The ridge", kind: "reefFormation" as const, note: "Turn here." }],
   creatureSlugs: ["blue-tang"],
 };
@@ -44,6 +45,7 @@ describe("dive-site template sync", () => {
     const merged = mergedDiveSiteTemplateSnapshot(current, baseline, latest, "preserve-shop-edits");
     expect(merged.description).toBe("Our local briefing.");
     expect(merged.divePlan).toBe("Follow the ridge, then return along the sand.");
+    expect(merged.conservationNote).toBe("Use mooring buoys.");
   });
 
   it("can intentionally replace template-managed copy", () => {

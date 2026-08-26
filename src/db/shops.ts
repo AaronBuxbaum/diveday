@@ -1,6 +1,6 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { ConservationCommitment } from "@/lib/conservation";
+import type { ConservationCommitmentCode } from "@/lib/conservation-commitments";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
@@ -113,7 +113,7 @@ export async function setShopPassThroughFee(
 export async function setShopConservationCommitments(
   db: AppDb,
   shopId: string,
-  conservationCommitments: ConservationCommitment[],
+  conservationCommitments: ConservationCommitmentCode[],
 ) {
   const [shop] = await db
     .update(shops)

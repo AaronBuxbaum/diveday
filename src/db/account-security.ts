@@ -101,11 +101,15 @@ export async function verifyAccountSecondFactor(
   }
 
   const recoveryHash = recoveryCodeHashes([code.trim().toUpperCase()])[0];
-  const remaining = security.recoveryCodeHashes.filter((hash) => hash !== recoveryHash);
-  if (remaining.length === security.recoveryCodeHashes.length) return false;
   const [row] = await db
     .update(accountSecurity)
-    .set({ recoveryCodeHashes: remaining, updatedAt: nowDate() })
+    .set({
+      // Delete from the value currently held by the row, rather than writing
+      // the array read above. Two simultaneous uses of one recovery code can
+      // therefore not write stale snapshots over one another.
+      recoveryCodeHashes: sql`${accountSecurity.recoveryCodeHashes} - ${recoveryHash}`,
+      updatedAt: nowDate(),
+    })
     .where(
       and(
         eq(accountSecurity.userAccountId, userAccountId),

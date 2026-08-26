@@ -166,6 +166,9 @@ export function PublicShopFooter({
               <p className="font-medium text-foreground">
                 {t("shopChrome.conservationCommitmentsHeading")}
               </p>
+              <p className="mt-1 text-xs text-muted">
+                {t("shopChrome.conservationCommitmentsDisclaimer")}
+              </p>
               <ul className="mt-1 list-inside list-disc">
                 {commitments.map((commitment) => (
                   <li key={commitment}>{t(commitmentKeys[commitment])}</li>

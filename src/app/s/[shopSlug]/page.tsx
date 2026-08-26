@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { submitInquiryAction } from "@/app/actions/inquiry";
+import { ConservationCommitmentBadge } from "@/components/ConservationCommitmentBadge";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
@@ -11,7 +12,7 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { type AppDb, getDb } from "@/db/client";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
@@ -30,6 +31,7 @@ import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
+import { isConservationCommitmentCode } from "@/lib/conservation-commitments";
 import {
   formatDayParts,
   formatMoneyScanned,
@@ -370,6 +372,24 @@ export default async function SchedulePage({
           </div>
         </header>
       )}
+
+      {shop.conservationCommitments && shop.conservationCommitments.length > 0 && !isEmbed ? (
+        <SectionCard aria-label={t("conservation.commitmentsHeading")} className="mb-8">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+            <h2 className="text-sm font-semibold tracking-wide text-foreground">
+              {t("conservation.commitmentsHeading")}
+            </h2>
+            <p className="text-xs text-muted">{t("conservation.shopClaimsDisclaimer")}</p>
+          </div>
+          <div className="mt-3.5 flex flex-wrap gap-2.5">
+            {shop.conservationCommitments.map((code) => {
+              if (!isConservationCommitmentCode(code)) return null;
+              return <ConservationCommitmentBadge key={code} code={code} t={t} />;
+            })}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {/* **The timezone sentence moved to the footer**, it did not go. It is
           the same list of times and a remote booker misreading them is the
           same mistake wherever it is framed — but as the *opening line* of a

@@ -431,6 +431,7 @@ export function SiteFields({
             rows={3}
             maxLength={600}
             defaultValue={values?.conservationNote ?? ""}
+            placeholder={t("diveSites.form.conservationNotePlaceholder")}
             className={controlClass}
           />
         </Field>

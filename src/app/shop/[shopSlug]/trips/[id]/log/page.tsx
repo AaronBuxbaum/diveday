@@ -424,8 +424,12 @@ export default async function IncidentExportPage({
                   </Th>
                   <Td>{dive.actualSiteName ?? t("incidentExport.notOnFile")}</Td>
                   <Td>
-                    {dive.enteredAt && dive.exitedAt
-                      ? `${dateTime(dive.enteredAt)} – ${dateTime(dive.exitedAt)}`
+                    {dive.enteredAt
+                      ? dateTime(dive.enteredAt)
+                      : t("incidentExport.executedDiveTimesMissing")}{" "}
+                    –{" "}
+                    {dive.exitedAt
+                      ? dateTime(dive.exitedAt)
                       : t("incidentExport.executedDiveTimesMissing")}
                   </Td>
                   <Td>

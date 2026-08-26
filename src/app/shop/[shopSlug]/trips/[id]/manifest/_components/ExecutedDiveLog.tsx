@@ -1,3 +1,4 @@
+import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { ExecutedDive } from "@/db/schema";
@@ -15,6 +16,7 @@ function dateTimeValue(value: Date | null, timeZone: string) {
 
 export function ExecutedDiveLog({
   planned,
+  liveDiveSites,
   executed,
   action,
   t,
@@ -23,6 +25,7 @@ export function ExecutedDiveLog({
   checkpoint,
 }: {
   planned: ReadonlyArray<{ diveNumber: number; diveSite: { id: string; name: string } | null }>;
+  liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
   executed: ReadonlyArray<{
     executed: ExecutedDive;
     actualSite: { id: string; name: string } | null;
@@ -47,7 +50,10 @@ export function ExecutedDiveLog({
           .filter(({ diveNumber }) => diveNumber === activeDiveNumber)
           .map(({ diveNumber, diveSite }) => {
             const row = byNumber.get(diveNumber);
-            const executedSite = row?.actualSite ?? diveSite;
+            // A saved null means staff explicitly recorded that the actual
+            // site was unknown; only a missing row gets the planned-site
+            // default.
+            const executedSite = row ? row.actualSite : diveSite;
             return (
               <form
                 key={diveNumber}
@@ -71,13 +77,11 @@ export function ExecutedDiveLog({
                       className={controlClass}
                     >
                       <option value="">{t("manifest.executedDive.unknown")}</option>
-                      {planned
-                        .filter((item) => item.diveSite)
-                        .map((item) => (
-                          <option key={item.diveSite?.id} value={item.diveSite?.id}>
-                            {item.diveSite?.name}
-                          </option>
-                        ))}
+                      {liveDiveSites.map((site) => (
+                        <option key={site.id} value={site.id}>
+                          {site.name}
+                        </option>
+                      ))}
                     </select>
                   </Field>
                   <Field
@@ -140,10 +144,7 @@ export function ExecutedDiveLog({
                   />
                   {t("manifest.executedDive.notRecordedDepth")}
                 </label>
-                <button
-                  type="submit"
-                  className="mt-4 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-                >
+                <button type="submit" className={buttonClass({ size: "sm", className: "mt-4" })}>
                   {t("manifest.executedDive.save")}
                 </button>
               </form>

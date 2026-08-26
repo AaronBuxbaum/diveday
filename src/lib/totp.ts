@@ -61,5 +61,5 @@ export function recoveryCodeHashes(codes: readonly string[]): string[] {
 }
 
 export function generateRecoveryCodes(count = 10): string[] {
-  return Array.from({ length: count }, () => base32Encode(randomBytes(5)).slice(0, 10));
+  return Array.from({ length: count }, () => base32Encode(randomBytes(7)).slice(0, 10));
 }

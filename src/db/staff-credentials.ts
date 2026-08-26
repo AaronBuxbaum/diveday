@@ -1,7 +1,8 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { people, staffCredentials } from "./schema";
+import { people, personRoles, staffCredentials } from "./schema";
 
 export async function listStaffCredentials(db: DbExecutor, shopId: string) {
   return db
@@ -34,8 +35,14 @@ export async function createStaffCredential(
   const [person] = await db
     .select({ id: people.id })
     .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
-      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
+      and(
+        eq(people.id, input.personId),
+        eq(people.shopId, input.shopId),
+        isNull(people.deletedAt),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
     )
     .limit(1);
   if (!person || (input.renewsAt && input.issuedAt && input.renewsAt < input.issuedAt)) return null;

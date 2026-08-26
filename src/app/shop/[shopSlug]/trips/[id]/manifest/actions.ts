@@ -138,8 +138,9 @@ export async function saveExecutedDiveAction(ctx: ManifestActionContext, formDat
   const exitedAt = dateOrNull(parsed.data.exitedAt);
   if (parsed.data.enteredAt && !enteredAt) return;
   if (parsed.data.exitedAt && !exitedAt) return;
+  const notRecorded = formData.getAll("notRecorded").map(String);
   const maxDepthMeters =
-    parsed.data.maxDepthMeters === ""
+    notRecorded.includes("depth") || parsed.data.maxDepthMeters === ""
       ? null
       : depthToMeters(parsed.data.maxDepthMeters, shop.depthUnit);
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) return;
@@ -155,7 +156,7 @@ export async function saveExecutedDiveAction(ctx: ManifestActionContext, formDat
       visibility: parsed.data.visibility || null,
       current: parsed.data.current || null,
     },
-    notRecorded: formData.getAll("notRecorded").map(String),
+    notRecorded,
     recordedByPersonId: staff.user.personId,
   });
   if (saved) revalidatePath(manifestPath(ctx));

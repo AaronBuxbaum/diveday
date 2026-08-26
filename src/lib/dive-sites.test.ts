@@ -19,6 +19,7 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
     divePlan: "",
     fitTone: "",
     fitNote: "",
+    conservationNote: "",
     fieldGuideTipsHeading: "",
     landmarks: "[]",
     creatures: "[]",
@@ -41,6 +42,19 @@ describe("parseDiveSiteForm", () => {
   it("reads a blank time in the water as the shop's own figure", () => {
     const result = parseDiveSiteForm(formEntries(), "meters");
     expect(result).toMatchObject({ ok: true, expectedBottomTimeMinutes: null });
+  });
+
+  it("parses and trims conservation note", () => {
+    const result = parseDiveSiteForm(
+      formEntries({ conservationNote: "  Mooring buoys mandatory. Avoid contact with coral.  " }),
+      "meters",
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.conservationNote).toBe(
+        "Mooring buoys mandatory. Avoid contact with coral.",
+      );
+    }
   });
 
   it("keeps a site's own time in the water in minutes, whatever unit the shop reads depth in", () => {

@@ -145,3 +145,24 @@ describe("the swipe hint", () => {
     expect(screen.queryByText(/Swipe to explore each dive/)).not.toBeInTheDocument();
   });
 });
+
+describe("conservation note", () => {
+  it("renders when the site carries a conservation note", () => {
+    const brief = {
+      ...briefing("d1", { id: "site-a", name: "Molasses Reef" }),
+      diveSite: {
+        id: "site-a",
+        name: "Molasses Reef",
+        locationName: null,
+        landmarks: [],
+        conservationNote: "Protected sanctuary zone. Maintain neutral buoyancy.",
+      },
+    } as unknown as DiveBriefing;
+
+    renderSection([brief], true);
+    expect(screen.getByText("Conservation note")).toBeInTheDocument();
+    expect(
+      screen.getByText("Protected sanctuary zone. Maintain neutral buoyancy."),
+    ).toBeInTheDocument();
+  });
+});

@@ -19,6 +19,7 @@ export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "divePlan",
   "fitTone",
   "fitNote",
+  "conservationNote",
   "fieldGuideTipsHeading",
   "landmarks",
   "minimumCertificationLevel",
@@ -44,6 +45,7 @@ export type DiveSiteTemplateSnapshot = {
   divePlan: string | null;
   fitTone: "welcoming" | "demanding" | "unknown" | null;
   fitNote: string | null;
+  conservationNote: string | null;
   fieldGuideTipsHeading: string | null;
   landmarks: DiveSiteLandmark[];
   minimumCertificationLevel: CertificationLevel | null;
@@ -75,6 +77,7 @@ export type DiveSiteTemplateSource = {
   divePlan?: string;
   fitTone?: "welcoming" | "demanding" | "unknown";
   fitNote?: string;
+  conservationNote?: string;
   fieldGuideTipsHeading?: string;
   landmarks?: unknown;
   minimumCertificationLevel?: CertificationLevel;
@@ -99,6 +102,7 @@ export type DiveSiteTemplateSiteRecord = {
   divePlan: string | null;
   fitTone: "welcoming" | "demanding" | "unknown" | null;
   fitNote: string | null;
+  conservationNote: string | null;
   fieldGuideTipsHeading: string | null;
   landmarks: unknown;
   minimumCertificationLevel: CertificationLevel | null;
@@ -133,6 +137,7 @@ export function diveSiteTemplateSnapshot(source: DiveSiteTemplateSource): DiveSi
     divePlan: source.divePlan ?? null,
     fitTone: source.fitTone ?? null,
     fitNote: source.fitNote ?? null,
+    conservationNote: source.conservationNote ?? null,
     fieldGuideTipsHeading: source.fieldGuideTipsHeading ?? null,
     landmarks: parseDiveSiteLandmarks(source.landmarks),
     minimumCertificationLevel: source.minimumCertificationLevel ?? null,

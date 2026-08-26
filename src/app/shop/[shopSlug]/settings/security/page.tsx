@@ -9,7 +9,9 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
+import { getDb } from "@/db/client";
 import { userAccounts } from "@/db/schema";
+import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -26,7 +28,17 @@ import {
   verifyStepUpAction,
 } from "./actions";
 
-export const metadata: Metadata = { title: "Account security — DiveDay" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ shopSlug: string }>;
+}): Promise<Metadata> {
+  const { shopSlug } = await params;
+  const shop = await getShopBySlug(await getDb(), shopSlug);
+  const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
+  return { title: `${t("settings.security.title")} — DiveDay` };
+}
 
 export default async function SecurityPage({
   params,

@@ -60,8 +60,8 @@ export async function upsertExecutedDive(db: AppDb, input: ExecutedDiveInput) {
       )
       .limit(1);
     if (!recorder) return null;
-    let actualSiteId = input.actualSiteId ?? null;
-    if (!actualSiteId) {
+    let actualSiteId = input.actualSiteId;
+    if (actualSiteId === undefined) {
       const [planned] = await tx
         .select({ diveSiteId: tripDives.diveSiteId })
         .from(tripDives)

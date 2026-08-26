@@ -16,6 +16,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { listDiveSites } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
@@ -110,6 +111,7 @@ export default async function TripManifestPage({
     checklistChecks,
     plannedDives,
     executedDives,
+    liveDiveSites,
   ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -127,6 +129,7 @@ export default async function TripManifestPage({
     latestPreDepartureChecksForTrip(db, shop.id, tripId),
     listTripDives(db, shop.id, tripId),
     listExecutedDives(db, shop.id, tripId),
+    listDiveSites(db, shop.id),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
@@ -469,6 +472,7 @@ export default async function TripManifestPage({
             diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
           }))}
           executed={executedDives}
+          liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
           action={boundSaveExecutedDiveAction}
           t={t}
           timeZone={shop.timezone}

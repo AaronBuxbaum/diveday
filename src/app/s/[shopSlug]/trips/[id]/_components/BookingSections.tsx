@@ -433,7 +433,7 @@ export function BookSpotSection({
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       }
       description={
-        payAtBooking && perDiverPriceCents
+        payAtBooking && perDiverPriceCents !== null && perDiverPriceCents > 0
           ? t("paidSecurely", { price: money(perDiverPriceCents) })
           : undefined
       }
@@ -479,7 +479,7 @@ export function BookSpotSection({
               the other three ran the gate with nothing. It now lives inside
               each diver's own fieldset in `BookingPartyFields`, which is where
               a person's own answer belongs. */}
-          {perDiverPriceCents && (gearTotalCents > 0 || passThroughTotalCents > 0) ? (
+          {perDiverPriceCents !== null && (gearTotalCents > 0 || passThroughTotalCents > 0) ? (
             <p className="-mt-2 text-sm font-medium tabular-nums">
               {t("totalDueAtCheckout", {
                 total: money(
@@ -487,7 +487,7 @@ export function BookSpotSection({
                 ),
               })}
             </p>
-          ) : partySize > 1 && perDiverPriceCents ? (
+          ) : partySize > 1 && perDiverPriceCents !== null ? (
             <p className="-mt-2 text-sm font-medium tabular-nums">
               {t("partyTotal", {
                 count: partySize,
