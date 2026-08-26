@@ -30,7 +30,12 @@ import {
   trips,
 } from "./schema";
 import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
-import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
+import {
+  canAcceptPayments,
+  getShopCurrency,
+  getShopStripeAccount,
+  getShopTaxEnabled,
+} from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
 
 export type StartCheckoutInput = {
@@ -145,6 +150,7 @@ export async function startBookingCheckout(
   // is already an integer count of this currency's minor unit, so it reaches
   // Stripe unchanged — there is no divisor anywhere on this path.
   const currency = await getShopCurrency(db, input.shopId);
+  const taxEnabled = await getShopTaxEnabled(db, input.shopId);
 
   const bookingRows = await db
     .select({ id: bookings.id })
@@ -245,6 +251,7 @@ export async function startBookingCheckout(
         totalCents,
         isDeposit: charge.isDeposit,
         currency,
+        taxEnabled,
         appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
         promoResolved: input.promotionCode !== undefined,
       })
@@ -311,6 +318,7 @@ export async function startBookingCheckout(
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
       promotionCode: input.promotionCode,
+      taxEnabled,
       // Deterministic per-attempt key: a retry of this same intent (a lost
       // response, a redeployed process) converges on the one session Stripe
       // already created instead of minting a second one (CR-005).
@@ -345,6 +353,8 @@ export async function startBookingCheckout(
           // switches currency must never reinterpret a settled amount
           // (docs ADR 20260731-shop-currency).
           currency,
+          taxEnabled,
+          taxCents: session.taxAmountCents,
           amountPerDiverCents,
           totalCents,
           isDeposit: charge.isDeposit,
@@ -389,6 +399,7 @@ type CurrentCharge = {
   totalCents: number;
   isDeposit: boolean;
   currency: string;
+  taxEnabled: boolean;
   /** The percent this attempt would hand Stripe, or null for no discount. */
   appliedDiscountPercent: number | null;
   /**
@@ -445,12 +456,13 @@ function stillQuotesCurrentCharge(existing: BookingCheckout, current: CurrentCha
  */
 function quotesCurrentTripCharge(
   existing: BookingCheckout,
-  current: Pick<CurrentCharge, "amountPerDiverCents" | "isDeposit" | "currency">,
+  current: Pick<CurrentCharge, "amountPerDiverCents" | "isDeposit" | "currency" | "taxEnabled">,
 ): boolean {
   return (
     existing.amountPerDiverCents === current.amountPerDiverCents &&
     existing.isDeposit === current.isDeposit &&
     existing.currency === current.currency
+    && existing.taxEnabled === current.taxEnabled
   );
 }
 
@@ -494,11 +506,13 @@ export async function retirePendingCheckoutIfRepriced(
   if (charge === null) return existing;
 
   const currency = await getShopCurrency(db, shopId);
+  const taxEnabled = await getShopTaxEnabled(db, shopId);
   if (
     quotesCurrentTripCharge(existing, {
       amountPerDiverCents: charge.amountCents,
       isDeposit: charge.isDeposit,
       currency,
+      taxEnabled,
     })
   ) {
     return existing;
@@ -659,6 +673,8 @@ export async function markCheckoutPaidBySessionId(
    * asked for rather than being recorded as paying nothing.
    */
   settledTotalCents?: number | null,
+  /** Stripe's reported tax total for the completed session. */
+  settledTaxCents?: number | null,
 ): Promise<BookingCheckout | null> {
   return db.transaction(async (tx) => {
     const [checkout] = await tx
@@ -709,9 +725,9 @@ export async function markCheckoutPaidBySessionId(
       return null;
     }
 
-    // Stripe's reported total, kept only when it is a usable figure. An
-    // already-recorded settled total is never overwritten — the first
-    // completion's evidence stands; a later delivery may only fill in a null.
+    // Stripe's reported totals, kept only when they are usable figures. An
+    // already-recorded total or tax amount is never overwritten — the first
+    // completion's evidence stands; a later delivery may only fill in null.
     const reportedSettledCents =
       settledTotalCents !== undefined &&
       settledTotalCents !== null &&
@@ -719,30 +735,50 @@ export async function markCheckoutPaidBySessionId(
       settledTotalCents >= 0
         ? settledTotalCents
         : null;
-    // …and never above what this session actually asked for. Above that
-    // ceiling `allocateSettledTotal` scales *every* share up past its own ask
-    // (its proportional split has no way to decide whose the surplus is), and
-    // the inflated `booking_payments.amountCents` that results is the figure a
-    // later refund reverses. No path reaches this today — the session is built
-    // from fixed `price_data` lines with no tax, no adjustable quantity, no
-    // tipping — and the figure is authenticated before it is trusted, so a
-    // mismatch means a Stripe-side assumption has changed (`automatic_tax`, a
-    // tipping toggle) rather than an attack. Clamped so that change surfaces as
-    // a log line instead of as money, and clamped *before* the store so the
-    // per-booking rows still sum to exactly the recorded settled total; the
-    // figure Stripe reported stays recoverable from the log.
-    if (reportedSettledCents !== null && reportedSettledCents > checkout.totalCents) {
+    const reportedTaxCents =
+      checkout.taxEnabled &&
+      settledTaxCents !== undefined &&
+      settledTaxCents !== null &&
+      Number.isInteger(settledTaxCents) &&
+      settledTaxCents >= 0
+        ? settledTaxCents
+        : null;
+    // Tax is added on top of the quoted, pre-tax total. Keep the same
+    // proportional-allocation precondition as before, but widen it by the
+    // Stripe-reported tax rather than treating a legitimate tax-inclusive
+    // total as an overcharge. If tax evidence is absent, the conservative
+    // pre-tax ceiling remains in force.
+    const taxCeiling = checkout.taxEnabled
+      ? (reportedTaxCents ?? checkout.taxCents ?? 0)
+      : 0;
+    const settledCeiling = checkout.totalCents + taxCeiling;
+    if (reportedTaxCents !== null && reportedTaxCents > (reportedSettledCents ?? settledCeiling)) {
+      log("checkout.tax_over_total", "error", {
+        shopId: checkout.shopId,
+        checkoutId: checkout.id,
+        stripeSessionId: checkout.stripeSessionId,
+        reportedTaxCents,
+        reportedSettledCents,
+      });
+    }
+    const usableTaxCents =
+      reportedTaxCents === null
+        ? null
+        : Math.min(reportedTaxCents, reportedSettledCents ?? checkout.totalCents);
+    if (reportedSettledCents !== null && reportedSettledCents > settledCeiling) {
       log("checkout.settled_total_over_asked", "error", {
         shopId: checkout.shopId,
         checkoutId: checkout.id,
         stripeSessionId: checkout.stripeSessionId,
         reportedCents: reportedSettledCents,
         askedCents: checkout.totalCents,
+        taxCents: taxCeiling,
       });
     }
     const usableSettledCents =
-      reportedSettledCents === null ? null : Math.min(reportedSettledCents, checkout.totalCents);
+      reportedSettledCents === null ? null : Math.min(reportedSettledCents, settledCeiling);
     const settledCents = checkout.settledTotalCents ?? usableSettledCents;
+    const taxCents = checkout.taxCents ?? usableTaxCents;
 
     const updated =
       checkout.status === "completed"
@@ -750,11 +786,12 @@ export async function markCheckoutPaidBySessionId(
           // settled total the original completion never had (an older webhook
           // payload, an internal repair run), so the repaired payment rows
           // below are written from Stripe's figure rather than the asked one.
-          checkout.settledTotalCents === null && settledCents !== null
+          (checkout.settledTotalCents === null && settledCents !== null) ||
+          (checkout.taxCents === null && taxCents !== null)
           ? ((
               await tx
                 .update(bookingCheckouts)
-                .set({ settledTotalCents: settledCents })
+                .set({ settledTotalCents: settledCents, taxCents })
                 .where(eq(bookingCheckouts.id, checkout.id))
                 .returning()
             )[0] ?? null)
@@ -766,6 +803,7 @@ export async function markCheckoutPaidBySessionId(
                 status: "completed",
                 completedAt: nowDate(),
                 settledTotalCents: settledCents,
+                taxCents,
               })
               .where(eq(bookingCheckouts.id, checkout.id))
               .returning()
@@ -795,13 +833,21 @@ export async function markCheckoutPaidBySessionId(
     // Always a number, so a completion is never refused and never recorded as
     // zero for want of a settled figure.
     const attributableCents =
-      updated.settledTotalCents ?? (await attributableTotalCents(tx, updated));
+      updated.settledTotalCents ??
+      (await attributableTotalCents(tx, updated)) + (updated.taxCents ?? 0);
     const allocation = allocateSettledTotal(
       linked.map((row) => ({
         key: row.bookingId,
         askedCents: askedCentsFor(row.tripCents, row.gearCents),
       })),
       attributableCents,
+    );
+    const taxAllocation = allocateSettledTotal(
+      linked.map((row) => ({
+        key: row.bookingId,
+        askedCents: askedCentsFor(row.tripCents, row.gearCents),
+      })),
+      updated.taxCents ?? 0,
     );
     // A diver's own self-service cancel/reschedule (docs ADR
     // 20260727-diver-self-service-cancel) can leave this exact session still
@@ -834,6 +880,15 @@ export async function markCheckoutPaidBySessionId(
     }
 
     for (const { bookingId, gearCents } of linked) {
+      await tx
+        .update(bookingCheckoutBookings)
+        .set({ taxCents: taxAllocation.get(bookingId) ?? 0 })
+        .where(
+          and(
+            eq(bookingCheckoutBookings.checkoutId, checkout.id),
+            eq(bookingCheckoutBookings.bookingId, bookingId),
+          ),
+        );
       await setBookingPaymentIfNotFinal(tx, {
         shopId: checkout.shopId,
         bookingId,
@@ -986,6 +1041,7 @@ export async function refreshCheckoutFromStripe(
       row.stripeSessionId,
       undefined,
       result.session.amountTotalCents,
+      result.session.taxAmountCents,
     );
   }
   if (result.session.stripeStatus === "expired") {

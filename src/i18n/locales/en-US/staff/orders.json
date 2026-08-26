@@ -68,6 +68,7 @@
     "voidOrder": "Void order",
     "voiding": "Voiding…",
     "refundPayment": "Refund payment",
+    "tax": "Tax",
     "refundedSoFar": "Refunded",
     "stillHeld": "Still held",
     "refundAmountLabel": "Refund ({currency})",

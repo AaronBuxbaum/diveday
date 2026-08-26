@@ -5,6 +5,7 @@ import {
   GEAR_SERVICE_DUE_SOON_DAYS,
   GEAR_SERVICE_DUE_SOON_DIVES,
   GEAR_SERVICE_KINDS_FOR,
+  gearAssignmentNeeds,
   gearKindRank,
   gearServiceState,
   pickDisplayReservation,
@@ -27,6 +28,13 @@ describe("gear kind coverage", () => {
     expect(GEAR_SERVICE_KINDS_FOR.dpv).toEqual(["service", "note"]);
     expect(GEAR_SERVICE_KINDS_FOR.nitrox_analyzer).toEqual(["service", "note"]);
     expect(GEAR_SERVICE_KINDS_FOR.o2_kit).toEqual(["service", "note"]);
+  });
+
+  it("splits a combined rental-fit answer into independently reservable units", () => {
+    expect(gearAssignmentNeeds({ kind: "mask_fins", size: "M" })).toEqual([
+      { kind: "mask", size: null },
+      { kind: "fins", size: "M" },
+    ]);
   });
 });
 

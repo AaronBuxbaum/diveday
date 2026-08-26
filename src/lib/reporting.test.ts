@@ -30,6 +30,7 @@ function input(overrides: Partial<MonthlyReportInput> = {}): MonthlyReportInput 
   return {
     trips: [trip()],
     revenueCents: 0,
+    taxCents: 0,
     importedPaymentCents: 0,
     importedRefundCents: 0,
     importedFinancialRecordCount: 0,
@@ -97,6 +98,13 @@ describe("summarizeMonth", () => {
 
   it("passes revenue through untouched", () => {
     expect(summarizeMonth(input({ revenueCents: 184_500 })).revenueCents).toBe(184_500);
+  });
+
+  it("carries tax separately from net revenue", () => {
+    expect(summarizeMonth(input({ revenueCents: 184_500, taxCents: 18_450 }))).toMatchObject({
+      revenueCents: 184_500,
+      taxCents: 18_450,
+    });
   });
 
   it("carries the labelled imported payment and refund slice without turning it into trip activity", () => {
@@ -210,6 +218,7 @@ function report(overrides: Partial<MonthlyReport> = {}): MonthlyReport {
     fillRate: 0.61,
     atCapacityTrips: 3,
     revenueCents: 747_900,
+    taxCents: 0,
     importedPaymentCents: 0,
     importedRefundCents: 0,
     importedFinancialRecordCount: 0,

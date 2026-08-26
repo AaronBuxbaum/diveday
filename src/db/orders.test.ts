@@ -58,6 +58,7 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
         hostedInvoiceUrl: `https://invoice.stripe.com/i/${request.stripeAccountId}/in_${counter}`,
         invoicePdfUrl: null,
         totalCents,
+        taxCents: 0,
       };
     },
     async voidInvoice(): Promise<VoidInvoiceResult> {
@@ -75,6 +76,7 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
           invoicePdfUrl: null,
           amountPaidCents: 22_000,
           totalCents: 22_000,
+          taxCents: 0,
         },
       };
     },
@@ -489,6 +491,7 @@ describe("orders", () => {
               invoicePdfUrl: null,
               amountPaidCents: 22_000,
               totalCents: 22_000,
+              taxCents: 0,
             },
           };
         },
@@ -832,6 +835,7 @@ describe("orders", () => {
                 invoicePdfUrl: null,
                 amountPaidCents: 22_000,
                 totalCents: 22_000,
+                taxCents: 0,
               },
             };
           },
@@ -958,6 +962,7 @@ describe("orders", () => {
             hostedInvoiceUrl: null,
             invoicePdfUrl: null,
             totalCents: 22_000,
+            taxCents: 0,
           };
         },
       }),
@@ -1119,6 +1124,7 @@ describe("orders", () => {
               hostedInvoiceUrl: null,
               invoicePdfUrl: null,
               totalCents,
+              taxCents: 0,
             };
           },
         }),
@@ -1630,6 +1636,7 @@ describe("orders — a partial refund", () => {
             amountPaidCents: 22_000,
             hostedInvoiceUrl: "https://stripe.test/refreshed",
             invoicePdfUrl: "https://stripe.test/refreshed.pdf",
+            taxCents: 0,
           },
         };
       },

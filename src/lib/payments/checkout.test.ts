@@ -48,6 +48,7 @@ describe("stripe checkout provider", () => {
       paymentStatus: "unpaid",
       checkoutUrl: "https://checkout.stripe.com/c/pay/cs_1",
       amountTotalCents: 36_000,
+      taxAmountCents: null,
       expiresAt: new Date(1_790_000_000 * 1000),
     });
 
@@ -62,6 +63,27 @@ describe("stripe checkout provider", () => {
     expect(form.get("customer_email")).toBe("diver@example.com");
     expect(form.get("success_url")).toBe(request.successUrl);
     expect(form.get("cancel_url")).toBe(request.cancelUrl);
+  });
+
+  it("enables exclusive automatic tax on every Checkout line when requested", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      ok({
+        id: "cs_taxed",
+        status: "open",
+        payment_status: "unpaid",
+        url: "https://checkout.stripe.com/c/pay/cs_taxed",
+        amount_total: 37_800,
+        total_details: { amount_tax: 1_800 },
+        expires_at: 1_790_000_000,
+      }),
+    );
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    const result = await provider.createCheckoutSession({ ...request, taxEnabled: true });
+
+    expect(result).toMatchObject({ status: "created", taxAmountCents: 1_800 });
+    const form = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(form.get("automatic_tax[enabled]")).toBe("true");
+    expect(form.get("line_items[0][price_data][tax_behavior]")).toBe("exclusive");
   });
 
   it("creates one Stripe line item per entry in lineItems", async () => {
@@ -170,6 +192,7 @@ describe("stripe checkout provider", () => {
         paymentStatus: "paid",
         checkoutUrl: null,
         amountTotalCents: 36_000,
+        taxAmountCents: null,
         expiresAt: null,
       },
     });

@@ -23,8 +23,10 @@
   "downloadCsv": "Download CSV",
   "metrics": {
     "revenueLabel": "Net revenue",
-    "revenueDetail": "Payments and deposits taken on this month's trips",
-    "revenueDetailWithImported": "Current-trip payments and deposits, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
+    "revenueDetail": "Payments and deposits after Stripe Tax on this month's trips",
+    "revenueDetailWithImported": "Current-trip payments and deposits after Stripe Tax, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
+    "taxLabel": "Tax collected",
+    "taxDetail": "Stripe Tax included in this month's verified payments",
     "bookingsLabel": "Bookings",
     "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
     "bookingsOther": "across {count, plural, one {# trip} other {# trips}}",

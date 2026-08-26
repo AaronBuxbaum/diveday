@@ -47,6 +47,7 @@ const stillOpen: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
     paymentStatus: "unpaid",
     checkoutUrl: "https://checkout.stripe.com/c/pay/cs_1",
     amountTotalCents: 18_000,
+    taxAmountCents: null,
     expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS),
   },
 });
@@ -59,6 +60,7 @@ const alreadyPaid: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
     paymentStatus: "paid",
     checkoutUrl: null,
     amountTotalCents: 18_000,
+    taxAmountCents: null,
     expiresAt: null,
   },
 });

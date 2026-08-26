@@ -426,6 +426,7 @@ describe("the recovery cron and the completion webhook, in every order that can 
             paymentStatus: "paid",
             checkoutUrl: null,
             amountTotalCents: REEF_PRICE_CENTS,
+            taxAmountCents: null,
             expiresAt: null,
           },
         };

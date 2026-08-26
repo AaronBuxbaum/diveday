@@ -388,6 +388,15 @@ export default async function OrderDetailPage({
           ))}
         </ul>
 
+        {order.order.taxCents > 0 ? (
+          <dl className="mt-3 flex justify-end gap-2 text-sm">
+            <dt className="text-muted">{t("orders.detail.tax")}</dt>
+            <dd className="font-medium tabular-nums">
+              {formatMoneyCents(order.order.taxCents, order.order.currency, locale)}
+            </dd>
+          </dl>
+        ) : null}
+
         {order.order.hostedInvoiceUrl ? (
           <p className="mt-4 text-sm">
             <a

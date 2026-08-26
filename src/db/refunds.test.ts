@@ -67,6 +67,7 @@ function fakeCheckout(
           (sum, line) => sum + line.unitAmountCents * line.quantity,
           0,
         ),
+        taxAmountCents: null,
         expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
       };
     },

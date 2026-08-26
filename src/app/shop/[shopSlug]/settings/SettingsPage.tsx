@@ -87,6 +87,7 @@ import {
   saveReviewUrlAction,
   saveSearchListingAction,
   saveSendWindowAction,
+  saveTaxAction,
   saveTimezoneAction,
   saveUnitsAction,
   updateBoatAction,
@@ -118,6 +119,8 @@ function noticeMessages(
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
+    "tax-saved": { tone: "success", text: t("settings.main.notice.taxSaved") },
+    "tax-invalid": { tone: "danger", text: t("settings.main.notice.taxInvalid") },
     "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
     "rental-prices-saved": { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
     "rental-prices-invalid": {
@@ -391,6 +394,7 @@ const SECTION_IDS = [
   "rentals",
   "rentalPricing",
   "divePackages",
+  "tax",
   "stripe",
 ] as const;
 type SectionId = (typeof SECTION_IDS)[number];
@@ -594,6 +598,9 @@ export default async function SettingsPage({
           price: formatMoneyScanned(shop.rentalPricing.setCents, shopCurrency, locale),
         })
       : notSet;
+  const taxValue = t(
+    shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
+  );
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -1792,6 +1799,34 @@ export default async function SettingsPage({
                       </SubmitButton>
                     </FieldActions>
                   </FieldGrid>
+                </SettingsRow>
+
+                <SettingsRow
+                  heading={t("settings.main.tax.heading")}
+                  value={taxValue}
+                  description={t("settings.main.tax.description")}
+                  detail={t("settings.main.tax.detail")}
+                  open={activeSection === "tax"}
+                >
+                  <SectionNotice banner={banner} section="tax" active={activeSection} />
+                  <form action={saveTaxAction} className="mt-4">
+                    <label className="flex min-h-11 items-center gap-3 text-sm">
+                      <input
+                        name="taxEnabled"
+                        type="checkbox"
+                        value="on"
+                        defaultChecked={shop.taxEnabled}
+                        className="size-4 accent-primary"
+                      />
+                      {t("settings.main.tax.checkboxLabel")}
+                    </label>
+                    <SubmitButton
+                      pendingLabel={t("settings.main.tax.submitting")}
+                      className={buttonClass({ variant: "secondary", className: "mt-3" })}
+                    >
+                      {t("settings.main.tax.submit")}
+                    </SubmitButton>
+                  </form>
                 </SettingsRow>
 
                 {/* The one row that opens itself: an unconnected or half-onboarded

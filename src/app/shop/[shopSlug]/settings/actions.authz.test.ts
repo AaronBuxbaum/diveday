@@ -49,6 +49,7 @@ const {
   saveAddressAction,
   saveDockDayRhythmAction,
   savePackingAction,
+  saveTaxAction,
   saveTimezoneAction,
   saveUnitsAction,
 } = await import("./actions");
@@ -158,6 +159,37 @@ describe("saving the shop's units", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=units-invalid&saved=units`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
+  });
+});
+
+describe("saving the shop's Stripe Tax setting", () => {
+  it("refuses a captain's tax change", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const form = new FormData();
+    form.set("taxEnabled", "on");
+
+    const to = await redirectedTo(() => saveTaxAction(form));
+
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
+    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
+  });
+
+  it("lets an owner enable and disable Stripe Tax", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const enabled = new FormData();
+    enabled.set("taxEnabled", "on");
+
+    expect(await redirectedTo(() => saveTaxAction(enabled))).toBe(
+      `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
+    );
+    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(true);
+
+    expect(await redirectedTo(() => saveTaxAction(new FormData()))).toBe(
+      `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
+    );
+    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
   });
 });
 

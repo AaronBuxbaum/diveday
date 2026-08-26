@@ -65,6 +65,7 @@ describe("stripe invoicing provider", () => {
       hostedInvoiceUrl: "https://invoice.stripe.com/i/acct_123/in_1",
       invoicePdfUrl: "https://invoice.stripe.com/i/acct_123/in_1/pdf",
       totalCents: 22_000,
+      taxCents: 0,
     });
 
     // Every call to Stripe carried the connected account header, not the platform.
@@ -87,6 +88,30 @@ describe("stripe invoicing provider", () => {
     expect(fetchImpl.mock.calls[3][1].headers["Idempotency-Key"]).toBe("intent-1:invoice");
     expect(fetchImpl.mock.calls[4][1].headers["Idempotency-Key"]).toBe("intent-1:finalize");
     expect(fetchImpl.mock.calls[5][1].headers["Idempotency-Key"]).toBe("intent-1:send");
+  });
+
+  it("enables exclusive automatic tax on every invoice item when requested", async () => {
+    const fetchImpl = sequencedFetch([
+      ok({ id: "cus_taxed" }),
+      ok({ id: "ii_taxed" }),
+      ok({ id: "ii_taxed_2" }),
+      ok({ id: "in_taxed", status: "draft", total: 22_000 }),
+      ok({
+        id: "in_taxed",
+        status: "open",
+        total: 24_200,
+        total_tax_amounts: [{ amount: 2_200 }],
+      }),
+      ok({ id: "in_taxed", status: "open", total: 24_200 }),
+    ]);
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    const result = await provider.createInvoice({ ...request, taxEnabled: true });
+
+    expect(result).toMatchObject({ status: "created", totalCents: 24_200, taxCents: 2_200 });
+    const itemForm = new URLSearchParams(fetchImpl.mock.calls[1][1].body);
+    expect(itemForm.get("tax_behavior")).toBe("exclusive");
+    const invoiceForm = new URLSearchParams(fetchImpl.mock.calls[3][1].body);
+    expect(invoiceForm.get("automatic_tax[enabled]")).toBe("true");
   });
 
   it("fails if any step in the chain is not ok", async () => {
@@ -223,6 +248,7 @@ describe("stripe invoicing provider", () => {
         invoicePdfUrl: null,
         amountPaidCents: 22_000,
         totalCents: 22_000,
+        taxCents: 0,
       },
     });
   });

@@ -21,6 +21,8 @@ export type CreateInvoiceRequest = {
   lineItems: InvoiceLineItem[];
   /** Days a diver has to pay before the invoice is overdue; Stripe requires this for `send_invoice`. */
   daysUntilDue?: number;
+  /** Opt-in Stripe Tax. When enabled, every invoice item is tax-exclusive. */
+  taxEnabled?: boolean;
   /**
    * Deterministic per-attempt key (`idempotencyKeyFor`,
    * src/db/payment-operations.ts). Invoice creation is several POSTs
@@ -40,6 +42,7 @@ export type CreatedInvoice = {
   hostedInvoiceUrl: string | null;
   invoicePdfUrl: string | null;
   totalCents: number;
+  taxCents: number;
 };
 
 export type CreateInvoiceResult =
@@ -53,6 +56,7 @@ export type InvoiceSnapshot = {
   invoicePdfUrl: string | null;
   amountPaidCents: number;
   totalCents: number;
+  taxCents: number;
 };
 
 export type InvoiceLookupResult =
@@ -118,6 +122,16 @@ const invoiceResponseSchema = z.object({
   invoice_pdf: z.string().url().nullable().optional(),
   total: z.number().int(),
   amount_paid: z.number().int().optional(),
+  total_tax_amounts: z
+    .array(z.object({ amount: z.number().int().nonnegative() }))
+    .nullable()
+    .optional(),
+  // Preview API versions have exposed the same evidence under `total_taxes`.
+  // Accept it as a compatibility fallback while preferring the stable field.
+  total_taxes: z
+    .array(z.object({ amount: z.number().int().nonnegative() }))
+    .nullable()
+    .optional(),
   payment_intent: z
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
     .nullable()
@@ -177,6 +191,11 @@ function paidPaymentIntentId(invoice: z.infer<typeof invoiceResponseSchema>): st
   return legacy?.id ?? null;
 }
 
+function taxCentsOf(invoice: z.infer<typeof invoiceResponseSchema>): number {
+  const amounts = invoice.total_tax_amounts ?? invoice.total_taxes ?? [];
+  return amounts.reduce((total, entry) => total + entry.amount, 0);
+}
+
 // `amount` is a non-negative **integer** count of minor units, matching every
 // other amount this file parses. It is not pedantry: `refundOrder` hands this
 // figure to `applyOrderUpdate` as the `reverseCents` delta, and a bare
@@ -207,6 +226,7 @@ function toCreatedInvoice(body: z.infer<typeof invoiceResponseSchema>, stripeCus
     hostedInvoiceUrl: body.hosted_invoice_url ?? null,
     invoicePdfUrl: body.invoice_pdf ?? null,
     totalCents: body.total,
+    taxCents: taxCentsOf(body),
   };
 }
 
@@ -255,6 +275,7 @@ export function stripeInvoicingProvider(
               description: item.description,
               quantity: String(item.quantity),
               unit_amount: String(item.unitAmountCents),
+              ...(request.taxEnabled ? { tax_behavior: "exclusive" } : {}),
             }),
             `${key}:item:${index}`,
           );
@@ -269,6 +290,7 @@ export function stripeInvoicingProvider(
             collection_method: "send_invoice",
             days_until_due: String(request.daysUntilDue ?? 7),
             auto_advance: "false",
+            ...(request.taxEnabled ? { "automatic_tax[enabled]": "true" } : {}),
           }),
           `${key}:invoice`,
         );
@@ -378,6 +400,7 @@ export function stripeInvoicingProvider(
             invoicePdfUrl: body.data.invoice_pdf ?? null,
             amountPaidCents: body.data.amount_paid ?? 0,
             totalCents: body.data.total,
+            taxCents: taxCentsOf(body.data),
           },
         };
       } catch {

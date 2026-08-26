@@ -110,10 +110,19 @@ async function pay(
   bookingId: string,
   status: PaymentStatus,
   amountCents: number,
+  source: { provider?: string; providerRef?: string } = {},
 ): Promise<void> {
   await db
     .insert(bookingPayments)
-    .values({ shopId, bookingId, status, amountCents, currency: "usd" });
+    .values({
+      shopId,
+      bookingId,
+      status,
+      amountCents,
+      currency: "usd",
+      provider: source.provider,
+      providerRef: source.providerRef,
+    });
 }
 
 /**
@@ -128,7 +137,7 @@ async function makeDepositCheckout(
   tripId: string,
   bookingId: string,
   perDiverCents: number,
-  options: { gearCents?: number; settledTotalCents?: number } = {},
+  options: { gearCents?: number; settledTotalCents?: number; taxCents?: number } = {},
 ): Promise<void> {
   seq += 1;
   const gearCents = options.gearCents ?? 0;
@@ -144,13 +153,14 @@ async function makeDepositCheckout(
       stripeSessionId: `cs_${seq}`,
       amountPerDiverCents: perDiverCents,
       totalCents: perDiverCents + gearCents,
+      taxCents: options.taxCents,
       settledTotalCents: options.settledTotalCents ?? null,
     })
     .returning();
   if (!checkout) throw new Error("failed to insert checkout");
   await db
     .insert(bookingCheckoutBookings)
-    .values({ shopId, checkoutId: checkout.id, bookingId, gearCents });
+    .values({ shopId, checkoutId: checkout.id, bookingId, gearCents, taxCents: options.taxCents });
 }
 
 /**
@@ -209,6 +219,45 @@ const JUNE_START = new Date("2026-06-01T00:00:00Z");
 const JULY_START = new Date("2026-07-01T00:00:00Z");
 
 describe("getMonthlyReport", () => {
+  it("separates verified Stripe Tax from net revenue", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Taxed Tessa");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: trip,
+        status: "completed",
+        stripeAccountId: "acct_test",
+        stripeSessionId: "cs_taxed",
+        currency: "usd",
+        amountPerDiverCents: 18_000,
+        totalCents: 18_000,
+        taxEnabled: true,
+        taxCents: 1_800,
+        settledTotalCents: 19_800,
+      })
+      .returning();
+    if (!checkout) throw new Error("failed to insert taxed checkout");
+    await db.insert(bookingCheckoutBookings).values({
+      shopId: shop.id,
+      checkoutId: checkout.id,
+      bookingId: booking,
+      tripCents: 18_000,
+      taxCents: 1_800,
+    });
+    await pay(db, shop.id, booking, "paid", 19_800, {
+      provider: "stripe",
+      providerRef: "cs_taxed",
+    });
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report).toMatchObject({ revenueCents: 18_000, taxCents: 1_800 });
+    expect(summarizeMonth(report).taxCents).toBe(1_800);
+  });
+
   it("buckets by departure, excludes cancellations, and sums cumulative collected money", async () => {
     const { db, shop } = await seededShopContext();
 

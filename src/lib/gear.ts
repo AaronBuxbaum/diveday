@@ -19,9 +19,11 @@ import {
   calendarDaysBetween,
   shiftCalendarDateMonths,
 } from "./calendar-date";
+import type { RentalItemKind } from "./dive-prep";
 
 /**
- * What a tracked unit is. The prep list's eight rental kinds plus register-only
+ * What a tracked unit is. The prep list's eight rental kinds plus the physical
+ * mask and fins units and register-only
  * fleet categories. Register-only kinds never become rental-fit options until
  * a separate product decision says they should. Keep aligned with the
  * `gear_item_kind` pg enum.
@@ -31,7 +33,8 @@ export type GearItemKind =
   | "regulator"
   | "wetsuit"
   | "boots"
-  | "mask_fins"
+  | "mask"
+  | "fins"
   | "weights"
   | "dive_computer"
   | "gopro"
@@ -71,7 +74,8 @@ export type GearItemStatus = (typeof GEAR_ITEM_STATUSES)[number];
 export type GearServiceKind = "service" | "hydro_test" | "visual_inspection" | "o2_clean" | "note";
 
 /**
- * Fleet display order. The eight shared kinds keep the prep list's own order
+ * Fleet display order. The four shared kinds before mask/fins keep the prep
+ * list's own order
  * (`KIND_ORDER` in dive-prep.ts) so the register and the packing list read
  * the same way; register-only categories follow, with `other` last as the
  * genuine catch-all.
@@ -81,7 +85,8 @@ export const GEAR_KIND_ORDER: readonly GearItemKind[] = [
   "regulator",
   "wetsuit",
   "boots",
-  "mask_fins",
+  "mask",
+  "fins",
   "weights",
   "dive_computer",
   "gopro",
@@ -131,7 +136,8 @@ export const GEAR_SERVICE_KINDS_FOR: Record<GearItemKind, readonly GearServiceKi
   regulator: ["service", "note"],
   wetsuit: ["note"],
   boots: ["note"],
-  mask_fins: ["note"],
+  mask: ["note"],
+  fins: ["note"],
   weights: ["note"],
   dive_computer: ["service", "note"],
   gopro: ["note"],
@@ -148,6 +154,30 @@ export const GEAR_SERVICE_KINDS_FOR: Record<GearItemKind, readonly GearServiceKi
   o2_kit: ["service", "note"],
   other: ["service", "note"],
 };
+
+/** A physical register demand derived from one rental-fit piece. */
+export type GearAssignmentNeed = {
+  kind: GearItemKind;
+  size: string | null;
+};
+
+/**
+ * Bridges the fit's combined mask-and-fins answer to the register's physical
+ * units. The diver still answers one rental-fit question and the public
+ * packing list still says "mask & fins", but staff must be able to reserve the
+ * two tagged things independently (issue #953).
+ */
+export function gearAssignmentNeeds(
+  piece: Pick<{ kind: RentalItemKind; size: string | null }, "kind" | "size">,
+): GearAssignmentNeed[] {
+  if (piece.kind === "mask_fins") {
+    return [
+      { kind: "mask", size: null },
+      { kind: "fins", size: piece.size },
+    ];
+  }
+  return [{ kind: piece.kind as Exclude<RentalItemKind, "mask_fins">, size: piece.size }];
+}
 
 /** The service-form suggestion: the conventional next deadline for this clock. */
 export function suggestNextDueOn(
