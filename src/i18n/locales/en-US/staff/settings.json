@@ -25,6 +25,8 @@
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
+      "conservationSaved": "Conservation commitments saved.",
+      "conservationInvalid": "Check your conservation commitments selection.",
       "connected": "Stripe account connected.",
       "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
       "notConfigured": "Online payments aren't switched on for this DiveDay setup yet.",
@@ -139,6 +141,24 @@
       "detail": "Untick this and anything already indexed can take a few weeks to disappear — and a page someone has linked to stays reachable by that link.",
       "label": "List my public pages in search engines",
       "submit": "Save",
+      "submitting": "Saving…"
+    },
+    "conservation": {
+      "heading": "Conservation commitments",
+      "description": "Coded commitments displayed on your public booking page as your shop's stated commitments.",
+      "detail": "Select the commitments your operation practices. These are published as your shop's own claim, never DiveDay's verification.",
+      "value": "{count, plural, one {# commitment} other {# commitments}}",
+      "commitments": {
+        "green_fins_member": "Green Fins member",
+        "padi_aware_partner": "PADI AWARE partner",
+        "mooring_buoys_only": "Mooring buoys only",
+        "no_touch_policy": "No-touch reef policy",
+        "no_gloves_policy": "No-gloves policy",
+        "reef_cleanup_dives": "Reef cleanup dives",
+        "lionfish_containment": "Lionfish containment",
+        "coral_nursery_support": "Coral nursery support"
+      },
+      "submit": "Save conservation commitments",
       "submitting": "Saving…"
     },
     "packing": {

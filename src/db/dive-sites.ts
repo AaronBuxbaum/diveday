@@ -65,6 +65,7 @@ export type DiveSiteInput = {
   /** Which fit reading the briefing shows; null/undefined derives it (src/lib/diver-planning.ts). */
   fitTone?: DiveSiteFitTone | null;
   fitNote?: string;
+  conservationNote?: string;
   fieldGuideTipsHeading?: string;
   landmarks?: DiveSiteLandmark[] | string[];
   /**
@@ -316,6 +317,7 @@ export async function createDiveSite(db: AppDb, input: DiveSiteInput) {
       divePlan: input.divePlan || null,
       fitTone: input.fitTone ?? null,
       fitNote: input.fitNote || null,
+      conservationNote: input.conservationNote || null,
       fieldGuideTipsHeading: input.fieldGuideTipsHeading || null,
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,
@@ -369,6 +371,7 @@ export async function updateDiveSite(
       divePlan: input.divePlan || null,
       fitTone: input.fitTone ?? null,
       fitNote: input.fitNote || null,
+      conservationNote: input.conservationNote || null,
       fieldGuideTipsHeading: input.fieldGuideTipsHeading || null,
       landmarks: input.landmarks ?? [],
       minimumCertificationLevel: input.minimumCertificationLevel ?? null,

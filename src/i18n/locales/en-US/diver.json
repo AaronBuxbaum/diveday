@@ -1,4 +1,18 @@
 {
+  "conservation": {
+    "commitmentsHeading": "Conservation commitments",
+    "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
+    "commitments": {
+      "green_fins_member": "Green Fins member",
+      "padi_aware_partner": "PADI AWARE partner",
+      "mooring_buoys_only": "Mooring buoys only",
+      "no_touch_policy": "No-touch reef policy",
+      "no_gloves_policy": "No-gloves policy",
+      "reef_cleanup_dives": "Reef cleanup dives",
+      "lionfish_containment": "Lionfish containment",
+      "coral_nursery_support": "Coral nursery support"
+    }
+  },
   "common": {
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
@@ -172,6 +186,7 @@
     "siteToBeConfirmed": "Site to be confirmed",
     "sitePlanningGuide": "A planning guide, not a certification or safety clearance.",
     "siteHowItUnfolds": "How the dive unfolds",
+    "siteConservationHeading": "Conservation note",
     "siteWhatToLookFor": "What to look for down there",
     "siteLandmarkCount": "{count, plural, one {# landmark} other {# landmarks}}",
     "siteSpeciesCount": "{count, plural, other {# species}}",

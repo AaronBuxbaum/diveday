@@ -151,6 +151,8 @@ export function SectionCard({
   elevated = true,
   id,
   className = "",
+  ariaLabel,
+  "aria-label": ariaLabelProp,
   children,
 }: {
   /** The element this card *is*. A row in a list is an `li`; a disclosure is `details`. */
@@ -173,6 +175,8 @@ export function SectionCard({
   /** A fragment target (`#backups`, `#invite`). Pair it with `scroll-mt-*` in `className`. */
   id?: string;
   className?: string;
+  ariaLabel?: string;
+  "aria-label"?: string;
   children?: ReactNode;
 }) {
   const Heading = titleAs;
@@ -196,6 +200,7 @@ export function SectionCard({
   // into the client bundle to buy nothing.
   const generatedId = useId();
   const headingId = title != null ? `${generatedId}-title` : undefined;
+  const resolvedAriaLabel = ariaLabelProp ?? ariaLabel;
   return (
     <Tag
       id={id}
@@ -203,6 +208,7 @@ export function SectionCard({
       // in a list of cards is named by its content, and labelling it would make
       // a screen reader announce the heading twice.
       aria-labelledby={headingId != null && Tag !== "li" ? headingId : undefined}
+      aria-label={resolvedAriaLabel}
       className={sectionCardClass({ padding, elevated, className })}
     >
       {hasHeader ? (

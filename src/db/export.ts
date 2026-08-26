@@ -752,6 +752,7 @@ export async function loadShopExportBundleInput(
             // bundle is also the *backup*: a shop that opted out and later
             // restored from one must not come back published.
             "search_listing_opt_out_at",
+            "conservation_commitments",
             "tagline",
             "description",
             "logo_url",
@@ -793,6 +794,7 @@ export async function loadShopExportBundleInput(
               shop.sendWindowStartHour,
               shop.sendWindowEndHour,
               shop.searchListingOptOutAt,
+              JSON.stringify(shop.conservationCommitments),
               shop.tagline,
               shop.description,
               shop.logoUrl,
@@ -2427,6 +2429,7 @@ export async function loadShopExportBundleInput(
             "dive_plan",
             "fit_tone",
             "fit_note",
+            "conservation_note",
             "field_guide_tips_heading",
             "marine_life",
             "marine_life_description",
@@ -2463,6 +2466,7 @@ export async function loadShopExportBundleInput(
             row.divePlan,
             row.fitTone,
             row.fitNote,
+            row.conservationNote,
             row.fieldGuideTipsHeading,
             row.marineLife,
             row.marineLifeDescription,

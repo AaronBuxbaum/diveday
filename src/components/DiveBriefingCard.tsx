@@ -187,6 +187,12 @@ export function DiveBriefingCard({
             <p className="mt-2 leading-relaxed text-muted">{site.divePlan}</p>
           </section>
         ) : null}
+        {site?.conservationNote ? (
+          <section className="mt-7">
+            <h4 className="font-semibold">{t("trip.siteConservationHeading")}</h4>
+            <p className="mt-2 leading-relaxed text-muted">{site.conservationNote}</p>
+          </section>
+        ) : null}
         {fieldGuideLeads && site ? (
           <div className="mt-7 border-t border-border pt-5">
             <DiveSiteFieldGuide

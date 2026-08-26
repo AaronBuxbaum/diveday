@@ -467,3 +467,19 @@ export async function setShopProfile(
     .returning();
   return shop ?? null;
 }
+
+/**
+ * Replaces the shop-configured conservation commitments after validation.
+ */
+export async function setShopConservationCommitments(
+  db: AppDb,
+  shopId: string,
+  conservationCommitments: string[],
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ conservationCommitments })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}

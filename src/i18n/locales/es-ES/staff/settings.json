@@ -25,6 +25,8 @@
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
+      "conservationSaved": "Compromisos de conservación guardados.",
+      "conservationInvalid": "Revisa la selección de compromisos de conservación.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
       "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay.",
@@ -139,6 +141,24 @@
       "detail": "Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer — y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
       "submit": "Guardar",
+      "submitting": "Guardando…"
+    },
+    "conservation": {
+      "heading": "Compromisos de conservación",
+      "description": "Compromisos codificados que se muestran en tu página pública de reservas como declaraciones de tu centro.",
+      "detail": "Selecciona los compromisos que practica tu operación. Se publican como una declaración de tu centro, nunca como una verificación de DiveDay.",
+      "value": "{count, plural, one {# compromiso} other {# compromisos}}",
+      "commitments": {
+        "green_fins_member": "Miembro de Green Fins",
+        "padi_aware_partner": "Socio de PADI AWARE",
+        "mooring_buoys_only": "Solo boyas de amarre",
+        "no_touch_policy": "Política de no tocar el arrecife",
+        "no_gloves_policy": "Política de no usar guantes",
+        "reef_cleanup_dives": "Inmersiones de limpieza de arrecifes",
+        "lionfish_containment": "Control de pez león",
+        "coral_nursery_support": "Apoyo a viveros de coral"
+      },
+      "submit": "Guardar compromisos de conservación",
       "submitting": "Guardando…"
     },
     "packing": {

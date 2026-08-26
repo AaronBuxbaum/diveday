@@ -71,6 +71,11 @@ export const shops = pgTable(
     currency: text("currency").notNull().default("usd"),
     /** Whether new Stripe charges should calculate and collect tax. Off by default. */
     taxEnabled: boolean("tax_enabled").notNull().default(false),
+    /** Coded commitments the shop chooses to display on its public schedule; these are shop claims. */
+    conservationCommitments: jsonb("conservation_commitments")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
     /**
@@ -1138,6 +1143,8 @@ export const diveSites = pgTable(
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
     marineLife: text("marine_life"),
     marineLifeDescription: text("marine_life_description"),
+    /** Optional shop-authored conservation note shown with this site briefing. */
+    conservationNote: text("conservation_note"),
     /** How demanding the site is; the briefing prints a translated label for it. */
     difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
@@ -1375,6 +1382,7 @@ export type GlobalDiveSiteBriefing = {
   imageUrls?: string[];
   marineLife?: string;
   marineLifeDescription?: string;
+  conservationNote?: string;
   /**
    * Legacy free text, on versions published before 2026-08-13. Published
    * snapshots are immutable, so the field stays readable forever; the import
