@@ -37,6 +37,9 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
   holding a filled-in application `.env.example` plus named-profile blocks for workstation-only
   credentials, and one stable generated seed that derives the three app secrets — see
   [§10](#10-the-credentials-secret) below.
+- An automated daily visual regression bucket pruner (`diveday-visual-bucket-pruner`) that reclaims
+  stale PR snapshots from S3 while preserving the active `main` baseline — see
+  [§11](#11-visual-regression-bucket-pruner) below.
 - A post-deploy wizard that offers Vercel env/deploy, GitHub secret, and Vercel DNS handoffs one
   yes/no question at a time. The short [manual-actions.md](manual-actions.md) contains only
   human account approvals.
@@ -678,3 +681,37 @@ account.
 > gone its users and keys are gone too, and a retained document of dead credentials that still looks
 > live is worse than no document. CloudFormation deletes secrets with `ForceDeleteWithoutRecovery`,
 > so there is no 7–30 day window blocking a redeploy under the same name.
+
+---
+
+## 11. Visual Regression Bucket Pruner
+
+Visual regression testing (`reg-suit`) publishes captured screenshots and diff reports to `diveday-vrt`
+under top-level commit SHA prefixes.
+
+### Daily Schedule and Behavior
+
+An EventBridge Scheduler schedule (`diveday-visual-bucket-pruner`) invokes the Lambda function
+`diveday-visual-bucket-pruner` daily at 04:00 UTC:
+1. Queries the GitHub API for recent commits on `main`.
+2. Identifies the newest commit that has a published snapshot report (`out.json`) in S3.
+3. Preserves that active main baseline.
+4. Deletes all objects in stale snapshot prefixes in 1000-object batches.
+5. Emits structured JSON summary metrics to CloudWatch Logs (`/aws/lambda/diveday-visual-bucket-pruner`).
+
+### Manual Invocation
+
+Run the pruner manually via AWS CLI:
+```bash
+aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout
+```
+
+Run locally via CLI tool (dry-run or real):
+```bash
+# Dry run: see what would be deleted without deleting
+pnpm visual:prune --dry-run
+
+# Execute pruning:
+pnpm visual:prune
+```
+

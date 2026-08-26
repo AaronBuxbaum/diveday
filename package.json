@@ -25,6 +25,7 @@
     "visual:capture": "playwright test e2e/visual.spec.ts",
     "visual:compare": "node scripts/visual-compare.mjs",
     "visual:report": "node scripts/visual-report.mjs",
+    "visual:prune": "dotenv -c -- node scripts/prune-visual-bucket.mjs",
     "infra:bootstrap": "dotenv -c -- node scripts/infra-bootstrap.mjs",
     "infra:deploy": "dotenv -c -- node scripts/infra-deploy.mjs",
     "infra:synth": "dotenv -c -- node scripts/infra-cdk.mjs synth",
@@ -72,10 +73,11 @@
     "build:sw": "node scripts/build-service-worker.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1117.0",
-    "@aws-sdk/client-geo-places": "^3.1117.0",
-    "@aws-sdk/client-sesv2": "^3.1117.0",
-    "@aws-sdk/client-sns": "^3.1117.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1118.0",
+    "@aws-sdk/client-geo-places": "^3.1118.0",
+    "@aws-sdk/client-s3": "^3.1118.0",
+    "@aws-sdk/client-sesv2": "^3.1118.0",
+    "@aws-sdk/client-sns": "^3.1118.0",
     "@electric-sql/pglite": "^0.5.7",
     "@sentry/nextjs": "^10.71.0",
     "@vercel/analytics": "^2.0.1",

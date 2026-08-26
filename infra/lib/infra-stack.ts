@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
@@ -18,6 +19,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as cr from "aws-cdk-lib/custom-resources";
 import type { Construct } from "constructs";
+import * as esbuild from "esbuild";
 import {
   type OffDotenvCredential,
   readEnvExample,
@@ -244,7 +246,12 @@ export class InfraStack extends cdk.Stack {
         {
           id: "expire-old-visual-snapshots",
           enabled: true,
-          expiration: cdk.Duration.days(7),
+          expiration: cdk.Duration.days(30),
+        },
+        {
+          id: "abort-incomplete-multipart-uploads",
+          enabled: true,
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
         },
       ],
     });
@@ -3053,6 +3060,97 @@ exports.handler = async () => {
       value: `${dumpConnectionSecret.secretName} <- put DATABASE_URL_UNPOOLED here`,
       description:
         "The weekly full-cluster pg_dump (diveday-database-dump) reads its connection string from this secret, which deploys holding the literal 'unset' and fails loudly until a human fills it in: aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<direct Neon connection string>'. Run it by hand to test: aws codebuild start-build --project-name diveday-database-dump. See docs/engineering/backup-and-restore-runbook.md section 2c.",
+    });
+
+    // 21. Visual Regression Bucket Pruner -- cleans up stale visual snapshot prefixes
+    // from S3 while preserving the active main baseline (ADR 20260826-prune-visual-bucket).
+    //
+    // Replaces the unconditional 7-day S3 lifecycle rule which deleted all snapshots
+    // after 7 days (including the active main baseline during quiet periods).
+    //
+    // The pruner queries the GitHub REST API for recent commits on main, identifies
+    // the newest commit that has a published snapshot (out.json) in S3, lists all
+    // snapshot prefixes, and removes all non-baseline prefixes in 1000-object batches.
+    const visualBucketPrunerLogs = new logs.LogGroup(this, "VisualBucketPrunerLogs", {
+      logGroupName: "/aws/lambda/diveday-visual-bucket-pruner",
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const bundleLambdaHandler = (entryPath: string): string => {
+      const result = esbuild.buildSync({
+        entryPoints: [entryPath],
+        write: false,
+        bundle: true,
+        target: "node22",
+        format: "cjs",
+        platform: "node",
+        external: ["@aws-sdk/*"],
+      });
+      return result.outputFiles[0].text;
+    };
+
+    const visualBucketPruner = new lambda.Function(this, "VisualBucketPruner", {
+      functionName: "diveday-visual-bucket-pruner",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      timeout: cdk.Duration.minutes(15),
+      memorySize: 512,
+      logGroup: visualBucketPrunerLogs,
+      environment: {
+        BUCKET: bucket.bucketName,
+        GITHUB_REPO: "AaronBuxbaum/diveday",
+        DEFAULT_BRANCH: "main",
+      },
+      code: lambda.Code.fromInline(
+        bundleLambdaHandler(path.join(__dirname, "visual-bucket-pruner-handler.ts")),
+      ),
+    });
+
+    visualBucketPruner.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "ListVisualBucketOnly",
+        actions: ["s3:ListBucket"],
+        resources: [bucket.bucketArn],
+      }),
+    );
+    visualBucketPruner.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "ManageVisualBucketObjects",
+        actions: ["s3:GetObject", "s3:DeleteObject"],
+        resources: [bucket.arnForObjects("*")],
+      }),
+    );
+
+    const visualBucketPrunerSchedulerRole = new iam.Role(this, "VisualBucketPrunerSchedulerRole", {
+      assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
+      description: "Lets EventBridge Scheduler invoke the daily visual bucket pruner.",
+    });
+    visualBucketPruner.grantInvoke(visualBucketPrunerSchedulerRole);
+
+    // Daily at 04:00 UTC. Prunes stale snapshots from PRs and old commits,
+    // preserving the active main baseline.
+    new scheduler.CfnSchedule(this, "VisualBucketPrunerSchedule", {
+      name: "diveday-visual-bucket-pruner",
+      description:
+        "Daily cleanup of stale visual regression testing snapshots in S3, preserving the active main baseline.",
+      flexibleTimeWindow: { mode: "OFF" },
+      scheduleExpression: "cron(0 4 * * ? *)",
+      scheduleExpressionTimezone: "Etc/UTC",
+      target: {
+        arn: visualBucketPruner.functionArn,
+        roleArn: visualBucketPrunerSchedulerRole.roleArn,
+        retryPolicy: {
+          maximumRetryAttempts: 2,
+          maximumEventAgeInSeconds: 3600,
+        },
+      },
+    });
+
+    new cdk.CfnOutput(this, "VisualBucketPrunerName", {
+      value: visualBucketPruner.functionName,
+      description:
+        "Daily cleaner for stale visual regression snapshots. Preserves the active main baseline. Invoke by hand to test: aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout",
     });
   }
 }
