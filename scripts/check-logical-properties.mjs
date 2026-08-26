@@ -64,7 +64,7 @@ const PHYSICAL = [
  */
 const patternFor = (utility) =>
   new RegExp(
-    `(?<![\\w-])-?(?:[a-z-]+:)*${utility.replace(/-$/, "-")}${utility.endsWith("-") ? "[\\w./\\[\\]%-]+" : ""}(?![\\w-])`,
+    `(?<![\\w-])-?(?:[a-z-]+:)*${utility}${utility.endsWith("-") ? "[\\w./\\[\\]%-]+" : ""}(?![\\w-])`,
     "g",
   );
 

@@ -50,7 +50,7 @@ describe("prune-visual-bucket-lib", () => {
 
     it("resolves head commit when HEAD has snapshot in S3", async () => {
       const fetchImpl = vi.fn(async (url) => {
-        if (url.includes("api.github.com")) {
+        if (new URL(url).host === "api.github.com") {
           return {
             ok: true,
             json: async () => [{ sha: SHA_1 }, { sha: SHA_2 }],
@@ -73,7 +73,7 @@ describe("prune-visual-bucket-lib", () => {
 
     it("walks back to recent ancestor when HEAD has no snapshot in S3", async () => {
       const fetchImpl = vi.fn(async (url) => {
-        if (url.includes("api.github.com")) {
+        if (new URL(url).host === "api.github.com") {
           return {
             ok: true,
             json: async () => [{ sha: SHA_1 }, { sha: SHA_2 }, { sha: SHA_3 }],
@@ -100,7 +100,7 @@ describe("prune-visual-bucket-lib", () => {
 
     it("falls back to git when GitHub API is unreachable", async () => {
       const fetchImpl = vi.fn(async (url) => {
-        if (url.includes("api.github.com")) {
+        if (new URL(url).host === "api.github.com") {
           return { ok: false, status: 500 };
         }
         if (url.includes(SHA_2)) {
@@ -124,7 +124,7 @@ describe("prune-visual-bucket-lib", () => {
 
     it("falls back to unverified HEAD if no candidates have snapshots in S3", async () => {
       const fetchImpl = vi.fn(async (url) => {
-        if (url.includes("api.github.com")) {
+        if (new URL(url).host === "api.github.com") {
           return {
             ok: true,
             json: async () => [{ sha: SHA_1 }, { sha: SHA_2 }],
