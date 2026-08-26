@@ -3609,8 +3609,8 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/waivers");
         await page.getByRole("heading", { level: 1, name: "Waiver template" }).waitFor();
-        await page.getByRole("button", { name: "Save new version" }).click();
-        await page.getByRole("button", { name: "Publish new version" }).waitFor();
+        await page.getByRole("button", { name: "Publish — signatures need renewing" }).click();
+        await page.getByRole("button", { name: "Publish as material" }).waitFor();
         await capture(page, "staff-waivers-confirm", scheme);
       });
 
