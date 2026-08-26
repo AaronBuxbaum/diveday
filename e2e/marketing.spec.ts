@@ -42,6 +42,15 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   await expect(heroSection.getByRole("link")).toHaveCount(1);
   await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
 
+  // The dock note intentionally rises 20px into the phone's lower edge. The
+  // phone's entrance animation creates a stacking context, so the note must
+  // explicitly sit above it or its eyebrow and first line are painted under
+  // the bezel (the regression shown in the homepage hero screenshot).
+  await expect(heroSection.getByText("At the dock", { exact: true }).locator("..")).toHaveCSS(
+    "z-index",
+    "10",
+  );
+
   // The diver preview moved out of the hero (where it was a third competing
   // door) onto the diver's row of the daily-moments section, still tagged for
   // attribution.
