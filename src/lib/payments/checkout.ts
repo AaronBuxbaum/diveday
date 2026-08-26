@@ -57,6 +57,8 @@ export type CreateCheckoutSessionRequest = {
    * sets, precisely so a code can't be applied to an unrelated checkout.
    */
   promotionCode?: string;
+  /** Opt-in Stripe Tax. When enabled, every line is tax-exclusive. */
+  taxEnabled?: boolean;
 };
 
 export type CheckoutSessionSnapshot = {
@@ -74,6 +76,8 @@ export type CheckoutSessionSnapshot = {
    * a settlement that didn't happen.
    */
   amountTotalCents: number | null;
+  /** Stripe's calculated tax total, or null before Stripe has enough evidence. */
+  taxAmountCents: number | null;
   expiresAt: Date | null;
 };
 
@@ -132,6 +136,10 @@ const sessionResponseSchema = z.object({
   payment_status: z.string(),
   url: z.string().url().nullable().optional(),
   amount_total: z.number().int().nullable(),
+  total_details: z
+    .object({ amount_tax: z.number().int().nonnegative().nullable().optional() })
+    .nullable()
+    .optional(),
   expires_at: z.number().int().optional(),
   payment_intent: z
     .union([z.string().min(1), z.object({ id: z.string().min(1) })])
@@ -154,6 +162,7 @@ function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessio
     paymentStatus: body.payment_status,
     checkoutUrl: body.url ?? null,
     amountTotalCents: body.amount_total ?? null,
+    taxAmountCents: body.total_details?.amount_tax ?? null,
     expiresAt: body.expires_at ? new Date(body.expires_at * 1000) : null,
   };
 }
@@ -180,10 +189,14 @@ export function stripeCheckoutProvider(
           cancel_url: request.cancelUrl,
           customer_email: request.customerEmail,
         });
+        if (request.taxEnabled) form.set("automatic_tax[enabled]", "true");
         request.lineItems.forEach((line, index) => {
           form.set(`line_items[${index}][price_data][currency]`, request.currency);
           form.set(`line_items[${index}][price_data][product_data][name]`, line.description);
           form.set(`line_items[${index}][price_data][unit_amount]`, String(line.unitAmountCents));
+          if (request.taxEnabled) {
+            form.set(`line_items[${index}][price_data][tax_behavior]`, "exclusive");
+          }
           form.set(`line_items[${index}][quantity]`, String(line.quantity));
         });
         if (request.promotionCode) {

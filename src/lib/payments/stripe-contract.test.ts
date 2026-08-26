@@ -118,6 +118,7 @@ describe("checkout provider against real Checkout Session payloads", () => {
       paymentStatus: "unpaid",
       checkoutUrl: session.url,
       amountTotalCents: 36_000,
+      taxAmountCents: 0,
       expiresAt: new Date(1_784_727_000 * 1000),
     });
   });
@@ -316,6 +317,7 @@ describe("invoicing provider against real Invoice payloads", () => {
       hostedInvoiceUrl: invoice.hosted_invoice_url,
       invoicePdfUrl: invoice.invoice_pdf,
       totalCents: 24_000,
+      taxCents: 0,
     });
   });
 
@@ -331,6 +333,7 @@ describe("invoicing provider against real Invoice payloads", () => {
     expect(result.invoice.status).toBe("paid");
     expect(result.invoice.amountPaidCents).toBe(24_000);
     expect(result.invoice.totalCents).toBe(24_000);
+    expect(result.invoice.taxCents).toBe(0);
   });
 
   /**

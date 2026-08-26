@@ -21,6 +21,14 @@ import { verifyStripeWebhook } from "@/lib/payments/webhook";
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),
+  total_tax_amounts: z
+    .array(z.object({ amount: z.number().int().nonnegative() }))
+    .nullable()
+    .optional(),
+  total_taxes: z
+    .array(z.object({ amount: z.number().int().nonnegative() }))
+    .nullable()
+    .optional(),
 });
 
 const checkoutSessionObjectSchema = z.object({
@@ -31,7 +39,16 @@ const checkoutSessionObjectSchema = z.object({
   // parses — the completion then falls back to the amounts DiveDay asked for
   // rather than recording nothing collected.
   amount_total: z.number().int().nullable().optional(),
+  total_details: z
+    .object({ amount_tax: z.number().int().nonnegative().nullable().optional() })
+    .nullable()
+    .optional(),
 });
+
+function invoiceTaxCents(invoice: z.infer<typeof invoiceObjectSchema>): number {
+  const amounts = invoice.total_tax_amounts ?? invoice.total_taxes ?? [];
+  return amounts.reduce((total, entry) => total + entry.amount, 0);
+}
 
 const accountObjectSchema = z.object({
   id: z.string().min(1),
@@ -175,6 +192,7 @@ export async function POST(request: Request) {
             invoice.data.id,
             invoice.data.amount_paid ?? 0,
             event.account,
+            invoiceTaxCents(invoice.data),
           );
           logOutcome(order ? "order_paid" : "order_not_found");
         } else {
@@ -207,6 +225,7 @@ export async function POST(request: Request) {
             session.data.id,
             event.account,
             session.data.amount_total,
+            session.data.total_details?.amount_tax,
           );
           if (checkout) {
             logOutcome("checkout_paid");
@@ -229,6 +248,7 @@ export async function POST(request: Request) {
             session.data.id,
             event.account,
             session.data.amount_total,
+            session.data.total_details?.amount_tax,
           );
           if (checkout) {
             logOutcome("checkout_paid");

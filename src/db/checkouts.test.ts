@@ -71,6 +71,7 @@ function retrieved(session: Partial<CheckoutSessionSnapshot>): CheckoutSessionLo
       checkoutUrl: null,
       // Null by default: "Stripe reported no total", not "collected nothing".
       amountTotalCents: null,
+      taxAmountCents: null,
       expiresAt: null,
       ...session,
     },

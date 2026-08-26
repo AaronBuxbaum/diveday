@@ -32,6 +32,7 @@ import {
   setShopReviewUrl,
   setShopSearchListing,
   setShopSendWindow,
+  setShopTaxEnabled,
   setShopTemperatureUnit,
   setShopTimezone,
 } from "@/db/shops";
@@ -263,6 +264,19 @@ export async function saveUnitsAction(formData: FormData) {
   // the row and agreed with the derived values has looked (issue #712).
   await markShopUnitsConfirmed(db, session.user.shopId);
   revalidateAndRedirect(settings, noticeUrl(settings, "units-saved", { saved: "units" }));
+}
+
+/** Saves the owner/manager's opt-in for Stripe Tax on future payments. */
+export async function saveTaxAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await paymentSettingsBlock(session);
+  const value = formData.get("taxEnabled");
+  if (value !== null && value !== "on") {
+    redirect(noticeUrl(settings, "tax-invalid", { saved: "tax" }));
+  }
+  await setShopTaxEnabled(await getDb(), session.user.shopId, value === "on");
+  revalidateAndRedirect(settings, noticeUrl(settings, "tax-saved", { saved: "tax" }));
 }
 
 /**

@@ -28,6 +28,16 @@ export async function getShopCurrency(db: DbExecutor, shopId: string): Promise<S
   return toShopCurrency(row?.currency);
 }
 
+/** Whether new Stripe Checkout sessions and invoices should use Stripe Tax. */
+export async function getShopTaxEnabled(db: DbExecutor, shopId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ taxEnabled: shops.taxEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return row?.taxEnabled ?? false;
+}
+
 /**
  * The two currency codes when the shop's declared currency and the one Stripe
  * reports for its connected account disagree, or null when they don't.

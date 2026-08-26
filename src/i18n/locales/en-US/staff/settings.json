@@ -9,6 +9,8 @@
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
+      "taxSaved": "Tax setting saved.",
+      "taxInvalid": "That tax setting couldn't be saved.",
       "rentalsSaved": "Rental catalog saved.",
       "rentalPricesSaved": "Rental prices saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
@@ -205,6 +207,16 @@
       "submit": "Save units",
       "submitting": "Saving…",
       "currencyRepricingWarning": "Changing this does not convert your prices. A $95 trip becomes 95 of the new currency, and orders already placed keep the currency they were charged in."
+    },
+    "tax": {
+      "heading": "Sales tax & VAT",
+      "description": "Add sales tax, VAT, and similar taxes to every Stripe payment.",
+      "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Stripe uses your connected account's tax settings and the customer's location. Turn this off if you handle tax yourself.",
+      "enabledValue": "On",
+      "disabledValue": "Off",
+      "checkboxLabel": "Use Stripe Tax for new payments",
+      "submit": "Save tax setting",
+      "submitting": "Saving…"
     },
     "paymentsGate": {
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."

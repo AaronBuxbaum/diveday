@@ -218,7 +218,7 @@ export async function getMonthlyReport(
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
   const [recoveredDeposits] = await db
-    .select({ total: recoveredDepositCents })
+    .select({ total: recoveredDepositCents, tax: sum(bookingCheckoutBookings.taxCents) })
     .from(bookingCheckouts)
     .innerJoin(
       bookingCheckoutBookings,
@@ -246,12 +246,47 @@ export async function getMonthlyReport(
       ),
     );
 
+  // Tax for a current booking payment comes from the checkout allocation, but
+  // only while that checkout is still the payment row's provider. A later
+  // invoice balance replaces the booking payment and has its own tax evidence
+  // below; a deposit that it replaced is recovered by the query above.
+  const [currentCheckoutTax] = await db
+    .select({ total: sum(bookingCheckoutBookings.taxCents) })
+    .from(bookingCheckoutBookings)
+    .innerJoin(
+      bookingCheckouts,
+      and(
+        eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+      ),
+    )
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(
+      bookingPayments,
+      and(
+        eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
+        eq(bookingPayments.shopId, shopId),
+        eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
+      ),
+    )
+    .where(
+      and(
+        inWindow,
+        inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES]),
+      ),
+    );
+
   // Older/demo data can contain a paid invoice without the booking-payment
   // mirror (the invoice is still the authoritative collected amount). Use it
   // only when no current payment row exists, avoiding double counting the
   // normal webhook/manual-payment path above.
   const [invoiceRevenue] = await db
-    .select({ total: sum(orders.amountPaidCents) })
+    .select({ total: sum(orders.amountPaidCents), tax: sum(orders.taxCents) })
     .from(orders)
     .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -279,6 +314,33 @@ export async function getMonthlyReport(
               ),
           ),
         ),
+      ),
+    );
+
+  // A paid staff invoice normally mirrors its collected total into
+  // `booking_payments`, so the revenue query above deliberately excludes it.
+  // Its tax still belongs in the separate tax line, matched by providerRef so
+  // an unrelated manual payment on the same booking cannot subtract tax that
+  // was not part of the amount being reported.
+  const [invoiceBookingTax] = await db
+    .select({ total: sum(orders.taxCents) })
+    .from(orders)
+    .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(
+      bookingPayments,
+      and(
+        eq(bookingPayments.bookingId, orders.bookingId),
+        eq(bookingPayments.shopId, shopId),
+        eq(bookingPayments.providerRef, orders.stripeInvoiceId),
+      ),
+    )
+    .where(
+      and(
+        inWindow,
+        eq(orders.shopId, shopId),
+        inArray(orders.status, ["paid", "partly_refunded"]),
+        gt(orders.amountPaidCents, 0),
       ),
     );
 
@@ -348,12 +410,18 @@ export async function getMonthlyReport(
     Number(baseRevenue?.total ?? 0) +
     Number(recoveredDeposits?.total ?? 0) +
     Number(invoiceRevenue?.total ?? 0);
+  const taxCents =
+    Number(currentCheckoutTax?.total ?? 0) +
+    Number(recoveredDeposits?.tax ?? 0) +
+    Number(invoiceRevenue?.tax ?? 0) +
+    Number(invoiceBookingTax?.total ?? 0);
   const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
   const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
 
   return {
     trips: reportTrips,
-    revenueCents: currentRevenueCents + importedPaymentCents - importedRefundCents,
+    revenueCents: currentRevenueCents - taxCents + importedPaymentCents - importedRefundCents,
+    taxCents,
     importedPaymentCents,
     importedRefundCents,
     importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),

@@ -88,6 +88,16 @@ export async function setShopTimezone(db: AppDb, shopId: string, timezone: strin
   return shop ?? null;
 }
 
+/** Turns Stripe Tax on or off for charges created after this setting is saved. */
+export async function setShopTaxEnabled(db: AppDb, shopId: string, taxEnabled: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ taxEnabled })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
 /**
  * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
  * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).

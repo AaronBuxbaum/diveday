@@ -9,6 +9,8 @@
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
+      "taxSaved": "Configuración de impuestos guardada.",
+      "taxInvalid": "No se pudo guardar la configuración de impuestos.",
       "rentalsSaved": "Catálogo de alquiler guardado.",
       "rentalPricesSaved": "Precios de alquiler guardados.",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -205,6 +207,16 @@
       "submit": "Guardar unidades",
       "submitting": "Guardando…",
       "currencyRepricingWarning": "Cambiar esto no convierte tus precios. Una salida de 95 $ pasa a ser 95 de la nueva moneda, y los pedidos ya realizados conservan la moneda en la que se cobraron."
+    },
+    "tax": {
+      "heading": "Impuestos (IVA y ventas)",
+      "description": "Añade IVA, impuestos sobre las ventas y otros impuestos similares a cada pago de Stripe.",
+      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuración de impuestos de tu cuenta conectada y la ubicación del cliente. Desactívalo si gestionas los impuestos por tu cuenta.",
+      "enabledValue": "Activados",
+      "disabledValue": "Desactivados",
+      "checkboxLabel": "Usar Stripe Tax para los pagos nuevos",
+      "submit": "Guardar configuración de impuestos",
+      "submitting": "Guardando…"
     },
     "paymentsGate": {
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."

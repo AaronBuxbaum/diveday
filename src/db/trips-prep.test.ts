@@ -1,6 +1,10 @@
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { tripReservationWindow } from "@/lib/gear";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { upcomingTripsWithCounts } from "./trips";
+import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep } from "./trips-prep";
 
@@ -110,6 +114,41 @@ describe("getTripPrep", () => {
       for (const [kind, units] of prep.freeByKind) {
         expect(units.every((unit) => unit.kind === kind)).toBe(true);
       }
+    });
+
+    it("keeps fins wanted after the mask unit is reserved", async () => {
+      const ctx = await context();
+      const before = await prepFor(ctx);
+      const row = before.assignmentRows.find((entry) => {
+        const kinds = entry.wanted.map((item) => item.kind);
+        return kinds.includes("mask") && kinds.includes("fins");
+      });
+      if (!row) throw new Error("seeded trip has no diver needing mask and fins");
+
+      const window = tripReservationWindow(before.trip, ctx.shop.timezone);
+      const mask = await listAvailableGearUnits(ctx.db, ctx.shop.id, {
+        ...window,
+        todayLocal: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
+        kind: "mask",
+      });
+      const unit = mask[0];
+      if (!unit) throw new Error("seeded shop has no available mask");
+      const reserved = await reserveGearUnit(ctx.db, {
+        shopId: ctx.shop.id,
+        gearItemId: unit.id,
+        bookingId: row.diver.bookingId,
+        tripId: ctx.tripId,
+        reservedFrom: window.from,
+        reservedUntil: window.until,
+      });
+      if (!reserved.ok) throw new Error(`mask reservation failed: ${reserved.reason}`);
+
+      const after = await prepFor(ctx);
+      const updated = after.assignmentRows.find(
+        (entry) => entry.diver.bookingId === row.diver.bookingId,
+      );
+      expect(updated?.wanted.map((item) => item.kind)).toContain("fins");
+      expect(updated?.wanted.map((item) => item.kind)).not.toContain("mask");
     });
   });
 });

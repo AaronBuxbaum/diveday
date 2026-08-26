@@ -23,8 +23,10 @@
   "downloadCsv": "Descargar CSV",
   "metrics": {
     "revenueLabel": "Ingresos netos",
-    "revenueDetail": "Pagos y depósitos cobrados en las salidas de este mes",
-    "revenueDetailWithImported": "Pagos y depósitos de salidas actuales, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
+    "revenueDetail": "Pagos y depósitos después del impuesto de Stripe en las salidas de este mes",
+    "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
+    "taxLabel": "Impuestos cobrados",
+    "taxDetail": "Impuesto de Stripe incluido en los pagos verificados de este mes",
     "bookingsLabel": "Reservas",
     "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
     "bookingsOther": "en {count, plural, one {# salida} other {# salidas}}",

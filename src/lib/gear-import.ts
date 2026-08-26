@@ -77,7 +77,10 @@ function kind(value: string | null): GearItemKind {
     regulator: ["regulator", "regs"],
     wetsuit: ["wetsuit", "exposure_suit"],
     boots: ["boots", "boot"],
-    mask_fins: ["mask_fins", "mask_and_fins", "mask_fins"],
+    mask: ["mask", "mask_only"],
+    // A legacy combined row cannot safely invent a serialized mask companion;
+    // keep its tagged/size-bearing unit as fins and let staff add the mask.
+    fins: ["fins", "fin", "flippers", "mask_fins", "mask_and_fins"],
     weights: ["weights", "weight"],
     dive_computer: ["dive_computer", "computer"],
     gopro: ["gopro", "go_pro"],

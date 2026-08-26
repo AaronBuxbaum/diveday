@@ -6,7 +6,7 @@ import {
   type HotelPickupRun,
   rentalFitLine,
 } from "@/lib/dive-prep";
-import { tripReservationWindow } from "@/lib/gear";
+import { gearAssignmentNeeds, tripReservationWindow, type GearAssignmentNeed } from "@/lib/gear";
 import type { AppDb } from "./client";
 import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "./gear";
 import { listTripPrepDivers } from "./rental-fit";
@@ -30,7 +30,7 @@ export type TripPrep = {
   assignmentRows: {
     diver: Awaited<ReturnType<typeof listTripPrepDivers>>[number];
     assigned: NonNullable<ReturnType<Awaited<ReturnType<typeof listTripGearAssignments>>["get"]>>;
-    wanted: Extract<ReturnType<typeof rentalFitLine>, { state: "rents" }>["items"];
+    wanted: GearAssignmentNeed[];
   }[];
 };
 
@@ -95,12 +95,14 @@ export async function getTripPrep(
       // tags its regulators.
       const wanted =
         line.state === "rents"
-          ? line.items.filter(
-              (item) =>
-                item.kind !== "weights" &&
-                (fleetByKind.get(item.kind) ?? 0) > 0 &&
-                !assigned.some((assignment) => assignment.kind === item.kind),
-            )
+          ? line.items
+              .flatMap(gearAssignmentNeeds)
+              .filter(
+                (item) =>
+                  item.kind !== "weights" &&
+                  (fleetByKind.get(item.kind) ?? 0) > 0 &&
+                  !assigned.some((assignment) => assignment.kind === item.kind),
+              )
           : [];
       return { diver, assigned, wanted };
     })

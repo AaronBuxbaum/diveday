@@ -151,7 +151,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 0);
   });
 
   it("tries test webhook secret if live webhook secret fails, and succeeds if test secret matches", async () => {
@@ -166,7 +166,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 0);
   });
 
   it("ignores (200, no state change) a checkout.session.completed signed by the live secret but claiming livemode:false", async () => {
@@ -247,7 +247,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined, 0);
   });
 
   it("invoice.paid defaults amount to 0 when Stripe omits it", async () => {
@@ -257,7 +257,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined, 0);
   });
 
   it("invoice.voided marks the order void", async () => {
@@ -278,7 +278,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, "acct_123");
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, "acct_123", 0);
   });
 
   it("checkout.session.completed with payment_status paid marks the checkout paid", async () => {
@@ -290,7 +290,13 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     expect(response.status).toBe(200);
     // Stripe's own settled total travels with the event and is handed to the
     // completion, which splits it across the bookings it paid for (PAY-H1/H2).
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined, 36_000);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
+      FAKE_DB,
+      "cs_123",
+      undefined,
+      36_000,
+      undefined,
+    );
     // A session id belongs to at most one of booking_checkouts or tips —
     // the booking-checkout path found a match, so the tip fallback never runs.
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
@@ -329,6 +335,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
       FAKE_DB,
       "cs_123",
+      undefined,
       undefined,
       undefined,
     );
@@ -996,7 +1003,13 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
     const retried = await post(event);
     expect(retried.status).toBe(200);
     expect(markOrderPaidByInvoiceId).toHaveBeenCalledTimes(2);
-    expect(markOrderPaidByInvoiceId).toHaveBeenLastCalledWith(FAKE_DB, "in_retry", 4500, undefined);
+    expect(markOrderPaidByInvoiceId).toHaveBeenLastCalledWith(
+      FAKE_DB,
+      "in_retry",
+      4500,
+      undefined,
+      0,
+    );
   });
 
   it("still does not re-run a handler on the redelivery after a success", async () => {

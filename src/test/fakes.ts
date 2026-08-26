@@ -62,6 +62,7 @@ export function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): Checkou
           (sum, line) => sum + line.unitAmountCents * line.quantity,
           0,
         ),
+        taxAmountCents: null,
         expiresAt: new Date(nowMs() + DAY_MS),
       };
     },

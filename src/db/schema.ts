@@ -69,6 +69,8 @@ export const shops = pgTable(
      * rather than silently overriding what the shop declared here.
      */
     currency: text("currency").notNull().default("usd"),
+    /** Whether new Stripe charges should calculate and collect tax. Off by default. */
+    taxEnabled: boolean("tax_enabled").notNull().default(false),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
     /**
@@ -3124,6 +3126,8 @@ export const orders = pgTable(
     status: orderStatus("status").notNull().default("open"),
     currency: text("currency").notNull(),
     totalCents: integer("total_cents").notNull(),
+    /** Tax included in Stripe's total, retained separately for reporting and display. */
+    taxCents: integer("tax_cents").notNull().default(0),
     amountPaidCents: integer("amount_paid_cents").notNull().default(0),
     /**
      * The running total sent back, in minor units — the sum of every refund
@@ -3167,6 +3171,7 @@ export const orders = pgTable(
     // half that was scanning every order the shop has ever written.
     index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
   ],
@@ -3313,6 +3318,10 @@ export const bookingCheckouts = pgTable(
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
+    /** Snapshot of whether Stripe Tax was enabled when this session was created. */
+    taxEnabled: boolean("tax_enabled").notNull().default(false),
+    /** Stripe-reported tax for the completed session; null while no evidence exists. */
+    taxCents: integer("tax_cents"),
     /**
      * What actually *settled*, as Stripe itself reported it on the completed
      * session (`amount_total`) — the counterpart to `totalCents` above, which
@@ -3362,6 +3371,10 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_settled_total_nonnegative",
       sql`${table.settledTotalCents} is null or ${table.settledTotalCents} >= 0`,
+    ),
+    check(
+      "booking_checkouts_tax_nonnegative",
+      sql`${table.taxCents} is null or ${table.taxCents} >= 0`,
     ),
     // The snapshot of what Stripe was told to take off this session. Bounded to
     // a real percentage so a corrupt value can never reconstruct a *larger*
@@ -3414,6 +3427,8 @@ export const bookingCheckoutBookings = pgTable(
     /** This booking's trip-fee share after package coverage, snapshotted. */
     tripCents: integer("trip_cents"),
     gearCents: integer("gear_cents").notNull().default(0),
+    /** Allocated share of the checkout's Stripe-reported tax. */
+    taxCents: integer("tax_cents").notNull().default(0),
   },
   (table) => [
     uniqueIndex("booking_checkout_bookings_checkout_booking_unique").on(
@@ -3422,6 +3437,7 @@ export const bookingCheckoutBookings = pgTable(
     ),
     index("booking_checkout_bookings_booking_idx").on(table.bookingId),
     check("booking_checkout_bookings_gear_cents_nonnegative", sql`${table.gearCents} >= 0`),
+    check("booking_checkout_bookings_tax_cents_nonnegative", sql`${table.taxCents} >= 0`),
     check(
       "booking_checkout_bookings_trip_cents_nonnegative",
       sql`${table.tripCents} is null or ${table.tripCents} >= 0`,
@@ -5022,7 +5038,8 @@ export const rentalFitProfiles = pgTable(
 
 /**
  * What a tracked unit of rental gear is. Mirrors the prep list's
- * `RentalItemKind` (the seven rentable kinds plus `boots`) and adds the two
+ * `RentalItemKind` (the seven rentable kinds plus `boots`), keeps mask and fins
+ * as separate physical units, and adds the two
  * kinds a fleet has that a fit never mentions: `tank` — the compliance-heavy
  * unit with its own hydro/VIP clocks — and `other` for the odd tagged thing
  * (torch, SMB, camera tray) a shop still wants on the register. Keep aligned
@@ -5033,7 +5050,8 @@ export const gearItemKind = pgEnum("gear_item_kind", [
   "regulator",
   "wetsuit",
   "boots",
-  "mask_fins",
+  "mask",
+  "fins",
   "weights",
   "dive_computer",
   "gopro",

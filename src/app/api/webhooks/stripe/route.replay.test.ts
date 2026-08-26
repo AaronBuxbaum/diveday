@@ -492,6 +492,7 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
             (sum, item) => sum + item.quantity * item.unitAmountCents,
             0,
           ),
+          taxCents: 0,
         };
       },
       async voidInvoice() {

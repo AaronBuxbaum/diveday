@@ -225,6 +225,7 @@ describe("getRecapPageData tip reconciliation", () => {
               paymentStatus: "paid",
               checkoutUrl: null,
               amountTotalCents: 1000,
+              taxAmountCents: null,
               expiresAt: null,
             },
           };
@@ -249,6 +250,7 @@ describe("getRecapPageData tip reconciliation", () => {
               paymentStatus: "unpaid",
               checkoutUrl: null,
               amountTotalCents: 1000,
+              taxAmountCents: null,
               expiresAt: null,
             },
           };

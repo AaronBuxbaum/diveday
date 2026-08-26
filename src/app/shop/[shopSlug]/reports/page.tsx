@@ -545,6 +545,11 @@ export default async function ReportsPage({
               linkHref={revenueOrdersHref}
               linkLabel={t("reports.metrics.revenueViewOrders")}
             />
+            <ShopStat
+              label={t("reports.metrics.taxLabel")}
+              value={formatReportMoney(report.taxCents, currency, locale)}
+              detail={t("reports.metrics.taxDetail")}
+            />
             {/*
               Tips sit beside revenue rather than inside it (PAY-M2): they are
               their own Stripe charge, 100% to the shop, and never part of the

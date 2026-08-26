@@ -26,7 +26,12 @@ import {
   people,
   trips,
 } from "./schema";
-import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
+import {
+  canAcceptPayments,
+  getShopCurrency,
+  getShopStripeAccount,
+  getShopTaxEnabled,
+} from "./stripe-accounts";
 
 export type NewOrderLineItem = {
   kind: OrderLineItemKind;
@@ -145,6 +150,7 @@ export async function createOrder(
   // can never disagree — and snapshotted onto the order, which is evidence of
   // what was billed and must survive a later change to the shop setting.
   const currency = await getShopCurrency(db, input.shopId);
+  const taxEnabled = await getShopTaxEnabled(db, input.shopId);
   const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
   if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
     return { ok: false, reason: "invalid" };
@@ -195,6 +201,7 @@ export async function createOrder(
     customerEmail: customer.email,
     customerName: customer.fullName,
     currency,
+    taxEnabled,
     lineItems: input.lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,
@@ -226,6 +233,7 @@ export async function createOrder(
         status,
         currency,
         totalCents: result.totalCents,
+        taxCents: result.taxCents,
         amountPaidCents: status === "paid" ? result.totalCents : 0,
         description: input.description ?? null,
         stripeAccountId,
@@ -599,6 +607,8 @@ async function applyOrderUpdate(
   patch: {
     status: OrderStatus;
     amountPaidCents?: number;
+    /** Absolute Stripe-reported tax total when a provider read supplies it. */
+    taxCents?: number;
     /**
      * Minor units coming back on **this** refund, applied as a delta against
      * the row this transaction locks — never a figure computed from a snapshot
@@ -638,6 +648,20 @@ async function applyOrderUpdate(
     const status: OrderStatus =
       reversedCents === null ? patch.status : remainingCents > 0 ? "partly_refunded" : "refunded";
 
+    const taxCents =
+      reversedCents === null
+        ? (patch.taxCents ?? current.taxCents)
+        : current.amountPaidCents > 0
+          ? Math.max(
+              0,
+              current.taxCents -
+                Math.min(
+                  current.taxCents,
+                  Math.round((current.taxCents * Math.max(0, reversedCents)) / current.amountPaidCents),
+                ),
+            )
+          : 0;
+
     if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(status)) {
       console.error("applyOrderUpdate: refused an illegal order status transition", {
         orderId: current.id,
@@ -657,6 +681,7 @@ async function applyOrderUpdate(
           reversedCents === null
             ? (patch.amountPaidCents ?? current.amountPaidCents)
             : remainingCents,
+        taxCents,
         refundedCents:
           reversedCents === null
             ? (patch.refundedCents ?? current.refundedCents)
@@ -767,6 +792,7 @@ export async function markOrderPaidByInvoiceId(
   stripeInvoiceId: string,
   amountPaidCents: number,
   expectedAccountId?: string,
+  taxCents?: number | null,
 ): Promise<Order | null> {
   const [order] = await db
     .select()
@@ -783,7 +809,11 @@ export async function markOrderPaidByInvoiceId(
     });
     return null;
   }
-  return applyOrderUpdate(db, order, { status: "paid", amountPaidCents });
+  return applyOrderUpdate(db, order, {
+    status: "paid",
+    amountPaidCents,
+    ...(taxCents === null || taxCents === undefined ? {} : { taxCents }),
+  });
 }
 
 export async function markOrderVoidedByInvoiceId(
@@ -1161,6 +1191,7 @@ export async function refreshOrderStatus(
   return applyOrderUpdate(db, order, {
     status: refundState ? order.status : mapStripeStatus(result.invoice.status),
     ...(refundState ? {} : { amountPaidCents: result.invoice.amountPaidCents }),
+    ...(refundState ? {} : { taxCents: result.invoice.taxCents }),
     hostedInvoiceUrl: result.invoice.hostedInvoiceUrl,
     invoicePdfUrl: result.invoice.invoicePdfUrl,
   });
