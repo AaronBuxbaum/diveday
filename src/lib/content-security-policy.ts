@@ -177,7 +177,8 @@ export type CspOptions = {
   metaSignup?: boolean;
   /**
    * React uses `eval` in development to reconstruct server stacks in the
-   * browser, and Next's own CSP guide says so. Never true in production.
+   * browser, and Next's own CSP guide says so. Automation test harnesses (E2E)
+   * also evaluate scripts dynamically. Never true in production deployments.
    */
   development?: boolean;
 };

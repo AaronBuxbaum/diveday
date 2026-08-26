@@ -94,3 +94,23 @@ describe("proxy embed handling", () => {
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
   });
 });
+
+describe("proxy CSP handling", () => {
+  it("allows unsafe-eval in report-only policy during e2e runs", async () => {
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await run(request("/shop/blue-mantis/divers"));
+    const reportOnly = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
+    expect(reportOnly).toContain("'unsafe-eval'");
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps unsafe-eval out of report-only policy in production when not in e2e", async () => {
+    vi.stubEnv("DIVEDAY_E2E", "");
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await run(request("/shop/blue-mantis/divers"));
+    const reportOnly = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
+    expect(reportOnly).not.toContain("'unsafe-eval'");
+    vi.unstubAllEnvs();
+  });
+});

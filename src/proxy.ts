@@ -196,7 +196,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     // the product that loads a third-party script at all. Granting those hosts
     // here rather than app-wide keeps them off every page a diver ever sees.
     metaSignup: WHATSAPP_SETTINGS_PATH.test(req.nextUrl.pathname),
-    development: process.env.NODE_ENV === "development",
+    development: process.env.NODE_ENV === "development" || process.env.DIVEDAY_E2E === "1",
   };
   const enforced = enforcedPolicy(cspOptions);
   if (enforced.length > 0) res.headers.set("Content-Security-Policy", enforced);
