@@ -35,7 +35,8 @@
     "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
-    "promosNotAuthorized": "Promo codes are limited to owners and managers."
+    "promosNotAuthorized": "Promo codes are limited to owners and managers.",
+    "integrationsNotAuthorized": "Only an owner or manager can change integrations."
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",

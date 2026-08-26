@@ -3492,6 +3492,170 @@ export const orderLineItems = pgTable(
   ],
 );
 
+/** Provider ids are deliberately closed here; adding a provider requires a registry entry. */
+export const integrationProvider = pgEnum("integration_provider", [
+  "shopify",
+  "quickbooks",
+  "zapier",
+]);
+
+export const integrationConnectionStatus = pgEnum("integration_connection_status", [
+  "connected",
+  "error",
+]);
+
+export const integrationDeliveryStatus = pgEnum("integration_delivery_status", [
+  "pending",
+  "processing",
+  "delivered",
+  "failed",
+]);
+
+/** Non-secret provider configuration. Secrets and OAuth tokens live sealed in credentials_sealed. */
+export type IntegrationSettings = {
+  eventTypes?: string[];
+  shopDomain?: string;
+  environment?: "sandbox" | "production";
+  incomeAccountId?: string;
+};
+
+/** The one encrypted credential envelope shared by OAuth and webhook providers. */
+export type IntegrationCredentials = Record<string, string | number | undefined>;
+
+/** One connected provider per shop. A row is the registry's durable installation record. */
+export const shopIntegrations = pgTable(
+  "shop_integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    provider: integrationProvider("provider").notNull(),
+    status: integrationConnectionStatus("status").notNull().default("connected"),
+    /** Realm id, Shopify shop id, or another non-secret provider identifier. */
+    externalAccountId: text("external_account_id"),
+    /** Safe display label, never an access token or URL secret. */
+    externalLabel: text("external_label"),
+    credentialsSealed: text("credentials_sealed").notNull(),
+    settings: jsonb("settings").$type<IntegrationSettings>().notNull().default({}),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("shop_integrations_shop_provider_unique").on(table.shopId, table.provider),
+    index("shop_integrations_shop_status_idx").on(table.shopId, table.status),
+  ],
+);
+
+/** Short-lived, one-time OAuth state. Only the hash of the browser state is stored. */
+export const integrationOauthStates = pgTable(
+  "integration_oauth_states",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    stateHash: text("state_hash").notNull(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    provider: integrationProvider("provider").notNull(),
+    context: jsonb("context").$type<Record<string, string>>().notNull().default({}),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("integration_oauth_states_hash_unique").on(table.stateHash),
+    index("integration_oauth_states_expiry_idx").on(table.expiresAt),
+  ],
+);
+
+/** Transactional business event. The idempotency key makes order replays harmless. */
+export const integrationEvents = pgTable(
+  "integration_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("integration_events_shop_idempotency_unique").on(
+      table.shopId,
+      table.idempotencyKey,
+    ),
+    index("integration_events_shop_created_idx").on(table.shopId, table.createdAt),
+  ],
+);
+
+/** Delivery state for one event/provider pair. This is the retryable outbox. */
+export const integrationDeliveries = pgTable(
+  "integration_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => shopIntegrations.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => integrationEvents.id, { onDelete: "cascade" }),
+    status: integrationDeliveryStatus("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("integration_deliveries_integration_event_unique").on(
+      table.integrationId,
+      table.eventId,
+    ),
+    index("integration_deliveries_due_idx").on(table.status, table.nextAttemptAt),
+    index("integration_deliveries_shop_created_idx").on(table.shopId, table.createdAt),
+  ],
+);
+
+/** Idempotent mapping from a DiveDay source record to a provider record. */
+export const integrationSyncRecords = pgTable(
+  "integration_sync_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    integrationId: uuid("integration_id")
+      .notNull()
+      .references(() => shopIntegrations.id, { onDelete: "cascade" }),
+    sourceType: text("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    operation: text("operation").notNull(),
+    externalId: text("external_id").notNull(),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).notNull().defaultNow(),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("integration_sync_records_source_unique").on(
+      table.integrationId,
+      table.sourceType,
+      table.sourceId,
+      table.operation,
+    ),
+    index("integration_sync_records_external_idx").on(table.integrationId, table.externalId),
+  ],
+);
+
 export const paymentOperationKind = pgEnum("payment_operation_kind", [
   "checkout_session",
   "invoice",
@@ -6158,6 +6322,14 @@ export type BackupDeliveryTrigger = (typeof backupDeliveryTrigger.enumValues)[nu
 export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
+export type IntegrationProvider = (typeof integrationProvider.enumValues)[number];
+export type IntegrationConnectionStatus = (typeof integrationConnectionStatus.enumValues)[number];
+export type IntegrationDeliveryStatus = (typeof integrationDeliveryStatus.enumValues)[number];
+export type ShopIntegration = typeof shopIntegrations.$inferSelect;
+export type IntegrationOauthState = typeof integrationOauthStates.$inferSelect;
+export type IntegrationEvent = typeof integrationEvents.$inferSelect;
+export type IntegrationDelivery = typeof integrationDeliveries.$inferSelect;
+export type IntegrationSyncRecord = typeof integrationSyncRecords.$inferSelect;
 export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type Tip = typeof tips.$inferSelect;

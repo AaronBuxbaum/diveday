@@ -31,6 +31,9 @@ import {
   gearReservations,
   gearServiceEvents,
   importedPaymentHistory,
+  integrationDeliveries,
+  integrationEvents,
+  integrationOauthStates,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -838,6 +841,13 @@ export async function resetDemoSchedule(
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // These records can contain order/customer payloads and point at schedule
+  // data that is about to be replaced, so they must not survive a demo reset.
+  // Keep the provider connections themselves: they are shop settings, not
+  // part of the seeded schedule.
+  await db.delete(integrationDeliveries).where(eq(integrationDeliveries.shopId, shopId));
+  await db.delete(integrationEvents).where(eq(integrationEvents.shopId, shopId));
+  await db.delete(integrationOauthStates).where(eq(integrationOauthStates.shopId, shopId));
   // The shop's own checklist *items* are settings, not schedule — kept, like
   // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
   // against them are schedule-scoped operational history.

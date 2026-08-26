@@ -60,6 +60,8 @@ export const STRIPE_WEBHOOK_RETRY_DAYS = 3;
  */
 export type RetainedTable =
   | "stripe_webhook_events"
+  | "integration_events"
+  | "integration_oauth_states"
   | "notification_deliveries"
   | "notification_delivery_attempts"
   | "activity_events"
@@ -88,6 +90,18 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * connected-account ids, timestamps).
    */
   stripe_webhook_events: 400,
+  /**
+   * 400 days. Integration event payloads are provider delivery evidence, but
+   * can also contain customer/order fields needed for a retry. Keep them for
+   * the same season-plus-year window as provider delivery trails; cascading
+   * deletes remove their delivery rows at the same time.
+   */
+  integration_events: 400,
+  /**
+   * 2 days after expiry. OAuth state is hash-only and one-use, but a stale
+   * callback should not leave short-lived login records accumulating forever.
+   */
+  integration_oauth_states: 2,
   /**
    * 400 days. This is the current delivery outcome a shop uses to answer
    * whether a message reached a diver. It is mutable latest state rather than

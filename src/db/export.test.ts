@@ -241,6 +241,15 @@ const EXCLUDED_TABLES = [
   // export process, not a shop record; same reasoning as
   // notification_deliveries.
   "shop_backup_deliveries",
+  // Integration provider credentials, OAuth state, delivery retries, and
+  // external-id mappings are operational machinery rather than shop records.
+  // The credentials and webhook URLs are live capabilities; the remaining
+  // rows are pointers/retry state that cannot be restored into another shop.
+  "shop_integrations",
+  "integration_oauth_states",
+  "integration_events",
+  "integration_deliveries",
+  "integration_sync_records",
 ];
 
 /**

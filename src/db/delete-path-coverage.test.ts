@@ -121,6 +121,7 @@ const RESET_KEEPS: Record<string, string> = {
   pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
   shop_backup_deliveries: "delivery history for those bundles, seeded alongside the destination",
+  shop_integrations: "provider credentials and linkage, outside the resettable schedule",
   // The one table here that needs no delete at all: both its foreign keys carry
   // `ON DELETE CASCADE`, so Postgres clears it when the booking goes. Naming it
   // in the ordering would be dead code that reads like a safety measure.
