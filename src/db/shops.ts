@@ -90,11 +90,7 @@ export async function setShopTimezone(db: AppDb, shopId: string, timezone: strin
 
 /** Turns Stripe Tax on or off for charges created after this setting is saved. */
 export async function setShopTaxEnabled(db: AppDb, shopId: string, taxEnabled: boolean) {
-  const [shop] = await db
-    .update(shops)
-    .set({ taxEnabled })
-    .where(eq(shops.id, shopId))
-    .returning();
+  const [shop] = await db.update(shops).set({ taxEnabled }).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }
 

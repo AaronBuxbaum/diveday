@@ -657,7 +657,9 @@ async function applyOrderUpdate(
               current.taxCents -
                 Math.min(
                   current.taxCents,
-                  Math.round((current.taxCents * Math.max(0, reversedCents)) / current.amountPaidCents),
+                  Math.round(
+                    (current.taxCents * Math.max(0, reversedCents)) / current.amountPaidCents,
+                  ),
                 ),
             )
           : 0;

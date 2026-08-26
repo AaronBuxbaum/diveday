@@ -461,8 +461,8 @@ function quotesCurrentTripCharge(
   return (
     existing.amountPerDiverCents === current.amountPerDiverCents &&
     existing.isDeposit === current.isDeposit &&
-    existing.currency === current.currency
-    && existing.taxEnabled === current.taxEnabled
+    existing.currency === current.currency &&
+    existing.taxEnabled === current.taxEnabled
   );
 }
 
@@ -748,9 +748,7 @@ export async function markCheckoutPaidBySessionId(
     // Stripe-reported tax rather than treating a legitimate tax-inclusive
     // total as an overcharge. If tax evidence is absent, the conservative
     // pre-tax ceiling remains in force.
-    const taxCeiling = checkout.taxEnabled
-      ? (reportedTaxCents ?? checkout.taxCents ?? 0)
-      : 0;
+    const taxCeiling = checkout.taxEnabled ? (reportedTaxCents ?? checkout.taxCents ?? 0) : 0;
     const settledCeiling = checkout.totalCents + taxCeiling;
     if (reportedTaxCents !== null && reportedTaxCents > (reportedSettledCents ?? settledCeiling)) {
       log("checkout.tax_over_total", "error", {

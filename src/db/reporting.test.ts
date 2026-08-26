@@ -112,17 +112,15 @@ async function pay(
   amountCents: number,
   source: { provider?: string; providerRef?: string } = {},
 ): Promise<void> {
-  await db
-    .insert(bookingPayments)
-    .values({
-      shopId,
-      bookingId,
-      status,
-      amountCents,
-      currency: "usd",
-      provider: source.provider,
-      providerRef: source.providerRef,
-    });
+  await db.insert(bookingPayments).values({
+    shopId,
+    bookingId,
+    status,
+    amountCents,
+    currency: "usd",
+    provider: source.provider,
+    providerRef: source.providerRef,
+  });
 }
 
 /**

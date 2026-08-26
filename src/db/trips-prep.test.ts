@@ -1,10 +1,10 @@
+import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
-import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { upcomingTripsWithCounts } from "./trips";
 import { listAvailableGearUnits, reserveGearUnit } from "./gear";
+import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep } from "./trips-prep";
 

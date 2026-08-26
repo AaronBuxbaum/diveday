@@ -274,12 +274,7 @@ export async function getMonthlyReport(
         eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
       ),
     )
-    .where(
-      and(
-        inWindow,
-        inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES]),
-      ),
-    );
+    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])));
 
   // Older/demo data can contain a paid invoice without the booking-payment
   // mirror (the invoice is still the authoritative collected amount). Use it

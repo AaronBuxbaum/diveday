@@ -6,7 +6,7 @@ import {
   type HotelPickupRun,
   rentalFitLine,
 } from "@/lib/dive-prep";
-import { gearAssignmentNeeds, tripReservationWindow, type GearAssignmentNeed } from "@/lib/gear";
+import { type GearAssignmentNeed, gearAssignmentNeeds, tripReservationWindow } from "@/lib/gear";
 import type { AppDb } from "./client";
 import { countGearItemsByKind, listAvailableGearUnits, listTripGearAssignments } from "./gear";
 import { listTripPrepDivers } from "./rental-fit";
