@@ -3,6 +3,8 @@ import { redactCapabilityUrl } from "@/app/observability";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 import {
+  mutationDurationBeaconSchema,
+  mutationDurationLogContext,
   normalizeBeaconPath,
   webVitalsBeaconSchema,
   webVitalsLogContext,
@@ -55,8 +57,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     return new NextResponse(null, { status: 204 });
   }
 
-  const parsed = webVitalsBeaconSchema.safeParse(parsedJson);
-  if (!parsed.success) return new NextResponse(null, { status: 204 });
+  const webVitals = webVitalsBeaconSchema.safeParse(parsedJson);
+  const mutationDurations = mutationDurationBeaconSchema.safeParse(parsedJson);
+  if (!webVitals.success && !mutationDurations.success) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  if (mutationDurations.success) {
+    for (const mutation of mutationDurations.data.mutations) {
+      log("mutation_duration.reported", "info", mutationDurationLogContext(mutation));
+    }
+    await flushLogs();
+    return new NextResponse(null, { status: 204 });
+  }
+  if (!webVitals.success) return new NextResponse(null, { status: 204 });
 
   // Two steps, in this order, and this is the copy that counts — the
   // client-side redaction is a courtesy to whatever is on the wire, while this
@@ -65,9 +79,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   // absolute URL or 2KB of anything else into the `route` field a dashboard
   // query groups on; `redactCapabilityUrl` last, so redaction is the final word
   // and fails closed on anything it cannot parse.
-  const route = redactCapabilityUrl(normalizeBeaconPath(parsed.data.url));
+  const route = redactCapabilityUrl(normalizeBeaconPath(webVitals.data.url));
 
-  log("web_vital.reported", "info", webVitalsLogContext(parsed.data, route));
+  log("web_vital.reported", "info", webVitalsLogContext(webVitals.data, route));
 
   // A beacon fires as the page is going away, so this response is nobody's
   // latency. Awaiting the flush is what keeps a single-page visit's numbers from

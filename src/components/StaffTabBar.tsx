@@ -210,7 +210,7 @@ export function StaffTabBar({
                     the truncated form — and a label that actually truncates at
                     390px is a locale bug to shorten in the bundle, not a
                     rendering strategy. es-ES's longest ("Buceadores") fits. */}
-                  <span className="max-w-full truncate text-xs font-medium leading-tight">
+                  <span className="max-w-full truncate text-base font-medium leading-tight">
                     {destination.id === "closeOut" ? closeOutLabel : labels[destination.id]}
                   </span>
                 </Link>
@@ -271,7 +271,7 @@ export function StaffTabBar({
                     <circle cx="19" cy="12" r="1" />
                   </svg>
                 </span>
-                <span className="max-w-full truncate text-xs font-medium leading-tight">
+                <span className="max-w-full truncate text-base font-medium leading-tight">
                   {moreLabel}
                 </span>
               </button>

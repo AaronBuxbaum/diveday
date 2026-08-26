@@ -1,4 +1,5 @@
-import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
@@ -12,10 +13,13 @@ import {
   courses,
   diveSites,
   people,
+  personRoles,
   rollCallEvents,
+  tripAssignments,
   tripDives,
   tripScheduleDays,
   trips,
+  userAccounts,
 } from "./schema";
 import {
   normalizedDiveCount,
@@ -84,6 +88,40 @@ export async function bookedDiverLanguages(
     .filter((locale): locale is string => locale !== null)
     .map((locale) => locale.split("-")[0]);
   return [...new Set(languages)];
+}
+
+/**
+ * Languages currently represented by a departure's active, assigned crew.
+ *
+ * This is intentionally an aggregate public read: it names no crew member and
+ * makes no promise about a particular guide. The extra active/deleted filters
+ * match `listShopSpokenLanguages`, so removing a staff account also stops a
+ * stale assignment advertising a language on every trip it once covered.
+ */
+export async function tripCrewSpokenLanguages(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ language: sql<string>`jsonb_array_elements_text(${people.spokenLanguages})` })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(tripAssignments.tripId, tripId),
+        eq(trips.shopId, shopId),
+        eq(people.shopId, shopId),
+        liveTrip(),
+        isNull(people.deletedAt),
+        eq(userAccounts.status, "active"),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    );
+  return rows.map((row) => row.language);
 }
 
 /**

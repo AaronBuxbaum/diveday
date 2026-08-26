@@ -18,6 +18,11 @@ In contrast, **roll call on the manifest remains strictly non-optimistic**: mark
 Primary flows work one-handed on a phone, in glare, with wet fingers: touch targets ≥ 44 px,
 critical text ≥ 16 px, strong contrast (AA — 4.5:1 text, 3:1 focus rings and control borders — is
 the bar every new surface must clear, and manifest/roll-call surfaces aim higher),
+**Critical text is any text a person reads to make a decision or to identify a record** — a person's
+name, a trip title, a time, a money amount, a status word, or a control's own label. Text that
+supports one is not critical: a caption, a timestamp beside a name already stated, a column header,
+or small print.
+
 forgiving inputs (autocomplete, sensible defaults, no precision gestures). A 44 px target must
 center its own label, and fields in a row must share one baseline no matter how their captions
 wrap — both come free from the primitives in

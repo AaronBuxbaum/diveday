@@ -649,6 +649,7 @@ export async function seedHistory(
         templateId: template.id,
         templateTitle: template.title,
         templateVersion: template.version,
+        templateGeneration: template.materialGeneration,
         templateBody: template.body,
         status: "completed" as const,
         tokenHash: `hist-waiver-${shopId}-${waiverToken}`,

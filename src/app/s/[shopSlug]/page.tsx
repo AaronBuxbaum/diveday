@@ -736,10 +736,10 @@ export default async function SchedulePage({
                       {dayParts.day}
                     </span>
                     <span className="flex flex-col justify-center leading-tight">
-                      <span className="text-xs font-bold tracking-[0.18em] uppercase">
+                      <span className="text-base font-bold tracking-[0.18em] uppercase">
                         {dayParts.weekday}
                       </span>
-                      <span className="text-xs font-medium tracking-[0.18em] text-muted uppercase">
+                      <span className="text-base font-medium tracking-[0.18em] text-muted uppercase">
                         {dayParts.month}
                       </span>
                     </span>

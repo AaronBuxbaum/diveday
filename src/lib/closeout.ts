@@ -263,6 +263,8 @@ export type DayCloseoutState = {
   leftovers: TodayAction[];
   /** How much tomorrow's queue opens with, by kind. Counts, never rows. */
   tomorrow: TomorrowGlance;
+  /** The latest explicit choice for each leftover, carried from the append-only trail. */
+  leftoverDecisions: Readonly<Record<string, LeftoverDecision>>;
   /**
    * The departures that must be acknowledged by name before closing — the
    * after-dive gaps and the boats not home. Empty means the close button
@@ -314,6 +316,7 @@ export function assembleDayCloseout(input: {
   gaps: readonly CloseoutRollCallGap[];
   actions: readonly TodayAction[];
   adminTasks?: readonly CloseoutAdminTask[];
+  leftoverDecisions?: Readonly<Record<string, LeftoverDecision>>;
   timeZone: string;
   now?: Date;
 }): DayCloseoutState {
@@ -390,6 +393,12 @@ export function assembleDayCloseout(input: {
     adminTasks,
     leftovers,
     tomorrow: countByKind(tomorrowAll),
+    leftoverDecisions: Object.fromEntries(
+      leftovers.flatMap((action) => {
+        const decision = input.leftoverDecisions?.[action.id];
+        return decision === "carry" || decision === "dismiss" ? [[action.id, decision]] : [];
+      }),
+    ),
     mustAcknowledge,
   };
 }
@@ -466,9 +475,10 @@ export type CloseoutSnapshot = {
  */
 export function buildCloseoutSnapshot(
   state: Pick<DayCloseoutState, "departures" | "leftovers"> &
-    Partial<Pick<DayCloseoutState, "adminTasks">>,
-  decisions: Readonly<Record<string, LeftoverDecision>>,
+    Partial<Pick<DayCloseoutState, "adminTasks" | "leftoverDecisions">>,
+  decisions: Readonly<Record<string, LeftoverDecision>> = {},
 ): CloseoutSnapshot {
+  const effectiveDecisions = { ...(state.leftoverDecisions ?? {}), ...decisions };
   return {
     departures: state.departures
       .filter(
@@ -490,7 +500,7 @@ export function buildCloseoutSnapshot(
       subject: action.subject,
       detail: action.detail,
       decision:
-        Object.hasOwn(decisions, action.id) && decisions[action.id] === "dismiss"
+        Object.hasOwn(effectiveDecisions, action.id) && effectiveDecisions[action.id] === "dismiss"
           ? "dismiss"
           : "carry",
     })),

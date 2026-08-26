@@ -74,6 +74,11 @@ function declarationKeys(): string[] {
     .map(([key]) => key);
 }
 
+function bookingRateLimitCalls(): number {
+  return vi.mocked(checkRateLimit).mock.calls.filter(([, config]) => config === RATE_LIMITS.booking)
+    .length;
+}
+
 const keyFor = (email: string) => rateLimitKey("declaration", SHOP_ID, email);
 
 const ref = (tripId: string) => ({ shopSlug: "blue-mantis", tripId, embed: false });
@@ -91,6 +96,24 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("the declaration budget", () => {
+  it("charges the booking bucket once per declaration in a party", async () => {
+    await bookSpot(
+      ref(TRIP_ID),
+      {},
+      submission([
+        { email: "one@example.com", level: "rescue" },
+        { email: "two@example.com", level: "rescue" },
+        { email: "three@example.com", level: "rescue" },
+        { email: "four@example.com", level: "rescue" },
+        { email: "five@example.com", level: "rescue" },
+        { email: "six@example.com", level: "rescue" },
+      ]),
+    );
+
+    expect(bookingRateLimitCalls()).toBe(6);
+    expect(declarationKeys()).toHaveLength(6);
+  });
+
   it("is spent on the diver the claim is about, not on the diver submitting", async () => {
     // The whole reason this is not keyed to the lead booker: a party names up
     // to six people, so a bucket on the submitter is cleared by putting the

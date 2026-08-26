@@ -104,11 +104,18 @@
   },
   "leftovers": {
     "heading": "Lo que quedó de hoy",
-    "subtitle": "Trabajo de hoy que sigue abierto. Pásalo a mañana o descártalo: el cierre recuerda ambas decisiones.",
+    "subtitle": "Trabajo de hoy que sigue abierto. Pasa a mañana salvo que lo descartes aquí.",
     "empty": "No quedó nada pendiente de hoy.",
     "carry": "Llevar a mañana",
     "dismiss": "Descartar",
-    "decisionLabel": "Qué hacer con {subject}"
+    "decisionLabel": "Qué hacer con {subject}",
+    "currentCarried": "Esto pasará a mañana.",
+    "currentDismissed": "Descartado para este cierre; volverá a aparecer si sigue abierto.",
+    "savedCarried": "{subject} pasará a mañana.",
+    "savedDismissed": "{subject} descartado para este cierre.",
+    "saving": "Guardando…",
+    "undo": "Deshacer",
+    "undoing": "Deshaciendo…"
   },
   "tomorrow": {
     "heading": "Mañana, de un vistazo",

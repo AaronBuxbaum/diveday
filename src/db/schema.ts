@@ -373,7 +373,7 @@ export const people = pgTable(
      *   record began is history, exactly as `certifications.self_declared_at`
      *   is kept after a sighting.
      * - It renders in the one staff phrase a level renders in ("Not certified
-     *   yet — diver's word"), so a staffer scanning a send list can tell this
+     *   yet — unverified"), so a staffer scanning a send list can tell this
      *   answer from the silence of somebody who skipped the question.
      */
     noCertificationDeclaredAt: timestamp("no_certification_declared_at", { withTimezone: true }),
@@ -384,7 +384,7 @@ export const people = pgTable(
      * The forms that write `no_certification_declared_at` are unauthenticated
      * and resolve a person by shop + email, so for a diver the shop holds no
      * card for, anybody who knows a name and an email address can mark them
-     * *"Not certified yet — diver's word"* on the send lists and in every CSV
+     * *"Not certified yet — unverified"* on the send lists and in every CSV
      * the shop exports from then on. Until this column there was exactly one
      * way back, and it was owner-only erasure of the whole record.
      *
@@ -4008,6 +4008,12 @@ export const waiverTemplates = pgTable(
       .references(() => shops.id),
     title: text("title").notNull(),
     version: integer("version").notNull(),
+    /**
+     * Legal-term generation. Versions still increment for every edit, while
+     * this counter advances only when the publisher says the edit changes what
+     * a diver agreed to (issue #738). Never infer that answer from a diff.
+     */
+    materialGeneration: integer("material_generation").notNull().default(1),
     body: text("body").notNull(),
     /** Soft delete, spelled the one way every other entity spells it (ADR 20260820-every-delete-is-soft). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -4021,6 +4027,27 @@ export const waiverTemplates = pgTable(
     // titles both claim "version 2" at the same shop (CR-015).
     uniqueIndex("waiver_templates_shop_version_unique").on(table.shopId, table.version),
   ],
+);
+
+/** The accountable human assertion that a waiver version is (or is not) material. */
+export const waiverMaterialityDecisions = pgTable(
+  "waiver_materiality_decisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => waiverTemplates.id),
+    material: boolean("material").notNull(),
+    actorPersonId: uuid("actor_person_id")
+      .notNull()
+      .references(() => people.id),
+    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [index("waiver_materiality_decisions_shop_idx").on(table.shopId, table.templateId)],
 );
 
 /**
@@ -4089,6 +4116,8 @@ export const waiverRecords = pgTable(
       .references(() => waiverTemplates.id),
     templateTitle: text("template_title").notNull(),
     templateVersion: integer("template_version").notNull(),
+    /** The material generation the signer agreed to, separate from display version. */
+    templateGeneration: integer("template_generation").notNull().default(1),
     templateBody: text("template_body").notNull(),
     status: waiverRecordStatus("status").notNull().default("pending"),
     /** Latest delivery outcome for a digital link; null for paper/imported records. */
@@ -5189,7 +5218,7 @@ export const gearServiceEvents = pgTable(
 );
 
 /**
- * One unit assigned to one booking for a date range — the fulfillment record
+ * One unit assigned to either a booking or a known person for a date range — the fulfillment record
  * behind "who has what and when is it due back". Never a billing record:
  * rental money stays where it already lives (checkout gear lines, staff
  * invoices). The double-booking guard is the database's, not the app's: an
@@ -5210,9 +5239,9 @@ export const gearReservations = pgTable(
     gearItemId: uuid("gear_item_id")
       .notNull()
       .references(() => gearItems.id, { onDelete: "cascade" }),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id, { onDelete: "cascade" }),
+    /** Set only for a bookingless counter rental; see the holder-shape check below. */
+    personId: uuid("person_id").references(() => people.id),
+    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
     /** Inclusive shop-local calendar dates — a rental window, not an instant. */
     reservedFrom: date("reserved_from").notNull(),
     reservedUntil: date("reserved_until").notNull(),
@@ -5227,8 +5256,13 @@ export const gearReservations = pgTable(
   (table) => [
     index("gear_reservations_item_idx").on(table.gearItemId),
     index("gear_reservations_booking_idx").on(table.bookingId),
+    index("gear_reservations_person_idx").on(table.personId),
     index("gear_reservations_shop_until_idx").on(table.shopId, table.reservedUntil),
     check("gear_reservations_window", sql`${table.reservedUntil} >= ${table.reservedFrom}`),
+    check(
+      "gear_reservations_one_holder",
+      sql`(${table.bookingId} is not null and ${table.personId} is null) or (${table.bookingId} is null and ${table.personId} is not null)`,
+    ),
   ],
 );
 
@@ -5896,7 +5930,7 @@ export const reviewModerationAction = pgEnum("review_moderation_action", ["publi
  * `buddy_team_events` and the roll-call trails beside it.
  *
  * It exists for two reasons and the second is the load-bearing one. It records
- * what a shop asserted when it took a diver's words down; and it is what makes
+ * what a shop asserted when it recorded an unverified declaration; and it is what makes
  * "how much of this shop's record has been suppressed?" answerable, which
  * decides whether DiveDay will still vouch for the shop's average in JSON-LD.
  * A review sitting unpublished because it carries words nobody has read yet is
@@ -6238,6 +6272,48 @@ export const dayCloseouts = pgTable(
     // The surface's one read: this shop's closes of one day, latest first.
     index("day_closeouts_shop_day_idx").on(table.shopId, table.shopDay),
     check("day_closeouts_shop_day_format", sql`${table.shopDay} ~ '^\\d{4}-\\d{2}-\\d{2}$'`),
+  ],
+);
+
+/**
+ * The per-leftover choices made while reviewing a close-out. This is a
+ * separate append-only trail rather than mutable state on `day_closeouts`:
+ * tapping Dismiss/Carry is immediately durable, and Undo is simply another
+ * row recording the inverse choice. The close snapshot still captures the
+ * effective choices at close time, while this table answers who changed one
+ * and when without rewriting history.
+ */
+export const closeoutLeftoverDecisions = pgTable(
+  "closeout_leftover_decisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    shopDay: text("shop_day").notNull(),
+    actionId: text("action_id").notNull(),
+    decision: text("decision").$type<"carry" | "dismiss">().notNull(),
+    actorPersonId: uuid("actor_person_id")
+      .notNull()
+      .references(() => people.id),
+    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Global write order keeps the latest choice deterministic under a frozen clock. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("closeout_leftover_decisions_shop_day_idx").on(table.shopId, table.shopDay),
+    index("closeout_leftover_decisions_action_idx").on(
+      table.shopId,
+      table.shopDay,
+      table.actionId,
+      table.seq,
+    ),
+    check(
+      "closeout_leftover_decisions_shop_day_format",
+      sql`${table.shopDay} ~ '^\\d{4}-\\d{2}-\\d{2}$'`,
+    ),
+    check("closeout_leftover_decisions_value", sql`${table.decision} in ('carry', 'dismiss')`),
+    check("closeout_leftover_decisions_action_id_nonempty", sql`length(${table.actionId}) > 0`),
   ],
 );
 

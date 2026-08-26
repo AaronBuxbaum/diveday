@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { gearServiceState, tripReservationWindow } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
@@ -53,7 +53,7 @@ async function shopBooking(db: AppDb, shopId: string, name: string) {
     email: `${name.toLowerCase().replace(/[^a-z]+/g, "-")}@example.com`,
   });
   if (!booking.ok) throw new Error(`booking failed: ${booking.reason}`);
-  return { trip, bookingId: booking.bookingId };
+  return { trip, bookingId: booking.bookingId, personId: booking.personId };
 }
 
 async function rivalShop(db: AppDb) {
@@ -88,6 +88,52 @@ function mustCreate(outcome: Awaited<ReturnType<typeof createGearItem>>) {
 }
 
 describe("gear items", () => {
+  it("names exactly one holder: a booking or a person-held counter rental", async () => {
+    const { db, shop } = await gearShopContext();
+    const bookingUnit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #holder-booking" }),
+    );
+    const personUnit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #holder-person" }),
+    );
+    const blankUnit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #holder-blank" }),
+    );
+    const doubleUnit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #holder-double" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Holder");
+
+    const insertReservation = (input: {
+      gearItemId: string;
+      bookingId?: string;
+      personId?: string;
+    }) =>
+      db.execute(sql`
+        insert into gear_reservations (
+          shop_id, gear_item_id, booking_id, person_id, reserved_from, reserved_until
+        ) values (
+          ${shop.id}, ${input.gearItemId}, ${input.bookingId ?? null}, ${input.personId ?? null},
+          ${"2026-09-01"}, ${"2026-09-02"}
+        )
+      `);
+
+    await expect(
+      insertReservation({ gearItemId: bookingUnit.id, bookingId: maya.bookingId }),
+    ).resolves.toBeDefined();
+    await expect(
+      insertReservation({ gearItemId: personUnit.id, personId: maya.personId }),
+    ).resolves.toBeDefined();
+    await expect(insertReservation({ gearItemId: blankUnit.id })).rejects.toThrow();
+    await expect(
+      insertReservation({
+        gearItemId: doubleUnit.id,
+        bookingId: maya.bookingId,
+        personId: maya.personId,
+      }),
+    ).rejects.toThrow();
+  });
+
   it("adds, edits, lists, and counts units — the register is presence, not a setting", async () => {
     const { db, shop } = await gearShopContext();
     expect(await countGearItems(db, shop.id)).toBe(0);

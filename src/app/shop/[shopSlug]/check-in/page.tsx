@@ -688,6 +688,7 @@ export default async function CheckInPage({
                               ariaLabel={t("checkIn.addToDepartureFor", {
                                 departure: departure.title,
                               })}
+                              observabilityAction="check-in-seat-existing"
                             >
                               {t("checkIn.addToDepartureFor", { departure: departure.title })}
                             </SubmitButton>

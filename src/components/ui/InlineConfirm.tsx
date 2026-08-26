@@ -23,6 +23,8 @@ type SharedProps = {
    * cancel affordance (sign out) should pass this explicitly.
    */
   autoResetMs?: number;
+  /** Hidden values submitted only after the armed confirmation tap. */
+  confirmFields?: Record<string, string>;
 };
 
 type MessageModeProps = SharedProps & {
@@ -83,6 +85,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
     confirmClassName,
     ariaLabel,
     autoResetMs,
+    confirmFields,
     message,
     cancelLabel,
   } = props;
@@ -169,6 +172,9 @@ export function InlineConfirm(props: InlineConfirmProps) {
       <div className="rounded-lg border border-border bg-surface-sunken p-4" role="alert">
         <p className="text-sm">{message}</p>
         <div className="mt-3 flex flex-wrap gap-3">
+          {Object.entries(confirmFields ?? {}).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
           <SubmitButton
             pendingLabel={pendingLabel}
             className={confirmClassName ?? triggerClassName}
@@ -188,27 +194,34 @@ export function InlineConfirm(props: InlineConfirmProps) {
   }
 
   return (
-    <button
-      ref={triggerRef}
-      // Only the confirm tap is a real submit — the arming tap must never
-      // fire the form's action, so it stays a plain button until confirmed.
-      type={armed ? "submit" : "button"}
-      disabled={pending}
-      aria-busy={pending}
-      className={armed ? (confirmClassName ?? triggerClassName) : triggerClassName}
-      aria-label={ariaLabel}
-      onClick={(event) => {
-        if (!armed) {
-          event.preventDefault();
-          setArmed(true);
-        }
-      }}
-      onBlur={() => setArmed(false)}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") setArmed(false);
-      }}
-    >
-      {pending ? pendingLabel : armed ? confirmLabel : triggerLabel}
-    </button>
+    <>
+      {armed
+        ? Object.entries(confirmFields ?? {}).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))
+        : null}
+      <button
+        ref={triggerRef}
+        // Only the confirm tap is a real submit — the arming tap must never
+        // fire the form's action, so it stays a plain button until confirmed.
+        type={armed ? "submit" : "button"}
+        disabled={pending}
+        aria-busy={pending}
+        className={armed ? (confirmClassName ?? triggerClassName) : triggerClassName}
+        aria-label={ariaLabel}
+        onClick={(event) => {
+          if (!armed) {
+            event.preventDefault();
+            setArmed(true);
+          }
+        }}
+        onBlur={() => setArmed(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setArmed(false);
+        }}
+      >
+        {pending ? pendingLabel : armed ? confirmLabel : triggerLabel}
+      </button>
+    </>
   );
 }

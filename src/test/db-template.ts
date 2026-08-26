@@ -30,7 +30,11 @@ export type TemplateVariant = "lean" | "history";
 
 const VARIANTS: readonly TemplateVariant[] = ["lean", "history"];
 
-const CACHE_DIR = path.join(process.cwd(), "node_modules", ".cache", "diveday");
+// Worktrees can share a host-level node_modules volume. Allow a runner to
+// isolate its snapshot so another checkout cannot replace it mid-run.
+const CACHE_DIR =
+  process.env.DIVEDAY_TEST_CACHE_DIR ??
+  path.join(process.cwd(), "node_modules", ".cache", "diveday");
 const META_FILE = path.join(CACHE_DIR, "test-db-template.json");
 
 function templateFile(variant: TemplateVariant): string {

@@ -691,14 +691,14 @@
     "medicalReview": "Revisión médica"
   },
   "certificationSummary": {
-    "selfDeclared": "{value} — sin confirmar",
+    "selfDeclared": "{value} — sin verificar",
     "levelNotSaid": "Nivel no indicado",
-    "notCertified": "Todavía sin certificación — sin confirmar",
+    "notCertified": "Todavía sin certificación — sin verificar",
     "nitrox": "Nitrox",
     "belowRequirement": "{value} · por debajo del mínimo de esta salida"
   },
   "diveRecency": {
-    "lastDived": "Última inmersión {when} — según el buceador",
+    "lastDived": "Última inmersión {when} — sin verificar",
     "thisSeason": "esta temporada",
     "withinAYear": "en el último año",
     "oneToFiveYears": "hace entre uno y cinco años",

@@ -741,7 +741,8 @@ async function writeEvidence(
         );
       const hasActiveHold = existingRecords.some((r) => r.status === "medical_review");
       const hasCurrentCompleted = existingRecords.some(
-        (r) => r.status === "completed" && isCompletedWaiverCurrent(r, template.version, now),
+        (r) =>
+          r.status === "completed" && isCompletedWaiverCurrent(r, template.materialGeneration, now),
       );
       if (hasActiveHold || hasCurrentCompleted) {
         summary.waiversSkippedExisting += 1;
@@ -754,6 +755,7 @@ async function writeEvidence(
           templateId: template.id,
           templateTitle: template.title,
           templateVersion: template.version,
+          templateGeneration: template.materialGeneration,
           templateBody: template.body,
           status: "completed",
           // No link is ever handed out for an imported record; a random

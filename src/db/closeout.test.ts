@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { CloseoutAcknowledgementRequired, closeDay, getDayCloseout } from "./closeout";
+import {
+  CloseoutAcknowledgementRequired,
+  closeDay,
+  getDayCloseout,
+  listLatestLeftoverDecisions,
+  recordLeftoverDecision,
+} from "./closeout";
 import { addCrewRecapPhoto } from "./recap";
 import { listShopReviewsForStaff, submitTripReview } from "./reviews";
 import { bookings as bookingsTable, people, rollCallEvents, trips as tripsTable } from "./schema";
@@ -223,6 +229,51 @@ describe("day close-out (in-memory PGlite)", () => {
     expect(after.closeCount).toBe(2);
     expect(after.latest?.id).toBe(second.id);
     expect(after.latest?.id).not.toBe(first.id);
+  });
+
+  it("persists each leftover tap immediately and resolves the append-only trail last-write-wins", async () => {
+    const { db, shop } = await seededShopContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    const now = new Date(nowMs() + 60 * 60 * 1000);
+    const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
+    const [leftover] = state.leftovers;
+    if (!leftover) throw new Error("expected a leftover");
+
+    await recordLeftoverDecision(db, {
+      shopId: shop.id,
+      shopDay: state.shopDay,
+      actionId: leftover.id,
+      decision: "dismiss",
+      actorPersonId: staff.person.id,
+      decidedAt: now,
+    });
+    expect(
+      (await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now)).state.leftoverDecisions[
+        leftover.id
+      ],
+    ).toBe("dismiss");
+
+    await recordLeftoverDecision(db, {
+      shopId: shop.id,
+      shopDay: state.shopDay,
+      actionId: leftover.id,
+      decision: "carry",
+      actorPersonId: staff.person.id,
+      decidedAt: new Date(now.getTime() + 1),
+    });
+    expect(await listLatestLeftoverDecisions(db, shop.id, state.shopDay)).toEqual({
+      [leftover.id]: "carry",
+    });
+    await expect(
+      recordLeftoverDecision(db, {
+        shopId: shop.id,
+        shopDay: state.shopDay,
+        actionId: leftover.id,
+        decision: "dismiss",
+        actorPersonId: "00000000-0000-0000-0000-000000000000",
+      }),
+    ).rejects.toThrow(/not a person of this shop/);
   });
 
   it("refuses to attribute a close to a person from another shop", async () => {

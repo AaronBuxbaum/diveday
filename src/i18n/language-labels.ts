@@ -37,6 +37,24 @@ export function languageEndonym(code: string): string | null {
 }
 
 /**
+ * Distinct language names written in each language's own words, suitable for
+ * an aggregate availability line such as a shop's languages or a trip's
+ * current crew languages. A raw tag is intentionally not a fallback here: a
+ * diver can act on a name they recognise, not an implementation code.
+ */
+export function languageEndonymList(codes: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const code of codes) {
+    if (seen.has(code)) continue;
+    seen.add(code);
+    const name = languageEndonym(code);
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+/**
  * A language's name in `locale` — `("en", "es-ES")` → "inglés". Used for the
  * language the page is actually rendered in, which is by definition a language
  * the reader is being shown, so it is named in that language rather than in

@@ -16,6 +16,7 @@ import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import {
   bookings,
+  closeoutLeftoverDecisions,
   dayCloseouts,
   notificationDeliveries,
   people,
@@ -59,6 +60,74 @@ export class CloseoutAcknowledgementRequired extends Error {
     super("close-out acknowledgement required");
     this.name = "CloseoutAcknowledgementRequired";
   }
+}
+
+/**
+ * Read the latest choice for each leftover in one shop-local day. The table is
+ * append-only, so a descending sequence and first-seen map give deterministic
+ * last-write-wins semantics even when the test/e2e clock is frozen.
+ */
+export async function listLatestLeftoverDecisions(
+  db: AppDb,
+  shopId: string,
+  shopDay: string,
+): Promise<Readonly<Record<string, LeftoverDecision>>> {
+  const rows = await db
+    .select({
+      actionId: closeoutLeftoverDecisions.actionId,
+      decision: closeoutLeftoverDecisions.decision,
+    })
+    .from(closeoutLeftoverDecisions)
+    .where(
+      and(
+        eq(closeoutLeftoverDecisions.shopId, shopId),
+        eq(closeoutLeftoverDecisions.shopDay, shopDay),
+      ),
+    )
+    .orderBy(desc(closeoutLeftoverDecisions.seq));
+  const latest: Record<string, LeftoverDecision> = Object.create(null);
+  for (const row of rows) {
+    if (
+      !Object.hasOwn(latest, row.actionId) &&
+      (row.decision === "carry" || row.decision === "dismiss")
+    ) {
+      latest[row.actionId] = row.decision;
+    }
+  }
+  return latest;
+}
+
+/** Append one per-row close-out choice. There is deliberately no update/delete path. */
+export async function recordLeftoverDecision(
+  db: AppDb,
+  input: {
+    shopId: string;
+    shopDay: string;
+    actionId: string;
+    decision: LeftoverDecision;
+    actorPersonId: string;
+    decidedAt?: Date;
+  },
+): Promise<void> {
+  if (!input.actionId || input.actionId.length > 200)
+    throw new Error("invalid close-out action id");
+  if (input.decision !== "carry" && input.decision !== "dismiss") {
+    throw new Error("invalid close-out leftover decision");
+  }
+  const [actor] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!actor) throw new Error("close-out actor is not a person of this shop");
+  await db.insert(closeoutLeftoverDecisions).values({
+    shopId: input.shopId,
+    shopDay: input.shopDay,
+    actionId: input.actionId,
+    decision: input.decision,
+    actorPersonId: input.actorPersonId,
+    decidedAt: input.decidedAt,
+  });
 }
 
 /**
@@ -304,10 +373,12 @@ async function assembleState(
   locale: string,
   includeOpsAlerts: boolean,
 ): Promise<DayCloseoutState> {
-  const [tripsToday, gaps, work] = await Promise.all([
+  const shopDay = shopDayOf(now, timeZone);
+  const [tripsToday, gaps, work, leftoverDecisions] = await Promise.all([
     todaysTrips(db, shopId, timeZone, now),
     listRollCallGaps(db, shopId, now),
     getTodayWork(db, shopId, shopSlug, timeZone, now, undefined, t, locale, includeOpsAlerts),
+    listLatestLeftoverDecisions(db, shopId, shopDay),
   ]);
   const adminTask = await postDiveReportTask(db, shopId, tripsToday, now);
   return assembleDayCloseout({
@@ -315,6 +386,7 @@ async function assembleState(
     gaps,
     actions: work.actions,
     adminTasks: adminTask ? [adminTask] : [],
+    leftoverDecisions,
     timeZone,
     now,
   });

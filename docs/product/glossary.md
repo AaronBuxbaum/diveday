@@ -112,7 +112,7 @@ new domain concept, define it here in the same PR.
   That means the sale-time gate **can be talked past** — a refused diver can type a higher rung and
   succeed — and that is accepted rather than overlooked: it was never the thing keeping anyone out of
   the water, and refusing a shop's own carded regulars to hold a line it could not hold was the worse
-  trade (H-27/H-29). Staff see it marked *"— diver's word, no card"* in a warning tone wherever it renders, the
+  trade (H-27/H-29). Staff see it marked *"— unverified, no card"* in a warning tone wherever it renders, the
   same treatment an **Imported specialty card** gets for the same reason: it must never be scanned as
   a plain level. Deliberately *not* the same
   thing as an **Imported certification**: a CSV a shop uploaded out of its own prior system is
@@ -168,8 +168,8 @@ new domain concept, define it here in the same PR.
 - **Certification summary** — the one staff-facing phrase for *what a person may dive, as far as
   anybody here knows*, rendered beside a name on the last-minute-deal recipient list and the
   wait-list rows: a card the shop holds reads plainly, a **Self-declared certification** reads
-  *"— diver's word, no card"* in a warning tone, a **Declared uncertified** joiner reads *"Not
-  certified yet — diver's word"* in the same tone, and nothing on file reads *"Level not said"* rather
+  *"— unverified, no card"* in a warning tone, a **Declared uncertified** joiner reads *"Not
+  certified yet — unverified"* in the same tone, and nothing on file reads *"Level not said"* rather
   than blank. On the deal list it also says *"· below this departure's minimum"* when that person
   ranks under the trip's effective gate — a **word**, because the warning tone beside it already
   means exactly one thing ("nobody has seen this card") and colour is never the only carrier of
@@ -1210,8 +1210,9 @@ new domain concept, define it here in the same PR.
   status is `in_service` or `needs_service` (pulled to the bench, out of the assignable pool).
   Register-only kinds do not enter rental fit or trip prep: they are inventory a shop counts and
   services, not gear the app assigns to a diver.
-- **Gear reservation** — one unit assigned to one booking for an inclusive shop-local date range;
-  the fulfillment record behind "who has what and when is it due back", never a billing record
+- **Gear reservation** — one unit assigned for an inclusive shop-local date range to exactly one
+  holder: either a **booking** or a known person in a bookingless **counter rental**. It is the
+  fulfillment record behind "who has what and when is it due back", never a billing record
   (rental money stays in checkout gear lines and staff invoices). The double-booking guard is the
   **database's**: an exclusion constraint refuses two open reservations of one unit with
   overlapping windows, so two staff racing get one reservation and one worded refusal. Check-out
@@ -1220,7 +1221,9 @@ new domain concept, define it here in the same PR.
   stamp: checked out and late is **overdue** (the unit is with a diver), never collected is
   **never picked up** (it hangs on the wall) and is closed by release, never a fabricated return.
   Cancelling a booking releases its un-collected units; a checked-out one stays until it really
-  comes home. Assigning informs the prep page; it gates nothing at boarding.
+  comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
+  shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
+  shape.
 - **Service clock** — a unit's care deadlines, derived from its append-only service events
   (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest

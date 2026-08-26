@@ -1,8 +1,9 @@
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
-import { rollCallEvents } from "./schema";
+import { people, rollCallEvents, userAccounts } from "./schema";
 import {
   createTrip,
   getShopTripTitle,
@@ -11,11 +12,48 @@ import {
   listStaff,
   listTripDives,
   listTripScheduleDays,
+  setTripCrew,
+  tripCrewSpokenLanguages,
   upcomingTripsWithCounts,
   updateTrip,
 } from "./trips";
 
 describe("trip records (in-memory PGlite)", () => {
+  it("returns only active, assigned crew languages for the public trip line", async () => {
+    const { db, shop } = await seededShopContext();
+    const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.title === "Two-Tank Reef — Molasses & French",
+    );
+    if (!reef) throw new Error("expected seeded reef trip missing");
+    const [firstCrew, secondCrew] = await listStaff(db, shop.id);
+    if (!firstCrew || !secondCrew) throw new Error("expected seeded crew");
+
+    await db
+      .update(people)
+      .set({ spokenLanguages: ["de", "ja"] })
+      .where(eq(people.id, firstCrew.person.id));
+    await db
+      .update(people)
+      .set({ spokenLanguages: ["de", "es"] })
+      .where(eq(people.id, secondCrew.person.id));
+    expect(
+      await setTripCrew(db, shop.id, reef.id, [firstCrew.person.id, secondCrew.person.id]),
+    ).toBe(true);
+    expect(new Set(await tripCrewSpokenLanguages(db, shop.id, reef.id))).toEqual(
+      new Set(["de", "ja", "es"]),
+    );
+
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.personId, firstCrew.person.id));
+    await db
+      .update(people)
+      .set({ deletedAt: nowDate() })
+      .where(and(eq(people.id, secondCrew.person.id), eq(people.shopId, shop.id)));
+    expect(await tripCrewSpokenLanguages(db, shop.id, reef.id)).toEqual([]);
+  });
+
   it("stores an optional per-diver price and lets staff update or clear it", async () => {
     const { db, shop } = await seededShopContext();
 

@@ -15,8 +15,8 @@
  * month. Past those it is $0.30 per metric, $0.10 per alarm, $3.00 per
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
- * This registry currently declares 15 metrics (10 log signals + 5 web vitals)
- * and 11 alarms (8 + the 3 alarmed vitals), so it sits 5 metrics and 1 alarm
+ * This registry currently declares 17 metrics (11 log signals + 5 web vitals
+ * + the mutation-duration metric) and 11 alarms (8 + the 3 alarmed vitals), so it sits 7 metrics and 1 alarm
  * over the free allowance at about $1.60/month. A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
@@ -361,6 +361,18 @@ export const WEB_VITAL_SIGNALS: readonly WebVitalSignal[] = [
   },
 ];
 
+/** Client-observed settled mutation time, grouped by its stable action label. */
+export const MUTATION_DURATION_SIGNAL = {
+  metricName: "MutationDuration",
+  title: "Mutation duration (ms)",
+  event: "mutation_duration.reported",
+  field: "durationMs",
+} as const;
+
+export function mutationDurationFilterPattern(): string {
+  return `{ $.event = "${MUTATION_DURATION_SIGNAL.event}" && $.${MUTATION_DURATION_SIGNAL.field} = * }`;
+}
+
 /** Matches a `web_vital.reported` line that actually carries this figure. */
 export function webVitalFilterPatternFor(signal: WebVitalSignal): string {
   return `{ $.event = "web_vital.reported" && $.${signal.field} = * }`;
@@ -436,6 +448,17 @@ export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
       "| stats pct(lcp, 75) as lcpP75, pct(inp, 75) as inpP75, pct(cls, 75) as clsP75, count(*) as views by route",
       "| sort lcpP75 desc",
       "| limit 40",
+    ].join("\n"),
+  },
+  {
+    name: "DiveDay/Slowest mutations",
+    why: "Which staff actions make people wait longest from tap to settled UI, split by action name.",
+    queryString: [
+      "fields @timestamp, action, durationMs",
+      '| filter event = "mutation_duration.reported" and ispresent(durationMs)',
+      "stats pct(durationMs, 75) as durationP75, count(*) as mutations by action",
+      "sort durationP75 desc",
+      "limit 40",
     ].join("\n"),
   },
   {

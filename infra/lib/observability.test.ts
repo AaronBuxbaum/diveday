@@ -9,6 +9,8 @@ import {
   filterPatternFor,
   LOG_SIGNALS,
   METRIC_NAMESPACE,
+  MUTATION_DURATION_SIGNAL,
+  mutationDurationFilterPattern,
   queryConstructIdFor,
   SAVED_LOG_QUERIES,
   WEB_VITAL_SIGNALS,
@@ -120,6 +122,13 @@ describe("the log-signal registry", () => {
       expect(queryConstructIdFor(query)).toMatch(/^[A-Za-z0-9]+$/);
     }
   });
+
+  it("keeps the mutation metric tied to the client event and field", () => {
+    expect(mutationDurationFilterPattern()).toBe(
+      '{ $.event = "mutation_duration.reported" && $.durationMs = * }',
+    );
+    expect(MUTATION_DURATION_SIGNAL.metricName).toBe("MutationDuration");
+  });
 });
 
 describe("the synthesized observability stack", () => {
@@ -181,7 +190,11 @@ describe("the synthesized observability stack", () => {
         {
           Properties?: {
             FilterPattern?: string;
-            MetricTransformations?: { MetricName?: string; MetricNamespace?: string }[];
+            MetricTransformations?: {
+              MetricName?: string;
+              MetricNamespace?: string;
+              MetricValue?: string;
+            }[];
           };
         }
       >,
@@ -204,7 +217,7 @@ describe("the synthesized observability stack", () => {
 
     // Count signals plus web-vital signals; only the three Core Web Vitals
     // among the latter carry an alarm.
-    expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length);
+    expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length + 1);
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
         WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length,
@@ -237,6 +250,18 @@ describe("the synthesized observability stack", () => {
       expect(alarm?.Properties?.AlarmActions).toHaveLength(1);
       expect(alarm?.Properties?.AlarmDescription).toContain(signal.response);
     }
+
+    const mutationFilter = filters.find((candidate) =>
+      candidate.Properties?.MetricTransformations?.some(
+        (transformation) => transformation.MetricName === MUTATION_DURATION_SIGNAL.metricName,
+      ),
+    );
+    expect(mutationFilter?.Properties?.FilterPattern).toBe(mutationDurationFilterPattern());
+    expect(mutationFilter?.Properties?.MetricTransformations?.[0]?.MetricValue).toBe(
+      "$.durationMs",
+    );
+    expect(JSON.stringify(mutationFilter)).toContain('"Key":"Action"');
+    expect(JSON.stringify(mutationFilter)).toContain('"Value":"$.action"');
   });
 
   it("extracts each Core Web Vital as a value, scored at p75", () => {

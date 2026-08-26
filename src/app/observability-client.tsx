@@ -5,6 +5,42 @@ import { useEffect, useState } from "react";
 import { redactCapabilityUrl } from "./observability";
 import { WebVitals } from "./web-vitals-client";
 
+type MutationSettledDetail = { action: string; durationMs: number };
+
+/**
+ * The single browser-to-vitals seam for client mutation timing. Components
+ * dispatch a detail-only event; this mount owns the beacon and therefore keeps
+ * capability URLs out of the telemetry path alongside the existing vital
+ * reporter.
+ */
+function MutationDurations() {
+  useEffect(() => {
+    const onSettled = (event: Event) => {
+      const detail = (event as CustomEvent<MutationSettledDetail>).detail;
+      if (
+        !detail ||
+        typeof detail.action !== "string" ||
+        !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(detail.action) ||
+        typeof detail.durationMs !== "number" ||
+        !Number.isFinite(detail.durationMs) ||
+        detail.durationMs < 0 ||
+        detail.durationMs > 600_000 ||
+        typeof navigator.sendBeacon !== "function"
+      ) {
+        return;
+      }
+      const body = JSON.stringify({
+        mutations: [{ action: detail.action, durationMs: detail.durationMs }],
+      });
+      navigator.sendBeacon("/api/vitals", new Blob([body], { type: "application/json" }));
+    };
+    window.addEventListener("diveday:mutation-settled", onSettled);
+    return () => window.removeEventListener("diveday:mutation-settled", onSettled);
+  }, []);
+
+  return null;
+}
+
 // `next/dynamic` (ssr: false) keeps both SDKs' JS out of the bundle a diver's
 // first paint waits on — it's only fetched once `Observability` actually
 // renders them, which the idle/timeout gate below pushes past hydration.
@@ -67,6 +103,7 @@ export function Observability() {
   return (
     <>
       <WebVitals />
+      <MutationDurations />
       {ready ? (
         <>
           <Analytics beforeSend={(event) => ({ ...event, url: redactCapabilityUrl(event.url) })} />

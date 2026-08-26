@@ -22,6 +22,7 @@ src/lib/log.ts  ──►  console.log/warn/error          (unchanged, always, f
                                              └─► saved Logs Insights queries
 
 browser ──► useReportWebVitals ──► one sendBeacon per page view ──► /api/vitals ──► log() ──┘
+        └─► settled staff mutation ─► one bounded beacon per action ─► /api/vitals ─► log() ─────┘
         └─► aws-rum-web ─────────► PutRumEvents ────────────────► CloudWatch RUM "diveday"
 ```
 
@@ -57,7 +58,7 @@ sent to the alert address. Until then every alarm transitions correctly and noti
 
 ## What is counted, and what to do when it fires
 
-Ten signals. Eight are alarmed; two are counters only, declared once in
+Eleven signals. Eight are alarmed; three are counters only, declared once in
 `infra/lib/observability.ts` and still available as dashboard series. Every other event code the app emits stays queryable — see
 the saved queries below — it just does not have a metric.
 
@@ -92,6 +93,19 @@ form.
 
 **FCP and TTFB are collected and graphed but never alarmed.** They exist to tell you *why* an LCP
 regressed, not to be woken up for on their own.
+
+### Mutation duration
+
+Every shared `SubmitButton` can report a bounded action label and the elapsed time from the tap
+until the server action settles. The browser sends the same-origin beacon to `/api/vitals`; the
+server writes `mutation_duration.reported` and CloudWatch publishes `MutationDuration` in the
+`DiveDay/App` namespace, dimensioned by the action name. There is no record id or URL in the line,
+and one action is never allowed to create an unbounded label or duration.
+
+The dashboard's **Slowest mutations (p75)** widget groups these lines by action. Use it to decide
+which safe mutation is a candidate for optimistic UI; it is evidence, not an alarm. A slow action
+that is safety-sensitive should keep its settled-state behavior until the product decision and
+failure path are understood.
 
 Three consecutive hours, not one: a single slow hour on a young product is one visitor on hotel
 wifi.
@@ -130,6 +144,7 @@ For anything narrower, **CloudWatch → Logs Insights → Queries → DiveDay/**
 | Money path, everything | Every Stripe webhook and checkout decision in order, successes included — for reconciling one order end to end. |
 | Notification failures by provider | Whether a send problem is one provider or all of them, which is what decides the next runbook. |
 | Slowest routes by LCP | The per-route breakdown behind the app-wide vitals metrics. Free, because grouping by a field costs nothing where a metric dimension would. |
+| Slowest mutations (p75) | The settled round-trip time by action, so a locally fast button cannot hide a slow production request. |
 | Core Web Vitals, rated | How many visits landed in each of Google's good / needs-improvement / poor bands — the shape a score is actually reported in. |
 | Scheduled passes | Did every cron run, and what did it do. |
 
@@ -205,6 +220,7 @@ and a sampled count is a count that lies.
 | A cron's log line is missing but the pass ran | The four cron routes `await flushLogs()` in a `finally`, so this should not happen. If it does, look for an early `return` added above the `try`. |
 | A preview deploy's lines are mixed in with production's | They are not — the stream name carries `VERCEL_ENV`. Filter by log stream. |
 | No `web_vital.reported` lines | The beacon only fires when the page is *hidden*, so a tab left open reports nothing. Check with DevTools → Application → Background services, or just switch tabs. Also confirm the browser has `navigator.sendBeacon` (every current one does). |
+| No `mutation_duration.reported` lines | Only settled `SubmitButton` actions report, and the beacon requires `navigator.sendBeacon`. Check the browser network panel and the action's `observabilityAction`; the server still answers 204 when telemetry is malformed or rate-limited. |
 | Vitals arrive but a p75 looks impossibly good | Check the metric filter has no `DefaultValue`. Publishing a 0 for page views that reported no INP would drag the percentile down until the metric flattered the app; the infra test asserts it is absent. |
 | RUM records nothing | The app monitor's `domain` must match the origin the browser is on — RUM refuses events from anywhere else, and a preview URL is a different origin. Then check the four `NEXT_PUBLIC_RUM_*` values reached the *client* bundle (they must keep the prefix). |
 | RUM's bill is larger than expected | `NEXT_PUBLIC_RUM_SAMPLE_RATE`. If it is already low, look at the Cognito identity pool: it issues anonymous credentials by design, so an unexpected volume of `PutRumEvents` from outside the app's own origin is worth ruling out. |

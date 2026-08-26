@@ -222,7 +222,7 @@ describe("LastMinuteDealSection recipient review", () => {
 
     // A departure that asks for no level has no bar for anyone to be under —
     // the answer is still stated on the row, and it is still not a refusal.
-    expect(container.textContent).toContain("Not certified yet — unconfirmed");
+    expect(container.textContent).toContain("Not certified yet — unverified");
     expect(container.textContent).not.toContain("below this departure's minimum");
   });
 

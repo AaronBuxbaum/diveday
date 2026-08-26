@@ -308,3 +308,33 @@ The word on screen is still **Delete** and **Restore**
 ([20260820-every-delete-is-soft](20260820-every-delete-is-soft.md)), and the
 page carries no sentence reassuring the reader which history survived: the
 history is on the page, which is a better answer than a caption about it.
+
+## Amendment 2026-08-25 — bookingless counter rentals are a holder shape, not a frontend yet
+
+A pilot shop reported that renting a unit to someone who is not on a boat that
+day is ordinary counter work. The product owner accepted that need, but was
+specific about sequencing: **model it now; do not add a walk-in-rental form or
+any significant frontend admission yet.** A shape with no writer is intentional
+here, not an unfinished UI.
+
+`gear_reservations` now has nullable `booking_id` and nullable `person_id`,
+backed by a one-holder check: exactly one is present. Both shapes retain the
+existing non-null, inclusive `reserved_from`/`reserved_until` window:
+
+- a booking-held reservation uses `booking_id` and remains the prep-flow shape;
+- a counter rental uses `person_id` and has its own explicit window.
+
+The existing `gear_reservations_no_overlap` exclusion constraint is untouched:
+it correctly arbitrates a physical unit and date window without needing to know
+which holder shape produced the reservation. There is no backfill because the
+product is pre-pilot.
+
+This changes no money behavior. A reservation remains a **fulfillment** record,
+never a charge: a future counter-rental flow will use the existing staff-invoice
+and `order_line_items` machinery for rental money, rather than growing prices or
+payments onto `gear_reservations`. Shop and diver exports preserve the direct
+person holder when one exists.
+
+The first-call script continues to ask how often counter rentals occur. That
+frequency decides whether the deliberately deferred staff flow is worth opening;
+it does not reopen the data-model decision.

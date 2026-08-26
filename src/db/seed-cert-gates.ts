@@ -67,7 +67,13 @@ export async function seedCertGates(
     instructorId: string;
     captainId: string | undefined;
     divemasterId: string | undefined;
-    waiverTemplate: { id: string; title: string; version: number; body: string };
+    waiverTemplate: {
+      id: string;
+      title: string;
+      version: number;
+      materialGeneration: number;
+      body: string;
+    };
   },
 ): Promise<void> {
   const { customers, siteByName, courseRows, instructorId, captainId, divemasterId } = ctx;
@@ -343,6 +349,7 @@ export async function seedCertGates(
       templateId: ctx.waiverTemplate.id,
       templateTitle: ctx.waiverTemplate.title,
       templateVersion: ctx.waiverTemplate.version,
+      templateGeneration: ctx.waiverTemplate.materialGeneration,
       templateBody: ctx.waiverTemplate.body,
       // Unique per shop row, so a fleet of minted demo shops never collides on
       // the table's global tokenHash constraint.
