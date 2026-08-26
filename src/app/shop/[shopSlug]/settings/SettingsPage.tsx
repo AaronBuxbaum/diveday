@@ -2046,6 +2046,11 @@ export default async function SettingsPage({
               heading={t("settings.main.calendar.heading")}
               description={t("settings.main.calendar.description")}
             />
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/integrations`}
+              heading={t("settings.main.integrations.heading")}
+              description={t("settings.main.integrations.description")}
+            />
             {/* Owner/manager only, like the payment rows above: the credential it
               stores can send messages as the business. */}
             {canManageMessaging ? (

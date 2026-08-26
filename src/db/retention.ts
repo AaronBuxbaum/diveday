@@ -12,6 +12,8 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  integrationEvents,
+  integrationOauthStates,
   notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
@@ -125,6 +127,32 @@ export async function pruneExpiredRecords(
           .where(lt(stripeWebhookEvents.occurredAt, cutoff("stripe_webhook_events")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(stripeWebhookEvents).where(inArray(stripeWebhookEvents.id, ids)),
+    ),
+  );
+
+  outcomes.push(
+    await pruneBatch(
+      "integration_events",
+      () =>
+        db
+          .select({ id: integrationEvents.id })
+          .from(integrationEvents)
+          .where(lt(integrationEvents.createdAt, cutoff("integration_events")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(integrationEvents).where(inArray(integrationEvents.id, ids)),
+    ),
+  );
+
+  outcomes.push(
+    await pruneBatch(
+      "integration_oauth_states",
+      () =>
+        db
+          .select({ id: integrationOauthStates.id })
+          .from(integrationOauthStates)
+          .where(lt(integrationOauthStates.expiresAt, cutoff("integration_oauth_states")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(integrationOauthStates).where(inArray(integrationOauthStates.id, ids)),
     ),
   );
 

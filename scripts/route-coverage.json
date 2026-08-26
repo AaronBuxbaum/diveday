@@ -197,7 +197,7 @@
   },
   "/shop/[shopSlug]/close-out": {
     "e2e": ["a11y.spec.ts", "closeout.spec.ts"],
-    "visual": ["close-out", "close-out-quiet", "close-out-closed"]
+    "visual": ["close-out", "close-out-closed", "close-out-quiet"]
   },
   "/shop/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
@@ -365,6 +365,10 @@
   "/shop/[shopSlug]/settings/import": {
     "e2e": ["import.spec.ts"],
     "visual": ["settings-import"]
+  },
+  "/shop/[shopSlug]/settings/integrations": {
+    "e2e": ["integrations.spec.ts"],
+    "visual": ["settings-integrations"]
   },
   "/shop/[shopSlug]/settings/safety-checklist": {
     "e2e": ["manifest.spec.ts"],

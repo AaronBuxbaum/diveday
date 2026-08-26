@@ -260,6 +260,10 @@
       "heading": "Calendar subscriptions",
       "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it."
     },
+    "integrations": {
+      "heading": "Shopify, QuickBooks & Zapier",
+      "description": "Connect the tools you already use for catalog publishing, accounting, and automation."
+    },
     "trial": {
       "heading": "Your trial",
       "activeDescription": "{count, plural, one {# day} other {# days}} left, through {endDate}.",

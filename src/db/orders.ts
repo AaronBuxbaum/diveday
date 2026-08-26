@@ -5,6 +5,7 @@ import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/
 import { canPersonManageOrders } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
+import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   idempotencyKeyFor,
@@ -272,6 +273,16 @@ export async function createOrder(
         purchasedAt: created.paidAt ?? undefined,
       });
     }
+
+    await enqueueOrderIntegrationEvent(tx, {
+      shopId: input.shopId,
+      orderId: created.id,
+      eventType: created.status === "paid" ? "order.paid" : "order.created",
+      idempotencyKey: `order:${created.id}:${created.status === "paid" ? "paid" : "created"}`,
+      status: created.status,
+      amountPaidCents: created.amountPaidCents,
+      refundedCents: created.refundedCents,
+    });
 
     return created;
   });
@@ -705,6 +716,29 @@ async function applyOrderUpdate(
         shopId: updated.shopId,
         orderId: updated.id,
         purchasedAt: updated.paidAt ?? undefined,
+      });
+    }
+
+    if (updated.status === "paid") {
+      await enqueueOrderIntegrationEvent(tx, {
+        shopId: updated.shopId,
+        orderId: updated.id,
+        eventType: "order.paid",
+        idempotencyKey: `order:${updated.id}:paid`,
+        status: updated.status,
+        amountPaidCents: updated.amountPaidCents,
+        refundedCents: updated.refundedCents,
+      });
+    } else if (updated.status === "refunded" || updated.status === "partly_refunded") {
+      await enqueueOrderIntegrationEvent(tx, {
+        shopId: updated.shopId,
+        orderId: updated.id,
+        eventType: "order.refunded",
+        idempotencyKey: `order:${updated.id}:refund:${updated.refundedCents}`,
+        status: updated.status,
+        amountPaidCents: updated.amountPaidCents,
+        refundedCents: updated.refundedCents,
+        refundCents: reversedCents ?? undefined,
       });
     }
     return updated;

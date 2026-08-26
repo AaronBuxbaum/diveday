@@ -28,6 +28,9 @@ import {
   gearReservations,
   gearServiceEvents,
   importedPaymentHistory,
+  integrationDeliveries,
+  integrationEvents,
+  integrationOauthStates,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -55,6 +58,7 @@ import {
   rollCallEvents,
   shopBackupDeliveries,
   shopBackupDestinations,
+  shopIntegrations,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -124,6 +128,14 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .from(people)
     .where(eq(people.shopId, shopId));
   const personIds = shopPeople.map((p) => p.id);
+
+  // Integration deliveries reference both the event and the connection, so
+  // clear the operational records before the shop-owned connection rows. The
+  // sync records then disappear with their connection through its cascade.
+  await db.delete(integrationDeliveries).where(eq(integrationDeliveries.shopId, shopId));
+  await db.delete(integrationEvents).where(eq(integrationEvents.shopId, shopId));
+  await db.delete(integrationOauthStates).where(eq(integrationOauthStates.shopId, shopId));
+  await db.delete(shopIntegrations).where(eq(shopIntegrations.shopId, shopId));
 
   // Order/checkout/booking dependents first.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));

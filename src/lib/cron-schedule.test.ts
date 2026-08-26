@@ -74,6 +74,7 @@ describe("the daily tick", () => {
       "/api/cron/minimum-seats",
       "/api/cron/recaps",
       "/api/cron/trip-reminders",
+      "/api/cron/integrations",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");

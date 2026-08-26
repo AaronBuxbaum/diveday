@@ -35,6 +35,7 @@ import diveSites from "./diveSites.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
 import incidentExport from "./incidentExport.json";
+import integrations from "./integrations.json";
 import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
 import orders from "./orders.json";
@@ -84,6 +85,7 @@ const staff = {
   seatDiver,
   blowout,
   incidentExport,
+  integrations,
   boats,
 };
 

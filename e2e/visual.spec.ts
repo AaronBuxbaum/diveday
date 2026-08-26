@@ -3283,6 +3283,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-whatsapp", scheme);
       });
 
+      // Provider connections are disabled in the browser fleet because their
+      // OAuth client secrets are not configured. The useful visual contract is
+      // the three-card coming-soon state, which should stay understandable as
+      // more providers join the registry.
+      test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/integrations");
+        await page.getByRole("heading", { level: 1, name: "Shop integrations" }).waitFor();
+        await capture(page, "settings-integrations", scheme);
+      });
+
       /**
        * The two orders surfaces — the densest money screens in the app, and
        * until recently the only ones with no baseline at all. That gap was found

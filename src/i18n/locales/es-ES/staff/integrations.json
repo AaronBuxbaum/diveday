@@ -1,0 +1,75 @@
+{
+  "eyebrow": "Ajustes / integraciones",
+  "title": "Integraciones del centro",
+  "description": "Conecta los sistemas que deben compartir el catálogo, los registros de dinero o los eventos automáticos de tu centro.",
+  "notice": {
+    "connected": "Integración conectada.",
+    "saved": "Ajustes de integración guardados.",
+    "disconnected": "Integración desconectada.",
+    "sync-complete": "Catálogo de Shopify sincronizado: {count, plural, =0 {nada listo para publicar} one {# producto} other {# productos}}.",
+    "test-sent": "Prueba de Zapier entregada.",
+    "invalid": "Revisa los datos y elige al menos un evento.",
+    "not-configured": "Esta integración aún no está configurada para esta instancia de DiveDay.",
+    "not-authorized": "Solo un propietario o gerente puede cambiar las integraciones.",
+    "failed": "La integración no pudo completar esa solicitud. Inténtalo de nuevo o vuelve a conectarla.",
+    "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
+    "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada."
+  },
+  "status": {
+    "connected": "Conectada",
+    "notConnected": "Sin conectar",
+    "error": "Necesita atención",
+    "connectedAt": "Conectada",
+    "lastSynced": "Última sincronización",
+    "never": "Nunca",
+    "account": "Cuenta"
+  },
+  "common": {
+    "connect": "Conectar",
+    "reconnect": "Reconectar",
+    "disconnect": "Desconectar",
+    "disconnecting": "Desconectando…",
+    "save": "Guardar ajustes",
+    "saving": "Guardando…",
+    "notConfigured": "Sin configurar",
+    "comingSoon": "Añade las credenciales del proveedor a esta implementación de DiveDay para activar la conexión.",
+    "selectedEvents": "Eventos que enviar",
+    "orderCreated": "Se crea un pedido",
+    "orderPaid": "Se paga un pedido",
+    "orderRefunded": "Se reembolsa un pedido"
+  },
+  "shopify": {
+    "name": "Shopify",
+    "description": "Publica tus alquileres y paquetes con precio de DiveDay como productos de Shopify.",
+    "domainLabel": "Dominio de Shopify",
+    "domainPlaceholder": "tu-centro.myshopify.com",
+    "domainDescription": "Usa el dominio myshopify.com de tu cuenta. DiveDay solo solicita permiso para escribir productos.",
+    "connect": "Conectar Shopify",
+    "sync": "Sincronizar catálogo",
+    "syncing": "Sincronizando catálogo…",
+    "syncDescription": "Solo se envían alquileres con precio y paquetes de buceo activos. Los productos llevan la etiqueta de DiveDay.",
+    "notConnected": "Todavía no hay una cuenta de Shopify conectada."
+  },
+  "quickbooks": {
+    "name": "QuickBooks Online",
+    "description": "Escribe pedidos pagados y reembolsos como SalesReceipts y RefundReceipts idempotentes.",
+    "connect": "Conectar QuickBooks",
+    "incomeAccountLabel": "ID de cuenta de ingresos",
+    "incomeAccountPlaceholder": "p. ej., 79",
+    "incomeAccountDescription": "La cuenta de ingresos de QuickBooks que usará el artículo de ventas de DiveDay. Busca su ID numérico en QuickBooks.",
+    "notConnected": "Todavía no hay una empresa de QuickBooks conectada.",
+    "setupRequired": "Conecta una empresa y define su cuenta de ingresos antes de sincronizar pedidos pagados."
+  },
+  "zapier": {
+    "name": "Zapier",
+    "description": "Envía eventos de pedidos seleccionados a un Catch Hook de Webhooks by Zapier.",
+    "webhookLabel": "URL del Catch Hook",
+    "webhookPlaceholder": "https://hooks.zapier.com/hooks/catch/…",
+    "webhookDescription": "Trata esta URL como una contraseña. DiveDay la cifra y no vuelve a mostrarla después de guardarla.",
+    "connect": "Conectar Zapier",
+    "test": "Enviar prueba",
+    "testing": "Enviando prueba…",
+    "notConnected": "Todavía no hay un Catch Hook de Zapier conectado.",
+    "eventsDescription": "Elige qué eventos de pedidos debe recibir este Zap."
+  }
+}
