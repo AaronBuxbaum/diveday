@@ -118,6 +118,8 @@
     "currentNoteLabel": "Notas de corriente y condiciones",
     "divePlanLabel": "Plan de inmersión",
     "divePlanPlaceholder": "Entrada, ruta, punto de retorno y notas de salida.",
+    "conservationNoteLabel": "Nota de conservación",
+    "conservationNoteHint": "Orientación opcional del centro para los buceadores en este sitio.",
     "fitLegend": "Para quién es este sitio",
     "fitDescription": "La línea que un buceador lee sobre los datos del sitio. Si la dejas en “deducirlo”, DiveDay la saca de la dificultad, la profundidad y la corriente de abajo, que son palabras que escribiste con otro propósito.",
     "fitToneLabel": "Cómo se lee este sitio",

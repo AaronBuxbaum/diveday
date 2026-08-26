@@ -1,708 +1,19 @@
-{
-  "operationalWindow": {
-    "arrivalsLens": "El modo mostrador muestra las llegadas de {lookback, plural, one {la √∫ltima # hora} other {las √∫ltimas # horas}} hasta las pr√≥ximas {ahead}."
-  },
-  "skipToContent": "Saltar al contenido principal",
-  "publicPreview": {
-    "youWorkHere": "Trabajas aqu√≠: esta es la p√°gina que ven los buceadores.",
-    "openTheBoard": "Abrir el panel"
-  },
-  "imageInput": {
-    "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
-    "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb} MB ‚Äî prueba con una foto m√°s peque√±a.",
-    "choose": "Elige una foto",
-    "chooseAnother": "Elige otra foto"
-  },
-  "paperWaiver": {
-    "markSignedOnPaper": "Marcar como firmado en papel",
-    "medicalAttestationLabel": "Tengo la liberaci√≥n firmada de este buceador archivada y he revisado su cuestionario m√©dico ‚Äî ninguna respuesta necesita el visto bueno de un m√©dico.",
-    "recording": "Registrando‚Ä¶",
-    "recordPaperSignature": "Registrar firma en papel"
-  },
-  "waiverSend": {
-    "sending": "Enviando‚Ä¶",
-    "copied": "Copiado",
-    "copyLink": "Copiar enlace",
-    "copyFailed": "Reintentar",
-    "reasonNoEmailOne": "Sin correo registrado",
-    "reasonNoEmailOther": "{count} no tienen correo registrado",
-    "reasonNoPhoneOne": "Sin un n√∫mero al que podamos enviar mensajes",
-    "reasonNoPhoneOther": "{count} no tienen un n√∫mero al que podamos enviar mensajes",
-    "reasonFailedOne": "No se pudo entregar el correo",
-    "reasonFailedOther": "No se pudo entregar el correo a {count}",
-    "reasonTextFailedOne": "No se pudo entregar el mensaje",
-    "reasonTextFailedOther": "No se pudo entregar el mensaje a {count}",
-    "reasonTestRecipientOne": "Esta direcci√≥n de prueba no puede recibir correo",
-    "reasonTestRecipientOther": "{count} direcciones de prueba no pueden recibir correo",
-    "reasonUnconfigured": "DiveDay todav√≠a no puede enviar correo desde esta instalaci√≥n",
-    "reasonTextUnconfigured": "DiveDay todav√≠a no puede enviar mensajes desde esta instalaci√≥n",
-    "reasonNoAppOrigin": "Esta instalaci√≥n no tiene una direcci√≥n web p√∫blica configurada, as√≠ que no se puede crear un enlace",
-    "sent": "Exenci√≥n enviada a {names}.",
-    "alreadyDoneOne": "{names} ya tiene una exenci√≥n firmada ‚Äî no se reenvi√≥ nada.",
-    "alreadyDoneOther": "{names} ya tienen una exenci√≥n firmada ‚Äî no se reenvi√≥ nada.",
-    "errors": "No se pudo enviar a {names} ‚Äî revisa la reserva en el listado.",
-    "confirmResend": "S√≠, reenviar",
-    "neverMind": "Cancelar",
-    "emptySelection": "Marca al menos un buceador y env√≠a la exenci√≥n a toda la selecci√≥n."
-  },
-  "connectivity": {
-    "online": "En l√≠nea",
-    "onlineTitle": "Este dispositivo est√° en l√≠nea.",
-    "offlineTitle": "Este dispositivo no tiene conexi√≥n en este momento.",
-    "offlineWithCopy": "Sin se√±al ¬∑ copia en el dispositivo"
-  },
-  "capacity": {
-    "full": "Completo",
-    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
-  },
-  "depth": {
-    "meters": "m",
-    "feet": "ft"
-  },
-  "temperature": {
-    "celsius": "¬∞C",
-    "fahrenheit": "¬∞F"
-  },
-  "birthday": {
-    "label": "Cumplea√±os",
-    "today": "hoy",
-    "soon": "en {days, plural, one {# d√≠a} other {# d√≠as}}",
-    "recent": "hace {days, plural, one {# d√≠a} other {# d√≠as}}"
-  },
-  "printButton": {
-    "label": "Imprimir / guardar PDF",
-    "popupBlocked": "El navegador bloque√≥ la ventana de impresi√≥n. Permite las ventanas emergentes y vuelve a intentarlo."
-  },
-  "printPacket": {
-    "title": "Paquete de salida",
-    "diveNumber": "Inmersi√≥n {number}",
-    "travelMinutes": "{minutes} min de trayecto",
-    "meetingPoint": "Punto de encuentro: {label}",
-    "conditionsHeading": "Condiciones"
-  },
-  "rollCallNote": {
-    "optionalNote": "Nota",
-    "message": {
-      "saving": "Guardando‚Ä¶",
-      "waiting": "Guardada en este dispositivo ‚Äî se env√≠a con el resultado de este buceador.",
-      "saved": "Guardada.",
-      "queued": "Guardada en este dispositivo ‚Äî se enviar√° cuando vuelvas a estar en l√≠nea.",
-      "error": "No se pudo guardar ‚Äî tu nota sigue aqu√≠. Int√©ntalo de nuevo.",
-      "idle": "Se guarda mientras escribes."
-    },
-    "notePlaceholder": "Lleg√≥ tarde al barco, pregunta m√©dica, problema de equipo‚Ä¶"
-  },
-  "commandPalette": {
-    "search": "Buscar",
-    "dialogAriaLabel": "B√∫squeda r√°pida",
-    "comboboxAriaLabel": "Buscar buceadores, salidas y p√°ginas",
-    "placeholder": "Busca buceadores, salidas, o ve directo a una p√°gina‚Ä¶",
-    "emptyShort": "Escribe para buscar personas y salidas, o ve directo a una p√°gina.",
-    "emptyNoMatches": "Sin resultados. Prueba un nombre, correo o t√≠tulo de salida.",
-    "groupDivers": "Buceadores",
-    "addDiver": "A√±adir buceador",
-    "groupTrips": "Salidas",
-    "groupDiveSites": "Sitios de buceo",
-    "groupCourses": "Cursos",
-    "groupOrders": "Pedidos",
-    "groupGear": "Equipo",
-    "groupSession": "Sesi√≥n",
-    "groupGoTo": "Ir a",
-    "goToBoarding": "Embarque ‚Äî el barco de hoy",
-    "goToOfflineRollCall": "Abrir pase de lista sin conexi√≥n",
-    "hintMove": "para moverte",
-    "hintOpen": "para abrir",
-    "hintClose": "para cerrar"
-  },
-  "tripAdmission": {
-    "level": "Esta salida exige {level}. La titulaci√≥n m√°s alta registrada de este buceador es {held}. Si tiene la certificaci√≥n de {level}, a√±√°dela a su ficha; si no, res√©rvale una salida acorde a su nivel o el curso de {level}.",
-    "levelNoCard": "Esta salida exige {level} y nada en la ficha de este buceador llega a ese nivel. A√±ade su certificaci√≥n de {level} si la tiene; si no, res√©rvale una salida acorde a su nivel o el curso de {level}.",
-    "cards": "{count, plural, one {Esta salida exige la certificaci√≥n {list}. No hay ninguna en la ficha de este buceador.} other {Esta salida exige las certificaciones {list}. No hay ninguna de ellas en la ficha de este buceador.}}",
-    "nitrox": "Nitrox",
-    "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus puntos de inmersi√≥n."
-  },
-  "readiness": {
-    "certificationLevels": {
-      "openWater": "Open Water",
-      "advancedOpenWater": "Advanced Open Water",
-      "rescue": "Buceador de Rescate",
-      "divemaster": "Divemaster",
-      "instructor": "Instructor"
-    },
-    "specialties": {
-      "deep": "Profundidad",
-      "wreck": "Naufragios",
-      "night": "Nocturno",
-      "drysuit": "Traje seco"
-    },
-    "status": {
-      "ready": "Listo",
-      "blocked": "Bloqueado"
-    },
-    "blockers": {
-      "requirementsNotConfigured": "A√∫n no se han configurado los requisitos de la salida.",
-      "identityUnconfirmed": "Identidad sin confirmar: esta reserva us√≥ el correo de un buceador existente con un nombre distinto. Confirma que es la misma persona antes de embarcar.",
-      "waiverNotSent": "La exenci√≥n a√∫n no se ha enviado.",
-      "waiverPending": "La exenci√≥n espera la firma del buceador.",
-      "waiverExpired": "El enlace de la exenci√≥n caduc√≥; emite uno nuevo.",
-      "medicalReview": "Una respuesta m√©dica necesita seguimiento del personal.",
-      "certificationMissing": "No hay ninguna certificaci√≥n registrada para esta salida.",
-      "certificationPending": "La certificaci√≥n espera verificaci√≥n del personal.",
-      "certificationSelfDeclared": "El buceador indic√≥ su nivel por su cuenta. No se ha verificado ning√∫n registro de certificaci√≥n: pide los datos y verif√≠calos.",
-      "certificationInsufficient": "Se requiere {level} o superior para esta salida.",
-      "specialtyMissing": "Se requiere la especialidad {specialty}; no hay certificaci√≥n registrada.",
-      "specialtyPending": "La certificaci√≥n de especialidad {specialty} espera verificaci√≥n del personal.",
-      "specialtyImportUnconfirmed": "La certificaci√≥n de especialidad {specialty} lleg√≥ en una importaci√≥n ‚Äî un miembro del personal debe confirmarla antes de esta inmersi√≥n.",
-      "nitroxMissing": "Se requiere certificaci√≥n de nitrox; no hay un registro de certificaci√≥n.",
-      "nitroxPending": "La certificaci√≥n de nitrox espera verificaci√≥n del personal.",
-      "nitroxSelfDeclared": "El buceador marc√≥ nitrox por su cuenta. No se ha verificado ninguna evidencia de certificaci√≥n: pide los datos y verifica el registro.",
-      "underMinimumAge": "Por debajo de la edad m√≠nima del curso: {age} en la fecha del curso, y se requieren {minimumAge}. Verifica la fecha de nacimiento registrada antes de embarcar.",
-      "paymentDue": "Hay un pago pendiente para esta salida.",
-      "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
-      "readinessUnavailable": "La informaci√≥n de preparaci√≥n no est√° disponible. No embarques a este buceador hasta verificarlo."
-    }
-  },
-  "shopNav": {
-    "language": "Idioma",
-    "signOut": "Cerrar sesi√≥n",
-    "signOutConfirm": "¬øCerrar sesi√≥n? Confirmar",
-    "signOutPending": "Cerrando sesi√≥n‚Ä¶"
-  },
-  "shopNavLinks": {
-    "badgeBlocked": "{count, plural, one {# buceador bloqueado} other {# buceadores bloqueados}}",
-    "primaryNavAriaLabel": "Principal",
-    "more": "M√°s",
-    "groupDaily": "Llevar el centro",
-    "groupSetup": "Configurar",
-    "today": "Hoy",
-    "checkIn": "Registro",
-    "closeOut": "Cierre del d√≠a",
-    "closeOutShort": "Cierre",
-    "walkIn": "Walk-in",
-    "blockers": "No listos",
-    "divers": "Buceadores",
-    "board": "Tablero",
-    "addBooking": "A√±adir una reserva",
-    "staffing": "Personal",
-    "diveSites": "Sitios de buceo",
-    "gear": "Equipo",
-    "courses": "Cursos",
-    "reviews": "Rese√±as",
-    "requests": "Peticiones",
-    "orders": "Pedidos",
-    "waivers": "Exenciones",
-    "reports": "Informes",
-    "promoCodes": "C√≥digos promocionales",
-    "settings": "Ajustes",
-    "team": "Equipo",
-    "calendarFeed": "Suscripci√≥n al calendario"
-  },
-  "subSurfaceRipple": {
-    "iconTitle": "Icono de pase de lista completo",
-    "message": "Pase de lista completo"
-  },
-  "waterLocker": {
-    "rainAlt": "Lluvia",
-    "heading": "Pantalla bloqueada ‚Äî se detect√≥ agua",
-    "body": "Estamos ignorando toques aleatorios provocados por el agua en la pantalla. Mant√©n presionado para desbloquear en cuanto est√© seca.",
-    "holdLine1": "MANT√âN",
-    "holdLine2": "2s",
-    "unlockingProgress": "Desbloqueando... {percent}%",
-    "holdToUnlock": "Mant√©n presionado el bot√≥n para desbloquear",
-    "disableToggleLabel": "Desactivar la protecci√≥n contra salpicaduras en este dispositivo"
-  },
-  "undoToast": {
-    "pendingLabel": "Deshaciendo‚Ä¶",
-    "undo": "Deshacer"
-  },
-  "today": {
-    "departureBoard": {
-      "crewingBadge": "Formas parte de la tripulaci√≥n",
-      "courseSession": "Sesi√≥n de curso ¬∑ {title}",
-      "bookedOfCapacityOne": "{booked} de {capacity} reservado",
-      "bookedOfCapacityOther": "{booked} de {capacity} reservados",
-      "boarding": "Embarcar buceadores",
-      "openGuests": "Ver invitados",
-      "assignCrewMemberAria": "Asignar tripulante a {title}",
-      "assignCrewOption": "Asignar tripulante‚Ä¶",
-      "assignCrewLabel": "Asignar tripulante",
-      "assignFailed": "No se ha guardado ‚Äî verifica tu conexi√≥n o int√©ntalo de nuevo.",
-      "boardingSummary": "{aboard} ¬∑ {ready} ¬∑ {blocked} ¬∑ {open}",
-      "boardingAboardOne": "{count} a bordo",
-      "boardingAboardOther": "{count} a bordo",
-      "boardingReadyOne": "{count} listo para embarcar",
-      "boardingReadyOther": "{count} listos para embarcar",
-      "boardingBlockedOne": "{count} bloqueado",
-      "boardingBlockedOther": "{count} bloqueados",
-      "boardingOpenOne": "{count} plaza libre",
-      "boardingOpenOther": "{count} plazas libres",
-      "blockedWarningNamed": "{name} todav√≠a no puede embarcar ‚Äî la soluci√≥n est√° en la lista de abajo.",
-      "unassignAria": "Quitar a {name}",
-      "noCrewAssigned": "Todav√≠a no hay tripulaci√≥n asignada.",
-      "crewLine": "Tripulaci√≥n ¬∑ {names}",
-      "editCrew": "Editar",
-      "blockedWarningOne": "{count} buceador todav√≠a no puede embarcar ‚Äî est√° en la lista de abajo.",
-      "blockedWarningOther": "{count} buceadores todav√≠a no pueden embarcar ‚Äî est√°n en la lista de abajo.",
-      "blockedAboardNamed": "{name} est√° a bordo ‚Äî {reason}",
-      "blockedAboardOne": "{count} buceador est√° a bordo ‚Äî {reason}",
-      "blockedAboardOther": "{count} buceadores est√°n a bordo ‚Äî {reason}",
-      "aboardReasonMedical": "hay una respuesta m√©dica que un m√©dico tiene que autorizar; nadie a bordo puede darla por buena.",
-      "aboardReasonCertification": "falta una certificaci√≥n que esta inmersi√≥n pide y que no hemos visto.",
-      "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exenci√≥n firmada no hay declaraci√≥n m√©dica.",
-      "aboardReasonPayment": "queda un pago pendiente. Est√° en la lista de abajo.",
-      "noneBooked": "Todav√≠a nadie ha reservado ‚Äî comparte la p√°gina de la salida y aparecer√°n aqu√≠.",
-      "everyoneAboard": "Todos a bordo.",
-      "crewRollCallOpen": "Todos los buceadores est√°n a bordo: falta pasar lista a la tripulaci√≥n.",
-      "clearToBoard": "Todos los de esta salida est√°n listos para embarcar.",
-      "sailingToday": "Sale hoy"
-    },
-    "todayQueue": {
-      "emptyHeading": "No hay nada pendiente para ti",
-      "emptyBody": "Todos los buceadores reservados en la pr√≥xima semana tienen en orden su exenci√≥n, sus certificaciones y su pago.",
-      "emptyAction": "Ver el calendario",
-      "needsYouHeading": "Necesita tu atenci√≥n",
-      "boatsClear": "Las salidas de hoy est√°n todas despejadas ü§ô",
-      "itemsCount": "{count, plural, one {# tarea} other {# tareas}}",
-      "withheldDeskWork": "{count, plural, one {# tarea para recepci√≥n} other {# tareas para recepci√≥n}}"
-    },
-    "resendConfirmation": {
-      "resending": "Reenviando‚Ä¶",
-      "confirmationResent": "Confirmaci√≥n reenviada.",
-      "errors": {
-        "invalid": "No se encontr√≥ esa reserva ‚Äî abre la salida para revisarla.",
-        "noEmail": "No hay correo registrado ‚Äî a√±ade uno desde el listado y vuelve a intentarlo.",
-        "notConfigured": "El correo todav√≠a no est√° configurado para este centro.",
-        "failed": "Sigue sin poder entregarse ‚Äî abre la salida para revisar la reserva."
-      }
-    },
-    "paymentAction": {
-      "copyLink": "Copiar enlace de pago",
-      "linkCopied": "Enlace copiado.",
-      "copyFailed": "No se pudo copiar ‚Äî c√≥pialo desde la factura.",
-      "resendInvoice": "Reenviar factura",
-      "resending": "Reenviando‚Ä¶",
-      "invoiceResent": "Factura reenviada.",
-      "errors": {
-        "notFound": "No se encontr√≥ ese pedido ‚Äî abre la salida para revisarlo.",
-        "notOpen": "Este pedido ya no est√° abierto ‚Äî abre la salida para verificar su estado.",
-        "notConfigured": "Los pagos todav√≠a no est√°n conectados para este centro.",
-        "failed": "Sigue sin poder reenviarse ‚Äî abre la salida para revisar el pedido."
-      }
-    },
-    "yourSessions": {
-      "heading": "Tus sesiones",
-      "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
-      "readyCount": "{count, plural, one {# listo} other {# listos}}",
-      "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-      "openRoster": "Ver lista"
-    },
-    "urgency": {
-      "imminent": "Pr√≥ximas 3 horas",
-      "now": "En las pr√≥ximas 24 horas",
-      "soon": "Pr√≥ximos 3 d√≠as",
-      "later": "Esta semana"
-    },
-    "actionKind": {
-      "rollCallMissingDiver": "Buceador sin localizar",
-      "rollCallUnfinished": "Recuento",
-      "rollCallMissingCrew": "Tripulaci√≥n sin localizar",
-      "rollCallCrewUnfinished": "Recuento de tripulaci√≥n",
-      "rollCallDepartureOpen": "Recuento en muelle",
-      "rollCallNotStarted": "Sin recuento",
-      "medicalReview": "M√©dico",
-      "readinessUnavailable": "Disponibilidad",
-      "identity": "Identidad",
-      "certification": "Certificaciones",
-      "requirements": "Configuraci√≥n",
-      "waiver": "Exenci√≥n",
-      "instructorMissing": "Tripulaci√≥n",
-      "uncrewedDeparture": "Sin tripulaci√≥n",
-      "nitroxGate": "Nitrox",
-      "highWindAlert": "Viento fuerte",
-      "divePrep": "Preparaci√≥n",
-      "payment": "Pago",
-      "emailDelivery": "Correo",
-      "waitlistSeat": "Lista de espera",
-      "lastMinuteFill": "Llenar plazas",
-      "emergencyContact": "Contacto",
-      "crewBelowTarget": "Bajo el objetivo",
-      "stuckPaymentOperation": "Stripe",
-      "failedPhotoDeletion": "Limpieza",
-      "owedRefund": "Reembolso pendiente",
-      "reviewsPending": "Rese√±as",
-      "gearOverdue": "Equipo atrasado",
-      "gearDueBack": "Devoluci√≥n hoy",
-      "gearServiceDue": "Mantenimiento",
-      "unitsUnconfirmed": "Configuraci√≥n"
-    },
-    "blockerAction": {
-      "setRequirements": "Configurar requisitos",
-      "confirmIdentity": "Confirmar identidad",
-      "checkDateOfBirth": "Verificar fecha de nacimiento",
-      "sendWaiver": "Enviar exenci√≥n",
-      "nudgeWaiver": "Recordar exenci√≥n",
-      "reissueWaiver": "Reemitir exenci√≥n",
-      "reviewMedical": "Revisar informe m√©dico",
-      "addCard": "A√±adir certificaci√≥n",
-      "askForCard": "Pedir datos de certificaci√≥n",
-      "verifyCard": "Verificar certificaci√≥n",
-      "reviewCard": "Revisar certificaci√≥n",
-      "addSpecialty": "A√±adir especialidad",
-      "verifySpecialty": "Verificar especialidad",
-      "confirmSpecialty": "Confirmar especialidad",
-      "addNitroxCard": "A√±adir certificaci√≥n de nitrox",
-      "askForNitroxCard": "Pedir certificaci√≥n de nitrox",
-      "verifyNitroxCard": "Verificar certificaci√≥n de nitrox",
-      "takePayment": "Cobrar pago",
-      "checkReadiness": "Verificar disponibilidad"
-    },
-    "blockerGroup": {
-      "setRequirements": "Configurar requisitos",
-      "confirmIdentities": "Confirmar identidades",
-      "checkDatesOfBirth": "Verificar fechas de nacimiento",
-      "sendWaivers": "Enviar exenciones",
-      "nudgeWaivers": "Recordar exenciones",
-      "reissueWaivers": "Reemitir exenciones",
-      "reviewMedicals": "Revisar informes m√©dicos",
-      "reviewCards": "Revisar certificaciones",
-      "askForCards": "Pedir certificaciones",
-      "verifyCards": "Verificar certificaciones",
-      "reviewSpecialties": "Revisar especialidades",
-      "verifySpecialties": "Verificar especialidades",
-      "confirmImportedSpecialties": "Confirmar especialidades importadas",
-      "reviewNitroxCards": "Revisar certificaciones de nitrox",
-      "askForNitroxCards": "Pedir certificaciones de nitrox",
-      "verifyNitroxCards": "Verificar certificaciones de nitrox",
-      "takePayments": "Cobrar pagos",
-      "checkReadiness": "Verificar disponibilidad"
-    },
-    "pointingLabel": {
-      "trip": "Ver lista",
-      "diver": "Abrir la ficha de {name}"
-    },
-    "nameList": {
-      "all": "{leading} y {last}",
-      "overflow": "{leading} y {rest, plural, one {# m√°s} other {# m√°s}}"
-    },
-    "subject": {
-      "diverGroup": "{count, plural, one {# buceador} other {# buceadores}}"
-    },
-    "blockerDetail": {
-      "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo m√°s por resolver.} other {Quedan # bloqueos m√°s por resolver.}}",
-      "group": "{detail} {names}."
-    },
-    "detail": {
-      "missingDiver": "{uncounted, plural, one {# de {total} buceadores no ha vuelto} other {# de {total} buceadores no han vuelto}} a bordo tras la inmersi√≥n {dive}. Encu√©ntralos y cierra el recuento.",
-      "missingDiverStale": "{uncounted, plural, one {# de {total} buceadores nunca se contabiliz√≥} other {# de {total} buceadores nunca se contabilizaron}} tras la inmersi√≥n {dive}. Demasiado antiguo para resolverlo en el muelle: reconstr√∫yelo desde el manifiesto y anota qu√© pas√≥.",
-      "openRollCall": "El barco ha vuelto y el recuento de la inmersi√≥n {dive} est√° sin terminar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
-      "openRollCallUnderway": "El barco sigue fuera y la inmersi√≥n {dive} est√° a medio contar: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contacta con la tripulaci√≥n ahora, mientras est√° en el sitio.",
-      "openRollCallStale": "El recuento de la inmersi√≥n {dive} nunca se cerr√≥: {uncounted, plural, one {# de {total} buceadores sigue sin} other {# de {total} buceadores siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstr√∫yelo desde el manifiesto.",
-      "missingCrew": "{uncounted, plural, one {# de {total} tripulantes no ha vuelto} other {# de {total} tripulantes no han vuelto}} a bordo tras la inmersi√≥n {dive}. Encu√©ntralos y cierra el recuento.",
-      "missingCrewStale": "{uncounted, plural, one {# de {total} tripulantes nunca se contabiliz√≥} other {# de {total} tripulantes nunca se contabilizaron}} tras la inmersi√≥n {dive}. Demasiado antiguo para resolverlo en el muelle: reconstr√∫yelo desde el manifiesto y anota qu√© pas√≥.",
-      "openCrewRollCall": "El barco ha vuelto y el recuento de tripulaci√≥n de la inmersi√≥n {dive} est√° sin terminar: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
-      "openCrewRollCallUnderway": "El barco sigue fuera y el recuento de tripulaci√≥n de la inmersi√≥n {dive} est√° a medias: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contacta con el barco ahora, mientras est√° en el sitio.",
-      "openCrewRollCallStale": "El recuento de tripulaci√≥n de la inmersi√≥n {dive} nunca se cerr√≥: {uncounted, plural, one {# de {total} tripulantes sigue sin} other {# de {total} tripulantes siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstr√∫yelo desde el manifiesto.",
-      "departureCountOpen": "El recuento en el muelle nunca se complet√≥: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo, no un buceador en el agua: resu√©lvelo para que el pr√≥ximo recuento parta de una lista real.",
-      "noRollCall": "No se hizo ning√∫n recuento: {total, plural, one {# buceador zarp√≥} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; no hay registro.",
-      "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler, as√≠ que la lista de preparaci√≥n est√° incompleta.",
-      "ungatedNitrox": "{count, plural, one {# buceador pidi√≥} other {# buceadores pidieron}} nitrox sin certificaci√≥n verificada ‚Äî esos tanques est√°n planeados con aire.",
-      "highWindAlert": "Previsi√≥n de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes { (rachas de {gusts} nudos)} other {}} ‚Äî comprueba las condiciones antes de salir.",
-      "instructorMissing": "Esta sesi√≥n de curso no tiene instructor asignado y no puede aceptar inscripciones.",
-      "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulaci√≥n asignada solo cubre {capacity} seg√∫n la ratio de nivel inicial publicada por PADI.",
-      "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesi√≥n de iniciaci√≥n, la tripulaci√≥n cubre {capacity}: {perInstructor} por instructor para la inmersi√≥n en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor a√±ade plazas.",
-      "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y no hay divemaster ni instructor asignado para supervisar esta salida.",
-      "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasterCount, plural, one {# supervisor} other {# supervisores}} ‚Äî bajo tu objetivo de {ratio}:1.",
-      "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado ‚Äî pregunta en el mostrador; se imprime en el manifiesto.",
-      "missingContactNamed": "No tiene contacto de emergencia registrado ‚Äî pregunta en el mostrador; se imprime en el manifiesto.",
-      "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de √∫ltima hora enviada todav√≠a.",
-      "waitlistSeat": "{seats, plural, one {se liber√≥ # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona est√°} other {# personas est√°n}} en la lista de espera.",
-      "emailNotConfigured": {
-        "waiver": "Su enlace de exenci√≥n nunca se envi√≥ ‚Äî el correo no est√° configurado.",
-        "confirmation": "Su confirmaci√≥n de reserva nunca se envi√≥ ‚Äî el correo no est√° configurado."
-      },
-      "emailFailed": {
-        "waiver": "No se pudo entregar su enlace de exenci√≥n{attempts, plural, =0 {} =1 {} other { tras # intentos}}.",
-        "confirmation": "No se pudo entregar su confirmaci√≥n de reserva{attempts, plural, =0 {} =1 {} other { tras # intentos}}."
-      }
-    },
-    "actionLabel": {
-      "openRollCall": "Abrir recuento",
-      "openPrepList": "Abrir lista de preparaci√≥n",
-      "openTrip": "Abrir salida",
-      "openGuests": "Abrir invitados",
-      "inviteFromWaitlist": "Invitar de la lista de espera",
-      "resendWaiverLink": "Reenviar enlace de exenci√≥n",
-      "resendConfirmation": "Reenviar confirmaci√≥n",
-      "openOrders": "Revisar en Pedidos",
-      "openDataSettings": "Revisar en Ajustes",
-      "openReviews": "Ver rese√±as",
-      "openGearRegister": "Abrir registro de equipo",
-      "openGearUnit": "Abrir ficha de la unidad",
-      "openUnits": "Abrir unidades"
-    },
-    "summary": {
-      "blocked": "{departures, plural, =0 {Hoy no sale ning√∫n barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todav√≠a no puede embarcar.} other {# buceadores todav√≠a no pueden embarcar.}}",
-      "clear": "{departures, plural, =0 {Hoy no sale ning√∫n barco} =1 {1 salida hoy} other {# salidas hoy}} ‚Äî y no tienes nada pendiente.",
-      "urgent": "{departures, plural, =0 {Hoy no sale ning√∫n barco} =1 {1 salida hoy} other {# salidas hoy}}. {urgent, plural, =1 {1 tarea por resolver antes de zarpar.} other {# tareas por resolver antes de zarpar.}}",
-      "ahead": "{departures, plural, =0 {Hoy no sale ning√∫n barco} =1 {1 salida hoy} other {# salidas hoy}}. Nada es urgente; {jobs, plural, =1 {1 tarea para adelantar.} other {# tareas para adelantar.}}"
-    },
-    "greeting": {
-      "morning": "Buenos d√≠as, {name}",
-      "afternoon": "Buenas tardes, {name}",
-      "evening": "Buenas noches, {name}",
-      "night": "Trabajando hasta tarde, {name}"
-    },
-    "seasonalBriefing": {
-      "summer": "Aprovecha el intervalo de superficie ‚Äî busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el pr√≥ximo barco.",
-      "autumn": "Aprovecha el intervalo de superficie ‚Äî toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el pr√≥ximo barco.",
-      "winter": "Aprovecha el intervalo de superficie ‚Äî abr√≠gate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el pr√≥ximo barco.",
-      "spring": "Aprovecha el intervalo de superficie ‚Äî disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el pr√≥ximo barco."
-    },
-    "opsAlert": {
-      "operationKind": {
-        "checkoutSession": "Pago",
-        "invoice": "Factura",
-        "refund": "Reembolso"
-      },
-      "mediaKind": {
-        "coursePhoto": "Foto del curso",
-        "recapPhoto": "Foto del resumen",
-        "certificationCard": "Evidencia de certificaci√≥n",
-        "waiverDocument": "Documento de exenci√≥n",
-        "diveSitePhoto": "Foto del sitio de buceo"
-      },
-      "stuckDetail": {
-        "withId": "{kind} atascado desde {when} ‚Äî Stripe: {id}. Rev√≠salo en el panel de Stripe.",
-        "withoutId": "{kind} atascado desde {when}. Rev√≠salo en el panel de Stripe."
-      },
-      "mediaDeletionDetail": "{kind} eliminada de la aplicaci√≥n pero todav√≠a no borrada del almacenamiento ‚Äî en cola desde {when}.",
-      "owedRefundDetail": "{amount} de {tripTitle} del {when} ‚Äî cancelaste la salida y el dinero no pudo volver por tarjeta. Devu√©lvelo y luego marca la plaza como reembolsada.",
-      "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when} ‚Äî cancelaste la salida y no se registr√≥ ning√∫n importe en el pago. Devuelve lo que pag√≥ y luego marca la plaza como reembolsada."
-    },
-    "reviewsPending": {
-      "subject": "{count, plural, one {# rese√±a espera} other {# rese√±as esperan}} tu revisi√≥n",
-      "detail": "Los buceadores escribieron sobre sus salidas ‚Äî publica las buenas palabras u oculta el resto con discreci√≥n."
-    },
-    "unitsUnconfirmed": {
-      "subject": "¬øEn qu√© moneda y unidad de profundidad trabaja este centro?",
-      "detail": "Supusimos {currency} por tu zona horaria al crear la cuenta y nadie lo ha confirmado. Es lo que se le cobra a la tarjeta de un buceador."
-    },
-    "gear": {
-      "overdueDetail": "{unitLabel} deb√≠a devolverse el {dueOn} y sigue fuera.",
-      "dueBackDetail": "{unitLabel} debe devolverse hoy.",
-      "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
-      "serviceOverdueDetail": "{clockLabel} venci√≥ el {dueOn}.",
-      "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogi√≥ ‚Äî lib√©ralo."
-    }
-  },
-  "tripDiveFields": {
-    "heading": "Plan de inmersiones",
-    "description": "Dejar una inmersi√≥n en blanco no pasa nada ‚Äî los buceadores igualmente ver√°n un plan claro de {tripShape}.",
-    "twoTankTrip": "dos tanques",
-    "diveCountTripOne": "{count} inmersi√≥n",
-    "diveCountTripOther": "{count} inmersiones",
-    "numberOfDivesLabel": "N√∫mero de inmersiones",
-    "diveOptionOne": "{count} inmersi√≥n",
-    "diveOptionOther": "{count} inmersiones",
-    "diveLegend": "Inmersi√≥n {number}",
-    "nameLabel": "Nombre",
-    "optionalHint": "(opcional)",
-    "namePlaceholderFirst": "Molasses Reef",
-    "namePlaceholderOther": "Segundo tanque ¬∑ sitio por definir",
-    "diveSiteLabel": "Sitio de buceo",
-    "noSiteChosen": "Sin sitio elegido todav√≠a",
-    "travelLabelFirst": "Minutos desde el muelle",
-    "travelLabelOther": "Minutos desde el sitio anterior",
-    "travelHint": "(en blanco usa tu trayecto habitual)",
-    "diverFacingDetailsLabel": "Detalles para los buceadores",
-    "footerNote": "Elegir un sitio trae sus notas guardadas ‚Äî mapa, referencias, gu√≠a de campo ‚Äî al briefing de esa inmersi√≥n."
-  },
-  "offlineManifest": {
-    "freshnessCopy": {
-      "current": "Esta copia est√° al d√≠a",
-      "aging": "Esta copia es un poco antigua",
-      "stale": "Esta copia es antigua"
-    },
-    "freshnessPill": {
-      "current": "Copia reciente",
-      "aging": "Copia antigua",
-      "stale": "Copia caducada"
-    },
-    "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo‚Ä¶",
-    "openingHeading": "Abriendo la copia guardada en este dispositivo",
-    "reconcile": {
-      "reachError": "No se pudo contactar con DiveDay en este momento ‚Äî tus cambios siguen guardados en este tel√©fono e intentar√°n enviarse de nuevo en el pr√≥ximo cambio o al reconectar.",
-      "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisi√≥n ‚Äî abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisi√≥n ‚Äî abre el manifiesto en vivo para resolverlo.}}",
-      "pendingWaiting": "{count, plural, one {# cambio todav√≠a se est√° enviando.} other {# cambios todav√≠a se est√°n enviando.}}",
-      "allCaughtUp": "Todo enviado.",
-      "listLoadError": "Este dispositivo no pudo abrir sus manifiestos guardados. Guarda una copia nueva mientras tengas se√±al.",
-      "singleLoadError": "Este dispositivo no pudo abrir su manifiesto guardado. Guarda una copia nueva mientras tengas se√±al.",
-      "savedCount": "{count, plural, one {# manifiesto guardado} other {# manifiestos guardados}} en este dispositivo.",
-      "noneSavedYet": "Todav√≠a no hay nada guardado en este dispositivo.",
-      "listPendingRejected": "{count, plural, one {# cambio necesita revisi√≥n ‚Äî abre esa salida para resolverlo.} other {# cambios necesitan revisi√≥n ‚Äî abre esa salida para resolverlo.}}",
-      "listAllCaughtUp": "Todo enviado en estas salidas.",
-      "ready": "El manifiesto guardado en este dispositivo est√° listo.",
-      "noneForTrip": "No hay ning√∫n manifiesto guardado actualmente para esta salida en este dispositivo."
-    },
-    "list": {
-      "eyebrow": "Manifiestos sin conexi√≥n",
-      "headingWithTrips": "Guardado en este dispositivo",
-      "headingEmpty": "Todav√≠a no hay nada guardado en este dispositivo",
-      "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
-      "expiredViewOnly": "Caducado ‚Äî solo lectura",
-      "emptyHint": "Mientras a√∫n tengas se√±al, abre cualquier p√°gina del centro: DiveDay mantiene al d√≠a la copia de los pr√≥ximos dos d√≠as en este dispositivo.",
-      "freshnessAllCurrent": "Todas al d√≠a.",
-      "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
-      "savedAgo": "Guardada {ago}",
-      "refreshBeforeRelying": "Actual√≠zala antes de confiar en ella"
-    },
-    "single": {
-      "eyebrow": "Manifiesto sin conexi√≥n",
-      "emptyHeading": "Todav√≠a no hay nada guardado en este tel√©fono",
-      "emptyHint": "Mientras a√∫n tengas se√±al, abre el manifiesto en vivo de la salida: mantiene al d√≠a la copia de este dispositivo.",
-      "removedOtherShopHeading": "Esa copia guardada se elimin√≥",
-      "removedOtherShopMessage": "En esta tablet hay otro centro con la sesi√≥n iniciada.",
-      "removedOtherShopHint": "Esta salida la guard√≥ otro centro, as√≠ que su copia se elimin√≥ de esta tablet cuando cambi√≥ el centro con la sesi√≥n iniciada aqu√≠. Su pase de lista debe registrarse en el manifiesto en vivo de ese centro.",
-      "skipLink": "Ir directo al pase de lista sin conexi√≥n",
-      "savedAt": "Guardado {when}",
-      "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguir√° intent√°ndolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
-      "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento ‚Äî lo verificamos todo de nuevo en cuanto tengas se√±al.",
-      "pendingRejectedCounts": "{pending} esperando para enviarse ¬∑ {rejected} necesitan revisi√≥n",
-      "checkpointNavAria": "Punto del pase de lista",
-      "statsDivers": "Buceadores",
-      "statsBoarded": "Embarcados",
-      "statsAwaiting": "Pendientes",
-      "rollCallCompleteHeading": "Pase de lista completo üéâ",
-      "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
-      "allAboard": "Todos tienen un resultado ‚Äî todos a bordo.",
-      "someNotBoarded": "Todos tienen un resultado ‚Äî {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que est√°n localizados antes de continuar.",
-      "crewHeading": "Tripulaci√≥n a bordo",
-      "crewAllAccountedFor": "{assigned, plural, one {# tripulante, contabilizado.} other {Los # tripulantes, contabilizados.}}",
-      "crewNoneAssigned": "No hay tripulaci√≥n asignada a esta salida, as√≠ que no hay a qui√©n pasar lista. La tripulaci√≥n se a√±ade en la lista de tripulaci√≥n de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
-      "crewNoneAboard": "Toda la tripulaci√≥n de esta salida figura en tierra, as√≠ que nadie a bordo est√° en la lista de tripulaci√≥n. Quien saliera de verdad se a√±ade en la lista de tripulaci√≥n de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
-      "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
-      "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}}: se guard√≥ antes de que el pase de lista de tripulaci√≥n funcionara sin conexi√≥n. Actualiza la copia la pr√≥xima vez que tengas cobertura o reg√≠stralos en el manifiesto en vivo.",
-      "buddyReadOnlyHere": "Los equipos de buceo se muestran tal como se guardaron. Si alguien del equipo est√° a bordo se registra en el pase de lista en vivo ‚Äî esta copia no lo sigue.",
-      "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la lista de tripulaci√≥n necesita su propio resultado.",
-      "readyBadge": "Listo cuando se guard√≥",
-      "blockedBadge": "Bloqueado cuando se guard√≥",
-      "statePendingSuffix": "¬∑ esperando para enviarse",
-      "emergencyContact": "Contacto de emergencia",
-      "notOnFile": "Sin datos registrados",
-      "rentalFit": "Equipo de alquiler",
-      "nitroxRequestedSuffix": "¬∑ Nitrox solicitado",
-      "addNoteSummary": "A√±adir una nota",
-      "optionalNote": "Nota opcional",
-      "notePlaceholder": "Lleg√≥ tarde al barco, pregunta m√©dica, problema de equipo‚Ä¶",
-      "noteHint": "La nota viaja con este registro de pase de lista.",
-      "saving": "Guardando‚Ä¶",
-      "boardedDone": "Embarcado ‚òëÔ∏è",
-      "markBoarded": "Marcar embarcado",
-      "notBoardedDone": "No embarcado ‚òëÔ∏è",
-      "markNotBoarded": "Marcar no embarcado",
-      "notBackAboardActive": "Sin regresar a bordo",
-      "markNotBackAboard": "Marcar sin regresar a bordo",
-      "confirmAboard": "Confirmar que {name} est√° a bordo",
-      "confirmAboardHint": "Toca de nuevo para registrar que ves a {name} y que ya est√° de vuelta en el barco.",
-      "confirmAboardCancel": "Mantener ‚Äúsin regresar a bordo‚Äù",
-      "markedElsewhere": "Registrado en otro dispositivo o en el manifiesto en vivo ‚Äî deshazlo all√≠, no aqu√≠.",
-      "openLiveManifest": "Abrir manifiesto en vivo",
-      "record": {
-        "expiredCannotRecord": "Esta copia guardada ha caducado ‚Äî abre el manifiesto en vivo para registrar el pase de lista.",
-        "expiredRecordOnLive": "Caducado ‚Äî reg√≠stralo en el manifiesto en vivo",
-        "saved": "Guardado en este tel√©fono ‚Äî se enviar√° en cuanto recuperes la conexi√≥n.",
-        "genericError": "Ese cambio no se pudo guardar en este dispositivo ‚Äî int√©ntalo de nuevo.",
-        "notAllowed": "Este buceador a√∫n no puede embarcar ‚Äî resuelve lo pendiente en el manifiesto en vivo primero.",
-        "unavailable": "Esta copia guardada ya no est√° disponible ‚Äî abre el manifiesto en vivo para registrar el pase de lista."
-      },
-      "checklist": {
-        "heading": "Comprobaci√≥n previa a la salida"
-      }
-    },
-    "shellVersion": {
-      "staleBanner": "Esta copia guardada es de una versi√≥n anterior de DiveDay. Actual√≠zala con conexi√≥n antes de embarcar buceadores.",
-      "updateBanner": "Hay una nueva versi√≥n de DiveDay lista.",
-      "refreshButton": "Actualizar ahora"
-    },
-    "discarded": {
-      "heading": "Se elimin√≥ un pase de lista que nunca se envi√≥",
-      "body": "{count, plural, one {# cambio de recuento registrado} other {# cambios de recuento registrados}} en este dispositivo nunca llegaron a DiveDay, y la copia guardada super√≥ la fecha en que un manifiesto puede permanecer en un dispositivo. Vuelve a introducir en el manifiesto en vivo lo que siga haciendo falta.",
-      "item": "{shop} ¬∑ {trip} ‚Äî {count, plural, one {# cambio perdido} other {# cambios perdidos}}",
-      "acknowledge": "Entendido"
-    }
-  },
-  "boatMode": {
-    "modeLabel": "Modo barco",
-    "labelAuto": "Autom√°tico",
-    "labelLand": "Modo tierra",
-    "labelBoat": "Modo barco"
-  },
-  "haptics": {
-    "toggleLabel": "Vibrar en cada toque"
-  },
-  "rentalFit": {
-    "itemLabels": {
-      "bcd": "Chaleco",
-      "regulator": "Regulador",
-      "wetsuit": "Traje",
-      "boots": "Escarpines",
-      "maskFins": "M√°scara y aletas",
-      "weights": "Lastre",
-      "diveComputer": "Ordenador de buceo",
-      "gopro": "GoPro"
-    },
-    "nitroxFillsLabel": "Llenados de nitrox",
-    "itemWithSize": "{item} {size}",
-    "notRecorded": "No hay equipo registrado ‚Äî a√∫n no se ha preguntado",
-    "ownKit": "Trae su propio equipo",
-    "needsStaffFit": "Necesita ajuste del personal en el check-in",
-    "needsStaffFitWithNote": "Necesita ajuste del personal ‚Äî {note}"
-  },
-  "rollCallCheckpoint": {
-    "departure": "Antes de zarpar",
-    "afterDive": "Despu√©s de la inmersi√≥n {n}"
-  },
-  "rollCallState": {
-    "awaiting": "Pendiente de pase de lista",
-    "boarded": "Embarcado",
-    "notBoarded": "No embarcado",
-    "notBoardedCarried": "No embarcado ¬∑ arrastrado",
-    "notBackAboard": "Sin regresar a bordo"
-  },
-  "buddyTeam": {
-    "with": "Equipo: {names}",
-    "separatedDock": "Alguien no est√° a bordo",
-    "separatedAfterDive": "Alguien sin contabilizar"
-  },
-  "payments": {
-    "connect": "Conectar pagos"
-  },
-  "pager": {
-    "label": "P√°ginas",
-    "previous": "Anterior",
-    "next": "Siguiente",
-    "position": "P√°gina {page} de {pageCount}"
-  },
-  "waiverStatus": {
-    "none": "Sin firmar",
-    "current": "Firmado",
-    "expired": "Hay que firmarlo de nuevo",
-    "medicalReview": "Revisi√≥n m√©dica"
-  },
-  "certificationSummary": {
-    "selfDeclared": "{value} ‚Äî sin verificar",
-    "levelNotSaid": "Nivel no indicado",
-    "notCertified": "Todav√≠a sin certificaci√≥n ‚Äî sin verificar",
-    "nitrox": "Nitrox",
-    "belowRequirement": "{value} ¬∑ por debajo del m√≠nimo de esta salida"
-  },
-  "diveRecency": {
-    "lastDived": "√öltima inmersi√≥n {when} ‚Äî sin verificar",
-    "thisSeason": "esta temporada",
-    "withinAYear": "en el √∫ltimo a√±o",
-    "oneToFiveYears": "hace entre uno y cinco a√±os",
-    "overFiveYears": "hace m√°s de cinco a√±os",
-    "never": "nunca"
-  }
-}
+Y™Áäx-ÆÈ‹j◊ù¢Îi∫⁄+äßj[hëÈ‹¢ÈÌ◊çπı:-jZ.∂õ≠ñ)ﬁ≥W∞¢&˜W&FñˆÊ≈vñÊF˜r#¢∞¢&'&óf«4∆VÁ2#¢$V¬÷ˆFÚ÷˜7G&F˜"◊VW7G&∆2∆∆VvF2FR∂∆ˆˆ∂&6≤¬«W&¬¬ˆÊR∂∆;¶«Fñ÷2Ü˜&“˜FÜW"∂∆2;¶«Fñ÷22Ü˜&7◊“Ü7F∆2,;7Üñ÷2∂ÜVG“‚ ¢“¿¢'6∂óFÙ6ˆÁFVÁB#¢%6«F"¬6ˆÁFVÊñFÚ&ñÊ6ó¬"¿¢'V&∆ñ5&WfñWr#¢∞¢'ñ˜Uv˜&¥ÜW&R#¢%G&&¶2\:”¢W7FW2∆:vñÊVRfV‚∆˜2'V6VF˜&W2‚"¿¢&˜VÂFÜT&ˆ&B#¢$'&ó"V¬ÊV¬ ¢“¿¢&ñ÷vTñÁWB#¢∞¢'FˆÙ÷Áí#¢'∂6˜VÁB¬«W&¬¬ˆÊR¥V∆ñvRÜ7F2f˜FÚ˜"fW¢Á“˜FÜW"¥V∆ñvRÜ7F2f˜F˜2˜"fW¢Á◊“"¿¢'w&ˆÊuGóU7VffóÇ#¢#¢W6VÊf˜FÚ•r¬‰r¬vV%ÚÑTî2‚"¿¢'FˆÙ&ñu7VffóÇ#¢#¢7WW&∆˜2∂÷Ñ÷'“‘"(	B'VV&6ˆ‚VÊf˜FÚ‹:2WV\;‚"¿¢&6Üˆ˜6R#¢$V∆ñvRVÊf˜FÚ"¿¢&6Üˆ˜6TÊ˜FÜW"#¢$V∆ñvR˜G&f˜FÚ ¢“¿¢'W%vófW"#¢∞¢&÷&µ6ñvÊVDˆÂW"#¢$÷&6"6ˆ÷Úfó&÷FÚV‚V¬"¿¢&÷VFñ6ƒGFW7FFñˆ‰∆&V¬#¢%FVÊvÚ∆∆ñ&W&6ú;6‚fó&÷FFRW7FR'V6VF˜"&6ÜófFíÜR&Wfó6FÚ7R7VW7FñˆÊ&ñÚ‹:ñFñ6Ú(	BÊñÊwVÊ&W7VW7FÊV6W6óFV¬fó7FÚ'VVÊÚFRV‚‹:ñFñ6Ú‚"¿¢'&V6˜&FñÊr#¢%&Vvó7G&ÊF˛(
+b"¿¢'&V6˜&EW%6ñvÊGW&R#¢%&Vvó7G&"fó&÷V‚V¬ ¢“¿¢'vófW%6VÊB#¢∞¢'6VÊFñÊr#¢$VÁfñÊF˛(
+b"¿¢&6˜ñVB#¢$6˜ñFÚ"¿¢&6˜î∆ñÊ≤#¢$6˜ñ"VÊ∆6R"¿¢&6˜îfñ∆VB#¢%&VñÁFVÁF""¿¢'&V6ˆ‰ÊÙV÷ñƒˆÊR#¢%6ñ‚6˜'&VÚ&Vvó7G&FÚ"¿¢'&V6ˆ‰ÊÙV÷ñƒ˜FÜW"#¢'∂6˜VÁG“ÊÚFñVÊV‚6˜'&VÚ&Vvó7G&FÚ"¿¢'&V6ˆ‰ÊıÜˆÊTˆÊR#¢%6ñ‚V‚Ï;¶÷W&Ú¬VRˆF÷˜2VÁfñ"÷VÁ6¶W2"¿¢'&V6ˆ‰ÊıÜˆÊT˜FÜW"#¢'∂6˜VÁG“ÊÚFñVÊV‚V‚Ï;¶÷W&Ú¬VRˆF÷˜2VÁfñ"÷VÁ6¶W2"¿¢'&V6ˆ‰fñ∆VDˆÊR#¢$ÊÚ6RVFÚVÁG&Vv"V¬6˜'&VÚ"¿¢'&V6ˆ‰fñ∆VD˜FÜW"#¢$ÊÚ6RVFÚVÁG&Vv"V¬6˜'&VÚ∂6˜VÁG“"¿¢'&V6ˆÂFWáDfñ∆VDˆÊR#¢$ÊÚ6RVFÚVÁG&Vv"V¬÷VÁ6¶R"¿¢'&V6ˆÂFWáDfñ∆VD˜FÜW"#¢$ÊÚ6RVFÚVÁG&Vv"V¬÷VÁ6¶R∂6˜VÁG“"¿¢'&V6ˆÂFW7E&V6óñVÁDˆÊR#¢$W7FFó&V66ú;6‚FR'VV&ÊÚVVFR&V6ñ&ó"6˜'&VÚ"¿¢'&V6ˆÂFW7E&V6óñVÁD˜FÜW"#¢'∂6˜VÁG“Fó&V66ñˆÊW2FR'VV&ÊÚVVFV‚&V6ñ&ó"6˜'&VÚ"¿¢'&V6ˆÂVÊ6ˆÊfñwW&VB#¢$FófTFíFˆFl:÷ÊÚVVFRVÁfñ"6˜'&VÚFW6FRW7FñÁ7F∆6ú;6‚"¿¢'&V6ˆÂFWáEVÊ6ˆÊfñwW&VB#¢$FófTFíFˆFl:÷ÊÚVVFRVÁfñ"÷VÁ6¶W2FW6FRW7FñÁ7F∆6ú;6‚"¿¢'&V6ˆ‰ÊÙ˜&ñvñ‚#¢$W7FñÁ7F∆6ú;6‚ÊÚFñVÊRVÊFó&V66ú;6‚vV";¶&∆ñ66ˆÊfñwW&F¬<:“VRÊÚ6RVVFR7&V"V‚VÊ∆6R"¿¢'6VÁB#¢$WÜVÊ6ú;6‚VÁfñF∂Ê÷W7“‚"¿¢&«&VGîFˆÊTˆÊR#¢'∂Ê÷W7“ñFñVÊRVÊWÜVÊ6ú;6‚fó&÷F(	BÊÚ6R&VVÁfú;2ÊF‚"¿¢&«&VGîFˆÊT˜FÜW"#¢'∂Ê÷W7“ñFñVÊV‚VÊWÜVÊ6ú;6‚fó&÷F(	BÊÚ6R&VVÁfú;2ÊF‚"¿¢&W'&˜'2#¢$ÊÚ6RVFÚVÁfñ"∂Ê÷W7“(	B&Wfó6∆&W6W'fV‚V¬∆ó7FFÚ‚"¿¢&6ˆÊfó&’&W6VÊB#¢%<:“¬&VVÁfñ""¿¢&ÊWfW$÷ñÊB#¢$6Ê6V∆""¿¢&V◊Gï6V∆V7Fñˆ‚#¢$÷&6¬÷VÊ˜2V‚'V6VF˜"íVÁl:÷∆WÜVÊ6ú;6‚FˆF∆6V∆V66ú;6‚‚ ¢“¿¢&6ˆÊÊV7FófóGí#¢∞¢&ˆÊ∆ñÊR#¢$V‚Ã:÷ÊV"¿¢&ˆÊ∆ñÊUFóF∆R#¢$W7FRFó7˜6óFófÚW7L:V‚Ã:÷ÊV‚"¿¢&ˆff∆ñÊUFóF∆R#¢$W7FRFó7˜6óFófÚÊÚFñVÊR6ˆÊWÜú;6‚V‚W7FR÷ˆ÷VÁFÚ‚"¿¢&ˆff∆ñÊUvóFÑ6˜í#¢%6ñ‚6\;¬+r6˜ñV‚V¬Fó7˜6óFófÚ ¢“¿¢&66óGí#¢∞¢&gV∆¬#¢$6ˆ◊∆WFÚ"¿¢'7˜G4∆VgB#¢'∂6˜VÁB¬«W&¬¬ˆÊR∑VVF2∆¶“˜FÜW"∑VVF‚2∆¶7◊“ ¢“¿¢&FWFÇ#¢∞¢&÷WFW'2#¢&“"¿¢&fVWB#¢&gB ¢“¿¢'FV◊W&GW&R#¢∞¢&6V«6óW2#¢,+2"¿¢&fá&VÊÜVóB#¢,+b ¢“¿¢&&ó'FÜFí#¢∞¢&∆&V¬#¢$7V◊∆V;˜2"¿¢'FˆFí#¢&Ü˜í"¿¢'6ˆˆ‚#¢&V‚∂Fó2¬«W&¬¬ˆÊR≤2L:÷“˜FÜW"≤2L:÷7◊“"¿¢'&V6VÁB#¢&Ü6R∂Fó2¬«W&¬¬ˆÊR≤2L:÷“˜FÜW"≤2L:÷7◊“ ¢“¿¢'&ñÁD'WGFˆ‚#¢∞¢&∆&V¬#¢$ñ◊&ñ÷ó"ÚwV&F"Db"¿¢'˜W&∆ˆ6∂VB#¢$V¬ÊfVvF˜"&∆˜V\;2∆fVÁFÊFRñ◊&W6ú;6‚‚W&÷óFR∆2fVÁFÊ2V÷W&vVÁFW2ígVV«fRñÁFVÁF&∆Ú‚ ¢“¿¢'&ñÁE6∂WB#¢∞¢'FóF∆R#¢%VWFRFR6∆ñF"¿¢&FófTÁV÷&W"#¢$ñÊ÷W'6ú;6‚∂ÁV÷&W'“"¿¢'G&fVƒ÷ñÁWFW2#¢'∂÷ñÁWFW7“÷ñ‚FRG&ñV7FÚ"¿¢&÷VWFñÊuˆñÁB#¢%VÁFÚFRVÊ7VVÁG&Û¢∂∆&V«“"¿¢&6ˆÊFóFñˆÁ4ÜVFñÊr#¢$6ˆÊFñ6ñˆÊW2 ¢“¿¢'&ˆ∆ƒ6∆ƒÊ˜FR#¢∞¢&˜FñˆÊƒÊ˜FR#¢$Ê˜F"¿¢&÷W76vR#¢∞¢'6fñÊr#¢$wV&FÊF˛(
+b"¿¢'vóFñÊr#¢$wV&FFV‚W7FRFó7˜6óFófÚ(	B6RVÁl:÷6ˆ‚V¬&W7V«FFÚFRW7FR'V6VF˜"‚"¿¢'6fVB#¢$wV&FF‚"¿¢'VWVVB#¢$wV&FFV‚W7FRFó7˜6óFófÚ(	B6RVÁfñ,:7VÊFÚgVV«f2W7F"V‚Ã:÷ÊV‚"¿¢&W'&˜"#¢$ÊÚ6RVFÚwV&F"(	BGRÊ˜F6ñwVR\:“‚ñÁL:ñÁF∆ÚFRÁVWfÚ‚"¿¢&ñF∆R#¢%6RwV&F÷ñVÁG&2W67&ñ&W2‚ ¢“¿¢&Ê˜FU∆6VÜˆ∆FW"#¢$∆∆V|;2F&FR¬&&6Ú¬&VwVÁF‹:ñFñ6¬&ˆ&∆V÷FRWVó˛(
+b ¢“¿¢&6ˆ÷÷ÊE∆WGFR#¢∞¢'6V&6Ç#¢$'W66""¿¢&Fñ∆ˆt&ñ∆&V¬#¢$,;ß7VVF,:ñF"¿¢&6ˆ÷&ˆ&˜Ñ&ñ∆&V¬#¢$'W66"'V6VF˜&W2¬6∆ñF2í:vñÊ2"¿¢'∆6VÜˆ∆FW"#¢$'W66'V6VF˜&W2¬6∆ñF2¬ÚfRFó&V7FÚVÊ:vñÊ(
+b"¿¢&V◊Gï6Ü˜'B#¢$W67&ñ&R&'W66"W'6ˆÊ2í6∆ñF2¬ÚfRFó&V7FÚVÊ:vñÊ‚"¿¢&V◊GîÊÙ÷F6ÜW2#¢%6ñ‚&W7V«FF˜2‚'VV&V‚Êˆ÷'&R¬6˜'&VÚÚL:◊GV∆ÚFR6∆ñF‚"¿¢&w&˜WFófW'2#¢$'V6VF˜&W2"¿¢&FDFófW"#¢$;Fó"'V6VF˜""¿¢&w&˜WG&ó2#¢%6∆ñF2"¿¢&w&˜WFófU6óFW2#¢%6óFñ˜2FR'V6VÚ"¿¢&w&˜W6˜W'6W2#¢$7W'6˜2"¿¢&w&˜W˜&FW'2#¢%VFñF˜2"¿¢&w&˜WvV"#¢$WVóÚ"¿¢&w&˜W6W76ñˆ‚#¢%6W6ú;6‚"¿¢&w&˜WvıFÚ#¢$ó""¿¢&vıFÙ&ˆ&FñÊr#¢$V÷&'VR(	BV¬&&6ÚFRÜ˜í"¿¢&vıFÙˆff∆ñÊU&ˆ∆ƒ6∆¬#¢$'&ó"6RFR∆ó7F6ñ‚6ˆÊWÜú;6‚"¿¢&ÜñÁD÷˜fR#¢'&÷˜fW'FR"¿¢&ÜñÁD˜V‚#¢'&'&ó""¿¢&ÜñÁD6∆˜6R#¢'&6W'&" ¢“¿¢'G&óF÷ó76ñˆ‚#¢∞¢&∆WfV¬#¢$W7F6∆ñFWÜñvR∂∆WfV«“‚∆FóGV∆6ú;6‚‹:2«F&Vvó7G&FFRW7FR'V6VF˜"W2∂ÜV∆G“‚6íFñVÊR∆6W'Fñfñ66ú;6‚FR∂∆WfV«“¬;:FV∆7Rfñ6Ü≤6íÊÚ¬&W<:ó'f∆RVÊ6∆ñF6˜&FR7RÊófV¬ÚV¬7W'6ÚFR∂∆WfV«“‚"¿¢&∆WfVƒÊÙ6&B#¢$W7F6∆ñFWÜñvR∂∆WfV«“íÊFV‚∆fñ6ÜFRW7FR'V6VF˜"∆∆VvW6RÊófV¬‚;FR7R6W'Fñfñ66ú;6‚FR∂∆WfV«“6í∆FñVÊS≤6íÊÚ¬&W<:ó'f∆RVÊ6∆ñF6˜&FR7RÊófV¬ÚV¬7W'6ÚFR∂∆WfV«“‚"¿¢&6&G2#¢'∂6˜VÁB¬«W&¬¬ˆÊR¥W7F6∆ñFWÜñvR∆6W'Fñfñ66ú;6‚∂∆ó7G“‚ÊÚÜíÊñÊwVÊV‚∆fñ6ÜFRW7FR'V6VF˜"Á“˜FÜW"¥W7F6∆ñFWÜñvR∆26W'Fñfñ66ñˆÊW2∂∆ó7G“‚ÊÚÜíÊñÊwVÊFRV∆∆2V‚∆fñ6ÜFRW7FR'V6VF˜"Á◊“"¿¢&ÊóG&˜Ç#¢$ÊóG&˜Ç"¿¢&vVÊW&ñ2#¢$∆2FóGV∆6ñˆÊW2&Vvó7G&F2FRW7FR'V6VF˜"ÊÚ∆6Á¶‚∆ÚVRWÜñvV‚W7F6∆ñFí7W2VÁF˜2FRñÊ÷W'6ú;6‚‚ ¢“¿¢'&VFñÊW72#¢∞¢&6W'Fñfñ6Fñˆ‰∆WfV«2#¢∞¢&˜VÂvFW"#¢$˜V‚vFW""¿¢&GfÊ6VD˜VÂvFW"#¢$GfÊ6VB˜V‚vFW""¿¢'&W67VR#¢$'V6VF˜"FR&W66FR"¿¢&FófV÷7FW"#¢$FófV÷7FW""¿¢&ñÁ7G'V7F˜"#¢$ñÁ7G'V7F˜" ¢“¿¢'7V6ñ«FñW2#¢∞¢&FVW#¢%&ˆgVÊFñFB"¿¢'w&V6≤#¢$ÊVg&vñ˜2"¿¢&ÊñváB#¢$Êˆ7GW&ÊÚ"¿¢&G'ó7VóB#¢%G&¶R6V6Ú ¢“¿¢'7FGW2#¢∞¢'&VGí#¢$∆ó7FÚ"¿¢&&∆ˆ6∂VB#¢$&∆˜VVFÚ ¢“¿¢&&∆ˆ6∂W'2#¢∞¢'&WVó&V÷VÁG4Ê˜D6ˆÊfñwW&VB#¢$;¶‚ÊÚ6RÜ‚6ˆÊfñwW&FÚ∆˜2&WVó6óF˜2FR∆6∆ñF‚"¿¢&ñFVÁFóGïVÊ6ˆÊfó&÷VB#¢$ñFVÁFñFB6ñ‚6ˆÊfó&÷#¢W7F&W6W'fW<;2V¬6˜'&VÚFRV‚'V6VF˜"WÜó7FVÁFR6ˆ‚V‚Êˆ÷'&RFó7FñÁFÚ‚6ˆÊfó&÷VRW2∆÷ó6÷W'6ˆÊÁFW2FRV÷&&6"‚"¿¢'vófW$Ê˜E6VÁB#¢$∆WÜVÊ6ú;6‚;¶‚ÊÚ6RÜVÁfñFÚ‚"¿¢'vófW%VÊFñÊr#¢$∆WÜVÊ6ú;6‚W7W&∆fó&÷FV¬'V6VF˜"‚"¿¢'vófW$Wáó&VB#¢$V¬VÊ∆6RFR∆WÜVÊ6ú;6‚6GV<;3≤V÷óFRVÊÚÁVWfÚ‚"¿¢&÷VFñ6≈&WfñWr#¢%VÊ&W7VW7F‹:ñFñ6ÊV6W6óF6VwVñ÷ñVÁFÚFV¬W'6ˆÊ¬‚"¿¢&6W'Fñfñ6Fñˆ‰÷ó76ñÊr#¢$ÊÚÜíÊñÊwVÊ6W'Fñfñ66ú;6‚&Vvó7G&F&W7F6∆ñF‚"¿¢&6W'Fñfñ6FñˆÂVÊFñÊr#¢$∆6W'Fñfñ66ú;6‚W7W&fW&ñfñ66ú;6‚FV¬W'6ˆÊ¬‚"¿¢&6W'Fñfñ6FñˆÂ6V∆dFV6∆&VB#¢$V¬'V6VF˜"ñÊFñ<;27RÊófV¬˜"7R7VVÁF‚ÊÚ6RÜfW&ñfñ6FÚÊñÊ|;¶‚&Vvó7G&ÚFR6W'Fñfñ66ú;6„¢ñFR∆˜2FF˜2ífW&ñl:÷6∆˜2‚"¿¢&6W'Fñfñ6Fñˆ‰ñÁ7Vffñ6ñVÁB#¢%6R&WVñW&R∂∆WfV«“Ú7WW&ñ˜"&W7F6∆ñF‚"¿¢'7V6ñ«Gî÷ó76ñÊr#¢%6R&WVñW&R∆W7V6ñ∆ñFB∑7V6ñ«Gó”≤ÊÚÜí6W'Fñfñ66ú;6‚&Vvó7G&F‚"¿¢'7V6ñ«GïVÊFñÊr#¢$∆6W'Fñfñ66ú;6‚FRW7V6ñ∆ñFB∑7V6ñ«Gó“W7W&fW&ñfñ66ú;6‚FV¬W'6ˆÊ¬‚"¿¢'7V6ñ«Gîñ◊˜'EVÊ6ˆÊfó&÷VB#¢$∆6W'Fñfñ66ú;6‚FRW7V6ñ∆ñFB∑7V6ñ«Gó“∆∆V|;2V‚VÊñ◊˜'F6ú;6‚(	BV‚÷ñV÷'&ÚFV¬W'6ˆÊ¬FV&R6ˆÊfó&÷&∆ÁFW2FRW7FñÊ÷W'6ú;6‚‚"¿¢&ÊóG&˜Ñ÷ó76ñÊr#¢%6R&WVñW&R6W'Fñfñ66ú;6‚FRÊóG&˜É≤ÊÚÜíV‚&Vvó7G&ÚFR6W'Fñfñ66ú;6‚‚"¿¢&ÊóG&˜ÖVÊFñÊr#¢$∆6W'Fñfñ66ú;6‚FRÊóG&˜ÇW7W&fW&ñfñ66ú;6‚FV¬W'6ˆÊ¬‚"¿¢&ÊóG&˜Ö6V∆dFV6∆&VB#¢$V¬'V6VF˜"÷&<;2ÊóG&˜Ç˜"7R7VVÁF‚ÊÚ6RÜfW&ñfñ6FÚÊñÊwVÊWfñFVÊ6ñFR6W'Fñfñ66ú;6„¢ñFR∆˜2FF˜2ífW&ñfñ6V¬&Vvó7G&Ú‚"¿¢'VÊFW$÷ñÊñ◊V‘vR#¢%˜"FV&¶ÚFR∆VFB‹:÷Êñ÷FV¬7W'6Û¢∂vW“V‚∆fV6ÜFV¬7W'6Ú¬í6R&WVñW&V‚∂÷ñÊñ◊V‘vW“‚fW&ñfñ6∆fV6ÜFRÊ6ñ÷ñVÁFÚ&Vvó7G&FÁFW2FRV÷&&6"‚"¿¢'ñ÷VÁDGVR#¢$ÜíV‚vÚVÊFñVÁFR&W7F6∆ñF‚"¿¢'ñ÷VÁE&VgVÊFVB#¢$V¬vÚgVR&VV÷&ˆ«6FÛ≤6ˆ'&ÁFW2FRV÷&&6"‚"¿¢'&VFñÊW75VÊfñ∆&∆R#¢$∆ñÊf˜&÷6ú;6‚FR&W&6ú;6‚ÊÚW7L:Fó7ˆÊñ&∆R‚ÊÚV÷&'VW2W7FR'V6VF˜"Ü7FfW&ñfñ6&∆Ú‚ ¢–¢“¿¢'6Ü˜Êb#¢∞¢&∆ÊwVvR#¢$ñFñˆ÷"¿¢'6ñv‰˜WB#¢$6W'&"6W6ú;6‚"¿¢'6ñv‰˜WD6ˆÊfó&“#¢,+Ù6W'&"6W6ú;6„Ú6ˆÊfó&÷""¿¢'6ñv‰˜WEVÊFñÊr#¢$6W'&ÊFÚ6W6ú;6Ó(
+b ¢“¿¢'6Ü˜Êd∆ñÊ∑2#¢∞¢&&FvT&∆ˆ6∂VB#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2'V6VF˜"&∆˜VVF˜“˜FÜW"≤2'V6VF˜&W2&∆˜VVF˜7◊“"¿¢'&ñ÷'îÊd&ñ∆&V¬#¢%&ñÊ6ó¬"¿¢&÷˜&R#¢$‹:2"¿¢&w&˜WFñ«í#¢$∆∆Wf"V¬6VÁG&Ú"¿¢&w&˜W6WGW#¢$6ˆÊfñwW&""¿¢'FˆFí#¢$Ü˜í"¿¢&6ÜV6¥ñ‚#¢%&Vvó7G&Ú"¿¢&6∆˜6T˜WB#¢$6ñW'&RFV¬L:÷"¿¢&6∆˜6T˜WE6Ü˜'B#¢$6ñW'&R"¿¢'v∆¥ñ‚#¢%v∆≤÷ñ‚"¿¢&&∆ˆ6∂W'2#¢$ÊÚ∆ó7F˜2"¿¢&FófW'2#¢$'V6VF˜&W2"¿¢&&ˆ&B#¢%F&∆W&Ú"¿¢&FD&ˆˆ∂ñÊr#¢$;Fó"VÊ&W6W'f"¿¢'7FffñÊr#¢%W'6ˆÊ¬"¿¢&FófU6óFW2#¢%6óFñ˜2FR'V6VÚ"¿¢&vV"#¢$WVóÚ"¿¢&6˜W'6W2#¢$7W'6˜2"¿¢'&WfñWw2#¢%&W6\;2"¿¢'&WVW7G2#¢%WFñ6ñˆÊW2"¿¢&˜&FW'2#¢%VFñF˜2"¿¢'vófW'2#¢$WÜVÊ6ñˆÊW2"¿¢'&W˜'G2#¢$ñÊf˜&÷W2"¿¢'&ˆ÷Ù6ˆFW2#¢$<;6Fñv˜2&ˆ÷ˆ6ñˆÊ∆W2"¿¢'6WGFñÊw2#¢$ßW7FW2"¿¢'FV“#¢$WVóÚ"¿¢&6∆VÊF$fVVB#¢%7W67&ó6ú;6‚¬6∆VÊF&ñÚ ¢“¿¢'7V%7W&f6U&ó∆R#¢∞¢&ñ6ˆÂFóF∆R#¢$ñ6ˆÊÚFR6RFR∆ó7F6ˆ◊∆WFÚ"¿¢&÷W76vR#¢%6RFR∆ó7F6ˆ◊∆WFÚ ¢“¿¢'vFW$∆ˆ6∂W"#¢∞¢'&ñ‰«B#¢$∆«Wfñ"¿¢&ÜVFñÊr#¢%ÁF∆∆&∆˜VVF(	B6RFWFV7L;2wV"¿¢&&ˆGí#¢$W7F÷˜2ñvÊ˜&ÊFÚF˜VW2∆VF˜&ñ˜2&˜fˆ6F˜2˜"V¬wVV‚∆ÁF∆∆‚÷ÁL:ñ‚&W6ñˆÊFÚ&FW6&∆˜VV"V‚7VÁFÚW7L:í6V6‚"¿¢&Üˆ∆D∆ñÊS#¢$‘ÂL8î‚"¿¢&Üˆ∆D∆ñÊS"#¢#'2"¿¢'VÊ∆ˆ6∂ñÊu&ˆw&W72#¢$FW6&∆˜VVÊFÚ‚‚‚∑W&6VÁG“R"¿¢&Üˆ∆EFıVÊ∆ˆ6≤#¢$÷ÁL:ñ‚&W6ñˆÊFÚV¬&˜L;6‚&FW6&∆˜VV""¿¢&Fó6&∆UFˆvv∆T∆&V¬#¢$FW67Fóf"∆&˜FV66ú;6‚6ˆÁG&6«ñ6GW&2V‚W7FRFó7˜6óFófÚ ¢“¿¢'VÊFıFˆ7B#¢∞¢'VÊFñÊt∆&V¬#¢$FW6Ü6ñVÊF˛(
+b"¿¢'VÊFÚ#¢$FW6Ü6W" ¢“¿¢'FˆFí#¢∞¢&FW'GW&T&ˆ&B#¢∞¢&7&WvñÊt&FvR#¢$f˜&÷2'FRFR∆G&óV∆6ú;6‚"¿¢&6˜W'6U6W76ñˆ‚#¢%6W6ú;6‚FR7W'6Ú+r∑FóF∆W“"¿¢&&ˆˆ∂VDˆd66óGîˆÊR#¢'∂&ˆˆ∂VG“FR∂66óGó“&W6W'fFÚ"¿¢&&ˆˆ∂VDˆd66óGî˜FÜW"#¢'∂&ˆˆ∂VG“FR∂66óGó“&W6W'fF˜2"¿¢&&ˆ&FñÊr#¢$V÷&&6"'V6VF˜&W2"¿¢&˜V‰wVW7G2#¢%fW"ñÁfóFF˜2"¿¢&76ñv‰7&Wt÷V÷&W$&ñ#¢$6ñvÊ"G&óV∆ÁFR∑FóF∆W“"¿¢&76ñv‰7&Wt˜Fñˆ‚#¢$6ñvÊ"G&óV∆ÁF^(
+b"¿¢&76ñv‰7&Wt∆&V¬#¢$6ñvÊ"G&óV∆ÁFR"¿¢&76ñv‰fñ∆VB#¢$ÊÚ6RÜwV&FFÚ(	BfW&ñfñ6GR6ˆÊWÜú;6‚ÚñÁL:ñÁF∆ÚFRÁVWfÚ‚"¿¢&&ˆ&FñÊu7V÷÷'í#¢'∂&ˆ&G“+r∑&VGó“+r∂&∆ˆ6∂VG“+r∂˜VÁ“"¿¢&&ˆ&FñÊt&ˆ&DˆÊR#¢'∂6˜VÁG“&˜&FÚ"¿¢&&ˆ&FñÊt&ˆ&D˜FÜW"#¢'∂6˜VÁG“&˜&FÚ"¿¢&&ˆ&FñÊu&VGîˆÊR#¢'∂6˜VÁG“∆ó7FÚ&V÷&&6""¿¢&&ˆ&FñÊu&VGî˜FÜW"#¢'∂6˜VÁG“∆ó7F˜2&V÷&&6""¿¢&&ˆ&FñÊt&∆ˆ6∂VDˆÊR#¢'∂6˜VÁG“&∆˜VVFÚ"¿¢&&ˆ&FñÊt&∆ˆ6∂VD˜FÜW"#¢'∂6˜VÁG“&∆˜VVF˜2"¿¢&&ˆ&FñÊt˜V‰ˆÊR#¢'∂6˜VÁG“∆¶∆ñ'&R"¿¢&&ˆ&FñÊt˜V‰˜FÜW"#¢'∂6˜VÁG“∆¶2∆ñ'&W2"¿¢&&∆ˆ6∂VEv&ÊñÊtÊ÷VB#¢'∂Ê÷W“FˆFl:÷ÊÚVVFRV÷&&6"(	B∆6ˆ«V6ú;6‚W7L:V‚∆∆ó7FFR&¶Ú‚"¿¢'VÊ76ñv‰&ñ#¢%VóF"∂Ê÷W“"¿¢&ÊÙ7&Wt76ñvÊVB#¢%FˆFl:÷ÊÚÜíG&óV∆6ú;6‚6ñvÊF‚"¿¢&7&Wt∆ñÊR#¢%G&óV∆6ú;6‚+r∂Ê÷W7“"¿¢&VFóD7&Wr#¢$VFóF""¿¢&&∆ˆ6∂VEv&ÊñÊtˆÊR#¢'∂6˜VÁG“'V6VF˜"FˆFl:÷ÊÚVVFRV÷&&6"(	BW7L:V‚∆∆ó7FFR&¶Ú‚"¿¢&&∆ˆ6∂VEv&ÊñÊt˜FÜW"#¢'∂6˜VÁG“'V6VF˜&W2FˆFl:÷ÊÚVVFV‚V÷&&6"(	BW7L:‚V‚∆∆ó7FFR&¶Ú‚"¿¢&&∆ˆ6∂VD&ˆ&DÊ÷VB#¢'∂Ê÷W“W7L:&˜&FÚ(	B∑&V6ˆÁ“"¿¢&&∆ˆ6∂VD&ˆ&DˆÊR#¢'∂6˜VÁG“'V6VF˜"W7L:&˜&FÚ(	B∑&V6ˆÁ“"¿¢&&∆ˆ6∂VD&ˆ&D˜FÜW"#¢'∂6˜VÁG“'V6VF˜&W2W7L:‚&˜&FÚ(	B∑&V6ˆÁ“"¿¢&&ˆ&E&V6ˆ‰÷VFñ6¬#¢&ÜíVÊ&W7VW7F‹:ñFñ6VRV‚‹:ñFñ6ÚFñVÊRVRWF˜&ó¶#≤ÊFñR&˜&FÚVVFRF&∆˜"'VVÊ‚"¿¢&&ˆ&E&V6ˆ‰6W'Fñfñ6Fñˆ‚#¢&f«FVÊ6W'Fñfñ66ú;6‚VRW7FñÊ÷W'6ú;6‚ñFRíVRÊÚÜV÷˜2fó7FÚ‚"¿¢&&ˆ&E&V6ˆÂVÊ∂Ê˜v‚#¢&ÊÚÜíÊFV‚∆fñ6ÜVR∆ÚWF˜&ñ6R‚6ñ‚WÜVÊ6ú;6‚fó&÷FÊÚÜíFV6∆&6ú;6‚‹:ñFñ6‚"¿¢&&ˆ&E&V6ˆÂñ÷VÁB#¢'VVFV‚vÚVÊFñVÁFR‚W7L:V‚∆∆ó7FFR&¶Ú‚"¿¢&ÊˆÊT&ˆˆ∂VB#¢%FˆFl:÷ÊFñRÜ&W6W'fFÚ(	B6ˆ◊'FR∆:vñÊFR∆6∆ñFí&V6W,:‚\:“‚"¿¢&WfW'ñˆÊT&ˆ&B#¢%FˆF˜2&˜&FÚ‚"¿¢&7&Wu&ˆ∆ƒ6∆ƒ˜V‚#¢%FˆF˜2∆˜2'V6VF˜&W2W7L:‚&˜&FÛ¢f«F6"∆ó7F∆G&óV∆6ú;6‚‚"¿¢&6∆V%FÙ&ˆ&B#¢%FˆF˜2∆˜2FRW7F6∆ñFW7L:‚∆ó7F˜2&V÷&&6"‚"¿¢'6ñ∆ñÊuFˆFí#¢%6∆RÜ˜í ¢“¿¢'FˆFïVWVR#¢∞¢&V◊GîÜVFñÊr#¢$ÊÚÜíÊFVÊFñVÁFR&Fí"¿¢&V◊Gî&ˆGí#¢%FˆF˜2∆˜2'V6VF˜&W2&W6W'fF˜2V‚∆,;7Üñ÷6V÷ÊFñVÊV‚V‚˜&FV‚7RWÜVÊ6ú;6‚¬7W26W'Fñfñ66ñˆÊW2í7RvÚ‚"¿¢&V◊Gî7Fñˆ‚#¢%fW"V¬6∆VÊF&ñÚ"¿¢&ÊVVG5ñ˜TÜVFñÊr#¢$ÊV6W6óFGRFVÊ6ú;6‚"¿¢&&ˆG46∆V"#¢$∆26∆ñF2FRÜ˜íW7L:‚FˆF2FW7V¶F2	˙Ií"¿¢&óFV◊46˜VÁB#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2F&V“˜FÜW"≤2F&V7◊“"¿¢'vóFÜÜV∆DFW6µv˜&≤#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2F&V&&V6W6ú;6Á“˜FÜW"≤2F&V2&&V6W6ú;6Á◊“ ¢“¿¢'&W6VÊD6ˆÊfó&÷Fñˆ‚#¢∞¢'&W6VÊFñÊr#¢%&VVÁfñÊF˛(
+b"¿¢&6ˆÊfó&÷FñˆÂ&W6VÁB#¢$6ˆÊfó&÷6ú;6‚&VVÁfñF‚"¿¢&W'&˜'2#¢∞¢&ñÁf∆ñB#¢$ÊÚ6RVÊ6ˆÁG,;2W6&W6W'f(	B'&R∆6∆ñF&&Wfó6&∆‚"¿¢&ÊÙV÷ñ¬#¢$ÊÚÜí6˜'&VÚ&Vvó7G&FÚ(	B;FRVÊÚFW6FRV¬∆ó7FFÚígVV«fRñÁFVÁF&∆Ú‚"¿¢&Ê˜D6ˆÊfñwW&VB#¢$V¬6˜'&VÚFˆFl:÷ÊÚW7L:6ˆÊfñwW&FÚ&W7FR6VÁG&Ú‚"¿¢&fñ∆VB#¢%6ñwVR6ñ‚ˆFW"VÁG&Vv'6R(	B'&R∆6∆ñF&&Wfó6"∆&W6W'f‚ ¢–¢“¿¢'ñ÷VÁD7Fñˆ‚#¢∞¢&6˜î∆ñÊ≤#¢$6˜ñ"VÊ∆6RFRvÚ"¿¢&∆ñÊ¥6˜ñVB#¢$VÊ∆6R6˜ñFÚ‚"¿¢&6˜îfñ∆VB#¢$ÊÚ6RVFÚ6˜ñ"(	B<;7ñ∆ÚFW6FR∆f7GW&‚"¿¢'&W6VÊDñÁfˆñ6R#¢%&VVÁfñ"f7GW&"¿¢'&W6VÊFñÊr#¢%&VVÁfñÊF˛(
+b"¿¢&ñÁfˆñ6U&W6VÁB#¢$f7GW&&VVÁfñF‚"¿¢&W'&˜'2#¢∞¢&Ê˜Df˜VÊB#¢$ÊÚ6RVÊ6ˆÁG,;2W6RVFñFÚ(	B'&R∆6∆ñF&&Wfó6&∆Ú‚"¿¢&Ê˜D˜V‚#¢$W7FRVFñFÚñÊÚW7L:&ñW'FÚ(	B'&R∆6∆ñF&fW&ñfñ6"7RW7FFÚ‚"¿¢&Ê˜D6ˆÊfñwW&VB#¢$∆˜2v˜2FˆFl:÷ÊÚW7L:‚6ˆÊV7FF˜2&W7FR6VÁG&Ú‚"¿¢&fñ∆VB#¢%6ñwVR6ñ‚ˆFW"&VVÁfñ'6R(	B'&R∆6∆ñF&&Wfó6"V¬VFñFÚ‚ ¢–¢“¿¢'ñ˜W%6W76ñˆÁ2#¢∞¢&ÜVFñÊr#¢%GW26W6ñˆÊW2"¿¢'7GVFVÁG46˜VÁB#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2W7GVFñÁFW“˜FÜW"≤2W7GVFñÁFW7◊“"¿¢'&VGî6˜VÁB#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2∆ó7F˜“˜FÜW"≤2∆ó7F˜7◊“"¿¢&&∆ˆ6∂VD6˜VÁB#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2&∆˜VVF˜“˜FÜW"≤2&∆˜VVF˜7◊“"¿¢&˜VÂ&˜7FW"#¢%fW"∆ó7F ¢“¿¢'W&vVÊ7í#¢∞¢&ñ÷÷ñÊVÁB#¢%,;7Üñ÷22Ü˜&2"¿¢&Ê˜r#¢$V‚∆2,;7Üñ÷2#BÜ˜&2"¿¢'6ˆˆ‚#¢%,;7Üñ÷˜22L:÷2"¿¢&∆FW"#¢$W7F6V÷Ê ¢“¿¢&7Fñˆ‰∂ñÊB#¢∞¢'&ˆ∆ƒ6∆ƒ÷ó76ñÊtFófW"#¢$'V6VF˜"6ñ‚∆ˆ6∆ó¶""¿¢'&ˆ∆ƒ6∆≈VÊfñÊó6ÜVB#¢%&V7VVÁFÚ"¿¢'&ˆ∆ƒ6∆ƒ÷ó76ñÊt7&Wr#¢%G&óV∆6ú;6‚6ñ‚∆ˆ6∆ó¶""¿¢'&ˆ∆ƒ6∆ƒ7&WuVÊfñÊó6ÜVB#¢%&V7VVÁFÚFRG&óV∆6ú;6‚"¿¢'&ˆ∆ƒ6∆ƒFW'GW&T˜V‚#¢%&V7VVÁFÚV‚◊VV∆∆R"¿¢'&ˆ∆ƒ6∆ƒÊ˜E7F'FVB#¢%6ñ‚&V7VVÁFÚ"¿¢&÷VFñ6≈&WfñWr#¢$‹:ñFñ6Ú"¿¢'&VFñÊW75VÊfñ∆&∆R#¢$Fó7ˆÊñ&ñ∆ñFB"¿¢&ñFVÁFóGí#¢$ñFVÁFñFB"¿¢&6W'Fñfñ6Fñˆ‚#¢$6W'Fñfñ66ñˆÊW2"¿¢'&WVó&V÷VÁG2#¢$6ˆÊfñwW&6ú;6‚"¿¢'vófW"#¢$WÜVÊ6ú;6‚"¿¢&ñÁ7G'V7F˜$÷ó76ñÊr#¢%G&óV∆6ú;6‚"¿¢'VÊ7&WvVDFW'GW&R#¢%6ñ‚G&óV∆6ú;6‚"¿¢&ÊóG&˜ÑvFR#¢$ÊóG&˜Ç"¿¢&ÜñvÖvñÊD∆W'B#¢%fñVÁFÚgVW'FR"¿¢&FófU&W#¢%&W&6ú;6‚"¿¢'ñ÷VÁB#¢%vÚ"¿¢&V÷ñƒFV∆ófW'í#¢$6˜'&VÚ"¿¢'vóF∆ó7E6VB#¢$∆ó7FFRW7W&"¿¢&∆7D÷ñÁWFTfñ∆¬#¢$∆∆VÊ"∆¶2"¿¢&V÷W&vVÊ7î6ˆÁF7B#¢$6ˆÁF7FÚ"¿¢&7&Wt&V∆˜uF&vWB#¢$&¶ÚV¬ˆ&¶WFófÚ"¿¢'7GV6µñ÷VÁD˜W&Fñˆ‚#¢%7G&óR"¿¢&fñ∆VEÜ˜FÙFV∆WFñˆ‚#¢$∆ñ◊ñW¶"¿¢&˜vVE&VgVÊB#¢%&VV÷&ˆ«6ÚVÊFñVÁFR"¿¢'&WfñWw5VÊFñÊr#¢%&W6\;2"¿¢&vV$˜fW&GVR#¢$WVóÚG&6FÚ"¿¢&vV$GVT&6≤#¢$FWfˆ«V6ú;6‚Ü˜í"¿¢&vV%6W'fñ6TGVR#¢$÷ÁFVÊñ÷ñVÁFÚ"¿¢'7Ffd7&VFVÁFñƒGVR#¢$7&VFVÊ6ñ¬"¿¢'VÊóG5VÊ6ˆÊfó&÷VB#¢$6ˆÊfñwW&6ú;6‚ ¢“¿¢&&∆ˆ6∂W$7Fñˆ‚#¢∞¢'6WE&WVó&V÷VÁG2#¢$6ˆÊfñwW&"&WVó6óF˜2"¿¢&6ˆÊfó&‘ñFVÁFóGí#¢$6ˆÊfó&÷"ñFVÁFñFB"¿¢&6ÜV6¥FFTˆd&ó'FÇ#¢%fW&ñfñ6"fV6ÜFRÊ6ñ÷ñVÁFÚ"¿¢'6VÊEvófW"#¢$VÁfñ"WÜVÊ6ú;6‚"¿¢&ÁVFvUvófW"#¢%&V6˜&F"WÜVÊ6ú;6‚"¿¢'&Vó77VUvófW"#¢%&VV÷óFó"WÜVÊ6ú;6‚"¿¢'&WfñWt÷VFñ6¬#¢%&Wfó6"ñÊf˜&÷R‹:ñFñ6Ú"¿¢&FD6&B#¢$;Fó"6W'Fñfñ66ú;6‚"¿¢&6¥f˜$6&B#¢%VFó"FF˜2FR6W'Fñfñ66ú;6‚"¿¢'fW&ñgî6&B#¢%fW&ñfñ6"6W'Fñfñ66ú;6‚"¿¢'&WfñWt6&B#¢%&Wfó6"6W'Fñfñ66ú;6‚"¿¢&FE7V6ñ«Gí#¢$;Fó"W7V6ñ∆ñFB"¿¢'fW&ñgï7V6ñ«Gí#¢%fW&ñfñ6"W7V6ñ∆ñFB"¿¢&6ˆÊfó&’7V6ñ«Gí#¢$6ˆÊfó&÷"W7V6ñ∆ñFB"¿¢&FDÊóG&˜Ñ6&B#¢$;Fó"6W'Fñfñ66ú;6‚FRÊóG&˜Ç"¿¢&6¥f˜$ÊóG&˜Ñ6&B#¢%VFó"6W'Fñfñ66ú;6‚FRÊóG&˜Ç"¿¢'fW&ñgîÊóG&˜Ñ6&B#¢%fW&ñfñ6"6W'Fñfñ66ú;6‚FRÊóG&˜Ç"¿¢'F∂Uñ÷VÁB#¢$6ˆ'&"vÚ"¿¢&6ÜV6µ&VFñÊW72#¢%fW&ñfñ6"Fó7ˆÊñ&ñ∆ñFB ¢“¿¢&&∆ˆ6∂W$w&˜W#¢∞¢'6WE&WVó&V÷]∂Á€hëÈÏ∂ªßq´^uΩ—°ï»ÅÌÕîÅ±•âï…Ö…Ω∏ÄåÅ¡±ÖÈÖÕıÙÅ‰ÅÌ›Ö•—•πú∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅ¡ï…ÕΩπÑÅïÕ”ÖÙÅΩ—°ï»ÅÏåÅ¡ï…ÕΩπÖÃÅïÕ”ÖπıÙÅï∏Å±ÑÅ±•Õ—ÑÅëîÅïÕ¡ï…Ñ∏à∞(ÄÄÄÄÄÄâïµÖ•±9Ω—Ωπô•ù’…ïêàËÅÏ(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï»àËÄâM‘Åïπ±ÖçîÅëîÅï·ïπçßÕ∏Åπ’πçÑÅÕîÅïπŸßÃÉäPÅï∞ÅçΩ……ïºÅπºÅïÕ”ÑÅçΩπô•ù’…Öëº∏à∞(ÄÄÄÄÄÄÄÄâçΩπô•…µÖ—•Ω∏àËÄâM‘ÅçΩπô•…µÖçßÕ∏ÅëîÅ…ïÕï…ŸÑÅπ’πçÑÅÕîÅïπŸßÃÉäPÅï∞ÅçΩ……ïºÅπºÅïÕ”ÑÅçΩπô•ù’…Öëº∏à(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâïµÖ•±Ö•±ïêàËÅÏ(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï»àËÄâ9ºÅÕîÅ¡’ëºÅïπ—…ïùÖ»ÅÕ‘Åïπ±ÖçîÅëîÅï·ïπçßÕπÌÖ——ïµ¡—Ã∞Å¡±’…Ö∞∞ÄÙ¿ÅÌÙÄÙƒÅÌÙÅΩ—°ï»ÅÏÅ—…ÖÃÄåÅ•π—ïπ—ΩÕıÙ∏à∞(ÄÄÄÄÄÄÄÄâçΩπô•…µÖ—•Ω∏àËÄâ9ºÅÕîÅ¡’ëºÅïπ—…ïùÖ»ÅÕ‘ÅçΩπô•…µÖçßÕ∏ÅëîÅ…ïÕï…ŸÖÌÖ——ïµ¡—Ã∞Å¡±’…Ö∞∞ÄÙ¿ÅÌÙÄÙƒÅÌÙÅΩ—°ï»ÅÏÅ—…ÖÃÄåÅ•π—ïπ—ΩÕıÙ∏à(ÄÄÄÄÄÅÙ(ÄÄÄÅÙ∞(ÄÄÄÄâÖç—•Ωπ1Öâï∞àËÅÏ(ÄÄÄÄÄÄâΩ¡ïπIΩ±±Ö±∞àËÄââ…•»Å…ïç’ïπ—ºà∞(ÄÄÄÄÄÄâΩ¡ïπA…ï¡1•Õ–àËÄââ…•»Å±•Õ—ÑÅëîÅ¡…ï¡Ö…ÖçßÕ∏à∞(ÄÄÄÄÄÄâΩ¡ïπQ…•¿àËÄââ…•»ÅÕÖ±•ëÑà∞(ÄÄÄÄÄÄâΩ¡ïπ’ïÕ—ÃàËÄââ…•»Å•πŸ•—ÖëΩÃà∞(ÄÄÄÄÄÄâ•πŸ•—ï…Ωµ]Ö•—±•Õ–àËÄâ%πŸ•—Ö»ÅëîÅ±ÑÅ±•Õ—ÑÅëîÅïÕ¡ï…Ñà∞(ÄÄÄÄÄÄâ…ïÕïπë]Ö•Ÿï…1•π¨àËÄâIïïπŸ•Ö»Åïπ±ÖçîÅëîÅï·ïπçßÕ∏à∞(ÄÄÄÄÄÄâ…ïÕïπëΩπô•…µÖ—•Ω∏àËÄâIïïπŸ•Ö»ÅçΩπô•…µÖçßÕ∏à∞(ÄÄÄÄÄÄâΩ¡ïπ=…ëï…ÃàËÄâIïŸ•ÕÖ»Åï∏ÅAïë•ëΩÃà∞(ÄÄÄÄÄÄâΩ¡ïπÖ—ÖMï——•πùÃàËÄâIïŸ•ÕÖ»Åï∏Å©’Õ—ïÃà∞(ÄÄÄÄÄÄâΩ¡ïπIïŸ•ï›ÃàËÄâYï»Å…ïÕó≈ÖÃà∞(ÄÄÄÄÄÄâΩ¡ïπïÖ…Iïù•Õ—ï»àËÄââ…•»Å…ïù•Õ—…ºÅëîÅï≈’•¡ºà∞(ÄÄÄÄÄÄâΩ¡ïπïÖ…Uπ•–àËÄââ…•»Åô•ç°ÑÅëîÅ±ÑÅ’π•ëÖêà∞(ÄÄÄÄÄÄâΩ¡ïπM—Öôô•πúàËÄââ…•»Å¡ï…ÕΩπÖ∞à∞(ÄÄÄÄÄÄâΩ¡ïπUπ•—ÃàËÄââ…•»Å’π•ëÖëïÃà(ÄÄÄÅÙ∞(ÄÄÄÄâÕ’µµÖ…‰àËÅÏ(ÄÄÄÄÄÄââ±Ωç≠ïêàËÄâÌëï¡Ö…—’…ïÃ∞Å¡±’…Ö∞∞ÄÙ¿ÅÌ!Ω‰ÅπºÅÕÖ±îÅπ•πüÈ∏ÅâÖ…çΩÙÄÙƒÅÏƒÅÕÖ±•ëÑÅ°ΩÂÙÅΩ—°ï»ÅÏåÅÕÖ±•ëÖÃÅ°ΩÂıÙ∏ÅÌâ±Ωç≠ïëQΩëÖ‰∞Å¡±’…Ö∞∞ÄÙƒÅÏƒÅâ’çïÖëΩ»Å—ΩëÖ€µÑÅπºÅ¡’ïëîÅïµâÖ…çÖ»πÙÅΩ—°ï»ÅÏåÅâ’çïÖëΩ…ïÃÅ—ΩëÖ€µÑÅπºÅ¡’ïëï∏ÅïµâÖ…çÖ»πıÙà∞(ÄÄÄÄÄÄâç±ïÖ»àËÄâÌëï¡Ö…—’…ïÃ∞Å¡±’…Ö∞∞ÄÙ¿ÅÌ!Ω‰ÅπºÅÕÖ±îÅπ•πüÈ∏ÅâÖ…çΩÙÄÙƒÅÏƒÅÕÖ±•ëÑÅ°ΩÂÙÅΩ—°ï»ÅÏåÅÕÖ±•ëÖÃÅ°ΩÂıÙÉäPÅ‰ÅπºÅ—•ïπïÃÅπÖëÑÅ¡ïπë•ïπ—î∏à∞(ÄÄÄÄÄÄâ’…ùïπ–àËÄâÌëï¡Ö…—’…ïÃ∞Å¡±’…Ö∞∞ÄÙ¿ÅÌ!Ω‰ÅπºÅÕÖ±îÅπ•πüÈ∏ÅâÖ…çΩÙÄÙƒÅÏƒÅÕÖ±•ëÑÅ°ΩÂÙÅΩ—°ï»ÅÏåÅÕÖ±•ëÖÃÅ°ΩÂıÙ∏ÅÌ’…ùïπ–∞Å¡±’…Ö∞∞ÄÙƒÅÏƒÅ—Ö…ïÑÅ¡Ω»Å…ïÕΩ±Ÿï»ÅÖπ—ïÃÅëîÅÈÖ…¡Ö»πÙÅΩ—°ï»ÅÏåÅ—Ö…ïÖÃÅ¡Ω»Å…ïÕΩ±Ÿï»ÅÖπ—ïÃÅëîÅÈÖ…¡Ö»πıÙà∞(ÄÄÄÄÄÄâÖ°ïÖêàËÄâÌëï¡Ö…—’…ïÃ∞Å¡±’…Ö∞∞ÄÙ¿ÅÌ!Ω‰ÅπºÅÕÖ±îÅπ•πüÈ∏ÅâÖ…çΩÙÄÙƒÅÏƒÅÕÖ±•ëÑÅ°ΩÂÙÅΩ—°ï»ÅÏåÅÕÖ±•ëÖÃÅ°ΩÂıÙ∏Å9ÖëÑÅïÃÅ’…ùïπ—îÏÅÌ©ΩâÃ∞Å¡±’…Ö∞∞ÄÙƒÅÏƒÅ—Ö…ïÑÅ¡Ö…ÑÅÖëï±Öπ—Ö»πÙÅΩ—°ï»ÅÏåÅ—Ö…ïÖÃÅ¡Ö…ÑÅÖëï±Öπ—Ö»πıÙà(ÄÄÄÅÙ∞(ÄÄÄÄâù…ïï—•πúàËÅÏ(ÄÄÄÄÄÄâµΩ…π•πúàËÄâ	’ïπΩÃÅìµÖÃ∞ÅÌπÖµïÙà∞(ÄÄÄÄÄÄâÖô—ï…πΩΩ∏àËÄâ	’ïπÖÃÅ—Ö…ëïÃ∞ÅÌπÖµïÙà∞(ÄÄÄÄÄÄâïŸïπ•πúàËÄâ	’ïπÖÃÅπΩç°ïÃ∞ÅÌπÖµïÙà∞(ÄÄÄÄÄÄâπ•ù°–àËÄâQ…ÖâÖ©ÖπëºÅ°ÖÕ—ÑÅ—Ö…ëî∞ÅÌπÖµïÙà(ÄÄÄÅÙ∞(ÄÄÄÄâÕïÖÕΩπÖ±	…•ïô•πúàËÅÏ(ÄÄÄÄÄÄâÕ’µµï»àËÄâ¡…ΩŸïç°ÑÅï∞Å•π—ï…ŸÖ±ºÅëîÅÕ’¡ï…ô•ç•îÉäPÅâ’ÕçÑÅÕΩµâ…ÖÌ°ÖÕM°Ω¿∞ÅÕï±ïç–∞Å—…’îÅÏÅï∏ÅÌÕ°Ω¡9ÖµïıÙÅΩ—°ï»ÅÌıÙ∞ÅâïâîÅÖù’ÑÅ‰ÅπΩÃÅŸïµΩÃÅï∏Åï∞Å¡ÀÕ·•µºÅâÖ…çº∏à∞(ÄÄÄÄÄÄâÖ’—’µ∏àËÄâ¡…ΩŸïç°ÑÅï∞Å•π—ï…ŸÖ±ºÅëîÅÕ’¡ï…ô•ç•îÉäPÅ—ΩµÑÅ’πÑÅ—ΩÖ±±ÑÅçÖ±ïπ—•—ÖÌ°ÖÕM°Ω¿∞ÅÕï±ïç–∞Å—…’îÅÏÅï∏ÅÌÕ°Ω¡9ÖµïıÙÅΩ—°ï»ÅÌıÙ∞Å…ïŸ•ÕÑÅ±ÑÅâ…•ÕÑÅ‰ÅπΩÃÅŸïµΩÃÅï∏Åï∞Å¡ÀÕ·•µºÅâÖ…çº∏à∞(ÄÄÄÄÄÄâ›•π—ï»àËÄâ¡…ΩŸïç°ÑÅï∞Å•π—ï…ŸÖ±ºÅëîÅÕ’¡ï…ô•ç•îÉäPÅÖâÀµùÖ—îÅçΩ∏Å’∏Åç°’âÖÕ≈’ï…ºÅÕïçΩÌ°ÖÕM°Ω¿∞ÅÕï±ïç–∞Å—…’îÅÏÅï∏ÅÌÕ°Ω¡9ÖµïıÙÅΩ—°ï»ÅÌıÙÅ‰ÅπΩÃÅŸïµΩÃÅï∏Åï∞Å¡ÀÕ·•µºÅâÖ…çº∏à∞(ÄÄÄÄÄÄâÕ¡…•πúàËÄâ¡…ΩŸïç°ÑÅï∞Å•π—ï…ŸÖ±ºÅëîÅÕ’¡ï…ô•ç•îÉäPÅë•Õô…’—ÑÅëï∞ÅÕΩ±Ì°ÖÕM°Ω¿∞ÅÕï±ïç–∞Å—…’îÅÏÅï∏ÅÌÕ°Ω¡9ÖµïıÙÅΩ—°ï»ÅÌıÙ∞Å…ïŸ•ÕÑÅ—‘Åï≈’•¡ºÅ‰ÅπΩÃÅŸïµΩÃÅï∏Åï∞Å¡ÀÕ·•µºÅâÖ…çº∏à(ÄÄÄÅÙ∞(ÄÄÄÄâΩ¡Õ±ï…–àËÅÏ(ÄÄÄÄÄÄâΩ¡ï…Ö—•Ωπ-•πêàËÅÏ(ÄÄÄÄÄÄÄÄâç°ïç≠Ω’—MïÕÕ•Ω∏àËÄâAÖùºà∞(ÄÄÄÄÄÄÄÄâ•πŸΩ•çîàËÄâÖç—’…Ñà∞(ÄÄÄÄÄÄÄÄâ…ïô’πêàËÄâIïïµâΩ±Õºà(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâµïë•Ö-•πêàËÅÏ(ÄÄÄÄÄÄÄÄâçΩ’…ÕïA°Ω—ºàËÄâΩ—ºÅëï∞Åç’…Õºà∞(ÄÄÄÄÄÄÄÄâ…ïçÖ¡A°Ω—ºàËÄâΩ—ºÅëï∞Å…ïÕ’µï∏à∞(ÄÄÄÄÄÄÄÄâçï…—•ô•çÖ—•ΩπÖ…êàËÄâŸ•ëïπç•ÑÅëîÅçï…—•ô•çÖçßÕ∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…Ωç’µïπ–àËÄâΩç’µïπ—ºÅëîÅï·ïπçßÕ∏à∞(ÄÄÄÄÄÄÄÄâë•ŸïM•—ïA°Ω—ºàËÄâΩ—ºÅëï∞ÅÕ•—•ºÅëîÅâ’çïºà(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâÕ—’ç≠ï—Ö•∞àËÅÏ(ÄÄÄÄÄÄÄÄâ›•—°%êàËÄâÌ≠•πëÙÅÖ—ÖÕçÖëºÅëïÕëîÅÌ›°ïπÙÉäPÅM—…•¡îËÅÌ•ëÙ∏ÅIï€µÕÖ±ºÅï∏Åï∞Å¡Öπï∞ÅëîÅM—…•¡î∏à∞(ÄÄÄÄÄÄÄÄâ›•—°Ω’—%êàËÄâÌ≠•πëÙÅÖ—ÖÕçÖëºÅëïÕëîÅÌ›°ïπÙ∏ÅIï€µÕÖ±ºÅï∏Åï∞Å¡Öπï∞ÅëîÅM—…•¡î∏à(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâµïë•Öï±ï—•Ωπï—Ö•∞àËÄâÌ≠•πëÙÅï±•µ•πÖëÑÅëîÅ±ÑÅÖ¡±•çÖçßÕ∏Å¡ï…ºÅ—ΩëÖ€µÑÅπºÅâΩ……ÖëÑÅëï∞ÅÖ±µÖçïπÖµ•ïπ—ºÉäPÅï∏ÅçΩ±ÑÅëïÕëîÅÌ›°ïπÙ∏à∞(ÄÄÄÄÄÄâΩ›ïëIïô’πëï—Ö•∞àËÄâÌÖµΩ’π—ÙÅëîÅÌ—…•¡Q•—±ïÙÅëï∞ÅÌ›°ïπÙÉäPÅçÖπçï±ÖÕ—îÅ±ÑÅÕÖ±•ëÑÅ‰Åï∞Åë•πï…ºÅπºÅ¡’ëºÅŸΩ±Ÿï»Å¡Ω»Å—Ö…©ï—Ñ∏ÅïŸ◊•±Ÿï±ºÅ‰Å±’ïùºÅµÖ…çÑÅ±ÑÅ¡±ÖÈÑÅçΩµºÅ…ïïµâΩ±ÕÖëÑ∏à∞(ÄÄÄÄÄÄâΩ›ïëIïô’πëï—Ö•±9ΩµΩ’π–àËÄâAïπë•ïπ—îÅëîÅÌ—…•¡Q•—±ïÙÅëï∞ÅÌ›°ïπÙÉäPÅçÖπçï±ÖÕ—îÅ±ÑÅÕÖ±•ëÑÅ‰ÅπºÅÕîÅ…ïù•Õ—ÀÃÅπ•πüÈ∏Å•µ¡Ω…—îÅï∏Åï∞Å¡Öùº∏ÅïŸ’ï±ŸîÅ±ºÅ≈’îÅ¡ÖüÃÅ‰Å±’ïùºÅµÖ…çÑÅ±ÑÅ¡±ÖÈÑÅçΩµºÅ…ïïµâΩ±ÕÖëÑ∏à(ÄÄÄÅÙ∞(ÄÄÄÄâ…ïŸ•ï›ÕAïπë•πúàËÅÏ(ÄÄÄÄÄÄâÕ’â©ïç–àËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅ…ïÕó≈ÑÅïÕ¡ï…ÖÙÅΩ—°ï»ÅÏåÅ…ïÕó≈ÖÃÅïÕ¡ï…ÖπıÙÅ—‘Å…ïŸ•ÕßÕ∏à∞(ÄÄÄÄÄÄâëï—Ö•∞àËÄâ1ΩÃÅâ’çïÖëΩ…ïÃÅïÕç…•â•ï…Ω∏ÅÕΩâ…îÅÕ’ÃÅÕÖ±•ëÖÃÉäPÅ¡’â±•çÑÅ±ÖÃÅâ’ïπÖÃÅ¡Ö±Öâ…ÖÃÅ‘ÅΩç’±—ÑÅï∞Å…ïÕ—ºÅçΩ∏Åë•Õç…ïçßÕ∏∏à(ÄÄÄÅÙ∞(ÄÄÄÄâ’π•—ÕUπçΩπô•…µïêàËÅÏ(ÄÄÄÄÄÄâÕ’â©ïç–àËÄã
+˝∏Å≈◊§ÅµΩπïëÑÅ‰Å’π•ëÖêÅëîÅ¡…Ωô’πë•ëÖêÅ—…ÖâÖ©ÑÅïÕ—îÅçïπ—…º¸à∞(ÄÄÄÄÄÄâëï—Ö•∞àËÄâM’¡’Õ•µΩÃÅÌç’……ïπçÂÙÅ¡Ω»Å—‘ÅÈΩπÑÅ°Ω…Ö…•ÑÅÖ∞Åç…ïÖ»Å±ÑÅç’ïπ—ÑÅ‰ÅπÖë•îÅ±ºÅ°ÑÅçΩπô•…µÖëº∏ÅÃÅ±ºÅ≈’îÅÕîÅ±îÅçΩâ…ÑÅÑÅ±ÑÅ—Ö…©ï—ÑÅëîÅ’∏Åâ’çïÖëΩ»∏à(ÄÄÄÅÙ∞(ÄÄÄÄâùïÖ»àËÅÏ(ÄÄÄÄÄÄâΩŸï…ë’ïï—Ö•∞àËÄâÌ’π•—1Öâï±ÙÅëïãµÑÅëïŸΩ±Ÿï…ÕîÅï∞ÅÌë’ï=πÙÅ‰ÅÕ•ù’îÅô’ï…Ñ∏à∞(ÄÄÄÄÄÄâë’ï	Öç≠ï—Ö•∞àËÄâÌ’π•—1Öâï±ÙÅëïâîÅëïŸΩ±Ÿï…ÕîÅ°Ω‰∏à∞(ÄÄÄÄÄÄâÕï…Ÿ•çï’ïï—Ö•∞àËÄâÌç±Ωç≠1Öâï±ÙÅŸïπçîÅï∞ÅÌë’ï=πÙ∏à∞(ÄÄÄÄÄÄâÕï…Ÿ•çï=Ÿï…ë’ïï—Ö•∞àËÄâÌç±Ωç≠1Öâï±ÙÅŸïπçßÃÅï∞ÅÌë’ï=πÙ∏à∞(ÄÄÄÄÄÄâπïŸï…A•ç≠ïëU¡ï—Ö•∞àËÄâÌ’π•—1Öâï±ÙÅïÕ—ÖâÑÅ…ïÕï…ŸÖëºÅ°ÖÕ—ÑÅï∞ÅÌë’ï=πÙÅ‰Åπ’πçÑÅÕîÅ…ïçΩùßÃÉäPÅ±•ã•…Ö±º∏à(ÄÄÄÅÙ∞(ÄÄÄÄâÕ—Öôô…ïëïπ—•Ö∞àËÅÏ(ÄÄÄÄÄÄâë’ïï—Ö•∞àËÄâ1ÑÅ…ïπΩŸÖçßÕ∏ÅëîÅÌç…ïëïπ—•Ö±ÙÅ¡Ö…ÑÅïÕ—ÑÅ¡ï…ÕΩπÑÅïÃÅï∞ÅÌë’ï=πÙ∏à∞(ÄÄÄÄÄÄâΩŸï…ë’ïï—Ö•∞àËÄâÌç…ïëïπ—•Ö±ÙÅ¡Ö…ÑÅïÕ—ÑÅ¡ï…ÕΩπÑÅŸïπçßÃÅï∞ÅÌë’ï=πÙÉäPÅÖç—’Ö±•ÈÑÅï∞Å…ïù•Õ—…º∏à(ÄÄÄÅÙ(ÄÅÙ∞(ÄÄâ—…•¡•Ÿï•ï±ëÃàËÅÏ(ÄÄÄÄâ°ïÖë•πúàËÄâA±Ö∏ÅëîÅ•πµï…Õ•ΩπïÃà∞(ÄÄÄÄâëïÕç…•¡—•Ω∏àËÄâï©Ö»Å’πÑÅ•πµï…ÕßÕ∏Åï∏Åâ±ÖπçºÅπºÅ¡ÖÕÑÅπÖëÑÉäPÅ±ΩÃÅâ’çïÖëΩ…ïÃÅ•ù’Ö±µïπ—îÅŸïÀÖ∏Å’∏Å¡±Ö∏Åç±Ö…ºÅëîÅÌ—…•¡M°Ö¡ïÙ∏à∞(ÄÄÄÄâ—›ΩQÖπ≠Q…•¿àËÄâëΩÃÅ—Öπ≈’ïÃà∞(ÄÄÄÄâë•ŸïΩ’π—Q…•¡=πîàËÄâÌçΩ’π—ÙÅ•πµï…ÕßÕ∏à∞(ÄÄÄÄâë•ŸïΩ’π—Q…•¡=—°ï»àËÄâÌçΩ’π—ÙÅ•πµï…Õ•ΩπïÃà∞(ÄÄÄÄâπ’µâï…=ô•ŸïÕ1Öâï∞àËÄâ;Èµï…ºÅëîÅ•πµï…Õ•ΩπïÃà∞(ÄÄÄÄâë•Ÿï=¡—•Ωπ=πîàËÄâÌçΩ’π—ÙÅ•πµï…ÕßÕ∏à∞(ÄÄÄÄâë•Ÿï=¡—•Ωπ=—°ï»àËÄâÌçΩ’π—ÙÅ•πµï…Õ•ΩπïÃà∞(ÄÄÄÄâë•Ÿï1ïùïπêàËÄâ%πµï…ÕßÕ∏ÅÌπ’µâï…Ùà∞(ÄÄÄÄâπÖµï1Öâï∞àËÄâ9Ωµâ…îà∞(ÄÄÄÄâΩ¡—•ΩπÖ±!•π–àËÄà°Ω¡ç•ΩπÖ∞§à∞(ÄÄÄÄâπÖµïA±Öçï°Ω±ëï…•…Õ–àËÄâ5Ω±ÖÕÕïÃÅIïïòà∞(ÄÄÄÄâπÖµïA±Öçï°Ω±ëï…=—°ï»àËÄâMïù’πëºÅ—Öπ≈’îÉ
+‹ÅÕ•—•ºÅ¡Ω»Åëïô•π•»à∞(ÄÄÄÄâë•ŸïM•—ï1Öâï∞àËÄâM•—•ºÅëîÅâ’çïºà∞(ÄÄÄÄâπΩM•—ï°ΩÕï∏àËÄâM•∏ÅÕ•—•ºÅï±ïù•ëºÅ—ΩëÖ€µÑà∞(ÄÄÄÄâ—…ÖŸï±1Öâï±•…Õ–àËÄâ5•π’—ΩÃÅëïÕëîÅï∞Åµ’ï±±îà∞(ÄÄÄÄâ—…ÖŸï±1Öâï±=—°ï»àËÄâ5•π’—ΩÃÅëïÕëîÅï∞ÅÕ•—•ºÅÖπ—ï…•Ω»à∞(ÄÄÄÄâ—…ÖŸï±!•π–àËÄà°ï∏Åâ±ÖπçºÅ’ÕÑÅ—‘Å—…ÖÂïç—ºÅ°Öâ•—’Ö∞§à∞(ÄÄÄÄâë•Ÿï…Öç•πùï—Ö•±Õ1Öâï∞àËÄâï—Ö±±ïÃÅ¡Ö…ÑÅ±ΩÃÅâ’çïÖëΩ…ïÃà∞(ÄÄÄÄâôΩΩ—ï…9Ω—îàËÄâ±ïù•»Å’∏ÅÕ•—•ºÅ—…ÖîÅÕ’ÃÅπΩ—ÖÃÅù’Ö…ëÖëÖÃÉäPÅµÖ¡Ñ∞Å…ïôï…ïπç•ÖÃ∞Åù◊µÑÅëîÅçÖµ¡ºÉäPÅÖ∞Åâ…•ïô•πúÅëîÅïÕÑÅ•πµï…ÕßÕ∏∏à(ÄÅÙ∞(ÄÄâΩôô±•πï5Öπ•ôïÕ–àËÅÏ(ÄÄÄÄâô…ïÕ°πïÕÕΩ¡‰àËÅÏ(ÄÄÄÄÄÄâç’……ïπ–àËÄâÕ—ÑÅçΩ¡•ÑÅïÕ”ÑÅÖ∞ÅìµÑà∞(ÄÄÄÄÄÄâÖù•πúàËÄâÕ—ÑÅçΩ¡•ÑÅïÃÅ’∏Å¡ΩçºÅÖπ—•ù’Ñà∞(ÄÄÄÄÄÄâÕ—Ö±îàËÄâÕ—ÑÅçΩ¡•ÑÅïÃÅÖπ—•ù’Ñà(ÄÄÄÅÙ∞(ÄÄÄÄâô…ïÕ°πïÕÕA•±∞àËÅÏ(ÄÄÄÄÄÄâç’……ïπ–àËÄâΩ¡•ÑÅ…ïç•ïπ—îà∞(ÄÄÄÄÄÄâÖù•πúàËÄâΩ¡•ÑÅÖπ—•ù’Ñà∞(ÄÄÄÄÄÄâÕ—Ö±îàËÄâΩ¡•ÑÅçÖë’çÖëÑà(ÄÄÄÅÙ∞(ÄÄÄÄâ±ΩÖë•πù5ïÕÕÖùîàËÄââ…•ïπëºÅï∞ÅµÖπ•ô•ïÕ—ºÅù’Ö…ëÖëºÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿøäòà∞(ÄÄÄÄâΩ¡ïπ•πù!ïÖë•πúàËÄââ…•ïπëºÅ±ÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿºà∞(ÄÄÄÄâ…ïçΩπç•±îàËÅÏ(ÄÄÄÄÄÄâ…ïÖç°……Ω»àËÄâ9ºÅÕîÅ¡’ëºÅçΩπ—Öç—Ö»ÅçΩ∏Å•ŸïÖ‰Åï∏ÅïÕ—îÅµΩµïπ—ºÉäPÅ—’ÃÅçÖµâ•ΩÃÅÕ•ù’ï∏Åù’Ö…ëÖëΩÃÅï∏ÅïÕ—îÅ—ï≥•ôΩπºÅîÅ•π—ïπ—ÖÀÖ∏ÅïπŸ•Ö…ÕîÅëîÅπ’ïŸºÅï∏Åï∞Å¡ÀÕ·•µºÅçÖµâ•ºÅºÅÖ∞Å…ïçΩπïç—Ö»∏à∞(ÄÄÄÄÄÄâ¡ïπë•πùIï©ïç—ïëM•πù±îàËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅçÖµâ•ºÅπïçïÕ•—ÑÅ…ïŸ•ÕßÕ∏ÉäPÅÖâ…îÅï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅ¡Ö…ÑÅ…ïÕΩ±Ÿï…±ºπÙÅΩ—°ï»ÅÏåÅçÖµâ•ΩÃÅπïçïÕ•—Ö∏Å…ïŸ•ÕßÕ∏ÉäPÅÖâ…îÅï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅ¡Ö…ÑÅ…ïÕΩ±Ÿï…±ºπıÙà∞(ÄÄÄÄÄÄâ¡ïπë•πù]Ö•—•πúàËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅçÖµâ•ºÅ—ΩëÖ€µÑÅÕîÅïÕ”ÑÅïπŸ•ÖπëºπÙÅΩ—°ï»ÅÏåÅçÖµâ•ΩÃÅ—ΩëÖ€µÑÅÕîÅïÕ”Ö∏ÅïπŸ•ÖπëºπıÙà∞(ÄÄÄÄÄÄâÖ±±Ö’ù°—U¿àËÄâQΩëºÅïπŸ•Öëº∏à∞(ÄÄÄÄÄÄâ±•Õ—1ΩÖë……Ω»àËÄâÕ—îÅë•Õ¡ΩÕ•—•ŸºÅπºÅ¡’ëºÅÖâ…•»ÅÕ’ÃÅµÖπ•ô•ïÕ—ΩÃÅù’Ö…ëÖëΩÃ∏Å’Ö…ëÑÅ’πÑÅçΩ¡•ÑÅπ’ïŸÑÅµ•ïπ—…ÖÃÅ—ïπùÖÃÅÕó≈Ö∞∏à∞(ÄÄÄÄÄÄâÕ•πù±ï1ΩÖë……Ω»àËÄâÕ—îÅë•Õ¡ΩÕ•—•ŸºÅπºÅ¡’ëºÅÖâ…•»ÅÕ‘ÅµÖπ•ô•ïÕ—ºÅù’Ö…ëÖëº∏Å’Ö…ëÑÅ’πÑÅçΩ¡•ÑÅπ’ïŸÑÅµ•ïπ—…ÖÃÅ—ïπùÖÃÅÕó≈Ö∞∏à∞(ÄÄÄÄÄÄâÕÖŸïëΩ’π–àËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅµÖπ•ô•ïÕ—ºÅù’Ö…ëÖëΩÙÅΩ—°ï»ÅÏåÅµÖπ•ô•ïÕ—ΩÃÅù’Ö…ëÖëΩÕıÙÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿº∏à∞(ÄÄÄÄÄÄâπΩπïMÖŸïëeï–àËÄâQΩëÖ€µÑÅπºÅ°Ö‰ÅπÖëÑÅù’Ö…ëÖëºÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿº∏à∞(ÄÄÄÄÄÄâ±•Õ—Aïπë•πùIï©ïç—ïêàËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅçÖµâ•ºÅπïçïÕ•—ÑÅ…ïŸ•ÕßÕ∏ÉäPÅÖâ…îÅïÕÑÅÕÖ±•ëÑÅ¡Ö…ÑÅ…ïÕΩ±Ÿï…±ºπÙÅΩ—°ï»ÅÏåÅçÖµâ•ΩÃÅπïçïÕ•—Ö∏Å…ïŸ•ÕßÕ∏ÉäPÅÖâ…îÅïÕÑÅÕÖ±•ëÑÅ¡Ö…ÑÅ…ïÕΩ±Ÿï…±ºπıÙà∞(ÄÄÄÄÄÄâ±•Õ—±±Ö’ù°—U¿àËÄâQΩëºÅïπŸ•ÖëºÅï∏ÅïÕ—ÖÃÅÕÖ±•ëÖÃ∏à∞(ÄÄÄÄÄÄâ…ïÖë‰àËÄâ∞ÅµÖπ•ô•ïÕ—ºÅù’Ö…ëÖëºÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•ŸºÅïÕ”ÑÅ±•Õ—º∏à∞(ÄÄÄÄÄÄâπΩπïΩ…Q…•¿àËÄâ9ºÅ°Ö‰Åπ•πüÈ∏ÅµÖπ•ô•ïÕ—ºÅù’Ö…ëÖëºÅÖç—’Ö±µïπ—îÅ¡Ö…ÑÅïÕ—ÑÅÕÖ±•ëÑÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿº∏à(ÄÄÄÅÙ∞(ÄÄÄÄâ±•Õ–àËÅÏ(ÄÄÄÄÄÄâïÂïâ…Ω‹àËÄâ5Öπ•ô•ïÕ—ΩÃÅÕ•∏ÅçΩπï·ßÕ∏à∞(ÄÄÄÄÄÄâ°ïÖë•πù]•—°Q…•¡ÃàËÄâ’Ö…ëÖëºÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿºà∞(ÄÄÄÄÄÄâ°ïÖë•πùµ¡—‰àËÄâQΩëÖ€µÑÅπºÅ°Ö‰ÅπÖëÑÅù’Ö…ëÖëºÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿºà∞(ÄÄÄÄÄÄâë•Ÿï…Ω’π–àËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅâ’çïÖëΩ…ÙÅΩ—°ï»ÅÏåÅâ’çïÖëΩ…ïÕıÙà∞(ÄÄÄÄÄÄâï·¡•…ïëY•ï›=π±‰àËÄâÖë’çÖëºÉäPÅÕΩ±ºÅ±ïç—’…Ñà∞(ÄÄÄÄÄÄâïµ¡—Â!•π–àËÄâ5•ïπ—…ÖÃÅáÈ∏Å—ïπùÖÃÅÕó≈Ö∞∞ÅÖâ…îÅç’Ö±≈’•ï»Å√Öù•πÑÅëï∞Åçïπ—…ºËÅ•ŸïÖ‰ÅµÖπ—•ïπîÅÖ∞ÅìµÑÅ±ÑÅçΩ¡•ÑÅëîÅ±ΩÃÅ¡ÀÕ·•µΩÃÅëΩÃÅìµÖÃÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿº∏à∞(ÄÄÄÄÄÄâô…ïÕ°πïÕÕ±±’……ïπ–àËÄâQΩëÖÃÅÖ∞ÅìµÑ∏à∞(ÄÄÄÄÄÄâô…ïÕ°πïÕÕ9ïïëIïô…ïÕ†àËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅçΩ¡•ÑÅπïçïÕ•—ÑÅÖç—’Ö±•ÈÖ…ÕîπÙÅΩ—°ï»ÅÏåÅçΩ¡•ÖÃÅπïçïÕ•—Ö∏ÅÖç—’Ö±•ÈÖ…ÕîπıÙà∞(ÄÄÄÄÄÄâÕÖŸïëùºàËÄâ’Ö…ëÖëÑÅÌÖùΩÙà∞(ÄÄÄÄÄÄâ…ïô…ïÕ°	ïôΩ…ïIï±Â•πúàËÄâç—’Ö≥µÈÖ±ÑÅÖπ—ïÃÅëîÅçΩπô•Ö»Åï∏Åï±±Ñà(ÄÄÄÅÙ∞(ÄÄÄÄâÕ•πù±îàËÅÏ(ÄÄÄÄÄÄâïÂïâ…Ω‹àËÄâ5Öπ•ô•ïÕ—ºÅÕ•∏ÅçΩπï·ßÕ∏à∞(ÄÄÄÄÄÄâïµ¡—Â!ïÖë•πúàËÄâQΩëÖ€µÑÅπºÅ°Ö‰ÅπÖëÑÅù’Ö…ëÖëºÅï∏ÅïÕ—îÅ—ï≥•ôΩπºà∞(ÄÄÄÄÄÄâïµ¡—Â!•π–àËÄâ5•ïπ—…ÖÃÅáÈ∏Å—ïπùÖÃÅÕó≈Ö∞∞ÅÖâ…îÅï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅëîÅ±ÑÅÕÖ±•ëÑËÅµÖπ—•ïπîÅÖ∞ÅìµÑÅ±ÑÅçΩ¡•ÑÅëîÅïÕ—îÅë•Õ¡ΩÕ•—•Ÿº∏à∞(ÄÄÄÄÄÄâ…ïµΩŸïë=—°ï…M°Ω¡!ïÖë•πúàËÄâÕÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅÕîÅï±•µ•ªÃà∞(ÄÄÄÄÄÄâ…ïµΩŸïë=—°ï…M°Ω¡5ïÕÕÖùîàËÄâ∏ÅïÕ—ÑÅ—Öâ±ï–Å°Ö‰ÅΩ—…ºÅçïπ—…ºÅçΩ∏Å±ÑÅÕïÕßÕ∏Å•π•ç•ÖëÑ∏à∞(ÄÄÄÄÄÄâ…ïµΩŸïë=—°ï…M°Ω¡!•π–àËÄâÕ—ÑÅÕÖ±•ëÑÅ±ÑÅù’Ö…ìÃÅΩ—…ºÅçïπ—…º∞ÅÖœ¥Å≈’îÅÕ‘ÅçΩ¡•ÑÅÕîÅï±•µ•ªÃÅëîÅïÕ—ÑÅ—Öâ±ï–Åç’ÖπëºÅçÖµâßÃÅï∞Åçïπ—…ºÅçΩ∏Å±ÑÅÕïÕßÕ∏Å•π•ç•ÖëÑÅÖ≈◊¥∏ÅM‘Å¡ÖÕîÅëîÅ±•Õ—ÑÅëïâîÅ…ïù•Õ—…Ö…ÕîÅï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅëîÅïÕîÅçïπ—…º∏à∞(ÄÄÄÄÄÄâÕ≠•¡1•π¨àËÄâ%»Åë•…ïç—ºÅÖ∞Å¡ÖÕîÅëîÅ±•Õ—ÑÅÕ•∏ÅçΩπï·ßÕ∏à∞(ÄÄÄÄÄÄâÕÖŸïë–àËÄâ’Ö…ëÖëºÅÌ›°ïπÙà∞(ÄÄÄÄÄÄâï·¡•…ïë	Öππï»àËÄâÕ—ÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅ°ÑÅçÖë’çÖëºÅ‰ÅπºÅÕîÅ¡’ïëîÅ’ÕÖ»Å¡Ö…ÑÅïµâÖ…çÖ»Åâ’çïÖëΩ…ïÃ∏Å’Ö±≈’•ï»ÅçÖµâ•ºÅ≈’îÅÕ•ùÑÅïÕ¡ï…ÖπëºÅ¡Ö…ÑÅïπŸ•Ö…ÕîÅÖâÖ©ºÅÕïù’•ÀÑÅ•π—ïπ”ÖπëΩ±º∞Å¡ï…ºÅï∞Åπ’ïŸºÅ¡ÖÕîÅëîÅ±•Õ—ÑÅëïâîÅ…ïù•Õ—…Ö…ÕîÅï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•Ÿº∏à∞(ÄÄÄÄÄÄâô…ïÕ°πïÕÕ	Öππï»àËÄâÌô…ïÕ°πïÕÕ9Ω—ïÙ∏Å1ÑÅë•Õ¡Ωπ•â•±•ëÖêÅ…ïô±ï©ÑÅïÕîÅµΩµïπ—ºÉäPÅ±ºÅŸï…•ô•çÖµΩÃÅ—ΩëºÅëîÅπ’ïŸºÅï∏Åç’Öπ—ºÅ—ïπùÖÃÅÕó≈Ö∞∏à∞(ÄÄÄÄÄÄâ¡ïπë•πùIï©ïç—ïëΩ’π—ÃàËÄâÌ¡ïπë•πùÙÅïÕ¡ï…ÖπëºÅ¡Ö…ÑÅïπŸ•Ö…ÕîÉ
+‹ÅÌ…ï©ïç—ïëÙÅπïçïÕ•—Ö∏Å…ïŸ•ÕßÕ∏à∞(ÄÄÄÄÄÄâç°ïç≠¡Ω•π—9ÖŸ…•ÑàËÄâA’π—ºÅëï∞Å¡ÖÕîÅëîÅ±•Õ—Ñà∞(ÄÄÄÄÄÄâÕ—Ö—Õ•Ÿï…ÃàËÄâ	’çïÖëΩ…ïÃà∞(ÄÄÄÄÄÄâÕ—Ö—Õ	ΩÖ…ëïêàËÄâµâÖ…çÖëΩÃà∞(ÄÄÄÄÄÄâÕ—Ö—Õ›Ö•—•πúàËÄâAïπë•ïπ—ïÃà∞(ÄÄÄÄÄÄâ…Ω±±Ö±±Ωµ¡±ï—ï!ïÖë•πúàËÄâAÖÕîÅëîÅ±•Õ—ÑÅçΩµ¡±ï—ºÉ¬~:$à∞(ÄÄÄÄÄÄâç°ïç≠¡Ω•π—IΩ±±Ö±±!ïÖë•πúàËÄâAÖÕîÅëîÅ±•Õ—ÑÅëîÅÌç°ïç≠¡Ω•π—Ùà∞(ÄÄÄÄÄÄâÖ±±âΩÖ…êàËÄâQΩëΩÃÅ—•ïπï∏Å’∏Å…ïÕ’±—ÖëºÉäPÅ—ΩëΩÃÅÑÅâΩ…ëº∏à∞(ÄÄÄÄÄÄâÕΩµï9Ω—	ΩÖ…ëïêàËÄâQΩëΩÃÅ—•ïπï∏Å’∏Å…ïÕ’±—ÖëºÉäPÅÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅµÖ…çÖëºÅçΩµºÅπºÅïµâÖ…çÖëΩÙÅΩ—°ï»ÅÏåÅµÖ…çÖëΩÃÅçΩµºÅπºÅïµâÖ…çÖëΩÕıÙ∏ÅΩπô•…µÑÅ≈’îÅïÕ”Ö∏Å±ΩçÖ±•ÈÖëΩÃÅÖπ—ïÃÅëîÅçΩπ—•π’Ö»∏à∞(ÄÄÄÄÄÄâç…ï›!ïÖë•πúàËÄâQ…•¡’±ÖçßÕ∏ÅÑÅâΩ…ëºà∞(ÄÄÄÄÄÄâç…ï›±±ççΩ’π—ïëΩ»àËÄâÌÖÕÕ•ùπïê∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅ—…•¡’±Öπ—î∞ÅçΩπ—Öâ•±•ÈÖëºπÙÅΩ—°ï»ÅÌ1ΩÃÄåÅ—…•¡’±Öπ—ïÃ∞ÅçΩπ—Öâ•±•ÈÖëΩÃπıÙà∞(ÄÄÄÄÄÄâç…ï›9ΩπïÕÕ•ùπïêàËÄâ9ºÅ°Ö‰Å—…•¡’±ÖçßÕ∏ÅÖÕ•ùπÖëÑÅÑÅïÕ—ÑÅÕÖ±•ëÑ∞ÅÖœ¥Å≈’îÅπºÅ°Ö‰ÅÑÅ≈’ß•∏Å¡ÖÕÖ»Å±•Õ—Ñ∏Å1ÑÅ—…•¡’±ÖçßÕ∏ÅÕîÅá≈ÖëîÅï∏Å±ÑÅ±•Õ—ÑÅëîÅ—…•¡’±ÖçßÕ∏ÅëîÅ±ÑÅÕÖ±•ëÑ∞Å≈’îÅπïçïÕ•—ÑÅçΩâï…—’…ÑËÅïÕ—îÅçΩπ—…Ω∞ÅÕ•ù’îÅÖâ•ï…—ºÅ°ÖÕ—ÑÅïπ—ΩπçïÃ∏à∞(ÄÄÄÄÄÄâç…ï›9ΩπïâΩÖ…êàËÄâQΩëÑÅ±ÑÅ—…•¡’±ÖçßÕ∏ÅëîÅïÕ—ÑÅÕÖ±•ëÑÅô•ù’…ÑÅï∏Å—•ï……Ñ∞ÅÖœ¥Å≈’îÅπÖë•îÅÑÅâΩ…ëºÅïÕ”ÑÅï∏Å±ÑÅ±•Õ—ÑÅëîÅ—…•¡’±ÖçßÕ∏∏ÅE’•ï∏ÅÕÖ±•ï…ÑÅëîÅŸï…ëÖêÅÕîÅá≈ÖëîÅï∏Å±ÑÅ±•Õ—ÑÅëîÅ—…•¡’±ÖçßÕ∏ÅëîÅ±ÑÅÕÖ±•ëÑ∞Å≈’îÅπïçïÕ•—ÑÅçΩâï…—’…ÑËÅïÕ—îÅçΩπ—…Ω∞ÅÕ•ù’îÅÖâ•ï…—ºÅ°ÖÕ—ÑÅïπ—ΩπçïÃ∏à∞(ÄÄÄÄÄÄâç…ï›9Ω—	Öç≠âΩÖ…êàËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅ—…•¡’±Öπ—îÅπºÅ°ÑÅŸ’ï±—ºÅÑÅâΩ…ëºπÙÅΩ—°ï»ÅÏåÅ—…•¡’±Öπ—ïÃÅπºÅ°Ö∏ÅŸ’ï±—ºÅÑÅâΩ…ëºπıÙÅÕ—îÅçΩπ—…Ω∞ÅÕ•ù’îÅÖâ•ï…—º∏à∞(ÄÄÄÄÄÄâç…ï›=±ëï…Ω¡‰àËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÌÄåÅ—…•¡’±Öπ—îÅπºÅÕîÅ±îÅ¡’ïëîÅ¡ÖÕÖ»Å±•Õ—ÑÅï∏ÅïÕ—ÑÅçΩ¡•ÑÅù’Ö…ëÖëÖÙÅΩ—°ï»ÅÌÄåÅ—…•¡’±Öπ—ïÃÅπºÅÕîÅ±ïÃÅ¡’ïëîÅ¡ÖÕÖ»Å±•Õ—ÑÅï∏ÅïÕ—ÑÅçΩ¡•ÑÅù’Ö…ëÖëÖıÙËÅÕîÅù’Ö…ìÃÅÖπ—ïÃÅëîÅ≈’îÅï∞Å¡ÖÕîÅëîÅ±•Õ—ÑÅëîÅ—…•¡’±ÖçßÕ∏Åô’πç•ΩπÖ…ÑÅÕ•∏ÅçΩπï·ßÕ∏∏Åç—’Ö±•ÈÑÅ±ÑÅçΩ¡•ÑÅ±ÑÅ¡ÀÕ·•µÑÅŸïËÅ≈’îÅ—ïπùÖÃÅçΩâï…—’…ÑÅºÅ…ïüµÕ—…Ö±ΩÃÅï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•Ÿº∏à∞(ÄÄÄÄÄÄââ’ëëÂIïÖë=π±Â!ï…îàËÄâ1ΩÃÅï≈’•¡ΩÃÅëîÅâ’çïºÅÕîÅµ’ïÕ—…Ö∏Å—Ö∞ÅçΩµºÅÕîÅù’Ö…ëÖ…Ω∏∏ÅM§ÅÖ±ù’•ï∏Åëï∞Åï≈’•¡ºÅïÕ”ÑÅÑÅâΩ…ëºÅÕîÅ…ïù•Õ—…ÑÅï∏Åï∞Å¡ÖÕîÅëîÅ±•Õ—ÑÅï∏ÅŸ•ŸºÉäPÅïÕ—ÑÅçΩ¡•ÑÅπºÅ±ºÅÕ•ù’î∏à∞(ÄÄÄÄÄÄâç…ï››Ö•—•πúàËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÌÖ±—ÑÅ¡ÖÕÖ»Å±•Õ—ÑÅÑÄåÅ—…•¡’±Öπ—îπÙÅΩ—°ï»ÅÌÖ±—ÑÅ¡ÖÕÖ»Å±•Õ—ÑÅÑÄåÅ—…•¡’±Öπ—ïÃπıÙÅÖëÑÅ¡ï…ÕΩπÑÅëîÅ±ÑÅ±•Õ—ÑÅëîÅ—…•¡’±ÖçßÕ∏ÅπïçïÕ•—ÑÅÕ‘Å¡…Ω¡•ºÅ…ïÕ’±—Öëº∏à∞(ÄÄÄÄÄÄâ…ïÖëÂ	ÖëùîàËÄâ1•Õ—ºÅç’ÖπëºÅÕîÅù’Ö…ìÃà∞(ÄÄÄÄÄÄââ±Ωç≠ïë	ÖëùîàËÄâ	±Ω≈’ïÖëºÅç’ÖπëºÅÕîÅù’Ö…ìÃà∞(ÄÄÄÄÄÄâÕ—Ö—ïAïπë•πùM’ôô•‡àËÄã
+‹ÅïÕ¡ï…ÖπëºÅ¡Ö…ÑÅïπŸ•Ö…Õîà∞(ÄÄÄÄÄÄâïµï…ùïπçÂΩπ—Öç–àËÄâΩπ—Öç—ºÅëîÅïµï…ùïπç•Ñà∞(ÄÄÄÄÄÄâπΩ—=π•±îàËÄâM•∏ÅëÖ—ΩÃÅ…ïù•Õ—…ÖëΩÃà∞(ÄÄÄÄÄÄâ…ïπ—Ö±•–àËÄâ≈’•¡ºÅëîÅÖ±≈’•±ï»à∞(ÄÄÄÄÄÄâπ•—…Ω·Iï≈’ïÕ—ïëM’ôô•‡àËÄã
+‹Å9•—…Ω‡ÅÕΩ±•ç•—Öëºà∞(ÄÄÄÄÄÄâÖëë9Ω—ïM’µµÖ…‰àËÄâ≈Öë•»Å’πÑÅπΩ—Ñà∞(ÄÄÄÄÄÄâΩ¡—•ΩπÖ±9Ω—îàËÄâ9Ω—ÑÅΩ¡ç•ΩπÖ∞à∞(ÄÄÄÄÄÄâπΩ—ïA±Öçï°Ω±ëï»àËÄâ1±ïüÃÅ—Ö…ëîÅÖ∞ÅâÖ…çº∞Å¡…ïù’π—ÑÅ∑•ë•çÑ∞Å¡…Ωâ±ïµÑÅëîÅï≈’•¡øäòà∞(ÄÄÄÄÄÄâπΩ—ï!•π–àËÄâ1ÑÅπΩ—ÑÅŸ•Ö©ÑÅçΩ∏ÅïÕ—îÅ…ïù•Õ—…ºÅëîÅ¡ÖÕîÅëîÅ±•Õ—Ñ∏à∞(ÄÄÄÄÄÄâÕÖŸ•πúàËÄâ’Ö…ëÖπëøäòà∞(ÄÄÄÄÄÄââΩÖ…ëïëΩπîàËÄâµâÖ…çÖëºÉäbGæ‚<à∞(ÄÄÄÄÄÄâµÖ…≠	ΩÖ…ëïêàËÄâ5Ö…çÖ»ÅïµâÖ…çÖëºà∞(ÄÄÄÄÄÄâπΩ—	ΩÖ…ëïëΩπîàËÄâ9ºÅïµâÖ…çÖëºÉäbGæ‚<à∞(ÄÄÄÄÄÄâµÖ…≠9Ω—	ΩÖ…ëïêàËÄâ5Ö…çÖ»ÅπºÅïµâÖ…çÖëºà∞(ÄÄÄÄÄÄâπΩ—	Öç≠âΩÖ…ëç—•ŸîàËÄâM•∏Å…ïù…ïÕÖ»ÅÑÅâΩ…ëºà∞(ÄÄÄÄÄÄâµÖ…≠9Ω—	Öç≠âΩÖ…êàËÄâ5Ö…çÖ»ÅÕ•∏Å…ïù…ïÕÖ»ÅÑÅâΩ…ëºà∞(ÄÄÄÄÄÄâçΩπô•…µâΩÖ…êàËÄâΩπô•…µÖ»Å≈’îÅÌπÖµïÙÅïÕ”ÑÅÑÅâΩ…ëºà∞(ÄÄÄÄÄÄâçΩπô•…µâΩÖ…ë!•π–àËÄâQΩçÑÅëîÅπ’ïŸºÅ¡Ö…ÑÅ…ïù•Õ—…Ö»Å≈’îÅŸïÃÅÑÅÌπÖµïÙÅ‰Å≈’îÅÂÑÅïÕ”ÑÅëîÅŸ’ï±—ÑÅï∏Åï∞ÅâÖ…çº∏à∞(ÄÄÄÄÄÄâçΩπô•…µâΩÖ…ëÖπçï∞àËÄâ5Öπ—ïπï»ÉäqÕ•∏Å…ïù…ïÕÖ»ÅÑÅâΩ…ëøätà∞(ÄÄÄÄÄÄâµÖ…≠ïë±Õï›°ï…îàËÄâIïù•Õ—…ÖëºÅï∏ÅΩ—…ºÅë•Õ¡ΩÕ•—•ŸºÅºÅï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÉäPÅëïÕ°ÖÈ±ºÅÖ±≥¥∞ÅπºÅÖ≈◊¥∏à∞(ÄÄÄÄÄÄâΩ¡ïπ1•Ÿï5Öπ•ôïÕ–àËÄââ…•»ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•Ÿºà∞(ÄÄÄÄÄÄâ…ïçΩ…êàËÅÏ(ÄÄÄÄÄÄÄÄâï·¡•…ïëÖππΩ—IïçΩ…êàËÄâÕ—ÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅ°ÑÅçÖë’çÖëºÉäPÅÖâ…îÅï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅ¡Ö…ÑÅ…ïù•Õ—…Ö»Åï∞Å¡ÖÕîÅëîÅ±•Õ—Ñ∏à∞(ÄÄÄÄÄÄÄÄâï·¡•…ïëIïçΩ…ë=π1•ŸîàËÄâÖë’çÖëºÉäPÅ…ïüµÕ—…Ö±ºÅï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•Ÿºà∞(ÄÄÄÄÄÄÄÄâÕÖŸïêàËÄâ’Ö…ëÖëºÅï∏ÅïÕ—îÅ—ï≥•ôΩπºÉäPÅÕîÅïπŸ•ÖÀÑÅï∏Åç’Öπ—ºÅ…ïç’¡ï…ïÃÅ±ÑÅçΩπï·ßÕ∏∏à∞(ÄÄÄÄÄÄÄÄâùïπï…•ç……Ω»àËÄâÕîÅçÖµâ•ºÅπºÅÕîÅ¡’ëºÅù’Ö…ëÖ»Åï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•ŸºÉäPÅ•π”•π—Ö±ºÅëîÅπ’ïŸº∏à∞(ÄÄÄÄÄÄÄÄâπΩ—±±Ω›ïêàËÄâÕ—îÅâ’çïÖëΩ»ÅáÈ∏ÅπºÅ¡’ïëîÅïµâÖ…çÖ»ÉäPÅ…ïÕ’ï±ŸîÅ±ºÅ¡ïπë•ïπ—îÅï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅ¡…•µï…º∏à∞(ÄÄÄÄÄÄÄÄâ’πÖŸÖ•±Öâ±îàËÄâÕ—ÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅÂÑÅπºÅïÕ”ÑÅë•Õ¡Ωπ•â±îÉäPÅÖâ…îÅï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅ¡Ö…ÑÅ…ïù•Õ—…Ö»Åï∞Å¡ÖÕîÅëîÅ±•Õ—Ñ∏à(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâç°ïç≠±•Õ–àËÅÏ(ÄÄÄÄÄÄÄÄâ°ïÖë•πúàËÄâΩµ¡…ΩâÖçßÕ∏Å¡…ïŸ•ÑÅÑÅ±ÑÅÕÖ±•ëÑà(ÄÄÄÄÄÅÙ(ÄÄÄÅÙ∞(ÄÄÄÄâÕ°ï±±Yï…Õ•Ω∏àËÅÏ(ÄÄÄÄÄÄâÕ—Ö±ï	Öππï»àËÄâÕ—ÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅïÃÅëîÅ’πÑÅŸï…ÕßÕ∏ÅÖπ—ï…•Ω»ÅëîÅ•ŸïÖ‰∏Åç—’Ö≥µÈÖ±ÑÅçΩ∏ÅçΩπï·ßÕ∏ÅÖπ—ïÃÅëîÅïµâÖ…çÖ»Åâ’çïÖëΩ…ïÃ∏à∞(ÄÄÄÄÄÄâ’¡ëÖ—ï	Öππï»àËÄâ!Ö‰Å’πÑÅπ’ïŸÑÅŸï…ÕßÕ∏ÅëîÅ•ŸïÖ‰Å±•Õ—Ñ∏à∞(ÄÄÄÄÄÄâ…ïô…ïÕ°	’——Ω∏àËÄâç—’Ö±•ÈÖ»ÅÖ°Ω…Ñà(ÄÄÄÅÙ∞(ÄÄÄÄâë•ÕçÖ…ëïêàËÅÏ(ÄÄÄÄÄÄâ°ïÖë•πúàËÄâMîÅï±•µ•ªÃÅ’∏Å¡ÖÕîÅëîÅ±•Õ—ÑÅ≈’îÅπ’πçÑÅÕîÅïπŸßÃà∞(ÄÄÄÄÄÄââΩë‰àËÄâÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅçÖµâ•ºÅëîÅ…ïç’ïπ—ºÅ…ïù•Õ—…ÖëΩÙÅΩ—°ï»ÅÏåÅçÖµâ•ΩÃÅëîÅ…ïç’ïπ—ºÅ…ïù•Õ—…ÖëΩÕıÙÅï∏ÅïÕ—îÅë•Õ¡ΩÕ•—•ŸºÅπ’πçÑÅ±±ïùÖ…Ω∏ÅÑÅ•ŸïÖ‰∞Å‰Å±ÑÅçΩ¡•ÑÅù’Ö…ëÖëÑÅÕ’¡ïÀÃÅ±ÑÅôïç°ÑÅï∏Å≈’îÅ’∏ÅµÖπ•ô•ïÕ—ºÅ¡’ïëîÅ¡ï…µÖπïçï»Åï∏Å’∏Åë•Õ¡ΩÕ•—•Ÿº∏ÅY’ï±ŸîÅÑÅ•π—…Ωë’ç•»Åï∏Åï∞ÅµÖπ•ô•ïÕ—ºÅï∏ÅŸ•ŸºÅ±ºÅ≈’îÅÕ•ùÑÅ°Öç•ïπëºÅôÖ±—Ñ∏à∞(ÄÄÄÄÄÄâ•—ï¥àËÄâÌÕ°Ω¡ÙÉ
+‹ÅÌ—…•¡ÙÉäPÅÌçΩ’π–∞Å¡±’…Ö∞∞ÅΩπîÅÏåÅçÖµâ•ºÅ¡ï…ë•ëΩÙÅΩ—°ï»ÅÏåÅçÖµâ•ΩÃÅ¡ï…ë•ëΩÕıÙà∞(ÄÄÄÄÄÄâÖç≠πΩ›±ïëùîàËÄâπ—ïπë•ëºà(ÄÄÄÅÙ(ÄÅÙ∞(ÄÄââΩÖ—5ΩëîàËÅÏ(ÄÄÄÄâµΩëï1Öâï∞àËÄâ5ΩëºÅâÖ…çºà∞(ÄÄÄÄâ±Öâï±’—ºàËÄâ’—Ω∑Ö—•çºà∞(ÄÄÄÄâ±Öâï±1ÖπêàËÄâ5ΩëºÅ—•ï……Ñà∞(ÄÄÄÄâ±Öâï±	ΩÖ–àËÄâ5ΩëºÅâÖ…çºà(ÄÅÙ∞(ÄÄâ°Ö¡—•çÃàËÅÏ(ÄÄÄÄâ—Ωùù±ï1Öâï∞àËÄâY•â…Ö»Åï∏ÅçÖëÑÅ—Ω≈’îà(ÄÅÙ∞(ÄÄâ…ïπ—Ö±•–àËÅÏ(ÄÄÄÄâ•—ïµ1Öâï±ÃàËÅÏ(ÄÄÄÄÄÄââçêàËÄâ°Ö±ïçºà∞(ÄÄÄÄÄÄâ…ïù’±Ö—Ω»àËÄâIïù’±ÖëΩ»à∞(ÄÄÄÄÄÄâ›ï—Õ’•–àËÄâQ…Ö©îà∞(ÄÄÄÄÄÄââΩΩ—ÃàËÄâÕçÖ…¡•πïÃà∞(ÄÄÄÄÄÄâµÖÕ≠•πÃàËÄâ7ÖÕçÖ…ÑÅ‰ÅÖ±ï—ÖÃà∞(ÄÄÄÄÄÄâ›ï•ù°—ÃàËÄâ1ÖÕ—…îà∞(ÄÄÄÄÄÄâë•ŸïΩµ¡’—ï»àËÄâ=…ëïπÖëΩ»ÅëîÅâ’çïºà∞(ÄÄÄÄÄÄâùΩ¡…ºàËÄâΩA…ºà(ÄÄÄÅÙ∞(ÄÄÄÄâπ•—…Ω·•±±Õ1Öâï∞àËÄâ1±ïπÖëΩÃÅëîÅπ•—…Ω‡à∞(ÄÄÄÄâ•—ïµ]•—°M•ÈîàËÄâÌ•—ïµÙÅÌÕ•ÈïÙà∞(ÄÄÄÄâπΩ—IïçΩ…ëïêàËÄâ9ºÅ°Ö‰Åï≈’•¡ºÅ…ïù•Õ—…ÖëºÉäPÅáÈ∏ÅπºÅÕîÅ°ÑÅ¡…ïù’π—Öëºà∞(ÄÄÄÄâΩ›π-•–àËÄâQ…ÖîÅÕ‘Å¡…Ω¡•ºÅï≈’•¡ºà∞(ÄÄÄÄâπïïëÕM—Öôô•–àËÄâ9ïçïÕ•—ÑÅÖ©’Õ—îÅëï∞Å¡ï…ÕΩπÖ∞Åï∏Åï∞Åç°ïç¨µ•∏à∞(ÄÄÄÄâπïïëÕM—Öôô•—]•—°9Ω—îàËÄâ9ïçïÕ•—ÑÅÖ©’Õ—îÅëï∞Å¡ï…ÕΩπÖ∞ÉäPÅÌπΩ—ïÙà(ÄÅÙ∞(ÄÄâ…Ω±±Ö±±°ïç≠¡Ω•π–àËÅÏ(ÄÄÄÄâëï¡Ö…—’…îàËÄâπ—ïÃÅëîÅÈÖ…¡Ö»à∞(ÄÄÄÄâÖô—ï…•ŸîàËÄâïÕ¡◊•ÃÅëîÅ±ÑÅ•πµï…ÕßÕ∏ÅÌπÙà(ÄÅÙ∞(ÄÄâ…Ω±±Ö±±M—Ö—îàËÅÏ(ÄÄÄÄâÖ›Ö•—•πúàËÄâAïπë•ïπ—îÅëîÅ¡ÖÕîÅëîÅ±•Õ—Ñà∞(ÄÄÄÄââΩÖ…ëïêàËÄâµâÖ…çÖëºà∞(ÄÄÄÄâπΩ—	ΩÖ…ëïêàËÄâ9ºÅïµâÖ…çÖëºà∞(ÄÄÄÄâπΩ—	ΩÖ…ëïëÖ……•ïêàËÄâ9ºÅïµâÖ…çÖëºÉ
+‹ÅÖ……ÖÕ—…Öëºà∞(ÄÄÄÄâπΩ—	Öç≠âΩÖ…êàËÄâM•∏Å…ïù…ïÕÖ»ÅÑÅâΩ…ëºà(ÄÅÙ∞(ÄÄââ’ëëÂQïÖ¥àËÅÏ(ÄÄÄÄâ›•—†àËÄâ≈’•¡ºËÅÌπÖµïÕÙà∞(ÄÄÄÄâÕï¡Ö…Ö—ïëΩç¨àËÄâ±ù’•ï∏ÅπºÅïÕ”ÑÅÑÅâΩ…ëºà∞(ÄÄÄÄâÕï¡Ö…Ö—ïëô—ï…•ŸîàËÄâ±ù’•ï∏ÅÕ•∏ÅçΩπ—Öâ•±•ÈÖ»à(ÄÅÙ∞(ÄÄâ¡ÖÂµïπ—ÃàËÅÏ(ÄÄÄÄâçΩππïç–àËÄâΩπïç—Ö»Å¡ÖùΩÃà(ÄÅÙ∞(ÄÄâ¡Öùï»àËÅÏ(ÄÄÄÄâ±Öâï∞àËÄâCÖù•πÖÃà∞(ÄÄÄÄâ¡…ïŸ•Ω’ÃàËÄâπ—ï…•Ω»à∞(ÄÄÄÄâπï·–àËÄâM•ù’•ïπ—îà∞(ÄÄÄÄâ¡ΩÕ•—•Ω∏àËÄâCÖù•πÑÅÌ¡ÖùïÙÅëîÅÌ¡ÖùïΩ’π—Ùà(ÄÅÙ∞(ÄÄâ›Ö•Ÿï…M—Ö—’ÃàËÅÏ(ÄÄÄÄâπΩπîàËÄâM•∏Åô•…µÖ»à∞(ÄÄÄÄâç’……ïπ–àËÄâ•…µÖëºà∞(ÄÄÄÄâï·¡•…ïêàËÄâ!Ö‰Å≈’îÅô•…µÖ…±ºÅëîÅπ’ïŸºà∞(ÄÄÄÄâµïë•çÖ±IïŸ•ï‹àËÄâIïŸ•ÕßÕ∏Å∑•ë•çÑà(ÄÅÙ∞(ÄÄâçï…—•ô•çÖ—•ΩπM’µµÖ…‰àËÅÏ(ÄÄÄÄâÕï±ôïç±Ö…ïêàËÄâÌŸÖ±’ïÙÉäPÅÕ•∏ÅŸï…•ô•çÖ»à∞(ÄÄÄÄâ±ïŸï±9Ω—MÖ•êàËÄâ9•Ÿï∞ÅπºÅ•πë•çÖëºà∞(ÄÄÄÄâπΩ—ï…—•ô•ïêàËÄâQΩëÖ€µÑÅÕ•∏Åçï…—•ô•çÖçßÕ∏ÉäPÅÕ•∏ÅŸï…•ô•çÖ»à∞(ÄÄÄÄâπ•—…Ω‡àËÄâ9•—…Ω‡à∞(ÄÄÄÄââï±Ω›Iï≈’•…ïµïπ–àËÄâÌŸÖ±’ïÙÉ
+‹Å¡Ω»ÅëïâÖ©ºÅëï∞Å∑µπ•µºÅëîÅïÕ—ÑÅÕÖ±•ëÑà(ÄÅÙ∞(ÄÄâë•ŸïIïçïπç‰àËÅÏ(ÄÄÄÄâ±ÖÕ—•ŸïêàËÄãi±—•µÑÅ•πµï…ÕßÕ∏ÅÌ›°ïπÙÉäPÅÕ•∏ÅŸï…•ô•çÖ»à∞(ÄÄÄÄâ—°•ÕMïÖÕΩ∏àËÄâïÕ—ÑÅ—ïµ¡Ω…ÖëÑà∞(ÄÄÄÄâ›•—°•πeïÖ»àËÄâï∏Åï∞ÉÈ±—•µºÅá≈ºà∞(ÄÄÄÄâΩπïQΩ•ŸïeïÖ…ÃàËÄâ°ÖçîÅïπ—…îÅ’πºÅ‰Åç•πçºÅá≈ΩÃà∞(ÄÄÄÄâΩŸï…•ŸïeïÖ…ÃàËÄâ°ÖçîÅ∑ÖÃÅëîÅç•πçºÅá≈ΩÃà∞(ÄÄÄÄâπïŸï»àËÄâπ’πçÑà(ÄÅÙ)Ù

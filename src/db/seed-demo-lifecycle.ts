@@ -3,7 +3,9 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
+  accountSecurity,
   accountSessions,
+  accountStepUps,
   accountTokens,
   activityEvents,
   boats,
@@ -25,6 +27,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  executedDives,
   gearItems,
   gearReservations,
   gearServiceEvents,
@@ -66,6 +69,7 @@ import {
   shops,
   shopWhatsappAccounts,
   specialtyCertifications,
+  staffCredentials,
   staffShifts,
   tips,
   tripAssignments,
@@ -198,6 +202,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
+    await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
@@ -229,6 +234,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
@@ -301,6 +307,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     ).map((row) => row.id);
     if (demoAccountIds.length > 0) {
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, demoAccountIds));
+      await db.delete(accountStepUps).where(inArray(accountStepUps.userAccountId, demoAccountIds));
+      await db
+        .delete(accountSecurity)
+        .where(inArray(accountSecurity.userAccountId, demoAccountIds));
     }
     await db.delete(userAccounts).where(inArray(userAccounts.personId, personIds));
     await db.delete(personRoles).where(inArray(personRoles.personId, personIds));

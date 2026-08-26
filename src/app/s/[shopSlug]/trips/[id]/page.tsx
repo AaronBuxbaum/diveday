@@ -43,6 +43,7 @@ import {
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
@@ -542,6 +543,7 @@ export default async function TripDetailPage({
             contactPhone={shop.contactPhone}
             rentalItems={shop.rentalItems}
             rentalPricing={shop.rentalPricing}
+            passThroughFee={parsePassThroughFee(shop.passThroughFee)}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         )}

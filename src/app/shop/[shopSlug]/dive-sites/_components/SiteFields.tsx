@@ -47,6 +47,7 @@ export type SiteFieldValues = {
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
   divePlan: string | null;
+  conservationNote: string | null;
   fitTone: DiveSiteFitTone | null;
   fitNote: string | null;
   fieldGuideTipsHeading: string | null;
@@ -418,6 +419,18 @@ export function SiteFields({
             maxLength={1200}
             defaultValue={values?.divePlan ?? ""}
             placeholder={t("diveSites.form.divePlanPlaceholder")}
+            className={controlClass}
+          />
+        </Field>
+        <Field
+          label={t("diveSites.form.conservationNoteLabel")}
+          hint={t("diveSites.form.conservationNoteHint")}
+        >
+          <textarea
+            name="conservationNote"
+            rows={3}
+            maxLength={600}
+            defaultValue={values?.conservationNote ?? ""}
             className={controlClass}
           />
         </Field>

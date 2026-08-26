@@ -15,6 +15,7 @@ import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
+import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
@@ -69,6 +70,7 @@ const destinationSchema = z.object({
 });
 
 async function backupContext(): Promise<{
+  session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopId: string;
   personId: string;
   shopSlug: string;
@@ -76,6 +78,7 @@ async function backupContext(): Promise<{
 }> {
   const session = await requireStaffSession();
   return {
+    session,
     shopId: session.user.shopId,
     personId: session.user.personId,
     shopSlug: session.user.shopSlug,
@@ -95,10 +98,13 @@ function done(path: string, notice: Notice | SaveBackupDestinationRefusal, reaso
 }
 
 export async function saveBackupDestinationAction(formData: FormData): Promise<void> {
-  const { shopId, personId, shopSlug, path } = await backupContext();
+  const { session, shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
     redirect(noticeUrl(shopPath(shopSlug), "backup-not-authorized"));
+  }
+  if (!(await hasRequiredStepUp(db, session, "backup"))) {
+    redirect(stepUpChallengeUrl(shopSlug, "backup", path));
   }
 
   const parsed = destinationSchema.safeParse({
@@ -123,10 +129,13 @@ export async function saveBackupDestinationAction(formData: FormData): Promise<v
  * history either way; the notice just saves a scroll.
  */
 export async function testBackupAction(): Promise<void> {
-  const { shopId, personId, shopSlug, path } = await backupContext();
+  const { session, shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
     redirect(noticeUrl(shopPath(shopSlug), "backup-not-authorized"));
+  }
+  if (!(await hasRequiredStepUp(db, session, "backup"))) {
+    redirect(stepUpChallengeUrl(shopSlug, "backup", path));
   }
 
   const shop = await getShopById(db, shopId);
@@ -153,10 +162,13 @@ export async function testBackupAction(): Promise<void> {
 }
 
 export async function disconnectBackupAction(): Promise<void> {
-  const { shopId, personId, shopSlug, path } = await backupContext();
+  const { session, shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
     redirect(noticeUrl(shopPath(shopSlug), "backup-not-authorized"));
+  }
+  if (!(await hasRequiredStepUp(db, session, "backup"))) {
+    redirect(stepUpChallengeUrl(shopSlug, "backup", path));
   }
   await disconnectShopBackupDestination(db, shopId);
   done(path, "disconnected");

@@ -374,6 +374,11 @@
     "e2e": ["manifest.spec.ts"],
     "visual": ["settings-safety-checklist"]
   },
+  "/shop/[shopSlug]/settings/security": {
+    "e2e": [],
+    "visual": [],
+    "exempt": "Account-security controls require a live authenticated session; the domain and action paths are covered by server-side tests, with browser and visual coverage still pending."
+  },
   "/shop/[shopSlug]/settings/team": {
     "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],
     "visual": ["settings-team"]

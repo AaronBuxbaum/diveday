@@ -5,6 +5,11 @@ import { z } from "zod";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import {
+  createStaffCredential,
+  deleteStaffCredential,
+  reviewStaffCredential,
+} from "@/db/staff-credentials";
 import { createStaffShift, deleteStaffShift } from "@/db/staffing";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -17,6 +22,24 @@ const shiftSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/),
   note: z.string().trim().max(120),
+});
+
+const credentialSchema = z.object({
+  personId: z.string().uuid(),
+  kind: z.enum([
+    "instructor_rating",
+    "divemaster_rating",
+    "liability_insurance",
+    "first_aid_cpr",
+    "oxygen_provider",
+    "captains_licence",
+    "other",
+  ]),
+  name: z.string().trim().min(1).max(160),
+  issuingBody: z.string().trim().max(160),
+  identifier: z.string().trim().max(120),
+  issuedAt: z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),
+  renewsAt: z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),
 });
 
 async function requireStaffingManager() {
@@ -61,4 +84,58 @@ export async function deleteShiftAction(formData: FormData) {
   if (!z.string().uuid().safeParse(shiftId).success) redirect(noticeUrl(path, "invalid"));
   const deleted = await deleteStaffShift(await getDb(), session.user.shopId, shiftId);
   revalidateAndRedirect(path, noticeUrl(path, deleted ? "shift-deleted" : "invalid"));
+}
+
+export async function saveStaffCredentialAction(formData: FormData) {
+  const session = await requireStaffingManager();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const parsed = credentialSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(noticeUrl(path, "credential-invalid"));
+  const row = await createStaffCredential(await getDb(), {
+    shopId: session.user.shopId,
+    personId: parsed.data.personId,
+    kind: parsed.data.kind,
+    name: parsed.data.name,
+    issuingBody: parsed.data.issuingBody || null,
+    identifier: parsed.data.identifier || null,
+    issuedAt: parsed.data.issuedAt || null,
+    renewsAt: parsed.data.renewsAt || null,
+  });
+  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-saved" : "credential-invalid"));
+}
+
+export async function reviewStaffCredentialAction(formData: FormData) {
+  const session = await requireStaffingManager();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const id = z.string().uuid().safeParse(formData.get("credentialId"));
+  const status = z.enum(["pending", "verified"]).safeParse(formData.get("status"));
+  if (!id.success || !status.success) redirect(noticeUrl(path, "credential-invalid"));
+  const row = await reviewStaffCredential(await getDb(), {
+    shopId: session.user.shopId,
+    credentialId: id.data,
+    status: status.data,
+    reviewNote:
+      String(formData.get("reviewNote") ?? "")
+        .trim()
+        .slice(0, 300) || null,
+    reviewedByPersonId: session.user.personId,
+  });
+  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-reviewed" : "credential-invalid"));
+}
+
+export async function deleteStaffCredentialAction(formData: FormData) {
+  const session = await requireStaffingManager();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const id = z.string().uuid().safeParse(formData.get("credentialId"));
+  if (!id.success) redirect(noticeUrl(path, "credential-invalid"));
+  const deleted = await deleteStaffCredential(
+    await getDb(),
+    session.user.shopId,
+    id.data,
+    session.user.personId,
+  );
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, deleted ? "credential-deleted" : "credential-invalid"),
+  );
 }

@@ -5,6 +5,7 @@ import { setSessionCookie } from "better-auth/cookies";
 import { nextCookies } from "better-auth/next-js";
 import { headers as nextHeaders } from "next/headers";
 import { z } from "zod";
+import { getAccountSecurity, verifyAccountSecondFactor } from "@/db/account-security";
 import { getDb } from "@/db/client";
 import {
   accountSessions,
@@ -59,6 +60,7 @@ function diveDayCredentialsPlugin() {
           body: z.object({
             email: z.email(),
             password: z.string().min(1),
+            totpCode: z.string().trim().min(6).max(32).optional(),
           }),
         },
         async (ctx) => {
@@ -91,6 +93,18 @@ function diveDayCredentialsPlugin() {
             // reach.
             log("auth.sign_in_refused", "warn", { code: "invalid_credentials" });
             throw new APIError("UNAUTHORIZED", { message: "invalid_credentials" });
+          }
+
+          const security = await getAccountSecurity(db, verified.id);
+          if (security?.totpEnabledAt) {
+            const secondFactor = ctx.body.totpCode;
+            if (!secondFactor) {
+              throw new APIError("UNAUTHORIZED", { message: "two_factor_required" });
+            }
+            const accepted = await verifyAccountSecondFactor(db, verified.id, secondFactor);
+            if (!accepted) {
+              throw new APIError("UNAUTHORIZED", { message: "invalid_two_factor" });
+            }
           }
 
           // Snapshotted once, at sign-in — exactly what next-auth's `jwt()`
@@ -231,6 +245,10 @@ export function getAuth(): Promise<DiveDayAuth> {
 
 export type DiveDaySession = {
   user: {
+    /** Better Auth account id, used to scope security settings. */
+    userAccountId?: string;
+    /** Better Auth session id, used for session-bound step-up grants. */
+    sessionId?: string;
     personId: string;
     shopId: string;
     shopSlug: string;
@@ -250,7 +268,13 @@ export type DiveDaySession = {
  */
 export async function auth(): Promise<DiveDaySession | null> {
   const instance = await getAuth();
-  const result = await instance.api.getSession({ headers: await nextHeaders() });
+  // The edge proxy may use the short-lived cookie cache for routing, but the
+  // server-side security decision must consult the session row every time so
+  // "sign out everywhere" and per-device revocation take effect immediately.
+  const result = await instance.api.getSession({
+    headers: await nextHeaders(),
+    query: { disableCookieCache: true },
+  });
   if (!result) return null;
   const session = result.session as unknown as {
     personId: string;
@@ -262,6 +286,8 @@ export async function auth(): Promise<DiveDaySession | null> {
   return {
     user: {
       personId: session.personId,
+      userAccountId: result.user.id,
+      sessionId: (result.session as { id?: string }).id,
       shopId: session.shopId,
       shopSlug: session.shopSlug,
       roles: session.roles,

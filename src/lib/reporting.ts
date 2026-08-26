@@ -35,6 +35,8 @@ export type MonthlyReportInput = {
   trips: ReportTrip[];
   /** Net minor units: current trip revenue less tax, plus imported payments minus refunds. */
   revenueCents: number;
+  /** Collected on behalf of a third party; excluded from revenueCents. */
+  passThroughCents?: number;
   /** Tax included in verified DiveDay-collected payments; imported history has no tax evidence. */
   taxCents: number;
   /** Unverified imported source payments included in revenueCents for this calendar month. */
@@ -70,6 +72,8 @@ export type MonthlyReport = {
   atCapacityTrips: number;
   /** Net minor units: current trip revenue less tax plus the clearly-labelled imported source slice. */
   revenueCents: number;
+  /** Collected on behalf of a third party; excluded from revenueCents. */
+  passThroughCents?: number;
   /** Tax included in verified DiveDay-collected payments, shown separately from net revenue. */
   taxCents: number;
   /** Unverified imported source payments included in revenueCents. */
@@ -110,6 +114,7 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     fillRate: seatsOffered > 0 ? Math.min(1, seatsBooked / seatsOffered) : null,
     atCapacityTrips,
     revenueCents: input.revenueCents,
+    passThroughCents: input.passThroughCents ?? 0,
     taxCents: input.taxCents,
     importedPaymentCents: input.importedPaymentCents,
     importedRefundCents: input.importedRefundCents,

@@ -17,7 +17,28 @@ subject-access request's reader is the person who wrote them, which is the oppos
 **H-50** in [human-decisions.md](../human-decisions.md) for the question as recorded. Until it is
 answered, the export ships every other field of a diver's own signed waiver evidence and states
 the gap in the bundle's own README rather than leaving it silent. `/privacy` now names this
-export alongside the shop-wide one and says medical answers are excluded for now.
+ export alongside the shop-wide one and says medical answers are excluded for now.
+
+## Account security review — issue #701
+
+The account-security slice adds optional TOTP, one-time recovery codes, database-backed session
+revocation, and a fifteen-minute session-bound step-up for money actions, shop exports, and backup
+destination changes. The implementation record is
+[20260826-account-security-step-up](../../architecture/decisions/20260826-account-security-step-up.md).
+
+Before production, privacy/security counsel or the named security reviewer should confirm:
+
+- the retention and access policy for session IP addresses, user agents, TOTP metadata, and
+  account-security audit evidence;
+- whether showing IP address and last-seen time to the account owner is appropriate for the launch
+  jurisdictions and the shop's staff notice;
+- the incident response and recovery process when a TOTP seed, recovery code, or staff session is
+  suspected exposed; and
+- that account erasure, shop export, backups, and support access do not disclose raw TOTP seeds or
+  recovery codes.
+
+This is a review packet, not a claim that a human security or privacy sign-off has happened. Record
+the reviewer, date, findings, and any changed policy in H-02/H-09 and the incident runbook.
 
 ## Why this blocks rollout
 

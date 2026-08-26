@@ -20,6 +20,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { currencySymbol, majorToMinor, minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -99,6 +100,9 @@ async function refreshAction(formData: FormData) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
+  }
   const updated = orderId ? await refreshOrderStatus(db, session.user.shopId, orderId) : null;
   revalidateAndRedirect(back, noticeUrl(back, updated ? "refreshed" : "refresh-failed"));
 }
@@ -112,6 +116,9 @@ async function voidAction(formData: FormData) {
   if (await isDemoShop(db, session.user.shopId)) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
+  }
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
   const updated = orderId ? await voidOrder(db, session.user.shopId, orderId) : null;
   revalidateAndRedirect(back, noticeUrl(back, updated ? "voided" : "void-failed"));
@@ -128,6 +135,9 @@ async function refundAction(formData: FormData) {
   if (!(await canPersonRefund(db, session.user.shopId, session.user.personId))) {
     revalidateAndRedirect(back, noticeUrl(back, "not-authorized"));
     return;
+  }
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
   if (await isDemoShop(db, session.user.shopId)) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));

@@ -54,6 +54,8 @@ export const EXPORT_FILE_NOTES = {
   "trip_assignments.csv": "Which staff crewed each trip.",
   "staff_shifts.csv":
     "Dated staff availability windows; trip assignments remain the authoritative crew list.",
+  "staff_credentials.csv":
+    "Staff-owned ratings, insurance, and safety credentials, including their review status and renewal dates.",
   "bookings.csv":
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time.",
   "waitlist_entries.csv":
@@ -72,6 +74,8 @@ export const EXPORT_FILE_NOTES = {
     "Every pay-at-booking checkout attempt this shop started, settled or not — the amount asked, the discount applied and where it came from, and how the attempt ended (completed, expired, or a bank payment that failed after the fact). bookings.csv and orders.csv say what the shop was *paid*; this file is what it *asked for*, including the asks nobody finished. Read it that way: only a row with a completed_at is money, and an abandoned row is a diver who got as far as the payment page. The Stripe account id is excluded (provider linkage, useless outside this Stripe account) and so is the checkout link, which stopped working when the session expired.",
   "booking_checkout_bookings.csv":
     "Which seats each checkout was paying for, one row per seat, with the rental gear charged on that seat. A checkout covers a whole party, so a single attempt in booking_checkouts.csv can carry several rows here — and the per-seat gear figure lives nowhere else, since the checkout total has it already folded in.",
+  "executed_dives.csv":
+    "What each dive actually recorded after the boat left: site, times, depth, observed conditions, and fields explicitly not recorded.",
   "roll_call_events.csv":
     "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only and in checkpoint order (departure, then after each dive): within one checkpoint the newest event per booking wins, and a 'cleared' event erases that checkpoint's result. Then carry forward: an explicit 'not_boarded' fills every later checkpoint that has no explicit result of its own until an explicit 'boarded' breaks the chain — off the boat stays off the boat; a checkpoint with no result and nothing carried means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
   "roll_call_crew_events.csv":

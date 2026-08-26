@@ -38,6 +38,40 @@
     "submit": "Add shift",
     "saving": "Saving…"
   },
+  "credentials": {
+    "heading": "Staff credentials",
+    "description": "Keep ratings, insurance, and safety credentials visible to the team. These are warning-only records, never an automatic assignment gate.",
+    "empty": "No staff credentials recorded yet.",
+    "person": "Staff member",
+    "choosePerson": "Choose a person",
+    "kind": "Credential type",
+    "name": "Credential name",
+    "issuer": "Issuing body",
+    "identifier": "Reference number",
+    "issuedAt": "Issue date",
+    "renewsAt": "Renewal date",
+    "renews": "renews {date}",
+    "issuerUnknown": "Issuing body not recorded",
+    "pending": "Needs review",
+    "verified": "Reviewed",
+    "overdue": "Expired",
+    "dueSoon": "Due within 30 days",
+    "markVerified": "Mark reviewed",
+    "markPending": "Needs review",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "saving": "Saving…",
+    "add": "Add credential",
+    "kinds": {
+      "instructor_rating": "Instructor rating",
+      "divemaster_rating": "Divemaster rating",
+      "liability_insurance": "Liability insurance",
+      "first_aid_cpr": "First aid / CPR",
+      "oxygen_provider": "Oxygen provider",
+      "captains_licence": "Captain's licence",
+      "other": "Other"
+    }
+  },
   "crewGaps": {
     "needCrew": "{count, plural, one {# departure in this window still needs crew.} other {# departures in this window still need crew.}}",
     "allCrewed": "Every departure in this window has its crew.",
@@ -49,6 +83,10 @@
     "overlap": "That person already has an overlapping shift.",
     "staffNotFound": "That staff member is no longer on this shop's team.",
     "invalid": "Check the shift date and times, then try again.",
-    "notAuthorized": "Only owners and managers can change shifts."
+    "notAuthorized": "Only owners and managers can change shifts.",
+    "credentialSaved": "Credential added.",
+    "credentialReviewed": "Credential review updated.",
+    "credentialDeleted": "Credential removed.",
+    "credentialInvalid": "That credential could not be saved. Check the staff member and dates."
   }
 }

@@ -1,800 +1,32 @@
-{
-  "main": {
-    "eyebrow": "Ajustes",
-    "title": "Ajustes del centro",
-    "notice": {
-      "packingSaved": "Lista de equipo guardada para todas las salidas.",
-      "packingInvalid": "A√±ade entre uno y doce art√≠culos a la lista.",
-      "dockSaved": "Hora de presentaci√≥n en el muelle guardada para todas las confirmaciones y recordatorios.",
-      "dockInvalid": "Introduce una hora de presentaci√≥n en el muelle de entre 5 y 180 minutos.",
-      "unitsSaved": "Unidades guardadas.",
-      "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
-      "taxSaved": "Configuraci√≥n de impuestos guardada.",
-      "taxInvalid": "No se pudo guardar la configuraci√≥n de impuestos.",
-      "rentalsSaved": "Cat√°logo de alquiler guardado.",
-      "rentalPricesSaved": "Precios de alquiler guardados.",
-      "rentalPricesInvalid": "Introduce cada precio como una cantidad en d√≥lares (o deja el campo vac√≠o), entre $0 y $100.000.",
-      "contactSaved": "Datos de contacto guardados.",
-      "contactInvalid": "Usa una direcci√≥n de correo completa, o vac√≠a el campo para quitarla de tus p√°ginas p√∫blicas.",
-      "profileSaved": "Perfil y marca del centro guardados.",
-      "profileInvalid": "Comprueba el lema, la descripci√≥n y el archivo del logotipo.",
-      "addressSaved": "Direcci√≥n del centro guardada.",
-      "addressRemoved": "Direcci√≥n del centro quitada.",
-      "addressInvalid": "No se pudo guardar esa direcci√≥n. Busca otra vez y elige tu centro en la lista.",
-      "reviewUrlSaved": "Enlace de rese√±as guardado.",
-      "reviewUrlInvalid": "Introduce un enlace https:// completo, o vac√≠a el campo para dejar de pedir rese√±as.",
-      "searchListingOn": "Tus p√°ginas p√∫blicas aparecen en los buscadores.",
-      "searchListingOff": "Tus p√°ginas p√∫blicas est√°n ocultas para los buscadores. Lo que ya est√© indexado puede tardar unas semanas en desaparecer.",
-      "connected": "Cuenta de Stripe conectada.",
-      "connectFailed": "La conexi√≥n con Stripe no se complet√≥. Int√©ntalo de nuevo.",
-      "notConfigured": "Los pagos en l√≠nea a√∫n no est√°n activos en esta instalaci√≥n de DiveDay.",
-      "disconnected": "Cuenta de Stripe desconectada.",
-      "refreshed": "Estado de pagos actualizado desde Stripe.",
-      "notAuthorized": "El cat√°logo de alquiler, los precios de alquiler y la conexi√≥n con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
-      "timezoneSaved": "Zona horaria guardada.",
-      "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
-      "emergencySaved": "Referencia de emergencia guardada.",
-      "sendWindowSaved": "Horario de mensajes guardado.",
-      "sendWindowInvalid": "Eso no se guard√≥. La primera hora tiene que ir antes que la √∫ltima, en formato de 24 horas.",
-      "packageSaved": "Paquete a√±adido.",
-      "packageDeleted": "Paquete eliminado.",
-      "packageInvalid": "Eso no se guard√≥. Revisa el n√∫mero de inmersiones, el precio y cu√°nto tiempo se puede usar."
-    },
-    "timezone": {
-      "heading": "Zona horaria",
-      "detail": "Cambiarla relee las salidas existentes en su nueva hora local; no las mueve.",
-      "label": "Zona horaria",
-      "submitting": "Guardando‚Ä¶",
-      "submit": "Guardar zona horaria",
-      "groups": {
-        "americas": "Am√©rica",
-        "caribbean": "Caribe y M√©xico",
-        "europeRedSea": "Europa y mar Rojo",
-        "asiaPacific": "Asia-Pac√≠fico",
-        "allZones": "Todas las zonas horarias"
-      },
-      "zones": {
-        "eastern": "Hora del Este (Nueva York)",
-        "central": "Hora Central (Chicago)",
-        "mountain": "Hora de Monta√±a (Denver)",
-        "pacific": "Hora del Pac√≠fico (Los √Ångeles)",
-        "hawaii": "Haw√°i (Honolulu)",
-        "cancun": "Canc√∫n / Cozumel",
-        "belize": "Belice",
-        "roatan": "Roat√°n / Honduras",
-        "cayman": "Islas Caim√°n",
-        "puertoRico": "Puerto Rico / Caribe oriental",
-        "nassau": "Nas√°u, Bahamas",
-        "bonaire": "Bonaire / Curazao",
-        "london": "Londres",
-        "cairo": "El Cairo / mar Rojo",
-        "maldives": "Maldivas",
-        "singapore": "Singapur",
-        "bangkok": "Bangkok",
-        "jakarta": "Yakarta / Indonesia occidental",
-        "bali": "Bali / Komodo (Indonesia central)",
-        "manila": "Manila",
-        "sydney": "S√≠dney",
-        "auckland": "Auckland",
-        "palau": "Palaos",
-        "fiji": "Fiyi"
-      }
-    },
-    "contact": {
-      "heading": "Datos de contacto p√∫blicos",
-      "description": "El correo y el tel√©fono de recepci√≥n que se imprimen en tus p√°ginas de cursos.",
-      "detail": "Un buceador que no encuentra fecha recibe un correo ya redactado para enviarte. Usa una direcci√≥n que lea todo el equipo. Vac√≠a la casilla para quitar el formulario.",
-      "emailLabel": "Correo de contacto",
-      "phoneLabel": "Tel√©fono de contacto",
-      "phoneHint": "(opcional)",
-      "submit": "Guardar datos de contacto",
-      "submitting": "Guardando‚Ä¶"
-    },
-    "profile": {
-      "heading": "Perfil y marca del centro",
-      "description": "Lema, descripci√≥n y logotipo visibles en tu calendario p√∫blico y en las vistas previas de b√∫squeda.",
-      "detail": "Ofrece a los buceadores una idea clara de tu centro, embarcaci√≥n, equipo y estilo de buceo antes de reservar.",
-      "tagline": "Lema",
-      "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
-      "descriptionLabel": "Acerca de tu centro",
-      "descriptionPlaceholder": "Una breve presentaci√≥n de tu centro, embarcaciones, equipo o buceo local...",
-      "logo": "Logotipo del centro",
-      "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
-      "removeLogo": "Eliminar logotipo actual",
-      "logoSet": "Logotipo subido",
-      "descriptionSet": "Descripci√≥n configurada",
-      "submitting": "Guardando‚Ä¶",
-      "submit": "Guardar perfil"
-    },
-    "address": {
-      "heading": "Direcci√≥n del centro",
-      "detail": "La direcci√≥n comercial del centro, no la de alguien del equipo. Se publica para que los buscadores te ubiquen como un lugar real. Busca tu centro por nombre o direcci√≥n y el√≠gelo: con eso queda guardado.",
-      "searchLabel": "Busca tu centro",
-      "searchPlaceholder": "Nombre o direcci√≥n de tu centro‚Ä¶",
-      "searching": "Buscando‚Ä¶",
-      "saving": "Guardando‚Ä¶",
-      "noMatches": "Sin coincidencias. Prueba con el nombre de tu centro o con una direcci√≥n cercana.",
-      "lookupFailed": "La b√∫squeda de direcciones no est√° disponible ahora. Int√©ntalo en un momento.",
-      "lookupResting": "Son muchas b√∫squedas en una hora: se pausa un rato. Int√©ntalo m√°s tarde.",
-      "notConfigured": "La b√∫squeda de direcciones no est√° configurada en esta instancia de DiveDay, as√≠ que la direcci√≥n de abajo no se puede cambiar aqu√≠.",
-      "suggestionsLabel": "Sugerencias de direcci√≥n",
-      "currentLabel": "Direcci√≥n guardada",
-      "noneSet": "Todav√≠a no hay ninguna direcci√≥n guardada.",
-      "remove": "Quitar direcci√≥n",
-      "removing": "Quitando‚Ä¶"
-    },
-    "reviewLink": {
-      "heading": "Enlace de rese√±as",
-      "description": "Tu p√°gina de rese√±as de Google Business, TripAdvisor o Facebook.",
-      "detail": "Cuando est√° configurada, el recap posterior al viaje invita al buceador a dejar una rese√±a ‚Äî vac√≠a el campo para dejar de pedirlas.",
-      "label": "Enlace de rese√±as",
-      "hint": "(opcional)",
-      "submit": "Guardar enlace de rese√±as",
-      "submitting": "Guardando‚Ä¶"
-    },
-    "searchListing": {
-      "heading": "Aparecer en buscadores",
-      "valueListed": "Visible",
-      "valueHidden": "Oculto",
-      "detail": "Si desmarcas esto, lo que ya est√© indexado puede tardar unas semanas en desaparecer ‚Äî y una p√°gina que alguien haya enlazado sigue siendo accesible por ese enlace.",
-      "label": "Mostrar mis p√°ginas p√∫blicas en los buscadores",
-      "submit": "Guardar",
-      "submitting": "Guardando‚Ä¶"
-    },
-    "packing": {
-      "heading": "Lista de equipo del viaje",
-      "description": "Un art√≠culo por l√≠nea. Los buceadores ven esta misma lista concisa en cada salida.",
-      "label": "Elementos de la lista",
-      "submit": "Guardar lista de equipo",
-      "submitting": "Guardando‚Ä¶",
-      "value": "{count, plural, one {# art√≠culo} other {# art√≠culos}}"
-    },
-    "dockCall": {
-      "heading": "Ritmo del d√≠a de buceo",
-      "description": "Todos estos n√∫meros est√°n en minutos.",
-      "detail": "Estos seis n√∫meros son el horario que tus buceadores leen como ¬´El ritmo de tu jornada¬ª en su p√°gina de reserva, y la hora de llegada aparece en las confirmaciones y en todos los recordatorios previos. Pon un momento a 0 y desaparece del d√≠a: as√≠ indicas que informas a bordo, que el equipo se monta en el barco o que entr√°is desde la playa. Los momentos previos a la salida nunca caen antes de la hora de llegada.",
-      "submit": "Guardar el ritmo del d√≠a",
-      "submitting": "Guardando‚Ä¶",
-      "value": "Llegar {count} min antes",
-      "dockCallLabel": "Llegar antes de la salida",
-      "dockCallDescription": "Con cu√°nta antelaci√≥n se pide a los buceadores estar en el muelle.",
-      "gearSetupLabel": "Montaje del equipo antes de la salida",
-      "gearSetupDescription": "0 si el equipo se monta a bordo.",
-      "briefingLabel": "Briefing antes de la salida",
-      "briefingDescription": "0 si haces el briefing en el barco.",
-      "boatRideLabel": "Trayecto hasta el primer punto",
-      "boatRideDescription": "0 si es una entrada desde la costa.",
-      "bottomTimeLabel": "Tiempo en el agua por inmersi√≥n",
-      "bottomTimeDescription": "Tu tiempo de fondo planificado habitual.",
-      "surfaceIntervalLabel": "Intervalo de superficie entre inmersiones",
-      "surfaceIntervalDescription": "0 si las inmersiones son seguidas.",
-      "stepArrive": "Llegada y registro",
-      "stepGearSetup": "Montaje del equipo",
-      "stepBriefing": "Briefing de la tripulaci√≥n",
-      "stepDeparture": "Salida",
-      "stepBoatRide": "Trayecto de ida",
-      "stepDive": "Inmersi√≥n {number}",
-      "stepSurfaceInterval": "Intervalo de superficie",
-      "stepReturn": "De vuelta en el muelle",
-      "minutesBefore": "{count} min antes",
-      "minutesAfter": "{count} min despu√©s",
-      "atDeparture": "A la hora",
-      "siteOverrides": "{count, plural, one {# punto de buceo tiene su propio tiempo en el agua, as√≠ que este ritmo no describe una inmersi√≥n all√≠:} other {# puntos de buceo tienen su propio tiempo en el agua, as√≠ que este ritmo no describe una inmersi√≥n en ninguno de ellos:}}",
-      "siteOverride": "{name} ¬∑ {count} min"
-    },
-    "sendWindow": {
-      "heading": "Cu√°ndo escribimos a los buceadores",
-      "value": "{start} ‚Äì {end}",
-      "description": "Los recordatorios y los res√∫menes esperan a estas horas en tu zona horaria. Una cancelaci√≥n sale siempre al momento.",
-      "startLabel": "No antes de (0‚Äì23)",
-      "endLabel": "No despu√©s de (1‚Äì24)",
-      "submit": "Guardar horario",
-      "submitting": "Guardando‚Ä¶"
-    },
-    "units": {
-      "heading": "Unidades",
-      "depthLabel": "Mostrar profundidades en",
-      "depthDetail": "Las profundidades siempre se guardan en metros, as√≠ que cambiar esto solo afecta a lo que escribes y lees ‚Äî ninguna profundidad registrada se mueve.",
-      "meters": "Metros (m)",
-      "feet": "Pies (ft)",
-      "temperatureLabel": "Mostrar la temperatura del agua en",
-      "temperatureDetail": "Siempre se guarda en Celsius, as√≠ que esto solo cambia lo que escribes y lees.",
-      "celsius": "Celsius (¬∞C)",
-      "fahrenheit": "Fahrenheit (¬∞F)",
-      "currencyLabel": "Cobrar y mostrar en",
-      "currencyDetail": "No convierte nada: una salida de 130 sigue en 130, ahora en la nueva moneda. Los pedidos ya liquidados conservan la moneda en que se cobraron.",
-      "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta en {accountCurrency} y rechazar√° un pago que no pueda liquidar. Elige {accountCurrency} aqu√≠ o conecta una cuenta que liquide en {shopCurrency}.",
-      "submit": "Guardar unidades",
-      "submitting": "Guardando‚Ä¶",
-      "currencyRepricingWarning": "Cambiar esto no convierte tus precios. Una salida de 95 $ pasa a ser 95 de la nueva moneda, y los pedidos ya realizados conservan la moneda en la que se cobraron."
-    },
-    "tax": {
-      "heading": "Impuestos (IVA y ventas)",
-      "description": "A√±ade IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
-      "detail": "El impuesto se a√±ade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuraci√≥n de impuestos de tu cuenta conectada y la ubicaci√≥n del cliente. Las propinas posteriores al viaje son independientes y este ajuste no las afecta. Desact√≠valo si gestionas los impuestos por tu cuenta.",
-      "enabledValue": "Activados",
-      "disabledValue": "Desactivados",
-      "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
-      "submit": "Guardar configuraci√≥n de impuestos",
-      "submitting": "Guardando‚Ä¶"
-    },
-    "paymentsGate": {
-      "notice": "El cat√°logo de alquiler, sus precios y la conexi√≥n con Stripe est√°n limitados a propietarios y gerentes. Los ajustes de arriba est√°n abiertos a todo el equipo."
-    },
-    "rentals": {
-      "heading": "Qu√© alquilamos",
-      "detail": "Desmarca lo que no ofrezcas: desaparece del formulario de equipo y de la lista de preparaci√≥n.",
-      "legend": "Equipo y servicios de alquiler",
-      "submit": "Guardar cat√°logo de alquiler",
-      "submitting": "Guardando‚Ä¶",
-      "value": "{count, plural, one {# art√≠culo ofrecido} other {# art√≠culos ofrecidos}}"
-    },
-    "rentalPricing": {
-      "heading": "Precios de alquiler",
-      "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
-      "detail": "Pon precio al equipo completo (suele salir m√°s barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vac√≠a para cobrarlo en el centro.",
-      "fullSetLabel": "Equipo completo",
-      "fullSetHint": "(BCD, regulador, traje, m√°scara y aletas, lastre, computadora de buceo)",
-      "nitroxLabel": "Nitrox",
-      "nitroxHint": "(por inmersi√≥n)",
-      "submit": "Guardar precios de alquiler",
-      "submitting": "Guardando‚Ä¶",
-      "value": "Equipo completo {price}"
-    },
-    "stripe": {
-      "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
-      "notConnectedDetail": "DiveDay nunca retiene tu dinero ‚Äî los pagos de pedidos van directo a tu propio saldo de Stripe.",
-      "connect": "Conectar Stripe",
-      "notConfiguredWarning": "Los pagos en l√≠nea todav√≠a no est√°n activados en DiveDay ‚Äî escribe a {email} y los ponemos en marcha.",
-      "connectedHeading": "Cuenta de Stripe conectada",
-      "readyBadge": "Lista para pagos",
-      "notReadyBadge": "Todav√≠a no est√° lista",
-      "accountEnding": "Cuenta terminada en {last6}",
-      "chargesEnabled": "Cobros habilitados",
-      "payoutsEnabled": "Pagos habilitados",
-      "onboardingSubmitted": "Datos de incorporaci√≥n enviados",
-      "statusYes": "S√≠",
-      "statusNotYet": "Todav√≠a no",
-      "reconnect": "Reconectar Stripe",
-      "refresh": "Actualizar estado",
-      "refreshing": "Actualizando‚Ä¶",
-      "disconnect": "Desconectar",
-      "disconnecting": "Desconectando‚Ä¶",
-      "rowHeading": "Pagos en l√≠nea",
-      "summaryNotConnected": "Sin conectar",
-      "summaryDisconnected": "Desconectada"
-    },
-    "embed": {
-      "heading": "Widget para tu web",
-      "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web."
-    },
-    "calendar": {
-      "heading": "Suscripciones al calendario",
-      "description": "Pon tus salidas en la app de calendario que ya usas ‚Äî de solo lectura, as√≠ que DiveDay nunca la modifica."
-    },
-    "integrations": {
-      "heading": "Shopify, QuickBooks y Zapier",
-      "description": "Conecta las herramientas que ya usas para publicar el cat√°logo, llevar la contabilidad y automatizar tareas."
-    },
-    "trial": {
-      "heading": "Tu prueba",
-      "activeDescription": "Quedan {count, plural, one {# d√≠a} other {# d√≠as}}, hasta el {endDate}.",
-      "expiredDescription": "Tu prueba termin√≥ el {endDate}. Todo lo que has configurado sigue funcionando.",
-      "upgradeBody": "¬øListo para pasar a un plan de pago?",
-      "emailCta": "Escribir a {email}",
-      "value": "{count, plural, one {Queda # d√≠a} other {Quedan # d√≠as}}",
-      "expiredValue": "Termin√≥ el {endDate}"
-    },
-    "support": {
-      "description": "Una mala ma√±ana en el mostrador, una funci√≥n que echas en falta, un fallo ‚Äî escribe cuando quieras.",
-      "emailCta": "Escribir a {email}"
-    },
-    "groups": {
-      "yourShop": "Tu centro",
-      "money": "Dinero",
-      "dataIntegrations": "Datos e integraciones"
-    },
-    "subNav": {
-      "ariaLabel": "Secciones de configuraci√≥n"
-    },
-    "whatsapp": {
-      "heading": "WhatsApp",
-      "description": "Env√≠a recordatorios y res√∫menes desde el n√∫mero de WhatsApp de tu centro en lugar de un n√∫mero SMS de la plataforma."
-    },
-    "backup": {
-      "heading": "Respaldos",
-      "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo."
-    },
-    "team": {
-      "heading": "Equipo",
-      "description": "Qui√©n trabaja aqu√≠, a qu√© puede llegar cada persona y c√≥mo van tus invitaciones."
-    },
-    "diveSites": {
-      "heading": "Puntos de buceo",
-      "description": "La biblioteca de puntos que usa el tabl√≥n ‚Äî profundidades, condiciones y qu√© ven los buceadores all√≠."
-    },
-    "waivers": {
-      "heading": "Plantilla de exenci√≥n",
-      "description": "La exenci√≥n que firma cada buceador, y el registro de qui√©n la ha firmado."
-    },
-    "safetyChecklist": {
-      "heading": "Lista de comprobaci√≥n previa a la salida",
-      "description": "Lo que tu tripulaci√≥n confirma antes de que el barco zarpe."
-    },
-    "promos": {
-      "heading": "C√≥digos promocionales",
-      "description": "C√≥digos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y l√≠mites."
-    },
-    "dataJobs": {
-      "mediaKind": {
-        "course_photo": "Foto del curso",
-        "recap_photo": "Foto del resumen",
-        "certification_card": "Evidencia de certificaci√≥n",
-        "waiver_document": "Documento de exenci√≥n",
-        "dive_site_photo": "Foto del sitio de buceo"
-      },
-      "mediaDeletions": {
-        "sectionLabel": "Fotos que no terminaron de eliminarse",
-        "heading": "{count, plural, one {# foto eliminada} other {# fotos eliminadas}} pero todav√≠a no borrada del almacenamiento",
-        "detail": "Reintenta la eliminaci√≥n, o d√©jala para el reintento autom√°tico de esta noche.",
-        "queued": "en cola desde {date}",
-        "retry": "Reintentar eliminaci√≥n",
-        "retrying": "Reintentando‚Ä¶"
-      },
-      "erasureTarget": {
-        "stripe_customer": "Cliente de Stripe",
-        "stripe_invoice_snapshot": "Factura de Stripe"
-      },
-      "processorErasures": {
-        "sectionLabel": "Borrados sin terminar en Stripe",
-        "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-        "detail": "Borrar a un buceador tambi√©n elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura no: Stripe copia el nombre y el correo en cada factura, y solo una solicitud de eliminaci√≥n de datos a Stripe lo borra. Pres√©ntala y m√°rcalo como hecho.",
-        "raised": "registrado el {date}",
-        "retry": "Reintentar borrado",
-        "retrying": "Reintentando‚Ä¶",
-        "discharge": "Marcar como hecho en Stripe",
-        "discharging": "Guardando‚Ä¶"
-      }
-    },
-    "summary": {
-      "notSet": "Sin configurar"
-    },
-    "dataImport": {
-      "description": "Trae contactos desde un CSV ‚Äî se emparejan con buceadores existentes, nunca se duplican."
-    },
-    "dataExport": {
-      "description": "Ll√©vate todo lo que guarda tu centro en un ZIP de CSV."
-    },
-    "emergency": {
-      "heading": "Referencia de emergencia",
-      "value": "{count, plural, one {# n√∫mero} other {# n√∫meros}} que la tripulaci√≥n puede ver sin conexi√≥n",
-      "empty": "Sin registrar",
-      "intro": "Aparecen en la lista de pasajeros, tambi√©n sin conexi√≥n. DiveDay nunca los rellena ‚Äî la c√°mara m√°s cercana y la l√≠nea correcta dependen de d√≥nde bucees.",
-      "lineLabel": "Qu√© es {n}",
-      "linePlaceholder": "C√°mara, l√≠nea de accidentes de buceo, guardacostas‚Ä¶",
-      "phoneLabel": "N√∫mero {n}",
-      "vesselLabel": "Embarcaci√≥n",
-      "shoreContactLabel": "Contacto en tierra",
-      "planLabel": "Si algo sale mal",
-      "submit": "Guardar referencia de emergencia",
-      "saving": "Guardando‚Ä¶"
-    },
-    "divePackages": {
-      "heading": "Paquetes de inmersiones",
-      "value": "{count, plural, =0 {Sin paquetes} one {# paquete} other {# paquetes}}",
-      "description": "Inmersiones prepagadas que un buceador compra una vez y usa en varias salidas.",
-      "summary": "{dives, plural, one {# inmersi√≥n} other {# inmersiones}} ¬∑ {price} ¬∑ {scope}",
-      "scopeAll": "Cualquier salida",
-      "scopeFunDives": "Solo inmersiones recreativas",
-      "nameLabel": "C√≥mo lo llamas",
-      "diveCountLabel": "Inmersiones incluidas",
-      "priceLabel": "Precio",
-      "validityLabel": "V√°lido hasta",
-      "validityDescription": "Elige la fecha final inclusiva. D√©jalo en blanco y no caduca.",
-      "scopeLabel": "Cubre",
-      "submit": "A√±adir paquete",
-      "submitting": "A√±adiendo‚Ä¶",
-      "delete": "Eliminar",
-      "deleting": "Eliminando‚Ä¶"
-    }
-  },
-  "team": {
-    "eyebrow": "Ajustes",
-    "title": "Equipo",
-    "notice": {
-      "invited": "Invitaci√≥n enviada.",
-      "inviteResent": "Invitaci√≥n reenviada.",
-      "changesSaved": "Cambios del equipo guardados.",
-      "reactivated": "Cuenta reactivada.",
-      "disabled": "Cuenta deshabilitada ‚Äî ya no puede iniciar sesi√≥n.",
-      "removed": "Eliminado: est√° fuera de tu equipo y ya no puede iniciar sesi√≥n.",
-      "restored": "Acceso al equipo restaurado.",
-      "restoreFailed": "No se pudo restaurar el acceso de esa persona ‚Äî revisa su cuenta primero.",
-      "inviteInvalid": "Introduce un nombre, un correo v√°lido y marca al menos un rol.",
-      "rolesInvalid": "Marca al menos un rol antes de guardar.",
-      "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aqu√≠.",
-      "inviteEmailTaken": "Ese correo ya est√° registrado en otro centro.",
-      "inviteEmailReserved": "Esa direcci√≥n de correo est√° reservada y no puede recibir mensajes. Invita a esta persona en una direcci√≥n que pueda leer.",
-      "lastOwner": "No se puede hacer eso ‚Äî el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
-      "notFound": "Esa persona no est√° en el equipo de este centro.",
-      "notAuthorized": "La gesti√≥n del equipo est√° limitada a propietarios y gerentes.",
-      "contactSaved": "Contacto de emergencia guardado.",
-      "contactHalfFilled": "Un contacto de emergencia necesita nombre y tel√©fono.",
-      "languagesSaved": "Idiomas guardados."
-    },
-    "statusBadge": {
-      "invited": "Invitado",
-      "active": "Activo",
-      "disabled": "Deshabilitado"
-    },
-    "rolesLegend": "Roles",
-    "roleLabels": {
-      "owner": "Propietario",
-      "manager": "Gerente",
-      "instructor": "Instructor",
-      "divemaster": "Divemaster",
-      "captain": "Patr√≥n",
-      "crew": "Tripulaci√≥n",
-      "diver": "Buceador"
-    },
-    "languagesLegend": "Idiomas",
-    "languagesLabel": "Idiomas que habla esta persona",
-    "languagesSave": "Guardar",
-    "languagesSaving": "Guardando‚Ä¶",
-    "invite": {
-      "heading": "Invitar a alguien",
-      "description": "Recibir√° un correo para establecer su propia contrase√±a. Invitar con el mismo correo a alguien que ya es buceador a√±ade acceso de personal a su ficha en vez de crear una segunda.",
-      "fullNameLabel": "Nombre completo",
-      "emailLabel": "Correo",
-      "submit": "Enviar invitaci√≥n",
-      "submitting": "Enviando‚Ä¶"
-    },
-    "current": {
-      "heading": "Equipo actual",
-      "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
-      "empty": "Todav√≠a no se ha invitado a nadie.",
-      "emptyAction": "Invitar a un compa√±ero",
-      "save": "Guardar cambios",
-      "saving": "Guardando‚Ä¶"
-    },
-    "staffRow": {
-      "resendInvite": "Reenviar invitaci√≥n",
-      "sending": "Enviando‚Ä¶",
-      "enable": "Habilitar",
-      "disable": "Deshabilitar",
-      "enabling": "Habilitando‚Ä¶",
-      "disabling": "Deshabilitando‚Ä¶",
-      "delete": "Eliminar",
-      "deleting": "Eliminando‚Ä¶",
-      "enableAriaLabel": "Habilitar a {name}",
-      "disableAriaLabel": "Deshabilitar a {name}",
-      "deleteAriaLabel": "Eliminar a {name}",
-      "deletedToast": "Se elimin√≥ a {name}."
-    },
-    "emergencyContact": {
-      "summaryOnFile": "Contacto de emergencia: {name}",
-      "summaryEmpty": "A√±adir un contacto de emergencia",
-      "nameLabel": "Nombre del contacto de emergencia",
-      "phoneLabel": "Tel√©fono del contacto de emergencia",
-      "save": "Guardar contacto",
-      "saving": "Guardando‚Ä¶"
-    }
-  },
-  "safetyChecklist": {
-    "eyebrow": "Ajustes",
-    "title": "Lista de comprobaci√≥n previa a la salida",
-    "description": "Las l√≠neas que tu tripulaci√≥n confirma antes de que el barco zarpe. T√∫ escribes cada elemento ‚Äî DiveDay no lo hace.",
-    "listHeading": "Lista de comprobaci√≥n",
-    "empty": {
-      "title": "A√∫n no hay nada en la lista",
-      "body": "A√±ade la primera l√≠nea abajo ‚Äî la tripulaci√≥n la ve en el manifiesto de cada salida."
-    },
-    "addLabel": "Nueva l√≠nea",
-    "addPlaceholder": "Kit de ox√≠geno de emergencia a bordo",
-    "addSubmit": "A√±adir",
-    "delete": "Eliminar",
-    "moveUp": "Subir",
-    "moveDown": "Bajar",
-    "notice": {
-      "added": "A√±adido a la lista de comprobaci√≥n.",
-      "deleted": "Eliminado de la lista de comprobaci√≥n.",
-      "invalid": "Eso no se guard√≥ ‚Äî int√©ntalo de nuevo.",
-      "duplicateLabel": "Esa l√≠nea ya est√° en la lista.",
-      "notAuthorized": "No tienes permiso para cambiar esto.",
-      "moveRefused": "Eso no se movi√≥ ‚Äî int√©ntalo de nuevo."
-    }
-  },
-  "export": {
-    "eyebrow": "Ajustes",
-    "title": "Exportar datos",
-    "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, registros de certificaci√≥n, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
-    "downloadButton": {
-      "idle": "Descargar exportaci√≥n",
-      "acknowledged": "En camino ‚Äî revisa tus descargas"
-    },
-    "bundle": {
-      "heading": "Qu√© contiene el paquete",
-      "fileCount": "{count, plural, one {# archivo, con el n√∫mero de filas de cada uno} other {# archivos, con el n√∫mero de filas de cada uno}}",
-      "description": "Un ZIP con un README y un CSV por tipo de registro. Cada fecha lleva su zona horaria, el dinero va en centavos y los registros eliminados tambi√©n vienen."
-    },
-    "rowCount": "{count, plural, one {# fila} other {# filas}}",
-    "notIncluded": {
-      "label": "No incluido, a prop√≥sito:",
-      "text": "copias de manifiesto sin conexi√≥n, colas de reintento de notificaciones, la vinculaci√≥n con Stripe, los rastros de cierre del d√≠a y de equipos de buceo, el estado de cancelaci√≥n por clima, los libros de conciliaci√≥n de DiveDay y las URL de im√°genes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>s√≠</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
-    }
-  },
-  "import": {
-    "eyebrow": "Ajustes",
-    "title": "Importar contactos",
-    "description": "Trae buceadores, registros de certificaci√≥n, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportaci√≥n de DiveDay.",
-    "comingFrom": "¬øVienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de c√°lculo</spreadsheet>? Consulta la gu√≠a correspondiente y vuelve aqu√≠ para importar.",
-    "notice": {
-      "notAuthorized": "La importaci√≥n escribe datos personales y m√©dicos de los buceadores, as√≠ que est√° limitada a propietarios y gerentes."
-    },
-    "comesAcross": {
-      "heading": "Qu√© se importa"
-    },
-    "scopeChip": {
-      "included": "Se importa",
-      "staysBehind": "Se queda fuera"
-    },
-    "scopeTable": {
-      "contact": {
-        "what": "Nombre, correo, tel√©fono",
-        "detail": "Se importan tal cual. Una fila con correo se empareja con un buceador existente al reimportar; sin √©l, siempre es una ficha nueva."
-      },
-      "emergencyContact": {
-        "what": "Contacto de emergencia",
-        "detail": "El nombre y el tel√©fono se trasladan cuando est√°n."
-      },
-      "diveInsurance": {
-        "what": "Seguro de buceo (DAN)",
-        "detail": "Se traslada como texto libre, exactamente como lo tenga tu archivo. Nunca es una barrera ‚Äî solo informaci√≥n que la tripulaci√≥n quiere tener a mano."
-      },
-      "rentalSizes": {
-        "what": "Tallas de alquiler",
-        "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
-      },
-      "certificationCard": {
-        "what": "Registro de certificaci√≥n",
-        "detail": "Se importa verificada y marcada como importada ‚Äî el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
-      },
-      "specialtyCards": {
-        "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
-        "detail": "Se importan como certificaciones de especialidad verificadas, marcadas como importadas; cada una sigue necesitando la confirmaci√≥n del personal antes de la inmersi√≥n que la exige."
-      },
-      "nitrox": {
-        "what": "Nitrox",
-        "detail": "Se importa como una certificaci√≥n de nitrox verificada, marcada como importada ‚Äî pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
-      },
-      "signedWaivers": {
-        "what": "Exenciones firmadas y aptitud m√©dica",
-        "detail": "Una fila marcada como ya aceptada se da por buena, aptitud m√©dica incluida, y queda marcada como importada ‚Äî las respuestas m√©dicas individuales nunca se reconstruyen, solo el resultado."
-      },
-      "waiverDocuments": {
-        "what": "Documentos de exenci√≥n / m√©dicos",
-        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditor√≠a. Im√°genes y PDF de hasta 5 MB."
-      },
-      "role": {
-        "what": "Rol",
-        "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importaci√≥n."
-      },
-      "cardOnFile": {
-        "what": "Tarjeta guardada / credencial de pago",
-        "detail": "Se queda con tu procesador de pagos. DiveDay nunca importa n√∫meros de tarjeta, CVC, m√©todos de pago ni credenciales de pago reutilizables."
-      },
-      "pastVisits": {
-        "what": "Visitas pasadas (qu√© reservaron y cu√°ndo)",
-        "detail": "Cada fila de reserva se convierte en historial de visitas ‚Äî no es una inmersi√≥n, y nunca aparece en tu horario ni cuenta para el aforo."
-      },
-      "paymentHistory": {
-        "what": "Historial de pagos y recibos",
-        "detail": "Las filas de pagos, reembolsos y recibos del origen se importan como historial sin verificar en Pedidos. Una cantidad claramente interpretada en la moneda de tu centro se indica en el agregado de ingresos/reembolsos; nunca se convierte en un pedido Stripe activo ni en un pago de reserva."
-      },
-      "serviceHistory": {
-        "what": "Historial de mantenimiento de equipo",
-        "detail": "Se importa mediante el CSV del registro de equipo; las unidades coinciden por etiqueta o n√∫mero de serie y conservan sus registros fechados."
-      },
-      "diverNotes": {
-        "what": "Notas internas y del buceador",
-        "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
-      }
-    },
-    "wizard": {
-      "heading": "Subir un archivo de contactos",
-      "intro": "Un CSV de tu sistema anterior o el propio <mono>contacts.csv</mono> de DiveDay. No se escribe nada hasta que confirmes la vista previa.",
-      "chooseFile": "Elegir archivo CSV",
-      "chooseDifferentFile": "Elegir otro archivo",
-      "columnTitle": "Columna ‚Äú{header}‚Äù",
-      "fieldLabels": {
-        "first_name": "Nombre",
-        "last_name": "Apellido",
-        "full_name": "Nombre completo",
-        "email": "Correo",
-        "phone": "Tel√©fono",
-        "date_of_birth": "Fecha de nacimiento",
-        "emergency_contact_name": "Contacto de emergencia",
-        "emergency_contact_phone": "Tel√©fono de emergencia",
-        "dive_insurance": "Seguro de buceo",
-        "certification_agency": "Agencia certificadora",
-        "certification_level": "Nivel de certificaci√≥n",
-        "certification_number": "N√∫mero de certificaci√≥n",
-        "certification_status": "Estado de la certificaci√≥n",
-        "specialty": "Especialidad",
-        "specialty_certification_number": "N√∫mero de especialidad",
-        "nitrox_certified": "Nitrox",
-        "nitrox_certification_number": "N√∫mero de nitrox",
-        "bcd_size": "Talla de BCD",
-        "wetsuit_size": "Talla de traje",
-        "boot_size": "Talla de botas",
-        "fin_size": "Talla de aletas",
-        "waiver_accepted": "Waiver aceptado",
-        "waiver_signed_at": "Waiver firmado",
-        "waiver_source_name": "Origen del waiver",
-        "waiver_document_url": "Documento del waiver",
-        "medical_document_url": "Documento m√©dico",
-        "payment_date": "Fecha de pago",
-        "payment_status": "Estado del pago",
-        "payment_amount": "Importe del pago",
-        "payment_currency": "Moneda del pago",
-        "payment_direction": "Direcci√≥n de pago / reembolso",
-        "payment_reference": "Referencia de pago",
-        "receipt_reference": "Referencia del recibo",
-        "receipt_document_url": "Documento del recibo",
-        "stripe_reference": "Referencia de Stripe",
-        "visit_date": "Fecha de visita anterior",
-        "visit_title": "Visita anterior",
-        "visit_status": "Estado de la visita anterior",
-        "visit_amount": "Importe de la visita anterior",
-        "visit_reference": "Referencia de reserva",
-        "internal_notes": "Notas internas"
-      },
-      "ignoredMedicalColumns": "Dejadas fuera a prop√≥sito: {columns}. No se reconocieron como columna de waiver, as√≠ que su contenido nunca se importa. En su lugar se conf√≠a en una columna ‚Äúwaiver aceptado‚Äù reconocida; ver m√°s abajo.",
-      "unmappedColumns": "No reconocidas, as√≠ que se ignoran: {columns}.",
-      "waiverRowsNoticeOne": "{count} fila declara una exenci√≥n ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud m√©dica, y la marca como ‚Äúimportada‚Äù.",
-      "waiverRowsNoticeOther": "{count} filas declaran una exenci√≥n ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud m√©dica, y la marca como ‚Äúimportada‚Äù.",
-      "visitRowsNoticeOne": "{count} fila registra una visita anterior. Consulta ‚ÄúQu√© se importa‚Äù arriba para ver qu√© significa eso y qu√© no.",
-      "visitRowsNoticeOther": "{count} filas registran una visita anterior. Consulta ‚ÄúQu√© se importa‚Äù arriba para ver qu√© significa eso y qu√© no.",
-      "paymentHistoryRowsNoticeOne": "{count} fila de pago, reembolso o recibo del origen se importar√° como historial sin verificar. Nunca crea pedidos ni cargos en Stripe.",
-      "paymentHistoryRowsNoticeOther": "{count} filas de pago, reembolso o recibo del origen se importar√°n como historial sin verificar. Nunca crean pedidos ni cargos en Stripe.",
-      "stats": {
-        "diversInFile": "Buceadores en el archivo",
-        "extraCardRows": "Filas de certificaci√≥n extra",
-        "skipped": "Omitidas",
-        "cards": "Certificaciones",
-        "specialties": "Especialidades",
-        "nitroxCards": "Certificaciones de nitrox",
-        "waivers": "Waivers",
-        "pastVisits": "Visitas anteriores",
-        "paymentHistory": "Historial de pagos / recibos",
-        "internalNotes": "Notas internas"
-      },
-      "table": {
-        "rowNumber": "#",
-        "name": "Nombre",
-        "email": "Correo",
-        "card": "Certificaci√≥n",
-        "waiver": "Waiver",
-        "notes": "Notas",
-        "noName": "‚Äî sin nombre ‚Äî",
-        "skippedBadge": "omitida",
-        "mergedBadge": "mismo buceador que la fila {row}",
-        "certImported": "importada",
-        "certForReview": "por revisar",
-        "certLine": "{level} ¬∑ {status}",
-        "specialtyLine": "especialidad {specialty} ¬∑ {status}",
-        "waiverAcceptedImported": "aceptado ¬∑ importado",
-        "emptyValue": "‚Äî"
-      },
-      "previewSwipeHint": "Desliza la tabla para ver todas las columnas ‚Üí",
-      "hiddenRowsNoticeOne": "Mostrando la primera {limit} fila. Las {total} se importan al confirmar.",
-      "hiddenRowsNoticeOther": "Mostrando las primeras {limit} filas. Las {total} se importan al confirmar.",
-      "submitOne": "Importar 1 contacto",
-      "submitOther": "Importar {count} contactos",
-      "submitting": "Importando‚Ä¶",
-      "result": {
-        "summary": "Importado. {addedPart}, {updatedPart}.",
-        "summaryAddedOne": "{added} a√±adido",
-        "summaryAddedOther": "{added} a√±adidos",
-        "summaryUpdatedOne": "{updated} actualizado",
-        "summaryUpdatedOther": "{updated} actualizados",
-        "cardsLineOne": "{cards} importada y marcada como importada, con confirmaci√≥n de un toque en cada buceador.",
-        "cardsLineOther": "{cards} importadas y marcadas como importadas, con confirmaci√≥n de un toque en cada buceador.",
-        "cardsCertificationsOne": "{count} certificaci√≥n",
-        "cardsCertificationsOther": "{count} certificaciones",
-        "cardsSpecialtyOne": "{count} certificaci√≥n de especialidad",
-        "cardsSpecialtyOther": "{count} certificaciones de especialidad",
-        "cardsNitroxOne": "{count} certificaci√≥n de nitrox",
-        "cardsNitroxOther": "{count} certificaciones de nitrox",
-        "rowsMergedNote": " {count} fila(s) a√±adieron certificaciones a un buceador que trajo una fila anterior.",
-        "cardsSkippedNote": " {count} certificaci√≥n(es) ya presentes en esos registros se dejaron sin tocar.",
-        "rowsSkippedNote": " {count} fila(s) omitidas.",
-        "cardsHeldByAnother": "{count} n√∫mero(s) de certificaci√≥n del archivo ya est√°n en otro buceador de tu centro, as√≠ que esos registros no se a√±adieron a nadie. Revisa el archivo por si hay un n√∫mero repetido y luego revisa y a√±ade los registros de certificaci√≥n en DiveDay.",
-        "specialtyGateNote": "Una inmersi√≥n que requiere una de esas especialidades espera esa confirmaci√≥n ‚Äî t√≥cala en el registro del buceador y la puerta se abre.",
-        "waiversLineOne": "{count} waiver importado como aceptado, marcado ‚Äúimportado‚Äù en el perfil del buceador.",
-        "waiversLineOther": "{count} waivers importados como aceptados, marcados ‚Äúimportado‚Äù en el perfil del buceador.",
-        "waiversSkippedExistingNote": " {count} buceador(es) ya ten√≠an un waiver vigente en el archivo, se dejaron sin tocar.",
-        "waiversSkippedNoTemplateNoteOne": " {count} omitido ‚Äî configura primero una plantilla de exenci√≥n.",
-        "waiversSkippedNoTemplateNoteOther": " {count} omitidos ‚Äî configura primero una plantilla de exenci√≥n.",
-        "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
-        "visitsLineOne": "{count} visita anterior a√±adida al historial del centro de los buceadores.",
-        "visitsLineOther": "{count} visitas anteriores a√±adidas al historial del centro de los buceadores.",
-        "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como est√°n ‚Äî volver a ejecutar la misma exportaci√≥n no duplica el historial de nadie.",
-        "paymentHistoryLineOne": "{count} registro de pago / recibo del origen sin verificar a√±adido a Pedidos.",
-        "paymentHistoryLineOther": "{count} registros de pago / recibo del origen sin verificar a√±adidos a Pedidos.",
-        "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como est√°n.",
-        "notesLineOne": "{count} nota interna importada a perfiles de buceadores.",
-        "notesLineOther": "{count} notas internas importadas a perfiles de buceadores.",
-        "receiptDocumentsFailedNote": " {count} enlace(s) de documento de recibo no se pudieron descargar y se dejaron fuera del registro del origen.",
-        "seeRoster": "Ver el listado"
-      }
-    },
-    "issues": {
-      "emailInvalid": "El correo ‚Äú{email}‚Äù no parece v√°lido ‚Äî importado sin correo.",
-      "cardMarkedUnverified": "Tu archivo marca esta certificaci√≥n como ‚Äú{status}‚Äù ‚Äî importada para revisi√≥n del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
-      "specialtyNotGated": "La especialidad ‚Äú{specialty}‚Äù no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) ‚Äî no se import√≥ nada para ella.",
-      "specialtyNoCardNumber": "La especialidad ‚Äú{specialty}‚Äù no tiene n√∫mero de certificaci√≥n en la fila ‚Äî no se import√≥. Una certificaci√≥n sin n√∫mero no se puede verificar.",
-      "specialtyImportedVerifiedOne": "Certificaci√≥n de especialidad importada como verificada desde tus registros y marcada como importada. Una inmersi√≥n que la exija espera a que alguien del equipo confirme haberla visto.",
-      "specialtyImportedVerifiedOther": "{count} certificaciones de especialidad importadas como verificadas desde tus registros y marcadas como importadas. Una inmersi√≥n que las exija espera a que alguien del equipo confirme haberlas visto.",
-      "specialtyImportedPendingOne": "Certificaci√≥n de especialidad importada para revisi√≥n del personal ‚Äî ver la nota anterior.",
-      "specialtyImportedPendingOther": "{count} certificaciones de especialidad importadas para revisi√≥n del personal ‚Äî ver la nota anterior.",
-      "agencyUnrecognized": "Agencia de certificaci√≥n no reconocida ‚Äî importada como ‚Äúotra‚Äù.",
-      "levelNamesSpecialty": "La certificaci√≥n ¬´{level}¬ª nombra una especialidad, no un nivel, y se us√≥ la columna de especialidad de esta fila en su lugar ‚Äî no se import√≥ ninguna certificaci√≥n de nivel. A√±ade ese registro de certificaci√≥n en DiveDay si es independiente.",
-      "levelIsTechnical": "La titulaci√≥n ‚Äú{level}‚Äù es t√©cnica o de entornos con techo, no un pelda√±o recreativo: no se importa ni se interpreta como un nivel cercano. Reg√≠strala a mano si tu centro la exige.",
-      "levelNotGated": "La certificaci√≥n ¬´{level}¬ª no es un nivel que controlemos ‚Äî certificaci√≥n no importada. A√±ade el registro en DiveDay si tu centro necesita conservarlo.",
-      "levelNoCardNumber": "El nivel de certificaci√≥n ¬´{level}¬ª no tiene un n√∫mero de certificaci√≥n utilizable ‚Äî certificaci√≥n no importada. Una evidencia sin n√∫mero no se puede verificar.",
-      "certImportedVerified": "Certificaci√≥n importada como verificada desde tus registros ‚Äî marcada como importada, con una confirmaci√≥n de un toque para el personal.",
-      "certImportedPending": "Certificaci√≥n importada para revisi√≥n del personal ‚Äî ver la nota anterior.",
-      "nitroxImported": "Certificaci√≥n de nitrox importada como verificada desde tus registros ‚Äî marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
-      "nitroxNoCardNumber": "Nitrox marcado en el origen sin n√∫mero de certificaci√≥n ‚Äî a√±ade y verifica la certificaci√≥n de nitrox en DiveDay.",
-      "waiverDateInvalid": "La fecha de aceptaci√≥n del waiver ‚Äú{value}‚Äù no es una fecha de calendario real (se espera AAAA-MM-DD) ‚Äî se import√≥ fechada hoy en su lugar.",
-      "waiverImported": "Exenci√≥n importada como aceptada: se acepta la del centro anterior, incluida la aptitud m√©dica, y se marca como ‚Äúimportada‚Äù.",
-      "dobInvalid": "La fecha de nacimiento ‚Äú{value}‚Äù no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) ‚Äî importada sin ella.",
-      "visitDateUnreadable": "La fecha de visita ‚Äú{value}‚Äù no es una fecha que podamos leer ‚Äî el buceador se importa sin esta visita.",
-      "visitNoReference": "Visita importada sin referencia de reserva: una reimportaci√≥n coincide por fecha, nombre e importe, as√≠ que dos reservas id√©nticas el mismo d√≠a entran como una sola visita.",
-      "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha ‚Äî el buceador se importa sin esta visita.",
-      "paymentHistoryDateUnreadable": "La fecha del historial de pagos ‚Äú{value}‚Äù no es una fecha que podamos leer ‚Äî ese registro del origen no se importar√°.",
-      "paymentHistoryNoDate": "Esta fila de pago o recibo del origen no tiene una fecha utilizable, as√≠ que no se importar√°.",
-      "noName": "Sin nombre ‚Äî fila omitida.",
-      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) ‚Äî las certificaciones, el waiver y la visita anterior de esta fila se a√±aden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
-      "noEmailNewRecord": "Sin correo ‚Äî importado como registro nuevo; una reimportaci√≥n no podr√° relacionarlo para actualizarlo."
-    },
-    "errors": {
-      "notOwnerOrManager": "Importar contactos est√° limitado al propietario o gerente del centro.",
-      "csvRequired": "Elige un archivo CSV para importar.",
-      "noImportableRows": "No hay filas importables ‚Äî a todas les faltaba un nombre o estaban duplicadas.",
-      "fileTooLarge": "El archivo es demasiado grande ‚Äî el l√≠mite es {limitMb} MB.",
-      "fileEmpty": "El archivo est√° vac√≠o.",
-      "tooManyColumns": "Demasiadas columnas ({count}) ‚Äî el l√≠mite es {limit}.",
-      "tooManyRows": "Demasiadas filas ({count}) ‚Äî el l√≠mite es {limit} por importaci√≥n. Divide el archivo e imp√≥rtalo en lotes.",
-      "cellTooLongHeader": "Una celda de la fila de encabezado tiene m√°s de {limit} caracteres ‚Äî revisa que no sea un documento pegado en vez de una hoja de c√°lculo.",
-      "cellTooLongRow": "Una celda de la fila {row} tiene m√°s de {limit} caracteres ‚Äî revisa que no sea un documento pegado en vez de una hoja de c√°lculo.",
-      "noNameColumn": "No se encontr√≥ columna de nombre. El archivo necesita un nombre completo, o nombre y apellido, para importar personas."
-    }
-  },
-  "embed": {
-    "eyebrow": "Ajustes",
-    "title": "Widget para tu web",
-    "description": "Pega uno de estos en tu web para que los buceadores exploren y reserven sin salir de ella.",
-    "notConfigured": "Los widgets necesitan una direcci√≥n de alojamiento p√∫blico configurada en esta instancia de DiveDay ‚Äî contacta a {email} para activarla.",
-    "calendarEmbed": {
-      "heading": "Widget de calendario",
-      "description": "Tus pr√≥ximas cuatro salidas con un enlace al resto, con un tama√±o que nunca genera scroll dentro de tu p√°gina. Ideal para una p√°gina ¬´Reservar¬ª en tu web.",
-      "attributionNote": "Incluye un peque√±o enlace de cr√©dito \"Con la tecnolog√≠a de DiveDay\" debajo del calendario, en tu propia p√°gina ‚Äî no dentro del widget.",
-      "fieldLabel": "C√≥digo del widget",
-      "attributionLinkText": "Con la tecnolog√≠a de DiveDay"
-    },
-    "bookButton": {
-      "heading": "Bot√≥n \"Reservar inmersi√≥n\"",
-      "description": "Un enlace normal con aspecto de bot√≥n, sin iframe. Abre tu calendario en una pesta√±a nueva y es la opci√≥n a usar si cobras en l√≠nea, ya que una p√°gina de pago puede negarse a cargar dentro del marco de otro sitio.",
-      "fieldLabel": "C√≥digo del bot√≥n",
-      "buttonText": "Reservar inmersi√≥n"
-    },
-    "footer": "Ambos fragmentos apuntan a <link>tu calendario p√∫blico</link>. Los cambios en salidas, las nuevas fechas y los precios aparecen en cuanto un buceador carga el incrustado.",
-    "snippetField": {
-      "copy": "Copiar",
-      "copied": "Copiado",
-      "failed": "No se pudo copiar ‚Äî selecciona el c√≥digo de arriba."
-    }
-  }
-}
+Y™Áäx-ÆÈ‹j◊ù¢Îi∫⁄+äßj[hëÈ‹¢ÈÌ◊Õ5Ì:-jZ.∂õ≠ñ)ﬁ≥W∞¢&÷ñ‚#¢∞¢&WñV'&˜r#¢$ßW7FW2"¿¢'FóF∆R#¢$ßW7FW2FV¬6VÁG&Ú"¿¢&Ê˜Fñ6R#¢∞¢'6∂ñÊu6fVB#¢$∆ó7FFRWVóÚwV&FF&FˆF2∆26∆ñF2‚"¿¢'6∂ñÊtñÁf∆ñB#¢$;FRVÁG&RVÊÚíFˆ6R'L:÷7V∆˜2∆∆ó7F‚"¿¢&Fˆ6µ6fVB#¢$Ü˜&FR&W6VÁF6ú;6‚V‚V¬◊VV∆∆RwV&FF&FˆF2∆26ˆÊfó&÷6ñˆÊW2í&V6˜&FF˜&ñ˜2‚"¿¢&Fˆ6¥ñÁf∆ñB#¢$ñÁG&ˆGV6RVÊÜ˜&FR&W6VÁF6ú;6‚V‚V¬◊VV∆∆RFRVÁG&RRíÉ÷ñÁWF˜2‚"¿¢'VÊóG56fVB#¢%VÊñFFW2wV&FF2‚"¿¢'VÊóG4ñÁf∆ñB#¢$V∆ñvRVÊVÊñFBFR&ˆgVÊFñFB¬VÊVÊñFBFRFV◊W&GW&FV¬wVíVÊ÷ˆÊVFFR∆2∆ó7F2‚"¿¢'FÖ6fVB#¢$6ˆÊfñwW&6ú;6‚FRñ◊VW7F˜2wV&FF‚"¿¢'FÑñÁf∆ñB#¢$ÊÚ6RVFÚwV&F"∆6ˆÊfñwW&6ú;6‚FRñ◊VW7F˜2‚"¿¢'75Fá&˜VvÖ6fVB#¢$7V˜F&WW&7WFñFwV&FF‚"¿¢'75Fá&˜VvÑñÁf∆ñB#¢$ñÁG&ˆGV6RV¬Êˆ÷'&RíV‚ñ◊˜'FR˜6óFófÚ¬ÚFV¶÷&˜2f<:÷˜2&FW67Fóf&∆‚"¿¢&6ˆÁ6W'fFñˆÂ6fVB#¢$6ˆ◊&ˆ÷ó6˜2FR6ˆÁ6W'f6ú;6‚wV&FF˜2‚"¿¢'&VÁF«56fVB#¢$6L:∆ˆvÚFR«Vñ∆W"wV&FFÚ‚"¿¢'&VÁF≈&ñ6W56fVB#¢%&V6ñ˜2FR«Vñ∆W"wV&FF˜2‚"¿¢'&VÁF≈&ñ6W4ñÁf∆ñB#¢$ñÁG&ˆGV6R6F&V6ñÚ6ˆ÷ÚVÊ6ÁFñFBV‚L;6∆&W2ÜÚFV¶V¬6◊Úf<:÷Úí¬VÁG&RCíC„‚"¿¢&6ˆÁF7E6fVB#¢$FF˜2FR6ˆÁF7FÚwV&FF˜2‚"¿¢&6ˆÁF7DñÁf∆ñB#¢%W6VÊFó&V66ú;6‚FR6˜'&VÚ6ˆ◊∆WF¬Úf<:÷V¬6◊Ú&VóF&∆FRGW2:vñÊ2;¶&∆ñ62‚"¿¢'&ˆfñ∆U6fVB#¢%W&fñ¬í÷&6FV¬6VÁG&ÚwV&FF˜2‚"¿¢'&ˆfñ∆TñÁf∆ñB#¢$6ˆ◊'VV&V¬∆V÷¬∆FW67&ó6ú;6‚íV¬&6ÜófÚFV¬∆ˆv˜FóÚ‚"¿¢&FG&W756fVB#¢$Fó&V66ú;6‚FV¬6VÁG&ÚwV&FF‚"¿¢&FG&W75&V÷˜fVB#¢$Fó&V66ú;6‚FV¬6VÁG&ÚVóFF‚"¿¢&FG&W74ñÁf∆ñB#¢$ÊÚ6RVFÚwV&F"W6Fó&V66ú;6‚‚'W66˜G&fW¢íV∆ñvRGR6VÁG&ÚV‚∆∆ó7F‚"¿¢'&WfñWuW&≈6fVB#¢$VÊ∆6RFR&W6\;2wV&FFÚ‚"¿¢'&WfñWuW&ƒñÁf∆ñB#¢$ñÁG&ˆGV6RV‚VÊ∆6RáGG3¢ÚÚ6ˆ◊∆WFÚ¬Úf<:÷V¬6◊Ú&FV¶"FRVFó"&W6\;2‚"¿¢'6V&6Ñ∆ó7FñÊtˆ‚#¢%GW2:vñÊ2;¶&∆ñ62&V6V‚V‚∆˜2'W66F˜&W2‚"¿¢'6V&6Ñ∆ó7FñÊtˆfb#¢%GW2:vñÊ2;¶&∆ñ62W7L:‚ˆ7V«F2&∆˜2'W66F˜&W2‚∆ÚVRñW7L:íñÊFWÜFÚVVFRF&F"VÊ26V÷Ê2V‚FW6&V6W"‚"¿¢&6ˆÊÊV7FVB#¢$7VVÁFFR7G&óR6ˆÊV7FF‚"¿¢&6ˆÊÊV7Dfñ∆VB#¢$∆6ˆÊWÜú;6‚6ˆ‚7G&óRÊÚ6R6ˆ◊∆WL;2‚ñÁL:ñÁF∆ÚFRÁVWfÚ‚"¿¢&Ê˜D6ˆÊfñwW&VB#¢$∆˜2v˜2V‚Ã:÷ÊV;¶‚ÊÚW7L:‚7Fóf˜2V‚W7FñÁ7F∆6ú;6‚FRFófTFí‚"¿¢&Fó66ˆÊÊV7FVB#¢$7VVÁFFR7G&óRFW66ˆÊV7FF‚"¿¢'&Vg&W6ÜVB#¢$W7FFÚFRv˜27GV∆ó¶FÚFW6FR7G&óR‚"¿¢&Ê˜DWFÜ˜&ó¶VB#¢$V¬6L:∆ˆvÚFR«Vñ∆W"¬∆˜2&V6ñ˜2FR«Vñ∆W"í∆6ˆÊWÜú;6‚6ˆ‚7G&óR6ˆ‚ßW7FW2FRvÚ¬∆ñ÷óFF˜2&˜ñWF&ñ˜2ívW&VÁFW2‚"¿¢'Fñ÷W¶ˆÊU6fVB#¢%¶ˆÊÜ˜&&ñwV&FF‚"¿¢'Fñ÷W¶ˆÊTñÁf∆ñB#¢$ÊÚ&V6ˆÊˆ6V÷˜2W6¶ˆÊÜ˜&&ñ¢V∆ñvRVÊFR∆∆ó7F‚"¿¢&V÷W&vVÊ7ï6fVB#¢%&VfW&VÊ6ñFRV÷W&vVÊ6ñwV&FF‚"¿¢'6VÊEvñÊF˜u6fVB#¢$Ü˜&&ñÚFR÷VÁ6¶W2wV&FFÚ‚"¿¢'6VÊEvñÊF˜tñÁf∆ñB#¢$W6ÚÊÚ6RwV&L;2‚∆&ñ÷W&Ü˜&FñVÊRVRó"ÁFW2VR∆;¶«Fñ÷¬V‚f˜&÷FÚFR#BÜ˜&2‚"¿¢'6∂vU6fVB#¢%VWFR;FñFÚ‚"¿¢'6∂vTFV∆WFVB#¢%VWFRV∆ñ÷ñÊFÚ‚"¿¢'6∂vTñÁf∆ñB#¢$W6ÚÊÚ6RwV&L;2‚&Wfó6V¬Ï;¶÷W&ÚFRñÊ÷W'6ñˆÊW2¬V¬&V6ñÚí7\:ÁFÚFñV◊Ú6RVVFRW6"‚ ¢“¿¢'Fñ÷W¶ˆÊR#¢∞¢&ÜVFñÊr#¢%¶ˆÊÜ˜&&ñ"¿¢&FWFñ¬#¢$6÷&ñ&∆&V∆VR∆26∆ñF2WÜó7FVÁFW2V‚7RÁVWfÜ˜&∆ˆ6√≤ÊÚ∆2◊VWfR‚"¿¢&∆&V¬#¢%¶ˆÊÜ˜&&ñ"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢'7V&÷óB#¢$wV&F"¶ˆÊÜ˜&&ñ"¿¢&w&˜W2#¢∞¢&÷W&ñ62#¢$‹:ó&ñ6"¿¢&6&ñ&&V‚#¢$6&ñ&Rí‹:óÜñ6Ú"¿¢&WW&˜U&VE6V#¢$WW&˜í÷"&ˆ¶Ú"¿¢&6ñ6ñfñ2#¢$6ñ’<:÷fñ6Ú"¿¢&∆≈¶ˆÊW2#¢%FˆF2∆2¶ˆÊ2Ü˜&&ñ2 ¢“¿¢'¶ˆÊW2#¢∞¢&V7FW&‚#¢$Ü˜&FV¬W7FRÑÁVWfñ˜&≤í"¿¢&6VÁG&¬#¢$Ü˜&6VÁG&¬Ñ6Üñ6vÚí"¿¢&÷˜VÁFñ‚#¢$Ü˜&FR÷ˆÁF;ÑFVÁfW"í"¿¢'6ñfñ2#¢$Ü˜&FV¬<:÷fñ6ÚÑ∆˜28ÊvV∆W2í"¿¢&Üvñí#¢$Ü|:íÑÜˆÊˆ«V«Rí"¿¢&6Ê7V‚#¢$6Ê<;¶‚Ú6˜ßV÷V¬"¿¢&&V∆ó¶R#¢$&V∆ñ6R"¿¢'&ˆF‚#¢%&ˆL:‚ÚÜˆÊGW&2"¿¢&6ñ÷‚#¢$ó6∆26ñ‹:‚"¿¢'VW'Fı&ñ6Ú#¢%VW'FÚ&ñ6ÚÚ6&ñ&R˜&ñVÁF¬"¿¢&Ê76R#¢$Ê<:R¬&Ü÷2"¿¢&&ˆÊó&R#¢$&ˆÊó&RÚ7W&¶Ú"¿¢&∆ˆÊFˆ‚#¢$∆ˆÊG&W2"¿¢&6ó&Ú#¢$V¬6ó&ÚÚ÷"&ˆ¶Ú"¿¢&÷∆FófW2#¢$÷∆Fóf2"¿¢'6ñÊv˜&R#¢%6ñÊvW""¿¢&&Êv∂ˆ≤#¢$&Êv∂ˆ≤"¿¢&¶∂'F#¢%ñ∂'FÚñÊFˆÊW6ñˆ66ñFVÁF¬"¿¢&&∆í#¢$&∆íÚ∂ˆ÷ˆFÚÑñÊFˆÊW6ñ6VÁG&¬í"¿¢&÷Êñ∆#¢$÷Êñ∆"¿¢'7ñFÊWí#¢%<:÷FÊWí"¿¢&V6∂∆ÊB#¢$V6∂∆ÊB"¿¢'∆R#¢%∆˜2"¿¢&fñ¶í#¢$fóñí ¢–¢“¿¢&6ˆÁF7B#¢∞¢&ÜVFñÊr#¢$FF˜2FR6ˆÁF7FÚ;¶&∆ñ6˜2"¿¢&FW67&óFñˆ‚#¢$V¬6˜'&VÚíV¬FVÃ:ñfˆÊÚFR&V6W6ú;6‚VR6Rñ◊&ñ÷V‚V‚GW2:vñÊ2FR7W'6˜2‚"¿¢&FWFñ¬#¢%V‚'V6VF˜"VRÊÚVÊ7VVÁG&fV6Ü&V6ñ&RV‚6˜'&VÚñ&VF7FFÚ&VÁfñ'FR‚W6VÊFó&V66ú;6‚VR∆VFˆFÚV¬WVóÚ‚f<:÷∆66ñ∆∆&VóF"V¬f˜&◊V∆&ñÚ‚"¿¢&V÷ñƒ∆&V¬#¢$6˜'&VÚFR6ˆÁF7FÚ"¿¢'ÜˆÊT∆&V¬#¢%FVÃ:ñfˆÊÚFR6ˆÁF7FÚ"¿¢'ÜˆÊTÜñÁB#¢"Ü˜6ñˆÊ¬í"¿¢'7V&÷óB#¢$wV&F"FF˜2FR6ˆÁF7FÚ"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢'&ˆfñ∆R#¢∞¢&ÜVFñÊr#¢%W&fñ¬í÷&6FV¬6VÁG&Ú"¿¢&FW67&óFñˆ‚#¢$∆V÷¬FW67&ó6ú;6‚í∆ˆv˜FóÚfó6ñ&∆W2V‚GR6∆VÊF&ñÚ;¶&∆ñ6ÚíV‚∆2fó7F2&Wfñ2FR,;ß7VVF‚"¿¢&FWFñ¬#¢$ˆg&V6R∆˜2'V6VF˜&W2VÊñFV6∆&FRGR6VÁG&Ú¬V÷&&66ú;6‚¬WVóÚíW7Fñ∆ÚFR'V6VÚÁFW2FR&W6W'f"‚"¿¢'Fv∆ñÊR#¢$∆V÷"¿¢'Fv∆ñÊU∆6VÜˆ∆FW"#¢&V¢‚'V6VÊFÚV‚∂Wí∆&vÚí∆˜26ñ˜2FRf∆˜&ñFFW6FR#""¿¢&FW67&óFñˆ‰∆&V¬#¢$6W&6FRGR6VÁG&Ú"¿¢&FW67&óFñˆÂ∆6VÜˆ∆FW"#¢%VÊ'&WfR&W6VÁF6ú;6‚FRGR6VÁG&Ú¬V÷&&66ñˆÊW2¬WVóÚÚ'V6VÚ∆ˆ6¬‚‚‚"¿¢&∆ˆvÚ#¢$∆ˆv˜FóÚFV¬6VÁG&Ú"¿¢&∆ˆvÙÜñÁB#¢%‰r¬•rÚvV%‚6R&V6ˆ÷ñVÊFVÊñ÷vV‚7VG&F‚"¿¢'&V÷˜fT∆ˆvÚ#¢$V∆ñ÷ñÊ"∆ˆv˜FóÚ7GV¬"¿¢&∆ˆvı6WB#¢$∆ˆv˜FóÚ7V&ñFÚ"¿¢&FW67&óFñˆÂ6WB#¢$FW67&ó6ú;6‚6ˆÊfñwW&F"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢'7V&÷óB#¢$wV&F"W&fñ¬ ¢“¿¢&FG&W72#¢∞¢&ÜVFñÊr#¢$Fó&V66ú;6‚FV¬6VÁG&Ú"¿¢&FWFñ¬#¢$∆Fó&V66ú;6‚6ˆ÷W&6ñ¬FV¬6VÁG&Ú¬ÊÚ∆FR∆wVñV‚FV¬WVóÚ‚6RV&∆ñ6&VR∆˜2'W66F˜&W2FRV&óVV‚6ˆ÷ÚV‚«Vv"&V¬‚'W66GR6VÁG&Ú˜"Êˆ÷'&RÚFó&V66ú;6‚íVÃ:÷vV∆Û¢6ˆ‚W6ÚVVFwV&FFÚ‚"¿¢'6V&6Ñ∆&V¬#¢$'W66GR6VÁG&Ú"¿¢'6V&6Ö∆6VÜˆ∆FW"#¢$Êˆ÷'&RÚFó&V66ú;6‚FRGR6VÁG&˛(
+b"¿¢'6V&6ÜñÊr#¢$'W66ÊF˛(
+b"¿¢'6fñÊr#¢$wV&FÊF˛(
+b"¿¢&ÊÙ÷F6ÜW2#¢%6ñ‚6ˆñÊ6ñFVÊ6ñ2‚'VV&6ˆ‚V¬Êˆ÷'&RFRGR6VÁG&ÚÚ6ˆ‚VÊFó&V66ú;6‚6W&6Ê‚"¿¢&∆ˆˆ∑Wfñ∆VB#¢$∆,;ß7VVFFRFó&V66ñˆÊW2ÊÚW7L:Fó7ˆÊñ&∆RÜ˜&‚ñÁL:ñÁF∆ÚV‚V‚÷ˆ÷VÁFÚ‚"¿¢&∆ˆˆ∑W&W7FñÊr#¢%6ˆ‚◊V6Ü2,;ß7VVF2V‚VÊÜ˜&¢6RW6V‚&FÚ‚ñÁL:ñÁF∆Ú‹:2F&FR‚"¿¢&Ê˜D6ˆÊfñwW&VB#¢$∆,;ß7VVFFRFó&V66ñˆÊW2ÊÚW7L:6ˆÊfñwW&FV‚W7FñÁ7FÊ6ñFRFófTFí¬<:“VR∆Fó&V66ú;6‚FR&¶ÚÊÚ6RVVFR6÷&ñ"\:“‚"¿¢'7VvvW7FñˆÁ4∆&V¬#¢%7VvW&VÊ6ñ2FRFó&V66ú;6‚"¿¢&7W'&VÁD∆&V¬#¢$Fó&V66ú;6‚wV&FF"¿¢&ÊˆÊU6WB#¢%FˆFl:÷ÊÚÜíÊñÊwVÊFó&V66ú;6‚wV&FF‚"¿¢'&V÷˜fR#¢%VóF"Fó&V66ú;6‚"¿¢'&V÷˜fñÊr#¢%VóFÊF˛(
+b ¢“¿¢'&WfñWt∆ñÊ≤#¢∞¢&ÜVFñÊr#¢$VÊ∆6RFR&W6\;2"¿¢&FW67&óFñˆ‚#¢%GR:vñÊFR&W6\;2FRvˆˆv∆R'W6ñÊW72¬G&óGfó6˜"Úf6V&ˆˆ≤‚"¿¢&FWFñ¬#¢$7VÊFÚW7L:6ˆÊfñwW&F¬V¬&V6˜7FW&ñ˜"¬fñ¶RñÁfóF¬'V6VF˜"FV¶"VÊ&W6\;(	Bf<:÷V¬6◊Ú&FV¶"FRVFó&∆2‚"¿¢&∆&V¬#¢$VÊ∆6RFR&W6\;2"¿¢&ÜñÁB#¢"Ü˜6ñˆÊ¬í"¿¢'7V&÷óB#¢$wV&F"VÊ∆6RFR&W6\;2"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢'6V&6Ñ∆ó7FñÊr#¢∞¢&ÜVFñÊr#¢$&V6W"V‚'W66F˜&W2"¿¢'f«VT∆ó7FVB#¢%fó6ñ&∆R"¿¢'f«VTÜñFFV‚#¢$ˆ7V«FÚ"¿¢&FWFñ¬#¢%6íFW6÷&62W7FÚ¬∆ÚVRñW7L:íñÊFWÜFÚVVFRF&F"VÊ26V÷Ê2V‚FW6&V6W"(	BíVÊ:vñÊVR∆wVñV‚ÜñVÊ∆¶FÚ6ñwVR6ñVÊFÚ66W6ñ&∆R˜"W6RVÊ∆6R‚"¿¢&∆&V¬#¢$÷˜7G&"÷ó2:vñÊ2;¶&∆ñ62V‚∆˜2'W66F˜&W2"¿¢'7V&÷óB#¢$wV&F""¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢'6∂ñÊr#¢∞¢&ÜVFñÊr#¢$∆ó7FFRWVóÚFV¬fñ¶R"¿¢&FW67&óFñˆ‚#¢%V‚'L:÷7V∆Ú˜"Ã:÷ÊV‚∆˜2'V6VF˜&W2fV‚W7F÷ó6÷∆ó7F6ˆÊ6ó6V‚6F6∆ñF‚"¿¢&∆&V¬#¢$V∆V÷VÁF˜2FR∆∆ó7F"¿¢'7V&÷óB#¢$wV&F"∆ó7FFRWVóÚ"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢'f«VR#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2'L:÷7V∆˜“˜FÜW"≤2'L:÷7V∆˜7◊“ ¢“¿¢&Fˆ6¥6∆¬#¢∞¢&ÜVFñÊr#¢%&óF÷ÚFV¬L:÷FR'V6VÚ"¿¢&FW67&óFñˆ‚#¢%FˆF˜2W7F˜2Ï;¶÷W&˜2W7L:‚V‚÷ñÁWF˜2‚"¿¢&FWFñ¬#¢$W7F˜26Vó2Ï;¶÷W&˜26ˆ‚V¬Ü˜&&ñÚVRGW2'V6VF˜&W2∆VV‚6ˆ÷Ú*¥V¬&óF÷ÚFRGR¶˜&ÊF+≤V‚7R:vñÊFR&W6W'f¬í∆Ü˜&FR∆∆VvF&V6RV‚∆26ˆÊfó&÷6ñˆÊW2íV‚FˆF˜2∆˜2&V6˜&FF˜&ñ˜2&Wfñ˜2‚ˆ‚V‚÷ˆ÷VÁFÚíFW6&V6RFV¬L:÷¢<:“ñÊFñ62VRñÊf˜&÷2&˜&FÚ¬VRV¬WVóÚ6R÷ˆÁFV‚V¬&&6ÚÚVRVÁG,:ó2FW6FR∆∆ñ‚∆˜2÷ˆ÷VÁF˜2&Wfñ˜2∆6∆ñFÁVÊ66V‚ÁFW2FR∆Ü˜&FR∆∆VvF‚"¿¢'7V&÷óB#¢$wV&F"V¬&óF÷ÚFV¬L:÷"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢'f«VR#¢$∆∆Vv"∂6˜VÁG“÷ñ‚ÁFW2"¿¢&Fˆ6¥6∆ƒ∆&V¬#¢$∆∆Vv"ÁFW2FR∆6∆ñF"¿¢&Fˆ6¥6∆ƒFW67&óFñˆ‚#¢$6ˆ‚7\:ÁFÁFV∆6ú;6‚6RñFR∆˜2'V6VF˜&W2W7F"V‚V¬◊VV∆∆R‚"¿¢&vV%6WGW∆&V¬#¢$÷ˆÁF¶RFV¬WVóÚÁFW2FR∆6∆ñF"¿¢&vV%6WGWFW67&óFñˆ‚#¢#6íV¬WVóÚ6R÷ˆÁF&˜&FÚ‚"¿¢&'&ñVfñÊt∆&V¬#¢$'&ñVfñÊrÁFW2FR∆6∆ñF"¿¢&'&ñVfñÊtFW67&óFñˆ‚#¢#6íÜ6W2V¬'&ñVfñÊrV‚V¬&&6Ú‚"¿¢&&ˆE&ñFT∆&V¬#¢%G&ñV7FÚÜ7FV¬&ñ÷W"VÁFÚ"¿¢&&ˆE&ñFTFW67&óFñˆ‚#¢#6íW2VÊVÁG&FFW6FR∆6˜7F‚"¿¢&&˜GFˆ’Fñ÷T∆&V¬#¢%FñV◊ÚV‚V¬wV˜"ñÊ÷W'6ú;6‚"¿¢&&˜GFˆ’Fñ÷TFW67&óFñˆ‚#¢%GRFñV◊ÚFRfˆÊFÚ∆Êñfñ6FÚÜ&óGV¬‚"¿¢'7W&f6TñÁFW'fƒ∆&V¬#¢$ñÁFW'f∆ÚFR7WW&fñ6ñRVÁG&RñÊ÷W'6ñˆÊW2"¿¢'7W&f6TñÁFW'fƒFW67&óFñˆ‚#¢#6í∆2ñÊ÷W'6ñˆÊW26ˆ‚6VwVñF2‚"¿¢'7FW'&ófR#¢$∆∆VvFí&Vvó7G&Ú"¿¢'7FWvV%6WGW#¢$÷ˆÁF¶RFV¬WVóÚ"¿¢'7FW'&ñVfñÊr#¢$'&ñVfñÊrFR∆G&óV∆6ú;6‚"¿¢'7FWFW'GW&R#¢%6∆ñF"¿¢'7FW&ˆE&ñFR#¢%G&ñV7FÚFRñF"¿¢'7FWFófR#¢$ñÊ÷W'6ú;6‚∂ÁV÷&W'“"¿¢'7FW7W&f6TñÁFW'f¬#¢$ñÁFW'f∆ÚFR7WW&fñ6ñR"¿¢'7FW&WGW&‚#¢$FRgVV«FV‚V¬◊VV∆∆R"¿¢&÷ñÁWFW4&Vf˜&R#¢'∂6˜VÁG“÷ñ‚ÁFW2"¿¢&÷ñÁWFW4gFW"#¢'∂6˜VÁG“÷ñ‚FW7\:ó2"¿¢&DFW'GW&R#¢$∆Ü˜&"¿¢'6óFT˜fW'&ñFW2#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2VÁFÚFR'V6VÚFñVÊR7R&˜ñÚFñV◊ÚV‚V¬wV¬<:“VRW7FR&óF÷ÚÊÚFW67&ñ&RVÊñÊ÷W'6ú;6‚∆Ã:”ß“˜FÜW"≤2VÁF˜2FR'V6VÚFñVÊV‚7R&˜ñÚFñV◊ÚV‚V¬wV¬<:“VRW7FR&óF÷ÚÊÚFW67&ñ&RVÊñÊ÷W'6ú;6‚V‚ÊñÊwVÊÚFRV∆∆˜3ß◊“"¿¢'6óFT˜fW'&ñFR#¢'∂Ê÷W“+r∂6˜VÁG“÷ñ‚ ¢“¿¢'6VÊEvñÊF˜r#¢∞¢&ÜVFñÊr#¢$7\:ÊFÚW67&ñ&ñ÷˜2∆˜2'V6VF˜&W2"¿¢'f«VR#¢'∑7F'G“(	2∂VÊG“"¿¢&FW67&óFñˆ‚#¢$∆˜2&V6˜&FF˜&ñ˜2í∆˜2&W<;¶÷VÊW2W7W&‚W7F2Ü˜&2V‚GR¶ˆÊÜ˜&&ñ‚VÊ6Ê6V∆6ú;6‚6∆R6ñV◊&R¬÷ˆ÷VÁFÚ‚"¿¢'7F'D∆&V¬#¢$ÊÚÁFW2FRÉ(	3#2í"¿¢&VÊD∆&V¬#¢$ÊÚFW7\:ó2FRÉ(	3#Bí"¿¢'7V&÷óB#¢$wV&F"Ü˜&&ñÚ"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢'VÊóG2#¢∞¢&ÜVFñÊr#¢%VÊñFFW2"¿¢&FWFÑ∆&V¬#¢$÷˜7G&"&ˆgVÊFñFFW2V‚"¿¢&FWFÑFWFñ¬#¢$∆2&ˆgVÊFñFFW26ñV◊&R6RwV&F‚V‚÷WG&˜2¬<:“VR6÷&ñ"W7FÚ6ˆ∆ÚfV7F∆ÚVRW67&ñ&W2í∆VW2(	BÊñÊwVÊ&ˆgVÊFñFB&Vvó7G&F6R◊VWfR‚"¿¢&÷WFW'2#¢$÷WG&˜2Ü“í"¿¢&fVWB#¢%ñW2ÜgBí"¿¢'FV◊W&GW&T∆&V¬#¢$÷˜7G&"∆FV◊W&GW&FV¬wVV‚"¿¢'FV◊W&GW&TFWFñ¬#¢%6ñV◊&R6RwV&FV‚6V«6óW2¬<:“VRW7FÚ6ˆ∆Ú6÷&ñ∆ÚVRW67&ñ&W2í∆VW2‚"¿¢&6V«6óW2#¢$6V«6óW2å+2í"¿¢&fá&VÊÜVóB#¢$fá&VÊÜVóBå+bí"¿¢&7W'&VÊ7î∆&V¬#¢$6ˆ'&"í÷˜7G&"V‚"¿¢&7W'&VÊ7îFWFñ¬#¢$ÊÚ6ˆÁfñW'FRÊF¢VÊ6∆ñFFR36ñwVRV‚3¬Ü˜&V‚∆ÁVWf÷ˆÊVF‚∆˜2VFñF˜2ñ∆óVñFF˜26ˆÁ6W'f‚∆÷ˆÊVFV‚VR6R6ˆ'&&ˆ‚‚"¿¢&7W'&VÊ7î÷ó6÷F6Ç#¢$6ˆ'&2V‚∑6Ü˜7W'&VÊ7ó“¬W&Ú7G&óR∆óVñFW7F7VVÁFV‚∂66˜VÁD7W'&VÊ7ó“í&V6Ü¶,:V‚vÚVRÊÚVVF∆óVñF"‚V∆ñvR∂66˜VÁD7W'&VÊ7ó“\:“Ú6ˆÊV7FVÊ7VVÁFVR∆óVñFRV‚∑6Ü˜7W'&VÊ7ó“‚"¿¢'7V&÷óB#¢$wV&F"VÊñFFW2"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢&7W'&VÊ7ï&W&ñ6ñÊuv&ÊñÊr#¢$6÷&ñ"W7FÚÊÚ6ˆÁfñW'FRGW2&V6ñ˜2‚VÊ6∆ñFFRìRB66W"ìRFR∆ÁVWf÷ˆÊVF¬í∆˜2VFñF˜2ñ&V∆ó¶F˜26ˆÁ6W'f‚∆÷ˆÊVFV‚∆VR6R6ˆ'&&ˆ‚‚ ¢“¿¢'FÇ#¢∞¢&ÜVFñÊr#¢$ñ◊VW7F˜2ÑïdífVÁF2í"¿¢&FW67&óFñˆ‚#¢$;FRïd¬ñ◊VW7F˜26ˆ'&R∆2fVÁF2í˜G&˜2ñ◊VW7F˜26ñ÷ñ∆&W2∆˜2ÁVWf˜2v˜2FR&W6W'f2íf7GW&2FV¬W'6ˆÊ¬÷VFñÁFR7G&óR‚"¿¢&FWFñ¬#¢$V¬ñ◊VW7FÚ6R;FR¬&V6ñÚV&∆ñ6FÚí6R◊VW7G&¬'V6VF˜"V‚V¬6ÜV6∂˜WBFR7G&óR‚7G&óRW6∆6ˆÊfñwW&6ú;6‚FRñ◊VW7F˜2FRGR7VVÁF6ˆÊV7FFí∆V&ñ66ú;6‚FV¬6∆ñVÁFR‚∆2&˜ñÊ2˜7FW&ñ˜&W2¬fñ¶R6ˆ‚ñÊFWVÊFñVÁFW2íW7FRßW7FRÊÚ∆2fV7F‚FW67L:◊f∆Ú6ívW7FñˆÊ2∆˜2ñ◊VW7F˜2˜"GR7VVÁF‚"¿¢&VÊ&∆VEf«VR#¢$7FófF˜2"¿¢&Fó6&∆VEf«VR#¢$FW67FófF˜2"¿¢&6ÜV6∂&˜Ñ∆&V¬#¢%W6"7G&óRFÇ&ÁVWf˜2v˜2FR&W6W'f2íf7GW&2"¿¢'7V&÷óB#¢$wV&F"6ˆÊfñwW&6ú;6‚FRñ◊VW7F˜2"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢'75Fá&˜VvÇ#¢∞¢&ÜVFñÊr#¢$7V˜FFV¬'VR÷&ñÊÚÚFR6ˆÁ6W'f6ú;6‚"¿¢&FW67&óFñˆ‚#¢$;FR˜6ñˆÊ∆÷VÁFRVÊ7V˜F˜"'V6VF˜"&V‚FW&6W&ÚñFVÁFñfñ6FÚ‚"¿¢&FWFñ¬#¢%6R◊VW7G&6ˆ÷ÚVÊÃ:÷ÊV&˜ñV‚V¬6ÜV6∂˜WBí6R÷ÁFñVÊRgVW&FR∆˜2ñÊw&W6˜2FV¬6VÁG&Ú‚"¿¢&Ê÷T∆&V¬#¢$Êˆ÷'&RFR∆7V˜F"¿¢&Ê÷U∆6VÜˆ∆FW"#¢$7V˜FFV¬'VR÷&ñÊÚ"¿¢&÷˜VÁD∆&V¬#¢$ñ◊˜'FR˜"'V6VF˜""¿¢&÷˜VÁDÜñÁB#¢$FV¶÷&˜26◊˜2f<:÷˜2&FW67Fóf&∆‚"¿¢&6∆V$ÜñÁB#¢$W2V‚6&vÚ&WW&7WFñFÚ¬ÊÚV‚&V6&vÚ6ˆ'&RV¬&V6ñÚFR∆ñÊ÷W'6ú;6‚‚"¿¢'7V&÷óB#¢$wV&F"7V˜F&WW&7WFñF"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢&6ˆÁ6W'fFñˆ‚#¢∞¢&ÜVFñÊr#¢$6ˆ◊&ˆ÷ó6˜2FR6ˆÁ6W'f6ú;6‚"¿¢&FW67&óFñˆ‚#¢$V∆ñvR∆2,:7Fñ62FR6ˆÁ6W'f6ú;6‚VRGR6VÁG&Úfó&÷˜ñ"‚"¿¢&FWFñ¬#¢%6ˆ‚FV6∆&6ñˆÊW2FRGR6VÁG&Úí&V6V‚V‚∆2:vñÊ2;¶&∆ñ626ˆ÷Ú6ˆ◊&ˆ÷ó6˜2¬ÊÚ6ˆ÷Ú6W'Fñfñ66ñˆÊW2ÊífW&ñfñ66ñˆÊW2FRFW&6W&˜2‚"¿¢&∆VvVÊB#¢%,:7Fñ62∆2VRÊ˜26ˆ◊&ˆ÷WFV÷˜2"¿¢'f«VR#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤26ˆ◊&ˆ÷ó6˜“˜FÜW"≤26ˆ◊&ˆ÷ó6˜7◊“"¿¢&6ˆ÷÷óF÷VÁG2#¢∞¢&v&U'FÊW"#¢$6ˆ∆&˜&F˜"FRv&R"¿¢&w&VV‰fñÁ4÷V÷&W"#¢$÷ñV÷'&ÚFRw&VV‚fñÁ2"¿¢'&VVd6∆VÁW#¢$∆ñ◊ñW¶2FR'&V6ñfW2"¿¢&÷ˆ˜&ñÊt'V˜ó2#¢$&˜ñ2FR÷'&R"¿¢&ÊÙv∆˜fW2#¢%6ñ‚wVÁFW2V‚∆˜2'&V6ñfW2"¿¢'vñ∆F∆ñfTFó7FÊ6R#¢%&W7WF"∆Fó7FÊ6ñFR∆fVÊ ¢“¿¢'7V&÷óB#¢$wV&F"6ˆ◊&ˆ÷ó6˜2"¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b ¢“¿¢'ñ÷VÁG4vFR#¢∞¢&Ê˜Fñ6R#¢$V¬6L:∆ˆvÚFR«Vñ∆W"¬7W2&V6ñ˜2í∆6ˆÊWÜú;6‚6ˆ‚7G&óRW7L:‚∆ñ÷óFF˜2&˜ñWF&ñ˜2ívW&VÁFW2‚∆˜2ßW7FW2FR'&ñ&W7L:‚&ñW'F˜2FˆFÚV¬WVóÚ‚ ¢“¿¢'&VÁF«2#¢∞¢&ÜVFñÊr#¢%\:í«Vñ∆÷˜2"¿¢&FWFñ¬#¢$FW6÷&6∆ÚVRÊÚˆg&W¶63¢FW6&V6RFV¬f˜&◊V∆&ñÚFRWVóÚíFR∆∆ó7FFR&W&6ú;6‚‚"¿¢&∆VvVÊB#¢$WVóÚí6W'fñ6ñ˜2FR«Vñ∆W""¿¢'7V&÷óB#¢$wV&F"6L:∆ˆvÚFR«Vñ∆W""¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢'f«VR#¢'∂6˜VÁB¬«W&¬¬ˆÊR≤2'L:÷7V∆Úˆg&V6ñF˜“˜FÜW"≤2'L:÷7V∆˜2ˆg&V6ñF˜7◊“ ¢“¿¢'&VÁF≈&ñ6ñÊr#¢∞¢&ÜVFñÊr#¢%&V6ñ˜2FR«Vñ∆W""¿¢&FW67&óFñˆ‚#¢$∆ÚVR6R6˜Fó¶V‚'V6VF˜"˜"7RWVóÚFR«Vñ∆W"‚"¿¢&FWFñ¬#¢%ˆ‚&V6ñÚ¬WVóÚ6ˆ◊∆WFÚá7VV∆R6∆ó"‹:2&&FÚíí6FñW¶˜"6W&FÛ¢6ñÊ6ÚñW¶26˜Fó¶‚V¬6ˆÊßVÁFÚ¬÷VÊ˜26Rv‚˜"ñW¶‚FV¶VÊ66ñ∆∆f<:÷&6ˆ'&&∆ÚV‚V¬6VÁG&Ú‚"¿¢&gV∆≈6WD∆&V¬#¢$WVóÚ6ˆ◊∆WFÚ"¿¢&gV∆≈6WDÜñÁB#¢"Ñ$4B¬&VwV∆F˜"¬G&¶R¬‹:66&í∆WF2¬∆7G&R¬6ˆ◊WFF˜&FR'V6VÚí"¿¢&ÊóG&˜Ñ∆&V¬#¢$ÊóG&˜Ç"¿¢&ÊóG&˜ÑÜñÁB#¢"á˜"ñÊ÷W'6ú;6‚í"¿¢'7V&÷óB#¢$wV&F"&V6ñ˜2FR«Vñ∆W""¿¢'7V&÷óGFñÊr#¢$wV&FÊF˛(
+b"¿¢'f«VR#¢$WVóÚ6ˆ◊∆WFÚ∑&ñ6W“ ¢“¿¢'7G&óR#¢∞¢&Ê˜D6ˆÊÊV7FVDÜVFñÊr#¢$ÊñÊwVÊ7VVÁFFR7G&óR6ˆÊV7FF"¿¢&Ê˜D6ˆÊÊV7FVDFWFñ¬#¢$FófTFíÁVÊ6&WFñVÊRGRFñÊW&Ú(	B∆˜2v˜2FRVFñF˜2f‚Fó&V7FÚGR&˜ñÚ6∆FÚFR7G&óR‚"¿¢&6ˆÊÊV7B#¢$6ˆÊV7F"7G&óR"¿¢&Ê˜D6ˆÊfñwW&VEv&ÊñÊr#¢$∆˜2v˜2V‚Ã:÷ÊVFˆFl:÷ÊÚW7L:‚7FófF˜2V‚FófTFí(	BW67&ñ&R∂V÷ñ«“í∆˜2ˆÊV÷˜2V‚÷&6Ü‚"¿¢&6ˆÊÊV7FVDÜVFñÊr#¢$7VVÁFFR7G&óR6ˆÊV7FF"¿¢'&VGî&FvR#¢$∆ó7F&v˜2"¿¢&Ê˜E&VGî&FvR#¢%FˆFl:÷ÊÚW7L:∆ó7F"¿¢&66˜VÁDVÊFñÊr#¢$7VVÁFFW&÷ñÊFV‚∂∆7Cg“"¿¢&6Ü&vW4VÊ&∆VB#¢$6ˆ'&˜2Ü&ñ∆óFF˜2"¿¢'ñ˜WG4VÊ&∆VB#¢%v˜2Ü&ñ∆óFF˜2"¿¢&ˆÊ&ˆ&FñÊu7V&÷óGFVB#¢$FF˜2FRñÊ6˜'˜&6ú;6‚VÁfñF˜2"¿¢'7FGW5ñW2#¢%<:“"¿¢'7FGW4Ê˜EñWB#¢%FˆFl:÷ÊÚ"¿¢'&V6ˆÊÊV7B#¢%&V6ˆÊV7F"7G&óR"¿¢'&Vg&W6Ç#¢$7GV∆ó¶"W7FFÚ"¿¢'&Vg&W6ÜñÊr#¢$7GV∆ó¶ÊF˛(
+b"¿¢&Fó66ˆÊÊV7B#¢$FW66ˆÊV7F""¿¢&Fó66ˆÊÊV7FñÊr#¢$FW66ˆÊV7FÊF˛(
+b"¿¢'&˜tÜVFñÊr#¢%v˜2V‚Ã:÷ÊV"¿¢'7V÷÷'îÊ˜D6ˆÊÊV7FVB#¢%6ñ‚6ˆÊV7F""¿¢'7V÷÷'îFó66ˆÊÊV7FVB#¢$FW66ˆÊV7FF ¢“¿¢&V÷&VB#¢∞¢&ÜVFñÊr#¢%vñFvWB&GRvV""¿¢&FW67&óFñˆ‚#¢$g&v÷VÁF˜2&6˜ñ"íVv"VRˆÊV‚GR6∆VÊF&ñÚFR&W6W'f2V‚Fó&V7FÚV‚GR&˜ñvV"‚ ¢“¿¢&6∆VÊF"#¢∞¢&ÜVFñÊr#¢%7W67&ó6ñˆÊW2¬6∆VÊF&ñÚ"¿¢&FW67&óFñˆ‚#¢%ˆ‚GW26∆ñF2V‚∆FR6∆VÊF&ñÚVRñW62(	BFR6ˆ∆Ú∆V7GW&¬<:“VRFófTFíÁVÊ6∆÷ˆFñfñ6‚ ¢“¿¢&ñÁFVw&FñˆÁ2#¢∞¢&ÜVFñÊr#¢%6Ü˛¥◊ªhëÈÏ∂ªßq´^tÅëîÅçï…—•ô•çÖçßÕ∏à∞(ÄÄÄÄÄÄÄÄâçï…—•ô•çÖ—•Ωπ}Õ—Ö—’ÃàËÄâÕ—ÖëºÅëîÅ±ÑÅçï…—•ô•çÖçßÕ∏à∞(ÄÄÄÄÄÄÄÄâÕ¡ïç•Ö±—‰àËÄâÕ¡ïç•Ö±•ëÖêà∞(ÄÄÄÄÄÄÄÄâÕ¡ïç•Ö±—Â}çï…—•ô•çÖ—•Ωπ}π’µâï»àËÄâ;Èµï…ºÅëîÅïÕ¡ïç•Ö±•ëÖêà∞(ÄÄÄÄÄÄÄÄâπ•—…Ω·}çï…—•ô•ïêàËÄâ9•—…Ω‡à∞(ÄÄÄÄÄÄÄÄâπ•—…Ω·}çï…—•ô•çÖ—•Ωπ}π’µâï»àËÄâ;Èµï…ºÅëîÅπ•—…Ω‡à∞(ÄÄÄÄÄÄÄÄââçë}Õ•ÈîàËÄâQÖ±±ÑÅëîÅ	à∞(ÄÄÄÄÄÄÄÄâ›ï—Õ’•—}Õ•ÈîàËÄâQÖ±±ÑÅëîÅ—…Ö©îà∞(ÄÄÄÄÄÄÄÄââΩΩ—}Õ•ÈîàËÄâQÖ±±ÑÅëîÅâΩ—ÖÃà∞(ÄÄÄÄÄÄÄÄâô•π}Õ•ÈîàËÄâQÖ±±ÑÅëîÅÖ±ï—ÖÃà∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…}Öççï¡—ïêàËÄâ]Ö•Ÿï»ÅÖçï¡—Öëºà∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…}Õ•ùπïë}Ö–àËÄâ]Ö•Ÿï»Åô•…µÖëºà∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…}ÕΩ’…çï}πÖµîàËÄâ=…•ùï∏Åëï∞Å›Ö•Ÿï»à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…}ëΩç’µïπ—}’…∞àËÄâΩç’µïπ—ºÅëï∞Å›Ö•Ÿï»à∞(ÄÄÄÄÄÄÄÄâµïë•çÖ±}ëΩç’µïπ—}’…∞àËÄâΩç’µïπ—ºÅ∑•ë•çºà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—}ëÖ—îàËÄâïç°ÑÅëîÅ¡Öùºà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—}Õ—Ö—’ÃàËÄâÕ—ÖëºÅëï∞Å¡Öùºà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—}ÖµΩ’π–àËÄâ%µ¡Ω…—îÅëï∞Å¡Öùºà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—}ç’……ïπç‰àËÄâ5ΩπïëÑÅëï∞Å¡Öùºà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—}ë•…ïç—•Ω∏àËÄâ•…ïççßÕ∏ÅëîÅ¡ÖùºÄºÅ…ïïµâΩ±Õºà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—}…ïôï…ïπçîàËÄâIïôï…ïπç•ÑÅëîÅ¡Öùºà∞(ÄÄÄÄÄÄÄÄâ…ïçï•¡—}…ïôï…ïπçîàËÄâIïôï…ïπç•ÑÅëï∞Å…ïç•âºà∞(ÄÄÄÄÄÄÄÄâ…ïçï•¡—}ëΩç’µïπ—}’…∞àËÄâΩç’µïπ—ºÅëï∞Å…ïç•âºà∞(ÄÄÄÄÄÄÄÄâÕ—…•¡ï}…ïôï…ïπçîàËÄâIïôï…ïπç•ÑÅëîÅM—…•¡îà∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—}ëÖ—îàËÄâïç°ÑÅëîÅŸ•Õ•—ÑÅÖπ—ï…•Ω»à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—}—•—±îàËÄâY•Õ•—ÑÅÖπ—ï…•Ω»à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—}Õ—Ö—’ÃàËÄâÕ—ÖëºÅëîÅ±ÑÅŸ•Õ•—ÑÅÖπ—ï…•Ω»à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—}ÖµΩ’π–àËÄâ%µ¡Ω…—îÅëîÅ±ÑÅŸ•Õ•—ÑÅÖπ—ï…•Ω»à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—}…ïôï…ïπçîàËÄâIïôï…ïπç•ÑÅëîÅ…ïÕï…ŸÑà∞(ÄÄÄÄÄÄÄÄâ•π—ï…πÖ±}πΩ—ïÃàËÄâ9Ω—ÖÃÅ•π—ï…πÖÃà(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâ•ùπΩ…ïë5ïë•çÖ±Ω±’µπÃàËÄâï©ÖëÖÃÅô’ï…ÑÅÑÅ¡…Ω√ÕÕ•—ºËÅÌçΩ±’µπÕÙ∏Å9ºÅÕîÅ…ïçΩπΩç•ï…Ω∏ÅçΩµºÅçΩ±’µπÑÅëîÅ›Ö•Ÿï»∞ÅÖœ¥Å≈’îÅÕ‘ÅçΩπ—ïπ•ëºÅπ’πçÑÅÕîÅ•µ¡Ω…—Ñ∏Å∏ÅÕ‘Å±’ùÖ»ÅÕîÅçΩπõµÑÅï∏Å’πÑÅçΩ±’µπÑÉäq›Ö•Ÿï»ÅÖçï¡—ÖëøätÅ…ïçΩπΩç•ëÑÏÅŸï»Å∑ÖÃÅÖâÖ©º∏à∞(ÄÄÄÄÄÄâ’πµÖ¡¡ïëΩ±’µπÃàËÄâ9ºÅ…ïçΩπΩç•ëÖÃ∞ÅÖœ¥Å≈’îÅÕîÅ•ùπΩ…Ö∏ËÅÌçΩ±’µπÕÙ∏à∞(ÄÄÄÄÄÄâ›Ö•Ÿï…IΩ›Õ9Ω—•çï=πîàËÄâÌçΩ’π—ÙÅô•±ÑÅëïç±Ö…ÑÅ’πÑÅï·ïπçßÕ∏ÅÂÑÅÖçï¡—ÖëÑÅï∏Å’∏Åçïπ—…ºÅÖπ—ï…•Ω»∏Å•ŸïÖ‰Å±ºÅÖçï¡—Ñ∞Å•πç±’•ëÑÅ±ÑÅÖ¡—•—’êÅ∑•ë•çÑ∞Å‰Å±ÑÅµÖ…çÑÅçΩµºÉäq•µ¡Ω…—Öëáät∏à∞(ÄÄÄÄÄÄâ›Ö•Ÿï…IΩ›Õ9Ω—•çï=—°ï»àËÄâÌçΩ’π—ÙÅô•±ÖÃÅëïç±Ö…Ö∏Å’πÑÅï·ïπçßÕ∏ÅÂÑÅÖçï¡—ÖëÑÅï∏Å’∏Åçïπ—…ºÅÖπ—ï…•Ω»∏Å•ŸïÖ‰Å±ºÅÖçï¡—Ñ∞Å•πç±’•ëÑÅ±ÑÅÖ¡—•—’êÅ∑•ë•çÑ∞Å‰Å±ÑÅµÖ…çÑÅçΩµºÉäq•µ¡Ω…—Öëáät∏à∞(ÄÄÄÄÄÄâŸ•Õ•—IΩ›Õ9Ω—•çï=πîàËÄâÌçΩ’π—ÙÅô•±ÑÅ…ïù•Õ—…ÑÅ’πÑÅŸ•Õ•—ÑÅÖπ—ï…•Ω»∏ÅΩπÕ’±—ÑÉäqE◊§ÅÕîÅ•µ¡Ω…—áätÅÖ……•âÑÅ¡Ö…ÑÅŸï»Å≈◊§ÅÕ•ùπ•ô•çÑÅïÕºÅ‰Å≈◊§Åπº∏à∞(ÄÄÄÄÄÄâŸ•Õ•—IΩ›Õ9Ω—•çï=—°ï»àËÄâÌçΩ’π—ÙÅô•±ÖÃÅ…ïù•Õ—…Ö∏Å’πÑÅŸ•Õ•—ÑÅÖπ—ï…•Ω»∏ÅΩπÕ’±—ÑÉäqE◊§ÅÕîÅ•µ¡Ω…—áätÅÖ……•âÑÅ¡Ö…ÑÅŸï»Å≈◊§ÅÕ•ùπ•ô•çÑÅïÕºÅ‰Å≈◊§Åπº∏à∞(ÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…ÂIΩ›Õ9Ω—•çï=πîàËÄâÌçΩ’π—ÙÅô•±ÑÅëîÅ¡Öùº∞Å…ïïµâΩ±ÕºÅºÅ…ïç•âºÅëï∞ÅΩ…•ùï∏ÅÕîÅ•µ¡Ω…—ÖÀÑÅçΩµºÅ°•Õ—Ω…•Ö∞ÅÕ•∏ÅŸï…•ô•çÖ»∏Å9’πçÑÅç…ïÑÅ¡ïë•ëΩÃÅπ§ÅçÖ…ùΩÃÅï∏ÅM—…•¡î∏à∞(ÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…ÂIΩ›Õ9Ω—•çï=—°ï»àËÄâÌçΩ’π—ÙÅô•±ÖÃÅëîÅ¡Öùº∞Å…ïïµâΩ±ÕºÅºÅ…ïç•âºÅëï∞ÅΩ…•ùï∏ÅÕîÅ•µ¡Ω…—ÖÀÖ∏ÅçΩµºÅ°•Õ—Ω…•Ö∞ÅÕ•∏ÅŸï…•ô•çÖ»∏Å9’πçÑÅç…ïÖ∏Å¡ïë•ëΩÃÅπ§ÅçÖ…ùΩÃÅï∏ÅM—…•¡î∏à∞(ÄÄÄÄÄÄâÕ—Ö—ÃàËÅÏ(ÄÄÄÄÄÄÄÄâë•Ÿï…Õ%π•±îàËÄâ	’çïÖëΩ…ïÃÅï∏Åï∞ÅÖ…ç°•Ÿºà∞(ÄÄÄÄÄÄÄÄâï·—…ÖÖ…ëIΩ›ÃàËÄâ•±ÖÃÅëîÅçï…—•ô•çÖçßÕ∏Åï·—…Ñà∞(ÄÄÄÄÄÄÄÄâÕ≠•¡¡ïêàËÄâ=µ•—•ëÖÃà∞(ÄÄÄÄÄÄÄÄâçÖ…ëÃàËÄâï…—•ô•çÖç•ΩπïÃà∞(ÄÄÄÄÄÄÄÄâÕ¡ïç•Ö±—•ïÃàËÄâÕ¡ïç•Ö±•ëÖëïÃà∞(ÄÄÄÄÄÄÄÄâπ•—…Ω·Ö…ëÃàËÄâï…—•ô•çÖç•ΩπïÃÅëîÅπ•—…Ω‡à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…ÃàËÄâ]Ö•Ÿï…Ãà∞(ÄÄÄÄÄÄÄÄâ¡ÖÕ—Y•Õ•—ÃàËÄâY•Õ•—ÖÃÅÖπ—ï…•Ω…ïÃà∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…‰àËÄâ!•Õ—Ω…•Ö∞ÅëîÅ¡ÖùΩÃÄºÅ…ïç•âΩÃà∞(ÄÄÄÄÄÄÄÄâ•π—ï…πÖ±9Ω—ïÃàËÄâ9Ω—ÖÃÅ•π—ï…πÖÃà(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâ—Öâ±îàËÅÏ(ÄÄÄÄÄÄÄÄâ…Ω›9’µâï»àËÄàåà∞(ÄÄÄÄÄÄÄÄâπÖµîàËÄâ9Ωµâ…îà∞(ÄÄÄÄÄÄÄÄâïµÖ•∞àËÄâΩ……ïºà∞(ÄÄÄÄÄÄÄÄâçÖ…êàËÄâï…—•ô•çÖçßÕ∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï»àËÄâ]Ö•Ÿï»à∞(ÄÄÄÄÄÄÄÄâπΩ—ïÃàËÄâ9Ω—ÖÃà∞(ÄÄÄÄÄÄÄÄâπΩ9ÖµîàËÄãäPÅÕ•∏ÅπΩµâ…îÉäPà∞(ÄÄÄÄÄÄÄÄâÕ≠•¡¡ïë	ÖëùîàËÄâΩµ•—•ëÑà∞(ÄÄÄÄÄÄÄÄâµï…ùïë	ÖëùîàËÄâµ•ÕµºÅâ’çïÖëΩ»Å≈’îÅ±ÑÅô•±ÑÅÌ…Ω›Ùà∞(ÄÄÄÄÄÄÄÄâçï…—%µ¡Ω…—ïêàËÄâ•µ¡Ω…—ÖëÑà∞(ÄÄÄÄÄÄÄÄâçï…—Ω…IïŸ•ï‹àËÄâ¡Ω»Å…ïŸ•ÕÖ»à∞(ÄÄÄÄÄÄÄÄâçï…—1•πîàËÄâÌ±ïŸï±ÙÉ
+‹ÅÌÕ—Ö—’ÕÙà∞(ÄÄÄÄÄÄÄÄâÕ¡ïç•Ö±—Â1•πîàËÄâïÕ¡ïç•Ö±•ëÖêÅÌÕ¡ïç•Ö±—ÂÙÉ
+‹ÅÌÕ—Ö—’ÕÙà∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…ççï¡—ïë%µ¡Ω…—ïêàËÄâÖçï¡—ÖëºÉ
+‹Å•µ¡Ω…—Öëºà∞(ÄÄÄÄÄÄÄÄâïµ¡—ÂYÖ±’îàËÄãäPà(ÄÄÄÄÄÅÙ∞(ÄÄÄÄÄÄâ¡…ïŸ•ï›M›•¡ï!•π–àËÄâïÕ±•ÈÑÅ±ÑÅ—Öâ±ÑÅ¡Ö…ÑÅŸï»Å—ΩëÖÃÅ±ÖÃÅçΩ±’µπÖÃÉäHà∞(ÄÄÄÄÄÄâ°•ëëïπIΩ›Õ9Ω—•çï=πîàËÄâ5ΩÕ—…ÖπëºÅ±ÑÅ¡…•µï…ÑÅÌ±•µ•—ÙÅô•±Ñ∏Å1ÖÃÅÌ—Ω—Ö±ÙÅÕîÅ•µ¡Ω…—Ö∏ÅÖ∞ÅçΩπô•…µÖ»∏à∞(ÄÄÄÄÄÄâ°•ëëïπIΩ›Õ9Ω—•çï=—°ï»àËÄâ5ΩÕ—…ÖπëºÅ±ÖÃÅ¡…•µï…ÖÃÅÌ±•µ•—ÙÅô•±ÖÃ∏Å1ÖÃÅÌ—Ω—Ö±ÙÅÕîÅ•µ¡Ω…—Ö∏ÅÖ∞ÅçΩπô•…µÖ»∏à∞(ÄÄÄÄÄÄâÕ’âµ•—=πîàËÄâ%µ¡Ω…—Ö»ÄƒÅçΩπ—Öç—ºà∞(ÄÄÄÄÄÄâÕ’âµ•—=—°ï»àËÄâ%µ¡Ω…—Ö»ÅÌçΩ’π—ÙÅçΩπ—Öç—ΩÃà∞(ÄÄÄÄÄÄâÕ’âµ•——•πúàËÄâ%µ¡Ω…—Öπëøäòà∞(ÄÄÄÄÄÄâ…ïÕ’±–àËÅÏ(ÄÄÄÄÄÄÄÄâÕ’µµÖ…‰àËÄâ%µ¡Ω…—Öëº∏ÅÌÖëëïëAÖ…—Ù∞ÅÌ’¡ëÖ—ïëAÖ…—Ù∏à∞(ÄÄÄÄÄÄÄÄâÕ’µµÖ…Âëëïë=πîàËÄâÌÖëëïëÙÅá≈Öë•ëºà∞(ÄÄÄÄÄÄÄÄâÕ’µµÖ…Âëëïë=—°ï»àËÄâÌÖëëïëÙÅá≈Öë•ëΩÃà∞(ÄÄÄÄÄÄÄÄâÕ’µµÖ…ÂU¡ëÖ—ïë=πîàËÄâÌ’¡ëÖ—ïëÙÅÖç—’Ö±•ÈÖëºà∞(ÄÄÄÄÄÄÄÄâÕ’µµÖ…ÂU¡ëÖ—ïë=—°ï»àËÄâÌ’¡ëÖ—ïëÙÅÖç—’Ö±•ÈÖëΩÃà∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕ1•πï=πîàËÄâÌçÖ…ëÕÙÅ•µ¡Ω…—ÖëÑÅ‰ÅµÖ…çÖëÑÅçΩµºÅ•µ¡Ω…—ÖëÑ∞ÅçΩ∏ÅçΩπô•…µÖçßÕ∏ÅëîÅ’∏Å—Ω≈’îÅï∏ÅçÖëÑÅâ’çïÖëΩ»∏à∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕ1•πï=—°ï»àËÄâÌçÖ…ëÕÙÅ•µ¡Ω…—ÖëÖÃÅ‰ÅµÖ…çÖëÖÃÅçΩµºÅ•µ¡Ω…—ÖëÖÃ∞ÅçΩ∏ÅçΩπô•…µÖçßÕ∏ÅëîÅ’∏Å—Ω≈’îÅï∏ÅçÖëÑÅâ’çïÖëΩ»∏à∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕï…—•ô•çÖ—•ΩπÕ=πîàËÄâÌçΩ’π—ÙÅçï…—•ô•çÖçßÕ∏à∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕï…—•ô•çÖ—•ΩπÕ=—°ï»àËÄâÌçΩ’π—ÙÅçï…—•ô•çÖç•ΩπïÃà∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕM¡ïç•Ö±—Â=πîàËÄâÌçΩ’π—ÙÅçï…—•ô•çÖçßÕ∏ÅëîÅïÕ¡ïç•Ö±•ëÖêà∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕM¡ïç•Ö±—Â=—°ï»àËÄâÌçΩ’π—ÙÅçï…—•ô•çÖç•ΩπïÃÅëîÅïÕ¡ïç•Ö±•ëÖêà∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕ9•—…Ω·=πîàËÄâÌçΩ’π—ÙÅçï…—•ô•çÖçßÕ∏ÅëîÅπ•—…Ω‡à∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕ9•—…Ω·=—°ï»àËÄâÌçΩ’π—ÙÅçï…—•ô•çÖç•ΩπïÃÅëîÅπ•—…Ω‡à∞(ÄÄÄÄÄÄÄÄâ…Ω›Õ5ï…ùïë9Ω—îàËÄàÅÌçΩ’π—ÙÅô•±Ñ°Ã§Åá≈Öë•ï…Ω∏Åçï…—•ô•çÖç•ΩπïÃÅÑÅ’∏Åâ’çïÖëΩ»Å≈’îÅ—…Ö©ºÅ’πÑÅô•±ÑÅÖπ—ï…•Ω»∏à∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕM≠•¡¡ïë9Ω—îàËÄàÅÌçΩ’π—ÙÅçï…—•ô•çÖçßÕ∏°ïÃ§ÅÂÑÅ¡…ïÕïπ—ïÃÅï∏ÅïÕΩÃÅ…ïù•Õ—…ΩÃÅÕîÅëï©Ö…Ω∏ÅÕ•∏Å—ΩçÖ»∏à∞(ÄÄÄÄÄÄÄÄâ…Ω›ÕM≠•¡¡ïë9Ω—îàËÄàÅÌçΩ’π—ÙÅô•±Ñ°Ã§ÅΩµ•—•ëÖÃ∏à∞(ÄÄÄÄÄÄÄÄâçÖ…ëÕ!ï±ë	ÂπΩ—°ï»àËÄâÌçΩ’π—ÙÅªÈµï…º°Ã§ÅëîÅçï…—•ô•çÖçßÕ∏Åëï∞ÅÖ…ç°•ŸºÅÂÑÅïÕ”Ö∏Åï∏ÅΩ—…ºÅâ’çïÖëΩ»ÅëîÅ—‘Åçïπ—…º∞ÅÖœ¥Å≈’îÅïÕΩÃÅ…ïù•Õ—…ΩÃÅπºÅÕîÅá≈Öë•ï…Ω∏ÅÑÅπÖë•î∏ÅIïŸ•ÕÑÅï∞ÅÖ…ç°•ŸºÅ¡Ω»ÅÕ§Å°Ö‰Å’∏ÅªÈµï…ºÅ…ï¡ï—•ëºÅ‰Å±’ïùºÅ…ïŸ•ÕÑÅ‰Åá≈ÖëîÅ±ΩÃÅ…ïù•Õ—…ΩÃÅëîÅçï…—•ô•çÖçßÕ∏Åï∏Å•ŸïÖ‰∏à∞(ÄÄÄÄÄÄÄÄâÕ¡ïç•Ö±—ÂÖ—ï9Ω—îàËÄâUπÑÅ•πµï…ÕßÕ∏Å≈’îÅ…ï≈’•ï…îÅ’πÑÅëîÅïÕÖÃÅïÕ¡ïç•Ö±•ëÖëïÃÅïÕ¡ï…ÑÅïÕÑÅçΩπô•…µÖçßÕ∏ÉäPÅ”ÕçÖ±ÑÅï∏Åï∞Å…ïù•Õ—…ºÅëï∞Åâ’çïÖëΩ»Å‰Å±ÑÅ¡’ï…—ÑÅÕîÅÖâ…î∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…Õ1•πï=πîàËÄâÌçΩ’π—ÙÅ›Ö•Ÿï»Å•µ¡Ω…—ÖëºÅçΩµºÅÖçï¡—Öëº∞ÅµÖ…çÖëºÉäq•µ¡Ω…—ÖëøätÅï∏Åï∞Å¡ï…ô•∞Åëï∞Åâ’çïÖëΩ»∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…Õ1•πï=—°ï»àËÄâÌçΩ’π—ÙÅ›Ö•Ÿï…ÃÅ•µ¡Ω…—ÖëΩÃÅçΩµºÅÖçï¡—ÖëΩÃ∞ÅµÖ…çÖëΩÃÉäq•µ¡Ω…—ÖëøätÅï∏Åï∞Å¡ï…ô•∞Åëï∞Åâ’çïÖëΩ»∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…ÕM≠•¡¡ïë·•Õ—•πù9Ω—îàËÄàÅÌçΩ’π—ÙÅâ’çïÖëΩ»°ïÃ§ÅÂÑÅ—ïªµÖ∏Å’∏Å›Ö•Ÿï»ÅŸ•ùïπ—îÅï∏Åï∞ÅÖ…ç°•Ÿº∞ÅÕîÅëï©Ö…Ω∏ÅÕ•∏Å—ΩçÖ»∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…ÕM≠•¡¡ïë9ΩQïµ¡±Ö—ï9Ω—ï=πîàËÄàÅÌçΩ’π—ÙÅΩµ•—•ëºÉäPÅçΩπô•ù’…ÑÅ¡…•µï…ºÅ’πÑÅ¡±Öπ—•±±ÑÅëîÅï·ïπçßÕ∏∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…ÕM≠•¡¡ïë9ΩQïµ¡±Ö—ï9Ω—ï=—°ï»àËÄàÅÌçΩ’π—ÙÅΩµ•—•ëΩÃÉäPÅçΩπô•ù’…ÑÅ¡…•µï…ºÅ’πÑÅ¡±Öπ—•±±ÑÅëîÅï·ïπçßÕ∏∏à∞(ÄÄÄÄÄÄÄÄâ›Ö•Ÿï…Ωç’µïπ—ÕÖ•±ïë9Ω—îàËÄàÅÌçΩ’π—ÙÅïπ±Öçî°Ã§ÅëîÅëΩç’µïπ—ºÅπºÅÕîÅ¡’ë•ï…Ω∏ÅëïÕçÖ…ùÖ»Å‰ÅÕîÅëï©Ö…Ω∏Åô’ï…ÑÅëï∞Å…ïù•Õ—…º∏à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—Õ1•πï=πîàËÄâÌçΩ’π—ÙÅŸ•Õ•—ÑÅÖπ—ï…•Ω»Åá≈Öë•ëÑÅÖ∞Å°•Õ—Ω…•Ö∞Åëï∞Åçïπ—…ºÅëîÅ±ΩÃÅâ’çïÖëΩ…ïÃ∏à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—Õ1•πï=—°ï»àËÄâÌçΩ’π—ÙÅŸ•Õ•—ÖÃÅÖπ—ï…•Ω…ïÃÅá≈Öë•ëÖÃÅÖ∞Å°•Õ—Ω…•Ö∞Åëï∞Åçïπ—…ºÅëîÅ±ΩÃÅâ’çïÖëΩ…ïÃ∏à∞(ÄÄÄÄÄÄÄÄâŸ•Õ•—ÕM≠•¡¡ïë9Ω—îàËÄàÅÌçΩ’π—ÙÅÂÑÅïÕ—ÖâÖ∏Å•µ¡Ω…—ÖëÖÃÅ‰ÅÕîÅëï©Ö…Ω∏ÅçΩµºÅïÕ”Ö∏ÉäPÅŸΩ±Ÿï»ÅÑÅï©ïç’—Ö»Å±ÑÅµ•ÕµÑÅï·¡Ω…—ÖçßÕ∏ÅπºÅë’¡±•çÑÅï∞Å°•Õ—Ω…•Ö∞ÅëîÅπÖë•î∏à∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…Â1•πï=πîàËÄâÌçΩ’π—ÙÅ…ïù•Õ—…ºÅëîÅ¡ÖùºÄºÅ…ïç•âºÅëï∞ÅΩ…•ùï∏ÅÕ•∏ÅŸï…•ô•çÖ»Åá≈Öë•ëºÅÑÅAïë•ëΩÃ∏à∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…Â1•πï=—°ï»àËÄâÌçΩ’π—ÙÅ…ïù•Õ—…ΩÃÅëîÅ¡ÖùºÄºÅ…ïç•âºÅëï∞ÅΩ…•ùï∏ÅÕ•∏ÅŸï…•ô•çÖ»Åá≈Öë•ëΩÃÅÑÅAïë•ëΩÃ∏à∞(ÄÄÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…ÂM≠•¡¡ïë9Ω—îàËÄàÅÌçΩ’π—ÙÅÂÑÅïÕ—ÖâÖ∏Å•µ¡Ω…—ÖëΩÃÅ‰ÅÕîÅëï©Ö…Ω∏ÅçΩµºÅïÕ”Ö∏∏à∞(ÄÄÄÄÄÄÄÄâπΩ—ïÕ1•πï=πîàËÄâÌçΩ’π—ÙÅπΩ—ÑÅ•π—ï…πÑÅ•µ¡Ω…—ÖëÑÅÑÅ¡ï…ô•±ïÃÅëîÅâ’çïÖëΩ…ïÃ∏à∞(ÄÄÄÄÄÄÄÄâπΩ—ïÕ1•πï=—°ï»àËÄâÌçΩ’π—ÙÅπΩ—ÖÃÅ•π—ï…πÖÃÅ•µ¡Ω…—ÖëÖÃÅÑÅ¡ï…ô•±ïÃÅëîÅâ’çïÖëΩ…ïÃ∏à∞(ÄÄÄÄÄÄÄÄâ…ïçï•¡—Ωç’µïπ—ÕÖ•±ïë9Ω—îàËÄàÅÌçΩ’π—ÙÅïπ±Öçî°Ã§ÅëîÅëΩç’µïπ—ºÅëîÅ…ïç•âºÅπºÅÕîÅ¡’ë•ï…Ω∏ÅëïÕçÖ…ùÖ»Å‰ÅÕîÅëï©Ö…Ω∏Åô’ï…ÑÅëï∞Å…ïù•Õ—…ºÅëï∞ÅΩ…•ùï∏∏à∞(ÄÄÄÄÄÄÄÄâÕïïIΩÕ—ï»àËÄâYï»Åï∞Å±•Õ—Öëºà(ÄÄÄÄÄÅÙ(ÄÄÄÅÙ∞(ÄÄÄÄâ•ÕÕ’ïÃàËÅÏ(ÄÄÄÄÄÄâïµÖ•±%πŸÖ±•êàËÄâ∞ÅçΩ……ïºÉäqÌïµÖ•±˜ätÅπºÅ¡Ö…ïçîÅ€Ö±•ëºÉäPÅ•µ¡Ω…—ÖëºÅÕ•∏ÅçΩ……ïº∏à∞(ÄÄÄÄÄÄâçÖ…ë5Ö…≠ïëUπŸï…•ô•ïêàËÄâQ‘ÅÖ…ç°•ŸºÅµÖ…çÑÅïÕ—ÑÅçï…—•ô•çÖçßÕ∏ÅçΩµºÉäqÌÕ—Ö—’Õ˜ätÉäPÅ•µ¡Ω…—ÖëÑÅ¡Ö…ÑÅ…ïŸ•ÕßÕ∏Åëï∞Å¡ï…ÕΩπÖ∞Åï∏Å±’ùÖ»ÅëîÅçΩµºÅŸï…•ô•çÖëÑ∞ÅÂÑÅ≈’îÅ—’ÃÅ¡…Ω¡•ΩÃÅ…ïù•Õ—…ΩÃÅπºÅ±ÑÅëÖ∏Å¡Ω»Å…ïŸ•ÕÖëÑ∏à∞(ÄÄÄÄÄÄâÕ¡ïç•Ö±—Â9Ω—Ö—ïêàËÄâ1ÑÅïÕ¡ïç•Ö±•ëÖêÉäqÌÕ¡ïç•Ö±—Â˜ätÅπºÅïÃÅ’πÑÅïÕ¡ïç•Ö±•ëÖêÅ≈’îÅçΩπ—…Ω±ïµΩÃÄ°¡…Ωô’πëÑ∞ÅπÖ’ô…Öù•ΩÃ∞ÅπΩç—’…πÑ∞Å—…Ö©îÅÕïçº§ÉäPÅπºÅÕîÅ•µ¡Ω…”ÃÅπÖëÑÅ¡Ö…ÑÅï±±Ñ∏à∞(ÄÄÄÄÄÄâÕ¡ïç•Ö±—Â9ΩÖ…ë9’µâï»àËÄâ1ÑÅïÕ¡ïç•Ö±•ëÖêÉäqÌÕ¡ïç•Ö±—Â˜ätÅπºÅ—•ïπîÅªÈµï…ºÅëîÅçï…—•ô•çÖçßÕ∏Åï∏Å±ÑÅô•±ÑÉäPÅπºÅÕîÅ•µ¡Ω…”Ã∏ÅUπÑÅçï…—•ô•çÖçßÕ∏ÅÕ•∏ÅªÈµï…ºÅπºÅÕîÅ¡’ïëîÅŸï…•ô•çÖ»∏à∞(ÄÄÄÄÄÄâÕ¡ïç•Ö±—Â%µ¡Ω…—ïëYï…•ô•ïë=πîàËÄâï…—•ô•çÖçßÕ∏ÅëîÅïÕ¡ïç•Ö±•ëÖêÅ•µ¡Ω…—ÖëÑÅçΩµºÅŸï…•ô•çÖëÑÅëïÕëîÅ—’ÃÅ…ïù•Õ—…ΩÃÅ‰ÅµÖ…çÖëÑÅçΩµºÅ•µ¡Ω…—ÖëÑ∏ÅUπÑÅ•πµï…ÕßÕ∏Å≈’îÅ±ÑÅï·•©ÑÅïÕ¡ï…ÑÅÑÅ≈’îÅÖ±ù’•ï∏Åëï∞Åï≈’•¡ºÅçΩπô•…µîÅ°Öâï…±ÑÅŸ•Õ—º∏à∞(ÄÄÄÄÄÄâÕ¡ïç•Ö±—Â%µ¡Ω…—ïëYï…•ô•ïë=—°ï»àËÄâÌçΩ’π—ÙÅçï…—•ô•çÖç•ΩπïÃÅëîÅïÕ¡ïç•Ö±•ëÖêÅ•µ¡Ω…—ÖëÖÃÅçΩµºÅŸï…•ô•çÖëÖÃÅëïÕëîÅ—’ÃÅ…ïù•Õ—…ΩÃÅ‰ÅµÖ…çÖëÖÃÅçΩµºÅ•µ¡Ω…—ÖëÖÃ∏ÅUπÑÅ•πµï…ÕßÕ∏Å≈’îÅ±ÖÃÅï·•©ÑÅïÕ¡ï…ÑÅÑÅ≈’îÅÖ±ù’•ï∏Åëï∞Åï≈’•¡ºÅçΩπô•…µîÅ°Öâï…±ÖÃÅŸ•Õ—º∏à∞(ÄÄÄÄÄÄâÕ¡ïç•Ö±—Â%µ¡Ω…—ïëAïπë•πù=πîàËÄâï…—•ô•çÖçßÕ∏ÅëîÅïÕ¡ïç•Ö±•ëÖêÅ•µ¡Ω…—ÖëÑÅ¡Ö…ÑÅ…ïŸ•ÕßÕ∏Åëï∞Å¡ï…ÕΩπÖ∞ÉäPÅŸï»Å±ÑÅπΩ—ÑÅÖπ—ï…•Ω»∏à∞(ÄÄÄÄÄÄâÕ¡ïç•Ö±—Â%µ¡Ω…—ïëAïπë•πù=—°ï»àËÄâÌçΩ’π—ÙÅçï…—•ô•çÖç•ΩπïÃÅëîÅïÕ¡ïç•Ö±•ëÖêÅ•µ¡Ω…—ÖëÖÃÅ¡Ö…ÑÅ…ïŸ•ÕßÕ∏Åëï∞Å¡ï…ÕΩπÖ∞ÉäPÅŸï»Å±ÑÅπΩ—ÑÅÖπ—ï…•Ω»∏à∞(ÄÄÄÄÄÄâÖùïπçÂUπ…ïçΩùπ•ÈïêàËÄâùïπç•ÑÅëîÅçï…—•ô•çÖçßÕ∏ÅπºÅ…ïçΩπΩç•ëÑÉäPÅ•µ¡Ω…—ÖëÑÅçΩµºÉäqΩ—…áät∏à∞(ÄÄÄÄÄÄâ±ïŸï±9ÖµïÕM¡ïç•Ö±—‰àËÄâ1ÑÅçï…—•ô•çÖçßÕ∏É
+≠Ì±ïŸï±˜
+ÏÅπΩµâ…ÑÅ’πÑÅïÕ¡ïç•Ö±•ëÖê∞ÅπºÅ’∏Åπ•Ÿï∞∞Å‰ÅÕîÅ’œÃÅ±ÑÅçΩ±’µπÑÅëîÅïÕ¡ïç•Ö±•ëÖêÅëîÅïÕ—ÑÅô•±ÑÅï∏ÅÕ‘Å±’ùÖ»ÉäPÅπºÅÕîÅ•µ¡Ω…”ÃÅπ•πù’πÑÅçï…—•ô•çÖçßÕ∏ÅëîÅπ•Ÿï∞∏Å≈ÖëîÅïÕîÅ…ïù•Õ—…ºÅëîÅçï…—•ô•çÖçßÕ∏Åï∏Å•ŸïÖ‰ÅÕ§ÅïÃÅ•πëï¡ïπë•ïπ—î∏à∞(ÄÄÄÄÄÄâ±ïŸï±%ÕQïç°π•çÖ∞àËÄâ1ÑÅ—•—’±ÖçßÕ∏ÉäqÌ±ïŸï±˜ätÅïÃÅ”•çπ•çÑÅºÅëîÅïπ—Ω…πΩÃÅçΩ∏Å—ïç°º∞ÅπºÅ’∏Å¡ï±ëá≈ºÅ…ïç…ïÖ—•ŸºËÅπºÅÕîÅ•µ¡Ω…—ÑÅπ§ÅÕîÅ•π—ï…¡…ï—ÑÅçΩµºÅ’∏Åπ•Ÿï∞Åçï…çÖπº∏ÅIïüµÕ—…Ö±ÑÅÑÅµÖπºÅÕ§Å—‘Åçïπ—…ºÅ±ÑÅï·•ùî∏à∞(ÄÄÄÄÄÄâ±ïŸï±9Ω—Ö—ïêàËÄâ1ÑÅçï…—•ô•çÖçßÕ∏É
+≠Ì±ïŸï±˜
+ÏÅπºÅïÃÅ’∏Åπ•Ÿï∞Å≈’îÅçΩπ—…Ω±ïµΩÃÉäPÅçï…—•ô•çÖçßÕ∏ÅπºÅ•µ¡Ω…—ÖëÑ∏Å≈ÖëîÅï∞Å…ïù•Õ—…ºÅï∏Å•ŸïÖ‰ÅÕ§Å—‘Åçïπ—…ºÅπïçïÕ•—ÑÅçΩπÕï…ŸÖ…±º∏à∞(ÄÄÄÄÄÄâ±ïŸï±9ΩÖ…ë9’µâï»àËÄâ∞Åπ•Ÿï∞ÅëîÅçï…—•ô•çÖçßÕ∏É
+≠Ì±ïŸï±˜
+ÏÅπºÅ—•ïπîÅ’∏ÅªÈµï…ºÅëîÅçï…—•ô•çÖçßÕ∏Å’—•±•ÈÖâ±îÉäPÅçï…—•ô•çÖçßÕ∏ÅπºÅ•µ¡Ω…—ÖëÑ∏ÅUπÑÅïŸ•ëïπç•ÑÅÕ•∏ÅªÈµï…ºÅπºÅÕîÅ¡’ïëîÅŸï…•ô•çÖ»∏à∞(ÄÄÄÄÄÄâçï…—%µ¡Ω…—ïëYï…•ô•ïêàËÄâï…—•ô•çÖçßÕ∏Å•µ¡Ω…—ÖëÑÅçΩµºÅŸï…•ô•çÖëÑÅëïÕëîÅ—’ÃÅ…ïù•Õ—…ΩÃÉäPÅµÖ…çÖëÑÅçΩµºÅ•µ¡Ω…—ÖëÑ∞ÅçΩ∏Å’πÑÅçΩπô•…µÖçßÕ∏ÅëîÅ’∏Å—Ω≈’îÅ¡Ö…ÑÅï∞Å¡ï…ÕΩπÖ∞∏à∞(ÄÄÄÄÄÄâçï…—%µ¡Ω…—ïëAïπë•πúàËÄâï…—•ô•çÖçßÕ∏Å•µ¡Ω…—ÖëÑÅ¡Ö…ÑÅ…ïŸ•ÕßÕ∏Åëï∞Å¡ï…ÕΩπÖ∞ÉäPÅŸï»Å±ÑÅπΩ—ÑÅÖπ—ï…•Ω»∏à∞(ÄÄÄÄÄÄâπ•—…Ω·%µ¡Ω…—ïêàËÄâï…—•ô•çÖçßÕ∏ÅëîÅπ•—…Ω‡Å•µ¡Ω…—ÖëÑÅçΩµºÅŸï…•ô•çÖëÑÅëïÕëîÅ—’ÃÅ…ïù•Õ—…ΩÃÉäPÅµÖ…çÖëÑÅçΩµºÅ•µ¡Ω…—ÖëÑ∏Å1ΩÃÅ…ï±±ïπΩÃÅëÖ∏ÅÖ•…îÅπΩ…µÖ∞Å°ÖÕ—ÑÅ≈’îÅï∞Å¡ï…ÕΩπÖ∞ÅçΩπô•…µî∏à∞(ÄÄÄÄÄÄâπ•—…Ω·9ΩÖ…ë9’µâï»àËÄâ9•—…Ω‡ÅµÖ…çÖëºÅï∏Åï∞ÅΩ…•ùï∏ÅÕ•∏ÅªÈµï…ºÅëîÅçï…—•ô•çÖçßÕ∏ÉäPÅá≈ÖëîÅ‰ÅŸï…•ô•çÑÅ±ÑÅçï…—•ô•çÖçßÕ∏ÅëîÅπ•—…Ω‡Åï∏Å•ŸïÖ‰∏à∞(ÄÄÄÄÄÄâ›Ö•Ÿï…Ö—ï%πŸÖ±•êàËÄâ1ÑÅôïç°ÑÅëîÅÖçï¡—ÖçßÕ∏Åëï∞Å›Ö•Ÿï»ÉäqÌŸÖ±’ï˜ätÅπºÅïÃÅ’πÑÅôïç°ÑÅëîÅçÖ±ïπëÖ…•ºÅ…ïÖ∞Ä°ÕîÅïÕ¡ï…ÑÅµ54µ§ÉäPÅÕîÅ•µ¡Ω…”ÃÅôïç°ÖëÑÅ°Ω‰Åï∏ÅÕ‘Å±’ùÖ»∏à∞(ÄÄÄÄÄÄâ›Ö•Ÿï…%µ¡Ω…—ïêàËÄâ·ïπçßÕ∏Å•µ¡Ω…—ÖëÑÅçΩµºÅÖçï¡—ÖëÑËÅÕîÅÖçï¡—ÑÅ±ÑÅëï∞Åçïπ—…ºÅÖπ—ï…•Ω»∞Å•πç±’•ëÑÅ±ÑÅÖ¡—•—’êÅ∑•ë•çÑ∞Å‰ÅÕîÅµÖ…çÑÅçΩµºÉäq•µ¡Ω…—Öëáät∏à∞(ÄÄÄÄÄÄâëΩâ%πŸÖ±•êàËÄâ1ÑÅôïç°ÑÅëîÅπÖç•µ•ïπ—ºÉäqÌŸÖ±’ï˜ätÅπºÅïÃÅ’πÑÅôïç°ÑÅëîÅçÖ±ïπëÖ…•ºÅ¡±Ö’Õ•â±îÄ°ÕîÅïÕ¡ï…ÑÅµ54µ∞Äƒ‰¿¿ÅºÅ¡ΩÕ—ï…•Ω»∞ÅπºÅï∏Åï∞Åô’—’…º§ÉäPÅ•µ¡Ω…—ÖëÑÅÕ•∏Åï±±Ñ∏à∞(ÄÄÄÄÄÄâŸ•Õ•—Ö—ïUπ…ïÖëÖâ±îàËÄâ1ÑÅôïç°ÑÅëîÅŸ•Õ•—ÑÉäqÌŸÖ±’ï˜ätÅπºÅïÃÅ’πÑÅôïç°ÑÅ≈’îÅ¡ΩëÖµΩÃÅ±ïï»ÉäPÅï∞Åâ’çïÖëΩ»ÅÕîÅ•µ¡Ω…—ÑÅÕ•∏ÅïÕ—ÑÅŸ•Õ•—Ñ∏à∞(ÄÄÄÄÄÄâŸ•Õ•—9ΩIïôï…ïπçîàËÄâY•Õ•—ÑÅ•µ¡Ω…—ÖëÑÅÕ•∏Å…ïôï…ïπç•ÑÅëîÅ…ïÕï…ŸÑËÅ’πÑÅ…ï•µ¡Ω…—ÖçßÕ∏ÅçΩ•πç•ëîÅ¡Ω»Åôïç°Ñ∞ÅπΩµâ…îÅîÅ•µ¡Ω…—î∞ÅÖœ¥Å≈’îÅëΩÃÅ…ïÕï…ŸÖÃÅ•ì•π—•çÖÃÅï∞Åµ•ÕµºÅìµÑÅïπ—…Ö∏ÅçΩµºÅ’πÑÅÕΩ±ÑÅŸ•Õ•—Ñ∏à∞(ÄÄÄÄÄÄâŸ•Õ•—9ΩÖ—îàËÄâÕ—ÑÅô•±ÑÅπΩµâ…ÑÅ’πÑÅ…ïÕï…ŸÑÅÖπ—ï…•Ω»Å¡ï…ºÅπºÅ±±ïŸÑÅôïç°ÑÉäPÅï∞Åâ’çïÖëΩ»ÅÕîÅ•µ¡Ω…—ÑÅÕ•∏ÅïÕ—ÑÅŸ•Õ•—Ñ∏à∞(ÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…ÂÖ—ïUπ…ïÖëÖâ±îàËÄâ1ÑÅôïç°ÑÅëï∞Å°•Õ—Ω…•Ö∞ÅëîÅ¡ÖùΩÃÉäqÌŸÖ±’ï˜ätÅπºÅïÃÅ’πÑÅôïç°ÑÅ≈’îÅ¡ΩëÖµΩÃÅ±ïï»ÉäPÅïÕîÅ…ïù•Õ—…ºÅëï∞ÅΩ…•ùï∏ÅπºÅÕîÅ•µ¡Ω…—ÖÀÑ∏à∞(ÄÄÄÄÄÄâ¡ÖÂµïπ—!•Õ—Ω…Â9ΩÖ—îàËÄâÕ—ÑÅô•±ÑÅëîÅ¡ÖùºÅºÅ…ïç•âºÅëï∞ÅΩ…•ùï∏ÅπºÅ—•ïπîÅ’πÑÅôïç°ÑÅ’—•±•ÈÖâ±î∞ÅÖœ¥Å≈’îÅπºÅÕîÅ•µ¡Ω…—ÖÀÑ∏à∞(ÄÄÄÄÄÄâπΩ9ÖµîàËÄâM•∏ÅπΩµâ…îÉäPÅô•±ÑÅΩµ•—•ëÑ∏à∞(ÄÄÄÄÄÄâµï…ùïë’¡±•çÖ—îàËÄâ5•ÕµºÅâ’çïÖëΩ»Å≈’îÅ±ÑÅô•±ÑÅÌ…Ω›ÙÄ°ÌïµÖ•±Ù§ÉäPÅ±ÖÃÅçï…—•ô•çÖç•ΩπïÃ∞Åï∞Å›Ö•Ÿï»Å‰Å±ÑÅŸ•Õ•—ÑÅÖπ—ï…•Ω»ÅëîÅïÕ—ÑÅô•±ÑÅÕîÅá≈Öëï∏ÅÑÅïÕîÅ…ïù•Õ—…ºÏÅ±ΩÃÅëÖ—ΩÃÅëîÅçΩπ—Öç—ºÅÕîÅëï©Ö∏ÅçΩµºÅ±ΩÃÅ—•ïπîÅ±ÑÅô•±ÑÅÖπ—ï…•Ω»∏à∞(ÄÄÄÄÄÄâπΩµÖ•±9ï›IïçΩ…êàËÄâM•∏ÅçΩ……ïºÉäPÅ•µ¡Ω…—ÖëºÅçΩµºÅ…ïù•Õ—…ºÅπ’ïŸºÏÅ’πÑÅ…ï•µ¡Ω…—ÖçßÕ∏ÅπºÅ¡ΩëÀÑÅ…ï±Öç•ΩπÖ…±ºÅ¡Ö…ÑÅÖç—’Ö±•ÈÖ…±º∏à(ÄÄÄÅÙ∞(ÄÄÄÄâï……Ω…ÃàËÅÏ(ÄÄÄÄÄÄâπΩ—=›πï…=…5ÖπÖùï»àËÄâ%µ¡Ω…—Ö»ÅçΩπ—Öç—ΩÃÅïÕ”ÑÅ±•µ•—ÖëºÅÖ∞Å¡…Ω¡•ï—Ö…•ºÅºÅùï…ïπ—îÅëï∞Åçïπ—…º∏à∞(ÄÄÄÄÄÄâçÕŸIï≈’•…ïêàËÄâ±•ùîÅ’∏ÅÖ…ç°•ŸºÅMXÅ¡Ö…ÑÅ•µ¡Ω…—Ö»∏à∞(ÄÄÄÄÄÄâπΩ%µ¡Ω…—Öâ±ïIΩ›ÃàËÄâ9ºÅ°Ö‰Åô•±ÖÃÅ•µ¡Ω…—Öâ±ïÃÉäPÅÑÅ—ΩëÖÃÅ±ïÃÅôÖ±—ÖâÑÅ’∏ÅπΩµâ…îÅºÅïÕ—ÖâÖ∏Åë’¡±•çÖëÖÃ∏à∞(ÄÄÄÄÄÄâô•±ïQΩΩ1Ö…ùîàËÄâ∞ÅÖ…ç°•ŸºÅïÃÅëïµÖÕ•ÖëºÅù…ÖπëîÉäPÅï∞Å≥µµ•—îÅïÃÅÌ±•µ•—5âÙÅ5∏à∞(ÄÄÄÄÄÄâô•±ïµ¡—‰àËÄâ∞ÅÖ…ç°•ŸºÅïÕ”ÑÅŸÖèµº∏à∞(ÄÄÄÄÄÄâ—ΩΩ5ÖπÂΩ±’µπÃàËÄâïµÖÕ•ÖëÖÃÅçΩ±’µπÖÃÄ°ÌçΩ’π—Ù§ÉäPÅï∞Å≥µµ•—îÅïÃÅÌ±•µ•—Ù∏à∞(ÄÄÄÄÄÄâ—ΩΩ5ÖπÂIΩ›ÃàËÄâïµÖÕ•ÖëÖÃÅô•±ÖÃÄ°ÌçΩ’π—Ù§ÉäPÅï∞Å≥µµ•—îÅïÃÅÌ±•µ•—ÙÅ¡Ω»Å•µ¡Ω…—ÖçßÕ∏∏Å•Ÿ•ëîÅï∞ÅÖ…ç°•ŸºÅîÅ•µ√Õ…—Ö±ºÅï∏Å±Ω—ïÃ∏à∞(ÄÄÄÄÄÄâçï±±QΩΩ1Ωπù!ïÖëï»àËÄâUπÑÅçï±ëÑÅëîÅ±ÑÅô•±ÑÅëîÅïπçÖâïÈÖëºÅ—•ïπîÅ∑ÖÃÅëîÅÌ±•µ•—ÙÅçÖ…Öç—ï…ïÃÉäPÅ…ïŸ•ÕÑÅ≈’îÅπºÅÕïÑÅ’∏ÅëΩç’µïπ—ºÅ¡ïùÖëºÅï∏ÅŸïËÅëîÅ’πÑÅ°Ω©ÑÅëîÅèÖ±ç’±º∏à∞(ÄÄÄÄÄÄâçï±±QΩΩ1ΩπùIΩ‹àËÄâUπÑÅçï±ëÑÅëîÅ±ÑÅô•±ÑÅÌ…Ω›ÙÅ—•ïπîÅ∑ÖÃÅëîÅÌ±•µ•—ÙÅçÖ…Öç—ï…ïÃÉäPÅ…ïŸ•ÕÑÅ≈’îÅπºÅÕïÑÅ’∏ÅëΩç’µïπ—ºÅ¡ïùÖëºÅï∏ÅŸïËÅëîÅ’πÑÅ°Ω©ÑÅëîÅèÖ±ç’±º∏à∞(ÄÄÄÄÄÄâπΩ9ÖµïΩ±’µ∏àËÄâ9ºÅÕîÅïπçΩπ—ÀÃÅçΩ±’µπÑÅëîÅπΩµâ…î∏Å∞ÅÖ…ç°•ŸºÅπïçïÕ•—ÑÅ’∏ÅπΩµâ…îÅçΩµ¡±ï—º∞ÅºÅπΩµâ…îÅ‰ÅÖ¡ï±±•ëº∞Å¡Ö…ÑÅ•µ¡Ω…—Ö»Å¡ï…ÕΩπÖÃ∏à(ÄÄÄÅÙ(ÄÅÙ∞(ÄÄâÕïç’…•—‰àËÅÏ(ÄÄÄÄâïÂïâ…Ω‹àËÄâ©’Õ—ïÃà∞(ÄÄÄÄâ—•—±îàËÄâMïù’…•ëÖêÅëîÅ±ÑÅç’ïπ—Ñà∞(ÄÄÄÄâëïÕç…•¡—•Ω∏àËÄâA…Ω—ïùîÅ—‘Åç’ïπ—ÑÅëï∞Å¡ï…ÕΩπÖ∞ÅçΩ∏Å’∏ÅÕïù’πëºÅôÖç—Ω»Å‰Å…ïŸ•ÕÑÅ±ÖÃÅÕïÕ•ΩπïÃÅÖç—•ŸÖÃ∏à∞(ÄÄÄÄâ—›ΩÖç—Ω…!ïÖë•πúàËÄâ’—ïπ—•çÖçßÕ∏Åï∏ÅëΩÃÅ¡ÖÕΩÃà∞(ÄÄÄÄâ—›ΩÖç—Ω…ïÕç…•¡—•Ω∏àËÄâUÕÑÅ’πÑÅÖ¡±•çÖçßÕ∏ÅëîÅÖ’—ïπ—•çÖçßÕ∏Å¡Ö…ÑÅ±ÖÃÅÖçç•ΩπïÃÅÕïπÕ•â±ïÃ∏Å∞ÅëïÕÖç—•ŸÖ…±ÑÅÕîÅï±•µ•πÑÅï∞ÅÕïç…ï—ºÅù’Ö…ëÖëº∏à∞(ÄÄÄÄâïπÖâ±ïêàËÄâç—•ŸÖëÑà∞(ÄÄÄÄâπΩ—πÖâ±ïêàËÄâ9ºÅÖç—•ŸÖëÑà∞(ÄÄÄÄâÕ—Ö…–àËÄâ%π•ç•Ö»ÅçΩπô•ù’…ÖçßÕ∏à∞(ÄÄÄÄâÕ—Ö…—•πúàËÄâ%π•ç•Öπëøäòà∞(ÄÄÄÄâë•ÕÖâ±îàËÄâïÕÖç—•ŸÖ»ÅëΩÃÅ¡ÖÕΩÃà∞(ÄÄÄÄâë•ÕÖâ±•πúàËÄâïÕÖç—•ŸÖπëøäòà∞(ÄÄÄÄâÕïç…ï—1Öâï∞àËÄâ≈ÖëîÅïÕ—îÅÕïç…ï—ºÅÑÅ—‘ÅÖ¡±•çÖçßÕ∏ÅëîÅÖ’—ïπ—•çÖçßÕ∏Å‰ÅïÕç…•âîÅï∞ÅèÕë•ùºÅÖç—’Ö∞ÅëîÅÕï•ÃÅç•ô…ÖÃËà∞(ÄÄÄÄâçΩëï1Öâï∞àËÄâÕë•ùºÅëîÅÖ’—ïπ—•çÖçßÕ∏à∞(ÄÄÄÄâïπÖâ±îàËÄâç—•ŸÖ»à∞(ÄÄÄÄâïπÖâ±•πúàËÄâç—•ŸÖπëøäòà∞(ÄÄÄÄâ…ïçΩŸï…Â!ïÖë•πúàËÄâÕë•ùΩÃÅëîÅ…ïç’¡ï…ÖçßÕ∏à∞(ÄÄÄÄâ…ïçΩŸï…ÂïÕç…•¡—•Ω∏àËÄâ’Ö…ëÑÅïÕ—ΩÃÅèÕë•ùΩÃÅï∏Å’∏Å±’ùÖ»ÅÕïù’…º∏ÅÖëÑÅ’πºÅô’πç•ΩπÑÅ’πÑÅŸïËÅÕ§Å¡•ï…ëïÃÅï∞ÅÖççïÕºÅÑÅ—‘ÅÖ¡±•çÖçßÕ∏ÅëîÅÖ’—ïπ—•çÖçßÕ∏∏à∞(ÄÄÄÄâ…ïçΩŸï…Â]Ö…π•πúàËÄâÕ—ΩÃÅèÕë•ùΩÃÅëïÕÖ¡Ö…ïçï∏ÅÖ∞Å—ï…µ•πÖ»Å±ÑÅçΩπô•ù’…ÖçßÕ∏ÅºÅï∏Åë•ïËÅµ•π’—ΩÃ∏Å•ŸïÖ‰ÅπºÅ¡’ïëîÅŸΩ±Ÿï»ÅÑÅµΩÕ—…Ö…±ΩÃ∏à∞(ÄÄÄÄâÕïÕÕ•ΩπÕ!ïÖë•πúàËÄâMïÕ•ΩπïÃÅÖç—•ŸÖÃà∞(ÄÄÄÄâÕïÕÕ•ΩπÕïÕç…•¡—•Ω∏àËÄâIïŸΩçÑÅ’∏Åë•Õ¡ΩÕ•—•ŸºÅ≈’îÅÂÑÅπºÅ…ïçΩπΩÈçÖÃÅºÅç•ï……ÑÅÕïÕßÕ∏Åï∏Å—ΩëÖÃÅ¡Ö…—ïÃ∏à∞(ÄÄÄÄâ’π≠πΩ›πïŸ•çîàËÄâ•Õ¡ΩÕ•—•ŸºÅëïÕçΩπΩç•ëºà∞(ÄÄÄÄâ’π≠πΩ›π%¿àËÄâIïêÅëïÕçΩπΩç•ëÑà∞(ÄÄÄÄâ…ïŸΩ≠îàËÄâIïŸΩçÖ»à∞(ÄÄÄÄâ…ïŸΩ≠•πúàËÄâIïŸΩçÖπëøäòà∞(ÄÄÄÄâ…ïŸΩ≠ï±∞àËÄâï……Ö»ÅÕïÕßÕ∏Åï∏Å—ΩëÖÃÅ¡Ö…—ïÃà∞(ÄÄÄÄâ…ïŸΩ≠•πù±∞àËÄâï……ÖπëºÅÕïÕßÕªäòà∞(ÄÄÄÄâ±ÖÕ—Mïï∏àËÄãÈ±—•µÑÅÖç—•Ÿ•ëÖêÅÌëÖ—ïÙà∞(ÄÄÄÄâÕ—ï¡U¡!ïÖë•πúàËÄâΩπô•…µÑÅïÕ—ÑÅÖççßÕ∏ÅÕïπÕ•â±îà∞(ÄÄÄÄâÕ—ï¡U¡ïÕç…•¡—•Ω∏àËÄâÕç…•âîÅ’∏ÅèÕë•ùºÅÖç—’Ö∞ÅëîÅ—‘ÅÖ¡±•çÖçßÕ∏ÅºÅ’∏ÅèÕë•ùºÅëîÅ…ïç’¡ï…ÖçßÕ∏∏ÅÕ—ÑÅÖ¡…ΩâÖçßÕ∏Åë’…ÑÄƒ‘Åµ•π’—ΩÃÅï∏ÅïÕ—îÅπÖŸïùÖëΩ»∏à∞(ÄÄÄÄâÕ—ï¡U¡Ωëï1Öâï∞àËÄâÕë•ùºÅëîÅÖ’—ïπ—•çÖçßÕ∏ÅºÅ…ïç’¡ï…ÖçßÕ∏à∞(ÄÄÄÄâÕ—ï¡U¡Ωëï!•π–àËÄâ1ΩÃÅèÕë•ùΩÃÅëîÅ…ïç’¡ï…ÖçßÕ∏ÅÕîÅ¡’ïëï∏Å’ÕÖ»Å’πÑÅŸïË∏à∞(ÄÄÄÄâÕ—ï¡U¡Yï…•ô‰àËÄâYï…•ô•çÖ»Å‰ÅçΩπ—•π’Ö»à∞(ÄÄÄÄâÕ—ï¡U¡Yï…•ôÂ•πúàËÄâYï…•ô•çÖπëøäòà∞(ÄÄÄÄâπΩ—•çîàËÅÏ(ÄÄÄÄÄÄâïπ…Ω±±µïπ—M—Ö…—ïêàËÄâΩπô•ù’…ÖçßÕ∏Å•π•ç•ÖëÑ∏Å’Ö…ëÑÅï∞ÅÕïç…ï—ºÅÖπ—ïÃÅëîÅÖç—•ŸÖ»Å±ΩÃÅëΩÃÅ¡ÖÕΩÃ∏à∞(ÄÄÄÄÄÄâïπÖâ±ïêàËÄâ’—ïπ—•çÖçßÕ∏Åï∏ÅëΩÃÅ¡ÖÕΩÃÅÖç—•ŸÖëÑ∏à∞(ÄÄÄÄÄÄâë•ÕÖâ±ïêàËÄâ’—ïπ—•çÖçßÕ∏Åï∏ÅëΩÃÅ¡ÖÕΩÃÅëïÕÖç—•ŸÖëÑ∏à∞(ÄÄÄÄÄÄâÕïÕÕ•ΩπIïŸΩ≠ïêàËÄâMïÕßÕ∏Å…ïŸΩçÖëÑ∏à∞(ÄÄÄÄÄÄâçΩëï%πŸÖ±•êàËÄâ9ºÅÕîÅÖçï¡”ÃÅïÕîÅèÕë•ùº∏à∞(ÄÄÄÄÄÄâÕ—ï¡U¡Iï≈’•…ïêàËÄâYï…•ô•çÑÅçΩ∏Å—‘ÅÖ¡±•çÖçßÕ∏ÅëîÅÖ’—ïπ—•çÖçßÕ∏Å¡Ö…ÑÅçΩπ—•π’Ö»∏à∞(ÄÄÄÄÄÄâ’πÖŸÖ•±Öâ±îàËÄâ1ÑÅçΩπô•ù’…ÖçßÕ∏ÅëîÅÕïù’…•ëÖêÅπºÅïÕ”ÑÅë•Õ¡Ωπ•â±îÅ°ÖÕ—ÑÅçΩπô•ù’…Ö»Å±ÑÅç±ÖŸîÅëîÅç•ô…ÖëºÅëï∞ÅëïÕ¡±•ïù’î∏à∞(ÄÄÄÄÄÄâ•πŸÖ±•êàËÄâ9ºÅÕîÅ¡’ëºÅçΩµ¡±ï—Ö»ÅïÕîÅçÖµâ•ºÅëîÅÕïù’…•ëÖê∏à(ÄÄÄÅÙ(ÄÅÙ∞(ÄÄâïµâïêàËÅÏ(ÄÄÄÄâïÂïâ…Ω‹àËÄâ©’Õ—ïÃà∞(ÄÄÄÄâ—•—±îàËÄâ]•ëùï–Å¡Ö…ÑÅ—‘Å›ïàà∞(ÄÄÄÄâëïÕç…•¡—•Ω∏àËÄâAïùÑÅ’πºÅëîÅïÕ—ΩÃÅï∏Å—‘Å›ïàÅ¡Ö…ÑÅ≈’îÅ±ΩÃÅâ’çïÖëΩ…ïÃÅï·¡±Ω…ï∏Å‰Å…ïÕï…Ÿï∏ÅÕ•∏ÅÕÖ±•»ÅëîÅï±±Ñ∏à∞(ÄÄÄÄâπΩ—Ωπô•ù’…ïêàËÄâ1ΩÃÅ›•ëùï—ÃÅπïçïÕ•—Ö∏Å’πÑÅë•…ïççßÕ∏ÅëîÅÖ±Ω©Öµ•ïπ—ºÅ√Èâ±•çºÅçΩπô•ù’…ÖëÑÅï∏ÅïÕ—ÑÅ•πÕ—Öπç•ÑÅëîÅ•ŸïÖ‰ÉäPÅçΩπ—Öç—ÑÅÑÅÌïµÖ•±ÙÅ¡Ö…ÑÅÖç—•ŸÖ…±Ñ∏à∞(ÄÄÄÄâçÖ±ïπëÖ…µâïêàËÅÏ(ÄÄÄÄÄÄâ°ïÖë•πúàËÄâ]•ëùï–ÅëîÅçÖ±ïπëÖ…•ºà∞(ÄÄÄÄÄÄâëïÕç…•¡—•Ω∏àËÄâQ’ÃÅ¡ÀÕ·•µÖÃÅç’Ö—…ºÅÕÖ±•ëÖÃÅçΩ∏Å’∏Åïπ±ÖçîÅÖ∞Å…ïÕ—º∞ÅçΩ∏Å’∏Å—Öµá≈ºÅ≈’îÅπ’πçÑÅùïπï…ÑÅÕç…Ω±∞Åëïπ—…ºÅëîÅ—‘Å√Öù•πÑ∏Å%ëïÖ∞Å¡Ö…ÑÅ’πÑÅ√Öù•πÑÉ
+≠IïÕï…ŸÖÀ
+ÏÅï∏Å—‘Å›ïà∏à∞(ÄÄÄÄÄÄâÖ——…•â’—•Ωπ9Ω—îàËÄâ%πç±’ÂîÅ’∏Å¡ï≈’ó≈ºÅïπ±ÖçîÅëîÅçÀ•ë•—ºÅpâΩ∏Å±ÑÅ—ïçπΩ±ΩüµÑÅëîÅ•ŸïÖÂpàÅëïâÖ©ºÅëï∞ÅçÖ±ïπëÖ…•º∞Åï∏Å—‘Å¡…Ω¡•ÑÅ√Öù•πÑÉäPÅπºÅëïπ—…ºÅëï∞Å›•ëùï–∏à∞(ÄÄÄÄÄÄâô•ï±ë1Öâï∞àËÄâÕë•ùºÅëï∞Å›•ëùï–à∞(ÄÄÄÄÄÄâÖ——…•â’—•Ωπ1•π≠Qï·–àËÄâΩ∏Å±ÑÅ—ïçπΩ±ΩüµÑÅëîÅ•ŸïÖ‰à(ÄÄÄÅÙ∞(ÄÄÄÄââΩΩ≠	’——Ω∏àËÅÏ(ÄÄÄÄÄÄâ°ïÖë•πúàËÄâ	Ω”Õ∏ÅpâIïÕï…ŸÖ»Å•πµï…ÕßÕπpàà∞(ÄÄÄÄÄÄâëïÕç…•¡—•Ω∏àËÄâU∏Åïπ±ÖçîÅπΩ…µÖ∞ÅçΩ∏ÅÖÕ¡ïç—ºÅëîÅâΩ”Õ∏∞ÅÕ•∏Å•ô…Öµî∏Åâ…îÅ—‘ÅçÖ±ïπëÖ…•ºÅï∏Å’πÑÅ¡ïÕ—á≈ÑÅπ’ïŸÑÅ‰ÅïÃÅ±ÑÅΩ¡çßÕ∏ÅÑÅ’ÕÖ»ÅÕ§ÅçΩâ…ÖÃÅï∏Å≥µπïÑ∞ÅÂÑÅ≈’îÅ’πÑÅ√Öù•πÑÅëîÅ¡ÖùºÅ¡’ïëîÅπïùÖ…ÕîÅÑÅçÖ…ùÖ»Åëïπ—…ºÅëï∞ÅµÖ…çºÅëîÅΩ—…ºÅÕ•—•º∏à∞(ÄÄÄÄÄÄâô•ï±ë1Öâï∞àËÄâÕë•ùºÅëï∞ÅâΩ”Õ∏à∞(ÄÄÄÄÄÄââ’——ΩπQï·–àËÄâIïÕï…ŸÖ»Å•πµï…ÕßÕ∏à(ÄÄÄÅÙ∞(ÄÄÄÄâôΩΩ—ï»àËÄâµâΩÃÅô…Öùµïπ—ΩÃÅÖ¡’π—Ö∏ÅÑÄÒ±•π¨˘—‘ÅçÖ±ïπëÖ…•ºÅ√Èâ±•çºΩ±•π¨¯∏Å1ΩÃÅçÖµâ•ΩÃÅï∏ÅÕÖ±•ëÖÃ∞Å±ÖÃÅπ’ïŸÖÃÅôïç°ÖÃÅ‰Å±ΩÃÅ¡…ïç•ΩÃÅÖ¡Ö…ïçï∏Åï∏Åç’Öπ—ºÅ’∏Åâ’çïÖëΩ»ÅçÖ…ùÑÅï∞Å•πç…’Õ—Öëº∏à∞(ÄÄÄÄâÕπ•¡¡ï—•ï±êàËÅÏ(ÄÄÄÄÄÄâçΩ¡‰àËÄâΩ¡•Ö»à∞(ÄÄÄÄÄÄâçΩ¡•ïêàËÄâΩ¡•Öëºà∞(ÄÄÄÄÄÄâôÖ•±ïêàËÄâ9ºÅÕîÅ¡’ëºÅçΩ¡•Ö»ÉäPÅÕï±ïçç•ΩπÑÅï∞ÅèÕë•ùºÅëîÅÖ……•âÑ∏à(ÄÄÄÅÙ(ÄÅÙ)Ù(

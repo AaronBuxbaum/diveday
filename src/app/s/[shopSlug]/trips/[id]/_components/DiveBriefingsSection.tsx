@@ -117,6 +117,17 @@ export function DiveBriefingsSection({
           />
         ))}
       </div>
+      {sited.some(({ diveSite }) => diveSite?.conservationNote) ? (
+        <div className="mt-5 space-y-2">
+          {sited.map(({ dive, diveSite }) =>
+            diveSite?.conservationNote ? (
+              <p key={`${dive.id}-conservation`} className="text-sm text-muted">
+                {t("shopChrome.siteConservationNote", { note: diveSite.conservationNote })}
+              </p>
+            ) : null,
+          )}
+        </div>
+      ) : null}
       <p className="mt-3 text-sm text-muted">{t("trip.briefingsFooter")}</p>
     </section>
   );
