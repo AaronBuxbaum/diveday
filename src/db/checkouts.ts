@@ -9,6 +9,7 @@ import {
   stripeLineDescription,
 } from "@/lib/payments/checkout";
 import { allocateSettledTotal, netOfPercentDiscount } from "@/lib/payments/settlement";
+import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import type { AppDb, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
 import {
@@ -30,6 +31,7 @@ import {
   trips,
 } from "./schema";
 import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
+import { getShopById } from "./shops";
 import {
   canAcceptPayments,
   getShopCurrency,
@@ -151,6 +153,8 @@ export async function startBookingCheckout(
   // Stripe unchanged — there is no divisor anywhere on this path.
   const currency = await getShopCurrency(db, input.shopId);
   const taxEnabled = await getShopTaxEnabled(db, input.shopId);
+  const shop = await getShopById(db, input.shopId);
+  const passThroughFee = parsePassThroughFee(shop?.passThroughFee);
 
   const bookingRows = await db
     .select({ id: bookings.id })
@@ -225,8 +229,11 @@ export async function startBookingCheckout(
         : null
     : null;
 
+  const passThroughCents = passThroughTotalCents(passThroughFee, input.bookingIds.length);
   const totalCents =
-    [...tripCentsByBooking.values()].reduce((sum, cents) => sum + cents, 0) + gearTotalCents;
+    [...tripCentsByBooking.values()].reduce((sum, cents) => sum + cents, 0) +
+    gearTotalCents +
+    passThroughCents;
   if (totalCents === 0) return { ok: false, reason: "already_paid" };
   const tripLineQuantities = new Map<number, number>();
   for (const cents of tripCentsByBooking.values()) {
@@ -313,6 +320,15 @@ export async function startBookingCheckout(
           unitAmountCents: line.amountCents,
           quantity: 1,
         })),
+        ...(passThroughFee
+          ? [
+              {
+                description: stripeLineDescription(passThroughFee.name),
+                unitAmountCents: passThroughFee.amountCents,
+                quantity: input.bookingIds.length,
+              },
+            ]
+          : []),
       ],
       customerEmail: input.customerEmail,
       successUrl: input.successUrl,
@@ -362,6 +378,7 @@ export async function startBookingCheckout(
           taxCents: null,
           amountPerDiverCents,
           totalCents,
+          passThroughCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
           // At most one source is ever recorded (the table's
@@ -382,6 +399,7 @@ export async function startBookingCheckout(
           bookingId,
           tripCents: tripCentsByBooking.get(bookingId) ?? 0,
           gearCents: gearCentsByBooking.get(bookingId) ?? 0,
+          passThroughCents: passThroughFee?.amountCents ?? 0,
         })),
       );
       return row;

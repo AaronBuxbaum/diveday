@@ -71,6 +71,15 @@ export const shops = pgTable(
     currency: text("currency").notNull().default("usd"),
     /** Whether new Stripe charges should calculate and collect tax. Off by default. */
     taxEnabled: boolean("tax_enabled").notNull().default(false),
+    /** Optional shop-configured conservation/park fee passed through per diver. */
+    passThroughFee: jsonb("pass_through_fee")
+      .$type<{ name: string; amountCents: number } | null>()
+      .default(null),
+    /** Coded commitments the shop chooses to display; these are shop claims. */
+    conservationCommitments: jsonb("conservation_commitments")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
     /**
@@ -1138,6 +1147,8 @@ export const diveSites = pgTable(
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
     marineLife: text("marine_life"),
     marineLifeDescription: text("marine_life_description"),
+    /** Optional shop-authored conservation note shown with this site. */
+    conservationNote: text("conservation_note"),
     /** How demanding the site is; the briefing prints a translated label for it. */
     difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
@@ -1802,6 +1813,91 @@ export const tripDives = pgTable(
     check(
       "trip_dives_travel_minutes_range",
       sql`${table.travelMinutes} is null or (${table.travelMinutes} >= 0 and ${table.travelMinutes} <= 480)`,
+    ),
+  ],
+);
+
+/** Recorded facts from a completed dive; planned trip details remain immutable evidence. */
+export const executedDives = pgTable(
+  "executed_dives",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id").notNull().references(() => shops.id),
+    tripId: uuid("trip_id").notNull().references(() => trips.id),
+    diveNumber: integer("dive_number").notNull(),
+    actualSiteId: uuid("actual_site_id").references(() => diveSites.id),
+    enteredAt: timestamp("entered_at", { withTimezone: true }),
+    exitedAt: timestamp("exited_at", { withTimezone: true }),
+    maxDepthMeters: doublePrecision("max_depth_meters"),
+    observedConditions: jsonb("observed_conditions")
+      .$type<Record<string, unknown> | null>()
+      .default(null),
+    /** Explicit field-level omissions, e.g. `max_depth`, rather than fake zeroes. */
+    notRecorded: jsonb("not_recorded").$type<string[]>().notNull().default([]),
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("executed_dives_trip_number_live_unique")
+      .on(table.tripId, table.diveNumber)
+      .where(sql`${table.deletedAt} is null`),
+    index("executed_dives_shop_trip_idx").on(table.shopId, table.tripId, table.diveNumber),
+    check("executed_dives_number_positive", sql`${table.diveNumber} >= 1`),
+    check(
+      "executed_dives_depth_nonnegative",
+      sql`${table.maxDepthMeters} is null or ${table.maxDepthMeters} >= 0`,
+    ),
+    check(
+      "executed_dives_exit_after_entry",
+      sql`${table.enteredAt} is null or ${table.exitedAt} is null or ${table.exitedAt} > ${table.enteredAt}`,
+    ),
+  ],
+);
+
+export const staffCredentialKind = pgEnum("staff_credential_kind", [
+  "instructor_rating",
+  "divemaster_rating",
+  "liability_insurance",
+  "first_aid_cpr",
+  "oxygen_provider",
+  "captains_licence",
+  "other",
+]);
+
+/** Staff-owned evidence; warning-only and never an assignment/booking gate. */
+export const staffCredentials = pgTable(
+  "staff_credentials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id").notNull().references(() => shops.id),
+    personId: uuid("person_id").notNull().references(() => people.id),
+    kind: staffCredentialKind("kind").notNull(),
+    name: text("name").notNull(),
+    issuingBody: text("issuing_body"),
+    identifier: text("identifier"),
+    issuedAt: date("issued_at", { mode: "string" }),
+    renewsAt: date("renews_at", { mode: "string" }),
+    status: certificationStatus("status").notNull().default("pending"),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("staff_credentials_shop_person_idx").on(table.shopId, table.personId),
+    index("staff_credentials_renewal_idx").on(table.shopId, table.renewsAt),
+    uniqueIndex("staff_credentials_live_identity_unique")
+      .on(table.shopId, table.personId, table.kind, sql`lower(${table.identifier})`)
+      .where(sql`${table.deletedAt} is null`),
+    check(
+      "staff_credentials_renewal_after_issue",
+      sql`${table.issuedAt} is null or ${table.renewsAt} is null or ${table.renewsAt} >= ${table.issuedAt}`,
     ),
   ],
 );
@@ -3099,6 +3195,7 @@ export const orderLineItemKind = pgEnum("order_line_item_kind", [
    * answer.
    */
   "dive_package",
+  "pass_through_fee",
   "merchandise",
   "other",
 ]);
@@ -3126,6 +3223,8 @@ export const orders = pgTable(
     status: orderStatus("status").notNull().default("open"),
     currency: text("currency").notNull(),
     totalCents: integer("total_cents").notNull(),
+    /** Shop-configured conservation/park fee charged separately per diver. */
+    passThroughCents: integer("pass_through_cents").notNull().default(0),
     /** Tax included in Stripe's total, retained separately for reporting and display. */
     taxCents: integer("tax_cents").notNull().default(0),
     amountPaidCents: integer("amount_paid_cents").notNull().default(0),
@@ -3171,6 +3270,7 @@ export const orders = pgTable(
     // half that was scanning every order the shop has ever written.
     index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check("orders_pass_through_nonnegative", sql`${table.passThroughCents} >= 0`),
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
@@ -3318,6 +3418,8 @@ export const bookingCheckouts = pgTable(
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
+    /** Snapshot of the separately reported pass-through fee total. */
+    passThroughCents: integer("pass_through_cents").notNull().default(0),
     /** Snapshot of whether Stripe Tax was enabled when this session was created. */
     taxEnabled: boolean("tax_enabled").notNull().default(false),
     /** Stripe-reported tax for the completed session; null while no evidence exists. */
@@ -3368,6 +3470,7 @@ export const bookingCheckouts = pgTable(
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
     check("booking_checkouts_amount_per_diver_nonnegative", sql`${table.amountPerDiverCents} >= 0`),
     check("booking_checkouts_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check("booking_checkouts_pass_through_nonnegative", sql`${table.passThroughCents} >= 0`),
     check(
       "booking_checkouts_settled_total_nonnegative",
       sql`${table.settledTotalCents} is null or ${table.settledTotalCents} >= 0`,
@@ -3426,6 +3529,8 @@ export const bookingCheckoutBookings = pgTable(
      */
     /** This booking's trip-fee share after package coverage, snapshotted. */
     tripCents: integer("trip_cents"),
+    /** This booking's allocated pass-through fee, excluded from revenue. */
+    passThroughCents: integer("pass_through_cents").notNull().default(0),
     gearCents: integer("gear_cents").notNull().default(0),
     /** Allocated share of the checkout's Stripe-reported tax. */
     taxCents: integer("tax_cents").notNull().default(0),
@@ -3437,6 +3542,10 @@ export const bookingCheckoutBookings = pgTable(
     ),
     index("booking_checkout_bookings_booking_idx").on(table.bookingId),
     check("booking_checkout_bookings_gear_cents_nonnegative", sql`${table.gearCents} >= 0`),
+    check(
+      "booking_checkout_bookings_pass_through_nonnegative",
+      sql`${table.passThroughCents} >= 0`,
+    ),
     check("booking_checkout_bookings_tax_cents_nonnegative", sql`${table.taxCents} >= 0`),
     check(
       "booking_checkout_bookings_trip_cents_nonnegative",
@@ -3974,6 +4083,52 @@ export const accountSessions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("account_sessions_user_account_idx").on(table.userAccountId)],
+);
+
+/** Encrypted TOTP seed plus one-time recovery-code hashes for an account. */
+export const accountSecurity = pgTable("account_security", {
+  userAccountId: uuid("user_account_id")
+    .primaryKey()
+    .references(() => userAccounts.id, { onDelete: "cascade" }),
+  totpSecretSealed: text("totp_secret_sealed"),
+  totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
+  recoveryCodeHashes: jsonb("recovery_code_hashes").$type<string[]>().notNull().default([]),
+  lastTotpStep: bigint("last_totp_step", { mode: "number" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const securityStepUpPurpose = pgEnum("security_step_up_purpose", [
+  "money",
+  "export",
+  "backup",
+]);
+
+/** Short-lived, session-bound grants produced by a second-factor challenge. */
+export const accountStepUps = pgTable(
+  "account_step_ups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userAccountId: uuid("user_account_id")
+      .notNull()
+      .references(() => userAccounts.id, { onDelete: "cascade" }),
+    accountSessionId: uuid("account_session_id")
+      .notNull()
+      .references(() => accountSessions.id, { onDelete: "cascade" }),
+    purpose: securityStepUpPurpose("purpose").notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("account_step_ups_session_purpose_idx").on(
+      table.accountSessionId,
+      table.purpose,
+      table.expiresAt,
+    ),
+    index("account_step_ups_account_expires_idx").on(table.userAccountId, table.expiresAt),
+    check("account_step_ups_expiry_after_verification", sql`${table.expiresAt} > ${table.verifiedAt}`),
+  ],
 );
 
 /**
@@ -6392,6 +6547,7 @@ export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 export type TripDive = typeof tripDives.$inferSelect;
+export type ExecutedDive = typeof executedDives.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
@@ -6416,6 +6572,11 @@ export type BackupDeliveryTrigger = (typeof backupDeliveryTrigger.enumValues)[nu
 export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
+export type StaffCredential = typeof staffCredentials.$inferSelect;
+export type StaffCredentialKind = (typeof staffCredentialKind.enumValues)[number];
+export type AccountSecurity = typeof accountSecurity.$inferSelect;
+export type AccountStepUp = typeof accountStepUps.$inferSelect;
+export type SecurityStepUpPurpose = (typeof securityStepUpPurpose.enumValues)[number];
 export type IntegrationProvider = (typeof integrationProvider.enumValues)[number];
 export type IntegrationConnectionStatus = (typeof integrationConnectionStatus.enumValues)[number];
 export type IntegrationDeliveryStatus = (typeof integrationDeliveryStatus.enumValues)[number];
