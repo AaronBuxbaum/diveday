@@ -572,7 +572,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // publishing a version puts every one of them back in the queue. The count in
   // front of the staffer is the point: it used to be a one-tap "Saved" (issue
   // #720).
-  await page.getByRole("button", { name: "Save new version" }).click();
+  await page.getByRole("button", { name: "Publish — signatures need renewing" }).click();
   // **The consequence, in sentence one.** "Replaces the release" is a statement
   // about a document and says nothing about a signature ceasing to count; the
   // second sentence then partitions the group, so a manager could read "11 need
@@ -593,7 +593,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // confirm restated the alarming number as an operational one.
   expect(Number(soon)).toBeLessThan(Number(signed));
 
-  await page.getByRole("button", { name: "Publish new version" }).click();
+  await page.getByRole("button", { name: "Publish as material" }).click();
   await expect(page.getByRole("status")).toContainText("sign again before boarding");
   // The shop now owes those divers a link, and the batch send is one tap away
   // rather than a hunt.
@@ -643,8 +643,8 @@ test("saving the release unchanged publishes nothing and says so", async ({ page
   // Not one character touched — the tap a staffer makes on the way out. The
   // confirm still arms, because until the body is submitted nothing knows this
   // is a no-op; what changed is what happens when it lands.
-  await page.getByRole("button", { name: "Save new version" }).click();
-  await page.getByRole("button", { name: "Publish new version" }).click();
+  await page.getByRole("button", { name: "Publish — signatures need renewing" }).click();
+  await page.getByRole("button", { name: "Publish as material" }).click();
 
   await expect(page.getByRole("status")).toContainText("No change");
   await expect(release.getByText("Version 3")).toBeVisible();

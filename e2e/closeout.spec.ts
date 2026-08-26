@@ -48,9 +48,10 @@ test.describe("end-of-day close-out", () => {
 
     // Make an explicit decision about the first leftover: dismiss it. Every
     // other row keeps its carry default.
-    const dismissals = page.locator('input[type="radio"][value="dismiss"]');
-    await expect(dismissals.first()).toBeVisible();
-    await dismissals.first().check();
+    const dismissButton = page.getByRole("button", { name: "Dismiss" }).first();
+    await expect(dismissButton).toBeVisible();
+    await dismissButton.click();
+    await expect(page.getByText("Dismissed for this close-out").first()).toBeVisible();
 
     // `Close the day` on a fresh day, `Close the day again` on a retry that
     // already closed it — either way it is the same recorded act.
