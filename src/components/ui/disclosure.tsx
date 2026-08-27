@@ -97,12 +97,15 @@ export function DisclosureRowMessage({
 }: {
   id: string;
   heading: string;
+  /** The settled sentence, and whatever the answer leaves the reader — a way
+   * to reach the shop, say. A `div` rather than a `p` so a caller may pass an
+   * element, which is not legal inside a paragraph. */
   children: ReactNode;
 }) {
   return (
     <div id={id} className="rise-in px-5 py-5 sm:px-6">
       <h3 className="text-base font-semibold">{heading}</h3>
-      <p className="mt-1 text-sm text-muted">{children}</p>
+      <div className="mt-1 text-sm text-muted">{children}</div>
     </div>
   );
 }

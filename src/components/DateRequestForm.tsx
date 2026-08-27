@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureRow } from "@/components/ui/disclosure";
+import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { telHref } from "@/lib/contact-links";
 import {
@@ -390,6 +390,20 @@ export function DateRequestForm({
   // "can't find your link" door. The row owns the heading (an `h3`, the group's
   // level) and the chevron, so nothing here spells either.
   if (collapsible) {
+    // An answered row drops its disclosure, exactly as the deal list and the
+    // find-my-link row beside it do. Left as a `DisclosureRow`, the chevron
+    // would go on offering a form that no longer exists — and collapsing it
+    // would hide the only thing telling the reader their request was sent.
+    // The section branch below keeps the sunken inset instead: there the
+    // confirmation replaces a body that was never collapsible.
+    if (state.success) {
+      return (
+        <DisclosureRowMessage id={sectionId} heading={copy.sentHeading}>
+          {copy.sentBody}
+          {contactLine}
+        </DisclosureRowMessage>
+      );
+    }
     return (
       <DisclosureRow id={sectionId} heading={copy.heading}>
         {body}

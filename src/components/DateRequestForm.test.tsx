@@ -44,7 +44,13 @@ function renderInquiry(
     askInterest = false,
     contactEmail = "hello@example.com",
     contactPhone = "+1 305 555 0134" as string | null,
-  }: { askInterest?: boolean; contactEmail?: string | null; contactPhone?: string | null } = {},
+    collapsible = false,
+  }: {
+    askInterest?: boolean;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+    collapsible?: boolean;
+  } = {},
 ) {
   return renderDiver(
     <DateRequestForm
@@ -52,6 +58,7 @@ function renderInquiry(
       askInterest={askInterest}
       contactEmail={contactEmail}
       contactPhone={contactPhone}
+      collapsible={collapsible}
       copy={copy}
     />,
   );
@@ -140,6 +147,29 @@ describe("DateRequestForm — server-recorded submission", () => {
     // The shop's own address and phone stay on screen after a successful
     // server-recorded send — the one way left to write to them directly.
     expect(screen.getByText("hello@example.com")).toBeInTheDocument();
+  });
+
+  /**
+   * On the schedule page this form is one row of a group of disclosures, and a
+   * row that has been answered drops its disclosure — the same as the deal list
+   * and the find-my-link row beside it. Left collapsible, the chevron would go
+   * on offering a form that no longer exists, and collapsing the row would hide
+   * the only thing telling the reader their request was sent.
+   */
+  it("drops the disclosure once the request is sent, on the collapsible surface", async () => {
+    const { container } = renderInquiry(succeeds(), { collapsible: true, contactEmail: null });
+
+    fireEvent.click(container.querySelector("summary") as HTMLElement);
+    fillEmail();
+    pickExperience("tried");
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(screen.getByText("Inquiry sent")).toBeInTheDocument());
+    expect(container.querySelector("details")).toBeNull();
+    // ...and the section surface keeps its own anatomy: no disclosure to drop.
+    cleanup();
+    renderInquiry(succeeds(), { contactEmail: null });
+    expect(document.querySelector("details")).toBeNull();
   });
 
   it("shows the server's error and keeps the form on screen (failure path)", async () => {
