@@ -219,6 +219,8 @@ export type BuilderCopy = {
   descriptionPlaceholder: string;
   isPrivateLabel: string;
   isPrivateHint: string;
+  selfGuidedLabel: string;
+  selfGuidedHint: string;
   daysLabel: string;
   daysDescription: string;
   payAtBookingLegend: string;
@@ -590,6 +592,26 @@ function AddPanel({
           <div className="flex flex-col">
             <span>{copy.isPrivateLabel}</span>
             <span className="text-xs font-normal text-muted">{copy.isPrivateHint}</span>
+          </div>
+        </label>
+      </Field>
+      {/* Offered at creation, not only on the trip's own edit form. The shape
+          this exists for is a *standing* unguided charter — created once as a
+          series template and materialized weekly — so a mark you can only
+          apply after the fact is a mark the case it was built for never gets
+          in time (issue #973). */}
+      <Field label={null} className={expanded ? undefined : "hidden"}>
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
+          <input
+            type="checkbox"
+            name="selfGuided"
+            value="true"
+            disabled={!expanded}
+            className="size-4 rounded border-border"
+          />
+          <div className="flex flex-col">
+            <span>{copy.selfGuidedLabel}</span>
+            <span className="text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
           </div>
         </label>
       </Field>
