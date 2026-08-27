@@ -219,6 +219,32 @@ disclosure's height animates *layout*, costs a reflow per frame on each of the s
 the board's inline panels, and every menu that opens inside a disclosure. The quarter-rem rise says
 "this came from the summary above" and moves nothing the browser has to lay out again.
 
+**Between pages there is no motion, and that is the answer rather than a gap
+(issue #795, decided 2026-08-27).** Every navigation in this app is a hard cut:
+`grep -rn "ViewTransition\|startViewTransition" src/ next.config.ts` returns nothing, and it will
+keep returning nothing. The case for changing that was real — this app's navigation *is* a
+hierarchy (Today -> a departure -> its manifest; Divers -> a diver -> their order), a shared element
+morphing across a cut is the strongest "where did it go" motion there is, and the diver's name
+exists on both the roster row and the record's `<h1>`. It was prototyped on exactly that pair and
+came back **no**, for two reasons that are worth writing down so nobody re-derives them:
+
+- **The skeleton is already the answer to that question.** Every route declares `instant = true` and
+  owns a body-shaped `loading.tsx` (ADR 20260804-instant-navigation), so a client navigation paints
+  the *skeleton* of the destination first. There is nothing for the roster's name to morph into: at
+  the instant of the transition the destination is a pulsing bar, not an `<h1>`. Making the morph
+  work means holding the old page on screen until the record's data resolves — which is exactly the
+  property that ADR exists to protect, and the app's best one. A content-shaped skeleton and a
+  shared-element morph are two answers to the same question, and this app already shipped one.
+- **It is not reachable from typed application code here.** React's `<ViewTransition>` lives only in
+  the canary channel Next vendors as `react-experimental`; the installed `react` is 19.2.8 stable
+  and `@types/react` describes that, so an import of it fails `pnpm typecheck` outright. Reaching it
+  means an untyped import of an unstable API on a component nearly every staff page renders.
+
+**Not proposed and not open: a blanket page cross-fade.** Motion with no job is what this whole
+principle forbids, and a fade over the instant paint would blur the one thing the reader is here to
+read. If this is ever revisited it needs a new fact — a stable `ViewTransition`, or a decision that
+the instant paint is worth trading — not a fresh opinion.
+
 **One earned exception to the 250 ms ceiling: a disclosure that unfolds.** A group of controls
 revealed on request (the board's "⋯" row menu) animates per child with a stagger, so the sequence
 runs longer than any one element's motion — 260 ms in and 280 ms out, staggered 50 ms, so the
