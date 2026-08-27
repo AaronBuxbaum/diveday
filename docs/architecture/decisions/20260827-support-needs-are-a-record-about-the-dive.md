@@ -180,17 +180,38 @@ the offline manifest, checking the named support diver against the roster and sh
 buddy-team builder, a staff-side write path for arrangements taken over the phone, and an activity
 trail entry so an overwritten arrangement is diagnosable.
 
-## What was **not** built, and is a decision rather than an omission
+## Amended 2026-08-27: the record does reach the offline manifest
 
-**The record does not reach the offline manifest.** `src/lib/offline-manifests.ts` carries an
-explicit allow-list, and this is not on it — so the copy a crew reads with no signal has the rental
-fit and the emergency contact but not "lift in and out of the water" or the named buddy. That cuts
-both ways and both reviews said so. It is health-adjacent data retained up to fourteen days on a
-deckhand's personal phone, which is exactly why the allow-list exists and why `age`/`minor` were
-taken out of it. It is also the offshore copy, and a water lift is an offshore fact. **The default
-here is to hold the line the allow-list already draws** — a new field does not join it silently —
-and the trade is now written down rather than being an unstated consequence of a `Pick`. Reopening
-it is a product-owner call, not a reviewer's.
+The build shipped without it, as the conservative default rather than a considered answer, and the
+trade was left written down here for a product-owner call. That call has been made (issue #1067):
+**the whole record rides, the two free-text fields included.**
+
+The argument against was real and is unchanged — this payload sits up to fourteen days in encrypted
+IndexedDB on a deckhand's *personal* phone, which is exactly why the allow-list exists and why
+`age`, `minor` and `birthday` were taken back off it, and support needs are health-adjacent facts
+about disabled adults. What settled it is *where the record is read*. Boarding assistance is a
+dock-side fact, where signal usually exists; a water lift and an agreed-signal briefing are
+**mooring** facts, and at the mooring the offline copy is the only copy. This ADR names "a
+support-diver count silently lost between `/ready` and the manifest" as the record's failure mode,
+and a crew that cannot see it offshore is precisely that loss.
+
+The equipment note and the named buddy ride rather than being trimmed as "a description of a
+person", which was the narrower option. They are the most operational things here: "webbed gloves,
+short fin" is what somebody packs, and a person you must be teamed with is the arrangement a crew
+acts on at the rail. Shipping the flags and dropping the words would hand the boat a record it
+could not act on.
+
+One field is deliberately left behind. `statedAt` is not an arrangement — it answers "was this
+diver ever asked", which the diver's own page reads and no crew surface renders — and it is a
+`Date` in a payload that is otherwise JSON scalars, so it would come back a string wearing the
+wrong type. The snapshot therefore carries `SupportArrangements` (`src/lib/support-needs.ts`), the
+record minus that field.
+
+It renders in `src/app/offline-manifest/` beside the rental fit, in the same neutral voice and
+never as a warning, and only when something was stated — a line reading "nothing needed" down the
+whole boat is the absence of information formatted as information. The field is optional and
+additive on the snapshot, like `buddyTeamNames`, so a copy saved before this change still decrypts
+and simply shows no record.
 
 ## Three deliberate differences from the design above
 

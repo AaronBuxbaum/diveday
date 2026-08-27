@@ -26,6 +26,7 @@ import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-label
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -1725,6 +1726,33 @@ export function OfflineManifestView() {
                                 : ""}
                             </span>
                           </p>
+                          {/* **What this diver arranged**, in the same neutral
+                              voice as the fit above it and never a warning
+                              (ADR 20260827-support-needs-are-a-record-about-
+                              the-dive). Only when something was stated: a line
+                              reading "nothing needed" down the whole boat is
+                              the absence of information formatted as
+                              information.
+
+                              One line per fact rather than a joined run, for
+                              the reason the live manifest does the same — two
+                              of these carry the diver's own free text, and a
+                              sentence inside a `·`-joined line is where a crew
+                              loses track of which fact is which. */}
+                          {supportNeedsLines(t, diver.supportNeeds).length > 0 ? (
+                            <p>
+                              <span className="font-bold">
+                                {t("shared.offlineManifest.single.diveSupport")}
+                              </span>
+                              <span className="mt-0.5 block text-muted">
+                                {supportNeedsLines(t, diver.supportNeeds).map((line) => (
+                                  <span key={line} className="block">
+                                    {line}
+                                  </span>
+                                ))}
+                              </span>
+                            </p>
+                          ) : null}
                         </div>
                       </details>
                       {!ready ? (

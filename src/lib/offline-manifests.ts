@@ -18,6 +18,7 @@ import {
   RETRACTION_SUPERSEDED,
   rollCallCheckpoints,
 } from "./roll-call";
+import type { SupportArrangements } from "./support-needs";
 
 /**
  * Bumped whenever the snapshot shape changes. It is the AES-GCM additional
@@ -219,7 +220,56 @@ export type OfflineManifestPayload = {
           | "emergencyContactPhone"
           | "rentalFit"
           | "nitroxRequested"
+          /**
+           * **Carried whole, free text included** (issue #1067).
+           *
+           * This is the one field on this list that was argued both ways. The
+           * allow-list exists because the payload sits up to 14 days in
+           * encrypted IndexedDB on a deckhand's *personal* phone, which is why
+           * `age`, `minor` and `birthday` were taken back off it -- and support
+           * needs are health-adjacent facts about disabled adults, which is the
+           * same argument.
+           *
+           * It rides anyway, because of where it is read. A water lift and an
+           * agreed-signal briefing are *mooring* facts: boarding assistance is
+           * dock-side, where signal usually exists, but the plan for dive two
+           * is made at the site, off the copy that is then the only copy. The
+           * ADR names "a support-diver count silently lost between `/ready` and
+           * the manifest" as this record's failure mode, and a crew that cannot
+           * see it offshore is exactly that loss.
+           *
+           * The two free-text fields ride too rather than being trimmed off.
+           * The equipment note and the named buddy are the most operational
+           * things here -- "webbed gloves, short fin" is what somebody packs,
+           * and a person you must be teamed with is the arrangement a crew
+           * acts on at the mooring -- and shipping the flags while dropping
+           * the words would give the boat a record it could not act on.
+           *
+           * `SupportArrangements` rather than `SupportNeeds`, which is the
+           * record minus `statedAt`. That field is a `Date` and nothing else
+           * in this payload is -- it is written as JSON, so it would come back
+           * a string wearing a `Date` type -- and it is the one field here
+           * that is not an arrangement: it answers "was this diver ever
+           * asked", which the diver's own page reads and no crew surface
+           * renders.
+           *
+           * This is the one entry on this list that is a type alias rather
+           * than a named field, and deliberately so: the decision was to carry
+           * the whole record, so a ninth *arrangement* column should ride
+           * without anybody having to remember. The allow-list's promise still
+           * holds where it matters -- a new field on a manifest diver does not
+           * reach a crew phone until it is named above.
+           */
         > & {
+          /**
+           * Optional and additive, like `buddyTeamNames` above and for the
+           * same reason: a snapshot written before this change still decrypts
+           * (`OFFLINE_MANIFEST_RECORD_VERSION` is the AAD and this field did
+           * not change it), and a required field would arrive `undefined` on
+           * the one surface a crew has with no signal. Absent reads as "no
+           * record", which is what a diver who was never asked has anyway.
+           */
+          supportNeeds?: SupportArrangements | null;
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
@@ -604,6 +654,22 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
+        // Whole or absent, never partially: `supportNeedFacts` is the one
+        // derivation of what this record says, and it reads every column.
+        supportNeeds: diver.supportNeeds
+          ? {
+              supportDiversNeeded: diver.supportNeeds.supportDiversNeeded,
+              supportDiversProvidedBy: diver.supportNeeds.supportDiversProvidedBy,
+              needsBoardingAssistance: diver.supportNeeds.needsBoardingAssistance,
+              needsWaterLift: diver.supportNeeds.needsWaterLift,
+              briefingInSign: diver.supportNeeds.briefingInSign,
+              briefingInWriting: diver.supportNeeds.briefingInWriting,
+              briefingAloud: diver.supportNeeds.briefingAloud,
+              briefingBySignals: diver.supportNeeds.briefingBySignals,
+              equipmentAdaptation: diver.supportNeeds.equipmentAdaptation,
+              divesWithName: diver.supportNeeds.divesWithName,
+            }
+          : null,
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.

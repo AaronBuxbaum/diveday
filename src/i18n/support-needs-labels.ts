@@ -1,5 +1,8 @@
-import type { SupportNeedFact, SupportNeeds } from "@/lib/support-needs";
-import { supportNeedFacts } from "@/lib/support-needs";
+import {
+  type SupportArrangements,
+  type SupportNeedFact,
+  supportNeedFacts,
+} from "@/lib/support-needs";
 import type { StaffTranslator } from "./staff-messages";
 
 /**
@@ -54,6 +57,9 @@ function factText(t: StaffTranslator, fact: SupportNeedFact): string {
  * an arbitrary sentence into a comma-separated line is how a crew misreads where
  * one fact ends and the next begins.
  */
-export function supportNeedsLines(t: StaffTranslator, needs: SupportNeeds | null | undefined) {
+export function supportNeedsLines(
+  t: StaffTranslator,
+  needs: SupportArrangements | null | undefined,
+) {
   return supportNeedFacts(needs).map((fact) => factText(t, fact));
 }

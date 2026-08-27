@@ -65,6 +65,18 @@ export type SupportNeeds = {
 };
 
 /**
+ * The arrangements alone -- every field except `statedAt`.
+ *
+ * `statedAt` answers "was this diver ever asked", which the diver's own page
+ * reads and no crew surface renders. Everything that decides what a crew *does*
+ * is in here, so the two readers that answer that question take this rather than
+ * the whole record: `supportNeedFacts` below, and the offline manifest snapshot,
+ * which carries the arrangements and deliberately not the timestamp (issue
+ * #1067).
+ */
+export type SupportArrangements = Omit<SupportNeeds, "statedAt">;
+
+/**
  * Whether this record says anything a crew would act on.
  *
  * A stated `0` support divers is deliberately **not** something to act on: it
@@ -73,7 +85,7 @@ export type SupportNeeds = {
  * row still exists and `statedAt` still records that the diver answered — that
  * is what a staff surface reads to tell "nothing needed" from "nobody asked".
  */
-export function hasSupportNeeds(needs: SupportNeeds | null | undefined): boolean {
+export function hasSupportNeeds(needs: SupportArrangements | null | undefined): boolean {
   if (!needs) return false;
   return (
     (needs.supportDiversNeeded ?? 0) > 0 ||
@@ -121,7 +133,7 @@ export type SupportNeedFact =
   | { kind: "dives_with"; name: string };
 
 /** Every stated fact, in reading order. Empty when nothing was stated. */
-export function supportNeedFacts(needs: SupportNeeds | null | undefined): SupportNeedFact[] {
+export function supportNeedFacts(needs: SupportArrangements | null | undefined): SupportNeedFact[] {
   if (!needs) return [];
   const facts: SupportNeedFact[] = [];
   // Ordered the way the day runs: who is in the water, then getting aboard and

@@ -978,6 +978,140 @@ describe("offline manifest policy", () => {
     expect(payload.manifests[0]?.divers[0]?.email).toBeNull();
   });
 
+  /** One ready diver on a two-dive departure — the shape these serialization cases vary. */
+  function baseManifest(): TripManifest {
+    return {
+      trip: {
+        id: "trip-1",
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-07-20T12:00:00.000Z"),
+        endsAt: new Date("2026-07-20T16:00:00.000Z"),
+        plannedDives: 2,
+      },
+      checkpoint: "after_dive_1",
+      crew: [],
+      completeness: {
+        complete: false,
+        diversAccountedFor: false,
+        crewAccountedFor: false,
+        reason: "divers_awaiting",
+        crewReason: "crew_none_assigned",
+        crewCounts: { crewAwaiting: 0, crewNotBackAboard: 0, crewAshore: 0, crewAssigned: 0 },
+      },
+      divers: [
+        {
+          bookingId: "booking-1",
+          fullName: "Nobody Asked",
+          email: "nobody@example.com",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          checkedIn: false,
+          rollCall: undefined,
+          buddyAlert: null,
+        },
+      ],
+      summary: {
+        totalDivers: 1,
+        ready: 1,
+        blocked: 0,
+        boarded: 0,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 1,
+        unaccountedFor: 1,
+      },
+    } as TripManifest;
+  }
+
+  it("carries the whole support-needs record offshore, free text and all", () => {
+    // Issue #1067. The allow-list exists because this payload sits up to 14
+    // days on a deckhand's personal phone -- but a water lift and an
+    // agreed-signal briefing are *mooring* facts, and at the mooring this copy
+    // is the only copy. The free text rides too: "webbed gloves" is what
+    // somebody packs, and a person you must be teamed with is the arrangement
+    // a crew acts on.
+    const manifest: TripManifest = {
+      ...baseManifest(),
+      divers: [
+        {
+          bookingId: "booking-adaeze",
+          fullName: "Adaeze Nwosu",
+          email: "adaeze@example.com",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          checkedIn: false,
+          rollCall: undefined,
+          buddyAlert: null,
+          supportNeeds: {
+            supportDiversNeeded: 2,
+            supportDiversProvidedBy: "shop",
+            needsBoardingAssistance: true,
+            needsWaterLift: true,
+            briefingInSign: false,
+            briefingInWriting: true,
+            briefingAloud: false,
+            briefingBySignals: false,
+            equipmentAdaptation: "webbed gloves, short fin",
+            divesWithName: "Marisol Vega",
+            statedAt: new Date("2026-07-19T09:00:00.000Z"),
+          },
+        },
+      ],
+    } as TripManifest;
+
+    const payload = serializeManifests(
+      [manifest],
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
+      (blocker) => blocker.code,
+    );
+    const [adaeze] = payload.manifests[0]?.divers ?? [];
+    expect(adaeze?.supportNeeds).toEqual({
+      supportDiversNeeded: 2,
+      supportDiversProvidedBy: "shop",
+      needsBoardingAssistance: true,
+      needsWaterLift: true,
+      briefingInSign: false,
+      briefingInWriting: true,
+      briefingAloud: false,
+      briefingBySignals: false,
+      equipmentAdaptation: "webbed gloves, short fin",
+      divesWithName: "Marisol Vega",
+    });
+    // `statedAt` is the one field deliberately left behind: it is a `Date` in
+    // a payload that is otherwise all JSON scalars, and it answers "was this
+    // diver ever asked" -- a question the diver's own page asks and no crew
+    // surface renders.
+    expect(adaeze?.supportNeeds).not.toHaveProperty("statedAt");
+    // And it survives the trip through storage, which is where a `Date` would
+    // have come back as a string wearing the wrong type.
+    expect(JSON.parse(JSON.stringify(adaeze)).supportNeeds).toEqual(adaeze?.supportNeeds);
+  });
+
+  it("leaves a diver nobody asked with no record rather than an empty one", () => {
+    const payload = serializeManifests(
+      [baseManifest()],
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
+      (blocker) => blocker.code,
+    );
+    expect(payload.manifests[0]?.divers[0]?.supportNeeds).toBeNull();
+  });
+
   it("carries a buddy as a name only — never an id, never a computed divergence", () => {
     // The dock copy *displays* buddy teams; whether a pair is split is a
     // live-roll-call read, and a snapshot cannot know who came back (ADR
