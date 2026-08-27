@@ -93,7 +93,6 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
-  rollCallEvents,
   specialtyCertifications,
   staffCredentials,
   tripReviews,
