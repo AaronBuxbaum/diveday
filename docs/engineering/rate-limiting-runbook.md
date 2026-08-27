@@ -32,10 +32,10 @@ cannot see it.
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
 | Post-trip tip checkout | same file, `startTipAction` | IP **and** booking | `RATE_LIMITS.tipStart` (10/hour), spent on both dimensions |
 | Review submit / revise | same file, `submitReviewAction` | IP **and** booking | `RATE_LIMITS.reviewSubmitByIp` (30/hour) + `RATE_LIMITS.reviewSubmitByToken` (10/hour) |
-| Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP | `RATE_LIMITS.waitlistJoin` (10/hour) |
+| Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.waitlistJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
-| Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP | `RATE_LIMITS.lastMinuteListJoin` (10/hour) |
+| Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Self-cancelling a booking from the readiness link | same file | IP | `RATE_LIMITS.bookingSelfCancel` (5/hour) |
@@ -60,6 +60,23 @@ Three notes the table can't carry:
   mailbox N separate 5/hour budgets. When the dead token can't be resolved to a
   booking at all, it falls back to keying on the token itself — the only case
   where that per-inbox invariant can't be enforced.
+- **`declarationByPerson` is keyed by the diver written *to*, never by whoever
+  submitted the form**, and it is spent by both public joins through one helper,
+  `declarationWithinPersonBudget` (`src/lib/dive-declaration.ts`). Both forms
+  take a name, an email and a rung from an anonymous page and hand them to
+  `recordSelfDeclaredCards`, which resolves the person by address; a per-IP
+  bucket cannot see a rotating set of submitters, so without this anyone who
+  knows a diver's name and address could spray claims onto their record. Keying
+  on the submitter would be no protection — a party names up to six people, so
+  that bucket is cleared by putting the victim in seat two. The key is
+  shop-scoped, so a spray at one shop cannot spend a diver's budget at another.
+  **An empty bucket drops the claim and lets the join succeed**: a diver must
+  never be turned away because somebody else sprayed the address they typed, and
+  a dropped claim is what a malformed one already gets. A join that answered
+  nothing spends nothing. What bounds the severity underneath it is
+  `src/db/self-declared-cards.ts`'s anti-displacement rule, which refuses to
+  write beside or over any real evidence the shop holds — this is the net for
+  divers the shop knows nothing about.
 - **`addressLookup` is a spend bound, not a security boundary.** The action is
   already owner/manager-gated; each keystroke past the minimum length is a
   billed Amazon Location request on the shop's own account.

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   DECLARABLE_CERTIFICATION_LEVELS,
+  type DiveDeclaration,
+  declarationWithinPersonBudget,
   diveDeclarationInput,
   diveDeclarationSchema,
   NO_CERTIFICATION_ANSWER,
@@ -156,5 +158,93 @@ describe("the declared card's agency and number", () => {
     const unsaid = parse({ certificationAgency: "padi", certificationNumber: "PA-1" });
     expect(unsaid?.agency).toBeUndefined();
     expect(unsaid?.identifier).toBeUndefined();
+  });
+});
+
+/**
+ * **The per-subject budget on a public declaration.**
+ *
+ * Both surviving public forms are anonymous and bounded per IP only, and a
+ * rotating set of addresses is exactly what a per-IP bucket cannot see. These
+ * pin the two properties that make `declarationWithinPersonBudget` worth
+ * having at all — that the key is the address the claim is *about*, and that
+ * an empty bucket costs the claim rather than the sign-up.
+ *
+ * Real buckets, not a mock: `checkRateLimit`'s in-process store is the one
+ * unit tests get, and asserting through it is what proves the key actually
+ * varies with what these tests say it varies with. Addresses are unique per
+ * test because that store outlives each one.
+ */
+describe("declarationWithinPersonBudget", () => {
+  const claim: DiveDeclaration = {
+    level: "open_water",
+    noCertification: false,
+    agency: "padi",
+    identifier: "PA-1",
+    nitrox: false,
+  };
+  const SHOP = "shop-a";
+  const drain = async (email: string, shopId = SHOP) => {
+    const results: Array<DiveDeclaration | undefined> = [];
+    for (let i = 0; i < 6; i += 1) {
+      results.push(await declarationWithinPersonBudget(claim, { shopId, email }));
+    }
+    return results;
+  };
+
+  it("stops writing to one address after five, and says so by returning nothing", async () => {
+    const results = await drain("spray-target@example.invalid");
+    expect(results.slice(0, 5)).toEqual([claim, claim, claim, claim, claim]);
+    // Not a throw and not a refusal — the caller passes this straight into the
+    // `declaration:` field it was already filling, so the join goes through
+    // with nothing said. That is the same outcome a malformed claim gets.
+    expect(results[4 + 1]).toBeUndefined();
+  });
+
+  it("budgets the subject, never the submitter", async () => {
+    // The whole reason this bucket exists. A party names up to six people, so a
+    // key on whoever posted the form is cleared by putting the victim in seat
+    // two with a fresh address — only a key on the address written *to* bounds
+    // how often one record can be written.
+    await drain("first-subject@example.invalid");
+    expect(
+      await declarationWithinPersonBudget(claim, {
+        shopId: SHOP,
+        email: "second-subject@example.invalid",
+      }),
+    ).toEqual(claim);
+  });
+
+  it("keeps one shop's spray out of the same diver's budget at another", async () => {
+    const shared = "travels-a-lot@example.invalid";
+    await drain(shared, "shop-b");
+    expect(await declarationWithinPersonBudget(claim, { shopId: "shop-c", email: shared })).toEqual(
+      claim,
+    );
+  });
+
+  it("treats one address written two ways as one address", async () => {
+    // Otherwise the bucket is cleared by holding down the shift key.
+    const email = "Mixed.Case@Example.invalid";
+    await drain(email);
+    expect(
+      await declarationWithinPersonBudget(claim, {
+        shopId: SHOP,
+        email: "  mixed.case@example.INVALID  ",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("spends nothing when the joiner said nothing", async () => {
+    // A sign-up with no answer to the certification question writes no record,
+    // so it has none to protect — and an honest joiner who skips the question
+    // must never exhaust their own budget by signing up.
+    const email = "quiet-joiner@example.invalid";
+    for (let i = 0; i < 20; i += 1) {
+      expect(
+        await declarationWithinPersonBudget(undefined, { shopId: SHOP, email }),
+      ).toBeUndefined();
+    }
+    expect(await declarationWithinPersonBudget(claim, { shopId: SHOP, email })).toEqual(claim);
   });
 });

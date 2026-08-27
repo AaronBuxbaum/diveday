@@ -26,6 +26,7 @@ import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
+  declarationWithinPersonBudget,
   diveDeclarationInput,
   diveDeclarationSchema,
   toDiveDeclaration,
@@ -656,7 +657,14 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     phone: parsed.data.phone || undefined,
-    declaration: declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+    // Bounded per *subject* address rather than per IP — the only key a
+    // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).
+    // An exhausted budget drops the claim; the wait-list join still succeeds,
+    // the same way a malformed declaration is simply not said.
+    declaration: await declarationWithinPersonBudget(
+      declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+      { shopId: shopNow.id, email: parsed.data.email },
+    ),
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "diver" });

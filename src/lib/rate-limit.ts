@@ -486,6 +486,47 @@ export const RATE_LIMITS = {
    */
   waiverLinkResendByBooking: perHour(5),
   /**
+   * Writing a self-declared certification onto a **named person's** record from
+   * a public page, per that person rather than per IP.
+   *
+   * Two anonymous forms still do this: the shop-wide last-minute-deal list
+   * (`joinLastMinuteListAction`) and a full trip's wait list (`joinWaitlist`).
+   * Both take a name, an email and a rung, and hand it to
+   * `recordSelfDeclaredCards`, which resolves the person by address. Both carry
+   * a per-IP bucket already (`lastMinuteListJoin`, `waitlistJoin`, 10/hour
+   * each), and a rotating set of addresses is exactly what a per-IP bucket
+   * cannot see: somebody who knows a diver's name and email could otherwise
+   * spray claims onto that diver's record. The default store is in-process per
+   * instance unless Upstash is provisioned, and fails open on a store error, so
+   * the effective per-IP ceiling across a serverless fleet is well above ten an
+   * hour.
+   *
+   * **The key is the person written to, not the person submitting.** Keying on
+   * the joiner would be no protection at all — a party names up to six people,
+   * so a bucket on the submitter is cleared by putting the victim in seat two
+   * with a fresh address each time. Only a key on the address a declaration is
+   * *about* bounds how often one record can be written to. Shop-scoped, so a
+   * spray at one shop cannot spend a diver's budget at another.
+   *
+   * **An empty bucket drops the declaration; it never refuses the join.** A
+   * joiner must never be turned away because somebody else sprayed claims at
+   * the address they typed, and the sign-up is the thing they actually came
+   * for. A dropped claim is the same outcome a malformed one already gets
+   * (`src/lib/dive-declaration.ts`: absent is a real answer).
+   *
+   * Five an hour, matching the resend buckets. A diver legitimately joins more
+   * than one list in a sitting; a spray is orders of magnitude above that. A
+   * join with no answer to the certification question spends nothing — there is
+   * no claim to write, so there is no record to protect.
+   *
+   * What bounds the severity underneath this is the anti-displacement rule
+   * (`src/db/self-declared-cards.ts`), which drops a claim rather than write it
+   * over or beside any real evidence the shop holds. That is the primary
+   * defence and it is unchanged; this is the net for divers the shop knows
+   * nothing at all about, where the write is closer to spam than to tampering.
+   */
+  declarationByPerson: perHour(5),
+  /**
    * The same net, for the same reason, on the trip-prep link (issue #850). A
    * separate bucket rather than a shared one so that a diver who has lost both
    * their waiver link and their prep link can rescue each once without one
