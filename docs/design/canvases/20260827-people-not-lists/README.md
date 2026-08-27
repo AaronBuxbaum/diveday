@@ -44,7 +44,8 @@ moments:
   (one flagged medical answer); Wednesday: Grace 4:18 PM, and Lena Fischer's paper signature
   recorded by Dana (not sealed).
 - **Monday, Aug 31** — reviews. ★4.3 across 83 published, 4.6 from 12 this month; waiting: Yara's
-  five stars (the turtle) and Diego's three stars (choppy ride) from the Thursday night dive;
+  five stars (the turtle, from Saturday's French Reef boat) and Diego's three stars (choppy
+  ride, from the Thursday night dive);
   published: Lars P.'s standout, Sofia M.'s four stars, one rating-only; hidden: one one-star
   hidden by Dana (not about the diving). Requests: Priya Sharma (3 divers, certified, Sep 5
   flexible), Emmet O&#8217;Brien (2, Sep 5–6), June Park (2, Sep 9, Discover Scuba ask), Marisol

@@ -16,8 +16,8 @@ permission gates; ADR 20260813's vocabulary (difficulty is a code, marine-life c
 
 ## The journeys
 
-- **L1 — Rig for Saturday** (staff, Saturday 8 AM). Gear: "Out" says whose sets are on the boat;
-  BCD-02 shows reserved for Grace; nothing to hunt, no tile arithmetic.
+- **L1 — Rig for the 7:00** (staff, Thursday 6:45 AM). Gear: "Out" says whose sets are on the
+  boat; BCD-07 shows reserved for Noor on Saturday; nothing to hunt, no tile arithmetic.
 - **L2 — Chase the overdue reg** (staff). REG-03's row says overdue, with whom, and Mark returned
   — one row, one act.
 - **L3 — Fill Thursday's crew gap** (Dana, from staffing). The gap sits in Thursday's cell with
@@ -78,7 +78,8 @@ export function EditorRail(props: {
 // src/db/gear.ts — one read shaped for the three groups:
 export type GearRegisterGroups = {
   out: GearUnitRow[];                     // active reservation, not yet returned
-  dueBack: GearUnitRow[];                 // due today or overdue (overdue flagged)
+  overdue: GearUnitRow[];                 // strictly past due and not returned — a unit due
+                                          // later today stays in `out` with its due-back fact
   onWall: GearUnitRow[];                  // everything else, upcoming reservation + service
                                           // sentence as row facts
 };
@@ -116,7 +117,7 @@ export function staffWeek(input: { shifts: ShiftRow[]; crewGaps: CrewGapRow[];
 
 ## 9f — Reports sheds its chrome
 
-- The six figures render as the unboxed figure row (`text-3xl`-class tabular, hairline-separated);
+- The five figures render as the unboxed figure row (`text-3xl`-class tabular, hairline-separated);
   tax and the CSV door drop to one quiet line; comparisons stay per-figure quiet lines; the
   celebrate state (waivers 100%) keeps its condition and becomes the one warm word.
 - The trips table becomes ledger rows: title+date (door), seats fact + quiet meter, waiver fact +

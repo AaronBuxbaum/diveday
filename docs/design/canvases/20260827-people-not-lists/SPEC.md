@@ -29,7 +29,7 @@ request rows gated on `reports` (strangers' contact details); waiver pages gated
 - **S5 — Fix the release's typo** (Dana). Waiver → edit text → choose "a correction" → Publish.
   Standing signatures stay current; the log is untouched. The material path states its cost in the
   choice itself, and Publish stays the only button.
-- **S6 — A day worth adding** (Dana). Requests: Sep 5 group says 2 groups · ~5 divers and what
+- **S6 — A day worth adding** (Dana). Requests: Sep 5 group says 2 groups · 5 divers and what
   fits; "+ Add a departure" lands on the board's add panel with the date carried.
 
 ---
@@ -56,6 +56,11 @@ export function BookingStoryRow(props: {
   href?: string; past?: boolean; imported?: boolean;
 }): JSX.Element;
 ```
+
+**Tone escalation is deliberate:** on an artifact row (a card in the file) `pending` renders
+the warning badge; a *blocker* row derived from it (the record's status ledger, the home's
+station, the roster badge) carries the blocker's own tone — danger when it blocks boarding.
+One fact, two contexts, stated here so it reads as design rather than drift.
 
 State words come from the existing i18n label maps (`readiness-labels`, waiver labels); `pending`
 renders the warning badge with glyph + word, `verified` renders **no badge** (expected state).

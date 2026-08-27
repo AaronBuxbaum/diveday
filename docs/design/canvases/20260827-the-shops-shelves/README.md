@@ -28,14 +28,14 @@ The same Blue Mantis week. The site library holds nine sites split reefs/wrecks 
 Christ of the Abyss; Spiegel Grove, USCGC Duane, Benwood, City of Washington among them), with the
 demanding wrecks carrying their requirement words (Advanced · Deep, plus Nitrox on the Duane) and
 the catalog door offering 34 Florida sites. The course editor shows Open Water Diver ($595, five
-per instructor, three days, eLearning included, `{depth18}` marker in the pitch). Gear, Saturday
-midday: Noor Rahman's BCD-07 and WET-11 out until 3:00 PM, REG-03 overdue with Dominic Rossi (due
-Wednesday), BCD-02 reserved for Grace Saturday, REG-01's annual service due in 12 days, 24 units
-total. Staffing shows the Aug 24–30 week: Keiko and Sal cover Thursday's three boats 6:30–23:30,
+per instructor, three days, eLearning included, `{depth18}` marker in the pitch). Gear, Thursday
+morning: Grace Mensah's BCD-02 and WET-06 out until 11:00 AM, REG-03 overdue with Dominic Rossi
+(due yesterday), BCD-07 reserved for Noor on Saturday, REG-01's annual service due in 12 days,
+24 units total. Staffing shows the Aug 24–30 week: Sal covers Thursday 6:30 AM–11:30 PM while Keiko's split shift leaves the 1:00 PM uncovered,
 Marcus Webb teaches the OW course Friday–Sunday, and Thursday's 1:00 PM still needs a divemaster —
 the gap that Today and the record also tell. Reports, August so far: $12,480.50 revenue (up 18%),
 $640 tips across 31, 214 seats over 24 departures, 78% fill (6 at capacity), 96% waivers signed
-with 3 unsigned — the Benwood row carrying the amber remainder (7 of 9).
+with 9 unsigned — the Benwood row carrying the amber remainder (7 of 9).
 
 Every name, number and time is demo-seed fiction. Nothing here is real customer data.
 
