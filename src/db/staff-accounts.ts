@@ -445,15 +445,11 @@ export async function setStaffAccountStatus(
       .update(userAccounts)
       .set({ status: input.status })
       .where(eq(userAccounts.id, input.userAccountId));
-    // Disabling does not touch an already-issued session on its own — revoke
-    // it here so the change takes effect immediately rather than waiting out
-    // whatever's left of the session's lifetime (the same reasoning
-    // removeStaffMember below already applies to push subscriptions).
-    if (input.status === "disabled") {
-      await tx
-        .delete(accountSessions)
-        .where(eq(accountSessions.userAccountId, input.userAccountId));
-    }
+    // Keep the session row until the next request. `requireStaffSession()`
+    // must be able to read the unchanged session and turn the live account
+    // status check into `/sign-in?session=ended`; deleting it here makes
+    // `auth()` return an ordinary `/sign-in` redirect, which the edge cache
+    // can mistake for a still-valid staff session and bounce back to `/shop`.
     return { ok: true };
   });
 }

@@ -28,6 +28,10 @@ import {
   verifyStepUpAction,
 } from "./actions";
 
+// This page reads live account security state, but the settings segment's
+// loading boundary still provides the static shell while those reads resolve.
+export const instant = true;
+
 export async function generateMetadata({
   params,
 }: {
