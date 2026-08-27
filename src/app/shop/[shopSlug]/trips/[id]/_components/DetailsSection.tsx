@@ -337,6 +337,20 @@ export function DetailsSection({
                 {t("schedule.builder.isPrivateHint")}
               </label>
             </Field>
+            {/* Silences the shop's own divemaster target for this departure and
+                nothing else — an agency training ratio is a safety cap with its
+                own module and a box cannot switch one off (issue #973). */}
+            <Field label={t("schedule.builder.selfGuidedLabel")}>
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="selfGuided"
+                  defaultChecked={trip.selfGuided}
+                  className="size-4"
+                />
+                {t("schedule.builder.selfGuidedHint")}
+              </label>
+            </Field>
           </FieldGrid>
           {/* A sunken inset, not a second card: this group sits *inside* the
               Details card, and surface never stacks on surface (see

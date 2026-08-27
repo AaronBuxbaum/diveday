@@ -128,3 +128,47 @@ describe("the bounds the settings form and the check constraint share", () => {
     expect(DEFAULT_DIVERS_PER_DIVEMASTER).toBeLessThanOrEqual(MAX_DIVERS_PER_DIVEMASTER);
   });
 });
+
+/**
+ * **A departure the shop marked self-guided is never short of the shop's own
+ * target** (issue #973, `trips.self_guided`).
+ *
+ * The exemption lives in `divemasterRatioGap` rather than at each caller so
+ * the trip page and the Today queue cannot disagree about one sailing — these
+ * pin that it is the measurement that changes, and that it reaches this target
+ * and nothing else.
+ */
+describe("a self-guided departure", () => {
+  it("reports no gap however far below the target it is rostered", () => {
+    expect(
+      divemasterRatioGap({
+        divers: 12,
+        divemasterCount: 0,
+        diversPerDivemaster: 4,
+        selfGuided: true,
+      }),
+    ).toEqual({ code: "none" });
+  });
+
+  it("is short again the moment the mark comes off", () => {
+    // The same departure, so the only thing the assertion turns on is the mark.
+    const departure = { divers: 12, divemasterCount: 0, diversPerDivemaster: 4 };
+    expect(divemasterRatioGap({ ...departure, selfGuided: false })).toMatchObject({
+      code: "under_target",
+      shortBy: 3,
+    });
+    expect(divemasterRatioGap(departure)).toMatchObject({ code: "under_target" });
+  });
+
+  it("cannot loosen an agency training ratio, which is a cap and not a target", () => {
+    // The boundary the mark must never cross. `courseCrewGap` reads agency
+    // published figures and really does refuse a seat in `createBookingRecord`;
+    // it takes no `selfGuided` and must never grow one.
+    const course = { agency: "PADI", minimumCertificationLevel: null, isIntroCourse: false };
+    expect(courseCrewGap({ course, instructorCount: 0, assistantCount: 0, booked: 4 })).not.toEqual(
+      {
+        code: "none",
+      },
+    );
+  });
+});

@@ -6,8 +6,21 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
-const diverSlots = ["one", "two", "three", "four", "five", "six"] as const;
+// **One slot per bookable seat, derived rather than listed.** This was a
+// six-name tuple, which silently became the real cap the moment
+// MAX_PUBLIC_PARTY_SIZE rose above it: the select offered twenty, `slice(0,
+// size)` rendered six, and a party of nine submitted three blank names for
+// boxes that were never on screen (caught in review of issue #725). Deriving
+// it means the form and the validator cannot disagree about how many divers a
+// booking holds.
+//
+// The values are only React keys, and they are stable per position — which is
+// all the comment at the `key=` below asks for: raising the party size mounts
+// the newly-added fieldsets and leaves the ones already on screen alone, so
+// `rise-in` plays for what just appeared.
+const diverSlots = Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, (_, index) => `diver-${index}`);
 
 type PartyMember = { fullName: string; email: string };
 
@@ -62,7 +75,7 @@ export function BookingPartyFields({
   const [size, setSize] = useState(1);
   const [hydrated, setHydrated] = useState(false);
   const [party, setParty] = useState<PartyMember[]>(() =>
-    Array.from({ length: 6 }, () => ({ ...emptyMember })),
+    Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, () => ({ ...emptyMember })),
   );
   const [phone, setPhone] = useState("");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
@@ -77,7 +90,7 @@ export function BookingPartyFields({
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
   // party" test).
   const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
-  const limit = Math.max(1, Math.min(6, maxPartySize));
+  const limit = Math.max(1, Math.min(MAX_PUBLIC_PARTY_SIZE, maxPartySize));
   useEffect(() => setHydrated(true), []);
   useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
 
@@ -118,11 +131,11 @@ export function BookingPartyFields({
           </select>
         </Field>
       </FieldGrid>
-      {/* The select tops out at `limit` (either the absolute party cap of 6
-          or however many seats remain) — a bigger group has no way to book
-          itself here, so it needs an explicit way out rather than a dead end
-          at the last option (task 24). */}
-      {limit < 6 ? (
+      {/* The select tops out at `limit` (either MAX_PUBLIC_PARTY_SIZE or
+          however many seats remain) — a bigger group has no way to book itself
+          here, so it needs an explicit way out rather than a dead end at the
+          last option (task 24). */}
+      {limit < MAX_PUBLIC_PARTY_SIZE ? (
         <p className="-mt-2 text-sm text-muted">
           {contactEmail
             ? t.rich("party.bigGroupContactEmail", {

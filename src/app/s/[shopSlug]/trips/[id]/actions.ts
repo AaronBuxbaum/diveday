@@ -26,6 +26,7 @@ import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
+  declarationWithinPersonBudget,
   diveDeclarationInput,
   diveDeclarationSchema,
   toDiveDeclaration,
@@ -51,6 +52,7 @@ import {
   type RentableItemKind,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 
 /** Stands in for a trip with no requirement row of its own, so its dive sites' gates still compose. */
@@ -123,7 +125,14 @@ export async function bookSpot(
   const t = diverTranslator(locale);
   const ip = await clientIp();
 
-  const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
+  // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
+  // numbers and for why the lock, not the row count, is what decides it.
+  const partySize = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PUBLIC_PARTY_SIZE)
+    .safeParse(formData.get("partySize"));
   if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
 
   // Validate per field so the form can point at the exact box that is wrong,
@@ -656,7 +665,14 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     phone: parsed.data.phone || undefined,
-    declaration: declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+    // Bounded per *subject* address rather than per IP — the only key a
+    // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).
+    // An exhausted budget drops the claim; the wait-list join still succeeds,
+    // the same way a malformed declaration is simply not said.
+    declaration: await declarationWithinPersonBudget(
+      declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+      { shopId: shopNow.id, email: parsed.data.email },
+    ),
   });
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "diver" });

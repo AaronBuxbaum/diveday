@@ -24,6 +24,7 @@ import {
   readinessBlockerText,
   readinessStatusText,
   readinessStatusTone,
+  SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -902,13 +903,20 @@ export function RosterSection({
                 ) : null}
 
                 {/* The one path from "this shop taught and ran this course"
-                    to a certifications row (issue #717) — a per-student tap,
+                    to a card row (issues #717 and #975) — a per-student tap,
                     collapsed by default like the diver record's own card
                     sighting form. Present only on a course session's own
                     roster (certifyDiverAction is only ever passed there);
-                    the level is picked here rather than inferred, because
-                    no column anywhere records what a course grants on
-                    completion, only what it demands to enrol. */}
+                    what the class awards is picked here rather than inferred,
+                    because no column anywhere records what a course grants on
+                    completion, only what it demands to enrol.
+
+                    One control for all three kinds, and the hint says the one
+                    thing that differs: a level card is live on this tap, while
+                    a specialty or nitrox card waits for the card itself. A
+                    staffer who believed a nitrox card was live when it is
+                    pending is the failure that whole design prevents, so the
+                    sentence is not decoration. */}
                 {certifyDiverAction ? (
                   <details className="mt-3">
                     <summary
@@ -932,12 +940,22 @@ export function RosterSection({
                         label={t("trips.roster.certifyLevel")}
                         description={t("trips.roster.certifyLevelHint")}
                       >
-                        <select name="level" className={controlClass}>
-                          {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                            <option key={value} value={value}>
-                              {t(key)}
-                            </option>
-                          ))}
+                        <select name="award" className={controlClass}>
+                          <optgroup label={t("trips.roster.certifyLevelGroup")}>
+                            {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+                              <option key={value} value={value}>
+                                {t(key)}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={t("trips.roster.certifySpecialtyGroup")}>
+                            {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
+                              <option key={value} value={value}>
+                                {t(key)}
+                              </option>
+                            ))}
+                            <option value="nitrox">{t("trips.roster.certifyNitrox")}</option>
+                          </optgroup>
                         </select>
                       </Field>
                       <SubmitButton

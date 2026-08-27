@@ -10,6 +10,7 @@ import {
   combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
+  needsCardSighting,
   unavailableReadiness,
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
@@ -349,8 +350,10 @@ export async function createCertification(db: AppDb, input: NewCertification) {
  * "Other agency" glossary entry), and the roster still shows the shop's own
  * spelling in `courses.agency` itself.
  */
-function agencyFromCourseAgency(courseAgency: string): CertificationAgency {
-  const normalized = courseAgency.trim().toLowerCase();
+function agencyFromCourseAgency(courseAgency: string | null): CertificationAgency {
+  // A course with no stated agency yields "other", the same answer an
+  // unrecognised one gets — never a throw, and never a guess at PADI.
+  const normalized = (courseAgency ?? "").trim().toLowerCase();
   return (certificationAgency.enumValues.find((value) => value === normalized) ??
     "other") as CertificationAgency;
 }
@@ -747,6 +750,225 @@ export async function createSpecialtyCertification(db: AppDb, input: NewSpecialt
 }
 
 /**
+ * What a shop-issued **specialty or nitrox** card needs, beside the level
+ * card's own {@link NewShopIssuedCertification}.
+ *
+ * No `identifier`, deliberately: the whole point is that the agency number has
+ * not arrived yet. No `agency` either — it is read off the course the session
+ * teaches, exactly as the level card's is, so an instructor cannot type one.
+ */
+export type NewShopIssuedSpecialty = {
+  shopId: string;
+  personId: string;
+  /** The course session that earned this card. Must be a live course trip of this shop. */
+  tripId: string;
+  /** Which specialty this shop's class certifies. Chosen at the tap, never derived. */
+  specialty: DiveSpecialty;
+  /** The staff member whose tap this is — same H-48 trust boundary as `reviewCertification`. */
+  issuedByPersonId: string;
+};
+
+/**
+ * **This shop's own instructor records a specialty they just taught** (issue
+ * #975) — and the row lands `pending`, clearing nothing.
+ *
+ * The level card's twin (`issueShopCertification` above) lands `verified` on
+ * this same tap, because for a level card the instructor *is* the evidence
+ * (ADR 20260824-shop-issued-certification-is-verified). This one does not, and
+ * the difference is the point rather than an oversight:
+ *
+ * - This table's own precedent is stricter and was set deliberately. Even an
+ *   **imported** specialty row — which the codebase trusts enough to clear a
+ *   *level* gate on arrival — is held back from clearing its own gate until a
+ *   staffer confirms it by hand ("a spreadsheet cell is not a card sighting",
+ *   ADR 20260725-import-specialty-cards).
+ * - A specialty is a yes/no gate on a materially riskier dive, and the nitrox
+ *   twin authorizes a gas fill, which is the highest-consequence failure in
+ *   this app.
+ *
+ * So what the tap buys is that the **record exists**: the diver who finished a
+ * Deep class on Saturday is no longer invisible to their own shop on Sunday,
+ * and the confirm is one tap away on their record instead of a card nobody
+ * knows to look for. What it does not buy is the gate. Promoting the row asks
+ * for the agency and the number off the physical card, exactly as an unsighted
+ * self-declaration's confirm does (`needsCardSighting`).
+ *
+ * Structured like `issueShopCertification` throughout — the person row is
+ * locked first so two concurrent taps serialize, the trip must be a live
+ * course session of this shop, the diver must hold a live booking on it, and a
+ * specialty the diver already holds is refused rather than duplicated. That
+ * last check matters more here than there: a numberless row is invisible to the
+ * unique index (nulls never collide), so nothing else would stop a second tap
+ * minting a second live row.
+ *
+ * `null` on every refusal — the caller has one thing to say either way, and
+ * there is no partial success to report.
+ */
+export async function issueShopSpecialtyCertification(
+  db: AppDb,
+  input: NewShopIssuedSpecialty,
+): Promise<typeof specialtyCertifications.$inferSelect | null> {
+  const issuedByPersonId = await activeCertificationReviewerId(
+    db,
+    input.shopId,
+    input.issuedByPersonId,
+  );
+  if (!issuedByPersonId) return null;
+  return db.transaction(async (tx) => {
+    const context = await shopIssuedCourseContext(tx, input);
+    if (!context) return null;
+    // Any live row for this specialty, whatever its provenance or status:
+    // re-issuing one the diver already has is redundant, and a second pending
+    // row would give a staffer two identical things to confirm.
+    const [existing] = await tx
+      .select({ id: specialtyCertifications.id })
+      .from(specialtyCertifications)
+      .where(
+        and(
+          eq(specialtyCertifications.shopId, input.shopId),
+          eq(specialtyCertifications.personId, input.personId),
+          eq(specialtyCertifications.specialty, input.specialty),
+          isNull(specialtyCertifications.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (existing) return null;
+    try {
+      const [certification] = await tx
+        .insert(specialtyCertifications)
+        .values({
+          shopId: input.shopId,
+          personId: input.personId,
+          agency: agencyFromCourseAgency(context.courseAgency),
+          specialty: input.specialty,
+          identifier: null,
+          // **Not `verified`.** See this function's own doc comment; the
+          // database's check constraint enforces the pairing from underneath,
+          // so a future edit that flips this to `verified` fails the insert
+          // rather than silently opening a depth gate.
+          status: "pending",
+          issuedByShopAt: nowDate(),
+          issuedFromTripId: input.tripId,
+          issuedByPersonId,
+          // Deliberately **not** stamped `reviewedAt`/`reviewedByPersonId`,
+          // unlike the level card's twin. Nobody has reviewed this; a staffer
+          // still has to, and those columns are what "Confirmed by {name} on
+          // {date}" reads from.
+        })
+        .returning();
+      return certification ?? null;
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return null;
+      throw error;
+    }
+  });
+}
+
+/**
+ * The nitrox twin of {@link issueShopSpecialtyCertification}, with the same
+ * `pending` landing and for the sharper version of the same reason: a
+ * `verified` nitrox card authorizes an enriched-air fill, and nothing an
+ * instructor taps is a substitute for somebody reading a card.
+ */
+export async function issueShopNitroxCertification(
+  db: AppDb,
+  input: Omit<NewShopIssuedSpecialty, "specialty">,
+): Promise<typeof nitroxCertifications.$inferSelect | null> {
+  const issuedByPersonId = await activeCertificationReviewerId(
+    db,
+    input.shopId,
+    input.issuedByPersonId,
+  );
+  if (!issuedByPersonId) return null;
+  return db.transaction(async (tx) => {
+    const context = await shopIssuedCourseContext(tx, input);
+    if (!context) return null;
+    const [existing] = await tx
+      .select({ id: nitroxCertifications.id })
+      .from(nitroxCertifications)
+      .where(
+        and(
+          eq(nitroxCertifications.shopId, input.shopId),
+          eq(nitroxCertifications.personId, input.personId),
+          isNull(nitroxCertifications.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (existing) return null;
+    try {
+      const [certification] = await tx
+        .insert(nitroxCertifications)
+        .values({
+          shopId: input.shopId,
+          personId: input.personId,
+          agency: agencyFromCourseAgency(context.courseAgency),
+          identifier: null,
+          status: "pending",
+          issuedByShopAt: nowDate(),
+          issuedFromTripId: input.tripId,
+          issuedByPersonId,
+        })
+        .returning();
+      return certification ?? null;
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) return null;
+      throw error;
+    }
+  });
+}
+
+/**
+ * The four facts a shop-issued card's write needs to establish, shared by the
+ * specialty and nitrox paths so neither can drift from the other or from
+ * `issueShopCertification`: the person is this shop's, the trip is a live
+ * course session of this shop, the diver holds a live booking on it, and the
+ * course names the agency the card will carry.
+ *
+ * The person row is locked and stays locked for the rest of the caller's
+ * transaction, so two concurrent taps for the same diver serialize and the
+ * "already holds this" check that follows acts as one atomic unit with its
+ * insert rather than a race either could win.
+ */
+async function shopIssuedCourseContext(
+  tx: DbExecutor,
+  input: { shopId: string; personId: string; tripId: string },
+): Promise<{ courseAgency: string | null } | null> {
+  const [person] = await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1)
+    .for("update");
+  if (!person) return null;
+  const [trip] = await tx
+    .select({ id: trips.id, courseId: trips.courseId })
+    .from(trips)
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .limit(1);
+  if (!trip?.courseId) return null;
+  const [course] = await tx
+    .select({ agency: courses.agency })
+    .from(courses)
+    .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, input.shopId)))
+    .limit(1);
+  if (!course) return null;
+  const [booking] = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.tripId, input.tripId),
+        eq(bookings.personId, input.personId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1);
+  if (!booking) return null;
+  return { courseAgency: course.agency };
+}
+
+/**
  * Why a review was refused, so a caller can say something specific. One case
  * today; the discriminated result stays because a refusal must never be
  * mistaken for a miss.
@@ -809,6 +1031,10 @@ export async function reviewSpecialtyCertification(
       id: specialtyCertifications.id,
       status: specialtyCertifications.status,
       selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
+      // A shop-issued row is numberless too, and its confirm is the tap that
+      // opens the depth gate — so it asks for the card exactly as a
+      // self-declaration's does (issue #975).
+      issuedByShopAt: specialtyCertifications.issuedByShopAt,
     })
     .from(specialtyCertifications)
     .where(
@@ -821,11 +1047,12 @@ export async function reviewSpecialtyCertification(
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
 
-  // A card the diver typed is not a card anybody has seen. Same guard as the
-  // nitrox review beside it, and for a stronger reason: this one opens a depth
-  // gate past 18 m.
-  const sighting = isUnsightedSelfDeclaration(existing) ? input.sighting : undefined;
-  if (isUnsightedSelfDeclaration(existing) && !sighting?.identifier.trim()) {
+  // A card nobody has seen is not evidence, whether the diver typed it or this
+  // shop's own instructor issued it from a class. Same guard as the nitrox
+  // review beside it, and for a stronger reason: this one opens a depth gate
+  // past 18 m.
+  const sighting = needsCardSighting(existing) ? input.sighting : undefined;
+  if (needsCardSighting(existing) && !sighting?.identifier.trim()) {
     return { ok: false, reason: "card_sighting_required" };
   }
 

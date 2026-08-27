@@ -95,6 +95,8 @@
     "descriptionPlaceholder": "Sites, conditions, who it's for, required certs.",
     "isPrivateLabel": "Private charter",
     "isPrivateHint": "Off the public schedule — only divers with the link can book it.",
+    "selfGuidedLabel": "Self-guided dive",
+    "selfGuidedHint": "Buddy pairs go in without a guide, so DiveDay stops asking you to roster one.",
     "daysLabel": "How many days",
     "daysDescription": "Most departures are one day. A course weekend or a liveaboard that meets the same hours on consecutive days is a single trip — one roster, one set of waivers, one crew.",
     "payAtBookingLegend": "Pay at booking",

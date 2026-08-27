@@ -90,8 +90,8 @@
     "noTrips": "No trips on the books yet",
     "noUpcomingStaff": "Nothing upcoming on the board",
     "noTripsStaff": "The board is clear. Schedule a departure and divers can start booking.",
-    "noTripsPublic": "Check back soon — or call the shop and we’ll find you a boat.",
-    "noTripsPublicNoPhone": "Check back soon — the inquiry form below is the best way to reach us for now.",
+    "noTripsPublic": "Check back soon — tell us below what you’d like to dive, or reach us at the foot of the page.",
+    "noTripsPublicNoPhone": "Check back soon — or tell us below what you’d like to dive.",
     "noTripsMonth": "No trips this month — try another month.",
     "filters": {
       "tripType": "Trip type",

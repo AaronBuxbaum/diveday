@@ -9,6 +9,7 @@ import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import {
+  declarationWithinPersonBudget,
   diveDeclarationInput,
   diveDeclarationSchema,
   toDiveDeclaration,
@@ -85,8 +86,13 @@ export async function joinLastMinuteListAction(
     availableUntil: parsed.data.availableUntil,
     // Recorded against the resolved person as a self-declared pending card, and
     // shown to staff before a blast goes out — never used to filter one
-    // (src/db/self-declared-cards.ts).
-    declaration: declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+    // (src/db/self-declared-cards.ts). Bounded per *subject* address rather
+    // than per IP, which is the only key a rotating set of submitters cannot
+    // clear; an exhausted budget drops the claim and lets the sign-up through.
+    declaration: await declarationWithinPersonBudget(
+      declaration.success ? toDiveDeclaration(declaration.data) : undefined,
+      { shopId: shop.id, email: parsed.data.email },
+    ),
   });
   return { success: true };
 }

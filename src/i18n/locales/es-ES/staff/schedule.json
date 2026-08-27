@@ -95,6 +95,8 @@
     "descriptionPlaceholder": "Puntos de inmersión, condiciones, para quién es, certificaciones requeridas.",
     "isPrivateLabel": "Chárter privado",
     "isPrivateHint": "Fuera del calendario público: solo pueden reservar quienes tengan el enlace.",
+    "selfGuidedLabel": "Inmersión autoguiada",
+    "selfGuidedHint": "Las parejas entran sin guía, así que DiveDay deja de pedirte que asignes uno.",
     "daysLabel": "Cuántos días",
     "daysDescription": "Casi todas las salidas duran un día. Un curso de fin de semana o un liveaboard que se reúne a las mismas horas en días consecutivos es una sola salida: una lista, un juego de exenciones, una tripulación.",
     "payAtBookingLegend": "Pago al reservar",

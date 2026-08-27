@@ -24,12 +24,14 @@ import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import {
   getTripRequirements,
   issueShopCertification,
+  issueShopNitroxCertification,
+  issueShopSpecialtyCertification,
   listTripReadiness,
   upsertTripRequirements,
 } from "@/db/readiness";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import type { PaymentStatus } from "@/db/schema";
-import { people } from "@/db/schema";
+import { diveSpecialty, people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import {
@@ -120,6 +122,10 @@ const detailsSchema = z.object({
   diveMode: z.enum(["boat", "shore", "pool"]).optional(),
   boatId: z.preprocess((value) => (value === "" ? undefined : value), z.uuid().optional()),
   isPrivate: z.preprocess((value) => value === "on", z.boolean()),
+  // The shop's own divemaster target stops applying to this departure. Nothing
+  // else moves: an agency training ratio still refuses a seat, and readiness,
+  // admission and capacity never see this (issue #973).
+  selfGuided: z.preprocess((value) => value === "on", z.boolean()),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -383,6 +389,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     diveMode,
     boatId,
     isPrivate,
+    selfGuided,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
@@ -461,6 +468,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
     isPrivate,
+    selfGuided,
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,
@@ -1200,19 +1208,38 @@ export async function certifyDiverFromRosterAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const personId = String(formData.get("personId") ?? "");
-  const levelInput = String(formData.get("level") ?? "");
-  const level = DECLARABLE_CERTIFICATION_LEVELS.find((value) => value === levelInput);
-  if (!bookingId || !personId || !level) redirect(back);
-  const certification = await issueShopCertification(await getDb(), {
-    shopId: s.user.shopId,
-    personId,
-    tripId,
-    level,
-    issuedByPersonId: s.user.personId,
-  });
+  const award = String(formData.get("award") ?? "");
+  if (!bookingId || !personId || !award) redirect(back);
+  const db = await getDb();
+  const issued = { shopId: s.user.shopId, personId, tripId, issuedByPersonId: s.user.personId };
+
+  // **Three destinations, and two different landings.** A level card lands
+  // `verified` on this tap — the instructor is the evidence (issue #717, ADR
+  // 20260824-shop-issued-certification-is-verified). A specialty or nitrox card
+  // lands `pending` and clears nothing until a staffer confirms it against the
+  // physical card (issue #975, ADR
+  // 20260827-shop-issued-specialty-cards-are-attested). The difference is
+  // deliberate and the notice below says which happened, because a staffer who
+  // believes a nitrox card is live when it is pending is the failure this whole
+  // design is arranged to prevent.
+  const level = DECLARABLE_CERTIFICATION_LEVELS.find((value) => value === award);
+  const specialty = diveSpecialty.enumValues.find((value) => value === award);
+  const written = level
+    ? await issueShopCertification(db, { ...issued, level })
+    : specialty
+      ? await issueShopSpecialtyCertification(db, { ...issued, specialty })
+      : award === "nitrox"
+        ? await issueShopNitroxCertification(db, issued)
+        : null;
+  if (!level && !specialty && award !== "nitrox") redirect(back);
+
   revalidateAndRedirect(
     back,
-    noticeUrl(back, certification ? "certified" : "certify-failed", { bid: bookingId }),
+    noticeUrl(
+      back,
+      written ? (level ? "certified" : "certified-awaiting-card") : "certify-failed",
+      { bid: bookingId },
+    ),
   );
 }
 

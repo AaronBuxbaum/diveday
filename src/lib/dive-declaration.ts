@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { type CertificationAgency, certificationAgency } from "@/db/schema";
 import { isPlausibleCardNumber, MAX_CARD_NUMBER_LENGTH } from "./card-number";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "./rate-limit";
 import type { CertificationLevel } from "./readiness";
 
 /**
@@ -178,4 +179,37 @@ export function toDiveDeclaration(parsed: z.infer<typeof diveDeclarationSchema>)
     identifier: level ? parsed.certificationNumber : undefined,
     nitrox: parsed.nitroxCertified === "on",
   };
+}
+
+/**
+ * **The declaration this joiner is allowed to write onto this address, right
+ * now** — the parsed one, or `undefined` because the address has had its
+ * share.
+ *
+ * The two public forms that still collect a declaration are anonymous, and
+ * both are bounded per IP only. A rotating set of addresses is exactly what a
+ * per-IP bucket cannot see, so `RATE_LIMITS.declarationByPerson` bounds the
+ * write by the address the claim is *about* instead — see that entry for why
+ * the key can only be the subject and never the submitter.
+ *
+ * Returning the declaration rather than a verdict is the point: there is no
+ * shape of this that refuses the join. A diver must never be turned away
+ * because somebody else sprayed claims at the address they typed, and a
+ * dropped claim is the outcome a malformed one already gets. The two callers
+ * pass the result straight into the `declaration:` field they were already
+ * filling, so neither can accidentally branch on it.
+ *
+ * A join that said nothing spends nothing — there is no claim to write, so
+ * there is no record to protect, and an honest joiner with no certification
+ * answer can sign up as often as the per-IP bucket allows.
+ */
+export async function declarationWithinPersonBudget(
+  declaration: DiveDeclaration | undefined,
+  { shopId, email }: { shopId: string; email: string },
+): Promise<DiveDeclaration | undefined> {
+  if (!declaration) return undefined;
+  const key = rateLimitKey("declaration", shopId, email.trim().toLowerCase());
+  return (await checkRateLimit(key, RATE_LIMITS.declarationByPerson)).allowed
+    ? declaration
+    : undefined;
 }

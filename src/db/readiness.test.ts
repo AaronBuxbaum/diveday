@@ -17,6 +17,8 @@ import {
   getBookingReadiness,
   getBookingReadinessDetail,
   issueShopCertification,
+  issueShopNitroxCertification,
+  issueShopSpecialtyCertification,
   listTripReadiness,
   listTripsReadiness,
   restoreCertification,
@@ -31,6 +33,7 @@ import {
   certifications,
   courses,
   diveSites,
+  people,
   specialtyCertifications,
   tripAssignments,
   trips,
@@ -1285,5 +1288,209 @@ describe("issueShopCertification (issue #717)", () => {
     });
 
     expect(booked.ok).toBe(true);
+  });
+});
+
+/**
+ * **A shop-issued specialty or nitrox card is attested, not verified** (issue
+ * #975, ADR 20260827-shop-issued-specialty-cards-are-attested).
+ *
+ * The level card's twin above lands `verified` on the instructor's tap. These
+ * land `pending` and clear nothing, and the difference is the whole decision:
+ * this table's own precedent holds even an *imported* row back from clearing
+ * its gate until a staffer confirms it by hand, and a wrong nitrox fill is the
+ * highest-consequence failure in this app.
+ */
+describe("issueShopSpecialtyCertification / issueShopNitroxCertification (issue #975)", () => {
+  async function courseSessionWithBooking(title: string) {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    if (!course) throw new Error("seeded course missing");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded fixture missing an instructor");
+    const startsAt = nowDate();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: instructor.person.id });
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: `Specialty Test Diver ${title}`,
+        email: `specialty-${encodeURIComponent(title)}@example.com`,
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    const [seat] = party.bookings;
+    if (!seat) throw new Error("booking party returned no seat");
+    return { db, shop, trip, instructorId: instructor.person.id, personId: seat.personId };
+  }
+
+  it("records a specialty pending, with provenance and no review stamp", async () => {
+    const { db, shop, trip, instructorId, personId } =
+      await courseSessionWithBooking("Deep session");
+
+    const card = await issueShopSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      specialty: "deep",
+      issuedByPersonId: instructorId,
+    });
+
+    // The line this whole feature turns on.
+    expect(card?.status).toBe("pending");
+    expect(card?.identifier).toBeNull();
+    expect(card?.specialty).toBe("deep");
+    expect(card?.issuedByShopAt).not.toBeNull();
+    expect(card?.issuedFromTripId).toBe(trip.id);
+    expect(card?.issuedByPersonId).toBe(instructorId);
+    // Nobody has reviewed it, so nothing may claim somebody did — those two
+    // columns are what "Confirmed by {name} on {date}" reads from.
+    expect(card?.reviewedAt).toBeNull();
+    expect(card?.reviewedByPersonId).toBeNull();
+  });
+
+  it("records nitrox pending, so it authorizes no fill", async () => {
+    const { db, shop, trip, instructorId, personId } =
+      await courseSessionWithBooking("Nitrox session");
+
+    const card = await issueShopNitroxCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      issuedByPersonId: instructorId,
+    });
+
+    expect(card?.status).toBe("pending");
+    expect(card?.identifier).toBeNull();
+    expect(card?.reviewedAt).toBeNull();
+  });
+
+  it("refuses to confirm either one without a card sighting", async () => {
+    // The point of landing `pending`: the tap that would open the gate demands
+    // the agency and the number off the physical card, exactly as an unsighted
+    // self-declaration's confirm does.
+    const { db, shop, trip, instructorId, personId } =
+      await courseSessionWithBooking("Wreck session");
+    const specialty = await issueShopSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      specialty: "wreck",
+      issuedByPersonId: instructorId,
+    });
+    const nitrox = await issueShopNitroxCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      issuedByPersonId: instructorId,
+    });
+    if (!specialty || !nitrox) throw new Error("expected both cards to be issued");
+
+    expect(
+      await reviewSpecialtyCertification(db, {
+        shopId: shop.id,
+        certificationId: specialty.id,
+        status: "verified",
+        reviewedByPersonId: instructorId,
+      }),
+    ).toEqual({ ok: false, reason: "card_sighting_required" });
+    expect(
+      await reviewNitroxCertification(db, {
+        shopId: shop.id,
+        certificationId: nitrox.id,
+        status: "verified",
+        reviewedByPersonId: instructorId,
+      }),
+    ).toEqual({ ok: false, reason: "card_sighting_required" });
+  });
+
+  it("verifies once a staffer reads the card, writing the number they saw", async () => {
+    const { db, shop, trip, instructorId, personId } =
+      await courseSessionWithBooking("Night session");
+    const card = await issueShopSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      specialty: "night",
+      issuedByPersonId: instructorId,
+    });
+    if (!card) throw new Error("expected a card");
+
+    const reviewed = await reviewSpecialtyCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+      reviewedByPersonId: instructorId,
+      sighting: { agency: "padi", identifier: "PA-NIGHT-1" },
+    });
+
+    expect(reviewed.ok).toBe(true);
+    if (!reviewed.ok) return;
+    expect(reviewed.certification.status).toBe("verified");
+    expect(reviewed.certification.identifier).toBe("PA-NIGHT-1");
+    // The provenance survives the confirm: this card is still one this shop
+    // issued, and the record of who taught it does not get overwritten by who
+    // read it.
+    expect(reviewed.certification.issuedByShopAt).not.toBeNull();
+    expect(reviewed.certification.issuedFromTripId).toBe(trip.id);
+  });
+
+  it("refuses a second card for a specialty the diver already holds", async () => {
+    // A numberless row is invisible to the unique index (nulls never collide),
+    // so nothing else would stop a second tap minting a second live row and
+    // giving a staffer two identical things to confirm.
+    const { db, shop, trip, instructorId, personId } =
+      await courseSessionWithBooking("Drysuit session");
+    const first = await issueShopSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId,
+      tripId: trip.id,
+      specialty: "drysuit",
+      issuedByPersonId: instructorId,
+    });
+    expect(first).not.toBeNull();
+    expect(
+      await issueShopSpecialtyCertification(db, {
+        shopId: shop.id,
+        personId,
+        tripId: trip.id,
+        specialty: "drysuit",
+        issuedByPersonId: instructorId,
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a diver who is not booked on the session", async () => {
+    const { db, shop, trip, instructorId } = await courseSessionWithBooking("Unbooked session");
+    const [stranger] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), isNull(people.deletedAt)))
+      .limit(1);
+    if (!stranger) throw new Error("expected a person");
+
+    expect(
+      await issueShopNitroxCertification(db, {
+        shopId: shop.id,
+        personId: stranger.id,
+        tripId: trip.id,
+        issuedByPersonId: instructorId,
+      }),
+    ).toBeNull();
   });
 });

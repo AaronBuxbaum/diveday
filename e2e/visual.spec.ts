@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -19,10 +20,11 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and fifty-seven key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 628 screenshots per run (see
+ * Visual regression coverage. A hundred and sixty key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 640 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
- * adding a surface; each `capture()` call costs 4 screenshots per CI run.
+ * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
+ * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
  * has drifted from it before (it read 48 while the grep said 56, 71 while the
  * grep said 72, 83 while the grep said 93, and 98 while the grep said 108), so
@@ -36,8 +38,13 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * trip-packet, and departure-log pages as they render for the printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
- * once, at a US-Letter width, via `capturePrint()`. That brings the run to 632
- * screenshots.
+ * once, at a US-Letter width, via `capturePrint()`.
+ *
+ * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
+ * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
+ * tablet width, at one screenshot per scheme rather than the usual two. That
+ * brings the run to 658 screenshots — the tablet width is a 1.6% addition, not
+ * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
  *
@@ -52,7 +59,8 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * docs/product/archive/comprehensive-review-20260802.md).
  *
  * So the rule is now: **one surface, one `test()`.** A surface that breaks
- * loses exactly its own four PNGs, every sibling is still shot in the same run,
+ * loses exactly its own PNGs — four, or six for a `TABLET_SURFACES` one —
+ * every sibling is still shot in the same run,
  * and the reg-suit report shows the whole blast radius at once. The handful of
  * groups left are the ones where a second test could not reproduce the state
  * without re-running the same one-shot setup *and* changing what the baseline
@@ -120,6 +128,80 @@ const VIEWPORTS = [
   { width: 390, height: 844 }, // phone
   { width: 1280, height: 800 }, // desktop
 ] as const;
+
+/**
+ * **A portrait tablet — the device the shop is actually holding.**
+ *
+ * `VIEWPORTS` above is the standard responsive pair, and it is the right
+ * default for a marketing page, a booking page and a diver's `/ready`. It is
+ * the wrong device for the surfaces a dive shop works from: `/check-in` calls
+ * itself "Counter mode", and a counter device is an iPad on a stand; the
+ * manifest is read at the rail, often through a dry case, which is the whole
+ * reason `glare-mode` exists in `globals.css` with its >=16px text and >=44px
+ * targets.
+ *
+ * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
+ * layout's *shape* — where a two-column `FieldGrid` collapses, and where
+ * `StaffTabBar`'s six-slot phone dock gives way to the header nav. Every one
+ * of those transitions was unphotographed, so a regression there reached a
+ * shop before it reached CI.
+ *
+ * Portrait rather than landscape because portrait is the harder layout and the
+ * posture a stand holds. A crew member holding a phone sideways at the rail is
+ * a real posture too; it is not photographed here, and should not be until
+ * something other than a hunch says it needs to be.
+ */
+const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
+
+/**
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **five, not
+ * every surface in this file.**
+ *
+ * A third width applied everywhere is another 320 screenshots and the baseline
+ * churn to match, and most routes have nothing new to say at 820px. So the
+ * list is a constant rather than a global width: the cost is bounded, and
+ * which surfaces earn it is a decision a reviewer can argue with in one place
+ * instead of inferring from a diff.
+ *
+ * Why each one:
+ *
+ * - `check-in` — "Counter mode" by its own heading. The front desk is a
+ *   tablet on a stand and nothing else.
+ * - `manifest` — worked at the rail in a dry case; `glare-mode`'s whole
+ *   premise is this device in this light.
+ * - `schedule-builder` — a dense two-column board a shop keeps open on
+ *   whatever is on the desk.
+ * - `prep` — the same, the day before.
+ * - `departure-log` — written up at the end of the day, on the device that
+ *   was already out.
+ *
+ * Adding a name here costs two screenshots per run (one per scheme). Adding
+ * one that no `capture()` call uses costs nothing and silently photographs
+ * nothing, which is why `tabletSurfacesAreReal` below refuses it.
+ */
+const TABLET_SURFACES: ReadonlySet<string> = new Set([
+  "check-in",
+  "manifest",
+  "schedule-builder",
+  "prep",
+  "departure-log",
+]);
+
+/**
+ * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
+ * nothing and fails nothing: the surface simply never gets its third width,
+ * and reg-suit reports one fewer new item than anyone was counting. Reading
+ * this file back is the cheapest thing that can tell a typo from a decision.
+ * Once per worker process, against a file already on the page cache.
+ */
+for (const name of TABLET_SURFACES) {
+  if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
+    throw new Error(
+      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
+        "silently photograph nothing. Fix the name or drop it from the set.",
+    );
+  }
+}
 
 /**
  * Force Chromium to paint the whole document, then settle fonts, before a
@@ -796,7 +878,12 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
       timeout: 15_000,
     },
   );
-  for (const viewport of VIEWPORTS) {
+  // The standard pair, plus the portrait tablet for the five staff surfaces a
+  // shop runs on one. Widest last is deliberate: the base viewport is restored
+  // below either way, but a capture that fails mid-loop leaves the page at a
+  // width a trace viewer can make sense of.
+  const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
+  for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await paintWholeDocument(page);
     await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);
@@ -2356,6 +2443,54 @@ for (const scheme of ["light", "dark"] as const) {
       const boardListSettled = (page: Page) =>
         page.getByRole("link", { name: "Show later departures" }).waitFor();
 
+      /**
+       * **Prove the add panel is open before photographing it — every other
+       * gate this capture has is equally true of the board with it shut.**
+       *
+       * `schedule-builder-add` used to gate on the placeholder `<option
+       * disabled>` inside `select[name="courseId"]` detaching, which is the
+       * right signal that the panel's own fetch has landed and the shot will
+       * not be of "Loading…". It is the wrong signal for whether the panel
+       * exists: Playwright resolves `state: "detached"` **immediately** for a
+       * locator matching nothing, and before the panel mounts there is no
+       * `select[name="courseId"]` at all. The gate was therefore true at
+       * exactly the moment it was meant to be false, and the capture's two
+       * other gates cannot tell the pages apart — the `Board` heading and the
+       * board's trailing pager render identically either way.
+       *
+       * Measured rather than reasoned. Instrumenting `capture()` to log
+       * `location.href` beside `document.documentElement.scrollHeight`, a
+       * `--repeat-each=5` run caught `schedule-builder-add` shooting
+       * `/schedule/board` with no `?add=` twice, at 3,828px — the
+       * `schedule-builder` baseline's own height, the same page — against
+       * 4,986px on `/schedule/board?add=1`. The click's client navigation had
+       * simply not committed, and nothing waited for it. The old gate also
+       * admitted a half-settled panel at 4,818px, the 168px that made this
+       * look like a pager appearing and disappearing.
+       *
+       * It is not the pager. The trailing "Show later departures" control was
+       * present in every probe of both runs, and the demo shop seeds 48
+       * upcoming departures against a 14-row keyset page, so `nextCursor` is
+       * never null and the control is never conditional. With the gates below,
+       * 20 consecutive captures measured 4,986px and 3,136px, every one.
+       */
+      const addPanelSettled = async (page: Page) => {
+        // The click's client navigation has committed. Every other gate below
+        // — and both of this capture's outer ones — is equally true of the
+        // *pre-click* board, so this is the only one that can tell the two
+        // pages apart. A no-op for the expanded capture, which `goto`s the
+        // panel state directly.
+        await page.waitForURL(/[?&]add=/);
+        const courseSelect = page.locator('select[name="courseId"]');
+        // The panel is mounted. Without this the wait below is vacuous.
+        await courseSelect.waitFor({ state: "attached" });
+        // `loadBuilderOptionsAction` has answered. One select speaks for both:
+        // the two placeholders are driven by the same `options === null`, and
+        // the dive-site select is `hidden` in the expanded panel, where a wait
+        // on its visibility would never resolve.
+        await courseSelect.locator("option[disabled]").waitFor({ state: "detached" });
+      };
+
       // The staff schedule as a builder: departures grouped by day, each row
       // carrying its crew and one quiet "⋯" disclosure for move/copy/remove.
       test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
@@ -2373,11 +2508,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
-        // Its two selects fetch their options when the panel opens; wait for
-        // the placeholder option to go, so the shot is never of "Loading…".
-        await page
-          .locator('select[name="courseId"] option[disabled]')
-          .waitFor({ state: "detached" });
+        await addPanelSettled(page);
         await boardListSettled(page);
         await capture(page, "schedule-builder-add", scheme);
       });
@@ -2393,9 +2524,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board?add=full");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
-        await page
-          .locator('select[name="courseId"] option[disabled]')
-          .waitFor({ state: "detached" });
+        await addPanelSettled(page);
         await boardListSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
       });
