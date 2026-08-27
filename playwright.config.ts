@@ -83,6 +83,16 @@ const serverEnv = {
     "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
   VAPID_PRIVATE_KEY: "UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTfKc-ls",
   VAPID_SUBJECT: "mailto:e2e@dive.day",
+  // Names the bucket that media URLs belong to, without the credentials to
+  // reach it. `isManagedStorageUrl` (src/lib/storage/blob-host.ts) derives
+  // "one of ours" from the configured bucket rather than from a hostname
+  // suffix, and it gates `queueMediaDeletion` -- so with no bucket named, the
+  // stuck-deletion row that `/api/test/seed-trouble-states` exists to create
+  // is silently never created, and the Settings panel the visual capture
+  // photographs never renders. No key id or secret: an upload must still
+  // report `not_configured` here, as every other provider in this fleet does.
+  MEDIA_BUCKET_NAME: "diveday-media",
+  MEDIA_AWS_REGION: "us-east-1",
   NEXT_TELEMETRY_DISABLED: "1",
   // `next start` loads `.env.local` itself (via `@next/env`) before this
   // config ever runs, and `...process.env` above only reflects this CLI
