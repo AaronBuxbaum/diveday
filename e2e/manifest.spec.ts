@@ -940,3 +940,38 @@ test("a checklist tap made offline queues, then syncs once signal returns", asyn
   await context.setOffline(false);
   await expect(page.getByRole("status").filter({ hasText: "Everything's sent" })).toBeVisible();
 });
+
+/**
+ * Issue #1018. Every refusal in `saveExecutedDiveAction` was a bare `return`,
+ * so a divemaster who typed the exit time before the entry time (a
+ * transposition — 14:35 in, 14:05 out, one-handed at the rail) saved nothing,
+ * was told nothing, and got a form back holding the last saved row. The most
+ * likely reading of that is that it saved, and what is written here is what an
+ * incident export later seals into a document a physician reads.
+ */
+test("a transposed dive log entry is refused out loud and keeps what was typed", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+  await page.getByRole("link", { name: "After dive 1" }).click();
+  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+
+  const log = page.locator("form").filter({ hasText: "Dive 1" });
+  await log.getByLabel("Entered the water").fill("2026-07-21T14:35");
+  await log.getByLabel("Exited the water").fill("2026-07-21T14:05");
+  await log.getByLabel(/Maximum depth/).fill("27");
+  await log.getByRole("button", { name: "Save dive record" }).click();
+
+  await expect(log.getByText(/exit time must be after the entry time/).first()).toBeVisible();
+  // The whole point: nothing the divemaster entered is lost to the refusal.
+  await expect(log.getByLabel("Entered the water")).toHaveValue("2026-07-21T14:35");
+  await expect(log.getByLabel("Exited the water")).toHaveValue("2026-07-21T14:05");
+  await expect(log.getByLabel(/Maximum depth/)).toHaveValue("27");
+
+  // Correcting the one wrong field is all it takes.
+  await log.getByLabel("Exited the water").fill("2026-07-21T15:05");
+  await log.getByRole("button", { name: "Save dive record" }).click();
+  await expect(log.getByText("Dive record saved.")).toBeVisible();
+});

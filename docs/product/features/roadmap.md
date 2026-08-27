@@ -61,13 +61,17 @@ export to shop-owned storage have shipped (see [../shipped.md](../shipped.md)); 
   has real payload today (bookings, waivers, `rental_fit.csv`, and since 2026-08-20 the gear
   register's `gear_items.csv` / `gear_service_events.csv` / `gear_reservations.csv` — the
   most-asked-for one, so the register-with-no-way-out half of the old objection is closed and only
-  the API half remains). The Proposed
+  the API half remains).
   [20260815-outbound-integration-webhooks-and-zapier](../../architecture/decisions/20260815-outbound-integration-webhooks-and-zapier.md)
-  already sketches the `gear_item.*` events. **One-directional by design** — DiveDay emits, it never
-  consumes another system's API; a direct competitor (DiveShop360) has no reason to build the
-  receiving end itself, so the intended shape is DiveDay's webhooks feeding a no-code bridge (a
-  published Zapier/Make integration) a shop or its own tooling wires to whatever it already runs
-  (Shopify, QuickBooks, ...) — not a bespoke DiveDay-built connector per target system.
+  sketches the `gear_item.*` events and still governs the transport (HMAC signing, at-least-once
+  delivery, dead-letter log). **Its one-directional rule no longer holds** — shop-authorized
+  Shopify and QuickBooks Online connectors shipped on 2026-08-25 and
+  [20260827-shop-authorized-provider-connectors](../../architecture/decisions/20260827-shop-authorized-provider-connectors.md)
+  accepts them: DiveDay may call a provider's API on a shop's own credentials, on private apps
+  never submitted to a public directory, pushing DiveDay's facts out and never reading a provider's
+  data back in as truth. A direct competitor (DiveShop360) is still not a target — nobody there has
+  a reason to build the receiving end — so for everything off that short register the shape remains
+  DiveDay's events feeding a no-code bridge (Zapier/Make) the shop wires up itself.
 
 ### 2. Third-party e-signature adapter (M3 follow-up)
 

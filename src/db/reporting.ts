@@ -217,9 +217,23 @@ export async function getMonthlyReport(
       * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
+  // **Like against like.** The recovered *deposit* above is scaled by a
+  // tax-inclusive settled total over a pre-tax ask on purpose: that figure
+  // feeds `currentRevenueCents`, from which `taxCents` is subtracted once at
+  // the end, so the tax has to be in it. This figure is the opposite — it is
+  // subtracted from revenue, so carrying the tax into it takes the tax on the
+  // fee off a second time and under-states what the shop kept (issue #1019).
+  //
+  // `settled - tax` is Stripe's own settled figure net of the tax it reported
+  // on the same session, which is the pre-tax basis `totalCents` is already on.
+  // `null - x` is null, so a row with no settled figure still falls through to
+  // the asked total rather than silently subtracting a tax it never collected.
   const recoveredPassThroughCents = sql<string>`coalesce(sum(round(
     ${bookingCheckoutBookings.passThroughCents}
-      * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
+      * greatest(coalesce(
+          ${bookingCheckouts.settledTotalCents} - coalesce(${bookingCheckouts.taxCents}, 0),
+          ${bookingCheckouts.totalCents}
+        ), 0)::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
   const [recoveredDeposits] = await db

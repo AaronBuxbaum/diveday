@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
@@ -111,7 +111,7 @@
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["schedule", "schedule-embed"]
+    "visual": ["schedule", "schedule-above-level", "schedule-embed"]
   },
   "/s/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
@@ -381,9 +381,9 @@
     "visual": ["settings-safety-checklist"]
   },
   "/shop/[shopSlug]/settings/security": {
-    "e2e": [],
+    "e2e": ["security-settings.spec.ts"],
     "visual": [],
-    "exempt": "Account-security controls require a live authenticated session; the domain and action paths are covered by server-side tests, with browser and visual coverage still pending."
+    "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
   },
   "/shop/[shopSlug]/settings/team": {
     "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],

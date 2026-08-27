@@ -132,12 +132,26 @@ export function latestClaimIn(comments) {
  * Note the asymmetry, which is deliberate: a *live* worktree with no commits is
  * ordinary early work, but a *missing* worktree with no commits is a session
  * that produced nothing and is gone.
+ *
+ * **The main checkout is not worktree evidence.** `git worktree list` always
+ * contains the repo root, so a claim whose `Worktree:` line names it would be
+ * live forever and its branch never consulted — which is exactly what happened
+ * to #953 and #959, both reported "live — worktree present" behind a branch
+ * (`codex/issue-953-959`) that has never existed anywhere (issue #1005).
+ * Working in the main checkout is legitimate and a claim that says so honestly
+ * is better than one inventing a worktree path, so such a claim is not refused:
+ * it simply falls through to the branch test, which is the only evidence there
+ * is. It gets no verdict of its own — a fourth state would be more vocabulary
+ * for the same fact — but its `reason` says the main checkout rather than
+ * claiming a worktree is "gone" when it is sitting right there.
  */
 export function classifyClaim(claim, facts, now) {
   const days = Math.max(0, Math.floor((now.getTime() - claim.startedAt.getTime()) / 86_400_000));
   if (!facts) return { state: "unverifiable", days, reason: "git unavailable" };
 
-  const worktreeExists = facts.worktreePaths.has(normalizeWorktree(claim.worktree, facts.root));
+  const claimed = normalizeWorktree(claim.worktree, facts.root);
+  const isMainCheckout = claimed === path.resolve(facts.root);
+  const worktreeExists = !isMainCheckout && facts.worktreePaths.has(claimed);
   const lastCommit = facts.branchLastCommit.get(claim.branch) ?? null;
   const committedSince = lastCommit ? lastCommit.getTime() >= claim.startedAt.getTime() : false;
 
@@ -149,12 +163,13 @@ export function classifyClaim(claim, facts, now) {
       lastCommit,
     };
   }
+  const where = isMainCheckout ? "claimed from the main checkout" : "worktree gone";
   return {
     state: "stale",
     days,
     reason: facts.branchLastCommit.has(claim.branch)
-      ? "worktree gone, branch has no commit since the claim"
-      : "worktree gone, branch does not exist",
+      ? `${where}, branch has no commit since the claim`
+      : `${where}, branch does not exist`,
     lastCommit,
   };
 }

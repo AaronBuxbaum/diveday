@@ -1,7 +1,15 @@
 # 20260815-outbound-integration-webhooks-and-zapier — Emit signed webhooks and a Zapier trigger app; never consume another system's API
 
-- **Status:** Proposed
+- **Status:** Superseded by [20260827-shop-authorized-provider-connectors](20260827-shop-authorized-provider-connectors.md)
 - **Date:** 2026-08-15
+
+**Superseded 2026-08-27 on its one-directional constraint only.** The transport decisions below —
+HMAC-signed webhooks, at-least-once delivery with backoff and a dead-letter log, one-time OAuth
+state, token-scoped reads, and a private (never publicly listed) Zapier integration — all stand and
+are what shipped. What the successor reverses is "never consume another system's API": DiveDay may
+call a provider's API when a shop has authorized it, on private apps only. The content here is left
+as written, including the constraint that is no longer true, so the reasoning that was correct in
+August stays readable.
 
 **Proposed, deliberately.** This is [roadmap §1](../../product/features/roadmap.md#1-data-portability-follow-ons-the-wedge)'s
 "read API + webhooks," which the roadmap already marks **ADR required**. Accepting it is a

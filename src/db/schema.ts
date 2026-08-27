@@ -3680,9 +3680,21 @@ export const shopIntegrations = pgTable(
     lastError: text("last_error"),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Disconnected, not destroyed (ADR 20260820-every-delete-is-soft). Tapping
+     * Disconnect used to `DELETE` this row, and the two `ON DELETE CASCADE`
+     * children went with it — the undelivered outbox and, worse, the QuickBooks
+     * idempotency map, so reconnecting after an errored token re-created every
+     * already-synced customer (issue #1015). The unique index below is partial
+     * over live rows precisely so a reconnect can insert a fresh row beside the
+     * stamped one.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("shop_integrations_shop_provider_unique").on(table.shopId, table.provider),
+    uniqueIndex("shop_integrations_shop_provider_unique")
+      .on(table.shopId, table.provider)
+      .where(sql`${table.deletedAt} is null`),
     index("shop_integrations_shop_status_idx").on(table.shopId, table.status),
   ],
 );
@@ -3766,14 +3778,28 @@ export const integrationDeliveries = pgTable(
   ],
 );
 
-/** Idempotent mapping from a DiveDay source record to a provider record. */
+/**
+ * Idempotent mapping from a DiveDay source record to a provider record.
+ *
+ * **Keyed on `(shop_id, provider)`, deliberately not on one `shop_integrations`
+ * row.** This table is the *only* thing that stops `ensureQuickBooksCustomer`
+ * POSTing a second Customer with the same `DisplayName` for a diver it has
+ * already synced, and a shop reconnects a provider exactly when something has
+ * gone wrong — an errored token, a re-auth. Hanging it off the connection row
+ * meant the mapping either cascaded away with the disconnect or, once the
+ * disconnect went soft, sat orphaned beside a new row that started with an
+ * empty map: both spellings of the same duplicate (issue #1015). A connection
+ * is a credential; the mapping is a fact about the shop's own books, and it
+ * outlives any one credential.
+ */
 export const integrationSyncRecords = pgTable(
   "integration_sync_records",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    integrationId: uuid("integration_id")
+    shopId: uuid("shop_id")
       .notNull()
-      .references(() => shopIntegrations.id, { onDelete: "cascade" }),
+      .references(() => shops.id, { onDelete: "cascade" }),
+    provider: integrationProvider("provider").notNull(),
     sourceType: text("source_type").notNull(),
     sourceId: text("source_id").notNull(),
     operation: text("operation").notNull(),
@@ -3785,12 +3811,17 @@ export const integrationSyncRecords = pgTable(
   },
   (table) => [
     uniqueIndex("integration_sync_records_source_unique").on(
-      table.integrationId,
+      table.shopId,
+      table.provider,
       table.sourceType,
       table.sourceId,
       table.operation,
     ),
-    index("integration_sync_records_external_idx").on(table.integrationId, table.externalId),
+    index("integration_sync_records_external_idx").on(
+      table.shopId,
+      table.provider,
+      table.externalId,
+    ),
   ],
 );
 

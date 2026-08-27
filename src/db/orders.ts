@@ -689,6 +689,30 @@ async function applyOrderUpdate(
             )
           : 0;
 
+    // The same proration as the tax above, and for a sharper reason. A
+    // pass-through fee is money collected for a third party, so a refund of
+    // half an order gives back half of that levy too — but `passThroughCents`
+    // used to stay whole through every partial refund. The monthly report
+    // subtracts it from revenue in full, so an order refunded far enough
+    // subtracted a fee the shop no longer holds, and net revenue could go
+    // negative on nothing but arithmetic (issue #1019).
+    const passThroughCents =
+      reversedCents === null
+        ? current.passThroughCents
+        : current.amountPaidCents > 0
+          ? Math.max(
+              0,
+              current.passThroughCents -
+                Math.min(
+                  current.passThroughCents,
+                  Math.round(
+                    (current.passThroughCents * Math.max(0, reversedCents)) /
+                      current.amountPaidCents,
+                  ),
+                ),
+            )
+          : 0;
+
     if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(status)) {
       console.error("applyOrderUpdate: refused an illegal order status transition", {
         orderId: current.id,
@@ -709,6 +733,7 @@ async function applyOrderUpdate(
             ? (patch.amountPaidCents ?? current.amountPaidCents)
             : remainingCents,
         taxCents,
+        passThroughCents,
         refundedCents:
           reversedCents === null
             ? (patch.refundedCents ?? current.refundedCents)

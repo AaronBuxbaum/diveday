@@ -40,14 +40,43 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
     .orderBy(asc(executedDives.diveNumber));
 }
 
-export async function upsertExecutedDive(db: AppDb, input: ExecutedDiveInput) {
-  return db.transaction(async (tx) => {
+/**
+ * Why a dive log entry was refused.
+ *
+ * This used to be a bare `null` for all five conditions, and the surface above
+ * it swallowed that too — so a divemaster who typed 14:35 in and 14:05 out (a
+ * transposition, at the rail, one-handed) got no message, an empty form, and
+ * every reason to believe it had saved. What is written here is what
+ * `buildIncidentExport` later reads into a sealed document for an investigator
+ * or a treating physician, and a dive that silently failed to save is a hole in
+ * that document nobody knows is there (issue #1018).
+ */
+export type ExecutedDiveRefusal =
+  | "unknown_trip"
+  | "dive_number_out_of_range"
+  | "unknown_recorder"
+  | "unknown_site"
+  | "times_transposed"
+  | "depth_out_of_range";
+
+export type UpsertExecutedDiveResult =
+  | { ok: true; dive: typeof executedDives.$inferSelect }
+  | { ok: false; reason: ExecutedDiveRefusal };
+
+export async function upsertExecutedDive(
+  db: AppDb,
+  input: ExecutedDiveInput,
+): Promise<UpsertExecutedDiveResult> {
+  return db.transaction(async (tx): Promise<UpsertExecutedDiveResult> => {
     const [trip] = await tx
       .select({ plannedDives: trips.plannedDives })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
-    if (!trip || input.diveNumber < 1 || input.diveNumber > trip.plannedDives) return null;
+    if (!trip) return { ok: false, reason: "unknown_trip" };
+    if (input.diveNumber < 1 || input.diveNumber > trip.plannedDives) {
+      return { ok: false, reason: "dive_number_out_of_range" };
+    }
     const [recorder] = await tx
       .select({ id: people.id })
       .from(people)
@@ -59,7 +88,7 @@ export async function upsertExecutedDive(db: AppDb, input: ExecutedDiveInput) {
         ),
       )
       .limit(1);
-    if (!recorder) return null;
+    if (!recorder) return { ok: false, reason: "unknown_recorder" };
     let actualSiteId = input.actualSiteId;
     if (actualSiteId === undefined) {
       const [planned] = await tx
@@ -81,14 +110,16 @@ export async function upsertExecutedDive(db: AppDb, input: ExecutedDiveInput) {
           ),
         )
         .limit(1);
-      if (!site) return null;
+      if (!site) return { ok: false, reason: "unknown_site" };
     }
-    if (input.enteredAt && input.exitedAt && input.exitedAt <= input.enteredAt) return null;
+    if (input.enteredAt && input.exitedAt && input.exitedAt <= input.enteredAt) {
+      return { ok: false, reason: "times_transposed" };
+    }
     if (
       input.maxDepthMeters != null &&
       (!Number.isFinite(input.maxDepthMeters) || input.maxDepthMeters < 0)
     ) {
-      return null;
+      return { ok: false, reason: "depth_out_of_range" };
     }
     const values = {
       shopId: input.shopId,
@@ -128,7 +159,10 @@ export async function upsertExecutedDive(db: AppDb, input: ExecutedDiveInput) {
         set: values,
       })
       .returning();
-    return row ?? null;
+    // The upsert targets a partial unique index and always writes a row; a
+    // missing one is not a refusal anyone can act on, so it stays the
+    // unknown-trip answer rather than inventing a sixth reason.
+    return row ? { ok: true, dive: row } : { ok: false, reason: "unknown_trip" };
   });
 }
 

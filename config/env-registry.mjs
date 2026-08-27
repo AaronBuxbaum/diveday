@@ -483,6 +483,13 @@ export const ENV_GROUPS = [
       "Blob with an S3 bucket in the DiveDay AWS account. The diveday-media-uploader",
       "IAM user (infra/lib/infra-stack.ts S11b) holds scoped PutObject and DeleteObject",
       "permissions on the media bucket.",
+      "",
+      "Reads go through CloudFront, never the bucket: the bucket blocks all public",
+      "access and grants GetObject only to that distribution, whose behaviours",
+      "enumerate the four public prefixes (courses, recap, dive-sites, shop-logos).",
+      "The same bucket holds import-waivers/ and import-receipts/, which are medical",
+      "and financial records read only server-side, so nothing at the edge may reach",
+      "them (issue #1013).",
     ],
     keys: [
       {
@@ -513,7 +520,7 @@ export const ENV_GROUPS = [
         key: "MEDIA_PUBLIC_URL_BASE",
         from: "stack",
         targets: LOCAL_AND_VERCEL,
-        absent: "uses the direct S3 virtual-hosted bucket endpoint",
+        absent: "falls back to the direct S3 bucket endpoint, which answers 403 to every viewer",
       },
     ],
   },

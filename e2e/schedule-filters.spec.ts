@@ -140,7 +140,12 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // (The sampler only records changes, so a stable row is exactly one entry;
   // asserting the value rather than just the length is what stops an empty or
   // never-found form passing as "never changed".)
-  expect([...new Set(samples.map(([count]) => count))]).toEqual([2]);
+  // Three, since issue #696 added the "what can you dive?" select beside the two.
+  // The fourth control — "Hide what needs more" — renders only once a level is
+  // stated, and that is a *URL* condition rather than a hydration one, so it is
+  // present in the first paint of a page carrying `?canDive=` and absent from
+  // every frame of this one. It is exactly the distinction this test is for.
+  expect([...new Set(samples.map(([count]) => count))]).toEqual([3]);
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
@@ -175,4 +180,93 @@ test("paging and month arrows keep the filters a diver applied", { tag: READ_ONL
   const nextMonth = page.getByRole("link", { name: "Next month" });
   await expect(nextMonth).toHaveAttribute("href", /hasSpace=1/);
   await expect(nextMonth).toHaveAttribute("href", /tripType=fun_dive/);
+});
+
+/**
+ * Issue #696. The filters asked what the *list* is (trip type, has space) and
+ * never the one thing the reader knows about themselves. DiveDay composes every
+ * departure's gate already; this lets a diver say their level and see which
+ * departures it opens.
+ *
+ * **Marked, not hidden, by default** -- a shop will take an Open Water diver on
+ * an Advanced charter as a guided dive or sell them the specialty, so a filter
+ * that silently removed those trips would cost the shop the sale. Hiding is a
+ * second, opt-in control.
+ *
+ * The two departures this leans on are both on the first page of the default
+ * view and both carry their gate from a *site*, so the assertion is about the
+ * composed requirement rather than a hand-set trip field: the Duane charter asks
+ * Advanced Open Water, the reef charter asks Open Water.
+ */
+test("stating a certification level marks the departures above it without removing them", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  // Six server round trips on one page -- four filter applications, a reload and
+  // the initial load. Same aggregate-cost reasoning as the trip-type test above.
+  test.setTimeout(45_000);
+  await page.goto("/s/blue-mantis");
+  const list = page.locator("form + ul");
+  const advanced = list.getByRole("listitem").filter({ hasText: "Deep Wreck Charter — the Duane" });
+  const reef = list.getByRole("listitem").filter({ hasText: "Two-Tank Reef — Molasses & French" });
+  await expect(advanced).toHaveCount(1);
+  await expect(reef).toHaveCount(1);
+  // Unsaid by default: nothing is marked until the reader answers.
+  await expect(page.getByText("Above your level")).toHaveCount(0);
+
+  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("What can you dive?").selectOption("open_water");
+  await expect(page).toHaveURL(/canDive=open_water/);
+
+  // Still on the list, and now saying why it is dimmed. The reef charter, which
+  // an Open Water diver does meet, is untouched.
+  await expect(advanced).toHaveCount(1);
+  await expect(advanced.getByText("Above your level")).toBeVisible();
+  await expect(reef.getByText("Above your level")).toHaveCount(0);
+  // Said once above the list, with its count, rather than repeated per card.
+  await expect(page.getByText(/asks? for more than Open Water/)).toBeVisible();
+
+  // Saying a higher level opens them: the same page, nothing marked.
+  await page.getByLabel("What can you dive?").selectOption("advanced_open_water");
+  await expect(page).toHaveURL(/canDive=advanced_open_water/);
+  await expect(advanced).toHaveCount(1);
+  await expect(page.getByText("Above your level")).toHaveCount(0);
+
+  // The shorter list is opt-in, and only offered once a level is stated.
+  await page.getByLabel("What can you dive?").selectOption("open_water");
+  await expect(page).toHaveURL(/canDive=open_water/);
+  await page.getByLabel("Hide what needs more").check();
+  await expect(page).toHaveURL(/hideAbove=1/);
+  await expect(advanced).toHaveCount(0);
+  await expect(reef).toHaveCount(1);
+
+  // A full reload keeps both -- they are query params, not client state.
+  await page.reload();
+  await expect(page.getByLabel("What can you dive?")).toHaveValue("open_water");
+  await expect(page.getByLabel("Hide what needs more")).toBeChecked();
+});
+
+/**
+ * The hard constraint on this filter: it is a *stated preference* and never a
+ * gate. A casual tap in a filter row must not become evidence the readiness
+ * engine reasons about, so it is not persisted and does not prefill the booking
+ * form's own certification select (ADR 20260814-self-declared-cards).
+ */
+test("the stated level never reaches the booking form", { tag: READ_ONLY }, async ({ page }) => {
+  await page.goto("/s/blue-mantis");
+  await expect(page.getByLabel("Trip type")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("What can you dive?").selectOption("rescue");
+  await expect(page).toHaveURL(/canDive=rescue/);
+
+  await page
+    .locator("form + ul")
+    .getByRole("listitem")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/trips\//);
+
+  const level = page.getByLabel(/Certification level/).first();
+  await expect(level).toBeVisible();
+  await expect(level).toHaveValue("");
 });

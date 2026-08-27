@@ -48,13 +48,16 @@ concretely here.
 - Not a dive-agency LMS (we track certs, we don't issue them).
 - Not a general POS/retail system — DiveDay manages gear *rental* only, never **selling** items
   (retail/barcode inventory) or **repairing** them (work orders, parts, labor). A shop's existing
-  POS stays authoritative for both. DiveDay only ever emits data outward, never reads another
-  system's — the read API + webhooks
-  ([features/roadmap.md](features/roadmap.md#1-data-portability-follow-ons-the-wedge)) is how a
-  shop's own POS or accounting tool pulls DiveDay's booking, waiver, and gear-register
-  data instead of double entry; no incumbent is expected to build the other end of that pipe
-  themselves (see the roadmap item), so the realistic path is a no-code bridge (Zapier/Make) the
-  shop wires up, not a DiveDay-built connector per target system.
+  POS stays authoritative for both. **No other system is ever authoritative for DiveDay's own
+  data** either: a connector may push DiveDay's facts out and read back only enough to stay
+  idempotent, never sync a provider's inventory, orders or certifications back in. Within that
+  line DiveDay *does* call a provider's API when a shop authorizes it — Shopify and QuickBooks
+  Online today — on private apps that are never submitted to a public app directory, because the
+  cost H-26 rules out is the review-and-support relationship, not the outbound call
+  ([20260827-shop-authorized-provider-connectors](../architecture/decisions/20260827-shop-authorized-provider-connectors.md),
+  superseding the earlier "emit only" rule). For everything not on that short register, the path is
+  still a no-code bridge (Zapier/Make) the shop wires to DiveDay's own events
+  ([features/roadmap.md](features/roadmap.md#1-data-portability-follow-ons-the-wedge)).
 - Not a dive-log social network.
 
 ## What kind of business this is

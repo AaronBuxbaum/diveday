@@ -384,16 +384,24 @@ export async function saveWaiverTemplate(
  * of the app answer "soon" the same way — and so every diver the sentence
  * counts is one the notice's "Send them by departure" link can reach.
  *
- * **Bookings only, so crew are outside it.** A divemaster who signed the shop's
- * release person-scoped is counted in `divers` and can never appear in
- * `boardingSoon`, because crew reach a departure through `trip_crew` rather
- * than `bookings`. Left deliberate rather than joined in passing: whether a
- * shop's release covers its own staff at all is a question for the shop, and
- * answering it by which table happened to be joined would be the wrong way to
- * decide it (`dive-domain-expert`, on issue #790; filed for triage). Walk-ups
- * and wait-list divers are outside it for the same structural reason and need
- * no decision — they have no booking yet, and counter check-in evaluates
- * readiness live.
+ * **Bookings only, and crew are outside it on purpose.** A divemaster reaches a
+ * departure through `trip_crew`, never a booking, so they can never appear in
+ * `boardingSoon` — and that is the answer, not an accident of which table got
+ * joined. The release is the agreement between a shop and someone paying to be
+ * taken diving; what stands behind staff in the water is the employment
+ * relationship and the professional liability their agency or the shop carries.
+ * A release signed by an employee does not create employer coverage, and asking
+ * for one blurs which relationship is which. So DiveDay neither counts crew here
+ * nor chases them for a signature (issue #842, settled 2026-08-27; the glossary's
+ * "waiver / release" entry carries the reasoning, and a shop whose counsel wants
+ * otherwise still has the paper/in-person path).
+ *
+ * **A divemaster who *is* also a diver on a departure is counted**, because then
+ * they hold a booking like anyone else — the rule is about the seat, not the job.
+ *
+ * Walk-ups and wait-list divers are outside it for a different, structural
+ * reason and need no decision — they have no booking yet, and counter check-in
+ * evaluates readiness live.
  *
  * Mirrors the conditions in `isCompletedWaiverCurrent` (`src/lib/waivers.ts`)
  * that a version bump is what breaks, and only those:

@@ -23,6 +23,14 @@ Shopify syncs priced rental/package catalog items on demand. QuickBooks writes
 idempotent SalesReceipts and RefundReceipts for paid/refunded orders. Zapier
 posts selected order events to a Catch Hook URL.
 
+Calling a provider's API at all is governed by
+`docs/architecture/decisions/20260827-shop-authorized-provider-connectors.md`,
+which supersedes the earlier emit-only rule. Two constraints from it bind every
+adapter here: a connector may push DiveDay's own facts out and read back only
+what keeps that push idempotent — never a provider's data as truth — and no app
+registered for these connectors is submitted to a public app directory. A fourth
+provider is a new ADR, not just a new file.
+
 ## Deployment configuration
 
 All three providers are optional. The shared `SECRET_ENCRYPTION_KEY` must be a

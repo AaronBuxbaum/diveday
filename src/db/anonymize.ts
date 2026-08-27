@@ -373,6 +373,43 @@ type ScrubResult = {
   raisedProcessorErasures: ProcessorErasureObligation[];
 };
 
+/**
+ * Every `people` row whose `merged_into_person_id` chain resolves to this one.
+ *
+ * A merge into a record that was itself later merged makes this a chain rather
+ * than a single hop, so it is walked breadth-first. The walk is **bounded** two
+ * ways: a `seen` set, so a cycle cannot spin (the schema's
+ * `people_merged_into_not_self` check rules out the one-hop case, and nothing
+ * rules out a longer loop), and a hard step ceiling, so a pathological graph
+ * cannot hold the erasure transaction open. Both are belt and braces on a chain
+ * that is one hop deep in practice.
+ */
+const MERGE_CHAIN_MAX_STEPS = 64;
+
+async function mergedIntoChain(
+  tx: AppTransaction,
+  shopId: string,
+  personId: string,
+): Promise<string[]> {
+  const found: string[] = [];
+  const seen = new Set<string>([personId]);
+  let frontier = [personId];
+  for (let step = 0; step < MERGE_CHAIN_MAX_STEPS && frontier.length > 0; step += 1) {
+    const rows = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shopId), inArray(people.mergedIntoPersonId, frontier)));
+    frontier = [];
+    for (const row of rows) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      found.push(row.id);
+      frontier.push(row.id);
+    }
+  }
+  return found;
+}
+
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
   const { shopId, personId, now } = ctx;
 
@@ -399,6 +436,35 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       anonymizedByPersonId: ctx.actorPersonId,
     })
     .where(eq(people.id, personId));
+
+  // Every record that was merged *into* this one, however deep the chain.
+  //
+  // A merge (`./diver-merge`) soft-deletes the source, points it at the
+  // survivor, and leaves every identifying column on it — and contact fields
+  // only move onto the survivor where the survivor's own field was null, so the
+  // source's distinct email and phone survive on that shell **only**. Nothing
+  // could then reach it: the diver record page redirects a merged id to the
+  // survivor before rendering, and that page is the only surface carrying the
+  // erase form. So an erasure of the survivor used to leave the real name, the
+  // old address and the phone number on file permanently, with no way to erase
+  // them by hand (issue #1014). Following the pointer is what makes ADR
+  // 20260802-diver-data-erasure true for a merged diver.
+  //
+  // The shells keep existing — they are soft-deleted rows several history
+  // tables still reference, and deleting one is not an option
+  // (ADR 20260820-every-delete-is-soft). What goes is the identity, not the row,
+  // so the merge audit trail (`merged_into_person_id`, `merged_at`,
+  // `merged_by_person_id`) is deliberately left in place.
+  for (const shellId of await mergedIntoChain(tx, shopId, personId)) {
+    await tx
+      .update(people)
+      .set({
+        ...ERASED_PERSON_COLUMNS,
+        anonymizedAt: now,
+        anonymizedByPersonId: ctx.actorPersonId,
+      })
+      .where(eq(people.id, shellId));
+  }
 
   // The person is no longer a diver of this shop; nothing downstream may treat
   // an erased record as an active one of any kind.

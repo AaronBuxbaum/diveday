@@ -129,6 +129,43 @@ async function expectNoA11yViolations(page: Page) {
   // asserts a non-empty title on the settled document, deterministically, for
   // every scanned surface. What axe would add is only catching the framework's
   // own transient — not a defect any visitor perceives.
+  // **No two elements share a DOM id.** Not an axe rule — `duplicate-id` and
+  // `duplicate-id-active` were removed from axe-core in 4.9, and the surviving
+  // `duplicate-id-aria` only fires when an ARIA attribute points at the
+  // duplicate — so the shape that actually hurts here is invisible to the scan
+  // above: two `Field`s (src/components/ui/form.tsx) minting the same
+  // `useId()`, whose `<label for>` then resolves to whichever element the
+  // document happens to reach first and whose accessible name computes as
+  // *both* labels concatenated. The DOM looks correct in a diff, in a
+  // screenshot, and to every assertion this suite already makes; what is wrong
+  // is only the name a screen reader speaks.
+  //
+  // Issue #1022 reported exactly that, theorising a `cacheComponents`/`useId`
+  // interaction — which is right: PPR resumes a prerendered shell beside
+  // streamed dynamic content, two passes, each starting the server `useId`
+  // counter at 1. It only shows up on a **client-side navigation**, so a hard
+  // load of the same URL is clean and a sweep of 229 hard-loaded renders found
+  // nothing. `scopedFieldId` (src/components/ui/form.tsx) separates the pairs
+  // those two counters can produce; this is the net under that fix, and the
+  // reason nobody noticed for as long as they didn't is that no test could see
+  // it. Now 38 scanned surfaces can — including the ones these scans reach by
+  // clicking rather than by `goto`.
+  const duplicateIds = await page.evaluate(() => {
+    const seen = new Map<string, number>();
+    for (const element of document.querySelectorAll("[id]")) {
+      seen.set(element.id, (seen.get(element.id) ?? 0) + 1);
+    }
+    return [...seen.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([id, count]) => {
+        const labelled = [...document.querySelectorAll(`label[for="${CSS.escape(id)}"]`)]
+          .map((label) => label.textContent?.trim() ?? "")
+          .filter(Boolean);
+        return { id, count, labels: labelled };
+      });
+  });
+  expect(duplicateIds, JSON.stringify(duplicateIds, null, 2)).toEqual([]);
+
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
     .disableRules(["document-title"])

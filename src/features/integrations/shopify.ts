@@ -283,7 +283,8 @@ export async function syncShopifyCatalog(
   const currency = toShopCurrency(shop.currency);
   for (const item of catalog) {
     const record = await getIntegrationSyncRecord(db, {
-      integrationId: integration.id,
+      shopId: integration.shopId,
+      provider: integration.provider,
       sourceType: item.sourceType,
       sourceId: item.sourceId,
       operation: "catalog_product",
@@ -307,7 +308,8 @@ export async function syncShopifyCatalog(
       throw new Error("shopify_product_sync_failed");
     }
     await upsertIntegrationSyncRecord(db, {
-      integrationId: integration.id,
+      shopId: integration.shopId,
+      provider: integration.provider,
       sourceType: item.sourceType,
       sourceId: item.sourceId,
       operation: "catalog_product",

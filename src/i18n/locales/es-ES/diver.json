@@ -99,7 +99,12 @@
       "funDive": "Inmersión recreativa",
       "course": "Curso",
       "hasSpace": "Con plazas",
-      "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno."
+      "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno.",
+      "canDive": "¿Qué puedes bucear?",
+      "canDiveUnsaid": "Prefiero no decirlo",
+      "hideAboveLevel": "Ocultar las que piden más",
+      "aboveLevelChip": "Por encima de tu nivel",
+      "aboveLevelCount": "{count, plural, one {# salida pide más que {level}. Se puede reservar igualmente: pregunta al centro.} other {# salidas piden más que {level}. Se pueden reservar igualmente: pregunta al centro.}}"
     },
     "showLater": "Ver salidas posteriores",
     "showEarlier": "Ver salidas anteriores",
@@ -287,6 +292,7 @@
     "partyTotal": "{count, plural, one {# buceador} other {# buceadores}} × {price} = {total}",
     "totalDueAtCheckout": "Total a pagar al finalizar, equipo y cargos de terceros incluidos: {total}",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
+    "taxAddedAtCheckout": "El impuesto se calcula al pagar y se suma a este total.",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
     "cancelledHeading": "Esta salida se canceló",

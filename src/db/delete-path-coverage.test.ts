@@ -122,6 +122,13 @@ const RESET_KEEPS: Record<string, string> = {
   shop_backup_destinations: "seeded by the stable half (seedBackup); a reset would not restore it",
   shop_backup_deliveries: "delivery history for those bundles, seeded alongside the destination",
   shop_integrations: "provider credentials and linkage, outside the resettable schedule",
+  // Kept for the same reason the connection above is: this is the map from a
+  // DiveDay record to the provider's own, and it is what stops a second
+  // QuickBooks Customer being created for a diver already synced (issue #1015).
+  // Clearing it on a schedule reset would recreate the duplicate the table
+  // exists to prevent -- and it is shop-and-provider scoped now, so it outlives
+  // any one connection rather than any one schedule.
+  integration_sync_records: "the provider idempotency map, which belongs to the connection above",
   // The one table here that needs no delete at all: both its foreign keys carry
   // `ON DELETE CASCADE`, so Postgres clears it when the booking goes. Naming it
   // in the ordering would be dead code that reads like a safety measure.
@@ -157,6 +164,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
 const CASCADE_KEEPS: Record<string, string> = {
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
   push_subscriptions: "ON DELETE CASCADE from trips clears it",
+  integration_sync_records: "ON DELETE CASCADE from shops clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

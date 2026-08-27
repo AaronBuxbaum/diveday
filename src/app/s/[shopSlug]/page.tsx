@@ -27,12 +27,13 @@ import {
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
 import type { DiverTranslator } from "@/i18n/messages";
-import { tripRequirementMarkers } from "@/i18n/readiness-labels";
+import { DIVER_CERTIFICATION_LEVEL_KEYS, tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { isConservationCommitmentCode } from "@/lib/conservation-commitments";
+import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import {
   formatDayParts,
   formatMoneyScanned,
@@ -44,6 +45,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { certificationRank } from "@/lib/readiness";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -125,13 +127,24 @@ export default async function SchedulePage({
     embed?: string;
     hasSpace?: string;
     tripType?: string;
+    canDive?: string;
+    hideAbove?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, back, embed, hasSpace, tripType } = await searchParams;
+  const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove } = await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
+  // **A stated preference, never a gate** (issue #696). It marks the list and
+  // nothing else: `src/lib/trip-admission.ts` and `src/lib/readiness.ts` are
+  // untouched by it, a diver who says "Rescue" here and books an Advanced
+  // charter still meets the ordinary admission check, and the answer is not
+  // persisted anywhere or prefilled into the booking form — a casual filter tap
+  // must never become evidence a readiness engine reasons about (ADRs
+  // 20260814-self-declared-cards, 20260820-attested-at-booking-verified-at-boarding).
+  const canDiveFilter = DECLARABLE_CERTIFICATION_LEVELS.find((level) => level === canDive);
+  const hideAboveFilter = Boolean(canDiveFilter) && hideAbove === "1";
   // Embed mode is the compact, chrome-light surface a shop pastes into its own
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
@@ -165,12 +178,14 @@ export default async function SchedulePage({
     if (isEmbed) params.set("embed", "1");
     if (hasSpaceFilter) params.set("hasSpace", "1");
     if (tripTypeFilter) params.set("tripType", tripTypeFilter);
+    if (canDiveFilter) params.set("canDive", canDiveFilter);
+    if (hideAboveFilter) params.set("hideAbove", "1");
     return params;
   };
   /** The same filters as `withViewParams`, for links that already carry their own `?month=`. */
   const filterSuffix = `${hasSpaceFilter ? "&hasSpace=1" : ""}${
     tripTypeFilter ? `&tripType=${tripTypeFilter}` : ""
-  }`;
+  }${canDiveFilter ? `&canDive=${canDiveFilter}` : ""}${hideAboveFilter ? "&hideAbove=1" : ""}`;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
@@ -223,7 +238,9 @@ export default async function SchedulePage({
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
   // never disagree about what is next (issue #805).
-  const listedTrips = isEmbed ? upcoming.slice(0, EMBED_TRIP_LIMIT) : upcoming;
+  // Declared below, once the composed requirements are known — hiding has to
+  // happen before the embed slice, or an embed showing three departures could
+  // show fewer than three for no visible reason.
   // The zone the times below are in, for the widget's footer. Anchored on a
   // real departure so a shop that switches to summer time reads correctly
   // either side of the change, falling back to the range's first.
@@ -268,6 +285,33 @@ export default async function SchedulePage({
     shop.id,
     upcoming.map((trip) => trip.id),
   );
+
+  // Which departures ask for more than the reader said they hold.
+  //
+  // The **ladder only**: `minimumCertificationLevel`, compared with
+  // `certificationRank`. Specialties and nitrox are deliberately outside it —
+  // asking in a filter row whether someone holds a Deep card is a form, not a
+  // filter, and the level is the question a diver answers without thinking.
+  // A course session is outside it too, for the same reason its requirement is
+  // not rendered on the card: a course exists to create the certification, so
+  // barring its own students from it reads as nonsense.
+  const aboveStatedLevel = new Set(
+    canDiveFilter
+      ? upcoming
+          .filter((trip) => {
+            if (trip.course) return false;
+            const required = requirementsByTrip.get(trip.id)?.minimumCertificationLevel;
+            return Boolean(
+              required && certificationRank(required) > certificationRank(canDiveFilter),
+            );
+          })
+          .map((trip) => trip.id)
+      : [],
+  );
+  const visibleUpcoming = hideAboveFilter
+    ? upcoming.filter((trip) => !aboveStatedLevel.has(trip.id))
+    : upcoming;
+  const listedTrips = isEmbed ? visibleUpcoming.slice(0, EMBED_TRIP_LIMIT) : visibleUpcoming;
 
   // The pinned quick link to the soonest departure with room — rendered only
   // when that answer is *not* already the agenda's own first row, i.e. when
@@ -495,12 +539,36 @@ export default async function SchedulePage({
           month={month ?? null}
           tripTypeFilter={tripTypeFilter ?? null}
           hasSpaceFilter={hasSpaceFilter}
+          canDiveFilter={canDiveFilter ?? null}
+          hideAboveFilter={hideAboveFilter}
+          aboveLevelNotice={
+            canDiveFilter && !hideAboveFilter && aboveStatedLevel.size > 0
+              ? // It says the trips are still bookable, because they are: this
+                // is a stated preference, and a shop will take an Open Water
+                // diver on an Advanced charter as a guided dive or sell them the
+                // specialty.
+                t("schedule.filters.aboveLevelCount", {
+                  count: aboveStatedLevel.size,
+                  level: t(DIVER_CERTIFICATION_LEVEL_KEYS[canDiveFilter]),
+                })
+              : null
+          }
           copy={{
             tripType: t("schedule.filters.tripType"),
             allTrips: t("schedule.filters.allTrips"),
             funDive: t("schedule.filters.funDive"),
             course: t("schedule.filters.course"),
             hasSpace: t("schedule.filters.hasSpace"),
+            canDive: t("schedule.filters.canDive"),
+            canDiveUnsaid: t("schedule.filters.canDiveUnsaid"),
+            // Ladder order, and the same words the public booking form's own
+            // certification select uses — the vocabulary a diver has already
+            // been asked in is the one to ask them in again.
+            canDiveLevels: DECLARABLE_CERTIFICATION_LEVELS.map((level) => ({
+              value: level,
+              label: t(DIVER_CERTIFICATION_LEVEL_KEYS[level]),
+            })),
+            hideAboveLevel: t("schedule.filters.hideAboveLevel"),
           }}
         />
       ) : null}
@@ -514,10 +582,10 @@ export default async function SchedulePage({
               : "schedule.noTripsPublicNoPhone",
           )}
         />
-      ) : upcoming.length === 0 ? (
+      ) : visibleUpcoming.length === 0 ? (
         <EmptyState
           title={
-            hasSpaceFilter || tripTypeFilter
+            hasSpaceFilter || tripTypeFilter || hideAboveFilter
               ? t("schedule.filters.noMatches")
               : t("schedule.noTripsMonth")
           }
@@ -569,6 +637,9 @@ export default async function SchedulePage({
               // the course exists to create.
               const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
               const requirementMarkers = requirement ? tripRequirementMarkers(t, requirement) : [];
+              // Marked, never removed, unless the reader asked for the shorter
+              // list (issue #696).
+              const aboveLevel = aboveStatedLevel.has(trip.id);
               const tripHref = `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`;
               return (
                 <li key={trip.id}>
@@ -582,7 +653,15 @@ export default async function SchedulePage({
                     carried by the day blocks, type, and whitespace, and the
                     hover/focus surface tint is the tap affordance (design
                     principle 10: type and space before boxes). */}
-                  <div className="group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
+                  <div
+                    className={`group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5${
+                      // Dimmed, not disabled: every control stays reachable and
+                      // the row still navigates. Opacity alone says nothing to a
+                      // screen reader, which is why the chip below is the real
+                      // marker and this is the sighted cue beside it (WCAG 1.4.1).
+                      aboveLevel ? " opacity-60 hover:opacity-100" : ""
+                    }`}
+                  >
                     <Link
                       href={tripHref}
                       className="absolute inset-0 z-0 rounded-xl"
@@ -687,6 +766,18 @@ export default async function SchedulePage({
                             : t("schedule.certifications")}
                           {" · "}
                           {requirementMarkers.join(" · ")}
+                          {/* Two words, on the card, beside the requirement it
+                              is about — so the dimming has a name a screen
+                              reader can read, and so the reason travels with the
+                              gate rather than sitting a paragraph away. */}
+                          {aboveLevel ? (
+                            <>
+                              {" · "}
+                              <span className="font-medium text-warning">
+                                {t("schedule.filters.aboveLevelChip")}
+                              </span>
+                            </>
+                          ) : null}
                         </p>
                       ) : null}
                       {/* The dive plan in words only when the sites line above
@@ -824,6 +915,8 @@ export default async function SchedulePage({
                 if (isEmbed) params.set("embed", "1");
                 if (hasSpaceFilter) params.set("hasSpace", "1");
                 if (tripTypeFilter) params.set("tripType", tripTypeFilter);
+                if (canDiveFilter) params.set("canDive", canDiveFilter);
+                if (hideAboveFilter) params.set("hideAbove", "1");
                 const query = params.toString();
                 return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
               })()}

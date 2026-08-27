@@ -292,6 +292,7 @@ export function BookSpotSection({
   rentalItems,
   rentalPricing,
   passThroughFee,
+  taxEnabled,
   terms,
 }: {
   trip: Trip;
@@ -331,6 +332,16 @@ export function BookSpotSection({
   rentalPricing: RentalPricing;
   /** A shop-configured third-party charge, shown separately from shop fare. */
   passThroughFee?: PassThroughFee | null;
+  /**
+   * Whether Stripe Tax is on for this shop (ADR
+   * 20260826-stripe-tax-is-opt-in-and-provider-owned). When it is, the figure
+   * above is not what the card is charged: tax is exclusive, computed by Stripe
+   * from an address this page does not have, and added on top. The one number a
+   * booking page must not surprise anyone with is the one they commit to, so
+   * the page says so rather than quoting a total it cannot compute (issue
+   * #1019).
+   */
+  taxEnabled?: boolean;
   /**
    * The money fine print (`TripTerms`), server-rendered by the page and
    * placed here beside the button it qualifies — deposit split, cancellation
@@ -503,6 +514,9 @@ export function BookSpotSection({
                 price: money(passThroughFee.amountCents),
               })}
             </p>
+          ) : null}
+          {taxEnabled && perDiverPriceCents !== null ? (
+            <p className="-mt-2 text-sm text-muted">{t("taxAddedAtCheckout")}</p>
           ) : null}
           {/* Self-declared only (task 23) — this checkbox is not persisted and
             does not gate the booking transaction; full enforcement (a birth

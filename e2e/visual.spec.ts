@@ -1319,6 +1319,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule", scheme);
       });
 
+      /**
+       * The same board read by someone who has said what they can dive.
+       *
+       * The whole design decision is visual and lives nowhere else: the
+       * departures above the stated level are **dimmed and marked**, not
+       * removed, with the count said once in the filter row and a two-word chip
+       * on each card (issue #696). A capture is the only thing that can tell a
+       * dimmed-and-still-there card from a missing one.
+       */
+      test(`the public schedule marks what a diver cannot dive (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis?canDive=open_water");
+        await publicReefCard(page).getByRole("link").waitFor();
+        await page.getByText("Above your level").first().waitFor();
+        await capture(page, "schedule-above-level", scheme);
+      });
+
       // A departure that no longer exists, which is what a link on a flyer or
       // in last season's Instagram post resolves to. It is a *shop* surface
       // now rather than DiveDay's app-wide 404 (issue #765), so the thing to
@@ -2356,11 +2372,33 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "booking-new-diver", scheme);
       });
 
+      /**
+       * **Wait for the list's own tail, not just the shell.**
+       *
+       * The board is `instant = true` with a `loading.tsx`, so its departures
+       * arrive by PPR streaming *after* the heading these shots used to gate on.
+       * That is the same race this file already documents for the public
+       * schedule ("two runs catching different skeleton frames is what produced
+       * the schedule-dark diffs on builds with no code change") — and it came
+       * back here: `schedule-builder-add-dark-vw-390` reported changed on a PR
+       * that touches neither the board nor anything it renders, and the whole
+       * difference was 168px of missing tail with "Show later departures" in it.
+       * One variant out of four, which is what a race looks like and what a code
+       * change does not.
+       *
+       * The pager is the last thing the list paints, so waiting for it proves
+       * the stream finished. It is stable: the seeded board always holds more
+       * departures than one keyset page.
+       */
+      const boardListSettled = (page: Page) =>
+        page.getByRole("link", { name: "Show later departures" }).waitFor();
+
       // The staff schedule as a builder: departures grouped by day, each row
       // carrying its crew and one quiet "⋯" disclosure for move/copy/remove.
       test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
         await capture(page, "schedule-builder", scheme);
       });
 
@@ -2377,6 +2415,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
+        await boardListSettled(page);
         await capture(page, "schedule-builder-add", scheme);
       });
 
@@ -2394,6 +2433,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
+        await boardListSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
       });
 

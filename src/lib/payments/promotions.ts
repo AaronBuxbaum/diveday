@@ -43,14 +43,49 @@ export type CreateShopPromotionRequest = {
   idempotencyKey: string;
 };
 
+/**
+ * A one-off, fixed-amount coupon for a single Checkout session.
+ *
+ * **Why a fixed amount rather than the shop's own percent code.** Stripe
+ * applies a session's `discounts` to the whole session, and the only way to
+ * exempt a line is `coupon.applies_to[products]` — an allowlist of *Product*
+ * ids. DiveDay's Checkout lines are inline `price_data`, so their products are
+ * minted per session and cannot be named in advance. There is no per-line
+ * "discountable" flag in Checkout at all.
+ *
+ * So when a session carries a third-party pass-through fee — a marine-park
+ * levy the shop collects and must remit **in full** — a percent code silently
+ * takes its cut of that fee out of the shop's own margin (issue #1019). The
+ * caller works out what the percent is worth against the discountable lines
+ * only, and hands Stripe that number.
+ */
+export type CreateSessionDiscountRequest = {
+  stripeAccountId: string;
+  /** Minor units, already computed against the discountable lines only. */
+  amountOffCents: number;
+  currency: string;
+  /** The shop's own code text, so the shop's Stripe dashboard still reads honestly. */
+  name: string;
+  /** Deterministic per-attempt key — same convention as the session itself. */
+  idempotencyKey: string;
+};
+
 export type CreateTripPromotionResult =
   | { status: "created"; stripeCouponId: string; stripePromotionCodeId: string }
+  | { status: "not_configured" }
+  | { status: "failed" };
+
+export type CreateSessionDiscountResult =
+  | { status: "created"; stripeCouponId: string }
   | { status: "not_configured" }
   | { status: "failed" };
 
 export interface PromotionProvider {
   createTripPromotion(request: CreateTripPromotionRequest): Promise<CreateTripPromotionResult>;
   createShopPromotion(request: CreateShopPromotionRequest): Promise<CreateTripPromotionResult>;
+  createSessionDiscount(
+    request: CreateSessionDiscountRequest,
+  ): Promise<CreateSessionDiscountResult>;
 }
 
 type Fetch = typeof fetch;
@@ -142,6 +177,35 @@ export function stripePromotionProvider(
     createShopPromotion(request) {
       return createPromotion(request);
     },
+    async createSessionDiscount(request) {
+      // A coupon and no promotion code: nothing here is typed by a diver, and
+      // it is spent by the one session it was minted for. `max_redemptions: 1`
+      // is the belt to that brace — a leaked coupon id cannot be reused.
+      try {
+        const form = new URLSearchParams({
+          duration: "once",
+          amount_off: String(Math.max(0, Math.round(request.amountOffCents))),
+          currency: request.currency,
+          name: request.name.slice(0, 40),
+          max_redemptions: "1",
+        });
+        const response = await fetchImpl("https://api.stripe.com/v1/coupons", {
+          method: "POST",
+          headers: {
+            ...headersFor(config.secretKey, request.stripeAccountId),
+            "Idempotency-Key": `${request.idempotencyKey}:session-discount`,
+          },
+          body: form.toString(),
+        });
+        if (!response.ok) return { status: "failed" };
+        const coupon = couponResponseSchema.safeParse(await response.json());
+        return coupon.success
+          ? { status: "created", stripeCouponId: coupon.data.id }
+          : { status: "failed" };
+      } catch {
+        return { status: "failed" };
+      }
+    },
   };
 }
 
@@ -150,6 +214,9 @@ const disabledPromotionProvider: PromotionProvider = {
     return { status: "not_configured" };
   },
   async createShopPromotion() {
+    return { status: "not_configured" };
+  },
+  async createSessionDiscount() {
     return { status: "not_configured" };
   },
 };

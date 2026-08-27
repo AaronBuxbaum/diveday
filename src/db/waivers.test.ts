@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -28,6 +28,7 @@ import {
   setTripStatus,
   upcomingTripsWithCounts,
 } from "./trips";
+import { setTripCrew } from "./trips-crew";
 import {
   completeWaiver,
   getCurrentWaiverTemplate,
@@ -1387,6 +1388,48 @@ describe("saving the waiver template", () => {
     // whole point — the history length above only proves nothing was inserted.
     expect(standing).toBeGreaterThan(0);
     expect((await standingWaiverExposure(db, shop.id, now)).divers).toBe(standing);
+  });
+
+  /**
+   * Issue #842. A divemaster who signed the shop's release person-scoped counts
+   * in `divers` like anyone else, and must never reach `boardingSoon` on the
+   * strength of a crew assignment: the release is the customer's, and joining
+   * `trip_crew` into that count is the drive-by this pins against. The
+   * function's docblock and the glossary's "waiver / release" entry carry the
+   * reasoning.
+   */
+  it("does not count a crew assignment as boarding soon", async () => {
+    const { db, shop, staff } = await signedContext();
+    const before = await standingWaiverExposure(db, shop.id, now);
+
+    // The signer of `signedContext` is a diver; give a *crew* member a standing
+    // signature and a seat on the crew of a departure inside the horizon.
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: staff.person.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`crew waiver issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: staff.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), gte(trips.startsAt, now)))
+      .orderBy(asc(trips.startsAt))
+      .limit(1);
+    if (!trip) throw new Error("expected a forward departure");
+    await setTripCrew(db, shop.id, trip.id, [staff.person.id]);
+
+    const after = await standingWaiverExposure(db, shop.id, now);
+    // The crew member's own signature is exposure, so `divers` moves.
+    expect(after.divers).toBe(before.divers + 1);
+    // Their crew assignment is not a booking, so the operational number does not.
+    expect(after.boardingSoon).toBe(before.boardingSoon);
   });
 
   it("versions a real edit, and reports the signatures it just put back in the queue", async () => {

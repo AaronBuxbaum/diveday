@@ -99,7 +99,12 @@
       "funDive": "Fun dive",
       "course": "Course",
       "hasSpace": "Has space",
-      "noMatches": "No trips match these filters — try clearing one."
+      "noMatches": "No trips match these filters — try clearing one.",
+      "canDive": "What can you dive?",
+      "canDiveUnsaid": "Rather not say",
+      "hideAboveLevel": "Hide what needs more",
+      "aboveLevelChip": "Above your level",
+      "aboveLevelCount": "{count, plural, one {# departure asks for more than {level}. It is still bookable — ask the shop.} other {# departures ask for more than {level}. They are still bookable — ask the shop.}}"
     },
     "showLater": "Show later departures",
     "showEarlier": "Show earlier departures",
@@ -287,6 +292,7 @@
     "partyTotal": "{count, plural, one {# diver} other {# divers}} × {price} = {total}",
     "totalDueAtCheckout": "Total due at checkout, gear and third-party charges included: {total}",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
+    "taxAddedAtCheckout": "Tax is calculated at checkout and added to this total.",
     "stripeHint": "You'll finish paying on a secure Stripe page.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was cancelled",

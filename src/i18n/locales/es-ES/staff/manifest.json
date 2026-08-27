@@ -50,7 +50,19 @@
     "visibility": "Visibilidad",
     "current": "Corriente",
     "notRecordedDepth": "Profundidad no registrada",
-    "save": "Guardar registro de inmersión"
+    "save": "Guardar registro de inmersión",
+    "saved": "Registro de la inmersión guardado.",
+    "refusal": {
+      "timesTransposed": "La hora de salida debe ser posterior a la de entrada. Revisa las dos horas y guarda de nuevo.",
+      "depthOutOfRange": "Esa profundidad está fuera de lo que admite este formulario. Revisa la cifra y guarda de nuevo.",
+      "diveNumberOutOfRange": "Esta salida no tiene planificada una inmersión con ese número.",
+      "unknownSite": "Ese punto de inmersión no es uno de los puntos activos del centro.",
+      "unknownTrip": "Esta salida ya no está en el calendario, así que no se guardó nada.",
+      "unknownRecorder": "No se encontró tu ficha de personal, así que no se guardó nada.",
+      "invalidTime": "No se pudo leer una de las horas. Revisa las dos y guarda de nuevo.",
+      "invalid": "No se guardó nada. Revisa los datos e inténtalo de nuevo.",
+      "wrongDive": "Este formulario es de otra inmersión. Recarga la lista de embarque e inténtalo de nuevo."
+    }
   },
   "addCrewToTrip": "Añadir tripulación a la salida",
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
