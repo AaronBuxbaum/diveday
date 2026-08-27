@@ -4913,7 +4913,27 @@ export const specialtyCertifications = pgTable(
       .references(() => people.id),
     agency: certificationAgency("agency").notNull(),
     specialty: diveSpecialty("specialty").notNull(),
-    identifier: text("identifier").notNull(),
+    /**
+     * **Nullable only for a shop-issued card, and the check constraint below
+     * is what says so.**
+     *
+     * It was NOT NULL until 2026-08-27, on the reasoning that "a specialty is a
+     * yes/no gate on a materially riskier dive, so there is no version of one
+     * that is only a claim with no number behind it". That reasoning is intact
+     * and the constraint still enforces it for every path that existed then: a
+     * staff capture, an import and a diver's own declaration all carry a
+     * number, and a self-declared row still cannot reach `verified` without
+     * one.
+     *
+     * The row this opens the door to is not a claim. A shop's own instructor
+     * finishing their own Nitrox or Deep class has certified somebody, and the
+     * agency number arrives days later — so the card is real and its number is
+     * pending, which is a different thing from a stranger's typing. It lands
+     * `pending` and clears nothing until a staffer confirms it against the
+     * card, which is exactly the caution ADR 20260725-import-specialty-cards
+     * asks for (issue #975).
+     */
+    identifier: text("identifier"),
     /** No expiry column, for the reason `certifications` states. */
     status: certificationStatus("status").notNull().default("pending"),
     reviewNote: text("review_note"),
@@ -4955,6 +4975,41 @@ export const specialtyCertifications = pgTable(
      * requires the number.
      */
     selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
+    /**
+     * **This shop's own instructor certified this diver, on this session.**
+     *
+     * Mirrors `certifications.issuedByShopAt` (issue #717, ADR
+     * 20260824-shop-issued-certification-is-verified) with **one deliberate
+     * difference: the row lands `pending`, not `verified`** (issue #975, ADR
+     * 20260827-shop-issued-specialty-cards-are-attested).
+     *
+     * A level card's shop issuance clears its own gate on the instructor's tap,
+     * because the instructor is the evidence. A specialty or nitrox card does
+     * not, because this table's own precedent is stricter and was set for a
+     * reason: even an **imported** row — which the codebase trusts enough to
+     * clear a level gate on arrival — is deliberately held back from clearing
+     * *this* gate until a staffer confirms it by hand ("a spreadsheet cell is
+     * not a card sighting", ADR 20260725-import-specialty-cards). A wrong
+     * nitrox fill is the highest-consequence failure in this app.
+     *
+     * So what this stamp buys is that the record **exists** — the diver who
+     * finished a Nitrox class on Saturday is no longer invisible to their own
+     * shop on Sunday — while the gate still waits for somebody to look at a
+     * card. The confirm asks for the agency and the number, exactly as an
+     * unsighted self-declaration's does.
+     */
+    issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
+    /**
+     * The course session this card came from, set only alongside
+     * `issuedByShopAt`. `onDelete: "set null"` for the same reason as its
+     * level-card twin: a certification is the diver's permanent evidence and
+     * must outlive the sailing that earned it.
+     */
+    issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
+      onDelete: "set null",
+    }),
+    /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
+    issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
@@ -4975,6 +5030,30 @@ export const specialtyCertifications = pgTable(
     uniqueIndex("specialty_certifications_shop_agency_specialty_identifier_unique")
       .on(table.shopId, table.agency, table.specialty, sql`lower(${table.identifier})`)
       .where(sql`${table.deletedAt} is null`),
+    // **The rule the nullable `identifier` above is worth having**, in the
+    // database rather than only in the action that writes it.
+    //
+    // A specialty card number may be absent on exactly one path: a still-
+    // `pending` card this shop's own instructor issued. Every other row — a
+    // staff capture, an import, a diver's own declaration — carries a number,
+    // and a shop-issued row **cannot reach `verified` without one**, which is
+    // the whole difference from the level card's twin constraint (that one
+    // exempts `issuedByShopAt` unconditionally, because a level card lands
+    // verified on the instructor's tap; this one does not, because a specialty
+    // gate waits for somebody to look at the card).
+    //
+    // The self-declared exemption is unchanged and is conditioned on `pending`
+    // for the same reason.
+    //
+    // `is not null` leads, and is not redundant with the length test: a CHECK
+    // passes when its expression is TRUE *or NULL*, and `length(btrim(NULL))`
+    // is NULL — so a predicate starting with the length test alone would
+    // evaluate to NULL and **accept** a numberless verified row, which is the
+    // afternoon-long bug the level card's own comment records.
+    check(
+      "specialty_certifications_identifier_present_unless_unsighted",
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending')`,
+    ),
   ],
 );
 
@@ -5602,6 +5681,31 @@ export const nitroxCertifications = pgTable(
      * still authorized only by a `verified` card.
      */
     selfDeclaredAt: timestamp("self_declared_at", { withTimezone: true }),
+    /**
+     * **This shop's own instructor certified this diver, on this session** —
+     * the nitrox twin of `specialtyCertifications.issuedByShopAt`, carrying
+     * every one of its consequences. Read that column's comment.
+     *
+     * The row lands `pending`, so it authorizes **no fill**. Enriched-air fill
+     * authorization reads `verified` and nothing else, and that is the line
+     * this column must never cross: a wrong nitrox fill is the
+     * highest-consequence failure in this app, and an instructor's own tap is
+     * not somebody looking at a card. What the stamp buys is that the diver who
+     * finished Saturday's Nitrox class is no longer invisible to their own shop
+     * on Sunday morning (issue #975, ADR
+     * 20260827-shop-issued-specialty-cards-are-attested).
+     */
+    issuedByShopAt: timestamp("issued_by_shop_at", { withTimezone: true }),
+    /**
+     * The course session this card came from, set only alongside
+     * `issuedByShopAt`. `onDelete: "set null"` so the diver's evidence outlives
+     * the sailing that earned it.
+     */
+    issuedFromTripId: uuid("issued_from_trip_id").references(() => trips.id, {
+      onDelete: "set null",
+    }),
+    /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
+    issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
@@ -5630,7 +5734,7 @@ export const nitroxCertifications = pgTable(
     // why leading with the length test alone silently accepts a NULL.
     check(
       "nitrox_certifications_identifier_present_unless_self_declared",
-      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );

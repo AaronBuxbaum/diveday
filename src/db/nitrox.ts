@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { needsCardSighting } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
@@ -94,6 +94,9 @@ export async function reviewNitroxCertification(
       id: nitroxCertifications.id,
       status: nitroxCertifications.status,
       selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+      // A shop-issued row is numberless too, and this confirm is what
+      // authorizes a fill — so it asks for the card (issue #975).
+      issuedByShopAt: nitroxCertifications.issuedByShopAt,
     })
     .from(nitroxCertifications)
     .where(
@@ -106,8 +109,8 @@ export async function reviewNitroxCertification(
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
 
-  const sighting = isUnsightedSelfDeclaration(existing) ? input.sighting : undefined;
-  if (isUnsightedSelfDeclaration(existing) && !sighting?.identifier.trim()) {
+  const sighting = needsCardSighting(existing) ? input.sighting : undefined;
+  if (needsCardSighting(existing) && !sighting?.identifier.trim()) {
     return { ok: false, reason: "card_sighting_required" };
   }
 

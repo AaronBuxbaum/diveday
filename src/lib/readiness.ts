@@ -481,6 +481,40 @@ export function isUnsightedSelfDeclaration(card: {
   return Boolean(card.selfDeclaredAt) && card.status === "pending";
 }
 
+/**
+ * **A pending card with no number anybody has read off a physical card**, of
+ * which there are now two kinds.
+ *
+ * The older one is an unsighted self-declaration above: a stranger's typing.
+ * The newer one is a **shop-issued specialty or nitrox card** (issue #975) —
+ * this shop's own instructor recording their own class, where the number is the
+ * agency's processing lag rather than missing evidence. They are very different
+ * in how much they are worth, and identical in the only thing this predicate
+ * decides: **the confirm that promotes one to `verified` must ask for the
+ * agency and the number off a card**, because that promotion is what opens a
+ * depth gate past 18 m or authorizes an enriched-air fill.
+ *
+ * The level table has no second kind. A shop-issued *level* card lands
+ * `verified` on the instructor's tap and never passes through here (ADR
+ * 20260824-shop-issued-certification-is-verified); the stricter treatment of
+ * specialty and nitrox is deliberate and is this table's own precedent — even
+ * an imported row does not clear its own gate without a staffer confirming it
+ * ("a spreadsheet cell is not a card sighting", ADR
+ * 20260725-import-specialty-cards).
+ *
+ * Structural rather than over a row type, like its sibling, so the specialty
+ * and nitrox tables go through one definition.
+ */
+export function needsCardSighting(card: {
+  selfDeclaredAt?: Date | string | null;
+  issuedByShopAt?: Date | string | null;
+  status: "pending" | "verified";
+}): boolean {
+  return (
+    card.status === "pending" && (Boolean(card.selfDeclaredAt) || Boolean(card.issuedByShopAt))
+  );
+}
+
 /** Shared rank check for course admission and final trip readiness. */
 export function hasVerifiedCertificationAtLeast(
   certifications: readonly Certification[],

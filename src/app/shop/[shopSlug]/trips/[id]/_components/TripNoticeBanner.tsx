@@ -114,6 +114,14 @@ const NOTICE_KEYS: Record<
   "diver-waitlisted": { form: "add-diver", tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   certified: { form: "roster", tone: "success", key: "trips.notices.certified" },
+  // Success, not a warning: the record landed. The tone is the same as its
+  // level-card sibling and only the words differ, because what changed is what
+  // happens *next*, not whether anything went wrong (issue #975).
+  "certified-awaiting-card": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.certifiedAwaitingCard",
+  },
   "certify-failed": { form: "roster", tone: "danger", key: "trips.notices.certifyFailed" },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },

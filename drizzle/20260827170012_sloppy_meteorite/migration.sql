@@ -1,0 +1,14 @@
+ALTER TABLE "nitrox_certifications" ADD COLUMN "issued_by_shop_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "nitrox_certifications" ADD COLUMN "issued_from_trip_id" uuid;--> statement-breakpoint
+ALTER TABLE "nitrox_certifications" ADD COLUMN "issued_by_person_id" uuid;--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD COLUMN "issued_by_shop_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD COLUMN "issued_from_trip_id" uuid;--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD COLUMN "issued_by_person_id" uuid;--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ALTER COLUMN "identifier" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "nitrox_certifications" ADD CONSTRAINT "nitrox_certifications_issued_from_trip_id_trips_id_fkey" FOREIGN KEY ("issued_from_trip_id") REFERENCES "trips"("id") ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE "nitrox_certifications" ADD CONSTRAINT "nitrox_certifications_issued_by_person_id_people_id_fkey" FOREIGN KEY ("issued_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD CONSTRAINT "specialty_certifications_issued_from_trip_id_trips_id_fkey" FOREIGN KEY ("issued_from_trip_id") REFERENCES "trips"("id") ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD CONSTRAINT "specialty_certifications_issued_by_person_id_people_id_fkey" FOREIGN KEY ("issued_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
+ALTER TABLE "specialty_certifications" ADD CONSTRAINT "specialty_certifications_identifier_present_unless_unsighted" CHECK (("identifier" is not null and length(btrim("identifier", E' \t\n\r\f\v')) > 0) or ("self_declared_at" is not null and "status" = 'pending') or ("issued_by_shop_at" is not null and "status" = 'pending'));--> statement-breakpoint
+-- diveday:allow-destructive drop-constraint nitrox_certifications.identifier: the re-added CHECK is strictly weaker than the one it replaces. It keeps both existing arms verbatim and adds a third (`issued_by_shop_at is not null and status = 'pending'`), so every row the previous release can write while this runs already satisfies it and the re-add cannot fail on rows written meanwhile. Nothing depends on the constraint's absence for the microseconds between the two statements, which are in one transaction; the only window is one where the table is *less* constrained than before, never more.
+ALTER TABLE "nitrox_certifications" DROP CONSTRAINT "nitrox_certifications_identifier_present_unless_self_declared", ADD CONSTRAINT "nitrox_certifications_identifier_present_unless_self_declared" CHECK (("identifier" is not null and length(btrim("identifier", E' \t\n\r\f\v')) > 0) or ("self_declared_at" is not null and "status" = 'pending') or ("issued_by_shop_at" is not null and "status" = 'pending'));

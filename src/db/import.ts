@@ -327,8 +327,14 @@ export async function commitContactImport(
       .where(
         and(eq(specialtyCertifications.shopId, shopId), isNull(specialtyCertifications.deletedAt)),
       );
+    // Numberless rows drop out, the same way the nitrox map below drops its
+    // own: a row with no identifier is a card nobody has read a number off —
+    // a shop-issued one awaiting its agency number (issue #975) — and it
+    // cannot be what an incoming numbered card is a duplicate of.
     const seenSpecialty = new Map(
-      liveSpecialty.map((c) => [specialtyKey(c.agency, c.specialty, c.identifier), c.personId]),
+      liveSpecialty
+        .filter((c) => c.identifier !== null)
+        .map((c) => [specialtyKey(c.agency, c.specialty, c.identifier as string), c.personId]),
     );
 
     const liveNitrox = await tx
