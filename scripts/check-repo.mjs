@@ -67,6 +67,7 @@ const checks = [
   ["migration-graph", "check-migration-graph.mjs"],
   ["open-graph", "check-open-graph.mjs"],
   ["critical-text", "check-critical-text.mjs"],
+  ["stack-ci-skip", "check-stack-ci-skip.mjs"],
 ];
 
 function runCheck(label, scriptFile) {
