@@ -6,9 +6,16 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
-import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
+import {
+  addSpecialtyAction,
+  deleteSpecialtyAction,
+  markCertifiedAction,
+  reviewSpecialtyAction,
+} from "../actions";
 import { CardSightingForm } from "./CardSightingForm";
 import { CardStatusMark } from "./CardStatusMark";
+import { MarkCertifiedControl } from "./MarkCertifiedControl";
+import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
@@ -43,6 +50,8 @@ export function SpecialtyCards({
   // to this add-specialty form. Render all feedback beside the cards so the
   // disclosure itself never claims an unrelated action succeeded.
   const sectionStatus = !numberError && status?.form === "specialty-cards" ? status : undefined;
+  const markCertified = markCertifiedCopy(t);
+  const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="specialty-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -50,7 +59,6 @@ export function SpecialtyCards({
           <h2 id="specialty-heading" className="text-lg font-semibold">
             {t("divers.specialty.heading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
         <details className="relative ml-auto shrink-0">
           <summary
@@ -175,23 +183,21 @@ export function SpecialtyCards({
                         certificationId={card.id}
                         numberError={numberError}
                       />
-                    ) : card.status === "pending" || needsImportConfirm(card) ? (
-                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <SubmitButton
-                          pendingLabel={
-                            needsImportConfirm(card)
-                              ? t("divers.certifications.confirming")
-                              : t("divers.certifications.markingCertified")
-                          }
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {needsImportConfirm(card)
-                            ? t("divers.certifications.confirmCard")
-                            : t("divers.certifications.markCertified")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
+                    ) : (
+                      <MarkCertifiedControl
+                        action={markCertify}
+                        certificationId={card.id}
+                        cardType="specialty"
+                        state={
+                          needsImportConfirm(card)
+                            ? "confirm"
+                            : card.status === "pending"
+                              ? "pending"
+                              : "settled"
+                        }
+                        copy={markCertified}
+                      />
+                    )}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
@@ -255,24 +261,21 @@ export function SpecialtyCards({
                         cardType="nitrox"
                         numberError={numberError}
                       />
-                    ) : card.status === "pending" || needsImportConfirm(card) ? (
-                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                        <input type="hidden" name="certificationId" value={card.id} />
-                        <input type="hidden" name="cardType" value="nitrox" />
-                        <SubmitButton
-                          pendingLabel={
-                            needsImportConfirm(card)
-                              ? t("divers.certifications.confirming")
-                              : t("divers.certifications.markingCertified")
-                          }
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {needsImportConfirm(card)
-                            ? t("divers.certifications.confirmCard")
-                            : t("divers.certifications.markCertified")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
+                    ) : (
+                      <MarkCertifiedControl
+                        action={markCertify}
+                        certificationId={card.id}
+                        cardType="nitrox"
+                        state={
+                          needsImportConfirm(card)
+                            ? "confirm"
+                            : card.status === "pending"
+                              ? "pending"
+                              : "settled"
+                        }
+                        copy={markCertified}
+                      />
+                    )}
                     <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
                       <input type="hidden" name="certificationId" value={card.id} />
                       <input type="hidden" name="cardType" value="nitrox" />

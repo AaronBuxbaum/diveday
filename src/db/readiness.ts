@@ -3,7 +3,7 @@ import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
-import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
@@ -12,6 +12,7 @@ import {
   isUnsightedSelfDeclaration,
   needsCardSighting,
   unavailableReadiness,
+  unreviewedCardState,
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
@@ -640,6 +641,104 @@ export async function reviewCertification(
     if (isUniqueConstraintViolation(error)) return { ok: false, reason: "duplicate_card" };
     throw error;
   }
+}
+
+/**
+ * **Take back a "Mark certified" tap.** The inverse of {@link reviewCertification}
+ * for the one-tap path, driving the land-then-undo toast that replaced the
+ * "Certification marked verified" banner.
+ *
+ * `unreviewedCardState` (src/lib/readiness.ts) owns the decision — including
+ * the refusal on a card that needed a sighting, whose review rewrote the row
+ * from the card in the staffer's hand and cannot be put back. Shop-scoped and
+ * live-rows-only like every other write in this file, so a replayed submit can
+ * neither reach another shop's evidence nor resurrect a deleted card.
+ */
+export async function unreviewCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const [existing] = await db
+    .select({
+      status: certifications.status,
+      reviewedAt: certifications.reviewedAt,
+      selfDeclaredAt: certifications.selfDeclaredAt,
+      issuedByShopAt: certifications.issuedByShopAt,
+      importedAt: certifications.importedAt,
+    })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.id, input.certificationId),
+        eq(certifications.shopId, input.shopId),
+        isNull(certifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+  const target = unreviewedCardState(existing);
+  if (!target.ok) return target;
+  const [row] = await db
+    .update(certifications)
+    .set({
+      status: target.status,
+      reviewNote: null,
+      reviewedAt: null,
+      reviewedByPersonId: null,
+    })
+    .where(
+      and(
+        eq(certifications.id, input.certificationId),
+        eq(certifications.shopId, input.shopId),
+        isNull(certifications.deletedAt),
+      ),
+    )
+    .returning({ id: certifications.id });
+  return row ? { ok: true } : { ok: false, reason: "not_found" };
+}
+
+/** The specialty twin of {@link unreviewCertification}; same decision, same guards. */
+export async function unreviewSpecialtyCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const [existing] = await db
+    .select({
+      status: specialtyCertifications.status,
+      reviewedAt: specialtyCertifications.reviewedAt,
+      selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
+      issuedByShopAt: specialtyCertifications.issuedByShopAt,
+      importedAt: specialtyCertifications.importedAt,
+    })
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.id, input.certificationId),
+        eq(specialtyCertifications.shopId, input.shopId),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+  const target = unreviewedCardState(existing);
+  if (!target.ok) return target;
+  const [row] = await db
+    .update(specialtyCertifications)
+    .set({
+      status: target.status,
+      reviewNote: null,
+      reviewedAt: null,
+      reviewedByPersonId: null,
+    })
+    .where(
+      and(
+        eq(specialtyCertifications.id, input.certificationId),
+        eq(specialtyCertifications.shopId, input.shopId),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    )
+    .returning({ id: specialtyCertifications.id });
+  return row ? { ok: true } : { ok: false, reason: "not_found" };
 }
 
 /**

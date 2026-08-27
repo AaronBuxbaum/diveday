@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { needsCardSighting } from "@/lib/readiness";
+import { type CardUnreviewRefusal, needsCardSighting, unreviewedCardState } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import {
@@ -141,6 +141,56 @@ export async function reviewNitroxCertification(
     if (isUniqueConstraintViolation(error)) return { ok: false, reason: "duplicate_card" };
     throw error;
   }
+}
+
+/**
+ * The nitrox twin of `unreviewCertification` (src/db/readiness.ts) — the
+ * inverse of the one-tap confirm, for the toast's Undo. A card that needed a
+ * sighting is refused there and here: this tap authorizes a gas fill, and a
+ * revert that left a sighted number on a row nobody had sighted is exactly
+ * the state the sighting exists to prevent.
+ */
+export async function unreviewNitroxCertification(
+  db: AppDb,
+  input: { shopId: string; certificationId: string },
+): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const [existing] = await db
+    .select({
+      status: nitroxCertifications.status,
+      reviewedAt: nitroxCertifications.reviewedAt,
+      selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
+      issuedByShopAt: nitroxCertifications.issuedByShopAt,
+      importedAt: nitroxCertifications.importedAt,
+    })
+    .from(nitroxCertifications)
+    .where(
+      and(
+        eq(nitroxCertifications.id, input.certificationId),
+        eq(nitroxCertifications.shopId, input.shopId),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+  const target = unreviewedCardState(existing);
+  if (!target.ok) return target;
+  const [row] = await db
+    .update(nitroxCertifications)
+    .set({
+      status: target.status,
+      reviewNote: null,
+      reviewedAt: null,
+      reviewedByPersonId: null,
+    })
+    .where(
+      and(
+        eq(nitroxCertifications.id, input.certificationId),
+        eq(nitroxCertifications.shopId, input.shopId),
+        isNull(nitroxCertifications.deletedAt),
+      ),
+    )
+    .returning({ id: nitroxCertifications.id });
+  return row ? { ok: true } : { ok: false, reason: "not_found" };
 }
 
 /**

@@ -117,15 +117,14 @@ function levelText(diver: DiverSummary, copy: DiverListCopy): string {
  *
  * Both used to render in the same muted grey, which made "No current
  * certification" the same weight as the "Open Water" repeated on seven rows
- * around it (issue #764). Still no badge: this is ordinary ink at medium
- * weight against muted, not an alert — the alerts are the attention column's,
- * and inventing a second one here would put two tones on the same row for two
- * different questions.
+ * around it (issue #764). The separation is **ink, not weight**: full-strength
+ * foreground against muted. Bolding it too made one cell of a scanned column
+ * shout, which is a job the attention column already has — and inventing a
+ * second alert here would put two tones on the same row for two different
+ * questions.
  */
 function levelClass(diver: DiverSummary): string {
-  return diver.certificationLevel
-    ? "whitespace-nowrap text-muted"
-    : "whitespace-nowrap font-medium";
+  return diver.certificationLevel ? "whitespace-nowrap text-muted" : "whitespace-nowrap";
 }
 
 /**

@@ -1,4 +1,5 @@
 import { ActivityLog, type ActivityLogEntry } from "@/components/ActivityLog";
+import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { SectionCard } from "@/components/ui/card";
 import type { OffsetPage } from "@/db/paging";
@@ -40,6 +41,9 @@ export function ActivitySection({
         <h2 id="activity-heading" className="text-lg font-semibold">
           {t("divers.activity.heading")}
         </h2>
+        {/* Not a bare heading: see the note in `ShopHistory`, which had the
+            same hole and is fixed the same way. */}
+        <EmptyState title={t("divers.activity.empty")} titleAs="h3" className="mt-4" />
       </section>
     );
   }

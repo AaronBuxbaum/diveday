@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -166,7 +167,15 @@ export function ShopHistory({
           {t("divers.history.importedVisitsText", { count: imported })}
         </p>
       ) : null}
-      {history.length === 0 ? null : (
+      {history.length === 0 ? (
+        /* A heading with nothing under it reads as a section that failed to
+           load. Both this and Activity below were exactly that for a diver on
+           their first booking, which is the record most likely to be opened by
+           somebody new to the app. `EmptyState` is the shape the two card
+           sections above already use, and it keeps this section's jump-nav
+           anchor pointing at something. */
+        <EmptyState title={t("divers.history.noTripsYet")} titleAs="h3" className="mt-4" />
+      ) : (
         <>
           <ul
             className={sectionCardClass({

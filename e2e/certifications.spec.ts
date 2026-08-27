@@ -59,7 +59,15 @@ test("staff captures and verifies level and specialty certifications before eith
     .filter({ visible: true })
     .last();
   await pendingRow.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("marked verified");
+  // The one-tap review settles in place and says so in a toast that offers an
+  // Undo — the page-top "Certification marked verified. It counts toward
+  // readiness." banner is gone, along with the reload that carried it.
+  // Filtered rather than a bare `getByRole("status")`: this toast lives for a
+  // few seconds and the delete below raises a second one, so naming the toast
+  // is what keeps either assertion from depending on the other's timing.
+  const certifiedToast = page.getByRole("status").filter({ hasText: "Marked certified." });
+  await expect(certifiedToast).toBeVisible();
+  await expect(certifiedToast.getByRole("button", { name: "Undo" })).toBeVisible();
 
   // Specialty certification: gated exactly the same way, on the same record.
   await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
@@ -78,7 +86,7 @@ test("staff captures and verifies level and specialty certifications before eith
     .filter({ visible: true })
     .last();
   await specialtyRow.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("marked verified");
+  await expect(specialtyRow).toContainText("certified");
 
   // The specialty certification can be deleted outright (replaces the old "needs
   // correction" flow). No confirm dialog: the delete lands and a toast offers a
@@ -94,7 +102,7 @@ test("staff captures and verifies level and specialty certifications before eith
     .click();
   // The button says Delete and so does the toast — this used to be the one
   // sentence in the flow that said "removed" instead (issue #779).
-  await expect(page.getByRole("status")).toContainText("Certification deleted");
+  await expect(page.getByRole("status").filter({ hasText: "Certification deleted" })).toBeVisible();
   await expect(
     page.locator("li").filter({ hasText: cardNo }).filter({ visible: true }),
   ).toHaveCount(0);
@@ -209,8 +217,13 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
 
   await sightingNumber.fill("PADI-ROWAN-2026");
   await page.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("Certification marked verified.");
+  // No banner: the row itself changed, which is the whole outcome. A sighting
+  // rewrites the card from what the staffer read off it, so unlike the one-tap
+  // review beside it there is nothing to undo and no toast to offer one.
   await expect(page.getByText("PADI-ROWAN-2026", { exact: true })).toBeVisible();
+  await expect(
+    cards.locator("li").filter({ hasText: "PADI-ROWAN-2026" }).filter({ visible: true }),
+  ).toContainText("certified");
 
   // Nadia is the test-only uncarded state. Clearing it removes the warning
   // rather than turning the record into a certified one, and the confirmation
@@ -333,5 +346,7 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await card.getByLabel("Agency").selectOption({ label: "PADI" });
   await card.getByLabel("Certification number").fill(cardNumber);
   await card.getByRole("button", { name: "Mark certified" }).click();
-  await expect(page.getByRole("status")).toContainText("marked verified");
+  await expect(
+    page.locator("li").filter({ hasText: cardNumber }).filter({ visible: true }).last(),
+  ).toContainText("certified");
 });

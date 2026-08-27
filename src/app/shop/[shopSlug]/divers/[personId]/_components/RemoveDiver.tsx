@@ -21,15 +21,16 @@ export function RemoveDiver({
 }) {
   const t = staffTranslator(locale);
   return (
-    <section className="mt-12 border-t border-border pt-8" aria-labelledby="remove-heading">
-      <h2 id="remove-heading" className="scroll-mt-24 text-lg font-semibold">
-        {t("divers.remove.heading")}
-      </h2>
+    /* No heading of its own: "Delete" above a disclosure that already says
+       "Delete Adaeze Nwosu" named the same act twice, and the second telling
+       was the one with the diver's name in it. The disclosure summary is the
+       section's own label. */
+    <section className="mt-12 border-t border-border pt-8">
       {/* Opened by its own outcome: a refusal rendered inside a shut
           disclosure is invisible, which is worse than page-top. */}
       <details
         open={Boolean(status)}
-        className="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-4"
+        className="scroll-mt-24 rounded-lg border border-danger/30 bg-danger/5 p-4"
       >
         <summary className="flex min-h-11 cursor-pointer items-center py-2 text-sm font-medium text-danger">
           {t("divers.remove.removePersonSummary", { name: diver.person.fullName })}

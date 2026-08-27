@@ -18,7 +18,8 @@
     "total": "{count, plural, one {# entry} other {# entries}}"
   },
   "upcoming": {
-    "heading": "Upcoming trips"
+    "heading": "Upcoming trips",
+    "empty": "No upcoming trips — book one above."
   },
   "shared": {
     "agencies": {
@@ -198,7 +199,6 @@
     "showOlderPayments": "{count, plural, one {Show # older payment} other {Show # older payments}}"
   },
   "remove": {
-    "heading": "Delete",
     "removePersonSummary": "Delete {name}",
     "removing": "Deleting…",
     "removeDiver": "Delete diver"
@@ -288,12 +288,11 @@
   },
   "specialty": {
     "heading": "Specialty certifications",
-    "description": "Verified nitrox certification is required before an EANx fill.",
     "addSpecialty": "Add specialty",
     "specialtyLabel": "Specialty",
     "nitroxOption": "Nitrox",
     "captureForReview": "Capture specialty for review",
-    "emptyState": "No specialty or nitrox certifications yet — add one above when they earn it.",
+    "emptyState": "No specialty certifications yet — add one above when they earn it.",
     "nitroxAgencyLine": "{agency} · Nitrox",
     "nitroxLine": "Nitrox"
   },
@@ -331,7 +330,9 @@
     "bookings": "Bookings"
   },
   "notices": {
-    "verified": "Certification marked verified. It counts toward readiness.",
+    "cardCertifiedToast": "Marked certified.",
+    "cardConfirmedToast": "Certification confirmed.",
+    "cardUndoFailed": "Couldn't undo that — this certification has changed since.",
     "cardDeleted": "Certification deleted.",
     "cardRestored": "Certification restored. It counts toward readiness again.",
     "cardRestoreConflict": "Couldn't restore that certification — another record now uses its number. Re-add it if you still need it.",
@@ -396,7 +397,7 @@
   },
   "export": {
     "downloadButton": {
-      "idle": "Download this diver's record",
+      "idle": "Download record",
       "acknowledged": "On its way — check your downloads"
     }
   }

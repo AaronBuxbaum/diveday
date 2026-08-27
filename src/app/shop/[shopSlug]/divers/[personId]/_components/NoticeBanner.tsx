@@ -55,7 +55,13 @@ const NOTICE_KEYS: Record<
   // Cards — the two card sections emit the same codes, so their actions stamp
   // an explicit `?form=`; these defaults are what an old link still resolves to.
   captured: { form: "cards", tone: "success", silent: true },
-  verified: { form: "cards", tone: "success", key: "divers.notices.verified" },
+  // Only the card-sighting form still emits this: the one-tap review posts in
+  // place and answers with a toast (`MarkCertifiedControl`). Silent for the
+  // same reason `captured` is — the row it names visibly changes to
+  // "Certified", so a banner would be a caption on a photograph of itself.
+  // "Certification marked verified. It counts toward readiness." is gone with
+  // the copy that said it.
+  verified: { form: "cards", tone: "success", silent: true },
   "card-restored": { form: "cards", tone: "success", key: "divers.notices.cardRestored" },
   "card-restore-conflict": {
     form: "cards",
