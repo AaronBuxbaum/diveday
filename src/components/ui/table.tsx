@@ -49,6 +49,13 @@ const MIN_WIDTH = {
   "36rem": "min-w-[36rem] print:min-w-0",
   "40rem": "min-w-[40rem] print:min-w-0",
   "45rem": "min-w-[45rem] print:min-w-0",
+  // Above the widest content column any staff page offers (`max-w-5xl` less
+  // `px-6` is 976px at desktop, and less than that on anything narrower), so a
+  // table that names this one scrolls at every width below the desktop tier
+  // rather than only on a phone. The departure log's six-column roster is what
+  // needed it: at 40rem a portrait tablet's 772px column sat *above* the floor,
+  // so the shell never scrolled and the columns packed instead (issue #1035).
+  "56rem": "min-w-[56rem] print:min-w-0",
 } as const;
 
 export type TableMinWidth = keyof typeof MIN_WIDTH;
