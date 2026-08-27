@@ -665,7 +665,9 @@ new domain concept, define it here in the same PR.
   refunded after. Keeping them separate on the order is what makes either one adjustable without
   re-working the total by hand.
 - **Manifest** — the authoritative list of every person on a boat (divers, students, staff,
-  crew), with emergency contacts. A legal/safety document — in US waters, coast guard
+  crew), with emergency contacts. "Every person on a boat" is about who must be *accounted for*,
+  which is not the same set as who signs the release — see **waiver / release** for why crew are
+  outside that one. A legal/safety document — in US waters, coast guard
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly. An after-dive head count that is not closed is chased, not merely displayed: Today
@@ -906,6 +908,19 @@ new domain concept, define it here in the same PR.
   must publish a legally revised release will publish it either way, so the question it actually
   faces is which boat this lands on (issue #790). Whether a shop may declare an edit
   *non-material* and keep those signatures is an open legal question (H-01/H-03), not a gap.
+
+  **The release is a customer's release; crew are not in its scope.** It is the agreement between a
+  shop and someone paying to be taken diving, so DiveDay never counts a divemaster or an instructor
+  in the exposure figures above and never chases one for a signature — a crew member reaches a
+  departure through `trip_crew`, not a booking, and `standingWaiverExposure`
+  (`src/db/waivers.ts`) joins bookings only. What stands behind staff in the water is the
+  employment relationship and the professional liability their agency or the shop carries, not a
+  document their employer asks them to sign each season; a release signed by an employee does not
+  create employer coverage and asking for one blurs which relationship is which. Answering this by
+  joining `trip_crew` "because it was there" is what issue #842 exists to have refused. It is a
+  product boundary, not legal advice: a shop whose own counsel wants staff on a release still has
+  the paper/in-person path, and if that ever becomes the norm it is a human decision to record
+  (H-01/H-03), not a query to widen.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

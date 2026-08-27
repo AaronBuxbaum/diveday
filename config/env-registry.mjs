@@ -520,8 +520,7 @@ export const ENV_GROUPS = [
         key: "MEDIA_PUBLIC_URL_BASE",
         from: "stack",
         targets: LOCAL_AND_VERCEL,
-        absent:
-          "falls back to the direct S3 bucket endpoint, which answers 403 to every viewer",
+        absent: "falls back to the direct S3 bucket endpoint, which answers 403 to every viewer",
       },
     ],
   },
