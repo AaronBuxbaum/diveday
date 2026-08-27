@@ -110,3 +110,40 @@ describe("the shop-wide spoken-languages line", () => {
     expect(screen.queryByText(/We speak/)).toBeNull();
   });
 });
+
+/**
+ * The footer used to parse `shops.conservation_commitments` against a second,
+ * older six-code enum that shared exactly one spelling with the eight codes
+ * the settings form writes. An owner ticked "PADI AWARE partner", saw the
+ * saved notice, and the footer showed nothing -- which looks identical to
+ * having ticked nothing.
+ */
+describe("the footer's conservation commitments", () => {
+  it("renders every code the settings form can write", () => {
+    render(
+      <PublicShopFooter
+        shop={{
+          ...shop,
+          conservationCommitments: ["padi_aware_partner", "no_touch_policy", "reef_cleanup_dives"],
+        }}
+        spokenLanguagesLine={null}
+        t={t}
+      />,
+    );
+
+    const items = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(items).toHaveLength(3);
+    for (const item of items) expect(item).not.toBe("");
+  });
+
+  it("shows nothing when a shop has stated none", () => {
+    render(
+      <PublicShopFooter
+        shop={{ ...shop, conservationCommitments: [] }}
+        spokenLanguagesLine={null}
+        t={t}
+      />,
+    );
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+});

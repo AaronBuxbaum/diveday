@@ -3,7 +3,10 @@ import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
-import { type ConservationCommitment, parseConservationCommitments } from "@/lib/conservation";
+import {
+  conservationCommitmentLabel,
+  parseConservationCommitments,
+} from "@/lib/conservation-commitments";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
@@ -125,14 +128,10 @@ export function PublicShopFooter({
   // iframe is a page the diver already trusts.
   const mapQuery = shopMapQuery(shop.name, address);
   const addressText = addressLines.join(", ");
-  const commitmentKeys: Record<ConservationCommitment, DiverMessageKey> = {
-    aware_partner: "shopChrome.conservationCommitmentAwarePartner",
-    green_fins_member: "shopChrome.conservationCommitmentGreenFinsMember",
-    reef_cleanup: "shopChrome.conservationCommitmentReefCleanup",
-    mooring_buoys: "shopChrome.conservationCommitmentMooringBuoys",
-    no_gloves: "shopChrome.conservationCommitmentNoGloves",
-    wildlife_distance: "shopChrome.conservationCommitmentWildlifeDistance",
-  };
+  // The vocabulary the settings form writes and the schedule page's badges
+  // read. This footer used to parse the same column against a second, older
+  // six-code enum that shared exactly one spelling with it, so seven of the
+  // eight things a shop can tick rendered as nothing at all.
   const commitments = parseConservationCommitments(shop.conservationCommitments);
   // Built above the JSX rather than nested in it: `check:copy` reads a ternary
   // chain inside an element as prose, and this one is three deep.
@@ -171,7 +170,7 @@ export function PublicShopFooter({
               </p>
               <ul className="mt-1 list-inside list-disc">
                 {commitments.map((commitment) => (
-                  <li key={commitment}>{t(commitmentKeys[commitment])}</li>
+                  <li key={commitment}>{conservationCommitmentLabel(commitment, t)}</li>
                 ))}
               </ul>
             </div>
