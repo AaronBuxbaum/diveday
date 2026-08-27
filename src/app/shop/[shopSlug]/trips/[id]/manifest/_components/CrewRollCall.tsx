@@ -257,7 +257,7 @@ export function CrewRollCall({
                         />
                       </div>
                     </details>
-                    <div className="shrink-0 pt-2.5 ps-2 pe-3 print:hidden">
+                    <div className="shrink-0 pt-2.5 ps-3 pe-3 print:hidden">
                       {rowState.notBackAboard ? (
                         <RollCallMark state="notBack" />
                       ) : (

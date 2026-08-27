@@ -439,7 +439,7 @@ export function DiverRollCall({
                     summary lines it used to be. */}
                 <details className="group/person min-w-0 flex-1">
                   <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -614,7 +614,7 @@ export function DiverRollCall({
                     mark lands. `pt-2.5` centres the 56px circle against the
                     76px summary line rather than against the panel below it,
                     which would walk the mark down the row as it opens. */}
-                <div className="shrink-0 pt-2.5 ps-2 pe-3 print:hidden">
+                <div className="shrink-0 pt-2.5 ps-3 pe-3 print:hidden">
                   {rowState.notBackAboard ? (
                     <RollCallMark state="notBack" />
                   ) : boardingControlShown ? (

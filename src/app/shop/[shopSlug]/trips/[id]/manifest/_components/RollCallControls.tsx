@@ -132,17 +132,24 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * at the trailing edge; `min-h-19` is the 76px row the canvas measures, which
  * keeps a 56px mark centred beside it with room above and below.
  *
- * **The `pe-3` is a dead zone, not padding.** This hit area and the row's 56px
- * mark are adjacent, and the two do opposite things: one opens a person, one
- * records a result. With their boxes touching, a tap that lands a few pixels
- * off the mark opens the panel instead — which grows the row and moves every
- * name below it, so the crew member's *next* tap, aimed by memory at where a
- * name was, is now over somebody else's mark (a design review of slice 5a
- * called this the worst mis-tap on the surface). The gap costs nothing: both
- * targets stay well over the dock minimum on a 390px phone.
+ * **A real gap separates it from the mark**, and it belongs to the mark's own
+ * container (`ps-3` at the call sites) rather than to this padding — padding is
+ * *inside* a hit box, so `pe-*` here would still be summary-clickable and buy
+ * nothing. The two targets are adjacent and do opposite things: one opens a
+ * person, one records a result. With their boxes touching, a tap that lands a
+ * few pixels off the mark opens the panel instead — which grows the row and
+ * moves every name below it, so the crew member's *next* tap, aimed by memory
+ * at where a name was, is now over somebody else's mark (a design review of
+ * slice 5a called this the worst mis-tap on the surface).
+ *
+ * Everything else on the line is measured against what is left for the name at
+ * 390px: `gap-2.5` and a `size-7` index, because "Kiona Blackfeather" at 18px
+ * semibold wants 165px and the column has 176 to give it. A name that wraps
+ * pushes its own audit line down and makes every row a different height, which
+ * is the one thing a list read at a glance cannot afford.
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-3 py-3 ps-4 pe-3 select-none [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 py-3 ps-4 pe-2 select-none [&::-webkit-details-marker]:hidden";
 export const ROW_DISCLOSURE_PANEL_CLASS =
   "mx-4 mb-4 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
