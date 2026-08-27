@@ -229,17 +229,21 @@ the Aurora floor, the manifest connection ceiling actually being hit in producti
 requirement that the database not be reachable from the public internet. Absent one of those, Neon
 is currently both cheaper and better at the thing we most need it to be good at.
 
-### AWS-8 — Object storage: Vercel Blob → S3 *(Writing delivered 2026-08-26; reading not yet)*
+### AWS-8 — Object storage: Vercel Blob → S3 + CloudFront *(Delivered)*
 
-**Status: Half delivered, and the half that is missing is the one a diver sees.** Vercel Blob has been completely removed and replaced by AWS S3 (`MediaStorageBucket` + `diveday-media-uploader` IAM User with SigV4 signed requests in `src/lib/storage/s3.ts`). Uploads work.
+**Status: Delivered 2026-08-27**, a day after the writing half. Vercel Blob has been completely removed and replaced by AWS S3 (`MediaStorageBucket` + `diveday-media-uploader` IAM User with SigV4 signed requests in `src/lib/storage/s3.ts`), and reads now go through a CloudFront distribution in front of it.
 
-**What does not work: serving.** `MediaStorageBucket` is `BLOCK_ALL`, carries no bucket policy, and has no CloudFront distribution in front of it — while `MEDIA_PUBLIC_URL_BASE` is set to the bucket's own REST endpoint and that URL is what the app stores in every `*_image_url` column and renders to browsers. Every photo uploaded since the cutover answers 403 to every viewer. This heading said "S3 + CloudFront" and "Delivered" from the day it landed; the CloudFront half was never built. Do **not** close the gap by making the bucket public: it also holds `import-waivers/` and `import-receipts/`, which are medical and financial scans. See the tracking issue for the two-prefix / signed-read options.
+**What the reading half had to work around, because it shapes the design.** For a day this heading said "S3 + CloudFront" and "Delivered" while only S3 existed: the bucket was `BLOCK_ALL` with no policy and no distribution, `MEDIA_PUBLIC_URL_BASE` pointed at the bucket's own REST endpoint, and that URL is what the app stores in every `*_image_url` column and renders to browsers — so every photo uploaded since the cutover answered **403 to every viewer** (issue #1013). The obvious fix was not available: this one flat bucket also holds `import-waivers/` and `import-receipts/`, imported medical and financial scans read only server-side by the export bundler, and keys are namespaced by content type rather than by shop. A public-read bucket policy would have published them.
+
+So the distribution serves an **allowlist**: an Origin Access Control, a bucket policy granting `s3:GetObject` to that distribution alone, and cache behaviours for exactly `courses/*`, `recap/*`, `dive-sites/*` and `shop-logos/*` (`PUBLIC_MEDIA_PREFIXES`, infra §11b). The default behaviour points at an unreachable origin, so anything unmatched — `import-*` included — is refused at the edge rather than forwarded; a new public prefix is opt-in. `infra/lib/media-distribution.test.ts` asserts all of that against the synthesized template. `MEDIA_PUBLIC_URL_BASE` is the distribution domain, which `isManagedStorageUrl` already accepts.
+
+**Still true of the bucket:** no versioning, so a deleted or overwritten object is gone — the same posture Vercel Blob had, recorded in `docs/engineering/backup-and-restore-runbook.md` §3.
 
 The seam is provider-neutral: `ImageStorageProvider` in `src/lib/storage/`, `isManagedStorageUrl` in `blob-host.ts`, and S3 `remotePatterns` in `next.config.ts`. S3 bucket `diveday-media` and the scoped IAM uploader credential exist in the stack.
 
 **Buys:** Moves all media assets (course media, recap memories, dive site briefing imagery, shop logos, imported waiver scans) into DiveDay's AWS system of record. Cuts storage cost by 6.5x ($0.023/GB in S3 vs $0.15/GB in Blob) and eliminates Vercel Blob as a vendor dependency. Diver certification card uploads were retired in ADR 20260811-retire-the-digital-card.
 
-**Completed:** S3 provider implementation (`s3ImageStorageProvider` + `deleteS3Image`), environment registry configuration (`MEDIA_*`), CSP & `next/image` allowlists, and CDK stack bucket provisioning.
+**Completed:** S3 provider implementation (`s3ImageStorageProvider` + `deleteS3Image`), environment registry configuration (`MEDIA_*`), CSP & `next/image` allowlists, CDK stack bucket provisioning, and the CloudFront read path with its prefix allowlist.
 
 ### AWS-9 — Scheduled jobs: Vercel Cron → EventBridge Scheduler *(independent of AWS-5)*
 

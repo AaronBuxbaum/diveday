@@ -2,6 +2,8 @@ import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
@@ -81,6 +83,22 @@ const MCP_READONLY_CLOUD_USER_NAME = "diveday-mcp-readonly-cloud";
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
 const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
 const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
+
+/**
+ * The media key prefixes CloudFront is allowed to serve.
+ *
+ * Mirrors the four public `keyPrefix` values in `src/lib/storage/index.ts`
+ * (`storeCourseImage`, `storeRecapImage`, `storeDiveSiteImage`,
+ * `storeShopLogo`). The two it deliberately omits -- `import-waivers` and
+ * `import-receipts` -- sit in the same bucket and hold imported medical and
+ * financial records; they are read server-side by the export bundler and must
+ * have no route out of the edge (issue #1013).
+ *
+ * Adding a prefix here publishes it. `infra/test/infra-stack.test.ts` asserts
+ * the import ones are absent, so growing this list past what the app actually
+ * uploads publicly is a failing test rather than a quiet deploy.
+ */
+const PUBLIC_MEDIA_PREFIXES = ["courses", "recap", "dive-sites", "shop-logos"] as const;
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 
 /**
@@ -1134,12 +1152,74 @@ exports.handler = async (event) => {
         "Destination bucket for media uploads (course photos, recaps, dive sites, shop logos). S3-managed, private, RETAIN -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
     });
 
+    // The read path. Without it every photo uploaded since the Vercel Blob
+    // cutover answered 403 to every viewer: the bucket blocks all public access
+    // and the uploader IAM user above does not even hold GetObject, while the
+    // app stored the bucket's REST endpoint as each object's public URL. A
+    // course photo, a diver's recap photo, a dive-site briefing image and a shop
+    // logo were all unreadable to the person they were uploaded for (issue
+    // #1013). The dossier billed this as delivered from the day it landed; only
+    // the S3 half had shipped.
+    //
+    // **The bucket is not made public, and cannot be.** One flat bucket holds
+    // the four public prefixes *and* `import-waivers/` and `import-receipts/` --
+    // imported waiver scans and payment receipts, which are medical and
+    // financial records read only server-side by the export bundler. Keys are
+    // namespaced by content type, never by shop, and a random 16-byte suffix is
+    // the only thing making one unguessable. A blanket public-read policy on
+    // that bucket publishes the scans.
+    //
+    // So: an Origin Access Control, a bucket policy granting GetObject to this
+    // distribution alone, and cache behaviours enumerating the four public
+    // prefixes. The default behaviour answers 403 rather than reaching the
+    // origin, which is what keeps `import-*` unreachable from the edge even
+    // though it lives in the same bucket -- a new prefix is opt-in, not
+    // opt-out, which is the direction a mistake should fail in.
+    const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
+    const publicMediaBehavior: cloudfront.BehaviorOptions = {
+      origin: mediaOrigin,
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
+      compress: true,
+    };
+    const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
+      comment: "DiveDay media (AWS-8) -- public prefixes only",
+      // An origin nothing is allowed to reach. Every request that does not match
+      // one of the four behaviours below lands here and is refused at the edge,
+      // so `import-waivers/` and `import-receipts/` have no route out of this
+      // bucket at all.
+      defaultBehavior: {
+        origin: new origins.HttpOrigin("diveday-media-no-public-default.invalid", {
+          customHeaders: { "x-diveday-blocked": "1" },
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      },
+      additionalBehaviors: Object.fromEntries(
+        PUBLIC_MEDIA_PREFIXES.map((prefix) => [`${prefix}/*`, publicMediaBehavior]),
+      ),
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
+      enableLogging: false,
+    });
+
+    new cdk.CfnOutput(this, "MediaDistributionDomain", {
+      value: mediaDistribution.distributionDomainName,
+      description:
+        "CloudFront domain serving the four public media prefixes (courses, recap, dive-sites, shop-logos). import-* is refused at the edge -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
+    });
+
     const mediaUploaderKey = mintAccessKey("MediaUploaderUserAccessKey", mediaUploaderUser);
     envValues.MEDIA_BUCKET_NAME = mediaBucket.bucketName;
     envValues.MEDIA_AWS_REGION = this.region;
     envValues.MEDIA_AWS_ACCESS_KEY_ID = mediaUploaderKey.id;
     envValues.MEDIA_AWS_SECRET_ACCESS_KEY = mediaUploaderKey.secret;
-    envValues.MEDIA_PUBLIC_URL_BASE = `https://${mediaBucket.bucketName}.s3.${this.region}.amazonaws.com`;
+    // The distribution, never the bucket endpoint: the bucket answers 403 to
+    // everyone, and `isManagedStorageUrl` derives its allowlist from this value,
+    // so a CDN domain needs no further change there.
+    envValues.MEDIA_PUBLIC_URL_BASE = `https://${mediaDistribution.distributionDomainName}`;
 
     // 12. Address lookup for the settings address card - see ADR
     // 20260804-aws-location-address-lookup, amended by ADR

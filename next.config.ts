@@ -60,8 +60,14 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
+        // Where media is actually read from since AWS-8's reading half landed:
+        // the bucket blocks all public access and grants GetObject only to this
+        // distribution, so `MEDIA_PUBLIC_URL_BASE` is a CloudFront domain and
+        // every stored `*_image_url` is one too (issue #1013). The two S3
+        // patterns above stay for a deployment that overrides the base back to
+        // the bucket endpoint. Vercel Blob's host is gone with the provider.
         protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
+        hostname: "*.cloudfront.net",
         pathname: "/**",
       },
     ],
