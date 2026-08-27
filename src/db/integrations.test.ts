@@ -143,7 +143,9 @@ describe("disconnect and reconnect", () => {
     const rows = await db
       .select()
       .from(shopIntegrations)
-      .where(and(eq(shopIntegrations.shopId, shop.id), eq(shopIntegrations.provider, "quickbooks")));
+      .where(
+        and(eq(shopIntegrations.shopId, shop.id), eq(shopIntegrations.provider, "quickbooks")),
+      );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.deletedAt).not.toBeNull();
     const row = rows[0];
@@ -259,7 +261,9 @@ describe("integration OAuth state", () => {
       provider: "quickbooks",
     });
     expect(await consumeIntegrationOAuthState(db, { state, provider: "shopify" })).toBeNull();
-    expect(await consumeIntegrationOAuthState(db, { state, provider: "quickbooks" })).not.toBeNull();
+    expect(
+      await consumeIntegrationOAuthState(db, { state, provider: "quickbooks" }),
+    ).not.toBeNull();
   });
 
   it("does not resolve an expired state", async () => {

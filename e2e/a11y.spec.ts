@@ -140,13 +140,16 @@ async function expectNoA11yViolations(page: Page) {
   // screenshot, and to every assertion this suite already makes; what is wrong
   // is only the name a screen reader speaks.
   //
-  // Issue #1022 reported exactly that on the gear unit page, theorising a
-  // `cacheComponents`/`useId` interaction. It does not reproduce on `main` —
-  // 229 renders were swept (32 static staff routes, 160 dynamic staff routes
-  // and all 37 gear units, on a dev server and on a production PPR build) with
-  // zero duplicates, so nothing here needed a fix. This assertion is what that
-  // investigation left behind instead: the reason nobody noticed for as long as
-  // it lasted was that no test could see it, and now 38 scanned surfaces can.
+  // Issue #1022 reported exactly that, theorising a `cacheComponents`/`useId`
+  // interaction — which is right: PPR resumes a prerendered shell beside
+  // streamed dynamic content, two passes, each starting the server `useId`
+  // counter at 1. It only shows up on a **client-side navigation**, so a hard
+  // load of the same URL is clean and a sweep of 229 hard-loaded renders found
+  // nothing. `scopedFieldId` (src/components/ui/form.tsx) separates the pairs
+  // those two counters can produce; this is the net under that fix, and the
+  // reason nobody noticed for as long as they didn't is that no test could see
+  // it. Now 38 scanned surfaces can — including the ones these scans reach by
+  // clicking rather than by `goto`.
   const duplicateIds = await page.evaluate(() => {
     const seen = new Map<string, number>();
     for (const element of document.querySelectorAll("[id]")) {

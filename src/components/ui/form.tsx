@@ -70,10 +70,47 @@ export function FieldGrid({
 /** The subset of a control's props `Field` reads or writes when it clones it. */
 type ControlProps = {
   id?: string;
+  name?: string;
   required?: boolean;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean | "true" | "false";
 };
+
+/**
+ * `useId()`, made unique against the counter restart that PPR causes.
+ *
+ * **The bug this exists for.** With `cacheComponents` on, a client-side
+ * navigation resumes a prerendered static shell and streams the dynamic content
+ * beside it — two render passes, each starting React's server `useId` counter
+ * at 1. So a `Field` in the shell and a `Field` in the resumed body can be
+ * handed the *same* id (`_S_2_`), and `<label for>` then resolves to whichever
+ * comes first in the document. What breaks is only the accessible *name*: a
+ * screen reader announces the two labels concatenated, the DOM looks correct in
+ * a diff and in a screenshot, and no assertion notices (issue #1022).
+ *
+ * Measured on 16.3.3 (the latest release; there is no upstream fix to take):
+ * a **hard load** of the manifest at `?checkpoint=after_dive_1` is clean, and
+ * clicking board → trip → Manifest → After dive 1 to the same URL puts seven
+ * duplicate ids in the document — the dive log's "Maximum depth", "Entered the
+ * water", "Exited the water", "Visibility" and "Current" each sharing an id
+ * with a field of the collapsed trip-edit disclosure. That is a divemaster's
+ * dive log at the rail, so it is worth not waiting for.
+ *
+ * **The fix, and its limit.** A control's `name` is unique within its form and
+ * stable across both passes, so folding it into the id separates every pair the
+ * two counters can produce — `_S_2_-maxDepthMeters` and `_S_2_-title` cannot
+ * collide however the counters land. It is not a proof: two `Field`s that share
+ * a `name` *and* land on the same counter value would still collide, and a
+ * `Field` whose control has no `name` keeps the bare id. That residue is what
+ * `expectNoA11yViolations` (e2e/a11y.spec.ts) is for — it fails on any
+ * duplicate id, and it is what would have caught this years earlier.
+ */
+function scopedFieldId(autoId: string, name: string | undefined): string {
+  if (!name) return autoId;
+  // Ids may not contain whitespace, and a `name` may (`person[0].note`), so
+  // anything outside the safe set becomes an underscore.
+  return `${autoId}-${name.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+}
 
 /** Native form-control tags `Field` will clone an id/aria-describedby onto. */
 const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
@@ -102,16 +139,15 @@ const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
  *   description inside it. A caller-supplied `htmlFor`/matching child `id`
  *   is preserved as-is; otherwise `Field` mints one with `useId()`.
  *
- * **The minted id is checked, not assumed.** Issue #1022 reported two `Field`s
- * on the gear unit page sharing one `useId()` value under `cacheComponents` —
- * which would make a screen reader announce a merged name built from both
- * labels, while the DOM, the screenshots and every existing assertion stayed
- * correct. It does not reproduce: 229 renders were swept (32 static staff
- * routes, 160 dynamic staff routes, all 37 gear units) on both a dev server and
- * a production PPR build, with zero duplicate ids, so nothing here was changed
- * on a theory. What the sweep did change is that nobody has to sweep again —
- * `expectNoA11yViolations` in e2e/a11y.spec.ts now fails on any duplicate DOM
- * id, across all 38 surfaces it scans. axe cannot do this itself: it dropped
+ * **The minted id is scoped, and then checked.** Issue #1022 reported two
+ * `Field`s sharing one `useId()` value under `cacheComponents`, which makes a
+ * screen reader announce a name built from both labels while the DOM, the
+ * screenshots and every existing assertion stay correct. It is real, and it
+ * needs a **client-side navigation** to show up — a hard load of the same URL
+ * is clean, which is why a sweep of 229 hard-loaded renders found nothing.
+ * `scopedFieldId` below is the fix and carries the measurement;
+ * `expectNoA11yViolations` in e2e/a11y.spec.ts is the net under it, failing on
+ * any duplicate DOM id. axe cannot do that itself: it dropped
  * `duplicate-id`/`duplicate-id-active` in 4.9 and the surviving
  * `duplicate-id-aria` never fires on a plain `<label for>`.
  *
@@ -172,9 +208,6 @@ export function Field({
   className?: string;
   children: ReactNode;
 }) {
-  const autoId = useId();
-  const descriptionId = description ? `${autoId}-description` : undefined;
-  const errorId = error ? `${autoId}-error` : undefined;
   // A native form-control tag specifically, not just any single element — a
   // wrapping <div> (e.g. an input plus a "$" prefix, or a select plus its own
   // button) is also `isValidElement`, and cloning the auto id/aria-describedby
@@ -185,7 +218,10 @@ export function Field({
     isValidElement<ControlProps>(children) &&
     typeof children.type === "string" &&
     CONTROL_TAGS.has(children.type);
-  const controlId = htmlFor ?? (isControl ? (children.props.id ?? autoId) : undefined);
+  const fieldId = scopedFieldId(useId(), isControl ? children.props.name : undefined);
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = error ? `${fieldId}-error` : undefined;
+  const controlId = htmlFor ?? (isControl ? (children.props.id ?? fieldId) : undefined);
   // `markRequired={false}` opts a field out of the asterisk without touching
   // the control's own `required` (the server refusal it pairs with is real).
   // For a form whose *every* field is required and where the marker therefore

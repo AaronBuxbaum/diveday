@@ -25,7 +25,8 @@ import { listTripDives } from "@/db/trips";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import type { DepthUnit } from "@/lib/depth-units";
 import { formatDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -45,7 +46,7 @@ import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
-import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
+import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
@@ -77,6 +78,39 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Boat manifest — DiveDay",
 };
+
+/**
+ * The dive log's words, resolved here and handed down: `ExecutedDiveLog` is a
+ * Client Component (it shows a typed refusal beside the field that caused it),
+ * and `staffTranslator` is server-side only.
+ */
+function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedDiveLabels {
+  return {
+    heading: t("manifest.executedDive.heading"),
+    description: t("manifest.executedDive.description"),
+    actualSite: t("manifest.executedDive.actualSite"),
+    unknown: t("manifest.executedDive.unknown"),
+    maxDepth: t("manifest.executedDive.maxDepth", { unit: depthUnit === "feet" ? "ft" : "m" }),
+    enteredAt: t("manifest.executedDive.enteredAt"),
+    exitedAt: t("manifest.executedDive.exitedAt"),
+    visibility: t("manifest.executedDive.visibility"),
+    current: t("manifest.executedDive.current"),
+    notRecordedDepth: t("manifest.executedDive.notRecordedDepth"),
+    save: t("manifest.executedDive.save"),
+    saved: t("manifest.executedDive.saved"),
+    refusals: {
+      times_transposed: t("manifest.executedDive.refusal.timesTransposed"),
+      depth_out_of_range: t("manifest.executedDive.refusal.depthOutOfRange"),
+      dive_number_out_of_range: t("manifest.executedDive.refusal.diveNumberOutOfRange"),
+      unknown_site: t("manifest.executedDive.refusal.unknownSite"),
+      unknown_trip: t("manifest.executedDive.refusal.unknownTrip"),
+      unknown_recorder: t("manifest.executedDive.refusal.unknownRecorder"),
+      invalid_time: t("manifest.executedDive.refusal.invalidTime"),
+      invalid: t("manifest.executedDive.refusal.invalid"),
+      wrong_dive: t("manifest.executedDive.refusal.wrongDive"),
+    },
+  };
+}
 
 export default async function TripManifestPage({
   params,
@@ -470,11 +504,15 @@ export default async function TripManifestPage({
           planned={plannedDives.map(({ dive, diveSite }) => ({
             diveNumber: dive.diveNumber,
             diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
+            diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
+            plannedSiteLabel: t("manifest.executedDive.plannedSite", {
+              site: diveSite?.name ?? t("manifest.executedDive.unknown"),
+            }),
           }))}
           executed={executedDives}
           liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
           action={boundSaveExecutedDiveAction}
-          t={t}
+          labels={executedDiveLabels(t, shop.depthUnit)}
           timeZone={shop.timezone}
           depthUnit={shop.depthUnit}
           checkpoint={checkpoint}

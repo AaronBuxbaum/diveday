@@ -149,7 +149,9 @@ describe("dispatchDueIntegrationDeliveries", () => {
     expect(after?.status).toBe("failed");
     // And the next pass does not even see it.
     expect(
-      await dispatchDueIntegrationDeliveries(db, { fetchImpl: vi.fn(async () => jsonResponse(200)) }),
+      await dispatchDueIntegrationDeliveries(db, {
+        fetchImpl: vi.fn(async () => jsonResponse(200)),
+      }),
     ).toMatchObject({ scanned: 0 });
   });
 

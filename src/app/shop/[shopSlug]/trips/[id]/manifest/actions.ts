@@ -13,7 +13,7 @@ import {
   removeBuddyTeamMember,
 } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
-import { upsertExecutedDive } from "@/db/executed-dives";
+import { type ExecutedDiveRefusal, upsertExecutedDive } from "@/db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { addInternalNote } from "@/db/operations";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
@@ -118,15 +118,35 @@ const executedDiveSchema = z.object({
   current: z.string().trim().max(120).optional(),
 });
 
+/**
+ * What the dive log form is told when its entry does not land.
+ *
+ * Every path out of the action used to be a bare `return`, on a safety surface,
+ * at the rail: a divemaster who typed a transposed entry and exit time saved
+ * nothing, was told nothing, and watched the form come back holding the last
+ * saved row. The likeliest reading of that is "it saved" — and what is written
+ * here is what `buildIncidentExport` later seals into a document an
+ * investigator or a treating physician reads (issue #1018).
+ */
+export type ExecutedDiveResult =
+  | { status: "ok" }
+  | { status: "error"; reason: ExecutedDiveRefusal | "invalid" | "invalid_time" | "wrong_dive" };
+
 /** Record what actually happened after a dive, including an honest unknown. */
-export async function saveExecutedDiveAction(ctx: ManifestActionContext, formData: FormData) {
+export async function saveExecutedDiveAction(
+  ctx: ManifestActionContext,
+  _previous: ExecutedDiveResult | undefined,
+  formData: FormData,
+): Promise<ExecutedDiveResult> {
   const staff = await requireStaffSession();
   const parsed = executedDiveSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return;
+  if (!parsed.success) return { status: "error", reason: "invalid" };
   const checkpointDive = /^after_dive_(\d+)$/.exec(ctx.checkpoint)?.[1];
-  if (!checkpointDive || Number(checkpointDive) !== parsed.data.diveNumber) return;
+  if (!checkpointDive || Number(checkpointDive) !== parsed.data.diveNumber) {
+    return { status: "error", reason: "wrong_dive" };
+  }
   const shop = await getShopById(await getDb(), staff.user.shopId);
-  if (!shop) return;
+  if (!shop) return { status: "error", reason: "invalid" };
   const dateOrNull = (value: string | undefined) => {
     if (!value) return null;
     const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/.exec(value);
@@ -136,14 +156,16 @@ export async function saveExecutedDiveAction(ctx: ManifestActionContext, formDat
   };
   const enteredAt = dateOrNull(parsed.data.enteredAt);
   const exitedAt = dateOrNull(parsed.data.exitedAt);
-  if (parsed.data.enteredAt && !enteredAt) return;
-  if (parsed.data.exitedAt && !exitedAt) return;
+  if (parsed.data.enteredAt && !enteredAt) return { status: "error", reason: "invalid_time" };
+  if (parsed.data.exitedAt && !exitedAt) return { status: "error", reason: "invalid_time" };
   const notRecorded = formData.getAll("notRecorded").map(String);
   const maxDepthMeters =
     notRecorded.includes("depth") || parsed.data.maxDepthMeters === ""
       ? null
       : depthToMeters(parsed.data.maxDepthMeters, shop.depthUnit);
-  if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) return;
+  if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
+    return { status: "error", reason: "depth_out_of_range" };
+  }
   const saved = await upsertExecutedDive(await getDb(), {
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
@@ -159,7 +181,9 @@ export async function saveExecutedDiveAction(ctx: ManifestActionContext, formDat
     notRecorded,
     recordedByPersonId: staff.user.personId,
   });
-  if (saved) revalidatePath(manifestPath(ctx));
+  if (!saved.ok) return { status: "error", reason: saved.reason };
+  revalidatePath(manifestPath(ctx));
+  return { status: "ok" };
 }
 
 /**

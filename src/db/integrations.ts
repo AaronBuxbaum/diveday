@@ -1,14 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, eq, gt, inArray, isNull, notExists, ne } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, ne, notExists } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import {
   type IntegrationCredentials,
-  integrationDeliveries,
-  integrationOauthStates,
   type IntegrationProvider,
   type IntegrationSettings,
+  integrationDeliveries,
+  integrationOauthStates,
   integrationSyncRecords,
   type ShopIntegration,
   shopIntegrations,

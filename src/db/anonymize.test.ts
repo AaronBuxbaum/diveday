@@ -47,12 +47,10 @@ describe("anonymizeDiver — a merged-away record (issue #1014)", () => {
       ])
       .returning();
     if (!source || !survivor) throw new Error("fixture insert failed");
-    await db
-      .insert(personRoles)
-      .values([
-        { personId: source.id, role: "diver" },
-        { personId: survivor.id, role: "diver" },
-      ]);
+    await db.insert(personRoles).values([
+      { personId: source.id, role: "diver" },
+      { personId: survivor.id, role: "diver" },
+    ]);
 
     const merged = await mergeDiverRecords({
       db,

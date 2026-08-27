@@ -626,8 +626,18 @@ describe("orders", () => {
         createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems: [
-          { kind: "trip_fee" as const, description: "Two-tank charter", quantity: 1, unitAmountCents: 18_000 },
-          { kind: "pass_through_fee" as const, description: "Park fee", quantity: 1, unitAmountCents: 2_000 },
+          {
+            kind: "trip_fee" as const,
+            description: "Two-tank charter",
+            quantity: 1,
+            unitAmountCents: 18_000,
+          },
+          {
+            kind: "pass_through_fee" as const,
+            description: "Park fee",
+            quantity: 1,
+            unitAmountCents: 2_000,
+          },
         ],
       },
       fakeInvoicing(),
@@ -659,8 +669,18 @@ describe("orders", () => {
         createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems: [
-          { kind: "trip_fee" as const, description: "Two-tank charter", quantity: 1, unitAmountCents: 18_000 },
-          { kind: "pass_through_fee" as const, description: "Park fee", quantity: 1, unitAmountCents: 2_000 },
+          {
+            kind: "trip_fee" as const,
+            description: "Two-tank charter",
+            quantity: 1,
+            unitAmountCents: 18_000,
+          },
+          {
+            kind: "pass_through_fee" as const,
+            description: "Park fee",
+            quantity: 1,
+            unitAmountCents: 2_000,
+          },
         ],
       },
       fakeInvoicing(),

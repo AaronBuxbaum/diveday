@@ -149,7 +149,9 @@ describe("classifyClaim", () => {
       NOW,
     );
     expect(verdict.state).toBe("stale");
-    expect(verdict.reason).toBe("claimed from the main checkout, branch has no commit since the claim");
+    expect(verdict.reason).toBe(
+      "claimed from the main checkout, branch has no commit since the claim",
+    );
   });
 
   // A trailing slash is the same directory; it must not sneak past the root check.

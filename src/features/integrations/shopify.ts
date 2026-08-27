@@ -284,7 +284,7 @@ export async function syncShopifyCatalog(
   for (const item of catalog) {
     const record = await getIntegrationSyncRecord(db, {
       shopId: integration.shopId,
-    provider: integration.provider,
+      provider: integration.provider,
       sourceType: item.sourceType,
       sourceId: item.sourceId,
       operation: "catalog_product",
@@ -309,7 +309,7 @@ export async function syncShopifyCatalog(
     }
     await upsertIntegrationSyncRecord(db, {
       shopId: integration.shopId,
-    provider: integration.provider,
+      provider: integration.provider,
       sourceType: item.sourceType,
       sourceId: item.sourceId,
       operation: "catalog_product",

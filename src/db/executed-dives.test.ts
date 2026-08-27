@@ -32,7 +32,7 @@ describe("upsertExecutedDive", () => {
       maxDepthMeters: 18,
       recordedByPersonId: owner.id,
     });
-    expect(saved?.maxDepthMeters).toBe(18);
+    expect(saved).toMatchObject({ ok: true, dive: { maxDepthMeters: 18 } });
 
     const listed = await listExecutedDives(db, shop.id, trip.id);
     expect(listed).toHaveLength(1);
@@ -57,8 +57,8 @@ describe("upsertExecutedDive", () => {
 
     const [first, second] = await Promise.all([write(18), write(21)]);
 
-    expect(first).not.toBeNull();
-    expect(second).not.toBeNull();
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
     const listed = await listExecutedDives(db, shop.id, trip.id);
     expect(listed).toHaveLength(1);
     expect([18, 21]).toContain(listed[0]?.executed.maxDepthMeters);
@@ -74,7 +74,7 @@ describe("upsertExecutedDive", () => {
         diveNumber: 0,
         recordedByPersonId: owner.id,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "dive_number_out_of_range" });
     expect(
       await upsertExecutedDive(db, {
         shopId: shop.id,
@@ -82,7 +82,7 @@ describe("upsertExecutedDive", () => {
         diveNumber: trip.plannedDives + 1,
         recordedByPersonId: owner.id,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "dive_number_out_of_range" });
   });
 
   it("refuses a transposed entry and exit time rather than storing it", async () => {
@@ -97,7 +97,7 @@ describe("upsertExecutedDive", () => {
         exitedAt: new Date("2026-07-21T14:00:00.000Z"),
         recordedByPersonId: owner.id,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "times_transposed" });
     expect(await listExecutedDives(db, shop.id, trip.id)).toHaveLength(0);
   });
 
@@ -112,7 +112,7 @@ describe("upsertExecutedDive", () => {
         maxDepthMeters: -5,
         recordedByPersonId: owner.id,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "depth_out_of_range" });
   });
 
   /** A shop may only write the log of its own departure. */
@@ -126,7 +126,7 @@ describe("upsertExecutedDive", () => {
         diveNumber: 1,
         recordedByPersonId: owner.id,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "unknown_trip" });
     expect(await listExecutedDives(db, shop.id, trip.id)).toHaveLength(0);
   });
 
@@ -140,7 +140,7 @@ describe("upsertExecutedDive", () => {
         diveNumber: 1,
         recordedByPersonId: crypto.randomUUID(),
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "unknown_recorder" });
   });
 
   it("keeps only the two observed-condition fields it understands", async () => {
@@ -154,7 +154,10 @@ describe("upsertExecutedDive", () => {
       recordedByPersonId: owner.id,
     });
 
-    expect(saved?.observedConditions).toEqual({ visibility: "20m", current: "mild" });
+    expect(saved).toMatchObject({
+      ok: true,
+      dive: { observedConditions: { visibility: "20m", current: "mild" } },
+    });
   });
 });
 
@@ -168,7 +171,7 @@ describe("deleteExecutedDive", () => {
       maxDepthMeters: 18,
       recordedByPersonId: owner.id,
     });
-    if (!saved) throw new Error("fixture write failed");
+    if (!saved.ok) throw new Error("fixture write failed");
 
     expect(
       await deleteExecutedDive(db, {
@@ -188,6 +191,6 @@ describe("deleteExecutedDive", () => {
       maxDepthMeters: 21,
       recordedByPersonId: owner.id,
     });
-    expect(again?.maxDepthMeters).toBe(21);
+    expect(again).toMatchObject({ ok: true, dive: { maxDepthMeters: 21 } });
   });
 });

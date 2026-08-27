@@ -31,7 +31,9 @@ test.describe("account security settings", () => {
     await expect(page.getByText("Not enabled")).toBeVisible();
 
     await page.getByRole("button", { name: "Start setup" }).click();
-    await expect(page.getByText("Enrollment started. Save the secret before enabling two-factor.")).toBeVisible();
+    await expect(
+      page.getByText("Enrollment started. Save the secret before enabling two-factor."),
+    ).toBeVisible();
 
     // The secret is what an authenticator app would be given; the code below is
     // what it would then show. Computing it at the *frozen* instant is what
@@ -77,7 +79,9 @@ test.describe("account security settings", () => {
   test("refuses a code that is not the current one", async ({ page, privateShop }) => {
     await page.goto(`/shop/${privateShop.slug}/settings/security`);
     await page.getByRole("button", { name: "Start setup" }).click();
-    await expect(page.getByText("Enrollment started. Save the secret before enabling two-factor.")).toBeVisible();
+    await expect(
+      page.getByText("Enrollment started. Save the secret before enabling two-factor."),
+    ).toBeVisible();
 
     await page.getByRole("textbox", { name: "Authenticator code" }).fill("000000");
     await page.getByRole("button", { name: "Enable", exact: true }).click();

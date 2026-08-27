@@ -50,7 +50,19 @@
     "visibility": "Visibility",
     "current": "Current",
     "notRecordedDepth": "Depth was not recorded",
-    "save": "Save dive record"
+    "save": "Save dive record",
+    "saved": "Dive record saved.",
+    "refusal": {
+      "timesTransposed": "The exit time must be after the entry time. Check the two times and save again.",
+      "depthOutOfRange": "That depth is outside what this form accepts. Check the figure and save again.",
+      "diveNumberOutOfRange": "This departure does not plan a dive with that number.",
+      "unknownSite": "That dive site is not one of this shop's live sites.",
+      "unknownTrip": "This departure is no longer on the board, so nothing was saved.",
+      "unknownRecorder": "Your staff record was not found, so nothing was saved.",
+      "invalidTime": "One of the times could not be read. Check both and save again.",
+      "invalid": "Nothing was saved. Check the entries and try again.",
+      "wrongDive": "This form is for a different dive. Reload the manifest and try again."
+    }
   },
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip's crew",

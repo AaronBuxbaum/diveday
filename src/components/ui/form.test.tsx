@@ -345,3 +345,67 @@ describe("Field's hint stays a qualifier", () => {
     expect(overlong).toEqual([]);
   });
 });
+
+/**
+ * Issue #1022. Under `cacheComponents`, a client-side navigation resumes a
+ * prerendered shell beside streamed dynamic content — two render passes, each
+ * starting React's server `useId` counter at 1 — so two `Field`s can be handed
+ * the same generated id and `<label for>` then names the wrong control. Folding
+ * the control's own `name` into the id separates every pair those two counters
+ * can produce.
+ *
+ * jsdom renders one pass, so it cannot stage the collision itself; what it can
+ * pin is the property the fix rests on — that the id carries the name, and that
+ * the whole `label`/`aria-describedby` triple still points at the control.
+ */
+describe("Field id scoping", () => {
+  it("folds the control's name into the generated id", () => {
+    render(
+      <Field label="Maximum depth" description="Metres.">
+        <input name="maxDepthMeters" className={controlClass} />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Maximum depth");
+    expect(input.id).toMatch(/-maxDepthMeters$/);
+    // The description travels with it, so nothing is left pointing at the
+    // unscoped id.
+    expect(input.getAttribute("aria-describedby")).toBe(`${input.id}-description`);
+  });
+
+  it("gives two same-named controls ids that differ anyway", () => {
+    render(
+      <>
+        <Field label="First note">
+          <input name="note" className={controlClass} />
+        </Field>
+        <Field label="Second note">
+          <input name="note" className={controlClass} />
+        </Field>
+      </>,
+    );
+    expect(screen.getByLabelText("First note").id).not.toBe(
+      screen.getByLabelText("Second note").id,
+    );
+  });
+
+  // A name may legally hold characters an id may not.
+  it("does not put whitespace or brackets from a name into an id", () => {
+    render(
+      <Field label="Diver note">
+        <input name="party[0].note text" className={controlClass} />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Diver note");
+    expect(input.id).toMatch(/^[A-Za-z0-9_\-«»:]+$/);
+    expect(input.id).toContain("party_0__note_text");
+  });
+
+  it("leaves a caller-supplied id alone", () => {
+    render(
+      <Field label="Name" htmlFor="chosen-by-the-caller">
+        <input id="chosen-by-the-caller" name="name" className={controlClass} />
+      </Field>,
+    );
+    expect(screen.getByLabelText("Name").id).toBe("chosen-by-the-caller");
+  });
+});
