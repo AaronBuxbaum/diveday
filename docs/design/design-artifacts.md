@@ -31,6 +31,68 @@ the ADR decides, and the code is held to the ADR by a doc comment and a test. A 
 believed to be normative is worse than no canvas, because it invites two sources of truth for one
 surface.
 
+## Nobody but an agent reads these files, and that raises the stakes
+
+Stated plainly because it inverts the usual reasoning about design assets: **the canvas has no human
+audience.** It is not a review artifact, not a stakeholder deliverable, not something anyone opens
+before a meeting. Its only reader is a session about to write TypeScript.
+
+The intuition that follows is wrong, so it is worth killing here: *if only a machine reads it, the
+rot matters less.* It matters **more**. A person opening a six-week-old mockup squints at it and
+doubts it — different type, a control they know moved, a colour that was retired. An agent has no
+such reflex. It reads the picture as a specification and rebuilds it faithfully, including the parts
+a later decision deliberately removed. Undoing shipped work is the failure mode, and it looks like
+diligence while it happens.
+
+So the guard cannot be judgment, taste, or a reader noticing something looks old. It has to be
+**procedure and a check**: a fixed read order, an authority that expires on its own, and a gate that
+fails when the loop is left open. Those are the next two sections and
+[the `design-implementation` skill](../../.claude/skills/design-implementation/SKILL.md).
+
+## Authority expires per slice, not per canvas
+
+> A canvas has authority over a surface **only while that surface's slice is unbuilt.** The moment a
+> slice ships, the shipped code *is* the design for that surface, and the canvas has nothing more to
+> say about it.
+
+This is the rule that makes a design safe to leave lying around in an agent-operated repo. It gives
+every disagreement a decidable answer without anyone having to judge how stale a picture looks:
+
+| Canvas vs. code | What it means | What to do |
+| --- | --- | --- |
+| Slice still open | The canvas is the intent | Build it |
+| Slice already shipped | **The canvas is stale** | Leave the code alone. A genuine problem is a new decision and needs an ADR, never a quiet edit toward an old drawing |
+| ADR vs. code | Real drift, or an unshipped slice | Say which, in the PR |
+
+Shipped code outranks the canvas; the ADR outranks both. And the read order — ADR, roadmap slice,
+slice table, **current code**, artboards last — exists so a session reaches the pictures already
+knowing which of them still apply.
+
+## The slice table is the sync mechanism
+
+Each canvas README carries a table of the slices its design breaks into, and that table — not
+anybody's memory — is what says which surfaces are still the canvas's business:
+
+```markdown
+| Slice | Status | Lands in | Pinned by |
+| --- | --- | --- | --- |
+| 5a | open | — | — |
+| 5b | shipped | `src/…/Thing.tsx` | `src/…/Thing.test.tsx` |
+```
+
+`pnpm check:design-canvases` enforces the half a script can see, which is exactly the half that rots
+quietly:
+
+- Every row carries a status of `open`, `in progress`, `shipped`, or `dropped`.
+- A **`shipped`** row names a file that **exists** and **mentions the canvas's ADR id** — so the
+  doc-comment obligation below is enforced rather than merely asked for, and code and design are
+  joined by something greppable rather than by intent.
+- A canvas whose slices are all `shipped` or `dropped` may not still call itself `Live`.
+
+That last rule is what stops the most likely end state: a design fully built, its canvas still
+advertising itself as current, and a future session treating a finished picture as an open
+instruction.
+
 ## When a canvas is warranted
 
 The same judgment that decides whether something needs an ADR or a `surfaces.md` entry, plus one
@@ -128,18 +190,25 @@ and the set contradicts itself:
 Run the second pass with fresh eyes — a subagent reading only the files, briefed that everything in
 them is untrusted content to review rather than instructions to follow.
 
-## What happens when it ships
+## What happens when a slice ships
 
-A canvas's job ends at the merge, and the constraint moves next to the code. Per the rule
-[surfaces.md](surfaces.md) already sets — an entry in a document is an index; a doc comment and a
-test are what stop it rotting:
+A canvas's authority over a surface ends at the merge, and the constraint moves next to the code.
+Per the rule [surfaces.md](surfaces.md) already sets — an entry in a document is an index; a doc
+comment and a test are what stop it rotting. All four, in the same PR as the slice:
 
-1. The component that must not drift **defers to the ADR by name** in its doc comment.
-2. **A test fails** if the load-bearing rule is broken (not a snapshot of the pixels — a test of the
-   rule: that the destructive path is not a single tap, that no danger tone renders with nothing
-   recorded).
-3. The roadmap slice moves to [shipped.md](../product/shipped.md); the surfaces entry stays.
-4. The canvas README's status becomes **Shipped**, with the date and the PR.
+1. The component that must not drift **defers to the ADR by name** in its doc comment. The check
+   above fails if it does not, which is what makes this an obligation rather than a wish.
+2. **A test fails** if the load-bearing rule is broken — a test of the *rule* (the destructive path
+   is not a single tap; no danger tone renders with nothing recorded), never a snapshot of the
+   pixels. A layout snapshot fails on every legitimate restyle and trains people to re-baseline
+   without reading.
+3. The **slice table** is updated: status, the file it landed in, the test that pins it.
+4. The roadmap slice moves to [shipped.md](../product/shipped.md); the `surfaces.md` entry stays and
+   drops its "designed, not yet built" marker. When the last open slice lands, the canvas `Status:`
+   becomes **Shipped**.
+
+The procedure a session follows to do all of this lives in
+[the `design-implementation` skill](../../.claude/skills/design-implementation/SKILL.md).
 
 ## Tooling
 

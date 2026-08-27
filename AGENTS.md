@@ -134,7 +134,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 ## Skills and providers
 
 The canonical process is this file, `docs/`, scripts, and tests. Claude-specific playbooks are indexed
-in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **i18n-copy**,
+in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **design-implementation**, **i18n-copy**,
 **copy-restraint**, **design-review**, **brand-voice**, **schema-change**, **debug**, **instant-navigation**,
 **e2e-and-visual**, **visual-triage**, **adr**, **stacked-prs**, **triage**, **backlog-routine**,
 **marketing-page**, **switching-pages**, and **commercial-outreach**.
