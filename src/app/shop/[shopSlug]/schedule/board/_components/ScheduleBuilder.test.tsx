@@ -48,6 +48,7 @@ const COPY: BuilderCopy = {
   crewLabel: "Crew:",
   crewNobodyYet: "nobody yet",
   crewMostlyAll: "Crew: {names} unless a departure says otherwise.",
+  windLabel: "Wind:",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll:
@@ -434,6 +435,46 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
 
     expect(screen.getAllByText("No price set")).toHaveLength(3);
     expect(screen.queryByText(/None of these departures/)).toBeNull();
+  });
+});
+
+describe("ScheduleBuilder wind line (issue #722)", () => {
+  function renderDay(trips: ReturnType<typeof baseTrip>[]) {
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-01",
+        label: "Sat, Aug 1",
+        parts: { weekday: "Sat", day: "1", month: "Aug" },
+        trips,
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+  }
+
+  it("shows the server-formatted wind numbers when the row carries them", () => {
+    renderDay([baseTrip({ id: "trip-wind", windSummary: "18 kt NE (gusts 22 kt)" })]);
+
+    expect(screen.getByText("Wind: 18 kt NE (gusts 22 kt)")).toBeInTheDocument();
+  });
+
+  it("renders no wind line when the row has no forecast", () => {
+    renderDay([baseTrip({ id: "trip-no-wind", windSummary: null })]);
+
+    expect(screen.queryByText(/^Wind:/)).toBeNull();
   });
 });
 
