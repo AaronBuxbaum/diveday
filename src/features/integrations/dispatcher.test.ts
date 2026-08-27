@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { enqueueOrderIntegrationEvent } from "@/db/integration-events";
 import { saveShopIntegration } from "@/db/integrations";
 import { integrationDeliveries, orders, shopIntegrations } from "@/db/schema";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { dispatchDueIntegrationDeliveries } from "./dispatcher";
 
@@ -182,7 +182,7 @@ describe("dispatchDueIntegrationDeliveries", () => {
     await queueOrderPaid(db, shop.id, "order:paid:6");
     await db
       .update(shopIntegrations)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: nowDate() })
       .where(eq(shopIntegrations.shopId, shop.id));
     const fetchImpl = vi.fn(async () => jsonResponse(200));
 
