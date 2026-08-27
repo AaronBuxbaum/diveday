@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
 import {
@@ -14,9 +14,26 @@ import {
   shopIntegrations,
 } from "./schema";
 
+/**
+ * The customer an order event is about.
+ *
+ * **Stored as an id and nothing else.** `name` and `email` are resolved at
+ * delivery time by {@link hydrateIntegrationEventPayload} and never written to
+ * `integration_events.payload`, which is kept for 400 days
+ * (`RETENTION_DAYS.integration_events`) and which erasure could not scrub even
+ * if it tried — the table carries no `person_id` and no index that could find
+ * one diver's rows without a full-table JSON scan (issue #1016).
+ *
+ * The consequence is deliberate and is the better behaviour anyway: a delivery
+ * sends whatever `people` says *now*, so an event replayed after an erasure
+ * carries the blanked row rather than reproducing a name the diver asked us to
+ * forget.
+ */
+export type OrderIntegrationCustomer = { id: string; name: string; email: string | null };
+
 export type OrderIntegrationPayload = {
   orderId: string;
-  customer: { id: string; name: string; email: string | null };
+  customer: { id: string } | OrderIntegrationCustomer;
   status: string;
   currency: string;
   totalCents: number;
@@ -49,7 +66,7 @@ export async function loadOrderIntegrationPayload(
   > = {},
 ): Promise<OrderIntegrationPayload | null> {
   const [row] = await db
-    .select({ order: orders, person: people })
+    .select({ order: orders, person: { id: people.id } })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
     .where(and(eq(orders.shopId, shopId), eq(orders.id, orderId)))
@@ -70,11 +87,8 @@ export async function loadOrderIntegrationPayload(
 
   return {
     orderId: row.order.id,
-    customer: {
-      id: row.person.id,
-      name: row.person.fullName,
-      email: row.person.email,
-    },
+    // Identity by reference only — see OrderIntegrationCustomer above.
+    customer: { id: row.person.id },
     status: overrides.status ?? row.order.status,
     currency: row.order.currency,
     totalCents: row.order.totalCents,
@@ -126,7 +140,14 @@ export async function enqueueIntegrationEvent(
     .select()
     .from(shopIntegrations)
     .where(
-      and(eq(shopIntegrations.shopId, input.shopId), eq(shopIntegrations.status, "connected")),
+      and(
+        eq(shopIntegrations.shopId, input.shopId),
+        eq(shopIntegrations.status, "connected"),
+        // A disconnect stamps the row rather than deleting it (issue #1015), so
+        // "connected" alone would keep queuing orders for a provider the shop
+        // took away last month.
+        isNull(shopIntegrations.deletedAt),
+      ),
     );
   for (const integration of integrations) {
     if (!eventIsSubscribed(integration.settings, input.eventType)) continue;
@@ -170,6 +191,45 @@ export async function enqueueOrderIntegrationEvent(
   });
 }
 
+/**
+ * Fill in the identity the stored payload deliberately does not hold.
+ *
+ * Called once per delivery, in the dispatcher, so every adapter receives the
+ * same hydrated event and no adapter has to know the payload is a reference
+ * rather than a copy. A diver whose record was erased comes back as the blanked
+ * row says — the anonymized name and a null email — which is exactly what a
+ * delivery after an erasure should carry.
+ *
+ * A person row that cannot be found at all leaves `customer` as the bare id.
+ * That is not an error path worth failing a delivery over: the order's owner is
+ * an `innerJoin` at enqueue time and `people` rows are never hard-deleted, so
+ * the only way here is a shop purge that is taking the event with it anyway.
+ */
+export async function hydrateIntegrationEventPayload(
+  db: DbExecutor,
+  event: IntegrationEvent,
+): Promise<IntegrationEvent> {
+  const payload = event.payload;
+  const customer = (payload as { customer?: unknown }).customer;
+  if (!customer || typeof customer !== "object" || Array.isArray(customer)) return event;
+  const personId = (customer as { id?: unknown }).id;
+  if (typeof personId !== "string") return event;
+
+  const [person] = await db
+    .select({ fullName: people.fullName, email: people.email })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, event.shopId)))
+    .limit(1);
+  if (!person) return event;
+  return {
+    ...event,
+    payload: {
+      ...payload,
+      customer: { id: personId, name: person.fullName, email: person.email },
+    },
+  };
+}
+
 export async function listDueIntegrationDeliveries(db: DbExecutor, limit = 25) {
   const current = nowDate();
   const staleProcessingBefore = new Date(current.getTime() - 15 * 60 * 1000);
@@ -196,6 +256,7 @@ export async function listDueIntegrationDeliveries(db: DbExecutor, limit = 25) {
           ),
         ),
         eq(shopIntegrations.status, "connected"),
+        isNull(shopIntegrations.deletedAt),
       ),
     )
     .orderBy(asc(integrationDeliveries.nextAttemptAt), asc(integrationDeliveries.createdAt))

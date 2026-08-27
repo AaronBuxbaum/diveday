@@ -45,7 +45,8 @@ async function connectedIntegration(
     ["quickbooks_item", "diveday-sales", "item", "42"],
   ] as const) {
     await upsertIntegrationSyncRecord(db, {
-      integrationId: integration.id,
+      shopId: integration.shopId,
+      provider: integration.provider,
       sourceType,
       sourceId,
       operation,

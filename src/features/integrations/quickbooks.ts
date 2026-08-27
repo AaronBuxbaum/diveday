@@ -325,7 +325,8 @@ async function ensureQuickBooksCustomer(
   fetchImpl: typeof fetch,
 ): Promise<{ status: "ok"; id: string } | { status: "failed"; code: string; retryable: boolean }> {
   const existing = await getIntegrationSyncRecord(db, {
-    integrationId: integration.id,
+    shopId: integration.shopId,
+    provider: integration.provider,
     sourceType: "quickbooks_customer",
     sourceId: payload.customer.id,
     operation: "customer",
@@ -346,7 +347,8 @@ async function ensureQuickBooksCustomer(
   const id = responseId(result.data, "Customer");
   if (!id) return { status: "failed", code: "quickbooks_customer_missing_id", retryable: false };
   await upsertIntegrationSyncRecord(db, {
-    integrationId: integration.id,
+    shopId: integration.shopId,
+    provider: integration.provider,
     sourceType: "quickbooks_customer",
     sourceId: payload.customer.id,
     operation: "customer",
@@ -364,7 +366,8 @@ async function ensureQuickBooksItem(
   fetchImpl: typeof fetch,
 ): Promise<{ status: "ok"; id: string } | { status: "failed"; code: string; retryable: boolean }> {
   const existing = await getIntegrationSyncRecord(db, {
-    integrationId: integration.id,
+    shopId: integration.shopId,
+    provider: integration.provider,
     sourceType: "quickbooks_item",
     sourceId: "diveday-sales",
     operation: "item",
@@ -390,7 +393,8 @@ async function ensureQuickBooksItem(
   const id = responseId(result.data, "Item");
   if (!id) return { status: "failed", code: "quickbooks_item_missing_id", retryable: false };
   await upsertIntegrationSyncRecord(db, {
-    integrationId: integration.id,
+    shopId: integration.shopId,
+    provider: integration.provider,
     sourceType: "quickbooks_item",
     sourceId: "diveday-sales",
     operation: "item",
@@ -444,7 +448,8 @@ export async function deliverQuickBooksEvent(
    */
   const syncSourceId = operation === "refund_receipt" ? event.idempotencyKey : event.entityId;
   const existing = await getIntegrationSyncRecord(db, {
-    integrationId: integration.id,
+    shopId: integration.shopId,
+    provider: integration.provider,
     sourceType: "quickbooks_order",
     sourceId: syncSourceId,
     operation,
@@ -472,7 +477,8 @@ export async function deliverQuickBooksEvent(
   if (!externalId)
     return { status: "failed", code: "quickbooks_receipt_missing_id", retryable: false };
   await upsertIntegrationSyncRecord(db, {
-    integrationId: integration.id,
+    shopId: integration.shopId,
+    provider: integration.provider,
     sourceType: "quickbooks_order",
     sourceId: syncSourceId,
     operation,
