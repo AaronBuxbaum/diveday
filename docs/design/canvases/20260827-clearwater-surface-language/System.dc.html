@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --accent: #ff6f61;
+      --success: #15803d; --success-tint: #e8f2ec;
+      --warning: #b45309; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e8e8;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .spec { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .sec { margin-top: 52px; }
+    .h2 { font-size: 18px; font-weight: 650; letter-spacing: -0.012em; margin: 0; }
+    .note { font-size: 13px; color: var(--muted); margin: 6px 0 0; max-width: 760px; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; height: 1990px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+<div style="padding: 52px 56px 40px; box-sizing: border-box;">
+
+  <p class="eyebrow" style="margin: 0;">Design language</p>
+  <h1 style="margin: 10px 0 0; font-size: 40px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05;">Clearwater</h1>
+  <p style="margin: 12px 0 0; font-size: 16px; color: var(--muted); max-width: 720px;">How a DiveDay surface is built. Same palette, same type family, same primitives underneath — a different default composition. Water this clear is water you don&#8217;t see.</p>
+
+  <!-- The stance -->
+  <div class="sec" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;">
+    <div>
+      <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.014em;">Type leads.</p>
+      <p class="note">Hierarchy is carried by size, weight and space. Borders, fills and buttons are the last tools, not the first.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.014em;">Groups own shared facts.</p>
+      <p class="note">A date, a departure, a state, a count — said once in the group header, never repeated down the rows at equal weight.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.014em;">Elevation is earned.</p>
+      <p class="note">Everything at rest is flat: hairline, no shadow. A shadow means the thing is floating above the page — a menu, a sheet, a toast.</p>
+    </div>
+  </div>
+
+  <!-- Two grammars, one retired -->
+  <div class="sec">
+    <p class="h2">Two grouped anatomies are the default. The card stack retires.</p>
+    <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;">
+
+      <div>
+        <p class="glabel" style="margin: 0 0 10px;">The open ledger</p>
+        <div>
+          <p class="glabel" style="margin: 0 0 4px; font-size: 10.5px;">Today &middot; Thu, Aug 27</p>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 38px; border-top: 1px solid var(--border); font-size: 13px;">
+            <span style="font-weight: 600;">Amara Osei</span><span style="color: var(--muted); flex: 1;">Counter sale</span><span class="tnum" style="font-weight: 600;">$148.00</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 38px; border-top: 1px solid var(--border); font-size: 13px;">
+            <span style="font-weight: 600;">Diego Alvarez</span><span style="color: var(--muted); flex: 1;">Night dive</span><span class="tnum" style="font-weight: 600;">$120.00</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 38px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 13px;">
+            <span style="font-weight: 600;">Kenji Watanabe</span><span style="color: var(--muted); flex: 1;">Wreck trip</span><span class="tnum" style="font-weight: 600;">$144.75</span>
+          </div>
+        </div>
+        <p class="note">Rows on the page itself, under a header that owns what they share. For work surfaces: the home, the board, orders, the counter, rosters, the public schedule.</p>
+      </div>
+
+      <div>
+        <p class="glabel" style="margin: 0 0 10px;">The inset group</p>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 14px; font-size: 13px;">
+            <span style="font-weight: 550;">Name</span><span style="margin-left: auto; color: var(--muted);">Blue Mantis Divers</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 14px; border-top: 1px solid var(--border); font-size: 13px;">
+            <span style="font-weight: 550;">Phone</span><span class="tnum" style="margin-left: auto; color: var(--muted);">+1 305 555 0142</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 14px; border-top: 1px solid var(--border); font-size: 13px;">
+            <span style="font-weight: 550;">Units</span><span style="margin-left: auto; color: var(--muted);">Metres &middot; &deg;C &middot; USD</span>
+          </div>
+        </div>
+        <p class="note">Label-and-value rows inside one hairline shell, under a small-caps group label. For configuration and object detail: settings, summaries, records.</p>
+      </div>
+
+      <div>
+        <p class="glabel" style="margin: 0 0 10px; text-decoration: line-through; text-decoration-thickness: 1.5px;">The card stack</p>
+        <div style="opacity: .45;">
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(12,42,53,.08); padding: 10px 12px; font-size: 12.5px;"><span style="font-weight: 600;">A box</span> <span style="color: var(--muted);">saying one thing</span></div>
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(12,42,53,.08); padding: 10px 12px; font-size: 12.5px; margin-top: 8px;"><span style="font-weight: 600;">Another box</span> <span style="color: var(--muted);">repeating its context</span></div>
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(12,42,53,.08); padding: 10px 12px; font-size: 12.5px; margin-top: 8px;"><span style="font-weight: 600;">A third box</span> <span style="color: var(--muted);">at the same weight</span></div>
+        </div>
+        <p class="note">Retired as the default composition. The bordered panel keeps exactly three jobs: a form someone works inside, a tone-carrying operational panel, and an overlay.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- The ramp -->
+  <div class="sec">
+    <p class="h2">The ramp is closed. Everything on a staff page is one of these.</p>
+    <div style="margin-top: 18px; border-top: 1px solid var(--border);">
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 34px; font-weight: 650; letter-spacing: -0.02em;">Page title</span>
+        <span class="spec" style="margin-left: auto;">34 / 650 / -0.02em &middot; one per page, in the page, not the chrome</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 16px; color: var(--muted);">Page summary — the day in one sentence</span>
+        <span class="spec" style="margin-left: auto;">16 / 400 / muted</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span class="eyebrow">Eyebrow &middot; the destination&#8217;s own name</span>
+        <span class="spec" style="margin-left: auto;">11 / 700 / +0.18em / primary</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 18px; font-weight: 650; letter-spacing: -0.012em;">Section heading</span>
+        <span class="spec" style="margin-left: auto;">18 / 650</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span class="glabel">Group label</span>
+        <span class="spec" style="margin-left: auto;">12 / 650 / +0.14em / caps / muted — the one spelling</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 16px; font-weight: 600;">Row title</span>
+        <span class="spec" style="margin-left: auto;">16 / 600</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 14px; color: var(--muted);">Row meta — what differs about this row, once</span>
+        <span class="spec" style="margin-left: auto;">14 / 400 / muted</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--border);">
+        <span class="tnum" style="font-size: 32px; font-weight: 700; letter-spacing: -0.015em;">7<span style="font-size: 18px; font-weight: 600; color: var(--muted);"> of 10</span></span>
+        <span class="spec" style="margin-left: auto;">figures lead: 32 / 700 / tabular — a count is never a sentence</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tone discipline -->
+  <div class="sec">
+    <p class="h2">A tone never travels alone.</p>
+    <p class="note">Ink on its opaque tint, a drawn glyph, and a word — all three, every time. Badges mark the exceptional state only; the expected state renders as nothing.</p>
+    <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 650; background: var(--danger-tint); color: var(--danger);">
+        <svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="2.2" stroke-linecap="round"><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>
+        Blocked — certification
+      </span>
+      <span style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 650; background: var(--warning-tint); color: var(--warning);">
+        <svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg>
+        Waiver not sent
+      </span>
+      <span style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 650; background: var(--success-tint); color: var(--success);">
+        <svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+        All home
+      </span>
+      <span style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 650; background: var(--sunken); border: 1px solid var(--border); color: var(--muted);">Full</span>
+      <span style="display: inline-flex; align-items: baseline; gap: 8px; padding: 6px 4px; font-size: 13px; color: var(--muted);">and a count is quiet text: <span class="tnum" style="font-weight: 600; color: var(--ink);">10 of 12</span> — never a pill</span>
+    </div>
+  </div>
+
+  <!-- Row anatomy -->
+  <div class="sec">
+    <p class="h2">The row, dissected.</p>
+    <div style="margin-top: 18px; max-width: 860px;">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r="0.4" fill="#b45309"></circle></svg>
+        <span style="font-size: 13px; font-weight: 650; color: var(--warning); min-width: 92px;">Waiver</span>
+        <span style="flex: 1; font-size: 14px;">Priya Sharma hasn&#8217;t been sent hers.</span>
+        <span style="font-size: 13.5px; font-weight: 600; color: var(--primary);">Send waiver</span>
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 10px;">
+        <span class="spec" style="width: 46px;">glyph</span>
+        <span class="spec" style="min-width: 150px;">the kind, one word, in its tone</span>
+        <span class="spec" style="flex: 1;">what&#8217;s true, one sentence — 48px minimum, hairlines between</span>
+        <span class="spec">the one fix, on the row</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chrome -->
+  <div class="sec">
+    <p class="h2">One chrome bar. The title stays in the page.</p>
+    <div style="margin-top: 16px; max-width: 860px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+      <div style="height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: rgba(250,249,246,.85); border-bottom: 1px solid var(--border);">
+        <div style="width: 22px; height: 22px; border-radius: 6px; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700;">BM</div>
+        <span style="font-size: 13px; font-weight: 650;">Blue Mantis Divers</span>
+        <span style="font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-tint); padding: 4px 9px; border-radius: 8px;">Today</span>
+        <span style="font-size: 12px; color: var(--muted);">Check-in&nbsp;&nbsp;&nbsp;Divers&nbsp;&nbsp;&nbsp;Board&nbsp;&nbsp;&nbsp;Close-out&nbsp;&nbsp;&nbsp;More</span>
+        <span style="margin-left: auto; font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+      </div>
+      <div style="padding: 14px 16px 18px; background: var(--bg);">
+        <p class="spec" style="margin: 0;">56px tall &middot; page background at 85% + blur &middot; hairline below &middot; one height token, shared by both shells &middot; the phone dock is unchanged</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Elevation ladder -->
+  <div class="sec">
+    <p class="h2">The elevation ladder has two rungs.</p>
+    <div style="margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 860px;">
+      <div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px;">
+          <p style="margin: 0; font-size: 14px; font-weight: 600;">At rest</p>
+          <p style="margin: 3px 0 0; font-size: 13px; color: var(--muted);">Hairline. No shadow. It sits in the page.</p>
+        </div>
+      </div>
+      <div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 36px rgba(12,42,53,.18);">
+          <p style="margin: 0; font-size: 14px; font-weight: 600;">Floating</p>
+          <p style="margin: 3px 0 0; font-size: 13px; color: var(--muted);">A menu, a sheet, a toast. The shadow says it will leave.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

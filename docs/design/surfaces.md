@@ -48,6 +48,12 @@ So an entry here is the index; the constraint lives beside the code it constrain
 Enforced beside the code: `RoleOrientationCard.tsx` defers to it by name, and
 `RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the queue.
 
+**Recomposition proposed** — ADR
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(Proposed) redraws the same one idea as a chronological spine: stations carry their own work rows,
+so a departure's facts are said once instead of once per card, and the two views become one
+composition. The shipped code governs until that slice ships.
+
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
 **Designed, not yet built** — ADR
@@ -86,6 +92,76 @@ is worked *on a boat*, one-handed and wet, so its content is tiered by when it i
 Two rules here are load-bearing and get pinned beside the code when they ship: a destructive
 roll-call claim is never a single tap, and no danger tone renders at a checkpoint where nothing has
 been recorded.
+
+### The schedule board — `/shop/[shopSlug]/schedule/board`
+
+**Redesign proposed (desktop only)** — ADR
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(Proposed), drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The
+stream stays on phone.
+
+- **One idea:** the shape of the week — where the boats are, and where they aren't.
+- **The question it arrives with:** "what does my week look like?" — answered in one screen of
+  seven columns rather than seven screens of scroll.
+- **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carry over.
+- **Remove first:** the standing crew line above the board, once a station says its own crew.
+- **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
+  stream because a seven-column grid has no honest 390px form.
+
+### Settings — `/shop/[shopSlug]/settings`
+
+**Redesign proposed (desktop only)** — same ADR and canvas. The phone keeps grouped lists.
+
+- **One idea:** every switch in the shop, findable in one look.
+- **The question it arrives with:** "where do I change X?" — answered by the rail, which shows the
+  whole map at once instead of 42 rows of scroll.
+- **Controls that dissolved:** the standing caption under every door row — the row's current value
+  is the description.
+- **Remove first:** nothing beyond the captions; the three groups already carve the space
+  correctly.
+- **Composition:** rail and pane, because settings are a directory and a directory reads as a tree,
+  not a queue.
+
+### Orders — `/shop/[shopSlug]/orders`
+
+**Redesign proposed** — same ADR and canvas.
+
+- **One idea:** the money ledger, day by day.
+- **The question it arrives with:** "what came in, and is anything still open?" — answered by day
+  subtotals and the rare `Open` badge, without reading fifty identical rows.
+- **Controls that dissolved:** the five-control filter card demotes to a toolbar; the date column
+  dissolves into the day group header.
+- **Remove first:** the second imported-history table — it becomes one disclosure row.
+- **Composition:** a grouped ledger because orders share their date, and a shared fact belongs to
+  the group (principle 9 applied to a table).
+
+### The counter — `/shop/[shopSlug]/check-in`
+
+**Redesign proposed** — same ADR and canvas. Safety-adjacent; gets the `dive-domain-expert` pass.
+
+- **One idea:** who has walked in, against who should.
+- **The question it arrives with:** "how many are still to come?" — answered by the count figure
+  before any list.
+- **Controls that dissolved:** per-row state text — the tap circle *is* the state; settled rows
+  sink into one collapsed group.
+- **Remove first:** the day's other boats from standing view; one departure is in focus, the rest
+  one tap away.
+- **Composition:** an instrument over a queue, inheriting the manifest's count-first grammar
+  ashore.
+
+### The public schedule — `/s/[shopSlug]`
+
+**Redesign proposed** — same ADR and canvas. Conversion surface; gets the `conversion-reviewer`
+pass.
+
+- **One idea:** this shop is worth your dive day — and the next boat is right there.
+- **The question it arrives with:** "is this shop good, and can I get on a boat?" — answered by the
+  identity line, the review aggregate, and the next-boat card before any scrolling.
+- **Controls that dissolved:** the per-row metadata stack (six lines collapse to one; the trip page
+  answers the rest); the month navigator demotes below the hero.
+- **Remove first:** the conservation disclaimer card at the top — it becomes one line in the hero.
+- **Composition:** a shopfront — identity, then the week as a shelf, then courses and reviews —
+  because a diver is choosing a shop before they are choosing a time slot.
 
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 

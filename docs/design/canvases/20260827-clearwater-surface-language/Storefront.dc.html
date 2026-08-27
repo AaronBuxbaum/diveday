@@ -1,0 +1,260 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --accent: #ff6f61;
+      --success: #15803d; --warning: #b45309; --warning-tint: #f8eee6; --danger: #b91c1c;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    a { color: var(--primary); }
+    .trow { display: flex; align-items: center; gap: 18px; min-height: 60px; border-top: 1px solid var(--border); }
+    h2 { margin: 0; font-size: 23px; font-weight: 650; letter-spacing: -0.017em; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 2240px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <!-- Public chrome -->
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 40px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <span style="font-size: 16px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 14.5px; font-weight: 600; color: var(--primary); background: var(--primary-tint); padding: 7px 14px; border-radius: 10px;">Schedule</span>
+      <span style="font-size: 14.5px; font-weight: 500; color: var(--muted); padding: 7px 14px;">Courses</span>
+      <span style="font-size: 13.5px; font-weight: 500; color: var(--muted); padding: 7px 10px; display: inline-flex; align-items: center; gap: 5px;">English
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+  </div>
+
+  <div style="width: 1152px; margin: 0 auto; padding: 76px 0 0; box-sizing: border-box;">
+
+    <!-- The shop leads -->
+    <div style="display: grid; grid-template-columns: 1fr 400px; column-gap: 72px; align-items: center;">
+      <div>
+        <h1 style="margin: 0; font-size: 46px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.06;">Blue Mantis Divers</h1>
+        <p style="margin: 16px 0 0; font-size: 18px; color: var(--muted); max-width: 520px;">Small-boat reef and wreck diving out of Key Largo.</p>
+        <div style="margin-top: 18px; display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-flex; gap: 2px;">
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61" opacity=".28"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          </span>
+          <span class="tnum" style="font-size: 14.5px; font-weight: 600;">4.3</span>
+          <span class="tnum" style="font-size: 14.5px; color: var(--muted);">&middot; 83 reviews &middot; every one from a diver who was on the boat</span>
+        </div>
+        <div style="margin-top: 10px; display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--muted);">
+          <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15.5c3.6-1.6 5.8-4.2 5.8-8V4.3L9 2.5 3.2 4.3v3.2c0 3.8 2.2 6.4 5.8 8z"></path><path d="M6.4 8.9l1.8 1.8 3.4-3.7"></path></svg>
+          Reef-safe operations &middot; no-touch briefings on every boat
+        </div>
+      </div>
+
+      <!-- The next boat: the page's one card, one primary -->
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 26px 28px; box-sizing: border-box;">
+        <p class="eyebrow" style="margin: 0;">Next boat</p>
+        <p style="margin: 12px 0 0; font-size: 25px; font-weight: 700; letter-spacing: -0.02em;"><span class="tnum">Tonight &middot; 7:30 PM</span></p>
+        <p style="margin: 6px 0 0; font-size: 16.5px; font-weight: 600;">Night Dive — City of Washington</p>
+        <p style="margin: 5px 0 0; font-size: 13.5px; color: var(--muted);">Torches, tarpon, and bioluminescence.</p>
+        <div style="margin-top: 16px; display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 14px; font-weight: 600;">5 spots left</span>
+          <span class="tnum" style="margin-left: auto; font-size: 22px; font-weight: 700;">$120</span>
+        </div>
+        <div style="margin-top: 16px; display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 12px; background: var(--primary); color: #ffffff; font-size: 15.5px; font-weight: 600;">Book this boat</div>
+      </div>
+    </div>
+
+    <!-- The week -->
+    <div style="margin-top: 76px; display: flex; align-items: baseline; justify-content: space-between; gap: 24px;">
+      <h2>This week</h2>
+      <span style="font-size: 13.5px; font-weight: 600; color: var(--primary);">September &#8250;</span>
+    </div>
+
+    <p class="glabel" style="margin: 26px 0 0;">Today &middot; Thu, Aug 27</p>
+    <div style="margin-top: 8px;">
+      <div class="trow" style="opacity: .5;">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">1:00 PM</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Wreck Trip — Spiegel Grove</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">Spiegel Grove &middot; Advanced, Deep</span>
+        </span>
+        <span style="display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 11px; font-size: 12.5px; font-weight: 650; background: var(--sunken); border: 1px solid var(--border); color: var(--muted);">Full</span>
+        <span class="tnum" style="width: 70px; text-align: right; font-size: 16px; font-weight: 650;">$145</span>
+      </div>
+      <div class="trow">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">7:30 PM</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Night Dive — City of Washington</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">City of Washington &middot; Open Water or higher, at night</span>
+        </span>
+        <span style="font-size: 13.5px; color: var(--muted);">5 spots left</span>
+        <span class="tnum" style="width: 70px; text-align: right; font-size: 16px; font-weight: 650;">$120</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <p class="glabel" style="margin: 30px 0 0;">Fri, Aug 28</p>
+    <div style="margin-top: 8px;">
+      <div class="trow">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">7:00 AM</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Morning Two-Tank — Molasses Reef</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">Molasses Reef &middot; Open Water or higher</span>
+        </span>
+        <span style="font-size: 13.5px; color: var(--muted);">4 spots left</span>
+        <span class="tnum" style="width: 70px; text-align: right; font-size: 16px; font-weight: 650;">$95</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="trow">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">8:00 AM</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Deep Wreck Charter — the Duane on EANx</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">USCGC Duane &middot; Advanced, Deep, Nitrox</span>
+        </span>
+        <span style="font-size: 13.5px; color: var(--muted);">7 spots left</span>
+        <span class="tnum" style="width: 70px; text-align: right; font-size: 16px; font-weight: 650;">$195</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="trow" style="border-bottom: 0;">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">Fri – Sun</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Open Water Diver — three-day course</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">Pool, classroom, and four ocean dives &middot; no experience required</span>
+        </span>
+        <span style="font-size: 13.5px; font-weight: 650; color: var(--warning);">1 spot left</span>
+        <span class="tnum" style="width: 70px; text-align: right; font-size: 16px; font-weight: 650;">$595</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <p class="glabel" style="margin: 30px 0 0;">Sat, Aug 29</p>
+    <div style="margin-top: 8px;">
+      <div class="trow">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">11:00 AM</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Two-Tank — French Reef</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">French Reef &middot; Open Water or higher</span>
+        </span>
+        <span style="font-size: 13.5px; font-weight: 650; color: var(--warning);">Only 2 spots left</span>
+        <span class="tnum" style="width: 70px; text-align: right; font-size: 16px; font-weight: 650;">$95</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <p class="glabel" style="margin: 30px 0 0;">Sun, Aug 30</p>
+    <div style="margin-top: 8px;">
+      <div class="trow" style="border-bottom: 1px solid var(--border);">
+        <span class="tnum" style="width: 92px; font-size: 15px; font-weight: 700;">11:30 AM</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 16px; font-weight: 600;">Two-Tank Reef — Christ of the Abyss</span>
+          <span style="display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px;">Christ of the Abyss &middot; great for refreshers and new divers</span>
+        </span>
+        <span style="font-size: 13.5px; color: var(--muted);">12 spots left</span>
+        <span style="width: 70px;"></span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <!-- Courses -->
+    <h2 style="margin-top: 76px;">Learn with us</h2>
+    <div style="margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;">
+        <div style="height: 140px; background: var(--primary-tint); position: relative; overflow: hidden;">
+          <svg width="100%" height="140" viewBox="0 0 360 140" preserveAspectRatio="none" fill="none"><path d="M0 92c40-16 80-16 120 0s80 16 120 0 80-16 120 0v48H0z" fill="#0e7490" opacity=".14"></path><path d="M0 108c40-14 80-14 120 0s80 14 120 0 80-14 120 0v32H0z" fill="#0e7490" opacity=".2"></path><circle cx="264" cy="46" r="5" fill="#0e7490" opacity=".25"></circle><circle cx="284" cy="30" r="3.4" fill="#0e7490" opacity=".2"></circle><circle cx="298" cy="18" r="2.2" fill="#0e7490" opacity=".16"></circle></svg>
+        </div>
+        <div style="padding: 18px 20px 20px;">
+          <p style="margin: 0; font-size: 16.5px; font-weight: 650;">Discover Scuba</p>
+          <p style="margin: 4px 0 0; font-size: 13.5px; color: var(--muted);">Half a day &middot; no experience needed</p>
+          <p class="tnum" style="margin: 12px 0 0; font-size: 17px; font-weight: 650;">$195</p>
+        </div>
+      </div>
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;">
+        <div style="height: 140px; background: var(--primary-tint); position: relative; overflow: hidden;">
+          <svg width="100%" height="140" viewBox="0 0 360 140" preserveAspectRatio="none" fill="none"><path d="M0 70c36-22 72-26 120-10s84 30 120 18 84-30 120-16v78H0z" fill="#0e7490" opacity=".14"></path><path d="M0 100c40-14 80-18 120-6s80 22 120 12 80-22 120-10v44H0z" fill="#0e7490" opacity=".2"></path><circle cx="86" cy="40" r="4.4" fill="#0e7490" opacity=".22"></circle><circle cx="104" cy="26" r="2.8" fill="#0e7490" opacity=".18"></circle></svg>
+        </div>
+        <div style="padding: 18px 20px 20px;">
+          <p style="margin: 0; font-size: 16.5px; font-weight: 650;">Open Water Diver</p>
+          <p style="margin: 4px 0 0; font-size: 13.5px; color: var(--muted);">Three days &middot; your first certification</p>
+          <p class="tnum" style="margin: 12px 0 0; font-size: 17px; font-weight: 650;">$595</p>
+        </div>
+      </div>
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;">
+        <div style="height: 140px; background: var(--primary-tint); position: relative; overflow: hidden;">
+          <svg width="100%" height="140" viewBox="0 0 360 140" preserveAspectRatio="none" fill="none"><path d="M0 84c48-20 96-8 144 4s96 16 144 2 60-14 72-12v62H0z" fill="#0e7490" opacity=".14"></path><path d="M0 112c48-12 96-6 144 2s96 10 144 0 60-8 72-6v32H0z" fill="#0e7490" opacity=".2"></path><circle cx="196" cy="38" r="4.8" fill="#0e7490" opacity=".22"></circle><circle cx="214" cy="24" r="3" fill="#0e7490" opacity=".18"></circle></svg>
+        </div>
+        <div style="padding: 18px 20px 20px;">
+          <p style="margin: 0; font-size: 16.5px; font-weight: 650;">Nitrox Diver</p>
+          <p style="margin: 4px 0 0; font-size: 13.5px; color: var(--muted);">Classroom &amp; two dives</p>
+          <p class="tnum" style="margin: 12px 0 0; font-size: 17px; font-weight: 650;">$150</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <h2 style="margin-top: 76px;">What divers say</h2>
+    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px;">
+      <div>
+        <span style="display: inline-flex; gap: 2px;">
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        </span>
+        <p style="margin: 10px 0 0; font-size: 17px; line-height: 1.5;">&#8220;Vis was unreal and the crew found us a turtle on the second tank.&#8221;</p>
+        <p style="margin: 8px 0 0; font-size: 13.5px; color: var(--muted);">Grace H. &middot; Two-Tank Reef — Molasses &amp; French &middot; Wed, Aug 26</p>
+      </div>
+      <div>
+        <span style="display: inline-flex; gap: 2px;">
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="13" height="13" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        </span>
+        <p style="margin: 10px 0 0; font-size: 17px; line-height: 1.5;">&#8220;Calm, unhurried briefing — exactly what I wanted for my first boat dive back.&#8221;</p>
+        <p style="margin: 8px 0 0; font-size: 13.5px; color: var(--muted);">Lars P. &middot; Wreck Trip — Duane &middot; Sun, Aug 23</p>
+      </div>
+    </div>
+
+    <!-- The other doors -->
+    <div style="margin-top: 72px;">
+      <div class="trow" style="min-height: 56px;">
+        <span style="font-size: 15px; font-weight: 600;">Nothing on a date that works? Ask for it.</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto;"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="trow" style="min-height: 56px;">
+        <span style="font-size: 15px; font-weight: 600;">Want a deal on a last-minute spot?</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto;"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="trow" style="min-height: 56px; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 15px; font-weight: 600;">Can&#8217;t find your booking link?</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto;"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top: 56px; padding: 26px 0 40px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);">
+      <span>Blue Mantis Divers &middot; 100 Ocean Drive, Key Largo, FL &middot; <span class="tnum">+1 305 555 0142</span> &middot; hello@demo.invalid</span>
+      <span style="margin-left: auto;">Powered by DiveDay</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

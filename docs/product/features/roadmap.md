@@ -136,6 +136,48 @@ a pixel snapshot).
 into Trip is an acceptable reading of one-home-per-action, and whether boat mode should hide the
 phone dock. Both want a `dive-domain-expert` review; 5a–5d and 5f do not depend on either.
 
+### 6. Clearwater — the surface language (design complete)
+
+The app-wide surface redesign — type-led hierarchy, grouped ledgers over card stacks, earned
+elevation, and five recomposed surfaces — argued in the Proposed ADR
+[20260827-clearwater-surface-language](../../architecture/decisions/20260827-clearwater-surface-language.md).
+Pictures live in
+[its canvas](../../design/canvases/20260827-clearwater-surface-language/README.md); the holistic
+passes are in [design/surfaces.md](../../design/surfaces.md). The trip/manifest surfaces are out of
+scope (item 5 owns them). Unranked against items 1–5; where it sits is an owner call.
+
+Sequenced so the language lands before the recompositions that speak it. **Each slice ends with the
+standing obligation**: the component that must not drift names the ADR in its doc comment, and a
+test pins the rule (never a pixel snapshot).
+
+- **6a. The language mechanics.** Flat-at-rest panels (shadow retires from resting cards), the
+  open-ledger and inset-group primitives, `Badge` as the only pill, the closed type ramp, tabular
+  figures. *Pins:* a test that `sectionCardClass` emits no shadow at rest, and that the group-label
+  spelling is single-sourced.
+- **6b. One chrome spec.** The 56px translucent header bar shared by both shells, its height a
+  token no child hard-codes. *Pins:* a test that no `top-[68px]`-style literal survives outside the
+  chrome component.
+- **6c. The home as the day's spine** (morning reading). Stations in clock order carrying their own
+  work rows; the desk group; collapsed horizons; the view switch dissolves. *Pins:* a test that a
+  departure's facts render once — no queue row repeats a station's title at equal weight.
+- **6d. The home's evening reading.** The spine closes: head-count results, recap/log state,
+  leftovers, the close act. **Blocked on the owner call** (concept-model row 1) for whether
+  Close-out's route then folds; this slice builds the reading without removing the route.
+- **6e. The week board.** Seven columns at desktop, spans for multi-day courses, the stream stays
+  on phone. *Pins:* a test that the phone width keeps the stream.
+- **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
+  history as one disclosure. *Pins:* a test that no row repeats its group's date.
+- **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
+  retire behind disclosure.
+- **6h. The counter instrument.** Count-led boarding queue, settled rows sink, ≥56px targets at
+  tablet. Safety-adjacent: `dive-domain-expert` review.
+- **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
+  shelves. Conversion surface: `conversion-reviewer` pass.
+
+**Two owner calls before 6d/6e ship their second halves** (both recorded in the ADR's
+Consequences): whether Close-out's route folds into the home, and whether the week board reaches
+tablet. Neither blocks 6a–6c or 6f–6i.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
