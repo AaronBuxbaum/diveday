@@ -3273,6 +3273,31 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-dive-packages", scheme);
       });
 
+      /**
+       * The Stripe Tax opt-in (issue #959, ADR
+       * 20260826-stripe-tax-is-opt-in-and-provider-owned). Its own capture for
+       * the same reason as the rows above — it is closed in
+       * `settings-payments`, and this is the only place a shop decides whether
+       * DiveDay adds tax to what it charges at all.
+       *
+       * Captured **off**, which is both the default and what every shop meets
+       * first: the decision this row is asking for is legible only if the
+       * paragraph explaining what turning it on does is in the picture. Opening
+       * a disclosure writes nothing, so this capture leaves the shared fixture's
+       * `shops.tax_enabled` exactly as it found it — the flag is shop-wide
+       * configuration a reset does not restore, and a spec that drove it would
+       * hand a taxed shop to whatever ran next in the worker (ADR
+       * 20260815-per-test-private-shops). `e2e/tax.spec.ts` drives it, on a
+       * shop of its own.
+       */
+      test(`the tax card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings");
+        await page.getByRole("heading", { name: "Sales tax & VAT" }).waitFor();
+        await openSettingsRow(page, "Sales tax & VAT");
+        await page.getByRole("button", { name: "Save tax setting" }).waitFor();
+        await capture(page, "settings-tax", scheme);
+      });
+
       // Where a shop connects its own WhatsApp Business number (ADR
       // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
       // credentials, so this captures the coming-soon state — which is what
