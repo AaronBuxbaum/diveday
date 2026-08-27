@@ -5,8 +5,8 @@
  * framework-free string logic with two consumers on opposite sides of the
  * layer boundary: the browser SDK wrappers in `src/app/observability.ts`
  * (which re-exports everything here, so every existing import still resolves),
- * and `src/lib/analytics-request-context.ts`, which redacts the page URL that
- * Vercel's *server* analytics composes for itself. `src/lib` may not import
+ * and `trackEvent` in `src/lib/analytics.ts`, whose `beforeSend` hook redacts
+ * the page URL Vercel's *server* analytics composes for itself. `src/lib` may not import
  * `src/app` (`pnpm check:architecture`), and the two halves must agree on what
  * a capability URL is, so the definition belongs on this side.
  */

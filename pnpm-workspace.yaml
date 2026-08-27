@@ -14,6 +14,9 @@ onlyBuiltDependencies:
   - esbuild
   - msw
 
+patchedDependencies:
+  '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
+
 publicHoistPattern:
   - '@img/*'
   - 'detect-libc'

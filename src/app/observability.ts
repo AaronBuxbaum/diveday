@@ -3,8 +3,8 @@
  *
  * The definition of a capability URL, and the redaction itself, live in
  * `src/lib/capability-urls.ts` — framework-free string logic that
- * `src/lib/analytics-request-context.ts` also needs, and `src/lib` may not
- * import `src/app`. Re-exported here so every existing import (and
+ * `src/lib/analytics.ts` also needs for the server-side seam, and `src/lib`
+ * may not import `src/app`. Re-exported here so every existing import (and
  * `observability.test.ts`, which anchors the route list to the `src/app`
  * directories on disk) keeps resolving from the same place it always did.
  */
