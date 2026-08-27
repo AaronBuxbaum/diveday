@@ -66,6 +66,15 @@ export type BuilderTrip = {
   boatName?: string | null;
   startsAt?: Date;
   endsAt?: Date;
+  /**
+   * Preformatted staff wind numbers in knots, from the same automated marine
+   * outlook the trip page and Today already read (issue #722) — the
+   * ICU-formatted `trips.conditions.automatedWind` text, server-rendered so
+   * the client never re-runs the forecast's own unit/direction formatting.
+   * Null when the site has no forecast coordinates or the departure is
+   * outside the provider's window.
+   */
+  windSummary?: string | null;
 };
 
 export type BuilderDay = {
@@ -151,6 +160,7 @@ export type BuilderCopy = {
   crewLabel: string;
   crewNobodyYet: string;
   crewMostlyAll: string;
+  windLabel: string;
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
@@ -1503,6 +1513,15 @@ export function ScheduleBuilder({
                               )}
                             </p>
                           )}
+                          {/* The number a captain actually calls a marginal
+                              morning on (issue #722) — informational only,
+                              same as the trip page's own outlook box; nothing
+                              here refuses or cancels a departure. */}
+                          {trip.windSummary ? (
+                            <p className="mt-1 text-sm text-muted">
+                              {copy.windLabel} {trip.windSummary}
+                            </p>
+                          ) : null}
                           {/* A returned departure is otherwise the only row here
                               that isn't upcoming, so it says why it is still on
                               the board rather than looking like a stale entry. */}

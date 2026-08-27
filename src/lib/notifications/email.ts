@@ -203,15 +203,41 @@ export function emailButton(url: string, label: string): string {
 }
 
 /**
+ * The bubble-trail mark, drawn as table cells rather than as `LogoMark`'s
+ * `<svg>` (`src/components/Logo.tsx`) or a rasterized `<img>`.
+ *
+ * Neither of those survives an inbox: Outlook's Word rendering engine strips
+ * `<svg>` outright (the defect this replaces, issue #770), and a remote
+ * `<img>` renders as a broken-image placeholder in every client that blocks
+ * images by default until the reader opts in — the same reasoning
+ * `wrapEmailHtml`'s own "never a logo image" test already holds the shop
+ * name to. A `<td>` with `border-radius` and a `background-color` is what the
+ * bulletproof-button primitive above already leans on for the same survival
+ * property, so three of them draw the mark the same way: three bubbles,
+ * ascending left to right via `valign`, sized and coloured to match
+ * `LOGO_MARK_CIRCLES`. A client with no `border-radius` support (old desktop
+ * Outlook) degrades to three small squares in the right colours rather than
+ * losing the mark entirely.
+ */
+const EMAIL_MARK_HTML =
+  '<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-right: 10px;"><tr>' +
+  '<td width="10" height="24" valign="bottom" style="width: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #008080; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  '<td width="3" style="width: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>' +
+  '<td width="7" height="24" valign="middle" style="width: 7px;"><div style="width: 7px; height: 7px; border-radius: 50%; background-color: #008080; opacity: 0.75; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  '<td width="3" style="width: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>' +
+  '<td width="4" height="24" valign="top" style="width: 4px;"><div style="width: 4px; height: 4px; border-radius: 50%; background-color: #ff6b6b; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  "</tr></table>";
+
+/**
  * Wraps a template's inner body fragment in a real HTML document — doctype,
  * `<html lang>`, a viewport meta tag, the brand palette from `docs/design/brand.md`,
- * and inlined bubble mark beside the shop name.
+ * and the table-safe bubble mark beside the shop name.
  */
 export function wrapEmailHtml(
   bodyHtml: string,
   options: { shopName: string; locale: string },
 ): string {
-  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;"><table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr><td style="vertical-align: middle;"><svg width="24" height="24" viewBox="0 0 24 24" style="display: block; margin-right: 10px;" aria-hidden="true"><circle cx="7" cy="17" r="5" fill="#008080" /><circle cx="15.5" cy="9" r="3.4" fill="#008080" opacity="0.75" /><circle cx="19.5" cy="4.5" r="2" fill="#ff6b6b" /></svg></td><td style="vertical-align: middle;"><p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p></td></tr></table><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></div></body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(options.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">${EMAIL_HEAD_STYLE}</head><body class="dd-page" style="margin: 0; padding: 0; background-color: ${BRAND_PAGE_COLOR}; color: ${BRAND_INK_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"><div style="max-width: 560px; margin: 0 auto; padding: 32px 20px;"><div class="dd-card" style="background-color: ${BRAND_CONTAINER_COLOR}; border: 1px solid ${BRAND_BORDER_COLOR}; border-radius: 16px; padding: 32px 24px;"><table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 24px;"><tr><td style="vertical-align: middle;">${EMAIL_MARK_HTML}</td><td style="vertical-align: middle;"><p class="dd-shop" style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: ${BRAND_PRIMARY_COLOR};">${escapeHtml(options.shopName)}</p></td></tr></table><div style="font-size: 15px; line-height: 1.6;">${bodyHtml}</div></div></div></body></html>`;
 }
 
 export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): NotificationEmail {
