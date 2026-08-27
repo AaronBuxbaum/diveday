@@ -17,15 +17,21 @@ import { useEffect, useRef } from "react";
 export function AutoOpenDetails({
   openOnHash,
   open,
+  id,
   className,
   children,
 }: {
-  /** The fragment (no leading "#") of an anchor inside `children` — the id
-   * belongs to that inner element, not to this `<details>` itself. */
+  /** The fragment (no leading "#") this disclosure answers to — usually an
+   * anchor inside `children`, or this element itself when `id` names it. */
   openOnHash: string;
   /** Server-decided initial state (e.g. "this section just saved") — the hash
    * check can only ever open, never close, so the two compose. */
   open?: boolean;
+  /** The `<details>`'s own fragment target, when the anchor *is* this element
+   * — a deep link then scopes to the whole disclosure, and the hash check
+   * below is what opens it (the native reveal only opens a target's
+   * ancestors). */
+  id?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -48,7 +54,7 @@ export function AutoOpenDetails({
   }, [openOnHash]);
 
   return (
-    <details ref={ref} open={open} className={className}>
+    <details ref={ref} id={id} open={open} className={className}>
       {children}
     </details>
   );
