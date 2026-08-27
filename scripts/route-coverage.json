@@ -111,7 +111,7 @@
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["schedule", "schedule-embed"]
+    "visual": ["schedule", "schedule-above-level", "schedule-embed"]
   },
   "/s/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],

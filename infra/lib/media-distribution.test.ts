@@ -115,10 +115,10 @@ describe("media distribution", () => {
         ),
     );
     expect(policies).toHaveLength(1);
+    const policy = policies[0];
+    if (!policy) throw new Error("expected a media bucket policy");
     const statements = (
-      policies[0]?.Properties as {
-        PolicyDocument: { Statement: Array<Record<string, unknown>> };
-      }
+      policy.Properties as { PolicyDocument: { Statement: Array<Record<string, unknown>> } }
     ).PolicyDocument.Statement;
     const reads = statements.filter(
       (statement) =>

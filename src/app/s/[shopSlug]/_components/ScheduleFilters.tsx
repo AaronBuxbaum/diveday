@@ -10,6 +10,12 @@ export type ScheduleFiltersCopy = {
   funDive: string;
   course: string;
   hasSpace: string;
+  /** "What can you dive?" — the one question a diver can answer about themselves. */
+  canDive: string;
+  canDiveUnsaid: string;
+  /** Each declarable level, in ladder order, already worded for this reader. */
+  canDiveLevels: ReadonlyArray<{ value: string; label: string }>;
+  hideAboveLevel: string;
 };
 
 /**
@@ -40,12 +46,33 @@ export function ScheduleFilters({
   month,
   tripTypeFilter,
   hasSpaceFilter,
+  canDiveFilter,
+  hideAboveFilter,
+  aboveLevelNotice,
   copy,
 }: {
   embed: boolean;
   month: string | null;
   tripTypeFilter: string | null;
   hasSpaceFilter: boolean;
+  /**
+   * The level the reader has stated, or null for unsaid. A **stated
+   * preference**, never a gate: it dims and counts, and nothing downstream of it
+   * touches admission or readiness (issue #696).
+   */
+  canDiveFilter: string | null;
+  hideAboveFilter: boolean;
+  /**
+   * How many departures ask for more than the stated level, already worded with
+   * its count — or null when there is nothing to say. Said **once**, here, beside
+   * the control that caused it, rather than repeated on every card
+   * (design/principles.md #9); each dimmed card wears a two-word chip instead.
+   *
+   * It lives inside the form rather than between the form and the list because
+   * the list is addressed as `form + ul` across this suite, and an element
+   * sibling in between silently breaks every one of those locators.
+   */
+  aboveLevelNotice: string | null;
   copy: ScheduleFiltersCopy;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -76,6 +103,27 @@ export function ScheduleFilters({
           </select>
         </Field>
       </FieldGrid>
+      {/* The one thing a diver arriving here knows about themselves, and until
+          now the one thing the filters never asked. Unsaid by default: this is
+          an anonymous page, the answer is a fact about a person, and it is
+          carried in the URL and nowhere else. */}
+      <FieldGrid columns={1} className="min-w-44">
+        <Field label={copy.canDive}>
+          <select
+            name="canDive"
+            defaultValue={canDiveFilter ?? ""}
+            onChange={submit}
+            className={controlClass}
+          >
+            <option value="">{copy.canDiveUnsaid}</option>
+            {copy.canDiveLevels.map((level) => (
+              <option key={level.value} value={level.value}>
+                {level.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </FieldGrid>
       <label className="flex min-h-11 items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -87,6 +135,26 @@ export function ScheduleFilters({
         />
         {copy.hasSpace}
       </label>
+      {/* Opt-in, and only once a level is stated. Marking rather than hiding is
+          the default because a shop will happily take an Open Water diver on an
+          Advanced charter as a guided dive, or sell them the specialty — a
+          filter that silently removes those trips costs the shop the sale and
+          the diver the option. This is for the reader who wants the shorter
+          list anyway. */}
+      {canDiveFilter ? (
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="hideAbove"
+            value="1"
+            defaultChecked={hideAboveFilter}
+            onChange={submit}
+            className="size-4"
+          />
+          {copy.hideAboveLevel}
+        </label>
+      ) : null}
+      {aboveLevelNotice ? <p className="w-full text-sm text-muted">{aboveLevelNotice}</p> : null}
     </QueryForm>
   );
 }

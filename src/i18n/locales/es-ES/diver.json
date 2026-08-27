@@ -99,7 +99,12 @@
       "funDive": "Inmersión recreativa",
       "course": "Curso",
       "hasSpace": "Con plazas",
-      "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno."
+      "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno.",
+      "canDive": "¿Qué puedes bucear?",
+      "canDiveUnsaid": "Prefiero no decirlo",
+      "hideAboveLevel": "Ocultar las que piden más",
+      "aboveLevelChip": "Por encima de tu nivel",
+      "aboveLevelCount": "{count, plural, one {# salida pide más que {level}. Se puede reservar igualmente: pregunta al centro.} other {# salidas piden más que {level}. Se pueden reservar igualmente: pregunta al centro.}}"
     },
     "showLater": "Ver salidas posteriores",
     "showEarlier": "Ver salidas anteriores",

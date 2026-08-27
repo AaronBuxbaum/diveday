@@ -1319,6 +1319,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule", scheme);
       });
 
+      /**
+       * The same board read by someone who has said what they can dive.
+       *
+       * The whole design decision is visual and lives nowhere else: the
+       * departures above the stated level are **dimmed and marked**, not
+       * removed, with the count said once in the filter row and a two-word chip
+       * on each card (issue #696). A capture is the only thing that can tell a
+       * dimmed-and-still-there card from a missing one.
+       */
+      test(`the public schedule marks what a diver cannot dive (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis?canDive=open_water");
+        await publicReefCard(page).getByRole("link").waitFor();
+        await page.getByText("Above your level").first().waitFor();
+        await capture(page, "schedule-above-level", scheme);
+      });
+
       // A departure that no longer exists, which is what a link on a flyer or
       // in last season's Instagram post resolves to. It is a *shop* surface
       // now rather than DiveDay's app-wide 404 (issue #765), so the thing to
