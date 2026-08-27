@@ -23,7 +23,8 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * Visual regression coverage. A hundred and sixty key surfaces × light/dark, each
  * captured at a phone and a desktop viewport — 640 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
- * adding a surface; each `capture()` call costs 4 screenshots per CI run.
+ * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
+ * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
  * has drifted from it before (it read 48 while the grep said 56, 71 while the
  * grep said 72, 83 while the grep said 93, and 98 while the grep said 108), so
@@ -58,7 +59,8 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * docs/product/archive/comprehensive-review-20260802.md).
  *
  * So the rule is now: **one surface, one `test()`.** A surface that breaks
- * loses exactly its own four PNGs, every sibling is still shot in the same run,
+ * loses exactly its own PNGs — four, or six for a `TABLET_SURFACES` one —
+ * every sibling is still shot in the same run,
  * and the reg-suit report shows the whole blast radius at once. The handful of
  * groups left are the ones where a second test could not reproduce the state
  * without re-running the same one-shot setup *and* changing what the baseline

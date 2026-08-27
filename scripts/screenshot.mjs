@@ -87,7 +87,7 @@ if (
   viewports.some((viewport) => Number.isNaN(viewport.width))
 ) {
   console.error(
-    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>] [--as owner|instructor|divemaster|captain]\n" +
+    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain]\n" +
       "Writes <out>/<path>[-<role>]-<scheme>-<width>.png; the role appears only when it is not the default owner.",
   );
   process.exit(1);
