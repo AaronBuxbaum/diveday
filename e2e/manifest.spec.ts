@@ -990,6 +990,13 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   await page.getByRole("link", { name: "After dive 1" }).click();
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
 
+  // The dive log is collapsed to a summary line now (#1055) — it stays on the
+  // boat, where the numbers are, but the form is one tap in rather than a third
+  // of the screen at every checkpoint.
+  const summary = page.locator("summary").filter({ hasText: "Dive 1" });
+  await expect(summary).toContainText("not recorded yet");
+  await summary.click();
+
   const log = page.locator("form").filter({ hasText: "Dive 1" });
   await log.getByLabel("Entered the water").fill("2026-07-21T14:35");
   await log.getByLabel("Exited the water").fill("2026-07-21T14:05");
@@ -1006,4 +1013,8 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   await log.getByLabel("Exited the water").fill("2026-07-21T15:05");
   await log.getByRole("button", { name: "Save dive record" }).click();
   await expect(log.getByText("Dive record saved.")).toBeVisible();
+  // And the summary now states the record rather than its absence, which is
+  // what the collapsed row is for.
+  await expect(summary).not.toContainText("not recorded yet");
+  await expect(summary).toContainText("27");
 });

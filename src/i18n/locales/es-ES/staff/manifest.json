@@ -39,8 +39,10 @@
   "noCrew": "Todavía no hay tripulación en esta salida. Añade a quien llevó el barco para completar este control.",
   "executedDive": {
     "heading": "Lo que ocurrió bajo el agua",
-    "description": "Registra el sitio real, los horarios, la profundidad y las condiciones después de cada inmersión. Los campos desconocidos quedan indicados.",
     "dive": "Inmersión {number}",
+    "summaryNotRecorded": "{dive} — sin registrar todavía",
+    "summaryRecorded": "{dive} — {detail}",
+    "summaryDepth": "{depth} {unit}",
     "plannedSite": "Sitio previsto: {site}",
     "actualSite": "Sitio real",
     "unknown": "Sin registrar",

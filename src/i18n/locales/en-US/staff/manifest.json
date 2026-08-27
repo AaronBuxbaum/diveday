@@ -39,8 +39,10 @@
   "noCrew": "Nobody is on this trip's crew yet. Add whoever ran the boat to complete this checkpoint.",
   "executedDive": {
     "heading": "What happened underwater",
-    "description": "Record the actual site, times, depth, and conditions after each dive. Unknown fields stay explicitly unknown.",
     "dive": "Dive {number}",
+    "summaryNotRecorded": "{dive} — not recorded yet",
+    "summaryRecorded": "{dive} — {detail}",
+    "summaryDepth": "{depth} {unit}",
     "plannedSite": "Planned site: {site}",
     "actualSite": "Actual site",
     "unknown": "Not recorded",

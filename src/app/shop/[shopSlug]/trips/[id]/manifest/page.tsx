@@ -20,13 +20,14 @@ import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import type { ExecutedDive } from "@/db/schema";
 import { listTripDives } from "@/db/trips";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import type { DepthUnit } from "@/lib/depth-units";
-import { formatDateTimeTz } from "@/lib/format";
+import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
+import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   isRollCallCheckpoint,
@@ -79,6 +80,57 @@ export const metadata: Metadata = {
 };
 
 /**
+ * The one line a collapsed dive shows: "Dive 1 — not recorded yet", or
+ * "Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47".
+ *
+ * Composed here rather than in the component for the reason `diveLabel` is: it
+ * needs the translator, the shop's depth unit and the shop's zone, and
+ * `ExecutedDiveLog` is a Client Component with none of them.
+ *
+ * Every part is optional except the site, which always resolves — a saved row
+ * with no actual site means staff recorded it as unknown, and that is itself
+ * the answer. A part nobody entered is simply absent; the line never invents a
+ * dash or a zero to stand in for it.
+ */
+function executedDiveSummary({
+  diveLabel,
+  row,
+  locale,
+  timeZone,
+  depthUnit,
+  t,
+}: {
+  diveLabel: string;
+  row?: { executed: ExecutedDive; actualSite: { id: string; name: string } | null };
+  locale: string;
+  timeZone: string;
+  depthUnit: DepthUnit;
+  t: StaffTranslator;
+}): string {
+  if (!row) return t("manifest.executedDive.summaryNotRecorded", { dive: diveLabel });
+  const parts: string[] = [row.actualSite?.name ?? t("manifest.executedDive.unknown")];
+  const depth = row.executed.maxDepthMeters;
+  if (depth != null && !row.executed.notRecorded.includes("depth")) {
+    parts.push(
+      t("manifest.executedDive.summaryDepth", {
+        depth: depthInUnit(depth, depthUnit),
+        unit: depthUnit === "feet" ? "ft" : "m",
+      }),
+    );
+  }
+  const { enteredAt, exitedAt } = row.executed;
+  if (enteredAt && exitedAt) {
+    parts.push(formatTimeRange(enteredAt, exitedAt, locale, timeZone));
+  } else if (enteredAt) {
+    parts.push(formatTime(enteredAt, locale, timeZone));
+  }
+  return t("manifest.executedDive.summaryRecorded", {
+    dive: diveLabel,
+    detail: parts.join(", "),
+  });
+}
+
+/**
  * The dive log's words, resolved here and handed down: `ExecutedDiveLog` is a
  * Client Component (it shows a typed refusal beside the field that caused it),
  * and `staffTranslator` is server-side only.
@@ -86,7 +138,6 @@ export const metadata: Metadata = {
 function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedDiveLabels {
   return {
     heading: t("manifest.executedDive.heading"),
-    description: t("manifest.executedDive.description"),
     actualSite: t("manifest.executedDive.actualSite"),
     unknown: t("manifest.executedDive.unknown"),
     maxDepth: t("manifest.executedDive.maxDepth", { unit: depthUnit === "feet" ? "ft" : "m" }),
@@ -502,6 +553,14 @@ export default async function TripManifestPage({
             diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
             plannedSiteLabel: t("manifest.executedDive.plannedSite", {
               site: diveSite?.name ?? t("manifest.executedDive.unknown"),
+            }),
+            summaryLine: executedDiveSummary({
+              diveLabel: t("manifest.executedDive.dive", { number: dive.diveNumber }),
+              row: executedDives.find((entry) => entry.executed.diveNumber === dive.diveNumber),
+              locale,
+              timeZone: shop.timezone,
+              depthUnit: shop.depthUnit,
+              t,
             }),
           }))}
           executed={executedDives}
