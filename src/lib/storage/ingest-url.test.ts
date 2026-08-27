@@ -6,7 +6,7 @@ const lookupPublic = vi.fn(async () => PUBLIC_ADDR);
 
 const storeStub = vi.fn(async (upload: { filename: string; contentType: string }) => ({
   status: "stored" as const,
-  url: `https://example.public.blob.vercel-storage.com/dive-sites/x-${upload.filename}`,
+  url: `https://diveday-media.s3.us-east-1.amazonaws.com/dive-sites/x-${upload.filename}`,
 }));
 
 const TINY_JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]).buffer;
@@ -30,12 +30,28 @@ describe("ingestImageUrl — passthrough", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("passes an already-managed blob URL through unchanged, never re-fetching", async () => {
+  it("passes a URL already on our own media host through unchanged, never re-fetching", async () => {
     const fetchImpl = vi.fn();
-    const url = "https://store123.public.blob.vercel-storage.com/dive-sites/abc-photo.jpg";
-    const result = await ingestImageUrl(url, storeStub, { fetchImpl });
+    const env = { MEDIA_BUCKET_NAME: "diveday-media", MEDIA_AWS_REGION: "us-east-1" };
+    const url = "https://diveday-media.s3.us-east-1.amazonaws.com/dive-sites/abc-photo.jpg";
+    const result = await ingestImageUrl(url, storeStub, { fetchImpl, env });
     expect(result).toEqual({ status: "unchanged", url });
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The passthrough is what puts a URL on a public briefing page without this
+   * app ever having fetched it, so it must mean "our bucket", not "a bucket".
+   */
+  it("re-stores a foreign S3 or CloudFront URL rather than trusting its shape", async () => {
+    const env = { MEDIA_BUCKET_NAME: "diveday-media", MEDIA_AWS_REGION: "us-east-1" };
+    for (const url of [
+      "https://attacker.s3.us-east-1.amazonaws.com/dive-sites/photo.jpg",
+      "https://d1234.cloudfront.net/dive-sites/photo.jpg",
+    ]) {
+      const result = await ingestImageUrl(url, storeStub, { env, lookup: lookupPublic });
+      expect(result.status).not.toBe("unchanged");
+    }
   });
 });
 

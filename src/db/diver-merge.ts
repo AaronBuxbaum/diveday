@@ -31,7 +31,22 @@ export type DiverMergeResult =
   | { ok: true; survivorId: string; mergedPersonId: string }
   | { ok: false; reason: DiverMergeRefusal };
 
-const DIVER_HISTORY_TABLES = [
+/**
+ * One row per person by construction, so the blanket repoint below cannot move
+ * them: a diver fitted at the counter under each of their two records -- an
+ * ordinary way to end up with duplicates in the first place -- made
+ * `update ... set person_id = survivor` raise 23505 and rolled the whole merge
+ * back to `record_conflict`. The merge was then permanently impossible through
+ * the UI, with nothing telling the staffer which row to delete to unblock it.
+ *
+ * The survivor is the record the shop chose to keep, so the survivor's row
+ * wins and the source's is dropped. Both are current-state rows a staffer can
+ * re-enter, not history: a fit profile is the diver's sizes today, and a
+ * last-minute-list entry is a standing "tell me when a seat frees".
+ */
+const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
+
+export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
   "bookings",
   "internal_notes",
@@ -48,6 +63,11 @@ const DIVER_HISTORY_TABLES = [
   "prior_visits",
   "imported_payment_history",
   "rental_fit_profiles",
+  // A bookingless counter rental names the diver directly (the other shape
+  // names a booking, which this merge moves anyway). Leaving it behind put the
+  // unit on a removed diver's record: the survivor's prep page showed no gear
+  // and the reservation still held the window.
+  "gear_reservations",
   "prior_gear_assignments",
   "nitrox_certifications",
   "trip_reviews",
@@ -55,14 +75,34 @@ const DIVER_HISTORY_TABLES = [
 ] as const;
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
-const STAFF_HISTORY_TABLES = [
+export const STAFF_HISTORY_TABLES = [
   "staff_shifts",
+  "staff_credentials",
   "account_sessions",
   "calendar_feeds",
   "roll_call_crew_events",
   "push_subscriptions",
 ] as const;
-const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
+export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
+
+/**
+ * The rest of the `person_id` columns in the schema, each left where it is on
+ * purpose. Stated rather than merely absent so `diver-merge.test.ts` can hold
+ * the three lists above exhaustive against the live database: a table added
+ * tomorrow with a `person_id` fails that test until somebody decides which of
+ * these four answers it deserves.
+ */
+export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
+  // Each identity keeps its own roles. The source row survives soft-deleted
+  // and still reads as a diver, which is what lets the pointer resolve.
+  person_roles: "a role belongs to the identity, not to its history",
+  // Minted seconds before an OAuth callback consumes it, and staff-only.
+  integration_oauth_states: "ephemeral staff OAuth state, consumed within minutes",
+  // Names an already-anonymized person as provenance for an erasure that is
+  // still owed. `mergeDiverRecords` refuses an anonymized person outright, so
+  // no row here can ever belong to either side of a merge.
+  processor_erasure_obligations: "provenance for an erasure, and anonymized rows never merge",
+};
 
 function quotedTable(tableName: string) {
   // The only callers pass the two static lists above; quoting here keeps the
@@ -209,10 +249,30 @@ export async function listDiverMergeDuplicateIds(db: AppDb, shopId: string): Pro
   return [...duplicateIds].sort();
 }
 
-function newestDate(left: Date | null, right: Date | null): Date | null {
-  if (!left) return right;
-  if (!right) return left;
-  return left >= right ? left : right;
+type NoCertificationStamp = {
+  noCertificationDeclaredAt: Date | null;
+  noCertificationClearedAt: Date | null;
+  noCertificationClearedByPersonId: string | null;
+};
+
+/** Whichever record declared more recently, with that record's own clear. */
+function noCertificationStamp(
+  survivor: NoCertificationStamp,
+  source: NoCertificationStamp,
+): NoCertificationStamp {
+  const pick =
+    survivor.noCertificationDeclaredAt && source.noCertificationDeclaredAt
+      ? survivor.noCertificationDeclaredAt >= source.noCertificationDeclaredAt
+        ? survivor
+        : source
+      : survivor.noCertificationDeclaredAt
+        ? survivor
+        : source;
+  return {
+    noCertificationDeclaredAt: pick.noCertificationDeclaredAt,
+    noCertificationClearedAt: pick.noCertificationClearedAt,
+    noCertificationClearedByPersonId: pick.noCertificationClearedByPersonId,
+  };
 }
 
 function oldestDate(left: Date | null, right: Date | null): Date | null {
@@ -349,22 +409,33 @@ export async function mergeDiverRecords(input: {
           diveInsurance: survivor.diveInsurance ?? source.diveInsurance,
           locale: survivor.locale ?? source.locale,
           spokenLanguages: mergedSpokenLanguages,
-          noCertificationDeclaredAt: newestDate(
-            survivor.noCertificationDeclaredAt,
-            source.noCertificationDeclaredAt,
-          ),
-          noCertificationClearedAt: newestDate(
-            survivor.noCertificationClearedAt,
-            source.noCertificationClearedAt,
-          ),
-          noCertificationClearedByPersonId:
-            survivor.noCertificationClearedByPersonId ?? source.noCertificationClearedByPersonId,
+          // Carried as a unit, never column by column. Readers ask this pair
+          // structurally -- `declared is not null and cleared is null` means
+          // the diver's "I hold no card" stamp still stands -- and
+          // `recordNoCertification` keeps that true by nulling `cleared_at`
+          // whenever a fresh declaration arrives. Maxing the two columns
+          // separately could pair a survivor's live declaration with the
+          // *other* record's older clear, which reads as no declaration at
+          // all: the stamp vanishes from the record, the certification send
+          // lists and the export, with nothing saying so.
+          ...noCertificationStamp(survivor, source),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,
           ),
         })
         .where(eq(people.id, survivor.id));
+
+      // Drop the source's singleton where the survivor already holds one, so
+      // the repoint below has room. Sequential, never a fan-out: this is one
+      // checked-out client (`scripts/check-db-concurrency.mjs`).
+      for (const tableName of SINGLETON_PER_PERSON_TABLES) {
+        if (await hasPersonRow(tx, tableName, input.shopId, survivor.id)) {
+          await tx.execute(
+            sql`delete from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}`,
+          );
+        }
+      }
 
       for (const tableName of DIVER_HISTORY_TABLES) {
         await tx.execute(

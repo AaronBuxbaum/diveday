@@ -12,6 +12,17 @@ import { minorToMajor, toShopCurrency } from "@/lib/money";
 import { type RentalPricing, toRentableKinds } from "@/lib/rentals";
 
 export const SHOPIFY_API_VERSION = "2026-07";
+
+/**
+ * A per-request ceiling on every outbound call.
+ *
+ * The dispatcher drains up to 50 deliveries in one sequential pass inside a
+ * 300-second cron, and `fetch` has no default timeout: one endpoint that
+ * accepts a connection and never answers holds the whole outbox until the
+ * function is killed, and every delivery behind it stays due. A hung request
+ * is a failure that retries, not a queue that stops.
+ */
+const REQUEST_TIMEOUT_MS = 15_000;
 export const SHOPIFY_OAUTH_SCOPES = ["write_products"] as const;
 
 export type ShopifyConfig = {
@@ -88,6 +99,7 @@ export async function exchangeShopifyCode(
   let response: Response;
   try {
     response = await fetchImpl(`https://${shopDomain}/admin/oauth/access_token`, {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -135,6 +147,7 @@ export async function shopifyGraphql(
   const response = await fetchImpl(
     `https://${input.credentials.shopDomain}/admin/api/${input.apiVersion}/graphql.json`,
     {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       method: "POST",
       headers: {
         "content-type": "application/json",

@@ -229,9 +229,11 @@ the Aurora floor, the manifest connection ceiling actually being hit in producti
 requirement that the database not be reachable from the public internet. Absent one of those, Neon
 is currently both cheaper and better at the thing we most need it to be good at.
 
-### AWS-8 — Object storage: Vercel Blob → S3 + CloudFront *(Delivered 2026-08-26)*
+### AWS-8 — Object storage: Vercel Blob → S3 *(Writing delivered 2026-08-26; reading not yet)*
 
-**Status: Delivered.** Vercel Blob has been completely removed and replaced by AWS S3 (`MediaStorageBucket` + `diveday-media-uploader` IAM User with SigV4 signed requests in `src/lib/storage/s3.ts`).
+**Status: Half delivered, and the half that is missing is the one a diver sees.** Vercel Blob has been completely removed and replaced by AWS S3 (`MediaStorageBucket` + `diveday-media-uploader` IAM User with SigV4 signed requests in `src/lib/storage/s3.ts`). Uploads work.
+
+**What does not work: serving.** `MediaStorageBucket` is `BLOCK_ALL`, carries no bucket policy, and has no CloudFront distribution in front of it — while `MEDIA_PUBLIC_URL_BASE` is set to the bucket's own REST endpoint and that URL is what the app stores in every `*_image_url` column and renders to browsers. Every photo uploaded since the cutover answers 403 to every viewer. This heading said "S3 + CloudFront" and "Delivered" from the day it landed; the CloudFront half was never built. Do **not** close the gap by making the bucket public: it also holds `import-waivers/` and `import-receipts/`, which are medical and financial scans. See the tracking issue for the two-prefix / signed-read options.
 
 The seam is provider-neutral: `ImageStorageProvider` in `src/lib/storage/`, `isManagedStorageUrl` in `blob-host.ts`, and S3 `remotePatterns` in `next.config.ts`. S3 bucket `diveday-media` and the scoped IAM uploader credential exist in the stack.
 

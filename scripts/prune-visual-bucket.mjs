@@ -85,25 +85,41 @@ async function main() {
     repo,
     branch,
     explicitCommit: args.explicitCommit,
+    s3Client,
     git: gitReader(),
   });
 
-  const { activeBaseline, source } = baselineResult;
+  const { activeBaseline, keepShas, verified, source } = baselineResult;
   console.log(`Preserving active baseline: ${activeBaseline} (resolved via ${source})`);
+  if (!verified) {
+    console.error(
+      `prune-visual-bucket: no commit on ${branch} has a published snapshot in "${bucket}".\n` +
+        "Nothing was deleted. That usually means the probe cannot read the bucket, not that\n" +
+        "every baseline is gone -- check credentials first, then re-run with --keep <sha>.",
+    );
+    process.exit(1);
+  }
+  console.log(`Preserving ${keepShas.length} recent main baseline(s)`);
 
   const pruneResult = await pruneVisualBucket({
     s3Client,
     bucket,
-    keepShas: [activeBaseline],
+    keepShas,
     dryRun: args.dryRun,
     log: (msg) => console.log(`  ${msg}`),
   });
 
-  const totalPrefixes = pruneResult.keptPrefixes.length + pruneResult.deletedPrefixes.length;
+  const totalPrefixes =
+    pruneResult.keptPrefixes.length +
+    pruneResult.keptRecentPrefixes.length +
+    pruneResult.deletedPrefixes.length;
   console.log("\nPruning summary:");
   console.log(`  Total snapshot prefixes found: ${totalPrefixes}`);
   console.log(
     `  Preserved active prefixes:     ${pruneResult.keptPrefixes.length} (${pruneResult.keptPrefixes.join(", ") || "none"})`,
+  );
+  console.log(
+    `  Preserved as too recent:       ${pruneResult.keptRecentPrefixes.length} (younger than the prune floor)`,
   );
   console.log(
     `  ${args.dryRun ? "Stale prefixes to delete:" : "Deleted stale prefixes:"}     ${pruneResult.deletedPrefixes.length}`,
@@ -114,6 +130,12 @@ async function main() {
   console.log(
     `  ${args.dryRun ? "Storage to reclaim:" : "Storage reclaimed:"}          ${Math.round(pruneResult.deletedBytesTotal / (1024 * 1024))} MB`,
   );
+  if (pruneResult.deleteErrors.length > 0) {
+    console.error(
+      `  S3 refused ${pruneResult.deleteErrors.length} deletes -- see the lines above.`,
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

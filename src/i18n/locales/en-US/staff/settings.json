@@ -855,7 +855,8 @@
       "codeInvalid": "That code was not accepted.",
       "stepUpRequired": "Verify with your authenticator before continuing.",
       "unavailable": "Security setup is unavailable until the deployment encryption key is configured.",
-      "invalid": "That security change could not be completed."
+      "invalid": "That security change could not be completed.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes and try again."
     }
   },
   "embed": {

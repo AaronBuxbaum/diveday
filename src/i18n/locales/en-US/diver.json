@@ -78,12 +78,6 @@
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
     "conservationCommitmentsHeading": "Shop-stated conservation commitments",
     "conservationCommitmentsDisclaimer": "These are the shop's claims; DiveDay does not verify or endorse them.",
-    "conservationCommitmentAwarePartner": "Works with AWARE",
-    "conservationCommitmentGreenFinsMember": "Green Fins member",
-    "conservationCommitmentReefCleanup": "Supports reef cleanups",
-    "conservationCommitmentMooringBuoys": "Supports mooring buoys",
-    "conservationCommitmentNoGloves": "No gloves on the reef",
-    "conservationCommitmentWildlifeDistance": "Keeps a respectful distance from wildlife",
     "siteConservationNote": "Shop note: {note}"
   },
   "schedule": {

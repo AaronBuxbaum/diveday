@@ -97,6 +97,13 @@ export default defineConfig({
       // the behaviour. Not a secret: it seals nothing outside a test database,
       // and production derives its own from the stack seed.
       SECRET_ENCRYPTION_KEY: "ZGl2ZWRheS10ZXN0LW9ubHktc2VhbGluZy1rZXktMDE=",
+      // Same reasoning as the sealing key: `isManagedStorageUrl` now derives
+      // "one of ours" from the configured bucket rather than from a hostname
+      // suffix, so without a bucket name the suite would prove the
+      // no-storage-configured fallback instead of the behaviour. No
+      // credentials, so nothing here can reach a real bucket.
+      MEDIA_BUCKET_NAME: "diveday-media",
+      MEDIA_AWS_REGION: "us-east-1",
       DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
     },
   },

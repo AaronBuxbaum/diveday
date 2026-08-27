@@ -10,6 +10,7 @@ import {
   getShopIntegration,
   INTEGRATION_PROVIDER_REGISTRY,
   integrationCallbackUrl,
+  normalizeShopifyDomain,
   normalizeZapierEventTypes,
   normalizeZapierWebhookUrl,
   quickBooksAuthorizationUrl,
@@ -75,16 +76,24 @@ export async function startShopifyConnectionAction(formData: FormData): Promise<
   const appHost = publicAppUrl();
   if (!parsed.success || !config || !appHost || secureStorageNotice())
     done(path, !parsed.success ? "invalid" : "not-configured");
+  // Normalized *before* the state row is minted. The schema only bounds the
+  // length, and `shopifyAuthorizationUrl` throws on anything that is not
+  // `*.myshopify.com` -- so a shop typing its own name or its storefront
+  // domain, which is the likeliest first attempt, got Next's error boundary
+  // instead of the refusal this action already has a notice for, and left an
+  // orphaned OAuth state row behind it.
+  const shopDomain = normalizeShopifyDomain(parsed.data.shopDomain);
+  if (!shopDomain) done(path, "invalid");
   const state = await createIntegrationOAuthState(db, {
     shopId: session.user.shopId,
     personId: session.user.personId,
     provider: "shopify",
-    context: { shopDomain: parsed.data.shopDomain },
+    context: { shopDomain },
   });
   redirect(
     shopifyAuthorizationUrl({
       config,
-      shopDomain: parsed.data.shopDomain,
+      shopDomain,
       state,
       redirectUri: integrationCallbackUrl(appHost, "shopify"),
     }),
@@ -172,12 +181,17 @@ export async function syncShopifyCatalogAction(): Promise<void> {
   const { db, session, path } = await integrationContext();
   const config = shopifyConfigFromEnvironment();
   if (!config) done(path, "not-configured");
+  // `done()` throws to unwind the action (Next's `redirect()` sentinel), so it
+  // must sit outside the `try` -- inside, the bare `catch` swallowed the
+  // *success* redirect and the only outcome this button could produce was
+  // "failed", after a sync that had already pushed the whole catalog.
+  let synced: number;
   try {
-    const result = await syncShopifyCatalog(db, session.user.shopId, config);
-    done(path, "sync-complete", { count: result.synced });
+    synced = (await syncShopifyCatalog(db, session.user.shopId, config)).synced;
   } catch {
     done(path, "failed");
   }
+  done(path, "sync-complete", { count: synced });
 }
 
 export async function testZapierIntegrationAction(): Promise<void> {

@@ -1,21 +1,28 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import {
+  DIVER_HISTORY_TABLES,
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
+  PERSON_TABLES_DELIBERATELY_UNMOVED,
+  STAFF_HISTORY_TABLES,
+  STAFF_PERSON_ONLY_TABLES,
 } from "./diver-merge";
 import {
   activityEvents,
   bookings,
   certifications,
+  gearItems,
+  gearReservations,
   internalNotes,
   people,
   personRoles,
   priorVisits,
   rentalFitProfiles,
+  shops,
   trips,
 } from "./schema";
 
@@ -223,5 +230,283 @@ describe("diver record merge", () => {
         actorPersonId: source.id,
       }),
     ).toEqual({ ok: false, reason: "not_authorized" });
+  });
+});
+
+/**
+ * The merge moves history table by table from a hard-coded list, so a table
+ * added tomorrow with a `person_id` is silently forgotten: no error, no failing
+ * test, just a row left pointing at a diver the shop just removed. That is how
+ * `gear_reservations` was missed. This holds the four answers exhaustive
+ * against the live schema, which is the only place the truth is.
+ */
+describe("every person_id column in the schema has a merge answer", () => {
+  it("classifies each one as moved, refused, or deliberately left alone", async () => {
+    const { db } = await seededShopContext();
+    const result = await db.execute(sql`
+      select table_name
+      from information_schema.columns
+      where table_schema = 'public' and column_name = 'person_id'
+      order by table_name
+    `);
+    const inSchema = result.rows.map((row) => String((row as { table_name: string }).table_name));
+    expect(inSchema.length).toBeGreaterThan(20);
+
+    const classified = new Set<string>([
+      ...DIVER_HISTORY_TABLES,
+      ...STAFF_HISTORY_TABLES,
+      ...STAFF_PERSON_ONLY_TABLES,
+      ...Object.keys(PERSON_TABLES_DELIBERATELY_UNMOVED),
+    ]);
+    expect(inSchema.filter((table) => !classified.has(table))).toEqual([]);
+    // And nothing is classified that the schema no longer has.
+    expect([...classified].filter((table) => !inSchema.includes(table)).sort()).toEqual([]);
+  });
+
+  it("moves a bookingless counter rental onto the survivor", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const [item] = await db
+      .insert(gearItems)
+      .values({
+        shopId: shop.id,
+        kind: "bcd",
+        label: "BCD-07",
+        size: "M",
+      })
+      .returning();
+    if (!item) throw new Error("gear fixture insert failed");
+    const [reservation] = await db
+      .insert(gearReservations)
+      .values({
+        shopId: shop.id,
+        gearItemId: item.id,
+        personId: source.id,
+        reservedFrom: "2026-09-01",
+        reservedUntil: "2026-09-02",
+      })
+      .returning();
+    if (!reservation) throw new Error("gear reservation fixture insert failed");
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    const [moved] = await db
+      .select({ personId: gearReservations.personId })
+      .from(gearReservations)
+      .where(eq(gearReservations.id, reservation.id));
+    expect(moved?.personId).toBe(survivor.id);
+  });
+});
+
+/**
+ * `no_certification_declared_at` and `no_certification_cleared_at` are read as
+ * a pair -- declared-and-not-cleared is the diver's standing "I hold no card"
+ * stamp -- so merging them column by column could pair a live declaration with
+ * the other record's older clear and erase the stamp everywhere at once.
+ */
+describe("merging the no-certification stamp", () => {
+  it("keeps a live declaration rather than pairing it with the other record's clear", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-20T00:00:00.000Z"),
+        noCertificationClearedAt: null,
+        noCertificationClearedByPersonId: null,
+      })
+      .where(eq(people.id, survivor.id));
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-01T00:00:00.000Z"),
+        noCertificationClearedAt: new Date("2026-08-05T00:00:00.000Z"),
+        noCertificationClearedByPersonId: owner.id,
+      })
+      .where(eq(people.id, source.id));
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
+    expect(merged?.noCertificationDeclaredAt).toEqual(new Date("2026-08-20T00:00:00.000Z"));
+    expect(merged?.noCertificationClearedAt).toBeNull();
+    expect(merged?.noCertificationClearedByPersonId).toBeNull();
+  });
+
+  it("takes the newer declaration's own clear when that is the source's", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-01T00:00:00.000Z"),
+        noCertificationClearedAt: null,
+      })
+      .where(eq(people.id, survivor.id));
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-20T00:00:00.000Z"),
+        noCertificationClearedAt: new Date("2026-08-22T00:00:00.000Z"),
+        noCertificationClearedByPersonId: owner.id,
+      })
+      .where(eq(people.id, source.id));
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
+    expect(merged?.noCertificationDeclaredAt).toEqual(new Date("2026-08-20T00:00:00.000Z"));
+    expect(merged?.noCertificationClearedAt).toEqual(new Date("2026-08-22T00:00:00.000Z"));
+    expect(merged?.noCertificationClearedByPersonId).toBe(owner.id);
+  });
+});
+
+/**
+ * The one tenant check in a rewrite that repoints twenty-one tables. Every
+ * other refusal is about the state of the two rows; this is the one that stops
+ * a staffer folding another shop's diver into their own roster, and it had no
+ * test.
+ */
+describe("merge tenant isolation", () => {
+  it("refuses a survivor that belongs to another shop", async () => {
+    const { db, shop, owner, source } = await mergeFixtures();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ slug: `other-${source.id.slice(0, 8)}`, name: "Other Shop", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [foreign] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Maya Rivera" })
+      .returning();
+    if (!foreign) throw new Error("foreign person insert failed");
+    await db.insert(personRoles).values({ personId: foreign.id, role: "diver" });
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: foreign.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    // Neither row moved.
+    const [sourceAfter] = await db.select().from(people).where(eq(people.id, source.id));
+    const [foreignAfter] = await db.select().from(people).where(eq(people.id, foreign.id));
+    expect(sourceAfter?.mergedIntoPersonId).toBeNull();
+    expect(foreignAfter?.mergedIntoPersonId).toBeNull();
+  });
+
+  it("refuses when the caller names a shop neither person belongs to", async () => {
+    const { db, owner, source, survivor } = await mergeFixtures();
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: crypto.randomUUID(),
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+  });
+
+  /** The candidate list is the door to the merge, and never crosses a shop. */
+  it("never offers another shop's diver as a duplicate", async () => {
+    const { db, shop, source } = await mergeFixtures();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ slug: `other2-${source.id.slice(0, 8)}`, name: "Other Shop 2", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [foreign] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Maya Rivera", phone: "+1 (305) 555-0142" })
+      .returning();
+    if (!foreign) throw new Error("foreign person insert failed");
+    await db.insert(personRoles).values({ personId: foreign.id, role: "diver" });
+
+    const candidates = await listDiverMergeCandidates(db, shop.id, source.id);
+    expect(candidates.map((candidate) => candidate.id)).not.toContain(foreign.id);
+  });
+});
+
+/**
+ * `rental_fit_profiles` and `last_minute_list_entries` are one row per person
+ * by construction. A diver fitted at the counter under each of their two
+ * records made the blanket repoint raise 23505, which rolled the whole merge
+ * back to `record_conflict` -- so the merge became permanently impossible
+ * through the UI, with nothing saying which row to delete to unblock it.
+ */
+describe("merging a one-row-per-person record", () => {
+  it("completes when both records carry a rental fit profile", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db.insert(rentalFitProfiles).values([
+      { shopId: shop.id, personId: survivor.id, wetsuitSize: "M" },
+      { shopId: shop.id, personId: source.id, wetsuitSize: "L" },
+    ]);
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    // The survivor is the record the shop chose to keep, so its sizes stand.
+    const profiles = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(inArray(rentalFitProfiles.personId, [source.id, survivor.id]));
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0]?.personId).toBe(survivor.id);
+    expect(profiles[0]?.wetsuitSize).toBe("M");
+  });
+
+  it("moves the source's profile when the survivor has none", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .insert(rentalFitProfiles)
+      .values({ shopId: shop.id, personId: source.id, wetsuitSize: "L" });
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const profiles = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(inArray(rentalFitProfiles.personId, [source.id, survivor.id]));
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0]?.personId).toBe(survivor.id);
+    expect(profiles[0]?.wetsuitSize).toBe("L");
   });
 });

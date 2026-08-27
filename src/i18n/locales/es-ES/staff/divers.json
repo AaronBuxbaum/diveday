@@ -216,7 +216,6 @@
     "description": "Estos registros activos parecen ser de la misma persona. Elige cuál sobrevive; las reservas, certificaciones, liberaciones, ajuste de alquiler, notas, pagos y visitas anteriores pasarán a ese registro.",
     "warning": "Esta es una acción explícita de propietario o gerente. La otra fila se elimina y conserva un enlace al registro superviviente; una salida compartida o un historial en conflicto se rechaza.",
     "survivorLabel": "Elige el registro que se conserva",
-    "keepThis": "Conservar {name} (este registro)",
     "keepCandidate": "Conservar {name}",
     "samePhone": "Mismo número de teléfono",
     "sameName": "Mismo nombre normalizado",

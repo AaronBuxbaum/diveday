@@ -96,6 +96,7 @@ export default async function SecurityPage({
     "two-factor-disabled": { tone: "success", text: t("settings.security.notice.disabled") },
     "session-revoked": { tone: "success", text: t("settings.security.notice.sessionRevoked") },
     "code-invalid": { tone: "danger", text: t("settings.security.notice.codeInvalid") },
+    "too-many-attempts": { tone: "danger", text: t("settings.security.notice.tooManyAttempts") },
     "security-unavailable": { tone: "danger", text: t("settings.security.notice.unavailable") },
     "security-invalid": { tone: "danger", text: t("settings.security.notice.invalid") },
     "step-up-required": {

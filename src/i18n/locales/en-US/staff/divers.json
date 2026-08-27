@@ -216,7 +216,6 @@
     "description": "These active diver records look like the same person. Choose which record survives; bookings, certifications, waivers, rental fit, notes, payments, and prior visits move to it.",
     "warning": "This is an explicit owner/manager action. The other row is deleted and kept as a pointer; a shared trip or conflicting history is refused.",
     "survivorLabel": "Choose the record to keep",
-    "keepThis": "Keep {name} (this record)",
     "keepCandidate": "Keep {name}",
     "samePhone": "Same phone number",
     "sameName": "Same normalized name",

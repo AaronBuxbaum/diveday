@@ -173,6 +173,5 @@ describe("the report-only half", () => {
     expect(imgSrc).toContain("https://*.s3.amazonaws.com");
     expect(imgSrc).toContain("https://*.s3.*.amazonaws.com");
     expect(imgSrc).toContain("https://*.cloudfront.net");
-    expect(imgSrc).toContain("https://*.public.blob.vercel-storage.com");
   });
 });

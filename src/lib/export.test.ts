@@ -124,31 +124,52 @@ describe("export bundle", () => {
 
 describe("exportPhotoPath", () => {
   it("mirrors a managed blob URL's pathname under photos/", () => {
-    expect(exportPhotoPath("https://xyz.public.blob.vercel-storage.com/recap/ab12-photo.jpg")).toBe(
-      "photos/recap/ab12-photo.jpg",
-    );
+    expect(
+      exportPhotoPath("https://diveday-media.s3.us-east-1.amazonaws.com/recap/ab12-photo.jpg"),
+    ).toBe("photos/recap/ab12-photo.jpg");
   });
 });
 
 describe("fetchExportPhotos", () => {
-  const managed = "https://xyz.public.blob.vercel-storage.com/cards/a.jpg";
+  const env = { MEDIA_BUCKET_NAME: "diveday-media", MEDIA_AWS_REGION: "us-east-1" };
+  const managed = "https://diveday-media.s3.us-east-1.amazonaws.com/cards/a.jpg";
 
-  it("fetches only managed-blob URLs, dedupes, and never touches an external or root-relative link", async () => {
+  it("fetches only our own media URLs, dedupes, and never touches an external or root-relative link", async () => {
     const fetchImpl = vi.fn(
       async () => new Response(new Uint8Array([9, 9]).buffer, { status: 200 }),
     );
     const photos = await fetchExportPhotos(
       [managed, managed, "https://evil.example.com/x.jpg", "/dive-sites/default.jpg"],
       fetchImpl as unknown as typeof fetch,
+      env,
     );
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(fetchImpl).toHaveBeenCalledWith(managed, expect.anything());
     expect(photos).toEqual([{ path: "photos/cards/a.jpg", bytes: new Uint8Array([9, 9]) }]);
   });
 
+  /**
+   * This filter is the SSRF guard on a server-side fetch. It used to accept
+   * any `*.s3.*.amazonaws.com` or `*.cloudfront.net` host, so a pasted URL
+   * could point it at an attacker's bucket.
+   */
+  it("does not fetch another account's bucket or an arbitrary CloudFront host", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const photos = await fetchExportPhotos(
+      [
+        "https://attacker.s3.us-east-1.amazonaws.com/cards/a.jpg",
+        "https://d1234.cloudfront.net/cards/a.jpg",
+      ],
+      fetchImpl as unknown as typeof fetch,
+      env,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(photos).toEqual([]);
+  });
+
   it("drops a photo that fails to fetch rather than failing the whole export", async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 500 }));
-    const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch);
+    const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch, env);
     expect(photos).toEqual([]);
   });
 
@@ -156,7 +177,7 @@ describe("fetchExportPhotos", () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error("network down");
     });
-    const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch);
+    const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch, env);
     expect(photos).toEqual([]);
   });
 });

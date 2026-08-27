@@ -736,7 +736,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
  * the leak out of view.
  */
 describe("diver erasure", () => {
-  const BLOB = "https://abc123.public.blob.vercel-storage.com";
+  const BLOB = "https://diveday-media.s3.us-east-1.amazonaws.com";
   const erasureNow = new Date("2026-07-18T12:00:00.000Z");
 
   async function personIdByName(db: AppDb, shopId: string, fullName: string) {

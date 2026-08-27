@@ -1,6 +1,6 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { type ImageUpload, isManagedBlobUrl, type StoredImage } from "./index";
+import { type ImageUpload, isManagedStorageUrl, type StoredImage } from "./index";
 import { MAX_IMAGE_BYTES } from "./limits";
 
 /**
@@ -111,10 +111,16 @@ const FETCH_TIMEOUT_MS = 10_000;
 export async function ingestImageUrl(
   rawUrl: string,
   store: (upload: Omit<ImageUpload, "keyPrefix">) => Promise<StoredImage>,
-  options: { fetchImpl?: Fetch; lookup?: DnsLookup } = {},
+  options: {
+    fetchImpl?: Fetch;
+    lookup?: DnsLookup;
+    env?: Readonly<Record<string, string | undefined>>;
+  } = {},
 ): Promise<IngestResult> {
   if (rawUrl.startsWith("/")) return { status: "unchanged", url: rawUrl };
-  if (isManagedBlobUrl(rawUrl)) return { status: "unchanged", url: rawUrl };
+  if (isManagedStorageUrl(rawUrl, options.env ?? process.env)) {
+    return { status: "unchanged", url: rawUrl };
+  }
 
   let parsed: URL;
   try {

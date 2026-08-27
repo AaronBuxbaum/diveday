@@ -239,7 +239,6 @@ export default async function DiverDetailPage({
       )}
       {canMerge && !removed ? (
         <MergeDiver
-          diver={diver}
           candidates={mergeCandidates}
           shopSlug={shopSlug}
           personId={personId}

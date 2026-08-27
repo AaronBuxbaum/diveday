@@ -621,19 +621,37 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     .sort(timelineOrder)
     .map(({ entry }) => entry);
 
+  /**
+   * A surface interval is only stated when the dive before it is actually on
+   * the log, and only when the two profiles do not overlap.
+   *
+   * `dives[index - 1]` is the previous *recorded* dive, not the dive numbered
+   * one lower, and `listExecutedDives` returns only what staff saved. On a
+   * three-tank day where dive 2 was never written up, dive 3's interval was
+   * measured from dive 1's exit -- out at 09:40, in at 14:10, "270 minutes" --
+   * and rendered into the Surface interval column of a SHA-256-sealed document
+   * handed to an investigator or a treating physician, with nothing saying
+   * dive 2 was missing. The real interval was much shorter, so the profile
+   * read more conservative than the diver's day actually was, which is the one
+   * direction a decompression-incident record must never err.
+   *
+   * `Math.max(0, ...)` had the same shape of problem at the other end: two
+   * recorded dives that overlap in time (nothing validates ordering *across*
+   * dives) rendered as a measured zero-minute interval rather than as the bad
+   * data it is. Null in both cases -- the page already renders "not recorded".
+   */
   const executedDives = [...(input.executedDives ?? [])]
     .sort((a, b) => a.diveNumber - b.diveNumber)
     .map((dive, index, dives) => {
       const previous = dives[index - 1];
+      const adjacent = previous?.diveNumber === dive.diveNumber - 1;
+      const elapsedMs =
+        adjacent && previous?.exitedAt && dive.enteredAt
+          ? new Date(dive.enteredAt).getTime() - new Date(previous.exitedAt).getTime()
+          : null;
       const surfaceIntervalMinutes =
-        previous?.exitedAt && dive.enteredAt
-          ? Math.max(
-              0,
-              Math.round(
-                (new Date(dive.enteredAt).getTime() - new Date(previous.exitedAt).getTime()) /
-                  60_000,
-              ),
-            )
+        elapsedMs !== null && Number.isFinite(elapsedMs) && elapsedMs >= 0
+          ? Math.round(elapsedMs / 60_000)
           : null;
       return { ...dive, surfaceIntervalMinutes };
     });

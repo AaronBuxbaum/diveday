@@ -133,7 +133,21 @@ export async function updateShopIntegrationSettings(
 ): Promise<ShopIntegration | null> {
   const [row] = await db
     .update(shopIntegrations)
-    .set({ settings: input.settings, updatedAt: now() })
+    .set({
+      settings: input.settings,
+      // Saving settings clears a parked error, because for this provider that
+      // *is* the fix. A QuickBooks connection is created with its event types
+      // set and no income account, so the first paid order fails
+      // non-retryably, `markIntegrationError` flips the row to `error`, and
+      // `listDueIntegrationDeliveries` only ever looks at `connected` rows --
+      // so from then on nothing retried and nothing new was even enqueued. The
+      // owner filling in the income account and saving was the one act that
+      // should have restarted it, and it wrote only `settings`: the row stayed
+      // `error` for good, behind a red badge with no button to clear it.
+      status: "connected",
+      lastError: null,
+      updatedAt: now(),
+    })
     .where(
       and(eq(shopIntegrations.shopId, input.shopId), eq(shopIntegrations.provider, input.provider)),
     )

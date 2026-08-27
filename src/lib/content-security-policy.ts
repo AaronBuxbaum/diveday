@@ -72,13 +72,18 @@ export const CSP_REPORT_PATH = "/api/csp-report";
 const REPORT_GROUP = "csp";
 
 /**
- * Media image hosts: AWS S3 and CloudFront distributions, plus legacy Vercel Blob.
+ * Media image hosts: the S3 bucket the app writes to, and the CloudFront
+ * distribution that will front it. Still wildcarded over the bucket name
+ * because this header is built in the edge layer where the media configuration
+ * is not read -- so it is a backstop, not the allowlist. The allowlist that
+ * decides whether a URL may be *stored* is `isManagedStorageUrl`
+ * (src/lib/storage/blob-host.ts), which compares against the configured bucket
+ * and nothing else.
  */
 const MEDIA_IMAGE_HOSTS = [
   "https://*.s3.amazonaws.com",
   "https://*.s3.*.amazonaws.com",
   "https://*.cloudfront.net",
-  "https://*.public.blob.vercel-storage.com",
 ];
 
 /**

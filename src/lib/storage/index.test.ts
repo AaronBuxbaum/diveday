@@ -1,10 +1,10 @@
 import sharp from "sharp";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  deleteS3Image,
   deleteStoredImage,
   deleteStoredImageTracked,
   imageStorageProviderFromEnvironment,
-  isManagedBlobUrl,
   isManagedStorageUrl,
   MAX_COURSE_IMAGE_BYTES,
   storeCourseImage,
@@ -235,34 +235,112 @@ describe("deleteStoredImageTracked", () => {
   });
 });
 
-describe("isManagedStorageUrl / isManagedBlobUrl", () => {
-  it("recognizes AWS S3 media URLs", () => {
+describe("isManagedStorageUrl", () => {
+  it("recognizes the configured bucket's own endpoints", () => {
     expect(
-      isManagedStorageUrl("https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg"),
+      isManagedStorageUrl(
+        "https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+        mockS3Env,
+      ),
     ).toBe(true);
-    expect(isManagedBlobUrl("https://diveday-media.s3.amazonaws.com/courses/x.jpg")).toBe(true);
+    expect(
+      isManagedStorageUrl("https://diveday-media.s3.amazonaws.com/courses/x.jpg", mockS3Env),
+    ).toBe(true);
   });
 
-  it("recognizes CloudFront media URLs", () => {
-    expect(isManagedStorageUrl("https://d1234.cloudfront.net/courses/x.jpg")).toBe(true);
+  it("recognizes the configured public base, so a CDN domain works once there is one", () => {
+    const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: "https://media.diveday.test" };
+    expect(isManagedStorageUrl("https://media.diveday.test/courses/x.jpg", env)).toBe(true);
   });
 
-  it("recognizes legacy Vercel Blob public object URLs for backward compatibility", () => {
-    expect(isManagedBlobUrl("https://abc123.public.blob.vercel-storage.com/courses/x.jpg")).toBe(
-      true,
+  /**
+   * The whole point of the predicate. It used to match `.s3.amazonaws.com` and
+   * `.cloudfront.net` by suffix, which is every bucket and every distribution
+   * on the internet — and this predicate is the ingest allowlist, the export
+   * fetch's SSRF guard, and the gate on queueing a delete.
+   */
+  it("rejects another account's S3 bucket and any CloudFront distribution", () => {
+    expect(
+      isManagedStorageUrl("https://attacker-bucket.s3.us-east-1.amazonaws.com/x.jpg", mockS3Env),
+    ).toBe(false);
+    expect(isManagedStorageUrl("https://attacker.s3.amazonaws.com/x.jpg", mockS3Env)).toBe(false);
+    expect(isManagedStorageUrl("https://d1234.cloudfront.net/courses/x.jpg", mockS3Env)).toBe(
+      false,
     );
   });
 
   it("rejects a bundled template asset (root-relative, never left this app)", () => {
-    expect(isManagedBlobUrl("/dive-sites/reef.jpg")).toBe(false);
+    expect(isManagedStorageUrl("/dive-sites/reef.jpg", mockS3Env)).toBe(false);
   });
 
   it("rejects an external URL — the provider never stored it", () => {
-    expect(isManagedBlobUrl("https://example.com/photo.jpg")).toBe(false);
+    expect(isManagedStorageUrl("https://example.com/photo.jpg", mockS3Env)).toBe(false);
+  });
+
+  it("rejects plain http on our own host", () => {
+    expect(
+      isManagedStorageUrl(
+        "http://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg",
+        mockS3Env,
+      ),
+    ).toBe(false);
   });
 
   it("fails closed on an unparseable URL instead of throwing", () => {
-    expect(isManagedBlobUrl("not a url")).toBe(false);
+    expect(isManagedStorageUrl("not a url", mockS3Env)).toBe(false);
+  });
+
+  it("fails closed when no media storage is configured", () => {
+    expect(
+      isManagedStorageUrl("https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg", {}),
+    ).toBe(false);
+  });
+});
+
+describe("deleteS3Image host binding", () => {
+  const config = {
+    bucket: "diveday-media",
+    region: "us-east-1",
+    accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+    secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  };
+
+  it("deletes an object addressed by our own bucket endpoint", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 204 }));
+    const result = await deleteS3Image(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/courses/abc-photo.jpg",
+      config,
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result).toEqual({ ok: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Keys are namespaced by content type, never by shop, and this used to
+   * discard the URL's host and treat its path as a key in our own bucket — so
+   * a URL a shop merely pasted deleted an object it had never uploaded.
+   */
+  it("refuses a foreign host instead of mapping its path onto our bucket", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 204 }));
+    const result = await deleteS3Image(
+      "https://attacker.example.com/import-waivers/victim-scan.pdf",
+      config,
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("refuses another account's bucket on the same S3 endpoint shape", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 204 }));
+    const result = await deleteS3Image(
+      "https://other-bucket.s3.us-east-1.amazonaws.com/courses/x.jpg",
+      config,
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 

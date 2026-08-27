@@ -10,6 +10,12 @@ import {
 
 const SHA_1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const SHA_2 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const SHA_3 = "cccccccccccccccccccccccccccccccccccccccc";
+
+const NOW = Date.UTC(2026, 7, 26, 4, 0, 0);
+const DAY = 24 * 60 * 60 * 1000;
+const OLD = new Date(NOW - 30 * DAY);
+const RECENT = new Date(NOW - 2 * DAY);
 
 describe("visual-bucket-pruner-handler", () => {
   describe("fetchCommits", () => {
@@ -93,50 +99,124 @@ describe("visual-bucket-pruner-handler", () => {
         })),
       } as unknown as S3Client;
 
-      const keys = await listObjects(client, "test-bucket", "prefix/");
-      expect(keys).toEqual(["prefix/1.png", "prefix/2.png"]);
+      const objects = await listObjects(client, "test-bucket", "prefix/");
+      expect(objects.map((object) => object.key)).toEqual(["prefix/1.png", "prefix/2.png"]);
     });
   });
 
   describe("pruneBucket", () => {
-    it("preserves active baseline prefix and deletes stale prefixes", async () => {
-      const sentCommands: Array<{
-        input?: {
-          Delimiter?: string;
-          Prefix?: string;
-          Delete?: { Objects: Array<{ Key: string }> };
-        };
-      }> = [];
+    /**
+     * `objectsByPrefix` maps a snapshot prefix to the objects the fake bucket
+     * holds under it, so each test states only the ages it cares about.
+     */
+    function fakeBucket(
+      objectsByPrefix: Record<string, Array<{ Key: string; LastModified?: Date }>>,
+      deleteErrors: Array<{ Key: string; Code: string }> = [],
+    ) {
+      const sent: Array<{ input?: Record<string, unknown> }> = [];
       const client = {
-        send: vi.fn(async (cmd) => {
-          sentCommands.push(cmd);
+        send: vi.fn(async (cmd: { input?: Record<string, unknown> }) => {
+          sent.push(cmd);
           if (cmd.input?.Delimiter === "/") {
             return {
-              CommonPrefixes: [{ Prefix: `${SHA_1}/` }, { Prefix: `${SHA_2}/` }],
+              CommonPrefixes: Object.keys(objectsByPrefix).map((Prefix) => ({ Prefix })),
               IsTruncated: false,
             };
           }
-          if (cmd.input?.Prefix === `${SHA_2}/`) {
-            return {
-              Contents: [{ Key: `${SHA_2}/out.json` }, { Key: `${SHA_2}/index.html` }],
-              IsTruncated: false,
-            };
-          }
-          return { IsTruncated: false };
+          if (cmd.input?.Delete) return { Errors: deleteErrors };
+          const prefix = cmd.input?.Prefix as string | undefined;
+          return { Contents: (prefix && objectsByPrefix[prefix]) || [], IsTruncated: false };
         }),
       } as unknown as S3Client;
+      return { client, sent };
+    }
 
-      const result = await pruneBucket(client, "test-bucket", SHA_1);
+    const deletedKeys = (sent: Array<{ input?: Record<string, unknown> }>) =>
+      sent
+        .flatMap((cmd) => {
+          const request = cmd.input?.Delete as { Objects: Array<{ Key: string }> } | undefined;
+          return request ? request.Objects : [];
+        })
+        .map((object) => object.Key);
+
+    it("preserves every kept baseline and deletes the stale prefixes", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [
+          { Key: `${SHA_2}/out.json`, LastModified: OLD },
+          { Key: `${SHA_2}/index.html`, LastModified: OLD },
+        ],
+      });
+
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
       expect(result.keptCount).toBe(1);
       expect(result.deletedPrefixesCount).toBe(1);
       expect(result.deletedObjectsCount).toBe(2);
+      expect(deletedKeys(sent)).toEqual([`${SHA_2}/out.json`, `${SHA_2}/index.html`]);
+    });
 
-      const deleteCmd = sentCommands.find((cmd) => cmd.input?.Delete);
-      expect(deleteCmd).toBeDefined();
-      expect(deleteCmd?.input?.Delete?.Objects).toEqual([
-        { Key: `${SHA_2}/out.json` },
-        { Key: `${SHA_2}/index.html` },
-      ]);
+    it("keeps more than one baseline when more than one is named", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, LastModified: OLD }],
+        [`${SHA_3}/`]: [{ Key: `${SHA_3}/out.json`, LastModified: OLD }],
+      });
+
+      const result = await pruneBucket(client, "test-bucket", [SHA_1, SHA_2], { now: NOW });
+      expect(result.keptCount).toBe(2);
+      expect(deletedKeys(sent)).toEqual([`${SHA_3}/out.json`]);
+    });
+
+    /**
+     * A stacked pull request's baseline is the layer below's head commit, which
+     * is on no branch the main-history walk can see. Age is what protects it.
+     */
+    it("never deletes a prefix younger than the prune floor", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, LastModified: RECENT }],
+      });
+
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
+      expect(result.keptRecentCount).toBe(1);
+      expect(result.deletedPrefixesCount).toBe(0);
+      expect(deletedKeys(sent)).toEqual([]);
+    });
+
+    it("keeps a prefix whose objects carry no timestamp", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+        [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json` }],
+      });
+
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
+      expect(result.keptRecentCount).toBe(1);
+      expect(deletedKeys(sent)).toEqual([]);
+    });
+
+    it("refuses to prune when nothing is named to keep", async () => {
+      const { client, sent } = fakeBucket({
+        [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+      });
+
+      await expect(pruneBucket(client, "test-bucket", [], { now: NOW })).rejects.toThrow(
+        /no verified baseline/i,
+      );
+      expect(deletedKeys(sent)).toEqual([]);
+    });
+
+    /** DeleteObjects reports per-key failures in the body instead of throwing. */
+    it("reports the keys S3 refused to delete", async () => {
+      const { client } = fakeBucket(
+        {
+          [`${SHA_1}/`]: [{ Key: `${SHA_1}/out.json`, LastModified: OLD }],
+          [`${SHA_2}/`]: [{ Key: `${SHA_2}/out.json`, LastModified: OLD }],
+        },
+        [{ Key: `${SHA_2}/out.json`, Code: "AccessDenied" }],
+      );
+
+      const result = await pruneBucket(client, "test-bucket", [SHA_1], { now: NOW });
+      expect(result.deleteErrors).toEqual([`${SHA_2}/out.json: AccessDenied`]);
     });
   });
 });

@@ -86,14 +86,23 @@ const THROWING_CALLS = [
  *
  * TypeScript already carries the signal: a helper whose whole job is to redirect
  * is annotated `: never` or `: Promise<never>` (`refuse` in
- * `app/actions/seat-diver.ts`, `done` in the two settings action files,
+ * `app/actions/seat-diver.ts`, `done` in the three settings action files,
  * `landAfterAdd` in the schedule board's). Reading the annotation closes the
  * class generically instead of chasing each new helper into the list above.
+ *
+ * The parameter list may span lines, and that is not a detail: this pattern
+ * used to forbid a newline between the name and the `)`, so a helper whose
+ * parameters biome had wrapped was invisible. `settings/integrations/actions.ts`
+ * shipped with exactly that shape and its `done()` sat inside a `try` in
+ * `syncShopifyCatalogAction`, swallowing the success redirect -- so a sync that
+ * worked reported "failed", on a check that was reporting a clean tree.
+ * `[^{};]*?` crosses lines but stops at a brace or a statement end, so it
+ * cannot run from one declaration into the next.
  */
 function neverReturningNames(masked) {
   const names = new Set();
   for (const match of masked.matchAll(
-    /\b(?:function\s+|const\s+|let\s+)([A-Za-z_$][\w$]*)\b[^\n]*?\)\s*:\s*(?:Promise\s*<\s*never\s*>|never)\s*(?:\{|=>)/g,
+    /\b(?:function\s+|const\s+|let\s+)([A-Za-z_$][\w$]*)\b[^{};]*?\)\s*:\s*(?:Promise\s*<\s*never\s*>|never)\s*(?:\{|=>)/g,
   )) {
     names.add(match[1]);
   }

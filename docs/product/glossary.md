@@ -1297,6 +1297,71 @@ new domain concept, define it here in the same PR.
   Clearing a request is always allowed. `setBookingNitrox` also refuses to turn a request *on* when
   the shop's catalog doesn't offer nitrox, so a shop that never enabled it can never end up with one.
 
+## Records and evidence
+
+- **Executed dive** — what a departure *actually* dived, as opposed to what it planned. One
+  `executed_dives` row per dive number per trip, carrying the site actually visited, entry and
+  exit times, max depth and observed conditions, written by crew at the rail from the manifest's
+  `after_dive_N` checkpoint. Distinct from a **trip dive** (`trip_dives`), which is the *plan*.
+  It informs and never gates: no readiness, admission or boarding decision reads it. It is,
+  however, evidence — `buildIncidentExport` renders it into a SHA-256-sealed document for an
+  investigator or a treating physician, which is why a dive nobody logged must read as *not
+  recorded* rather than being interpolated from its neighbours.
+- **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
+  stated between **consecutively numbered** executed dives that were both recorded and do not
+  overlap; anything else is "not recorded". An interval measured across a dive nobody logged
+  overstates the diver's rest, which is the one direction this figure must never err.
+- **Material generation** — a shop's explicit assertion that a new waiver version changes the
+  bargain, and therefore that standing signatures no longer cover it
+  (`waiver_materiality_decisions`, ADR
+  [20260826-waiver-material-generations](../architecture/decisions/20260826-waiver-material-generations.md)).
+  It is **not** the display version number: a typo or a reformat increments the version and leaves
+  the generation alone, so nobody is asked to sign again. DiveDay cannot infer legal materiality
+  from a text diff and does not try — a human says so. Never reason about re-signing from the
+  version number.
+- **Staff credential** — a professional qualification a *staff member* holds (instructor rating,
+  first-aid, boat licence), with an optional renewal date that raises a Today row as it approaches
+  (`staff_credentials`). Distinct from a **certification**, which is always a diver's. Renewal is
+  a calendar date, so it is good through the end of its own shop-local day.
+
+## Security
+
+- **Step-up** — a fresh second-factor check for one sensitive act, bound to one Better Auth
+  session and expiring on its own (`account_step_ups`, ADR
+  [20260826-account-security-step-up](../architecture/decisions/20260826-account-security-step-up.md)).
+  Three purposes: `money`, `export`, `backup`. A grant from another browser, or from a session
+  since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
+  only demanded of an account that has enabled two-factor**, so it is a control a staff member
+  opts into rather than a floor under every account.
+- **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
+  stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
+  a password reset: presenting one satisfies the same check a TOTP code does.
+
+## Money
+
+- **Pass-through fee** — a fixed per-diver charge a shop collects on behalf of somebody else — a
+  marine-park levy, a mooring fee — and remits in full. It rides on the checkout as its own line
+  item and is **not the shop's revenue**: it must not be discounted by a promotion code, and a
+  refund should return the diver's share of it. Distinct from **tax**, which Stripe computes and
+  owns (ADR
+  [20260826-stripe-tax-is-opt-in-and-provider-owned](../architecture/decisions/20260826-stripe-tax-is-opt-in-and-provider-owned.md)),
+  and from a **deposit**, which is the shop's money held early.
+
+## What a shop says about itself
+
+- **Conservation commitment** — one of a fixed set of codes a shop ticks to state its own practice
+  (Green Fins member, PADI AWARE partner, mooring buoys only, no-touch policy, no-gloves policy,
+  reef cleanup dives, lionfish containment, coral nursery support). DiveDay **cannot verify these
+  and does not**: they are shop claims, displayed as such, and no operational rule reads them — a
+  no-gloves commitment gates nothing at the rail (ADR
+  [20260826-shop-stated-conservation](../architecture/decisions/20260826-shop-stated-conservation.md)).
+  The vocabulary is `src/lib/conservation-commitments.ts` and there is exactly one of it; the
+  words for each code are DiveDay's, in every language, like the marine-life catalog and unlike a
+  site briefing.
+- **Conservation note** — a shop's own prose about its conservation practice at one dive site.
+  The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
+  not a claim DiveDay renders on the shop's behalf.
+
 ## Modeling notes
 
 - A **person** may be simultaneously a customer, a student, and staff — model roles, not

@@ -855,7 +855,8 @@
       "codeInvalid": "No se aceptó ese código.",
       "stepUpRequired": "Verifica con tu aplicación de autenticación para continuar.",
       "unavailable": "La configuración de seguridad no está disponible hasta configurar la clave de cifrado del despliegue.",
-      "invalid": "No se pudo completar ese cambio de seguridad."
+      "invalid": "No se pudo completar ese cambio de seguridad.",
+      "tooManyAttempts": "Demasiados intentos. Espera unos minutos e intÃ©ntalo de nuevo."
     }
   },
   "embed": {

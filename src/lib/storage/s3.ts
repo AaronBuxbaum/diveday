@@ -160,7 +160,36 @@ export function s3ImageStorageProvider(
   };
 }
 
-/** Delete an object from S3 by URL using AWS SigV4 signed DELETE request. */
+/**
+ * The origins an object of ours can be addressed by: the configured public
+ * base (a CDN domain, once there is one) and the bucket's own REST endpoints.
+ */
+function configuredOrigins(config: S3StorageConfig): string[] {
+  const origins = [
+    `https://${config.bucket}.s3.${config.region}.amazonaws.com`,
+    `https://${config.bucket}.s3.amazonaws.com`,
+  ];
+  if (config.publicUrlBase) {
+    try {
+      origins.push(new URL(config.publicUrlBase).origin);
+    } catch {
+      // Unparseable configuration; the bucket endpoints above still apply.
+    }
+  }
+  return origins;
+}
+
+/**
+ * Delete an object from S3 by URL using an AWS SigV4 signed DELETE request.
+ *
+ * The URL's own origin has to be one of ours. This used to take any URL, throw
+ * the host away and use the path as a key in our bucket — so a URL a shop
+ * merely *pasted* addressed an object it had never uploaded. Keys are
+ * namespaced by content type rather than by shop (`courses/`, `import-waivers/`),
+ * so that was a delete primitive over every other shop's media, and over the
+ * imported waiver and receipt scans, with no row in the victim's own deletion
+ * ledger to show for it.
+ */
 export async function deleteS3Image(
   url: string,
   config: S3StorageConfig,
@@ -168,6 +197,9 @@ export async function deleteS3Image(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const parsedUrl = new URL(url);
+    if (!configuredOrigins(config).includes(parsedUrl.origin)) {
+      return { ok: false, error: "url is not on this shop's configured media host" };
+    }
     const key = decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
     const s3Host = `${config.bucket}.s3.${config.region}.amazonaws.com`;
     const deleteUrl = new URL(`https://${s3Host}/${encodeS3KeyPath(key)}`);

@@ -172,9 +172,9 @@ describe("one diver's own record export (issue #726)", () => {
       // and it is what security review found this test did not yet cover:
       // it went out through photoUrls even while the JSON column stayed home.
       importSourceDocumentUrl:
-        "https://blue-mantis.public.blob.vercel-storage.com/waivers/signed-release.pdf",
+        "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/signed-release.pdf",
       importSourceMedicalDocumentUrl:
-        "https://blue-mantis.public.blob.vercel-storage.com/waivers/medical-questionnaire-scan.pdf",
+        "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/medical-questionnaire-scan.pdf",
     });
 
     const input = await loadDiverExportBundleInput(db, shop.id, follower.personId);
@@ -189,10 +189,10 @@ describe("one diver's own record export (issue #726)", () => {
     // against the photo manifest this loader hands the download route, not
     // against the CSV, since a URL bundles as a *file* rather than a cell.
     expect(input.photoUrls).toContain(
-      "https://blue-mantis.public.blob.vercel-storage.com/waivers/signed-release.pdf",
+      "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/signed-release.pdf",
     );
     expect(input.photoUrls).not.toContain(
-      "https://blue-mantis.public.blob.vercel-storage.com/waivers/medical-questionnaire-scan.pdf",
+      "https://diveday-media.s3.us-east-1.amazonaws.com/waivers/medical-questionnaire-scan.pdf",
     );
 
     // Everything else about the diver's own signature is still there,

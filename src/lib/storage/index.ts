@@ -44,7 +44,7 @@ type StorageEnvironment = Readonly<Record<string, string | undefined>>;
  * file, with no server-only imports, so a "use client" component can import it
  * directly without pulling in `sharp` via this module's `process-image.ts` import.
  */
-export { isManagedBlobUrl, isManagedStorageUrl } from "./blob-host";
+export { isManagedStorageUrl, managedStorageOrigins } from "./blob-host";
 export { deleteS3Image, type S3StorageConfig, s3ImageStorageProvider } from "./s3";
 
 /** Every accepted upload is re-encoded to JPEG (`processImage`); keep the stored name honest. */
