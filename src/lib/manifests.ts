@@ -408,10 +408,9 @@ export type ManifestBuddyTeam = {
  * - `separated_dock` — this person is aboard at departure and a teammate is
  *   not (yet). Ordinary mid-boarding churn, worth a glance, worded and toned
  *   as a heads-up rather than an alarm.
- * - `separated_after_dive` — this person came back from a dive and a teammate
- *   is not recorded back aboard: still awaiting a result, or a human said they
- *   did not come back. This is the signal a deck watches for, and it is the
- *   loud one.
+ * - `separated_after_dive` — this person came back from a dive and a human has
+ *   **recorded** a teammate as not back aboard. This is the signal a deck
+ *   watches for, and it is the loud one.
  * - `null` — nothing to say. Covers: no divergence (everyone aboard, everyone
  *   ashore, everyone awaiting), this person not being aboard themselves (their
  *   *own* row already carries whatever state matters — a teammate's row is
@@ -420,11 +419,23 @@ export type ManifestBuddyTeam = {
  *   the dock is accounted for on land, not separated in the water, and alarming
  *   about them would teach the crew to stop reading the panel.
  *
- * **One unaccounted-for teammate is enough.** The reading is fail-closed by
- * design: a team of four with three back and one not is exactly as loud as a
- * pair with one back and one not, because the boat's next move is identical.
- * A team with no teammates left aboard (everyone else's seat was cancelled)
- * has nothing to diverge from and stays quiet.
+ * **An alarm is earned by a recorded fact, never by the absence of one** (ADR
+ * 20260827-the-departure-is-two-working-surfaces, decision 4). A teammate
+ * nobody has called yet used to raise `separated_after_dive` too, which meant
+ * the loudest state the manifest has appeared the instant the *first* diver of
+ * a team was counted back — before anyone had said a word about the second.
+ * On a ten-person boat the ordinary opening of every surface-interval count
+ * painted red rows and a pinned "1 buddy team is split", and a crew that sees
+ * that every dive stops reading it, which is exactly the signal being spent.
+ * A crew starts the count believing everyone is back: an uncounted teammate
+ * means "not yet", and only a human saying "did not come back"
+ * (`isNotBackAboard`) is a split.
+ *
+ * **One recorded missing teammate is enough.** The reading stays fail-closed
+ * in the direction that matters: a team of four with three back and one
+ * recorded missing is exactly as loud as a pair, because the boat's next move
+ * is identical. A team with no teammates left aboard (everyone else's seat was
+ * cancelled) has nothing to diverge from and stays quiet.
  *
  * Codes, not sentences: the UI resolves the words through
  * `src/i18n/buddy-labels.ts`, same rule as every other status in the app.
@@ -445,17 +456,22 @@ export function buddyAlertFor(
 ): BuddyAlert | null {
   // Only someone who is themselves aboard can be "back without their team".
   if (self?.state !== "boarded") return null;
-  // A teammate who is aboard is settled. After a dive, so is one recorded
-  // ashore at the dock (explicitly, or carried forward): they never left, so
-  // they are accounted for on land rather than missing from the water. At the
-  // dock itself that exemption must not apply — "aboard while my buddy is
-  // still ashore" is precisely the heads-up this checkpoint exists to give.
-  const unsettled = teammates.some(
-    (mate) =>
-      mate?.state !== "boarded" &&
-      (checkpoint === "departure" || !isRecordedAshore(checkpoint, mate)),
-  );
-  if (!unsettled) return null;
+  // The two checkpoints ask different questions of a teammate, because the
+  // two checkpoints are different acts.
+  //
+  // At the dock the crew is *assembling* a boat, so anyone not yet aboard is
+  // genuinely still to gather and "aboard while my buddy is still ashore" is
+  // precisely the heads-up this checkpoint exists to give — a heads-up, worded
+  // and toned as one.
+  //
+  // After a dive the crew is *counting a boat back*, believing everyone is
+  // already on it. There an uncalled teammate is "not yet", not a split: only a
+  // recorded "did not come back" earns the alarm (see the note above).
+  const split =
+    checkpoint === "departure"
+      ? teammates.some((mate) => mate?.state !== "boarded")
+      : teammates.some((mate) => isNotBackAboard(checkpoint, mate));
+  if (!split) return null;
   return checkpoint === "departure" ? "separated_dock" : "separated_after_dive";
 }
 

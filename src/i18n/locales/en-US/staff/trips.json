@@ -571,6 +571,7 @@
     "checkedBy": "Checked by {name} · {date}",
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — Not checked",
-    "errorRefusal": "That didn't save — try it again."
+    "errorRefusal": "That didn't save — try it again.",
+    "summary": "Before you leave the dock — {checked} of {total} checked"
   }
 }

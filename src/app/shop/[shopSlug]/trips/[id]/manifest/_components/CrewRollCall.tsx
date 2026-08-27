@@ -3,25 +3,29 @@ import type {
   RollCallAction,
   RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { RollCallMark } from "@/components/RollCallMark";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatTime } from "@/lib/format";
 import {
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
-import { BuddyTeamChip } from "./BuddyTeamChip";
 import {
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
-  RollCallControls,
+  RollCallBackAboardControl,
+  RollCallExceptionControl,
+  RollCallMarkButton,
+  rollCallMarkState,
   rollCallRecordedTone,
   rollCallRowState,
   rollCallScrollMargin,
@@ -157,114 +161,154 @@ export function CrewRollCall({
               // once disagreed about what a colour meant. Crew carry no
               // readiness, so an untouched crew row is always plain slate.
               const rowState = rollCallRowState(checkpoint, rc);
-              const { impliedNotBoarded, recordedHere } = rowState;
+              const { impliedNotBoarded } = rowState;
               const recordedTone = rollCallRecordedTone(rowState);
+              // The same one line under the name a diver's row carries: who
+              // said what, and when. Nothing said yet says nothing.
+              // Time, not a timestamp — the same rule, and the same reason, as
+              // a diver's row: same-day at the rail, full on the sheet below.
+              const auditLabel = rollCallLabelText(t, rollCallLabel(checkpoint, rc));
+              const supportLine =
+                rc && !rc.implied
+                  ? t("manifest.rollCallRecordedShort", {
+                      label: auditLabel,
+                      time: formatTime(rc.occurredAt, locale, timezone),
+                      name: rc.recordedByName,
+                    })
+                  : null;
+              // Crew wear the same capsule rule as a diver — exceptions only,
+              // at most one — so a split team reads identically on a
+              // divemaster's row and on the row of the diver they lead.
+              const teamLabel = buddyTeamLabel(member.buddyTeams ?? []);
+              const capsule = member.buddyAlert ? (
+                <Badge tone={member.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
+                  {buddyAlertText(t, member.buddyAlert)}
+                </Badge>
+              ) : null;
               return (
                 <li
                   key={member.id}
-                  // A jump target, exactly as every diver row is: the summary
-                  // panel's chips now name uncalled *crew* too, and this row
-                  // sits below the whole diver roster — so on a phone the chip
-                  // is often several screens from the person it names. The
-                  // margin that keeps the landing clear of the sticky panel is
-                  // shared with the diver rows rather than restated here
-                  // (`rollCallScrollMargin`).
+                  // A jump target, exactly as every diver row is: the count
+                  // panel's chips name uncalled *crew* too, and this row sits
+                  // below the whole diver roster — so on a phone the chip is
+                  // often several screens from the person it names.
                   id={`crew-row-${member.id}`}
-                  className={`border-l-4 px-4 py-4 ${rollCallScrollMargin(isDeparture)} ${
+                  className={`border-l-4 ${rollCallScrollMargin(isDeparture)} ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
-                  {/* `md`, matching the diver rows: the control cluster is one
-                      line now, narrow enough to sit beside the name from
-                      tablet width up. */}
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0 md:flex-1">
-                      <p className="flex flex-wrap items-center gap-2">
-                        <strong className="text-base">{member.fullName}</strong>
-                        <span className="text-sm text-muted">{member.roles.join(", ")}</span>
-                        {/* Same rule, same reason, as the diver rows: hidden
-                            on screen while the buttons beside it carry the
-                            word — a recorded result on the settled control,
-                            or an untouched pair whose un-tapped "Mark aboard"
-                            already says awaiting — and always present on
-                            paper. Crew always get both buttons, so there is
-                            no readiness case to carve out here.
-                            The warning fill is the diver rows' rule too — it
-                            marks a result *carried forward from the dock*, not
-                            merely "has a result". Keyed on `rc` it painted the
-                            printed manifest's "Aboard" pill amber, so a crew
-                            member who was demonstrably on the boat read on
-                            paper as the one thing needing attention. */}
-                        <span
-                          className={`${recordedHere || !rc ? "hidden print:inline-flex " : ""}${
-                            impliedNotBoarded
-                              ? "rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning-strong"
-                              : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
-                          }`}
-                        >
-                          {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                  <div className="flex items-start">
+                    <details className="group/person min-w-0 flex-1">
+                      <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-lg font-semibold group-hover/summary:underline">
+                              {member.fullName}
+                            </span>
+                            <span className="text-sm text-muted">{member.roles.join(", ")}</span>
+                            {capsule}
+                          </span>
+                          {supportLine ? (
+                            <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
+                          ) : null}
                         </span>
-                        {/* Crew wear the same chip as a diver — a
-                            divemaster who is back while the group they lead
-                            is not is the same split, and it must not read
-                            differently on their row. */}
-                        <BuddyTeamChip
-                          label={buddyTeamLabel(member.buddyTeams ?? [])}
-                          alertText={
-                            member.buddyAlert ? buddyAlertText(t, member.buddyAlert) : null
-                          }
-                          alert={member.buddyAlert}
-                        />
-                      </p>
-                      {/* Print-only, kept here rather than beside the screen
-                          disclosure it mirrors below — paper has no collapsed
-                          state to open, so this is simply where the fact sits
-                          on the sheet, ahead of the audit line beneath it, the
-                          same order the row has always printed in. */}
-                      <div className="mt-2 hidden print:block">
+                        <DisclosureCaret className="group-open/person:rotate-90 print:hidden" />
+                        <span className="sr-only">{t("manifest.personDetails")}</span>
+                      </summary>
+                      <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                        {teamLabel ? (
+                          <p className="mb-3">
+                            <Badge tone={member.buddyAlert ? "danger" : "neutral"}>
+                              {member.buddyAlert
+                                ? `${teamLabel} · ${buddyAlertText(t, member.buddyAlert)}`
+                                : teamLabel}
+                            </Badge>
+                          </p>
+                        ) : null}
                         <CrewFacts member={member} labelled t={t} />
+                        {/* Both directions out of a stated "not back aboard",
+                            at the same cost and neither on the row — the same
+                            terms as a diver's, because a divemaster who did not
+                            surface is the same claim about the same kind of
+                            body (ADR 20260815-offline-can-unsay-a-missing-diver
+                            applies it to crew rows in as many words). */}
+                        {rowState.notBackAboard ? (
+                          <RollCallBackAboardControl
+                            kind="crew"
+                            subjectId={member.id}
+                            checkpoint={checkpoint}
+                            subjectName={member.fullName}
+                            action={crewRollCallAction}
+                            copy={crewRollCallButtonCopy}
+                            t={t}
+                          />
+                        ) : null}
+                        {/* The deliberate second step, on the same terms as a
+                            diver's. */}
+                        <RollCallExceptionControl
+                          kind="crew"
+                          subjectId={member.id}
+                          checkpoint={checkpoint}
+                          isDeparture={isDeparture}
+                          rollCall={rc}
+                          action={crewRollCallAction}
+                          copy={crewRollCallButtonCopy}
+                          t={t}
+                        />
                       </div>
-                      {rc && !rc.implied ? (
-                        <p className="mt-2 text-sm text-muted">
-                          {t("manifest.crewRollCallRecordedBy", {
-                            label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
-                            date: formatDateTimeTz(rc.occurredAt, locale, timezone),
-                            name: rc.recordedByName,
-                          })}
-                        </p>
-                      ) : null}
+                    </details>
+                    <div className="shrink-0 pt-2.5 ps-2 pe-3 print:hidden">
+                      {rowState.notBackAboard ? (
+                        <RollCallMark state="notBack" />
+                      ) : (
+                        <RollCallMarkButton
+                          kind="crew"
+                          subjectId={member.id}
+                          checkpoint={checkpoint}
+                          rollCall={rc}
+                          action={crewRollCallAction}
+                          copy={crewRollCallButtonCopy}
+                          markState={rollCallMarkState(rowState)}
+                          t={t}
+                        />
+                      )}
                     </div>
-                    <RollCallControls
-                      kind="crew"
-                      subjectId={member.id}
-                      checkpoint={checkpoint}
-                      isDeparture={isDeparture}
-                      rollCall={rc}
-                      action={crewRollCallAction}
-                      copy={crewRollCallButtonCopy}
-                      showBoardControl
-                      t={t}
-                    />
                   </div>
-                  {/* One quiet line at rest, the same grammar as a diver
-                      row's "Contact & gear" — and below the controls for the
-                      same reason the diver rows keep theirs there: the row
-                      reads name → state → act, and the rare path follows the
-                      act. Screen only — the print block above (beside the
-                      name, ahead of the audit line) carries the same fact
-                      unconditionally, because a closed disclosure prints
-                      nothing. */}
-                  <details className="group/crewfacts mt-1 print:hidden">
-                    <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                      <DisclosureCaret className="group-open/crewfacts:rotate-90" />
-                      <span className="group-hover/summary:underline">
-                        {t("manifest.emergencyContactLabel")}
+                  {/* Paper keeps what the tap hides: the recorded state as a
+                      word, the team, and the contact. The summary above prints
+                      as it stands, so the name, role and who-and-when are
+                      already on the sheet. */}
+                  <div className="hidden px-4 pb-4 print:block">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={
+                          impliedNotBoarded
+                            ? "rounded-full bg-warning-tint px-3 py-1 text-sm font-medium text-warning-strong"
+                            : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
+                        }
+                      >
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
                       </span>
-                    </summary>
-                    <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                      <CrewFacts member={member} labelled={false} t={t} />
+                      {teamLabel ? (
+                        <Badge tone="neutral">
+                          {teamLabel}
+                          {member.buddyAlert ? ` · ${buddyAlertText(t, member.buddyAlert)}` : ""}
+                        </Badge>
+                      ) : null}
+                    </p>
+                    {rc && !rc.implied ? (
+                      <p className="mt-2 text-sm">
+                        {t("manifest.crewRollCallRecordedBy", {
+                          label: auditLabel,
+                          date: formatDateTimeTz(rc.occurredAt, locale, timezone),
+                          name: rc.recordedByName,
+                        })}
+                      </p>
+                    ) : null}
+                    <div className="mt-2">
+                      <CrewFacts member={member} labelled t={t} />
                     </div>
-                  </details>
+                  </div>
                 </li>
               );
             })}

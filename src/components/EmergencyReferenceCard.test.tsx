@@ -15,17 +15,15 @@ const copy = {
 afterEach(cleanup);
 
 describe("EmergencyReferenceCard", () => {
-  it("dials the numbers that can be dialled and prints the ones that cannot", () => {
-    render(
+  it("renders every number as reference text — nothing here can place a call", () => {
+    const { container } = render(
       <EmergencyReferenceCard
         copy={copy}
         reference={{
           lines: [
             { label: "Chamber", phone: "+1 305 555 0177" },
-            // A radio channel is not a phone number. It belongs on this card
-            // and must still render — as text, because a `tel:` to it dials
-            // nothing, and a crew tapping a dead link loses the only seconds
-            // this card exists to save.
+            // A radio channel is not a phone number, and belongs on this card
+            // exactly as much as the chamber's line does.
             { label: "Radio", phone: "VHF 16" },
           ],
           vessel: "Mantis II",
@@ -35,12 +33,16 @@ describe("EmergencyReferenceCard", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "+1 305 555 0177" })).toHaveAttribute(
-      "href",
-      "tel:+13055550177",
-    );
-    expect(screen.queryByRole("link", { name: "VHF 16" })).toBeNull();
+    // **No call buttons anywhere on the boat** (ADR
+    // 20260827-the-departure-is-two-working-surfaces, decision 3). This card
+    // renders on the live manifest, the offline copy and the printed packet —
+    // every one of them a boat surface or paper. A dialable number here spends
+    // permanent mis-tap risk on a path used less than once a year, and an
+    // accidental call is strictly worse than a slow one.
+    expect(screen.getByText("+1 305 555 0177")).toBeInTheDocument();
     expect(screen.getByText("VHF 16")).toBeInTheDocument();
+    expect(container.querySelector('a[href^="tel:"]')).toBeNull();
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
   it("says so when the shop has recorded nothing, rather than rendering an empty box", () => {

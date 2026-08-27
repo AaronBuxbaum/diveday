@@ -571,6 +571,7 @@
     "checkedBy": "Comprobado por {name} · {date}",
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — No comprobado",
-    "errorRefusal": "Eso no se guardó — inténtalo de nuevo."
+    "errorRefusal": "Eso no se guardó — inténtalo de nuevo.",
+    "summary": "Antes de salir del muelle — {checked} de {total, plural, one {# comprobado} other {# comprobados}}"
   }
 }

@@ -68,7 +68,10 @@
     "label": "Birthday",
     "today": "today",
     "soon": "in {days, plural, one {# day} other {# days}}",
-    "recent": "{days, plural, one {# day} other {# days}} ago"
+    "recent": "{days, plural, one {# day} other {# days}} ago",
+    "calloutToday": "Birthday today",
+    "calloutSoon": "Birthday in {days, plural, one {# day} other {# days}}",
+    "calloutRecent": "Birthday {days, plural, one {# day} other {# days}} ago"
   },
   "printButton": {
     "label": "Print / save PDF",

@@ -823,19 +823,29 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
     expect(buddyAlertFor("departure", boardedAt(), [notBoardedAt()])).toBe("separated_dock");
   });
 
-  it("raises the loud alert after a dive for an awaiting or not-back teammate", () => {
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [undefined])).toBe("separated_after_dive");
+  it("raises the loud alert after a dive only once a teammate is recorded not back", () => {
     expect(buddyAlertFor("after_dive_1", boardedAt(), [notBoardedAt()])).toBe(
       "separated_after_dive",
     );
   });
 
-  it("needs only one unaccounted-for teammate, however large the team", () => {
+  it("stays quiet after a dive while a teammate is merely uncalled", () => {
+    // **An alarm is earned by a recorded fact, never by the absence of one**
+    // (ADR 20260827-the-departure-is-two-working-surfaces, decision 4). A crew
+    // starts the surface-interval count believing everyone is back, so the
+    // first diver counted in must not paint the second one red before anybody
+    // has said a word about them — which is what an uncalled teammate used to
+    // do, on every row of every count.
+    expect(buddyAlertFor("after_dive_1", boardedAt(), [undefined])).toBeNull();
+    expect(buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), undefined])).toBeNull();
+  });
+
+  it("needs only one teammate recorded not back, however large the team", () => {
     // Three of four back is exactly as loud as one of two: the boat's next
     // move is identical, and a team is not a severity scale.
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), boardedAt(), undefined])).toBe(
-      "separated_after_dive",
-    );
+    expect(
+      buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), boardedAt(), notBoardedAt()]),
+    ).toBe("separated_after_dive");
     expect(
       buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), boardedAt(), boardedAt()]),
     ).toBeNull();
@@ -846,9 +856,9 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
     // not missing from the water — alarming here would teach the crew to stop
     // reading the panel.
     expect(buddyAlertFor("after_dive_1", boardedAt(), [carriedAshore])).toBeNull();
-    // …but a second teammate with no result is still loud, so the exemption
-    // can never silence a real one.
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [carriedAshore, undefined])).toBe(
+    // …but a second teammate a human recorded as not back is still loud, so
+    // the exemption can never silence a real one.
+    expect(buddyAlertFor("after_dive_1", boardedAt(), [carriedAshore, notBoardedAt()])).toBe(
       "separated_after_dive",
     );
   });
@@ -887,6 +897,9 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
           buddyTeam: team("team-1", [otherDiver("booking-lena", "Lena Fischer")]),
         }),
         diver("booking-lena", "Lena Fischer", {
+          // Recorded not back aboard — the fact that earns the alert on Tom's
+          // row (decision 4 of ADR 20260827-the-departure-is-two-working-surfaces).
+          rollCall: notBoardedAt(),
           buddyTeam: team("team-1", [otherDiver("booking-tom", "Tom Okafor")]),
         }),
         // The odd diver out — unteamed, and that is normal, never an error.
@@ -915,12 +928,13 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
       ],
       divers: [
         diver("booking-tom", "Tom Okafor", {
+          rollCall: notBoardedAt(),
           buddyTeam: team("team-1", [otherCrew("person-keiko", "Keiko Tanaka")]),
         }),
       ],
     });
-    // The divemaster is back and the diver they led is not — the split reads
-    // on the DM's row, which is the row a deck is looking at.
+    // The divemaster is back and the diver they led is recorded not back — the
+    // split reads on the DM's row, which is the row a deck is looking at.
     expect(manifest.crew[0]?.buddyAlert).toBe("separated_after_dive");
     expect(manifest.divers[0]?.buddyAlert).toBeNull();
   });
@@ -940,6 +954,7 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
           buddyTeam: team("team-1", [otherDiver("a", "A"), otherDiver("c", "C")]),
         }),
         diver("c", "C", {
+          rollCall: notBoardedAt(),
           buddyTeam: team("team-1", [otherDiver("a", "A"), otherDiver("b", "B")]),
         }),
       ],

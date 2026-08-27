@@ -1,4 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openOnThisPhone } from "./helpers";
 
 /**
  * Not READ_ONLY, despite neither test submitting anything: both start by
@@ -22,6 +23,10 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await page.getByRole("link", { name: "Board divers" }).first().click();
   await expect(page).toHaveURL(/\/manifest/);
 
+  // Every per-device preference rests behind the "On this phone" line (ADR
+  // 20260827-the-departure-is-two-working-surfaces, decision 2), so opening
+  // that group is how a staffer reaches the boat-mode control at all.
+  await openOnThisPhone(page);
   const boatMode = page.getByRole("group", { name: "Boat mode" });
   await expect(boatMode).toBeVisible();
   const distanceFromPageEnd = await boatMode.evaluate((element) => {

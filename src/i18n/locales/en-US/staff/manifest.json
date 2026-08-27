@@ -84,7 +84,7 @@
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
   "rollCallRecordedByWithNote": "{label} {date} by {name} · {note}",
-  "carriedForwardFromDock": "Carried forward — this diver never left the dock. Mark boarded to bring them back on.",
+  "carriedForwardFromDock": "Ashore since the dock",
   "buddyHeading": "Buddy teams",
   "buddyTeamLabel": "Team {number, number, ::00}",
   "buddyCancelledName": "{name} (seat cancelled)",
@@ -120,7 +120,6 @@
   "markNotBoarded": "Mark not boarded",
   "notBackAboardActive": "Not back aboard",
   "markNotBackAboard": "Mark not back aboard",
-  "notBackAboardDescription": "After a dive, “not back aboard” means this diver has not returned to the boat. It keeps the count open.",
   "saving": "Saving…",
   "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo.",
   "diverFactsSummary": "Contact & gear",
@@ -130,5 +129,10 @@
   "noDiversLine": "No divers are booked on this departure.",
   "diverFactsSummaryWithMedical": "Contact, gear & medical",
   "sharedDepthApplies": "Applies to {names}.",
-  "depthChip": "Depth advisory"
+  "depthChip": "Depth advisory",
+  "personDetails": "Details",
+  "rollCallRecordedShort": "{label} · {time} · {name}",
+  "rollCallRecordedShortWithNote": "{label} · {time} · {name} · {note}",
+  "markBackAboard": "Mark back aboard",
+  "crewMarkBackAboard": "Mark back aboard"
 }

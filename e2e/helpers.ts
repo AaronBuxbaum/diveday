@@ -414,6 +414,75 @@ export async function openRosterNotes(row: Locator): Promise<void> {
   );
 }
 
+/**
+ * One roll-call row on the boat manifest, by the person it names.
+ *
+ * The row's name is not a heading any more (ADR
+ * 20260827-the-departure-is-two-working-surfaces, slice 5a): the whole name
+ * column is the person's `<summary>`, and a heading is not phrasing content a
+ * summary may hold beside an index and a caret. Specs used to anchor on the
+ * `<h3>` for a real reason — a bare `hasText` also matched whichever *other*
+ * row happened to carry the name in a buddy chip, and that misread Omar's row
+ * as Sam's on this suite's first CI run. Scoping to `> ul > li` restores that
+ * guarantee from the other end: within the roster list a person's name appears
+ * on their own row and nowhere else.
+ */
+export function manifestRow(page: Page, name: string): Locator {
+  return page
+    .locator("#roll-call-list > ul > li")
+    .filter({ has: page.locator("summary", { hasText: name }) });
+}
+
+/**
+ * Wait until the manifest's offline copy has been saved in the background.
+ *
+ * Specs used to wait on the "Open offline roll call" link, which since slice
+ * 5a lives inside the collapsed "On this phone" group and is therefore not
+ * visible at rest (ADR 20260827-the-departure-is-two-working-surfaces,
+ * decision 2 — device settings are "ashore, not here"). The freshness pill is
+ * the better signal anyway and is deliberately *not* behind the tap: a stale
+ * copy that looks current is the failure mode the whole mechanism exists to
+ * prevent, so its state rides the summary line.
+ */
+export async function offlineCopySaved(page: Page): Promise<void> {
+  await expect(page.getByText(/(Fresh|Aging|Stale) copy/)).toBeVisible();
+}
+
+/**
+ * Open the manifest's boat check — the pre-departure safety list, which rests
+ * as one line stating how many of how many are checked (ADR
+ * 20260827-the-departure-is-two-working-surfaces, decision 2: the items are a
+ * "one tap away" concern; the check itself happens once, before the boat
+ * leaves).
+ */
+export async function openBoatCheck(page: Page): Promise<void> {
+  await openIfClosed(
+    page
+      .locator("details")
+      .filter({ has: page.locator("#pre-departure-check-heading") })
+      .first(),
+  );
+}
+
+/** Open the manifest's "On this phone" group — offline detail, push, toggles. */
+export async function openOnThisPhone(page: Page): Promise<void> {
+  await openIfClosed(
+    page
+      .locator("details")
+      .filter({ has: page.locator("#offline-heading") })
+      .first(),
+  );
+}
+
+/**
+ * Open a roll-call row's person panel — the deliberate first step of the
+ * two-step that records "not back aboard", and the way to every reference fact
+ * the row tucks away (contact, medical, notes, buddy team).
+ */
+export async function openManifestPerson(row: Locator): Promise<void> {
+  await openIfClosed(row.locator("details").first());
+}
+
 /** Open the Guests page activity log when a spec needs to inspect its audit trail. */
 export async function openTripActivity(page: Page): Promise<void> {
   await openIfClosed(

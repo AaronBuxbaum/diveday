@@ -167,6 +167,24 @@ const sizes = {
    * where a floor grows with it.
    */
   icon: { x: "px-0", rest: "w-11 text-base" },
+  /**
+   * The roll-call mark: a **circular 56px** target holding one drawn glyph and
+   * no label at all, for the manifest's one-tap-per-person row (ADR
+   * 20260827-the-departure-is-two-working-surfaces, decision 3).
+   *
+   * Not `icon` and not `boat`, for a reason each. `icon` is the 44px desk
+   * target, and this is worked one-handed on a wet deck where 56px is the
+   * floor. `boat` is that 56px — but as a *minimum height* on a label-shaped
+   * box, so a glyph-only button on it comes out 56 tall and about 60 wide, an
+   * almost-circle. `size-14` fixes both axes, which is what lets the caller
+   * round it to a true circle.
+   *
+   * `touch-manipulation` for the same reason `boat` carries it: it drops the
+   * browser's ~300ms double-tap-to-zoom wait, and this is the exact control
+   * where a tap that seems not to have registered gets tapped again — which on
+   * a roll call is how one person gets marked aboard twice.
+   */
+  mark: { x: "px-0", rest: "size-14 touch-manipulation" },
 } as const;
 
 /**

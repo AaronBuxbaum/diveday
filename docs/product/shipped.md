@@ -7,6 +7,30 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The boat manifest becomes an instrument (delivered 2026-08-27)
+
+Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+the first slice of that ADR to land. The manifest is worked one-handed at the rail, and it now
+reads like it: **the count leads** the page, a row at rest is a number, a name, at most one
+exception capsule and **one 56px tap**, and everything else is one tap away inside that person's
+own panel — contact as reference text, rental fit, medical mark, staff notes, the readiness
+blockers and their fix. The boat check and the whole "On this phone" group each collapse to a
+single line (the offline copy's connectivity and freshness ride that line, because a stale copy
+that looks current is the failure the mechanism exists to prevent). The seeded ten-diver departure
+went from **5,731px to about 2,700px** at 390px wide.
+
+Three rules moved with it. **Consequence decides the gesture**: aboard is a plain tap on the row's
+trailing edge, undone by tapping it again, while "not back aboard" is a deliberate two-step
+recorded from the person's panel — it is the highest-consequence claim the app can make and it
+must not be brushable with a wet thumb. **An alarm is earned by a recorded fact, never by the
+absence of one**: an open circle mid-count means "not yet", the split-buddy-team alert now waits
+for a human to record a teammate not back rather than firing on the first uncalled name, and the
+after-dive readiness sentence lost its danger tone. **Status is drawn, not typed**: the five
+roll-call marks are inline SVG on the 16/20/24px grid (`src/components/RollCallMark.tsx`), and
+every colour-carried state still says its word — the audit line under the name keeps every
+result's who-and-when. Paper is untouched: the printed manifest carries every fact the screen
+tucks away, including the full timestamp the screen shortens to a time.
+
 ## The gear register — the shop's own fleet, reservations, and service clocks (delivered 2026-08-20)
 
 Roadmap §3's M5 reversal, accepted and built on the product owner's instruction

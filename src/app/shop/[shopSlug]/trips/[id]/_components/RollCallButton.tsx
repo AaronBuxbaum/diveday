@@ -60,6 +60,8 @@ export function RollCallButton({
   label,
   pendingLabel,
   ariaLabel,
+  mark,
+  pendingMark,
   className,
   formClassName,
   noteDraftFor,
@@ -97,6 +99,22 @@ export function RollCallButton({
    * pending state.
    */
   ariaLabel?: string;
+  /**
+   * A drawn glyph to render **instead of** the label's text — the roll-call
+   * row's 56px circle (ADR 20260827-the-departure-is-two-working-surfaces,
+   * decision 5: status is drawn, never typed as emoji).
+   *
+   * The words do not disappear when this is set, they move: `label` becomes the
+   * button's accessible name, so a screen reader still hears "Mark boarded" and
+   * "Aboard — tap again to undo" where a sighted user reads a check in a green
+   * circle. That is the whole reason this is a prop on the same control rather
+   * than a second component — the pending state, the confirm/refuse haptics,
+   * the `role="alert"` refusal and the remount-key contract are safety
+   * behaviour, and a mark-shaped copy of them is a copy that can drift.
+   */
+  mark?: ReactNode;
+  /** The same, while this control's own submit is in flight. */
+  pendingMark?: ReactNode;
   className: string;
   /**
    * Sizing for the `<form>` the button posts through. In the control
@@ -167,10 +185,31 @@ export function RollCallButton({
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          aria-label={isPending ? undefined : ariaLabel}
+          // With a drawn mark there is no visible text to be the accessible
+          // name, so the words always have to be said here — including while
+          // the submit is in flight, where a nameless button would otherwise
+          // go silent at the one moment a reader is waiting to hear what
+          // happened. Without a mark the rendered label *is* the name and this
+          // stays what it was: unset unless a settled control has no visible
+          // done-check to point at.
+          aria-label={
+            mark
+              ? isPending
+                ? pendingLabel
+                : (ariaLabel ?? label)
+              : isPending
+                ? undefined
+                : ariaLabel
+          }
           className={className}
         >
-          {isPending ? pendingLabel : label}
+          {mark ? (
+            <span aria-hidden="true">{isPending ? (pendingMark ?? mark) : mark}</span>
+          ) : isPending ? (
+            pendingLabel
+          ) : (
+            label
+          )}
         </button>
       </form>
       {result && !result.ok ? (
