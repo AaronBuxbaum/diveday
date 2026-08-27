@@ -460,7 +460,7 @@
   },
   "/shop/[shopSlug]/trips/[id]/log": {
     "e2e": ["a11y.spec.ts", "departure-log.spec.ts"],
-    "visual": ["departure-log"]
+    "visual": ["departure-log", "departure-log-every-checkpoint"]
   },
   "/shop/[shopSlug]/trips/[id]/manifest": {
     "e2e": [

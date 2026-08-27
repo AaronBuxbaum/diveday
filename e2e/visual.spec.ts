@@ -189,6 +189,7 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "schedule-builder",
   "prep",
   "departure-log",
+  "departure-log-every-checkpoint",
 ]);
 
 /**
@@ -988,6 +989,29 @@ function publicReefCard(page: Page) {
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, REEF_TRIP);
+}
+
+/**
+ * The staff departure-log path for the seeded four-dive Deep Diver session —
+ * the only departure in the demo that runs the maximum number of dives, and so
+ * the only one whose roll-call tables reach eight columns.
+ *
+ * Reached through the course's own public page rather than the schedule board,
+ * which is a keyset-paged stream: that session sails twenty days out, behind an
+ * unknown number of pages of departures that other seed scenarios are free to
+ * add to. The course page lists every upcoming session of one course and links
+ * each to its trip, so this resolves in one navigation and stays resolved when
+ * the board's contents change.
+ */
+async function deepDiverLogPath(page: Page): Promise<string> {
+  await page.goto("/s/blue-mantis/courses/deep-diver");
+  const href = await page.locator('#dates a[href*="/trips/"]').first().getAttribute("href");
+  const tripId = href?.split("/trips/")[1];
+  // Not a soft assertion: a null here would otherwise navigate to
+  // `/shop/blue-mantis/trips/undefined/log`, which `uuidParam` answers with a
+  // 404 — and a capture of a 404 is a baseline nobody reads twice.
+  expect(tripId, "the Deep Diver course page lists its seeded session").toBeTruthy();
+  return `/shop/blue-mantis/trips/${tripId}/log`;
 }
 
 /**
@@ -3037,6 +3061,22 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`${tripPath}/log`);
         await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
         await capture(page, "departure-log", scheme);
+      });
+
+      // The same document at its widest. The roster and crew tables are three
+      // columns plus one per roll-call checkpoint, and a checkpoint is a dive,
+      // so the reef trip's two dives photograph six columns and nothing in this
+      // suite had ever looked at more. Four dives is the ceiling the schedule
+      // form and the `trips_planned_dives_range` check constraint both enforce,
+      // and it is eight columns — the case issue #1052 widened the floor for.
+      // Captured at the portrait tablet as well (`TABLET_SURFACES`), because
+      // that width is where issue #1035 found the crush this inherits.
+      test(`a departure log at every checkpoint renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto(await deepDiverLogPath(page));
+        await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+        await capture(page, "departure-log-every-checkpoint", scheme);
       });
 
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full

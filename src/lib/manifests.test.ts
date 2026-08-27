@@ -272,6 +272,20 @@ describe("buildTripManifest", () => {
     expect(rollCallCheckpoints(2)).toEqual(["departure", "after_dive_1", "after_dive_2"]);
     expect(isRollCallCheckpoint("after_dive_2", 2)).toBe(true);
     expect(isRollCallCheckpoint("after_dive_3", 2)).toBe(false);
+    // Bounded at both ends, and the bound is load-bearing off this file: the
+    // departure log's roster and crew tables are three columns plus one per
+    // checkpoint, and they pick their scroll floor from a two-branch map over
+    // that count (`rollCallTableMinWidth`, trips/[id]/log/page.tsx, issue
+    // #1052). Two to five checkpoints is five to eight columns, so that map has
+    // no missing case. Widening this clamp without widening that map would put
+    // a ninth column back at a floor sized for eight — which renders, and looks
+    // exactly like the crush issue #1035 fixed.
+    expect(rollCallCheckpoints(1)).toHaveLength(2);
+    expect(rollCallCheckpoints(4)).toHaveLength(5);
+    // Clamped, not trusted: the DB check constraint `trips_planned_dives_range`
+    // says 1..4 too, so neither end is reachable through the product.
+    expect(rollCallCheckpoints(0)).toHaveLength(2);
+    expect(rollCallCheckpoints(9)).toHaveLength(5);
     // A checkpoint's word ("Before departure" / "After dive N") is resolved
     // against a message bundle by the caller — see
     // src/i18n/manifest-labels.test.ts's `rollCallCheckpointText` coverage —

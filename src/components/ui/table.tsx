@@ -56,6 +56,19 @@ const MIN_WIDTH = {
   // needed it: at 40rem a portrait tablet's 772px column sat *above* the floor,
   // so the shell never scrolled and the columns packed instead (issue #1035).
   "56rem": "min-w-[56rem] print:min-w-0",
+  // The same table with more roll-call columns. The departure log's roster is
+  // three fixed columns plus one per checkpoint, and a checkpoint is a dive:
+  // `rollCallCheckpoints` clamps `plannedDives` to 1..4 and the DB check
+  // constraint `trips_planned_dives_range` agrees, so the count is five to
+  // eight columns and nothing wider exists. `56rem` holds six of them at the
+  // ~149px issue #1035 measured; the same floor gives seven 128px and eight
+  // 112px, which is that crush returning on a shop that runs more dives per
+  // departure than the seed does. This one holds seven at 165px and eight at
+  // 144px. Wider than the `max-w-5xl` staff work surface on purpose — at eight
+  // columns the document scrolls sideways at every width including desktop,
+  // which is the answer #1035 settled on for a table that is a document, and
+  // `print:min-w-0` still hands paper the whole thing (issue #1052).
+  "72rem": "min-w-[72rem] print:min-w-0",
 } as const;
 
 export type TableMinWidth = keyof typeof MIN_WIDTH;

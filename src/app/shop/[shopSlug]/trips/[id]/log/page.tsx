@@ -6,7 +6,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { Table, type TableMinWidth, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
@@ -198,7 +198,7 @@ export default async function IncidentExportPage({
         <p className="mt-1 max-w-prose text-sm text-muted">
           {t("incidentExport.rosterDescription")}
         </p>
-        <Table minWidth="56rem" shellClassName="mt-3">
+        <Table minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)} shellClassName="mt-3">
           <THead>
             <Th>{t("incidentExport.colDiver")}</Th>
             <Th>{t("incidentExport.colEmergencyContact")}</Th>
@@ -278,7 +278,10 @@ export default async function IncidentExportPage({
         {doc.crew.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("incidentExport.crewNone")}</p>
         ) : (
-          <Table minWidth="56rem" shellClassName="mt-3">
+          <Table
+            minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
+            shellClassName="mt-3"
+          >
             <THead>
               <Th>{t("incidentExport.colCrewMember")}</Th>
               <Th>{t("incidentExport.colRoles")}</Th>
@@ -567,6 +570,27 @@ export default async function IncidentExportPage({
 }
 
 /** One roll-call result cell: the manifest's own word, plus when and by whom. */
+/**
+ * The scroll floor for the two roll-call tables, which is the one thing on this
+ * page whose column count is not fixed: three columns plus one per checkpoint,
+ * and a checkpoint is a dive. `rollCallCheckpoints` clamps to 1..4 dives (as
+ * does the `trips_planned_dives_range` check constraint), so this answers for
+ * five to eight columns and there is no ninth case to miss.
+ *
+ * A two-branch pick rather than arithmetic, because `MIN_WIDTH` is a static map
+ * of literal Tailwind classes: a computed `min-w-[${n}rem]` typechecks, lints
+ * and renders with no width at all, since the scanner never sees the class.
+ * The arithmetic lives here rather than in `Table` for the reason that
+ * component's own doc gives — its width props are a hint about a table's
+ * strategy, not a layout escape hatch, and this page is the only call site that
+ * has a column count to count (issue #1052).
+ */
+function rollCallTableMinWidth(checkpointCount: number): TableMinWidth {
+  // Seven columns and up. Six at `56rem` is ~149px each, the width issue #1035
+  // measured and settled on; seven would be 128px at that floor and eight 112px.
+  return checkpointCount >= 4 ? "72rem" : "56rem";
+}
+
 function RollCallCell({
   t,
   result,
