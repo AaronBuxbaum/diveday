@@ -101,7 +101,7 @@ const exemptPaths = new Set(["src/app/_og/card.tsx", "src/app/_brand/colors.ts"]
  * (a baseline entry would have banked the false positive as debt).
  */
 export const hexColorPattern =
-  /(?<!\b(?:issue|issues|PR|pull request)\s)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])/gi;
+  /(?<!\b(?:issue|issues|PR|pull request)\s+)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])/gi;
 
 const colorPrefixes = [
   "bg",
