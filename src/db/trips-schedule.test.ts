@@ -371,3 +371,45 @@ describe("schedule edits after roll-call evidence", () => {
     });
   });
 });
+
+/**
+ * **A copy of a self-guided departure is still self-guided** (issue #973).
+ *
+ * `trips.self_guided` silences the Today queue's `uncrewed_departure` row for a
+ * departure the shop has said runs without an in-water guide. Every path that
+ * *clones* a departure has to carry it, or the mark quietly stops holding on
+ * the copies — and the shop most likely to set it is the one running a standing
+ * weekly unguided charter, where every instance is a clone. Losing it there
+ * would leave the warning-toned row firing forever on exactly the shop the
+ * feature exists for, which is the failure it was built to prevent.
+ *
+ * Caught in review of PR #1041, where `duplicateTrip` and the series
+ * materialization both copied `isPrivate` beside it and neither copied this.
+ */
+describe("a self-guided departure keeps its mark when copied", () => {
+  it("carries self_guided through duplicateTrip", async () => {
+    const { db, shop } = await seededShopContext();
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Standing shore dive — buddy pairs",
+      startsAt: wallTimeToUtc({ year: 2026, month: 9, day: 5, hour: 8, minute: 0 }, shop.timezone),
+      endsAt: wallTimeToUtc({ year: 2026, month: 9, day: 5, hour: 12, minute: 0 }, shop.timezone),
+      capacity: 8,
+      plannedDives: 2,
+      selfGuided: true,
+    });
+    if (!source) throw new Error("failed to create the source departure");
+    expect(source.selfGuided).toBe(true);
+
+    const copied = await duplicateTrip(
+      db,
+      shop.id,
+      source.id,
+      wallTimeToUtc({ year: 2026, month: 9, day: 12, hour: 8, minute: 0 }, shop.timezone),
+    );
+
+    if (!copied) throw new Error("duplicateTrip returned nothing");
+    const [row] = await db.select().from(trips).where(eq(trips.id, copied.id));
+    expect(row?.selfGuided).toBe(true);
+  });
+});

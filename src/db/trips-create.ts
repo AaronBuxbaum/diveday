@@ -41,6 +41,8 @@ export type NewTrip = {
   minimumDecisionHours?: number | null;
   scheduleDays?: TripScheduleDayInput[];
   isPrivate?: boolean;
+  /** The shop's own divemaster target does not apply to this departure (issue #973). */
+  selfGuided?: boolean;
   diveMode?: "boat" | "shore" | "pool";
   boatId?: string | null;
 };
@@ -217,6 +219,8 @@ export async function insertTripInstance(
     drafts: ReturnType<typeof normalizedDiveDrafts>;
     scheduleDays?: TripScheduleDayInput[];
     isPrivate?: boolean;
+    /** The shop's own divemaster target does not apply to this departure (issue #973). */
+    selfGuided?: boolean;
     diveMode?: "boat" | "shore" | "pool";
     boatId?: string | null;
   },
@@ -241,6 +245,7 @@ export async function insertTripInstance(
       plannedDives: params.plannedDives,
       diveSiteId: primaryDiveSiteId(params.drafts),
       isPrivate: params.isPrivate ?? false,
+      selfGuided: params.selfGuided ?? false,
       diveMode: params.diveMode ?? "boat",
       boatId: params.boatId ?? null,
     })
@@ -304,6 +309,7 @@ export async function createTrip(db: AppDb, input: NewTrip) {
       drafts,
       scheduleDays: input.scheduleDays,
       isPrivate: input.isPrivate,
+      selfGuided: input.selfGuided,
       diveMode: input.diveMode,
       boatId: input.boatId,
     });

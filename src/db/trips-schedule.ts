@@ -330,6 +330,10 @@ export async function duplicateTrip(
       depositCents: source.depositCents,
       cancellationWindowHours: source.cancellationWindowHours,
       isPrivate: source.isPrivate,
+      // Copied like every other stated fact about the departure. A shop that
+      // marked a charter self-guided and then copied it to next Saturday must
+      // not find the copy raising the row the mark exists to silence.
+      selfGuided: source.selfGuided,
       diveMode: source.diveMode,
       // Re-checked rather than trusted, even though it is being copied from a
       // row this shop already owns: a bad id written before `validateBoat`

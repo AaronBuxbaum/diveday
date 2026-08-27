@@ -140,6 +140,10 @@ const addSchema = z.object({
     (value) => value === "true" || value === true,
     z.boolean().optional().default(false),
   ),
+  selfGuided: z.preprocess(
+    (value) => value === "true" || value === true,
+    z.boolean().optional().default(false),
+  ),
   diveMode: z.preprocess(
     (value) => value || "boat",
     z.enum(["boat", "shore", "pool"]).default("boat"),
@@ -249,6 +253,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     repeatIntervalWeeks,
     repeatEndsOn,
     isPrivate,
+    selfGuided,
     diveMode,
     boatId,
   } = parsed.data;
@@ -321,6 +326,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     minimumBookings: details.patch.minimumBookings,
     minimumDecisionHours: details.patch.minimumDecisionHours,
     isPrivate,
+    selfGuided,
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
   };

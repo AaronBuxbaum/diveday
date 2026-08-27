@@ -263,6 +263,10 @@ async function materializeWindow(
         depositCents: template.trip.depositCents,
         cancellationWindowHours: template.trip.cancellationWindowHours,
         isPrivate: template.trip.isPrivate,
+        // The case this matters most for: a standing weekly self-guided charter
+        // would otherwise raise `uncrewed_departure` on every instance the
+        // nightly horizon roll materializes, forever (issue #973).
+        selfGuided: template.trip.selfGuided,
         diveMode: template.trip.diveMode,
         boatId: template.trip.boatId,
         drafts: template.drafts,

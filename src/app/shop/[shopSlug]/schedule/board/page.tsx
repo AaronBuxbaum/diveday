@@ -359,6 +359,8 @@ export default async function ScheduleBoardPage({
     descriptionLabel: st("schedule.builder.descriptionLabel"),
     descriptionPlaceholder: st("schedule.builder.descriptionPlaceholder"),
     isPrivateLabel: st("schedule.builder.isPrivateLabel"),
+    selfGuidedLabel: st("schedule.builder.selfGuidedLabel"),
+    selfGuidedHint: st("schedule.builder.selfGuidedHint"),
     isPrivateHint: st("schedule.builder.isPrivateHint"),
     daysLabel: st("schedule.builder.daysLabel"),
     daysDescription: st("schedule.builder.daysDescription"),

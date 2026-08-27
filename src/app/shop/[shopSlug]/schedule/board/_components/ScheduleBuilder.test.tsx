@@ -106,6 +106,8 @@ const COPY: BuilderCopy = {
   descriptionLabel: "Description",
   descriptionPlaceholder: "Sites, conditions, who it's for.",
   isPrivateLabel: "Private charter",
+  selfGuidedLabel: "Self-guided dive",
+  selfGuidedHint: "Buddy pairs go in without a guide.",
   isPrivateHint: "Off the public schedule — only divers with the link can book it.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
