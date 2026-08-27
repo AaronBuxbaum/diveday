@@ -2356,6 +2356,54 @@ for (const scheme of ["light", "dark"] as const) {
       const boardListSettled = (page: Page) =>
         page.getByRole("link", { name: "Show later departures" }).waitFor();
 
+      /**
+       * **Prove the add panel is open before photographing it — every other
+       * gate this capture has is equally true of the board with it shut.**
+       *
+       * `schedule-builder-add` used to gate on the placeholder `<option
+       * disabled>` inside `select[name="courseId"]` detaching, which is the
+       * right signal that the panel's own fetch has landed and the shot will
+       * not be of "Loading…". It is the wrong signal for whether the panel
+       * exists: Playwright resolves `state: "detached"` **immediately** for a
+       * locator matching nothing, and before the panel mounts there is no
+       * `select[name="courseId"]` at all. The gate was therefore true at
+       * exactly the moment it was meant to be false, and the capture's two
+       * other gates cannot tell the pages apart — the `Board` heading and the
+       * board's trailing pager render identically either way.
+       *
+       * Measured rather than reasoned. Instrumenting `capture()` to log
+       * `location.href` beside `document.documentElement.scrollHeight`, a
+       * `--repeat-each=5` run caught `schedule-builder-add` shooting
+       * `/schedule/board` with no `?add=` twice, at 3,828px — the
+       * `schedule-builder` baseline's own height, the same page — against
+       * 4,986px on `/schedule/board?add=1`. The click's client navigation had
+       * simply not committed, and nothing waited for it. The old gate also
+       * admitted a half-settled panel at 4,818px, the 168px that made this
+       * look like a pager appearing and disappearing.
+       *
+       * It is not the pager. The trailing "Show later departures" control was
+       * present in every probe of both runs, and the demo shop seeds 48
+       * upcoming departures against a 14-row keyset page, so `nextCursor` is
+       * never null and the control is never conditional. With the gates below,
+       * 20 consecutive captures measured 4,986px and 3,136px, every one.
+       */
+      const addPanelSettled = async (page: Page) => {
+        // The click's client navigation has committed. Every other gate below
+        // — and both of this capture's outer ones — is equally true of the
+        // *pre-click* board, so this is the only one that can tell the two
+        // pages apart. A no-op for the expanded capture, which `goto`s the
+        // panel state directly.
+        await page.waitForURL(/[?&]add=/);
+        const courseSelect = page.locator('select[name="courseId"]');
+        // The panel is mounted. Without this the wait below is vacuous.
+        await courseSelect.waitFor({ state: "attached" });
+        // `loadBuilderOptionsAction` has answered. One select speaks for both:
+        // the two placeholders are driven by the same `options === null`, and
+        // the dive-site select is `hidden` in the expanded panel, where a wait
+        // on its visibility would never resolve.
+        await courseSelect.locator("option[disabled]").waitFor({ state: "detached" });
+      };
+
       // The staff schedule as a builder: departures grouped by day, each row
       // carrying its crew and one quiet "⋯" disclosure for move/copy/remove.
       test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
@@ -2373,11 +2421,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("link", { name: "Add a departure", exact: true }).click();
-        // Its two selects fetch their options when the panel opens; wait for
-        // the placeholder option to go, so the shot is never of "Loading…".
-        await page
-          .locator('select[name="courseId"] option[disabled]')
-          .waitFor({ state: "detached" });
+        await addPanelSettled(page);
         await boardListSettled(page);
         await capture(page, "schedule-builder-add", scheme);
       });
@@ -2393,9 +2437,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board?add=full");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await page.getByRole("button", { name: "Fewer options" }).waitFor();
-        await page
-          .locator('select[name="courseId"] option[disabled]')
-          .waitFor({ state: "detached" });
+        await addPanelSettled(page);
         await boardListSettled(page);
         await capture(page, "schedule-builder-add-full", scheme);
       });
