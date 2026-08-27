@@ -1872,7 +1872,11 @@ export const staffCredentialKind = pgEnum("staff_credential_kind", [
   "other",
 ]);
 
-/** Staff-owned evidence; warning-only and never an assignment/booking gate. */
+/**
+ * Staff-owned evidence; warning-only and never an assignment/booking gate.
+ * Decided permanently, not merely unbuilt — see H-59 in
+ * docs/product/human-decisions.md.
+ */
 export const staffCredentials = pgTable(
   "staff_credentials",
   {
