@@ -203,3 +203,42 @@ describe("DELETE /api/test/seed-private-shop", () => {
     expect(getDb).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * `seed-stripe-account` grew a `?slug=` so a spec that takes a shop of its own
+ * can still reach a payments surface (`e2e/tax.spec.ts` — the tax opt-in's only
+ * consequence is on checkout and invoicing). That parameter is the reason these
+ * two cases exist: the slug is caller-supplied, and the route hands whatever it
+ * names a connected Stripe account with charges enabled.
+ *
+ * The `isDemo` check is the whole guarantee, and it sits *after* the lookup, so
+ * asserting the refusal against a non-demo shop is asserting the thing that
+ * keeps a real tenant out — the bearer guard above already being no help to
+ * anyone who has the secret and a slug.
+ */
+describe("POST /api/test/seed-stripe-account — the caller-supplied slug", () => {
+  function connectRequest(query: string) {
+    return new Request(`http://localhost/api/test/seed-stripe-account${query}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+  }
+
+  it("refuses a malformed slug rather than sanitising it", async () => {
+    const response = await seedStripeAccount.POST(connectRequest("?slug=Not%20A%20Slug"));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "bad_slug" });
+    // Refused on its shape, before the slug is ever used to find a tenant.
+    expect(getShopBySlug).not.toHaveBeenCalled();
+  });
+
+  it("refuses a real shop, however well-formed the slug naming it", async () => {
+    vi.mocked(getShopBySlug).mockResolvedValue({ id: "shop-1", isDemo: false } as never);
+
+    const response = await seedStripeAccount.POST(connectRequest("?slug=a-real-dive-shop"));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not_available" });
+  });
+});

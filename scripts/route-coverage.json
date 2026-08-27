@@ -272,7 +272,7 @@
     "visual": ["order-detail", "order-detail-partly-refunded"]
   },
   "/shop/[shopSlug]/orders/new": {
-    "e2e": ["invoicing.spec.ts", "orders-demo.spec.ts"],
+    "e2e": ["invoicing.spec.ts", "orders-demo.spec.ts", "tax.spec.ts"],
     "visual": ["orders-new"]
   },
   "/shop/[shopSlug]/promos": {
@@ -341,12 +341,14 @@
       "recap.spec.ts",
       "role-permissions.spec.ts",
       "settings-findability.spec.ts",
+      "tax.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
     "visual": [
       "settings-address",
       "settings-data-unfinished",
       "settings-payments",
+      "settings-tax",
       "settings-trial"
     ]
   },
