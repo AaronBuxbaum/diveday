@@ -16,12 +16,33 @@ import {
 } from "@/db/account-security";
 import { userAccounts } from "@/db/schema";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import { sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 const RECOVERY_CODES_COOKIE = "diveday_totp_recovery_codes";
+
+/**
+ * Bounds second-factor guessing at every door that accepts a code.
+ *
+ * The caller here already holds a session, so this is not the sign-in net --
+ * it is what stops a stolen cookie grinding the million codes in a 30-second
+ * window. `disableTotpAction` makes that urgent rather than theoretical: one
+ * hit there clears the secret and every recovery hash, and nothing else stands
+ * in front of it. Two dimensions so one attacker cannot fan out across
+ * accounts, and both are spent before the code is looked at.
+ */
+async function secondFactorAttemptAllowed(accountId: string): Promise<boolean> {
+  const ip = await clientIp();
+  const [byAccount, byIp] = await Promise.all([
+    checkRateLimit(rateLimitKey("second-factor", accountId), RATE_LIMITS.secondFactorByAccount),
+    checkRateLimit(rateLimitKey("second-factor-ip", ip), RATE_LIMITS.secondFactorByIp),
+  ]);
+  return byAccount.allowed && byIp.allowed;
+}
 
 async function securityContext(shopSlug: string) {
   const surface = await requireShopSurface(shopSlug);
@@ -65,6 +86,9 @@ export async function beginTotpEnrollmentAction(shopSlug: string) {
 
 export async function enableTotpAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
+  if (!(await secondFactorAttemptAllowed(accountId))) {
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+  }
   const code = z
     .string()
     .regex(/^\d{6}$/)
@@ -82,6 +106,9 @@ export async function enableTotpAction(shopSlug: string, formData: FormData) {
 export async function disableTotpAction(shopSlug: string, formData: FormData) {
   const { db, accountId } = await securityContext(shopSlug);
   const security = await getAccountSecurity(db, accountId);
+  if (security?.totpEnabledAt && !(await secondFactorAttemptAllowed(accountId))) {
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+  }
   const code = z.string().trim().min(6).max(32).safeParse(formData.get("code"));
   const accepted =
     !security?.totpEnabledAt ||
@@ -116,6 +143,9 @@ export async function revokeAllSessionsAction(shopSlug: string) {
 
 export async function verifyStepUpAction(shopSlug: string, formData: FormData) {
   const { db, accountId, session } = await securityContext(shopSlug);
+  if (!(await secondFactorAttemptAllowed(accountId))) {
+    redirect(noticeUrl(shopPath(shopSlug, "settings", "security"), "too-many-attempts"));
+  }
   const purposeValue = String(formData.get("purpose") ?? "");
   const returnTo = safeStepUpReturnPath(shopSlug, String(formData.get("returnTo") ?? ""));
   const code = z.string().trim().min(6).max(32).safeParse(formData.get("code"));

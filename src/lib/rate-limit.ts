@@ -446,6 +446,18 @@ export const RATE_LIMITS = {
   accountTokenAction: perHour(20),
   /** RFC 8058 unsubscribe POSTs, per capability token rather than shared provider IP. */
   oneClickUnsubscribe: perHour(10),
+  /**
+   * Second-factor attempts (TOTP or a recovery code), per signed-in account.
+   *
+   * Tighter than sign-in, because the caller is already holding a session: the
+   * threat this bounds is a stolen cookie grinding the 1e6 codes in a 30-second
+   * window, and one of the doors it opens -- disabling two-factor -- clears the
+   * secret and every recovery hash on a single hit. Five is generous for a
+   * person copying six digits off their phone.
+   */
+  secondFactorByAccount: per15Min(5),
+  /** The same attempts per IP, so one attacker cannot fan out across accounts. */
+  secondFactorByIp: per15Min(20),
   /** Public booking submissions, per IP. */
   booking: perHour(10),
   /**

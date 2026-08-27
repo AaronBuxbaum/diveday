@@ -4,6 +4,7 @@ import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-b
 import {
   createTotpSecret,
   generateRecoveryCodes,
+  matchTotpStep,
   recoveryCodeHashes,
   verifyTotpCode,
 } from "@/lib/totp";
@@ -27,18 +28,19 @@ export async function beginTotpEnrollment(db: DbExecutor, userAccountId: string)
   if (current?.totpEnabledAt) return null;
   const secret = createTotpSecret();
   const recoveryCodes = generateRecoveryCodes();
+  const hashes = recoveryCodeHashes(recoveryCodes, key.key, userAccountId);
   await db
     .insert(accountSecurity)
     .values({
       userAccountId,
       totpSecretSealed: sealSecret(secret, key.key),
-      recoveryCodeHashes: recoveryCodeHashes(recoveryCodes),
+      recoveryCodeHashes: hashes,
     })
     .onConflictDoUpdate({
       target: accountSecurity.userAccountId,
       set: {
         totpSecretSealed: sealSecret(secret, key.key),
-        recoveryCodeHashes: recoveryCodeHashes(recoveryCodes),
+        recoveryCodeHashes: hashes,
         totpEnabledAt: null,
         lastTotpStep: null,
         updatedAt: nowDate(),
@@ -84,8 +86,10 @@ export async function verifyAccountSecondFactor(
 
   const secret = await getTotpSecret(db, userAccountId);
   const now = nowMs();
-  const step = Math.floor(now / 1_000 / 30);
-  if (secret && verifyTotpCode(secret, code, now)) {
+  // The step the code was *for*, which with drift accepted is not always the
+  // current one -- consuming the current step would leave the real one live.
+  const step = secret ? matchTotpStep(secret, code, now) : null;
+  if (step !== null) {
     if (options.consumeTotpStep === false) return true;
     const [row] = await db
       .update(accountSecurity)
@@ -100,7 +104,9 @@ export async function verifyAccountSecondFactor(
     return Boolean(row);
   }
 
-  const recoveryHash = recoveryCodeHashes([code.trim().toUpperCase()])[0];
+  const key = secretKeyFromEnvironment();
+  if (key.status !== "ok") return false;
+  const recoveryHash = recoveryCodeHashes([code], key.key, userAccountId)[0];
   const [row] = await db
     .update(accountSecurity)
     .set({
