@@ -90,6 +90,16 @@ rather than trusted.
 - **unverifiable** — the claim is missing a branch, worktree or timestamp, or `git` could not be
   read. Never assume either way from this; go and look.
 
+**A claim from the main checkout is vouched for by its branch alone.** `git worktree list` always
+contains the repo root, so naming it as your `Worktree:` proves nothing — and until issue #1005 it
+read as *live forever*, with the branch never consulted at all. #953 and #959 both sat that way,
+behind `codex/issue-953-959`, a branch that has never existed anywhere, while AGENTS.md was telling
+every other session to treat that verdict as somebody's reservation. Working in the main checkout is
+legitimate, and saying so honestly beats inventing a worktree path, so such a claim is not refused:
+it falls through to the branch test, gets no verdict of its own, and reads `stale — claimed from the
+main checkout, branch does not exist` when nothing backs it. If you claim from the main checkout,
+your first commit is what makes the claim checkable — until then it reads as stale, correctly.
+
 A claim missing any of the three facts is not a claim at all, and the parser refuses it. That is
 deliberate: a claim nobody can disprove is worse than none, because a dead session then holds a
 ticket forever and "someone is on it" stops being distinguishable from "someone was on it in

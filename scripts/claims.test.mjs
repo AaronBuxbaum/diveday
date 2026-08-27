@@ -121,6 +121,45 @@ describe("classifyClaim", () => {
     expect(verdict.reason).toBe("worktree gone, branch does not exist");
   });
 
+  // Issue #1005: `git worktree list` always contains the main checkout, so a claim
+  // naming it used to read "live — worktree present" forever with its branch never
+  // consulted. #953 and #959 both sat that way behind a branch that never existed.
+  const rootClaim = parseClaim(CLAIM.replace(".claude/worktrees/course-templates-a1b2c3", ROOT));
+
+  it("does not accept the main checkout as worktree evidence", () => {
+    const verdict = classifyClaim(rootClaim, facts({ worktrees: [ROOT] }), NOW);
+    expect(verdict.state).toBe("stale");
+    expect(verdict.reason).toBe("claimed from the main checkout, branch does not exist");
+  });
+
+  it("still vouches for a main-checkout claim whose branch advanced", () => {
+    const verdict = classifyClaim(
+      rootClaim,
+      facts({ worktrees: [ROOT], branches: { [rootClaim.branch]: "2026-08-21T10:00:00Z" } }),
+      NOW,
+    );
+    expect(verdict.state).toBe("live");
+    expect(verdict.reason).toBe("branch advanced");
+  });
+
+  it("says the main checkout rather than 'worktree gone' when the branch merely stalled", () => {
+    const verdict = classifyClaim(
+      rootClaim,
+      facts({ worktrees: [ROOT], branches: { [rootClaim.branch]: "2026-08-20T09:00:00Z" } }),
+      NOW,
+    );
+    expect(verdict.state).toBe("stale");
+    expect(verdict.reason).toBe("claimed from the main checkout, branch has no commit since the claim");
+  });
+
+  // A trailing slash is the same directory; it must not sneak past the root check.
+  it("treats a trailing-slash spelling of the root as the main checkout", () => {
+    const trailing = parseClaim(
+      CLAIM.replace(".claude/worktrees/course-templates-a1b2c3", `${ROOT}/`),
+    );
+    expect(classifyClaim(trailing, facts({ worktrees: [ROOT] }), NOW).state).toBe("stale");
+  });
+
   // Never guess a verdict that could not be checked — that is the registry problem again.
   it("is unverifiable rather than stale when git could not be read", () => {
     expect(classifyClaim(claim, null, NOW).state).toBe("unverifiable");
