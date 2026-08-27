@@ -164,10 +164,31 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     !file.endsWith(".test.mjs") &&
     file !== "check-repo.mjs" &&
     // Opt-in / env-shaped checks that check-repo runs are listed in its own
-    // `checks` table; the only standing exception is the e2e build probe,
-    // which needs a completed `pnpm e2e:build` to have anything to inspect.
-    file !== "check-e2e-build.mjs",
+    // `checks` table. Two standing exceptions: the e2e build probe, which needs
+    // a completed `pnpm e2e:build` to have anything to inspect, and check-all,
+    // which is the orchestrator one level *above* check-repo — it spawns this
+    // file, so requiring this file to spawn it would be a cycle.
+    file !== "check-e2e-build.mjs" &&
+    file !== "check-all.mjs",
 );
+// The count AGENTS.md states for `pnpm check:repo` is the one number in that table a
+// reader has no way to verify and every reason to trust. It is also the number that goes
+// stale the instant somebody adds a guard, which is exactly when the table is least likely
+// to be re-read.
+const declaredCheckCount = Number(
+  agentsMd.match(/^\| `pnpm check:repo` \| (\d+) static guards/m)?.[1],
+);
+const actualCheckCount = (checkRepoSource.match(/^\s+\["/gm) ?? []).length;
+if (!declaredCheckCount) {
+  problems.push(
+    'AGENTS.md: the `pnpm check:repo` row no longer opens with "<n> static guards" — that phrasing is what keeps its count honest',
+  );
+} else if (declaredCheckCount !== actualCheckCount) {
+  problems.push(
+    `AGENTS.md: the \`pnpm check:repo\` row says ${declaredCheckCount} guards; scripts/check-repo.mjs spawns ${actualCheckCount}`,
+  );
+}
+
 for (const file of checkScripts) {
   if (!checkRepoSource.includes(`"${file}"`))
     problems.push(
