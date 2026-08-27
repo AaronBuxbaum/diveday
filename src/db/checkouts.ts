@@ -9,6 +9,10 @@ import {
   checkoutProviderFromEnvironment,
   stripeLineDescription,
 } from "@/lib/payments/checkout";
+import {
+  type PromotionProvider,
+  promotionProviderFromEnvironment,
+} from "@/lib/payments/promotions";
 import { allocateSettledTotal, netOfPercentDiscount } from "@/lib/payments/settlement";
 import type { AppDb, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
@@ -130,6 +134,7 @@ export async function startBookingCheckout(
   db: AppDb,
   input: StartCheckoutInput,
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
+  promotions: PromotionProvider = promotionProviderFromEnvironment(),
 ): Promise<StartCheckoutOutcome> {
   if (input.bookingIds.length === 0) return { ok: false, reason: "invalid" };
 
@@ -305,6 +310,46 @@ export async function startBookingCheckout(
     return { ok: false, reason: "checkout_unavailable" };
   }
 
+  // A promotion must never discount the pass-through fee: that money is
+  // collected for a third party and remitted in full, so a shop-wide 20% code
+  // would make the shop pay a fifth of every diver's park levy out of its own
+  // margin (issue #1019). Stripe cannot express "this line is not
+  // discountable" — a coupon's `applies_to` names *Product* ids and these lines
+  // are inline `price_data` — so the percent is worked out here against the
+  // discountable lines only and handed over as a fixed amount.
+  //
+  // Only in this combination. With no fee, or no promotion, the shop's own
+  // percent promotion code goes to Stripe exactly as before.
+  const discountableCents = totalCents - passThroughCents;
+  const passThroughDiscountGuard =
+    appliedPromo && passThroughCents > 0 && discountableCents > 0
+      ? await promotions.createSessionDiscount({
+          stripeAccountId,
+          amountOffCents:
+            discountableCents -
+            netOfPercentDiscount(discountableCents, appliedPromo.discountPercent),
+          currency,
+          name: appliedPromo.code,
+          idempotencyKey: idempotencyKeyFor(intent.id),
+        })
+      : null;
+  if (passThroughDiscountGuard && passThroughDiscountGuard.status !== "created") {
+    // Falling back to the percent code is strictly no worse than the behaviour
+    // this replaces, and refusing the booking outright would be worse than
+    // either — so the session still goes out, and the shop absorbs the fee's
+    // share of the discount that one time. Logged, so a provider that starts
+    // failing is visible rather than silent.
+    log("checkout.pass_through_discount_unavailable", "warn", {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      reason: passThroughDiscountGuard.status,
+    });
+  }
+  const promotionCouponId =
+    passThroughDiscountGuard?.status === "created"
+      ? passThroughDiscountGuard.stripeCouponId
+      : undefined;
+
   try {
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
@@ -338,7 +383,10 @@ export async function startBookingCheckout(
       customerEmail: input.customerEmail,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
-      promotionCode: input.promotionCode,
+      promotionCouponId,
+      // One or the other, never both: Stripe reads a session's `discounts` as a
+      // list and would happily apply two.
+      promotionCode: promotionCouponId ? undefined : input.promotionCode,
       taxEnabled,
       // Deterministic per-attempt key: a retry of this same intent (a lost
       // response, a redeployed process) converges on the one session Stripe
@@ -680,15 +728,20 @@ export async function getLatestCheckoutForBooking(
  * Reads only rows, never Stripe: this runs inside the completion transaction.
  */
 async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout): Promise<number> {
-  if (checkout.appliedDiscountPercent !== null) {
-    return netOfPercentDiscount(checkout.totalCents, checkout.appliedDiscountPercent);
-  }
+  // The pass-through fee is outside the discount, here as at session creation:
+  // it is remitted in full whatever code the diver typed (issue #1019). Adding
+  // it back after discounting the rest is the same arithmetic the fixed-amount
+  // coupon performs at Stripe, so the fallback and the real settlement agree.
+  const discountable = checkout.totalCents - checkout.passThroughCents;
+  const net = (percent: number) =>
+    netOfPercentDiscount(discountable, percent) + checkout.passThroughCents;
+  if (checkout.appliedDiscountPercent !== null) return net(checkout.appliedDiscountPercent);
   if (!checkout.promoCodeId) return checkout.totalCents;
   const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.promoCodeId);
   // A code deleted since (or belonging to another shop) leaves nothing to
   // reconstruct from; the asked total is the only defensible figure left.
   if (!promo) return checkout.totalCents;
-  return netOfPercentDiscount(checkout.totalCents, promo.discountPercent);
+  return net(promo.discountPercent);
 }
 
 /**

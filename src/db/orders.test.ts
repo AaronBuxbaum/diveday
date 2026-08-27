@@ -608,6 +608,73 @@ describe("orders", () => {
     });
   });
 
+  /**
+   * Issue #1019. A pass-through fee is money collected for a third party, so a
+   * partial refund gives back that slice of the levy too. It used to stay whole
+   * through every refund, and the monthly report subtracts it from revenue in
+   * full — so an order refunded far enough subtracted a fee the shop no longer
+   * held, and net revenue could go negative on nothing but arithmetic.
+   */
+  it("prorates the pass-through fee across a partial refund", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems: [
+          { kind: "trip_fee" as const, description: "Two-tank charter", quantity: 1, unitAmountCents: 18_000 },
+          { kind: "pass_through_fee" as const, description: "Park fee", quantity: 1, unitAmountCents: 2_000 },
+        ],
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    expect(result.order.passThroughCents).toBe(2_000);
+
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 20_000);
+    const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing(), {
+      amountCents: 5_000,
+    });
+    if (refunded.status !== "refunded")
+      throw new Error(`expected a refund, got ${refunded.status}`);
+
+    // A quarter of the order came back, so a quarter of the levy did too.
+    expect(refunded.order.status).toBe("partly_refunded");
+    expect(refunded.order.amountPaidCents).toBe(15_000);
+    expect(refunded.order.passThroughCents).toBe(1_500);
+  });
+
+  it("leaves no pass-through fee behind on a full refund", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems: [
+          { kind: "trip_fee" as const, description: "Two-tank charter", quantity: 1, unitAmountCents: 18_000 },
+          { kind: "pass_through_fee" as const, description: "Park fee", quantity: 1, unitAmountCents: 2_000 },
+        ],
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 20_000);
+
+    const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
+    if (refunded.status !== "refunded")
+      throw new Error(`expected a refund, got ${refunded.status}`);
+    expect(refunded.order.amountPaidCents).toBe(0);
+    expect(refunded.order.passThroughCents).toBe(0);
+  });
+
   // The same repeated-tap exposure `refundBookingOnCancellation` has (see
   // src/db/refunds.test.ts): the guard is `status !== "paid"`, and the test
   // above passes a *fresh* provider to each call, so it can only prove the

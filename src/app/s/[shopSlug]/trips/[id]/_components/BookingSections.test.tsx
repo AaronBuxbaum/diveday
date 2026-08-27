@@ -163,3 +163,51 @@ describe("BookSpotSection rental gear at checkout", () => {
     expect(screen.queryByText("Rental gear")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Issue #1019. With Stripe Tax on, every line is tax-*exclusive*: Stripe
+ * computes tax at the session from an address this page has never seen and adds
+ * it on top. The quoted total is therefore lower than the card is charged — on
+ * the one figure a booking page must not surprise anyone with. The page cannot
+ * compute the number, so it says the number is not the whole story.
+ */
+describe("BookSpotSection tax disclosure", () => {
+  it("says tax is added at checkout when the shop has Stripe Tax on", () => {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={19_500}
+        currency="usd"
+        locale="en-US"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+        passThroughFee={{ name: "Marine park fee", amountCents: 2_500 }}
+        taxEnabled
+      />,
+    );
+
+    expect(screen.getByText(/Tax is calculated at checkout/)).toBeInTheDocument();
+  });
+
+  it("says nothing about tax when the shop handles it outside DiveDay", () => {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={19_500}
+        currency="usd"
+        locale="en-US"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+        passThroughFee={{ name: "Marine park fee", amountCents: 2_500 }}
+      />,
+    );
+
+    expect(screen.queryByText(/Tax is calculated at checkout/)).not.toBeInTheDocument();
+  });
+});

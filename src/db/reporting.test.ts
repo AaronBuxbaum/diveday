@@ -135,10 +135,16 @@ async function makeDepositCheckout(
   tripId: string,
   bookingId: string,
   perDiverCents: number,
-  options: { gearCents?: number; settledTotalCents?: number; taxCents?: number } = {},
+  options: {
+    gearCents?: number;
+    settledTotalCents?: number;
+    taxCents?: number;
+    passThroughCents?: number;
+  } = {},
 ): Promise<void> {
   seq += 1;
   const gearCents = options.gearCents ?? 0;
+  const passThroughCents = options.passThroughCents ?? 0;
   const [checkout] = await db
     .insert(bookingCheckouts)
     .values({
@@ -150,15 +156,22 @@ async function makeDepositCheckout(
       stripeAccountId: "acct_test",
       stripeSessionId: `cs_${seq}`,
       amountPerDiverCents: perDiverCents,
-      totalCents: perDiverCents + gearCents,
+      totalCents: perDiverCents + gearCents + passThroughCents,
+      passThroughCents,
+      taxEnabled: options.taxCents !== undefined,
       taxCents: options.taxCents,
       settledTotalCents: options.settledTotalCents ?? null,
     })
     .returning();
   if (!checkout) throw new Error("failed to insert checkout");
-  await db
-    .insert(bookingCheckoutBookings)
-    .values({ shopId, checkoutId: checkout.id, bookingId, gearCents, taxCents: options.taxCents });
+  await db.insert(bookingCheckoutBookings).values({
+    shopId,
+    checkoutId: checkout.id,
+    bookingId,
+    gearCents,
+    passThroughCents,
+    taxCents: options.taxCents,
+  });
 }
 
 /**
@@ -329,6 +342,56 @@ describe("getMonthlyReport", () => {
     expect(summary.seatsOffered).toBe(16);
     expect(summary.seatsBooked).toBe(9);
     expect(summary.atCapacityTrips).toBe(1);
+  });
+
+  /**
+   * Issue #1019. `settled_total_cents` is Stripe's `amount_total` and includes
+   * the tax it added; `total_cents` is the pre-tax ask. Scaling the recovered
+   * pass-through by one over the other put the tax into a figure that is then
+   * *subtracted* from revenue — so the tax on the levy came off twice and the
+   * shop's own revenue read low.
+   */
+  it("recovers a pass-through fee net of the tax charged on top of it", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Taxed Tomas");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+    // Asked 6000 deposit + a 1000 park fee, pre-tax. Stripe collected all of it
+    // plus 700 of tax: settled 7700, of which 700 is tax.
+    await makeDepositCheckout(db, shop.id, trip, booking, 6_000, {
+      passThroughCents: 1_000,
+      settledTotalCents: 7_700,
+      taxCents: 700,
+    });
+    await pay(db, shop.id, booking, "paid", 12_000);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+
+    // Nothing was discounted, so the whole levy was recovered: 1000, not the
+    // 1117 a tax-inclusive ratio produced.
+    expect(report.passThroughCents).toBe(1_000);
+    expect(report.taxCents).toBe(700);
+    // 12000 balance + 7700 recovered − 700 tax − 1000 levy.
+    expect(report.revenueCents).toBe(18_000);
+  });
+
+  it("recovers a discounted pass-through fee in proportion, still net of tax", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Halved Hana");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+    // Asked 8000 pre-tax; Stripe collected 4000 pre-tax plus 400 tax = 4400.
+    await makeDepositCheckout(db, shop.id, trip, booking, 6_000, {
+      passThroughCents: 2_000,
+      settledTotalCents: 4_400,
+      taxCents: 400,
+    });
+    await pay(db, shop.id, booking, "paid", 12_000);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+
+    // Half of the ask settled, so half of the levy: 1000.
+    expect(report.passThroughCents).toBe(1_000);
   });
 
   it("recovers a historical deposit at its asked amount when no settled figure was ever recorded", async () => {

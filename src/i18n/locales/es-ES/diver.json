@@ -287,6 +287,7 @@
     "partyTotal": "{count, plural, one {# buceador} other {# buceadores}} × {price} = {total}",
     "totalDueAtCheckout": "Total a pagar al finalizar, equipo y cargos de terceros incluidos: {total}",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
+    "taxAddedAtCheckout": "El impuesto se calcula al pagar y se suma a este total.",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
     "cancelledHeading": "Esta salida se canceló",

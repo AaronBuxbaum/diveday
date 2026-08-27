@@ -33,7 +33,11 @@ import type {
   CheckoutSessionLookupResult,
   CreateCheckoutSessionResult,
 } from "@/lib/payments/checkout";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
+import type {
+  CreateSessionDiscountResult,
+  CreateTripPromotionResult,
+  PromotionProvider,
+} from "@/lib/payments/promotions";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -118,6 +122,10 @@ export function fakePromotions(overrides: Partial<PromotionProvider> = {}): Prom
     },
     async createShopPromotion(): Promise<CreateTripPromotionResult> {
       return created();
+    },
+    async createSessionDiscount(): Promise<CreateSessionDiscountResult> {
+      counter += 1;
+      return { status: "created", stripeCouponId: `coupon_${counter}` };
     },
     ...overrides,
   };

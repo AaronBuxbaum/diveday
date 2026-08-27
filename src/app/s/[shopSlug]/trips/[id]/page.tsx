@@ -547,6 +547,7 @@ export default async function TripDetailPage({
             rentalItems={shop.rentalItems}
             rentalPricing={shop.rentalPricing}
             passThroughFee={passThroughFee}
+            taxEnabled={shop.taxEnabled}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         )}

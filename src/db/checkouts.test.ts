@@ -739,6 +739,126 @@ describe("startBookingCheckout", () => {
     expect(await checkoutStatus(db, first.checkout.id)).toBe("expired");
   });
 
+  /**
+   * Issue #1019. A pass-through fee is money the shop collects for a third
+   * party and remits in full, so a promotion may not touch it — and Stripe
+   * offers no way to say so on a Checkout line (a coupon's `applies_to` names
+   * Product ids; these lines are inline `price_data`). The discount is
+   * therefore worked out against the discountable lines and handed over as a
+   * fixed amount.
+   */
+  it("never lets a promotion discount the pass-through fee", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "half", discountPercent: 50, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+    const seen = recordingCheckout();
+
+    const outcome = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
+      },
+      seen.provider,
+      fakePromotions({
+        async createSessionDiscount(request) {
+          // Half of the two seats, and not one cent of the two park fees.
+          expect(request.amountOffCents).toBe(REEF_PRICE_CENTS);
+          expect(request.currency).toBe("usd");
+          return { status: "created", stripeCouponId: "coupon_session" };
+        },
+      }),
+    );
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.passThroughCents).toBe(3_000);
+    // The fixed-amount coupon, not the percent code — handing Stripe the code
+    // is what took 50% of the park fee out of the shop's margin.
+    expect(seen.requests[0]?.promotionCouponId).toBe("coupon_session");
+    expect(seen.requests[0]?.promotionCode).toBeUndefined();
+  });
+
+  it("hands Stripe the shop's own code when there is no pass-through fee to protect", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "plain20", discountPercent: 20, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+    const seen = recordingCheckout();
+
+    await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
+      },
+      seen.provider,
+      fakePromotions({
+        async createSessionDiscount() {
+          throw new Error("no session coupon should be minted without a pass-through fee");
+        },
+      }),
+    );
+
+    expect(seen.requests[0]?.promotionCode).toBe(promo.promo.stripePromotionCodeId);
+    expect(seen.requests[0]?.promotionCouponId).toBeUndefined();
+  });
+
+  // A booking that cannot be made is worse than one rare, logged over-discount,
+  // and the fallback is exactly the behaviour this replaced.
+  it("still mints the session when the fixed-amount coupon cannot be created", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "outage", discountPercent: 20, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+    const seen = recordingCheckout();
+
+    const outcome = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
+      },
+      seen.provider,
+      fakePromotions({
+        async createSessionDiscount() {
+          return { status: "failed" };
+        },
+      }),
+    );
+
+    expect(outcome.ok).toBe(true);
+    expect(seen.requests[0]?.promotionCouponId).toBeUndefined();
+    expect(seen.requests[0]?.promotionCode).toBe(promo.promo.stripePromotionCodeId);
+  });
+
   it("keeps a quoted discount when the reusing caller resolved no promotion", async () => {
     // The counterweight, and the reason the promo comparison is one-directional.
     // "Finish paying" (`payForBooking`, src/app/s/[shopSlug]/trips/[id]/actions.ts)

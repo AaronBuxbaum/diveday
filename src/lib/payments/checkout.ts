@@ -57,6 +57,15 @@ export type CreateCheckoutSessionRequest = {
    * sets, precisely so a code can't be applied to an unrelated checkout.
    */
   promotionCode?: string;
+  /**
+   * A Stripe `Coupon` id (`...`) to apply instead of `promotionCode`, for the
+   * one case a percent code cannot express: a session carrying a third-party
+   * pass-through fee, where the discount has to be worked out against the
+   * discountable lines only and handed over as a fixed amount
+   * (`createSessionDiscount`, ./promotions.ts, issue #1019). Never both — the
+   * caller picks one, and Stripe would apply both if given both.
+   */
+  promotionCouponId?: string;
   /** Opt-in Stripe Tax. When enabled, every line is tax-exclusive. */
   taxEnabled?: boolean;
 };
@@ -205,7 +214,9 @@ export function stripeCheckoutProvider(
           }
           form.set(`line_items[${index}][quantity]`, String(line.quantity));
         });
-        if (request.promotionCode) {
+        if (request.promotionCouponId) {
+          form.set("discounts[0][coupon]", request.promotionCouponId);
+        } else if (request.promotionCode) {
           form.set("discounts[0][promotion_code]", request.promotionCode);
         }
         const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {

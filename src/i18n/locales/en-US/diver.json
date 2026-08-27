@@ -287,6 +287,7 @@
     "partyTotal": "{count, plural, one {# diver} other {# divers}} × {price} = {total}",
     "totalDueAtCheckout": "Total due at checkout, gear and third-party charges included: {total}",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
+    "taxAddedAtCheckout": "Tax is calculated at checkout and added to this total.",
     "stripeHint": "You'll finish paying on a secure Stripe page.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was cancelled",
