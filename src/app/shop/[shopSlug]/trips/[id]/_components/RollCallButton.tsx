@@ -1,8 +1,7 @@
 "use client";
 
-import { type ReactNode, useActionState, useEffect, useRef, useSyncExternalStore } from "react";
+import { type ReactNode, useActionState, useEffect, useRef } from "react";
 import { vibrate } from "@/components/haptics";
-import { NOTE_DRAFT_CHANGE_EVENT, pendingNoteDraft } from "@/lib/roll-call-note-draft";
 
 /**
  * The result a roll-call server action returns instead of redirecting, so the
@@ -64,7 +63,6 @@ export function RollCallButton({
   pendingMark,
   className,
   formClassName,
-  noteDraftFor,
   copy,
   observabilityAction,
 }: {
@@ -123,17 +121,11 @@ export function RollCallButton({
    * while `className` keeps styling the button itself.
    */
   formClassName?: string;
-  /**
-   * The row whose note draft this submit should carry, when it has one. See
-   * `useUnsavedNote` below for why a button posts a note at all.
-   */
-  noteDraftFor?: { bookingId: string; checkpoint: string };
   copy: RollCallButtonCopy;
   /** Stable action label used by the app-wide mutation-duration reporter. */
   observabilityAction?: string;
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
-  const unsavedNote = useUnsavedNote(noteDraftFor);
   const startedAt = useRef<number | null>(null);
   const sawPending = useRef(false);
 
@@ -169,18 +161,6 @@ export function RollCallButton({
       <form action={formAction} className={formClassName}>
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
-        {/* A note typed before anybody was called has nowhere to be saved:
-            the note lives on the roll-call event row, and there isn't one yet
-            (`updateLatestRollCallNote`, src/db/manifests.ts). So it rides the
-            result that creates it — *either* result. It used to ride only the
-            "not boarded" submit, through a `form=` attribute on the note
-            input, which meant a note drafted while looking at a diver and then
-            marking them **boarded** was silently dropped. A controlled hidden
-            field on both buttons is also why this is `value=` rather than an
-            imperative write in `onSubmit`: React builds the action's FormData
-            from the DOM at submit time, and racing it is not a thing to do on
-            the roll-call surface. */}
-        {unsavedNote !== null ? <input type="hidden" name="note" value={unsavedNote} /> : null}
         <button
           type="submit"
           disabled={isPending}
@@ -223,31 +203,5 @@ export function RollCallButton({
         </p>
       ) : null}
     </>
-  );
-}
-
-/**
- * This row's note text that the server has not acknowledged yet, or `null`.
- *
- * The note field mirrors every keystroke to the device (localStorage) as its
- * never-lost guarantee, and clears the mirror once the server confirms. That
- * makes the *pending* mirror exactly the set of notes a roll-call submit still
- * needs to carry — which is what the hidden field above posts.
- *
- * `useSyncExternalStore` rather than an effect: the value has to be correct in
- * the render that the submit reads its DOM from, and the store is a plain
- * `window` event because `storage` events fire only in *other* tabs.
- */
-function useUnsavedNote(row: { bookingId: string; checkpoint: string } | undefined): string | null {
-  return useSyncExternalStore(
-    (onChange) => {
-      if (!row) return () => {};
-      window.addEventListener(NOTE_DRAFT_CHANGE_EVENT, onChange);
-      return () => window.removeEventListener(NOTE_DRAFT_CHANGE_EVENT, onChange);
-    },
-    () => (row ? pendingNoteDraft(row.bookingId, row.checkpoint) : null),
-    // Server render: no device, so nothing is pending. Matches the first
-    // client render, so there is nothing to hydrate-mismatch on.
-    () => null,
   );
 }

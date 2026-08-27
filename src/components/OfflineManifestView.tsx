@@ -19,7 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -338,7 +337,6 @@ export function OfflineManifestView() {
   const [discarded, setDiscarded] = useState<DiscardedOfflineRecord[]>([]);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [busyChecklistItem, setBusyChecklistItem] = useState<string | null>(null);
-  const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   /**
    * The one row whose "aboard" control is currently asking to be confirmed —
    * a booking id or a crew person id, never more than one at a time (ADR
@@ -1046,7 +1044,6 @@ export function OfflineManifestView() {
   async function record(
     subject: { bookingId: string } | { crewPersonId: string },
     statement: OfflineStatement,
-    note = "",
   ) {
     // Whatever this tap turns out to be, no confirmation is left armed behind
     // it — including the refusals below, which end the act just as finally as a
@@ -1056,29 +1053,15 @@ export function OfflineManifestView() {
       setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
       return;
     }
-    const bookingId = "bookingId" in subject ? subject.bookingId : undefined;
     setBusyBooking("bookingId" in subject ? subject.bookingId : subject.crewPersonId);
     try {
       const next = await appendOfflineRollCall(tripId, {
         ...subject,
         ...statement,
         checkpoint,
-        note: note.trim() || null,
       });
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
-      // Task 73: a typed note must not silently ride along on the next tap
-      // for this diver (e.g. tapping "Not boarded" again later re-sends a
-      // stale note nobody re-typed). Crew rows carry no note field, here or on
-      // the live manifest, so there is nothing to clear for them.
-      if (bookingId !== undefined) {
-        setNoteByBooking((current) => {
-          if (!(bookingId in current)) return current;
-          const next = { ...current };
-          delete next[bookingId];
-          return next;
-        });
-      }
       if (navigator.onLine) await reconcile();
     } catch (error) {
       if (error instanceof OfflineManifestError) {
@@ -1751,47 +1734,6 @@ export function OfflineManifestView() {
                           ))}
                         </ul>
                       ) : null}
-                      {/* The same disclosure the live manifest's rows carry, in
-                        the same clothes — the boat reads the two copies minutes
-                        apart, so a note behind a permanently-boxed blue link
-                        here and a quiet caret line there is one control wearing
-                        two faces. The box belongs to the open panel: shut on
-                        every diver it was a bordered card reading as an empty
-                        input the length of the roster. */}
-                      <details className="group/offlinenote mt-2 max-w-xl">
-                        <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
-                          <DisclosureCaret className="group-open/offlinenote:rotate-90" />
-                          <span className="group-hover/summary:underline">
-                            {t("shared.offlineManifest.single.addNoteSummary")}
-                          </span>
-                        </summary>
-                        <div className="mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3">
-                          {/* Named for the screen reader only: the summary one
-                            line above already says "Add a note". */}
-                          <label
-                            htmlFor={`offline-roll-call-note-${diver.bookingId}`}
-                            className="sr-only"
-                          >
-                            {t("shared.offlineManifest.single.optionalNote")}
-                          </label>
-                          <input
-                            id={`offline-roll-call-note-${diver.bookingId}`}
-                            maxLength={300}
-                            value={noteByBooking[diver.bookingId] ?? ""}
-                            onChange={(event) =>
-                              setNoteByBooking((current) => ({
-                                ...current,
-                                [diver.bookingId]: event.target.value,
-                              }))
-                            }
-                            placeholder={t("shared.offlineManifest.single.notePlaceholder")}
-                            className={controlClass}
-                          />
-                          <p className="mt-1.5 text-xs text-muted">
-                            {t("shared.offlineManifest.single.noteHint")}
-                          </p>
-                        </div>
-                      </details>
                     </div>
                     <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                       {expired ? (
@@ -1836,7 +1778,6 @@ export function OfflineManifestView() {
                                   // its opposite. Only ever **this device's own**
                                   // statement — see `OfflineRollCallResult.local`.
                                   reTap(state, state?.state === "boarded", "boarded"),
-                                  noteByBooking[diver.bookingId],
                                 );
                               }}
                               aria-busy={busyBooking === diver.bookingId}
@@ -1896,7 +1837,6 @@ export function OfflineManifestView() {
                                 // device has superseded since it synced (ADR
                                 // 20260815-an-offline-retraction-names-its-target).
                                 reTap(state, recordedNotBoarded, "not_boarded"),
-                                noteByBooking[diver.bookingId],
                               )
                             }
                             aria-busy={busyBooking === diver.bookingId}
@@ -1976,7 +1916,6 @@ export function OfflineManifestView() {
                                       // this control asserts the diver is aboard
                                       // over a stated "not back aboard".
                                       { status: "boarded" },
-                                      noteByBooking[diver.bookingId],
                                     )
                                   }
                                   aria-busy={busyBooking === diver.bookingId}

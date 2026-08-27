@@ -75,7 +75,6 @@ function pendingEvent(tripId: string): OfflineRollCallEvent {
     bookingId: `booking-${tripId}`,
     checkpoint: "departure",
     status: "boarded",
-    note: null,
     occurredAt: SAVED_AT,
     syncStatus: "pending",
   };

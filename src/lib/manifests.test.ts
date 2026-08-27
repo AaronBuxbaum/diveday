@@ -24,13 +24,16 @@ const boardedAt = (recordedByName = "Dana Reyes"): RollCallRecord => ({
   state: "boarded",
   occurredAt: new Date("2026-07-20T11:45:00.000Z"),
   recordedByName,
-  note: null,
 });
-const notBoardedAt = (note: string | null = null): RollCallRecord => ({
+/**
+ * The recorder's name is the discriminator here. It used to be the note, which
+ * went with the roll-call note itself (#1058) -- these tests only ever needed
+ * *some* field that tells one record from another when several are in flight.
+ */
+const notBoardedAt = (recordedByName = "Dana Reyes"): RollCallRecord => ({
   state: "not_boarded",
   occurredAt: new Date("2026-07-20T11:45:00.000Z"),
-  recordedByName: "Dana Reyes",
-  note,
+  recordedByName,
 });
 
 /**
@@ -81,7 +84,6 @@ describe("buildTripManifest", () => {
             state: "boarded",
             occurredAt: new Date("2026-07-20T11:45:00.000Z"),
             recordedByName: "Dana Reyes",
-            note: null,
           },
         },
         {
@@ -164,7 +166,7 @@ describe("buildTripManifest", () => {
             rentalFit: { state: "own_kit" as const },
             nitroxRequested: false,
             checkedIn: true,
-            rollCall: notBoardedAt("Not on the ladder"),
+            rollCall: notBoardedAt("Bo Chen"),
           },
         ],
       });
@@ -194,27 +196,21 @@ describe("buildTripManifest", () => {
     // Codes, never sentences: `src/lib` hands back the state and the staff
     // bundle picks the words (`rollCallLabelText`, src/i18n/manifest-labels.ts).
     expect(rollCallLabel("departure", undefined)).toBe("awaiting");
-    expect(rollCallLabel("departure", notBoardedAt("Stayed ashore"))).toBe("not_boarded");
+    expect(rollCallLabel("departure", notBoardedAt("Dev Patel"))).toBe("not_boarded");
     expect(rollCallLabel("departure", boardedAt())).toBe("boarded");
     expect(rollCallLabel("after_dive_1", { ...notBoardedAt(), implied: true })).toBe(
       "not_boarded_carried",
     );
     // The one that used to render as "Not boarded" (and, on the button beside
     // it, "Not boarded ✓") for a diver who had not come back from dive one.
-    expect(rollCallLabel("after_dive_1", notBoardedAt("Not on the ladder"))).toBe(
-      "not_back_aboard",
-    );
+    expect(rollCallLabel("after_dive_1", notBoardedAt("Bo Chen"))).toBe("not_back_aboard");
     expect(rollCallLabel("after_dive_2", boardedAt())).toBe("boarded");
   });
 
   it("carries a departure not-boarded forward until a later result breaks the chain", () => {
     // Not boarded at departure → every later checkpoint defaults to not boarded.
-    const carried = carryForwardNotBoarded([
-      notBoardedAt("Never left the dock"),
-      undefined,
-      undefined,
-    ]);
-    expect(carried[0]).toMatchObject({ state: "not_boarded", note: "Never left the dock" });
+    const carried = carryForwardNotBoarded([notBoardedAt("Ana Ruiz"), undefined, undefined]);
+    expect(carried[0]).toMatchObject({ state: "not_boarded", recordedByName: "Ana Ruiz" });
     expect(carried[0]?.implied).toBeUndefined();
     expect(carried[1]).toMatchObject({ state: "not_boarded", implied: true });
     expect(carried[2]).toMatchObject({ state: "not_boarded", implied: true });
@@ -229,11 +225,11 @@ describe("buildTripManifest", () => {
   it("never carries an after-dive not-boarded forward — a missing diver cannot satisfy a later count", () => {
     const carried = carryForwardNotBoarded([
       boardedAt(),
-      notBoardedAt("Not on the ladder"),
+      notBoardedAt("Bo Chen"),
       undefined,
       undefined,
     ]);
-    expect(carried[1]).toMatchObject({ state: "not_boarded", note: "Not on the ladder" });
+    expect(carried[1]).toMatchObject({ state: "not_boarded", recordedByName: "Bo Chen" });
     // Dives two and three must ask again rather than inheriting an answer.
     expect(carried[2]).toBeUndefined();
     expect(carried[3]).toBeUndefined();
@@ -247,8 +243,8 @@ describe("buildTripManifest", () => {
     expect(reboarded[1]).toMatchObject({ state: "boarded" });
     expect(reboarded[2]).toBeUndefined();
     // An explicit result at a later checkpoint is never overwritten by the default.
-    const explicitLater = carryForwardNotBoarded([notBoardedAt(), notBoardedAt("Own decision")]);
-    expect(explicitLater[1]).toMatchObject({ note: "Own decision" });
+    const explicitLater = carryForwardNotBoarded([notBoardedAt(), notBoardedAt("Cai Wen")]);
+    expect(explicitLater[1]).toMatchObject({ recordedByName: "Cai Wen" });
     expect(explicitLater[1]?.implied).toBeUndefined();
   });
 
@@ -1029,7 +1025,6 @@ describe("rollCallRecordedTone", () => {
     state,
     occurredAt: at,
     recordedByName: "Nora Quinn",
-    note: null,
     ...(implied === undefined ? {} : { implied }),
   });
 

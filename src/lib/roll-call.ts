@@ -64,7 +64,6 @@ export type RollCallRecord = {
   state: Exclude<RollCallState, "awaiting">;
   occurredAt: Date;
   recordedByName: string;
-  note: string | null;
   /**
    * True when this result was not recorded at this checkpoint but carried
    * forward: a diver left the boat at an earlier checkpoint, so every later

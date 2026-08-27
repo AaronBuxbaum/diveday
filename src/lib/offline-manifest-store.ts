@@ -647,7 +647,7 @@ export async function appendOfflineRollCall(
   tripId: string,
   input: Pick<
     OfflineRollCallEvent,
-    "bookingId" | "crewPersonId" | "checkpoint" | "status" | "note" | "retractsClientEventId"
+    "bookingId" | "crewPersonId" | "checkpoint" | "status" | "retractsClientEventId"
   >,
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {

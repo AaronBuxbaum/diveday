@@ -226,7 +226,6 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
       state: event.status,
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
-      note: event.note,
     });
   }
   return latest;
@@ -260,7 +259,6 @@ async function listLatestRollCallByBooking(
       state: "boarded" | "not_boarded";
       occurredAt: Date;
       recordedByName: string;
-      note: string | null;
     }
   >();
   // Rows are newest-first, so the first row per booking wins. A latest `cleared`
@@ -275,7 +273,6 @@ async function listLatestRollCallByBooking(
       state: event.status,
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
-      note: event.note,
     });
   }
   return latest;
@@ -813,7 +810,6 @@ export async function recordRollCall(
     /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
-    note?: string;
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
@@ -929,7 +925,6 @@ export async function recordRollCall(
         source,
         clientEventId: source === "offline" ? input.clientEventId : null,
         offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
-        note: input.note?.trim() || null,
         occurredAt,
       })
       .returning({ id: rollCallEvents.id });
@@ -1007,7 +1002,6 @@ export async function recordCrewRollCall(
     /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
-    note?: string;
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
@@ -1152,7 +1146,6 @@ export async function recordCrewRollCall(
         // evidence of which snapshot supplied the *readiness* it boarded on,
         // and a crew member has no readiness to evidence. It is still an input
         // above, where the staleness bound is computed from it.
-        note: input.note?.trim() || null,
         occurredAt,
       })
       .returning({ id: rollCallCrewEvents.id });
@@ -1168,50 +1161,4 @@ export async function recordCrewRollCall(
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;
-}
-
-/**
- * Annotate the diver's current roll-call result at a checkpoint. The note is an
- * annotation on the latest decision, not a decision of its own, so it updates
- * that event in place rather than appending — the recorded boarded/not-boarded
- * fact is never rewritten. Returns false when there is nothing to annotate yet
- * (the diver is awaiting, or the latest event is a `cleared` undo).
- */
-export async function updateLatestRollCallNote(
-  db: AppDb,
-  input: {
-    shopId: string;
-    tripId: string;
-    bookingId: string;
-    checkpoint: RollCallCheckpoint;
-    note: string;
-  },
-): Promise<boolean> {
-  const [latest] = await db
-    .select({ id: rollCallEvents.id, status: rollCallEvents.status })
-    .from(rollCallEvents)
-    .where(
-      and(
-        eq(rollCallEvents.shopId, input.shopId),
-        eq(rollCallEvents.tripId, input.tripId),
-        eq(rollCallEvents.bookingId, input.bookingId),
-        eq(rollCallEvents.checkpoint, input.checkpoint),
-      ),
-    )
-    .orderBy(
-      desc(rollCallEvents.occurredAt),
-      desc(rollCallEvents.createdAt),
-      desc(rollCallEvents.seq),
-    )
-    .limit(1);
-  if (!latest || latest.status === "cleared") return false;
-  await db
-    .update(rollCallEvents)
-    .set({ note: input.note.trim() || null })
-    .where(eq(rollCallEvents.id, latest.id));
-  // The note is part of the roll-call record staff read off the offline
-  // copy (src/lib/offline-manifests.ts), so an edit here is exactly the kind
-  // of change the push signal exists for, same as recordRollCall above.
-  await publishManifestEvent(db, input.shopId, input.tripId);
-  return true;
 }

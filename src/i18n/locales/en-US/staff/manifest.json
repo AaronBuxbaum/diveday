@@ -83,7 +83,6 @@
   "resolveBlockersLink": "Resolve blockers on Guests →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
-  "rollCallRecordedByWithNote": "{label} {date} by {name} · {note}",
   "carriedForwardFromDock": "Ashore since the dock",
   "buddyHeading": "Buddy teams",
   "buddyTeamLabel": "Team {number, number, ::00}",
@@ -132,7 +131,6 @@
   "depthChip": "Depth advisory",
   "personDetails": "Details",
   "rollCallRecordedShort": "{label} · {time} · {name}",
-  "rollCallRecordedShortWithNote": "{label} · {time} · {name} · {note}",
   "markBackAboard": "Mark back aboard",
   "crewMarkBackAboard": "Mark back aboard",
   "supportNeedsLabel": "Dive support"

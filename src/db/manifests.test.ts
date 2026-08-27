@@ -23,7 +23,6 @@ import {
   listDepartureBoardedByTrip,
   recordCrewRollCall,
   recordRollCall,
-  updateLatestRollCallNote,
 } from "./manifests";
 import {
   bookings,
@@ -265,7 +264,6 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         bookingId: booking.booking.id,
         recordedByPersonId: staff.id,
         status: "not_boarded",
-        note: "Not at the dock.",
       }),
     ).resolves.toMatchObject({ ok: true });
   });
@@ -366,16 +364,6 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(
       cleared?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall,
     ).toBeUndefined();
-    // A cleared result has nothing to annotate, so the note save is a no-op.
-    await expect(
-      updateLatestRollCallNote(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        checkpoint: "departure",
-        note: "late edit",
-      }),
-    ).resolves.toBe(false);
   });
 
   it("defaults later checkpoints to not boarded once a diver is left off", async () => {
@@ -393,81 +381,6 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(
       afterDive?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall,
     ).toMatchObject({ state: "not_boarded", implied: true });
-  });
-
-  it("saves a note onto the diver's latest result and no-ops while awaiting", async () => {
-    const { db, shop, reef, booking, staff } = await manifestContext();
-    await expect(
-      updateLatestRollCallNote(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        checkpoint: "departure",
-        note: "nothing recorded yet",
-      }),
-    ).resolves.toBe(false);
-
-    await recordRollCall(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: booking.booking.id,
-      recordedByPersonId: staff.id,
-      status: "not_boarded",
-      checkpoint: "departure",
-    });
-    await expect(
-      updateLatestRollCallNote(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        checkpoint: "departure",
-        note: "Forgot fins — chasing them down",
-      }),
-    ).resolves.toBe(true);
-    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
-    expect(
-      manifest?.divers.find((entry) => entry.bookingId === booking.booking.id)?.rollCall?.note,
-    ).toBe("Forgot fins — chasing them down");
-  });
-
-  it("raises the manifest-events push signal when a note is actually saved, not on a no-op", async () => {
-    const { db, shop, reef, booking, staff } = await manifestContext();
-    let signalCount = 0;
-    const unsubscribe = subscribeManifestEvents(shop.id, reef.id, () => {
-      signalCount++;
-    });
-    try {
-      // Nothing recorded yet, so this is the no-op branch — no signal.
-      await updateLatestRollCallNote(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        checkpoint: "departure",
-        note: "too early",
-      });
-      expect(signalCount).toBe(0);
-
-      await recordRollCall(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        recordedByPersonId: staff.id,
-        status: "not_boarded",
-        checkpoint: "departure",
-      });
-      expect(signalCount).toBe(1);
-
-      await updateLatestRollCallNote(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId: booking.booking.id,
-        checkpoint: "departure",
-        note: "Forgot fins — chasing them down",
-      });
-      expect(signalCount).toBe(2);
-    } finally {
-      unsubscribe();
-    }
   });
 
   it("applies an offline event once and rejects a delayed event behind newer live history", async () => {

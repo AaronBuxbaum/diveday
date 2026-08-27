@@ -1810,7 +1810,6 @@ export async function loadShopExportBundleInput(
             "offline_snapshot_saved_at",
             "recorded_by_person_id",
             "recorded_by_name",
-            "note",
             "occurred_at",
             "created_at",
           ],
@@ -1831,7 +1830,6 @@ export async function loadShopExportBundleInput(
               row.offlineSnapshotSavedAt,
               row.recordedByPersonId,
               personName.get(row.recordedByPersonId),
-              row.note,
               row.occurredAt,
               row.createdAt,
             ];
@@ -1853,7 +1851,6 @@ export async function loadShopExportBundleInput(
             "client_event_id",
             "recorded_by_person_id",
             "recorded_by_name",
-            "note",
             "occurred_at",
             "created_at",
           ],
@@ -1870,7 +1867,6 @@ export async function loadShopExportBundleInput(
             row.clientEventId,
             row.recordedByPersonId,
             personName.get(row.recordedByPersonId),
-            row.note,
             row.occurredAt,
             row.createdAt,
           ]),
@@ -3755,10 +3751,6 @@ export async function loadDiverExportBundleInput(
             personName.get(row.recordedByPersonId),
             row.occurredAt,
           ]),
-          // `note` (a free-text field staff can type at the rail) is
-          // deliberately not a column here — see activity_events in "Not
-          // included": free text on this table can name a different diver, and
-          // safely redacting it needs the same sweep the erasure path uses.
           note: "This diver's own boarding and roll-call record.",
         },
         {

@@ -84,18 +84,6 @@
     "meetingPoint": "Meeting point: {label}",
     "conditionsHeading": "Conditions"
   },
-  "rollCallNote": {
-    "optionalNote": "Note",
-    "message": {
-      "saving": "Saving…",
-      "waiting": "Saved on this device — sends with this diver’s result.",
-      "saved": "Saved.",
-      "queued": "Saved on this device — sends when you’re back online.",
-      "error": "Couldn’t save — your note is still here. Try again.",
-      "idle": "Saves as you type."
-    },
-    "notePlaceholder": "Late to the boat, medical question, kit issue…"
-  },
   "commandPalette": {
     "search": "Search",
     "dialogAriaLabel": "Quick search",
@@ -599,10 +587,6 @@
       "notOnFile": "Not on file",
       "rentalFit": "Rental fit",
       "nitroxRequestedSuffix": "· Nitrox requested",
-      "addNoteSummary": "Add a note",
-      "optionalNote": "Optional note",
-      "notePlaceholder": "Late to the boat, medical question, kit issue…",
-      "noteHint": "The note travels with this roll-call record.",
       "saving": "Saving…",
       "boardedDone": "Boarded ☑️",
       "markBoarded": "Mark boarded",

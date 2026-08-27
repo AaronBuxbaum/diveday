@@ -166,7 +166,6 @@ function richPayload(
         state: "boarded" as const,
         occurredAt: "2026-08-01T12:55:00.000Z",
         recordedByName: "Dana Divemaster",
-        note: null,
       }
     : undefined;
   // A current copy carries person ids (H-46) — that is what makes the crew half
@@ -204,7 +203,6 @@ function richPayload(
                 state: "not_boarded" as const,
                 occurredAt: "2026-08-01T14:55:00.000Z",
                 recordedByName: "Dana Divemaster",
-                note: null,
               }
             : opts.crewMemberUncounted
               ? undefined
@@ -246,7 +244,6 @@ function richPayload(
       state: "not_boarded",
       occurredAt: "2026-08-01T13:05:00.000Z",
       recordedByName: "Dana Divemaster",
-      note: "Left after departure",
       implied: true,
     },
   };
@@ -440,7 +437,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
             bookingId: "booking-1",
             checkpoint: "departure",
             status: "boarded",
-            note: null,
             occurredAt: longAgo,
             syncStatus: "pending",
           },
@@ -466,7 +462,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
           bookingId: "booking-1",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: new Date().toISOString(),
           syncStatus: "pending",
         },
@@ -503,7 +498,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
           bookingId: "booking-1",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: new Date(FROZEN_MS).toISOString(),
           syncStatus: "pending",
         },
@@ -590,7 +584,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
       bookingId: "booking-1",
       checkpoint: "departure" as const,
       status: "boarded" as const,
-      note: null,
       occurredAt: new Date(FROZEN_MS).toISOString(),
       syncStatus: "pending" as const,
     };
@@ -748,7 +741,6 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
             bookingId: "booking-1",
             checkpoint: "departure",
             status: "boarded",
-            note: null,
             occurredAt: new Date().toISOString(),
             syncStatus: "pending",
           },
@@ -930,7 +922,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: new Date(FROZEN_MS).toISOString(),
           syncStatus: "pending",
         },
@@ -947,7 +938,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         bookingId: "diver-priya",
         checkpoint: "after_dive_1",
         status: "boarded",
-        note: null,
       }),
     );
     // No refusal message — the tap actually recorded, matching what the
@@ -1008,7 +998,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: new Date(FROZEN_MS).toISOString(),
           syncStatus: "pending",
         },
@@ -1071,7 +1060,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
             bookingId: "diver-priya",
             checkpoint: "departure",
             status: "boarded",
-            note: null,
             occurredAt: new Date(FROZEN_MS).toISOString(),
             syncStatus: "pending",
           },
@@ -1115,7 +1103,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
               bookingId: "diver-priya",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              note: null,
               occurredAt: new Date(FROZEN_MS).toISOString(),
               syncStatus: "pending",
             },
@@ -1145,7 +1132,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
         }),
       );
     });
@@ -1188,7 +1174,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           // come back from the dive" (ADR
           // 20260815-an-offline-retraction-names-its-target).
           retractsClientEventId: "evt-missing",
-          note: null,
         }),
       );
     });
@@ -1212,7 +1197,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         tripId: "trip-1",
         bookingId: "diver-priya",
         checkpoint: "after_dive_1" as const,
-        note: null,
         occurredAt,
       };
       const saved = richEnvelope(
@@ -1263,7 +1247,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         state: "not_boarded",
         occurredAt: new Date(FROZEN_MS).toISOString(),
         recordedByName: "Dana Divemaster",
-        note: null,
       };
       vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
       vi.mocked(syncOfflineManifest).mockResolvedValue(null);
@@ -1282,7 +1265,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         bookingId: "diver-priya",
         checkpoint: "after_dive_1",
         status: "not_boarded",
-        note: null,
       });
     });
 
@@ -1304,7 +1286,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
               bookingId: "diver-priya",
               checkpoint: "after_dive_1",
               status: "boarded",
-              note: null,
               occurredAt: new Date(FROZEN_MS).toISOString(),
               syncStatus: "pending",
             },
@@ -1328,7 +1309,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           checkpoint: "after_dive_1",
           status: "cleared",
           retractsClientEventId: "evt-aboard",
-          note: null,
         }),
       );
     });
@@ -1355,7 +1335,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
               crewPersonId: "crew-dana",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              note: null,
               occurredAt: new Date(FROZEN_MS).toISOString(),
               syncStatus: "pending",
             },
@@ -1378,7 +1357,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           checkpoint: "after_dive_1",
           status: "cleared",
           retractsClientEventId: "evt-crew-missing",
-          note: null,
         }),
       );
     });
@@ -1399,7 +1377,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
               crewPersonId: "crew-dana",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              note: null,
               occurredAt: new Date(FROZEN_MS).toISOString(),
               syncStatus: "pending",
             },
@@ -1424,7 +1401,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
           crewPersonId: "crew-dana",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
         }),
       );
     });
@@ -1449,7 +1425,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
                 bookingId: "diver-priya",
                 checkpoint: "departure",
                 status: "not_boarded",
-                note: null,
                 occurredAt: new Date(FROZEN_MS).toISOString(),
                 syncStatus: "pending",
               },
@@ -1465,34 +1440,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       if (!row) throw new Error("Priya's row missing");
       expect(within(row).getByText(/Not boarded · carried/)).toBeInTheDocument();
     });
-  });
-
-  it("task 73: clears a typed note after a successful record so it doesn't ride along on the next tap", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1" });
-    const saved = richEnvelope("trip-1");
-    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
-    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
-    vi.mocked(appendOfflineRollCall).mockResolvedValue(saved);
-
-    render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-
-    fireEvent.click(screen.getByText("Add a note"));
-    const noteInput = screen.getByLabelText("Optional note") as HTMLInputElement;
-    fireEvent.change(noteInput, { target: { value: "Missed the morning van" } });
-    expect(noteInput.value).toBe("Missed the morning van");
-
-    fireEvent.click(screen.getByRole("button", { name: "Mark not boarded" }));
-
-    await waitFor(() =>
-      expect(appendOfflineRollCall).toHaveBeenCalledWith("trip-1", {
-        bookingId: "diver-priya",
-        checkpoint: "departure",
-        status: "not_boarded",
-        note: "Missed the morning van",
-      }),
-    );
-    await waitFor(() => expect(noteInput.value).toBe(""));
   });
 
   it("ports MissingDiversGrid: an awaiting diver appears as a tap target", async () => {
@@ -1547,7 +1494,6 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: new Date(FROZEN_MS).toISOString(),
           syncStatus: "pending",
         },
@@ -1591,7 +1537,6 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: new Date(FROZEN_MS).toISOString(),
           syncStatus: "pending",
         },
@@ -1636,7 +1581,6 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
           bookingId: "diver-priya",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: new Date(FROZEN_MS).toISOString(),
           syncStatus: "pending",
         },
@@ -1795,7 +1739,6 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
         state: "not_boarded",
         occurredAt: new Date(FROZEN_MS).toISOString(),
         recordedByName: "Dana Divemaster",
-        note: "Not on the ladder",
       }),
     );
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
@@ -1821,7 +1764,6 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
         state: "not_boarded",
         occurredAt: new Date(FROZEN_MS).toISOString(),
         recordedByName: "Dana Divemaster",
-        note: "Never made the dock",
       }),
     );
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);

@@ -190,7 +190,6 @@ export type OfflineManifestPayload = {
             state: "boarded" | "not_boarded";
             occurredAt: string;
             recordedByName: string;
-            note: string | null;
             /** Carried forward from an earlier checkpoint, not recorded here. */
             implied?: boolean;
           };
@@ -255,7 +254,6 @@ export type OfflineManifestPayload = {
             state: "boarded" | "not_boarded";
             occurredAt: string;
             recordedByName: string;
-            note: string | null;
             /** Carried forward from an earlier checkpoint, not recorded here. */
             implied?: boolean;
           };
@@ -344,7 +342,6 @@ export type OfflineRollCallEvent = {
    * "took the pre-change path", which the server still accepts.
    */
   retractsClientEventId?: string;
-  note: string | null;
   occurredAt: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
@@ -592,7 +589,6 @@ export function serializeManifests(
               state: member.rollCall.state,
               occurredAt: member.rollCall.occurredAt.toISOString(),
               recordedByName: member.rollCall.recordedByName,
-              note: member.rollCall.note,
               implied: member.rollCall.implied ?? false,
             }
           : undefined,
@@ -626,7 +622,6 @@ export function serializeManifests(
               state: diver.rollCall.state,
               occurredAt: diver.rollCall.occurredAt.toISOString(),
               recordedByName: diver.rollCall.recordedByName,
-              note: diver.rollCall.note,
               // Preserve the carried-forward default so it never reads as an
               // explicit dock-side result the crew did not actually record.
               implied: diver.rollCall.implied ?? false,

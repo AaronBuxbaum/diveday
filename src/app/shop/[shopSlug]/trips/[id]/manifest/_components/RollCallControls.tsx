@@ -201,7 +201,6 @@ export function RollCallMarkButton({
   action,
   copy,
   markState,
-  noteDraftFor,
   t,
 }: {
   /** Which list this row belongs to — the only thing that varies below. */
@@ -218,7 +217,6 @@ export function RollCallMarkButton({
    * before anybody was called rides the result that creates it. Divers only;
    * crew rows take no note.
    */
-  noteDraftFor?: { bookingId: string; checkpoint: string };
   t: StaffTranslator;
 }) {
   const { boarded } = rollCallRowState(checkpoint, rollCall);
@@ -250,7 +248,6 @@ export function RollCallMarkButton({
       mark={<RollCallMark state={markState} />}
       className={MARK_BUTTON_CLASS}
       formClassName="shrink-0"
-      noteDraftFor={noteDraftFor}
       copy={copy}
       observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
     />
@@ -337,7 +334,6 @@ export function RollCallExceptionControl({
   rollCall,
   action,
   copy,
-  noteDraftFor,
   t,
 }: {
   kind: "diver" | "crew";
@@ -347,7 +343,6 @@ export function RollCallExceptionControl({
   rollCall: RollCallRecord | undefined;
   action: RollCallAction;
   copy: RollCallButtonCopy;
-  noteDraftFor?: { bookingId: string; checkpoint: string };
   t: StaffTranslator;
 }) {
   const { recordedNotBoarded, notBackAboard, recordedHere } = rollCallRowState(
@@ -395,7 +390,6 @@ export function RollCallExceptionControl({
             : undefined
         }
         pendingLabel={t("manifest.saving")}
-        noteDraftFor={noteDraftFor}
         className={`${BOAT_TARGET_CLASS} ${
           notBackAboard
             ? "border border-danger bg-danger/15 text-danger"

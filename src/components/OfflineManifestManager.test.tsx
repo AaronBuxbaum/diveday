@@ -198,7 +198,6 @@ describe("OfflineManifestManager", () => {
         bookingId: "22222222-2222-2222-2222-222222222222",
         checkpoint: "departure",
         status: "boarded",
-        note: null,
         occurredAt: new Date().toISOString(),
         syncStatus: "rejected",
       },

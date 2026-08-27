@@ -746,17 +746,6 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       );
 
     await tx
-      .update(rollCallEvents)
-      .set({ note: null })
-      .where(
-        and(
-          eq(rollCallEvents.shopId, shopId),
-          inArray(rollCallEvents.bookingId, bookingIds),
-          isNotNull(rollCallEvents.note),
-        ),
-      );
-
-    await tx
       .update(bookingPayments)
       .set({ note: null })
       .where(

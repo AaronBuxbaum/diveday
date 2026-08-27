@@ -105,7 +105,6 @@ function manifestBack(ctx: ManifestActionContext): string {
 const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
   status: z.enum(["boarded", "not_boarded", "cleared"]),
-  note: z.string().trim().max(300).optional(),
 });
 
 const executedDiveSchema = z.object({
@@ -376,7 +375,6 @@ export async function rollCallAction(
       // Re-proved against this trip's own `plannedDives` inside the write's
       // transaction (`invalid_checkpoint`).
       checkpoint,
-      note: parsed.data.note,
     });
     if (!outcome.ok) {
       if (outcome.reason === "not_ready") {

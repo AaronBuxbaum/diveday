@@ -251,7 +251,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T11:05:00.000Z",
           syncStatus: "pending",
         },
@@ -293,7 +292,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T11:00:00.000Z",
           syncStatus: "applied",
         },
@@ -305,7 +303,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T11:10:00.000Z",
           syncStatus: "rejected",
         },
@@ -342,7 +339,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T14:00:00.000Z",
           syncStatus: "applied",
         },
@@ -354,7 +350,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T14:05:00.000Z",
           syncStatus: "rejected",
         },
@@ -493,7 +488,6 @@ describe("offline manifest policy", () => {
               state: "not_boarded",
               occurredAt: "2026-07-20T11:30:00.000Z",
               recordedByName: "Dana Divemaster",
-              note: null,
             }
           : undefined;
     }
@@ -558,7 +552,6 @@ describe("offline manifest policy", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:20:00.000Z",
       recordedByName: "Sal Ortiz",
-      note: null,
     };
     const refused = {
       clientEventId: "event-undo",
@@ -596,7 +589,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T14:00:00.000Z",
           syncStatus: "applied",
         },
@@ -608,7 +600,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T14:05:00.000Z",
           syncStatus: "rejected",
         },
@@ -636,7 +627,6 @@ describe("offline manifest policy", () => {
       state: "boarded",
       occurredAt: "2026-07-20T14:03:00.000Z",
       recordedByName: "Sal Ortiz",
-      note: null,
     };
     const latest = latestOfflineRollCall(
       saved,
@@ -649,7 +639,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T14:00:00.000Z",
           syncStatus: "applied",
         },
@@ -661,7 +650,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T14:05:00.000Z",
           syncStatus: "rejected",
         },
@@ -697,7 +685,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T11:00:00.000Z",
           syncStatus: "applied",
         },
@@ -709,7 +696,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T11:10:00.000Z",
           syncStatus: "rejected",
         },
@@ -788,7 +774,6 @@ describe("offline manifest policy", () => {
         state: "not_boarded",
         occurredAt: "2026-07-20T11:02:00.000Z",
         recordedByName: "Dana Divemaster",
-        note: null,
         implied: manifest.checkpoint !== "departure",
       };
     }
@@ -825,7 +810,6 @@ describe("offline manifest policy", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:00:00.000Z",
       recordedByName: "Dana Divemaster",
-      note: null,
     };
     const events = [
       {
@@ -881,7 +865,6 @@ describe("offline manifest policy", () => {
         state: "not_boarded",
         occurredAt: "2026-07-20T11:02:00.000Z",
         recordedByName: "Dana Divemaster",
-        note: "Left after dive 1",
         implied: true,
       },
     });
@@ -909,7 +892,6 @@ describe("offline manifest policy", () => {
           bookingId: "blocked",
           checkpoint: "departure",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T11:06:00.000Z",
           syncStatus: "pending",
         },
@@ -959,7 +941,6 @@ describe("offline manifest policy", () => {
             state: "not_boarded",
             occurredAt: new Date("2026-07-20T13:30:00.000Z"),
             recordedByName: "Dana Divemaster",
-            note: null,
             implied: true,
           },
           buddyAlert: null,
@@ -991,7 +972,6 @@ describe("offline manifest policy", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T13:30:00.000Z",
       recordedByName: "Dana Divemaster",
-      note: null,
       implied: true,
     });
     // Private data the dock does not need is still dropped.
@@ -1048,7 +1028,6 @@ describe("offline manifest policy", () => {
             state: "boarded",
             occurredAt: new Date("2026-07-20T13:30:00.000Z"),
             recordedByName: "Dana Divemaster",
-            note: null,
           },
           buddyAlert: "separated_after_dive",
         },
@@ -1292,7 +1271,6 @@ describe("offline crew roll call", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:30:00.000Z",
       recordedByName: "Sal Ortiz",
-      note: null,
     };
     const event = {
       clientEventId: "event-crew",

@@ -122,7 +122,6 @@ function baseInput(overrides: Partial<IncidentExportInput> = {}): IncidentExport
         status: "boarded",
         source: "live",
         recordedByName: "Captain Sol",
-        note: null,
         occurredAt: new Date("2026-08-04T12:45:00.000Z"),
         createdAt: new Date("2026-08-04T12:45:00.000Z"),
       },
@@ -367,7 +366,6 @@ describe("buildIncidentExport", () => {
             status: "not_boarded",
             source: "offline",
             recordedByName: "Captain Sol",
-            note: "Not at the ladder count",
             occurredAt: new Date("2026-08-04T15:00:00.000Z"),
             createdAt: new Date("2026-08-04T15:00:01.000Z"),
           },
@@ -378,7 +376,6 @@ describe("buildIncidentExport", () => {
             status: "cleared",
             source: "live",
             recordedByName: "Rae Owner",
-            note: null,
             occurredAt: new Date("2026-08-04T12:50:00.000Z"),
             createdAt: new Date("2026-08-04T12:50:00.000Z"),
           },
@@ -395,7 +392,7 @@ describe("buildIncidentExport", () => {
       label: "not_back_aboard",
     });
     expect(doc.timeline.map((entry) => entry.action)).toEqual(["cleared", "not_boarded"]);
-    expect(doc.timeline[1]).toMatchObject({ source: "offline", note: "Not at the ladder count" });
+    expect(doc.timeline[1]).toMatchObject({ source: "offline" });
   });
 
   it("marks imported cards and nitrox evidence distinctly", () => {
@@ -445,8 +442,9 @@ describe("buildIncidentExport", () => {
             checkpoint: "departure",
             status: "boarded",
             source: "live",
-            recordedByName: "Captain Sol",
-            note: "edited after the fact",
+            // The one edited fact: who recorded it. (It used to be the event's
+            // note, which went with the roll-call note itself -- #1058.)
+            recordedByName: "Captain Marisol",
             occurredAt: new Date("2026-08-04T12:45:00.000Z"),
             createdAt: new Date("2026-08-04T12:45:00.000Z"),
           },
@@ -770,7 +768,6 @@ describe("buildIncidentExport", () => {
             status: "boarded",
             source: "live",
             recordedByName: "Captain Sol",
-            note: null,
             occurredAt: new Date("2026-08-04T08:00:00.000Z"),
             createdAt: new Date("2026-08-04T08:00:00.000Z"),
           },

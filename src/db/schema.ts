@@ -5939,7 +5939,6 @@ export const rollCallEvents = pgTable(
     clientEventId: uuid("client_event_id"),
     /** Which encrypted snapshot supplied the offline readiness evidence. */
     offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
-    note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
@@ -6055,7 +6054,6 @@ export const rollCallCrewEvents = pgTable(
     source: rollCallSource("source").notNull().default("live"),
     /** Device-generated idempotency key. Live events leave this null. */
     clientEventId: uuid("client_event_id"),
-    note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
