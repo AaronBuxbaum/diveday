@@ -31,6 +31,32 @@ describe("hex colors", () => {
     expect(texts("/* was #0e7490 */ const y = 2;")).toEqual([]);
   });
 
+  it("never flags an issue or PR citation, in a string as well as a comment", () => {
+    // The regression: a comment citing an issue was always safe, because
+    // comments are stripped before the scan. A *test title* carrying the same
+    // citation is a string literal, and `#722` is three valid hex digits — so
+    // `describe("ScheduleBuilder wind line (issue #722)")` turned main red on a
+    // file with no colour in it.
+    expect(texts('describe("ScheduleBuilder wind line (issue #722)", () => {});')).toEqual([]);
+    expect(texts('it("closes issue #1010 and PR #949", () => {});')).toEqual([]);
+    expect(texts('const note = "see issues #700, and pull request #808";')).toEqual([]);
+  });
+
+  it("still flags an all-digit hex that nothing cites — it is a colour", () => {
+    // The rule is "preceded by the word that makes it a citation", not "all
+    // digits". Black and near-black are the hex a component is most likely to
+    // reach for, and they stay covered.
+    expect(texts('style={{ color: "#000" }}')).toEqual(["raw hex #000"]);
+    expect(texts('const shadow = "#111111";')).toEqual(["raw hex #111111"]);
+    // A bare number with no citing word in front of it is still a colour, and
+    // that includes a citation written without one: `"fixes #1010"` is flagged
+    // and `"fixes issue #1010"` is not. Deliberate — the alternative is
+    // forgiving every all-digit hex, which would blind the check to `#000` and
+    // `#111111`, the two a component is most likely to reach for.
+    expect(texts('const x = "#722";')).toEqual(["raw hex #722"]);
+    expect(texts('it("fixes #1010", () => {});')).toEqual(["raw hex #1010"]);
+  });
+
   it("ignores invalid hex lengths and long hashes", () => {
     expect(texts('const sha = "#deadbeefcafe";')).toEqual([]);
     expect(texts('const five = "#abcde";')).toEqual([]);

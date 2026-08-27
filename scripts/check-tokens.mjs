@@ -31,6 +31,8 @@ import { pathToFileURL } from "node:url";
  *     path at a time in `exemptPaths` below. Same bitmap, same reason; the
  *     only difference is that a shared module carries no convention name to
  *     key on.
+ *   - an issue or PR reference (`(issue #722)`, `PR #1010`) — see
+ *     {@link isIssueReference};
  *   - fragment hrefs and other `#word` strings — the hex pattern requires a
  *     valid color length and rejects a match that continues into an
  *     identifier (`#add-diver` never matches), and comments are stripped
@@ -92,6 +94,38 @@ const exemptPaths = new Set(["src/app/_og/card.tsx", "src/app/_brand/colors.ts"]
  */
 export const hexColorPattern =
   /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])/g;
+
+/**
+ * **`(issue #722)` is a citation, not a dark red.**
+ *
+ * This repository cites its own issues constantly, and until now every one of
+ * those citations happened to sit in a comment — which {@link stripComments}
+ * blanks before the scan, so nothing ever noticed. Then a test title carried
+ * one into a **string literal**: `describe("ScheduleBuilder wind line (issue
+ * #722)")`. `#722` is three hex digits not followed by an identifier
+ * character, so it is a perfectly good match, and `main` went red on a file
+ * with no colour in it at all.
+ *
+ * The narrow rule, rather than exempting all-decimal hex: a reference is `#`
+ * plus digits **preceded by the word that makes it one**. `#000` and `#111111`
+ * are real colours a component might reach for and stay fully covered; the only
+ * thing forgiven is the shape this codebase writes on purpose.
+ *
+ * The cost is that a citation written *without* that word — `"fixes #1010"` in
+ * a string — is still read as a colour. Write `fixes issue #1010`, which is how
+ * every citation in this tree already reads. Forgiving the uncited form would
+ * mean forgiving every all-digit hex, and that is the half of the check most
+ * worth keeping.
+ */
+const ISSUE_REFERENCE = /(?:\bissues?|\bPRs?|\bpull requests?)\s+#$/i;
+
+/** Whether the `#…` at `index` is the tail of an issue or PR citation. */
+function isIssueReference(source, index, match) {
+  // Digits only. A reference is never `#a1b2c3`, and a colour that happens to
+  // be all digits is still a colour unless a citing word precedes it.
+  if (!/^#\d+$/.test(match)) return false;
+  return ISSUE_REFERENCE.test(source.slice(Math.max(0, index - 40), index + 1));
+}
 
 const colorPrefixes = [
   "bg",
@@ -177,6 +211,7 @@ export function findTokenViolations(source) {
 
   const found = [];
   for (const match of stripped.matchAll(hexColorPattern)) {
+    if (isIssueReference(stripped, match.index, match[0])) continue;
     found.push({ line: lineAt(match.index), text: `raw hex ${match[0]}` });
   }
   for (const match of stripped.matchAll(paletteClassPattern)) {
