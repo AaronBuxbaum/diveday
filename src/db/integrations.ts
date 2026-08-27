@@ -28,6 +28,19 @@ function encryptionKey(): SecretKey | IntegrationKeyRefusal {
   return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }
 
+/**
+ * The digest of a browser OAuth state, and the only form of it ever stored.
+ *
+ * **A plain SHA-256 rather than a password hash is deliberate, and CodeQL
+ * disagrees.** `js/insufficient-password-hash` reads the value
+ * `createIntegrationOAuthState` returns as a credential and this as a weak hash
+ * of it; the reasoning it cannot see is the same one `src/lib/bearer-tokens.ts`
+ * writes down for the identical primitive. The state is 32 bytes from a CSPRNG,
+ * never user-chosen, so there is no dictionary to attack and no work factor
+ * worth paying on a callback path a person is waiting on. What the digest is for
+ * is that a reader of a database dump comes away with nothing replayable, and a
+ * one-way hash of a full-entropy secret already gives that.
+ */
 function stateHash(state: string): string {
   return createHash("sha256").update(state).digest("hex");
 }
