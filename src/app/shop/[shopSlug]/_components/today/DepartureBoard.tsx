@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BoardingBar } from "@/components/BoardingBar";
+import { BoardingSeats } from "@/components/BoardingBar";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -12,14 +12,12 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import type { DepartureSummary } from "@/db/today";
 import { fill, pluralForm } from "@/i18n/fill";
-import { formatTime, formatTimeRange } from "@/lib/format";
+import { formatTimeRange } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
 
 export type DepartureBoardCopy = {
   crewingBadge: string;
   courseSession: string;
-  bookedOfCapacityOne: string;
-  bookedOfCapacityOther: string;
   boarding: string;
   openGuests: string;
   assignCrewMemberAria: string;
@@ -176,8 +174,14 @@ function DepartureCard({
     <SectionCard as="li" padding="md" className="list-none">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
+          {/* **The whole window, said once.** This was the start time in
+              headline figures with the full range repeated in a muted line
+              underneath — the same departure time twice, three lines apart,
+              plus a seat count the boarding summary below already breaks into
+              aboard/ready/blocked/open. The range carries the end time up
+              here and the line under it is gone (principle 9). */}
           <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
-            {formatTime(departure.startsAt, locale, timeZone)}
+            {formatTimeRange(departure.startsAt, departure.endsAt, locale, timeZone)}
             {crewed ? <Badge tone="primary">{copy.crewingBadge}</Badge> : null}
           </p>
           <h3 className="mt-0.5 font-semibold">{departure.title}</h3>
@@ -187,18 +191,6 @@ function DepartureCard({
               {fill(copy.courseSession, { title: departure.courseTitle })}
             </p>
           ) : null}
-          <p className="text-sm text-muted">
-            {formatTimeRange(departure.startsAt, departure.endsAt, locale, timeZone)} ·{" "}
-            <span className="tabular-nums">
-              {fill(
-                pluralForm(capacity, {
-                  one: copy.bookedOfCapacityOne,
-                  other: copy.bookedOfCapacityOther,
-                }),
-                { booked, capacity },
-              )}
-            </span>
-          </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {/* The manifest opens on "Before departure" — the boarding pass — so
@@ -218,12 +210,13 @@ function DepartureCard({
         </div>
       </div>
 
-      {/* One bar, one caption, one quiet count line — the whole readiness
-          read for this boat. The bar stays decorative because the counts are
-          plain text right under it (principle 6: exact numbers, and state is
-          never carried by hue alone). */}
+      {/* One strip, one caption, one quiet count line — the whole readiness
+          read for this boat, drawn seat by seat exactly as the trip Overview
+          draws it. The strip stays decorative because the counts are plain
+          text right under it (principle 6: exact numbers, and state is never
+          carried by hue alone). */}
       <div className="mt-4">
-        <BoardingBar boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
+        <BoardingSeats boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
         {booked > 0 ? (
           <p className="mt-2 text-sm text-muted tabular-nums">
             {/* **Four counts, four plurals, one sentence.** This line used to

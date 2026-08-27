@@ -94,11 +94,14 @@ test.describe("staff", () => {
       .getByRole("link")
       .click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
-    // **No tap.** Marine life used to fold behind the per-dive "look for"
-    // disclosure; for a diver who has not booked it now leads the briefing,
-    // because those photos are the argument for the trip rather than pre-trip
-    // reading (issue #760). This site carries no landmarks, so nothing is left
-    // to fold and the disclosure is absent entirely.
+    // **One tap, and it is the field guide's own.** Marine life used to fold
+    // behind the per-dive "look for" disclosure, which named landmarks rather
+    // than species (issue #760); it has a door of its own now, named and
+    // counted — and closed, because eight photographs open pushed the dive
+    // plan and the depth off the first screenful (product owner, 2026-08-27).
+    // This site carries no landmarks, so the "look for" fold is absent
+    // entirely and this is the only disclosure on the card.
+    await page.getByText("A few faces to learn").click();
     await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
     await expect(page.getByText("27°C", { exact: true })).toBeVisible();
     await expect(page.getByText("18 m")).toBeVisible();
@@ -591,10 +594,14 @@ test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, a
   await expect(page.getByText("Reef garden loop")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
   // Landmarks and diver moments fold behind one tap per dive so the page stays
-  // a briefing; open both tanks' folds to read them. The field guide is
-  // *outside* those folds for a diver who has not booked (issue #760), which is
-  // why the species assertions below hold whether or not these clicks land.
+  // a briefing; open both tanks' folds to read them. The field guide has a
+  // *separate* door of its own for a diver who has not booked — named for what
+  // is in it and counting it (issue #760) — and it is closed too, so its own
+  // summary is opened alongside them (product owner, 2026-08-27).
   for (const summary of await page.getByText("What to look for down there").all()) {
+    await summary.click();
+  }
+  for (const summary of await page.getByText("A few faces to learn").all()) {
     await summary.click();
   }
   // Both tanks of the seeded two-tank trip carry a site briefing, so this
@@ -651,6 +658,11 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
   // looking for cards inside a closed `<details>`.
   await expect(page.getByRole("heading", { level: 3, name: "Molasses Reef" })).toBeVisible();
   for (const summary of await page.getByText("Qué buscar ahí abajo").all()) {
+    await summary.click();
+  }
+  // The field guide's own door, in the reader's own language — the same
+  // `site.fieldGuideHeading` the summary above renders in English.
+  for (const summary of await page.getByText("Algunas caras que aprender").all()) {
     await summary.click();
   }
 

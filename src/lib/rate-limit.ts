@@ -495,38 +495,6 @@ export const RATE_LIMITS = {
    */
   readinessLinkResendByBooking: perHour(5),
   /**
-   * Writing a self-declared certification onto a **named person's** record from
-   * the public booking form, per that person rather than per IP.
-   *
-   * Same argument as the bucket above, and the same shape: `RATE_LIMITS.booking`
-   * still applies, but on its own it would let anyone who knows a diver's name
-   * and email address spray claims onto that diver's record from a rotating set
-   * of addresses. The default store is in-process per instance unless Upstash is
-   * provisioned, and fails open on a store error, so the effective per-IP ceiling
-   * across a serverless fleet is well above ten an hour.
-   *
-   * **The key is the person written to, not the person submitting.** Keying on
-   * the lead booker would be no protection at all: a party booking names up to
-   * six people, so an attacker would simply put the victim in seat two and use a
-   * fresh lead address each time. Only a key on the address a declaration is
-   * *about* bounds how often one record can be written to.
-   *
-   * Five an hour, matching the resend bucket. A diver legitimately books more
-   * than one departure in a sitting — a week of diving is several — and every one
-   * of those spends a token, so this has to clear an honest booking spree
-   * comfortably while still bounding a spray. A seat with no answer to the
-   * certification question spends nothing: there is no claim to write, so there
-   * is no record to protect.
-   *
-   * What bounds the severity underneath this is the anti-displacement rule
-   * (`src/db/self-declared-cards.ts`), which refuses to write over any real card
-   * the shop holds. That is the primary defence and it is unchanged; this is the
-   * net for divers the shop knows nothing about, where the write is closer to
-   * spam than to tampering (security review of ADR
-   * 20260820-attested-at-booking-verified-at-boarding).
-   */
-  declarationByPerson: perHour(5),
-  /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *
    * Public and unauthenticated by necessity — the report comes from a diver's

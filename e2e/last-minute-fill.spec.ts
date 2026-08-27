@@ -288,3 +288,83 @@ test("a self-declared card cannot be certified without verified evidence", async
   await expect(certified).not.toContainText("Rescue");
   await expect(certified).not.toContainText("Self-declared — no certification number yet");
 });
+
+/**
+ * **The hint panel belongs to the mark you are pointing at.**
+ *
+ * `InfoHint`'s trigger is a 44px box around a 12px glyph (`-m-3 size-11 p-3`,
+ * the tap-target floor from principles.md §2) and the panel was placed from
+ * that box — so it opened 16px below and 16px left of the dot under the
+ * pointer, reading as a note about nothing in particular rather than about the
+ * question it hangs off. Underneath that, the panel is `position: fixed` and
+ * every `<details>` is a containing block for one in Chromium (through the
+ * `::details-content` pseudo the UA wraps its body in), which put it hundreds
+ * of pixels away; it is portalled to `document.body` for that.
+ *
+ * This is the one ⓘ a diver meets on a public page: the "why are you asking me
+ * this?" beside the certification question.
+ *
+ * **Geometry, and pinned to one branch.** The gap is a handful of pixels either
+ * way — exactly the size of difference a monochrome capture and a reviewer's
+ * eye both wave through — so it is measured rather than photographed. The panel
+ * legitimately flips *above* its trigger when it would not fit below, and this
+ * first went red on CI for that reason alone (a shorter runner viewport, gap
+ * -105): the viewport and the scroll position are fixed here so the "below"
+ * branch is the one under test, rather than the assertion accepting both and
+ * proving less.
+ */
+test("the certification hint opens beside the mark, not beside its tap target", async ({
+  page,
+}) => {
+  // Tall enough, and the trigger parked mid-page, so the panel always has room
+  // below it — see the note above.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/s/blue-mantis");
+  const dealList = page.locator("#last-minute-list");
+  await dealList.locator("summary").click();
+  // By its accessible name, never "the first disclosure in here" — a
+  // `<summary>` and an `EditDisclosure` wear the same attributes.
+  const trigger = dealList.getByRole("button", { name: "Why we ask about certification" });
+  await trigger.waitFor();
+  await trigger.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  // Read the id *before* the hover. The panel is placed by measurement and is
+  // dismissed by any scroll, so a locator action after the hover could scroll
+  // the page to reach its own target and leave this measuring a gap nobody
+  // would ever see.
+  const panelId = await trigger.getAttribute("aria-controls");
+  await trigger.hover();
+
+  const geometry = await page.evaluate((id) => {
+    const note = document.getElementById(id);
+    const button = document.querySelector(`button[aria-controls="${id}"]`);
+    const glyph = button?.querySelector("span");
+    if (!note || !button || !glyph) throw new Error("no hint on the page");
+    const mark = glyph.getBoundingClientRect();
+    const target = button.getBoundingClientRect();
+    const panel = note.getBoundingClientRect();
+    return {
+      open: getComputedStyle(note).visibility,
+      markGap: panel.top - mark.bottom,
+      // What the gap would have been measured from the tap target instead —
+      // the regression this test exists for.
+      targetGap: panel.top - target.bottom,
+      dx: panel.left - mark.left,
+      markWidth: mark.width,
+      targetWidth: target.width,
+    };
+  }, panelId ?? "");
+
+  expect(geometry.open).toBe("visible");
+  // The mark really is the small dot and the target really is the 44px box —
+  // the whole reason measuring the wrong one moved the panel.
+  expect(geometry.markWidth).toBeLessThan(24);
+  expect(geometry.targetWidth).toBeGreaterThanOrEqual(40);
+  // `PANEL_GAP` is 8; a couple of pixels of slack for sub-pixel layout.
+  expect(geometry.markGap).toBeGreaterThanOrEqual(6);
+  expect(geometry.markGap).toBeLessThanOrEqual(12);
+  // And it is the *mark* the panel hangs off: anchored to the padded box it
+  // would sit a padding's worth further away, which is what this used to do.
+  expect(geometry.targetGap).toBeLessThan(geometry.markGap);
+  // Left-aligned to the mark wherever there is room for it.
+  expect(Math.abs(geometry.dx)).toBeLessThanOrEqual(2);
+});

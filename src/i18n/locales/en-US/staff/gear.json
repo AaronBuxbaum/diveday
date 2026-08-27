@@ -238,7 +238,10 @@
     },
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",
-    "pickUnit": "Pick a unit…"
+    "pickUnit": "Pick a unit…",
+    "groupExactSize": "Size {size}",
+    "groupOtherSizes": "Other sizes free",
+    "groupFree": "Free for these dates"
   },
   "ticket": {
     "eyebrow": "Rental",

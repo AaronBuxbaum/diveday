@@ -12,8 +12,6 @@ afterEach(() => {
 const COPY: DepartureBoardCopy = {
   crewingBadge: "You’re crewing",
   courseSession: "Course session · {title}",
-  bookedOfCapacityOne: "{booked} of {capacity} booked",
-  bookedOfCapacityOther: "{booked} of {capacity} booked",
   boarding: "Board divers",
   openGuests: "Open guests",
   assignCrewMemberAria: "Assign crew member to {title}",

@@ -1462,43 +1462,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The warning a diver gets under their own answer**, on the same gated
-       * charter — the state the requirement note above can only describe in the
-       * abstract.
-       *
-       * Since 2026-08-20 the certification question is asked once per diver
-       * rather than once per party, and a rung below what the departure asks
-       * for is warned about rather than refused (H-30's amendment). No baseline
-       * had ever rendered either: not the repeated select inside each fieldset,
-       * and not the warning under one of them. Two divers, so the shot proves
-       * the warning belongs to the diver who gave the answer rather than to the
-       * form.
-       */
-      test(`a diver warned about their own rung renders true to the design (${scheme})`, async ({
-        page,
-        browser,
-        workerBaseURL,
-        staffStorageState,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await tripIdWithoutSigningIn(
-          browser,
-          workerBaseURL,
-          await staffStorageState("owner"),
-          ADVANCED_CHARTER,
-        );
-        await page.goto(`/s/blue-mantis/trips/${tripId}`);
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-        await page.getByLabel("Number of divers").selectOption("2");
-        // Diver 1 answers short of the charter's Advanced Open Water; diver 2
-        // clears it, so only one fieldset carries the line.
-        await page.locator('select[name="certificationLevel-0"]').selectOption("open_water");
-        await page.locator('select[name="certificationLevel-1"]').selectOption("rescue");
-        await expect(page.getByText(/bring your certification card/)).toHaveCount(1);
-        await capture(page, "booking-cert-warning", scheme);
-      });
-
-      /**
        * **A dock day the departure's own legs lay out** (ADR
        * 20260815-per-leg-travel-minutes).
        *

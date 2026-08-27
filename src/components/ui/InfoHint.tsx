@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 /** Gap between the trigger and the panel, and the panel's margin to the viewport edge. */
@@ -33,7 +34,21 @@ const PANEL_WIDTH = 288;
  *   it off would save the shop's settings every time somebody asked what a
  *   field meant.
  *
- * **The panel is `fixed` and placed by measurement, not hung off the trigger.**
+ * **The panel is rendered into `document.body`, not beside its trigger.** A
+ * `position: fixed` box is only laid out in viewport coordinates while no
+ * ancestor has made itself a containing block — and in Chromium every
+ * `<details>` does, through the `::details-content` pseudo-element the UA wraps
+ * its body in. That pseudo is invisible to an ancestor walk (it is not an
+ * `Element`), which is why this looked impossible before it was measured: the
+ * panel's computed `left`/`top` were exactly right and its rendered box was
+ * 89px right and 552px down from them, on a page where every hint sits inside
+ * a disclosure row. Settings' eleven hints, the public schedule's deal list,
+ * the readiness page's gear form — all of them are inside a `<details>`, which
+ * is the whole of the reported "the tooltip is weirdly far from the icon".
+ * A portal to `document.body` puts the panel where its coordinates mean what
+ * they say, whatever the trigger is nested in.
+ *
+ * **And it is placed by measurement, not hung off the trigger.**
  * It used to be `absolute top-7 left-0 w-72`, which means an 18rem panel
  * growing rightwards from a 20px marker: on a 390px phone every trigger that
  * is not at the far left put its panel past the right edge, and an absolutely
@@ -64,6 +79,15 @@ export function InfoHint({
   const id = useId();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const glyphRef = useRef<HTMLSpanElement>(null);
+  const panelRef = useRef<HTMLSpanElement>(null);
+  // The portal needs a document, so the first render — the server's, and the
+  // client's hydration pass — keeps the panel inline. It carries no position
+  // and is invisible either way; what it does carry is the id
+  // `aria-describedby` points at, so the description resolves in the static
+  // HTML rather than appearing only once React has mounted.
+  const [portalled, setPortalled] = useState(false);
+  useEffect(() => setPortalled(true), []);
   // Null until the panel has been placed — it renders off-flow and invisible
   // until then, so a first paint never flashes it at the top-left corner.
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
@@ -71,7 +95,12 @@ export function InfoHint({
   const place = useCallback(() => {
     const trigger = triggerRef.current;
     if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
+    // **The mark, not the target.** The trigger is a 44px box around a 12px
+    // glyph (`-m-3 size-11 p-3`), so measuring the button put the panel 16px
+    // below and 16px left of the dot somebody was actually pointing at — a
+    // hint that reads as belonging to nothing in particular. The glyph carries
+    // its own ref so the panel hangs off what the eye is on.
+    const rect = (glyphRef.current ?? trigger).getBoundingClientRect();
     const width = Math.min(PANEL_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
     // Left-aligned to the trigger where there is room, pulled back so the
     // panel's right edge clears the viewport where there isn't, and never past
@@ -84,7 +113,7 @@ export function InfoHint({
     // screen — a hint on the last card of a long settings page is exactly where
     // "below" runs out of room.
     const below = rect.bottom + PANEL_GAP;
-    const estimatedHeight = Math.max(trigger.nextElementSibling?.clientHeight ?? 0, 64);
+    const estimatedHeight = Math.max(panelRef.current?.offsetHeight ?? 0, 64);
     const top =
       below + estimatedHeight > window.innerHeight - VIEWPORT_MARGIN
         ? Math.max(VIEWPORT_MARGIN, rect.top - PANEL_GAP - estimatedHeight)
@@ -110,6 +139,27 @@ export function InfoHint({
       window.removeEventListener("resize", hide);
     };
   }, [open, hide]);
+
+  const panel = (
+    <span
+      key={id}
+      ref={panelRef}
+      id={id}
+      role="note"
+      style={position ? { left: position.left, top: position.top } : undefined}
+      // `z-50`, the tier every other floating surface in the app uses (Toast,
+      // Modal, CommandPalette). It was `z-30` while the panel lived inside the
+      // page's own stacking context; on `document.body` it shares the root one
+      // with the sticky headers, which are `z-40` — and the panel flips
+      // *above* its trigger whenever it would not fit below, which is exactly
+      // where it would have gone behind a header.
+      className={`pointer-events-none fixed top-0 left-0 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed font-normal text-muted shadow-lg transition-opacity ${
+        open && position ? "visible opacity-100" : "invisible opacity-0"
+      }`}
+    >
+      {detail}
+    </span>
+  );
 
   return (
     <span className={`inline-flex align-middle ${className}`}>
@@ -140,19 +190,13 @@ export function InfoHint({
         className="-m-3 inline-flex size-11 items-center justify-center rounded-full p-3 text-muted transition-colors hover:text-primary focus-visible:text-primary"
       >
         {/* An icon rather than a "?" glyph: a text marker is copy, and copy
-            belongs in a message bundle. This one carries no language at all. */}
-        <DiveDayIcon name="info" className="size-3 shrink-0" />
+            belongs in a message bundle. This one carries no language at all.
+            The wrapper exists to be measured — see `place`. */}
+        <span ref={glyphRef} className="inline-flex">
+          <DiveDayIcon name="info" className="size-3 shrink-0" />
+        </span>
       </button>
-      <span
-        id={id}
-        role="note"
-        style={position ? { left: position.left, top: position.top } : undefined}
-        className={`pointer-events-none fixed top-0 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed font-normal text-muted shadow-lg transition-opacity ${
-          open && position ? "visible opacity-100" : "invisible opacity-0"
-        }`}
-      >
-        {detail}
-      </span>
+      {portalled ? createPortal(panel, document.body) : panel}
     </span>
   );
 }

@@ -169,6 +169,8 @@
     "holdOnSummary": "La pausa por condiciones está activa — las nuevas reservas están en pausa",
     "publishedAt": "Publicada {date}",
     "visibilityFact": "{value} de visibilidad",
+    "automatedWater": "Agua {value}",
+    "automatedSeas": "Mar {height} {direction}",
     "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (rachas {gusts} kt)} other {}}",
     "automatedCurrent": "Corriente {velocity} kt {direction}",
     "automatedSun": "Amanecer {sunrise} · Puesta {sunset}",

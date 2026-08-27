@@ -85,33 +85,35 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
   });
 
-  test("a diver who says a lower rung is warned under their own answer and still gets the seat", async ({
-    page,
-  }) => {
-    // The other half of the test above, and the line H-30's amendment draws.
-    // There, the shortfall rests on the shop's *record* and the diver typed
-    // nothing, so nothing could have warned them and the refusal stands. Here
-    // the diver says it themselves, is told at the moment they say it, and buys
-    // the charter anyway — the case FU-20260820-the-sale-gate-bites-only-the-
-    // honest was about, where the only person the gate stopped was the one who
-    // answered truthfully and short.
+  test("a diver the shop knows nothing about is not screened at the sale", async ({ page }) => {
+    // The other half of the test above, and the line this gate now draws.
+    // There, the shortfall rests on the shop's own *record* — a verified Open
+    // Water card and nothing above it — and the refusal stands. Here the shop
+    // holds nothing at all, so there is nothing to judge and the seat is sold:
+    // H-08's fail-open, which the booking form's certification question briefly
+    // covered over between 2026-08-20 and 2026-08-27 (ADR
+    // 20260820-attested-at-booking-verified-at-boarding, amended).
+    //
+    // Readiness is what stops them at the dock, and it is unchanged: nothing
+    // clears a boarding decision but a card a staffer has sighted.
     test.setTimeout(30_000);
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
     await page.context().clearCookies();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
 
-    // A diver the shop holds nothing for, so the only fact in play is the one
-    // they type.
+    // The requirement is still disclosed above the form — a property of the
+    // trip, and the half a deciding diver needs.
+    await expect(
+      page.getByText("This charter is for divers with Advanced Open Water or higher."),
+    ).toBeVisible();
+    // And the form asks nothing about anybody's diving.
+    await expect(page.locator('select[name^="certificationLevel"]')).toHaveCount(0);
+
     await page.getByLabel("Name", { exact: true }).fill("Wren Halloway");
     await page.getByLabel("Email", { exact: true }).fill(`wren-${e2eNow().getTime()}@example.com`);
-    await page.locator('select[name="certificationLevel-0"]').selectOption("open_water");
-
-    // Said as they answer, not after the money moves.
-    await expect(page.getByText(/bring your certification card/)).toBeVisible();
-
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’re on the boat, Wren/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/ready\//);
     // And the old refusal is not what happened.
     await expect(
       page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),

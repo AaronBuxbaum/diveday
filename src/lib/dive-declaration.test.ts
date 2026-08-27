@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DECLARABLE_CERTIFICATION_LEVELS,
   diveDeclarationInput,
-  diveDeclarationInputAt,
   diveDeclarationSchema,
   NO_CERTIFICATION_ANSWER,
   toDiveDeclaration,
@@ -157,38 +156,5 @@ describe("the declared card's agency and number", () => {
     const unsaid = parse({ certificationAgency: "padi", certificationNumber: "PA-1" });
     expect(unsaid?.agency).toBeUndefined();
     expect(unsaid?.identifier).toBeUndefined();
-  });
-});
-
-/**
- * The booking form asks the whole question once per diver in the party, and the
- * card fields have to travel with the rung they belong to — a party of four is
- * four different cards, and one diver's number landing on another's record is
- * the failure this indexing exists to prevent.
- */
-describe("diveDeclarationInputAt", () => {
-  it("reads each diver's own card fields, never the lead's", () => {
-    const formData = new FormData();
-    formData.set("certificationLevel-0", "open_water");
-    formData.set("certificationAgency-0", "padi");
-    formData.set("certificationNumber-0", "OW-1");
-    formData.set("certificationLevel-1", "rescue");
-    formData.set("certificationAgency-1", "ssi");
-    formData.set("certificationNumber-1", "RS-2");
-
-    const read = (index: number) => {
-      const parsed = diveDeclarationSchema.safeParse(diveDeclarationInputAt(formData, index));
-      return parsed.success ? toDiveDeclaration(parsed.data) : null;
-    };
-    expect(read(0)).toMatchObject({ level: "open_water", agency: "padi", identifier: "OW-1" });
-    expect(read(1)).toMatchObject({ level: "rescue", agency: "ssi", identifier: "RS-2" });
-    // A slot nobody filled in is silence at every field, not the lead's answer.
-    expect(read(2)).toEqual({
-      level: undefined,
-      noCertification: false,
-      agency: undefined,
-      identifier: undefined,
-      nitrox: false,
-    });
   });
 });

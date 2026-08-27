@@ -48,19 +48,23 @@ export function DiveBriefingCard({
   creatures: Creature[];
   moments: Moment[];
   /**
-   * **Put the species photos in front of a diver who has not booked yet.**
+   * **Give the species photos their own door, in front of a diver who has not
+   * booked yet.**
    *
    * They are the only photography on the page a diver decides to spend $95
    * on — a licensed, credited grid of what they would actually see down there
-   * — and they were folded inside the disclosure below, whose closed summary
+   * — and they were buried inside the disclosure below, whose closed summary
    * reads "What to look for down there · 3 landmarks · 8 species" (issue
-   * #760). The page comment that justified folding it argues about the
-   * *confirmed* state: a just-paid diver should reach their confirmation
-   * without scrolling past a creature gallery. That is right, and it is the
-   * only state this stays folded for.
+   * #760), where nothing named them. So they get a disclosure of their own,
+   * named for what is in it and counting it.
    *
-   * The landmarks and the moment figure stay in the disclosure either way.
-   * They are reference for someone already going; the pictures are the
+   * **Closed, though** (product owner, 2026-08-27). Rendering the grid open
+   * pushed the dive plan, the depth and the water movement below the fold on
+   * every briefing card. A named, counted summary is the argument for tapping;
+   * eight photographs in the way of the plan is not.
+   *
+   * The landmarks and the moment figure stay in the disclosure below either
+   * way. They are reference for someone already going; the pictures are the
    * argument for someone deciding.
    */
   leadWithFieldGuide?: boolean;
@@ -78,8 +82,8 @@ export function DiveBriefingCard({
   const landmarks = site ? parseDiveSiteLandmarks(site.landmarks) : [];
   const hasFieldGuide =
     creatures.length > 0 || Boolean(site?.marineLifeDescription) || Boolean(site?.marineLife);
-  // Above the fold for a diver still deciding, inside it for one who has
-  // already paid — see `leadWithFieldGuide`.
+  // Its own named disclosure for a diver still deciding; folded in with the
+  // landmarks for one who has already paid — see `leadWithFieldGuide`.
   const fieldGuideLeads = leadWithFieldGuide && Boolean(site) && hasFieldGuide;
   // The long-tail site content folds behind one tap so the page stays a
   // briefing, not a scroll marathon — the essentials above stay in view. What
@@ -194,15 +198,41 @@ export function DiveBriefingCard({
           </section>
         ) : null}
         {fieldGuideLeads && site ? (
-          <div className="mt-7 border-t border-border pt-5">
-            <DiveSiteFieldGuide
-              creatures={creatures}
-              summary={site.marineLifeDescription}
-              highlights={site.marineLife}
-              tipsHeading={site.fieldGuideTipsHeading}
-              t={t}
-            />
-          </div>
+          // **Its own disclosure, closed.** The species grid led the card open
+          // from issue #760 until 2026-08-27 (product owner): eight 4:3 photos
+          // above the fold pushed the dive plan, the depth and the water
+          // movement — what a diver came to read — off the first screenful of
+          // every briefing. It keeps its own door rather than folding back
+          // into "What to look for down there", because it is the argument for
+          // going and that reference is not; the summary states the count, so
+          // a diver deciding knows what is behind it before they tap.
+          <details className="group/guide mt-7 border-t border-border">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+              <span className="font-semibold">{t("site.fieldGuideHeading")}</span>
+              <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
+                {creatures.length ? (
+                  <span className="tabular-nums">
+                    {t("site.likelySightings", { count: creatures.length })}
+                  </span>
+                ) : null}
+                <DiveDayIcon
+                  name="caret"
+                  direction="down"
+                  className="size-3 transition-transform ease-out group-open/guide:rotate-180"
+                />
+              </span>
+            </summary>
+            <div className="pb-2">
+              <DiveSiteFieldGuide
+                creatures={creatures}
+                summary={site.marineLifeDescription}
+                highlights={site.marineLife}
+                tipsHeading={site.fieldGuideTipsHeading}
+                showHeading={false}
+                t={t}
+              />
+            </div>
+          </details>
         ) : null}
         {hasSiteExtras ? (
           <details className="group mt-7 border-t border-border">

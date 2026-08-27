@@ -1,14 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The narrow rate-limit net on the public booking form's **declaration write**.
+ * **The public booking form asks nothing about anybody's diving, and this
+ * action reads nothing about it either.**
  *
- * A completed public booking writes each diver's stated certification onto that
- * diver's record. `RATE_LIMITS.booking` is keyed by IP, which on its own lets
- * anyone who knows a name and an email address spray claims onto that person's
- * record from a rotating set of addresses — the same argument
- * `waiverLinkResendByBooking` makes about a diver's inbox. These cover which
- * budget gets spent and on whose behalf; the bucket mechanics themselves are
+ * It asked, per diver, between 2026-08-20 and 2026-08-27 (ADR
+ * 20260820-attested-at-booking-verified-at-boarding and its 2026-08-27
+ * amendment); `/ready/<token>` asks the diver whose booking it is instead.
+ * The parse went with the fields rather than being left standing, for the
+ * reason the nitrox tick was taken out of this action: an action that accepts
+ * what no form renders is a route a hand-crafted POST has and an honest diver
+ * does not — here, one that writes a self-declared certification onto a
+ * **named person's** record from an anonymous page.
+ *
+ * That is what these cover. A POST carrying every field the old form posted
+ * must reach `createBookingParty` with no declaration on it, must not turn the
+ * gate advisory on its behalf, and must cost the submitter exactly one token
+ * however many claims it carries. The bucket mechanics themselves are
  * `src/lib/rate-limit.test.ts`'s.
  */
 
@@ -39,8 +47,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { getShopBySlug } = await import("@/db/shops");
 const { getTripWithBooked } = await import("@/db/trips");
 const { createBookingParty } = await import("@/db/bookings");
-const { clientIp } = await import("@/lib/request-ip");
-const { checkRateLimit, RATE_LIMITS, rateLimitKey } = await import("@/lib/rate-limit");
+const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot } = await import("./actions");
 
 const SHOP_ID = "8a1f0c2e-1111-4222-8333-444444444444";
@@ -52,34 +59,29 @@ const shop = { id: SHOP_ID, slug: "blue-mantis", rentalPricing: null, rentalItem
 const trip = { id: TRIP_ID, courseId: null, course: null, plannedDives: 2, priceCents: null };
 
 /**
- * One submission. `declared` is the certification answer per seat — `null` is
- * the select's own "Rather not say", which writes nothing.
+ * One submission. `level` is written into the field name the form used to
+ * render — these are hand-crafted posts by construction now, which is the
+ * whole point of asserting on them.
  */
-function submission(party: Array<{ email: string; level?: string }>): FormData {
+function submission(
+  party: Array<{ email: string; level?: string; agency?: string; number?: string }>,
+): FormData {
   const form = new FormData();
   form.set("partySize", String(party.length));
   party.forEach((member, index) => {
     form.set(`fullName-${index}`, `Diver ${index}`);
     form.set(`email-${index}`, member.email);
     if (member.level) form.set(`certificationLevel-${index}`, member.level);
+    if (member.agency) form.set(`certificationAgency-${index}`, member.agency);
+    if (member.number) form.set(`certificationNumber-${index}`, member.number);
   });
   return form;
-}
-
-/** Every key spent against the per-person declaration budget, in order. */
-function declarationKeys(): string[] {
-  return vi
-    .mocked(checkRateLimit)
-    .mock.calls.filter(([, config]) => config === RATE_LIMITS.declarationByPerson)
-    .map(([key]) => key);
 }
 
 function bookingRateLimitCalls(): number {
   return vi.mocked(checkRateLimit).mock.calls.filter(([, config]) => config === RATE_LIMITS.booking)
     .length;
 }
-
-const keyFor = (email: string) => rateLimitKey("declaration", SHOP_ID, email);
 
 const ref = (tripId: string) => ({ shopSlug: "blue-mantis", tripId, embed: false });
 
@@ -95,8 +97,32 @@ beforeEach(() => {
 });
 afterEach(() => vi.clearAllMocks());
 
-describe("the declaration budget", () => {
-  it("charges the booking bucket once per declaration in a party", async () => {
+describe("the booking form's certification fields", () => {
+  it("carries no declaration into the booking, however many a post claims", async () => {
+    await bookSpot(
+      ref(TRIP_ID),
+      {},
+      submission([
+        { email: "booker@example.com", level: "rescue", agency: "padi", number: "RS-1" },
+        { email: "victim@example.com", level: "instructor", agency: "ssi", number: "IN-2" },
+      ]),
+    );
+
+    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
+    expect(requests).toHaveLength(2);
+    for (const request of requests ?? []) {
+      // Nothing an anonymous submitter typed reaches `recordSelfDeclaredCards`.
+      expect(request.declared).toBeUndefined();
+      // And the gate is not softened on the strength of an answer nobody gave:
+      // `advise` was earned by the form warning a diver as they answered.
+      expect(request.admissionGate).toBeUndefined();
+    }
+  });
+
+  it("costs one token per submission, not one per claim", async () => {
+    // The count-scaled charge existed to price the declaration writes a
+    // booking could make. With none to write, what is left is the protection
+    // against repeated empty submissions.
     await bookSpot(
       ref(TRIP_ID),
       {},
@@ -110,77 +136,16 @@ describe("the declaration budget", () => {
       ]),
     );
 
-    expect(bookingRateLimitCalls()).toBe(6);
-    expect(declarationKeys()).toHaveLength(6);
+    expect(bookingRateLimitCalls()).toBe(1);
   });
 
-  it("is spent on the diver the claim is about, not on the diver submitting", async () => {
-    // The whole reason this is not keyed to the lead booker: a party names up
-    // to six people, so a bucket on the submitter is cleared by putting the
-    // victim in seat two and using a fresh lead address each time.
-    await bookSpot(
-      ref(TRIP_ID),
-      {},
-      submission([
-        { email: "booker@example.com" },
-        { email: "victim@example.com", level: "rescue" },
-      ]),
-    );
+  it("still refuses a submission the per-IP bucket has run out for", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfterMs: 1_000 });
 
-    expect(declarationKeys()).toEqual([keyFor("victim@example.com")]);
-  });
-
-  it("does not depend on the address the submission came from", async () => {
-    // A rotating set of IPs is exactly the attack the per-IP net cannot see.
-    const form = () => submission([{ email: "victim@example.com", level: "rescue" }]);
-    vi.mocked(clientIp).mockResolvedValueOnce("203.0.113.7");
-    await bookSpot(ref(TRIP_ID), {}, form());
-    vi.mocked(clientIp).mockResolvedValueOnce("198.51.100.42");
-    await bookSpot(ref(TRIP_ID), {}, form());
-
-    const [first, second] = declarationKeys();
-    expect(first).toBe(keyFor("victim@example.com"));
-    expect(second).toBe(first);
-  });
-
-  it("is not spent by a seat that answered nothing", async () => {
-    // "Rather not say" writes no claim, so there is no record to protect and
-    // no reason to charge an honest booker's budget for it.
-    await bookSpot(ref(TRIP_ID), {}, submission([{ email: "quiet@example.com" }]));
-
-    expect(declarationKeys()).toEqual([]);
-  });
-
-  it("refuses the booking when this diver's record has already been written to", async () => {
-    vi.mocked(checkRateLimit).mockImplementation(async (_key, config) => ({
-      allowed: config !== RATE_LIMITS.declarationByPerson,
-      retryAfterMs: 0,
-    }));
-
-    const state = await bookSpot(
-      ref(TRIP_ID),
-      {},
-      submission([{ email: "victim@example.com", level: "rescue" }]),
-    );
+    const state = await bookSpot(ref(TRIP_ID), {}, submission([{ email: "spray@example.com" }]));
 
     expect(state.error).toBeTruthy();
-    // Refused before the seats are taken, not after — the whole submission
-    // stops rather than booking and then failing to write.
+    // Refused before the seats are taken, not after.
     expect(createBookingParty).not.toHaveBeenCalled();
-  });
-
-  it("leaves a second departure for the same diver alone", async () => {
-    // The legitimate case the ceiling has to clear: a diver booking a week of
-    // diving spends one token per departure, well inside 5/hour.
-    const form = () => submission([{ email: "regular@example.com", level: "rescue" }]);
-    await bookSpot(ref(TRIP_ID), {}, form());
-    await bookSpot(ref("0c3d2e4a-9999-4aaa-8bbb-cccccccccccc"), {}, form());
-
-    expect(declarationKeys()).toEqual([
-      keyFor("regular@example.com"),
-      keyFor("regular@example.com"),
-    ]);
-    expect(createBookingParty).toHaveBeenCalledTimes(2);
-    expect(RATE_LIMITS.declarationByPerson.capacity).toBeGreaterThan(2);
   });
 });

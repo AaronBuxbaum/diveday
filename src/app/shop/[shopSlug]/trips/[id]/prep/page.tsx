@@ -23,7 +23,7 @@ import {
   UNSIZED_ITEM_KINDS,
 } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
-import { rankUnitsForSize } from "@/lib/gear";
+import { groupUnitsForSize } from "@/lib/gear";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
@@ -144,6 +144,14 @@ export default async function TripPrepPage({
     checklist.tanks.nitrox > 0 ||
     checklist.nitroxBlockers.length > 0;
 
+  /**
+   * One kit line: the piece on the left, what it resolves to — a tagged unit
+   * or the picker for one — on the right. Stacked on a phone, two columns from
+   * `sm` up, so a diver's pieces line up down the row rather than each finding
+   * its own indent.
+   */
+  const kitLineClass = "grid gap-x-3 gap-y-1 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-baseline";
+
   const gearBanner = noticeFromParam(notice, GEAR_NOTICES);
   // Both groupings are this page at a different `?group=`, so the switch's
   // links carry no other state — a `?notice=` is spent by the time anyone taps
@@ -244,7 +252,15 @@ export default async function TripPrepPage({
             <h2 id="tanks-heading" className="text-lg font-semibold">
               {t("trips.prep.tanksHeading")}
             </h2>
-            <div className={`mt-3 grid gap-3 ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
+            {/* **Three tiles on a screen; one line on paper.** The tiles are
+                the right shape for a wall-mounted screen a staffer reads
+                across the room, and the wrong one for a sheet carried to the
+                boat: three cards of whitespace holding two digits each pushed
+                the packing list that follows them onto its own page. Same
+                three numbers, said inline. */}
+            <div
+              className={`mt-3 grid gap-3 print:hidden ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}
+            >
               {showNitrox ? (
                 <>
                   <ShopStat label={t("trips.prep.total")} value={checklist.tanks.total} />
@@ -257,6 +273,16 @@ export default async function TripPrepPage({
                 <ShopStat label={t("trips.prep.total")} value={checklist.tanks.total} />
               )}
             </div>
+            <p className="mt-2 hidden text-base font-semibold tabular-nums print:block">
+              {(showNitrox
+                ? [
+                    `${t("trips.prep.total")} ${checklist.tanks.total}`,
+                    `${t("trips.prep.air")} ${checklist.tanks.air}`,
+                    `${t("trips.prep.nitrox")} ${checklist.tanks.nitrox}`,
+                  ]
+                : [`${t("trips.prep.total")} ${checklist.tanks.total}`]
+              ).join(" · ")}
+            </p>
             <p className="mt-2 text-sm text-muted">
               {checklist.crewCount > 0
                 ? t("trips.prep.includesCrew", { count: checklist.crewCount })
@@ -643,8 +669,13 @@ export default async function TripPrepPage({
               the section's own gate: a refusal like gear-not-found is exactly
               the case where the row (or the whole fleet) can be gone, and the
               staffer still gets told what happened. */}
+          {/* Its own space above it. Rendered flush, it read as the last row
+              of the packing table it happens to follow rather than as an
+              answer to the tap that produced it. */}
           {gearBanner ? (
-            <StaffNoticeBanner tone={gearBanner.tone}>{t(gearBanner.key)}</StaffNoticeBanner>
+            <StaffNoticeBanner tone={gearBanner.tone} className="mt-8">
+              {t(gearBanner.key)}
+            </StaffNoticeBanner>
           ) : null}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? (
             <section
@@ -658,10 +689,18 @@ export default async function TripPrepPage({
                 {t("gear.prep.heading")}
               </h2>
               <p className="mt-1 text-sm text-muted print:hidden">{t("gear.prep.description")}</p>
+              {/* **One grammar per diver, not two stacked lists.** A row used
+                  to be a list of assigned units in one shape (a mono tag, a
+                  kind, a release control) followed by a list of labelled
+                  `<select>`s in another, so "wetsuit XL" appeared twice in two
+                  different layouts depending on whether it had been picked
+                  yet. Every piece is one line now — the piece on the left, its
+                  unit or its picker on the right — and settling one moves it
+                  between bands rather than between designs. */}
               <ul
                 className={sectionCardClass({
                   padding: "none",
-                  className: "mt-3 divide-y divide-border overflow-hidden",
+                  className: "mt-3 divide-y divide-border overflow-hidden print:overflow-visible",
                 })}
               >
                 {assignmentRows.map(({ diver, assigned, wanted }) => (
@@ -691,18 +730,19 @@ export default async function TripPrepPage({
                         </Link>
                       ) : null}
                     </div>
-                    {assigned.length > 0 ? (
-                      <ul className="mt-1.5 flex flex-col gap-1.5">
-                        {assigned.map((assignment) => (
-                          <li
-                            key={assignment.reservationId}
-                            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
-                          >
+                    <dl className="mt-1.5 flex flex-col gap-2 text-sm">
+                      {assigned.map((assignment) => (
+                        <div key={assignment.reservationId} className={kitLineClass}>
+                          <dt className="text-muted">
+                            {assignment.size
+                              ? t("gear.prep.kindWithSize", {
+                                  kindLabel: gearItemKindLabel(t, assignment.kind),
+                                  size: assignment.size,
+                                })
+                              : gearItemKindLabel(t, assignment.kind)}
+                          </dt>
+                          <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
                             <span className="font-mono font-medium">{assignment.label}</span>
-                            <span className="text-muted">
-                              {gearItemKindLabel(t, assignment.kind)}
-                              {assignment.size ? ` · ${assignment.size}` : ""}
-                            </span>
                             {assignment.checkedOutAt ? (
                               <span className="text-muted">{t("gear.prep.outLabel")}</span>
                             ) : (
@@ -721,91 +761,126 @@ export default async function TripPrepPage({
                                 </SubmitButton>
                               </form>
                             )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {wanted.length > 0 ? (
-                      <div className="mt-2 flex flex-col gap-2 print:hidden">
-                        {wanted.map((item) => {
-                          const kindLabel = gearItemKindLabel(t, item.kind);
-                          const options = rankUnitsForSize(
-                            freeByKind.get(item.kind) ?? [],
-                            item.size,
-                          );
-                          const selectId = `assign-${diver.bookingId}-${item.kind}`;
-                          // Preselect only an exact size match: defaulting an
-                          // XS onto an L diver made a wrong reservation one
-                          // tap away, and defaulting the same unit into every
-                          // picker of a kind invited the somebody-got-it-first
-                          // refusal. Anything else opens on a placeholder the
-                          // form refuses to submit.
-                          const wantedSize = item.size?.trim().toLowerCase() ?? null;
-                          const preselect =
-                            wantedSize !== null &&
-                            options[0]?.size?.trim().toLowerCase() === wantedSize;
-                          return options.length === 0 ? (
-                            <p key={item.kind} className="text-sm text-muted">
-                              {t("gear.prep.noneFree", { kindLabel })}
-                            </p>
-                          ) : (
-                            <div key={item.kind} className="flex flex-wrap items-center gap-2">
-                              <label htmlFor={selectId} className="text-sm text-muted sm:w-32">
-                                {item.size
-                                  ? t("gear.prep.kindWithSize", { kindLabel, size: item.size })
-                                  : kindLabel}
-                              </label>
-                              {/* The width lives on a wrapper: `controlClass`
-                                  carries w-full, and a competing width utility
-                                  on the same element loses alphabetically. */}
-                              <div className="w-full min-w-44 flex-1 sm:max-w-64">
-                                {/* **No "Assign" beside it.** The pick is the
-                                    act; a second tap to confirm it is an "Edit"
-                                    button once per row, twenty-one times on a
-                                    seeded departure (issue #802). The refusal
-                                    the exclusion constraint can still answer
-                                    with lands on this row, and reverts it. */}
-                                <RentalUnitPicker
-                                  id={selectId}
-                                  tripId={tripId}
-                                  bookingId={diver.bookingId}
-                                  defaultValue={preselect ? (options[0]?.id ?? "") : ""}
-                                  assign={assignGearUnit}
-                                  options={options.map((option) => ({
-                                    id: option.id,
-                                    label: [
-                                      option.size
-                                        ? `${option.label} · ${option.size}`
-                                        : option.label,
-                                      // A lapsed or looming bench clock is
-                                      // said at the moment of the pick —
-                                      // still selectable, never hidden:
-                                      // the dock decides (H-06).
-                                      option.serviceState.state === "overdue"
-                                        ? t("gear.prep.optionServiceOverdue")
-                                        : option.serviceState.state === "due_soon"
-                                          ? t("gear.prep.optionServiceDueSoon")
-                                          : null,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" · "),
-                                  }))}
-                                  copy={{
-                                    pickUnit: t("gear.prep.pickUnit"),
-                                    assigning: t("gear.prep.assigning"),
-                                    refusals: {
-                                      unit_unavailable: t("gear.prep.notice.unitUnavailable"),
-                                      unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
-                                    },
-                                    refusalFallback: t("gear.prep.notice.assignFailed"),
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : null}
+                          </dd>
+                        </div>
+                      ))}
+                      {wanted.map((item) => {
+                        const kindLabel = gearItemKindLabel(t, item.kind);
+                        const pieceLabel = item.size
+                          ? t("gear.prep.kindWithSize", { kindLabel, size: item.size })
+                          : kindLabel;
+                        // Exactly this diver's size in its own band, everything
+                        // else free in a second — the boundary the old flat
+                        // ranked list could only imply.
+                        const { exact, rest } = groupUnitsForSize(
+                          freeByKind.get(item.kind) ?? [],
+                          item.size,
+                        );
+                        const selectId = `assign-${diver.bookingId}-${item.kind}`;
+                        // Preselect only an exact size match: defaulting an XS
+                        // onto an L diver made a wrong reservation one tap
+                        // away, and defaulting the same unit into every picker
+                        // of a kind invited the somebody-got-it-first refusal.
+                        // Anything else opens on a placeholder the form refuses
+                        // to submit.
+                        const preselect = exact[0]?.id ?? "";
+                        const optionsFor = (units: typeof exact) =>
+                          units.map((option) => ({
+                            id: option.id,
+                            label: [
+                              option.size ? `${option.label} · ${option.size}` : option.label,
+                              // A lapsed or looming bench clock is said at the
+                              // moment of the pick — still selectable, never
+                              // hidden: the dock decides (H-06).
+                              option.serviceState.state === "overdue"
+                                ? t("gear.prep.optionServiceOverdue")
+                                : option.serviceState.state === "due_soon"
+                                  ? t("gear.prep.optionServiceDueSoon")
+                                  : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · "),
+                          }));
+                        // **Nothing falls between the bands.** The first band
+                        // is headed by the size it matches, so it can only
+                        // exist where there is a size to name — and a unit
+                        // sorted into it without one would otherwise be in
+                        // neither band and reachable from no picker, which on
+                        // this page means a staffer cannot assign a unit that
+                        // is genuinely free. `groupUnitsForSize` does not
+                        // produce that pair today; this makes it structural
+                        // rather than something the next reader has to trace.
+                        const named = exact.length > 0 && item.size ? item.size : null;
+                        const exactBand = named ? exact : [];
+                        const restBand = named ? rest : [...exact, ...rest];
+                        const groups = [
+                          named
+                            ? {
+                                key: "exact",
+                                label: t("gear.prep.groupExactSize", { size: named }),
+                                options: optionsFor(exactBand),
+                              }
+                            : null,
+                          restBand.length > 0
+                            ? {
+                                key: "rest",
+                                label: t(
+                                  named ? "gear.prep.groupOtherSizes" : "gear.prep.groupFree",
+                                ),
+                                options: optionsFor(restBand),
+                              }
+                            : null,
+                        ].filter((group) => group !== null);
+                        return (
+                          <div key={item.kind} className={`${kitLineClass} print:hidden`}>
+                            <dt className="text-muted sm:pt-2">
+                              {groups.length === 0 ? (
+                                pieceLabel
+                              ) : (
+                                <label htmlFor={selectId}>{pieceLabel}</label>
+                              )}
+                            </dt>
+                            <dd>
+                              {groups.length === 0 ? (
+                                <span className="text-muted">
+                                  {t("gear.prep.noneFree", { kindLabel })}
+                                </span>
+                              ) : (
+                                // The width lives on a wrapper: `controlClass`
+                                // carries w-full, and a competing width utility
+                                // on the same element loses alphabetically.
+                                <div className="w-full min-w-44 sm:max-w-64">
+                                  {/* **No "Assign" beside it.** The pick is the
+                                      act; a second tap to confirm it is an
+                                      "Edit" button once per row, twenty-one
+                                      times on a seeded departure (issue #802).
+                                      The refusal the exclusion constraint can
+                                      still answer with lands on this row, and
+                                      reverts it. */}
+                                  <RentalUnitPicker
+                                    id={selectId}
+                                    tripId={tripId}
+                                    bookingId={diver.bookingId}
+                                    defaultValue={preselect}
+                                    assign={assignGearUnit}
+                                    groups={groups}
+                                    copy={{
+                                      pickUnit: t("gear.prep.pickUnit"),
+                                      assigning: t("gear.prep.assigning"),
+                                      refusals: {
+                                        unit_unavailable: t("gear.prep.notice.unitUnavailable"),
+                                        unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
+                                      },
+                                      refusalFallback: t("gear.prep.notice.assignFailed"),
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </dd>
+                          </div>
+                        );
+                      })}
+                    </dl>
                   </li>
                 ))}
               </ul>

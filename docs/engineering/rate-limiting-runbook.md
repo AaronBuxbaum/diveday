@@ -34,7 +34,6 @@ cannot see it.
 | Review submit / revise | same file, `submitReviewAction` | IP **and** booking | `RATE_LIMITS.reviewSubmitByIp` (30/hour) + `RATE_LIMITS.reviewSubmitByToken` (10/hour) |
 | Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP | `RATE_LIMITS.waitlistJoin` (10/hour) |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
-| Self-declared certification written by a booking | same file, `bookSpot` | each party member's own email, spent only for a seat that answered the certification question | `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP | `RATE_LIMITS.lastMinuteListJoin` (10/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |

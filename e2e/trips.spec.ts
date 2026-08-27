@@ -512,4 +512,86 @@ test.describe("the printed trip packet", () => {
     await expect(page.getByText(/Dive 1 ·/)).toBeVisible();
     await expect(page.getByText(/Souls on board/)).toBeVisible();
   });
+
+  /**
+   * **Nothing on the sheet is cut off by a page break.**
+   *
+   * A clipped overflow box is not a scroll region on paper — it is a box whose
+   * second half does not exist, and a page break inside one is where a manifest
+   * row or half a packing table silently disappears. Every card, divided list
+   * and table shell on this page opens one for screen chrome it does not want
+   * on paper (rounded corners, a sideways-scrolling table), and a split table
+   * loses its column names with them. Both are invisible on screen and
+   * invisible in a screenshot of page one, which is why they are asserted.
+   */
+  test("clips nothing at a page break, and repeats a split table's column names", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
+    await link.waitFor();
+    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
+      /\/(guests|manifest|prep|log)$/,
+      "",
+    );
+    await page.goto(`${tripPath}/print`);
+    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
+    await page.emulateMedia({ media: "print" });
+
+    const clipped = await page.evaluate(() =>
+      [...document.querySelectorAll(".trip-print-bundle *")]
+        .filter((element) => {
+          const style = getComputedStyle(element);
+          return style.overflowX === "hidden" || style.overflowY === "hidden";
+        })
+        // Named, not counted — see the assertion above.
+        .map((element) => `${element.tagName.toLowerCase()}.${element.className}`.slice(0, 80)),
+    );
+    expect(clipped).toEqual([]);
+
+    // `<thead>` is a header group by default, but only a table the browser can
+    // fragment reprints it — and the two nested overflow boxes above were what
+    // stopped the fragmentation.
+    const headerGroups = await page.evaluate(() =>
+      [...document.querySelectorAll(".trip-print-bundle thead")].map(
+        (head) => getComputedStyle(head).display,
+      ),
+    );
+    expect(headerGroups.length).toBeGreaterThan(0);
+    expect(new Set(headerGroups)).toEqual(new Set(["table-header-group"]));
+  });
+
+  /**
+   * **The tank counts are three tiles on a screen and one line on paper.** The
+   * tiles are right for a wall-mounted screen read across the room and wrong
+   * for a sheet carried to the boat: three cards of whitespace holding two
+   * digits each pushed the packing list that follows them onto its own page.
+   */
+  test("says the tank counts inline rather than as three tiles", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
+    await link.waitFor();
+    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
+      /\/(guests|manifest|prep|log)$/,
+      "",
+    );
+    await page.goto(`${tripPath}/prep`);
+    const tanks = page.getByRole("heading", { name: "Tanks" });
+    await tanks.waitFor();
+    const section = page.locator("section").filter({ has: tanks });
+
+    // `exact` is what tells the two apart: the tile's label is the word on its
+    // own, the printed line is "Total 20 · Air 20 · Nitrox 0".
+    const tileLabel = section.getByText("Total", { exact: true });
+    const printedLine = section.getByText(/^Total \d+/);
+
+    // On screen: the tiles, and no inline line.
+    await expect(printedLine).toBeHidden();
+    await expect(tileLabel).toBeVisible();
+
+    await page.emulateMedia({ media: "print" });
+    // On paper: the line, and no tiles.
+    await expect(printedLine).toBeVisible();
+    await expect(tileLabel).toBeHidden();
+  });
 });

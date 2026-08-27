@@ -160,3 +160,47 @@ owner call, filed rather than assumed.
 (`showNitrox={false}` at every call site), yet the action parsed it and this gate honoured it — so a
 hand-crafted POST could clear a nitrox-gated sale by a route no honest diver on that page had. The
 booking action now accepts only what the form renders.
+
+## Amendment 2026-08-27 — the booking form stops asking; `/ready` keeps asking
+
+**The decision above stands for the two public wait lists and is reversed for the booking form**
+(product owner, 2026-08-27). `/s/<slug>/trips/<id>` no longer asks a diver for a rung, an agency or
+a card number before they pay. `/ready/<token>` — the page every booking lands on and every reminder
+links back to — asks the same question of the diver whose booking it is, and has since ADR
+20260820-one-page-after-booking.
+
+**What was removed, and why the removal is wider than the form.** The per-diver fields went, and the
+booking action's per-index reader (`diveDeclarationInputAt`, now deleted) went with them, along with
+the per-declaration rate-limit buckets that existed to price the writes it enabled. Leaving the
+parse standing would have re-created, for a certification claim, exactly the tamper asymmetry the
+2026-08-20 amendment closed for the nitrox tick: an action that accepts what no form renders is a
+route a hand-crafted POST has and an honest diver does not — here, one that writes a self-declared
+level onto a *named person's* record from an anonymous page. `declarationFor` and the
+`admissionGate: "advise"` argument are gone for the same reason: advising rather than refusing was
+earned by the form warning a diver as they answered, and there is no answer to warn about now.
+
+**What this costs, stated plainly.**
+
+1. **The sale-time gate is back to judging the shop's own record alone** — its pre-2026-08-20
+   behaviour, and H-08's fail-open for a diver the shop holds nothing for. H-29's half of this ADR
+   is untouched and is the half that mattered: `shopHasAdjudicated` still counts any live
+   certification row, so a carded regular is still judged on their card rather than read as a
+   stranger.
+2. **The "you may be short for this trip" warning at the point of sale is gone.** The departure's
+   own requirement is still disclosed above the form (2026-08-03) — a property of the trip, which is
+   the half that never depended on asking the reader anything. What a diver loses is the sentence
+   measuring *their* answer against it, and they were never refused on it anyway (H-30's advisory
+   path).
+3. **The "I'm not certified yet" answer is no longer collected at the sale.** It is collected at
+   `/ready`, one page later, from the person it is about.
+
+**What gets better.** The write surface the 2026-08-20 amendment filed two follow-ups about —
+FU-20260820-six-strangers-per-anonymous-post, and the widened anonymous claim path in Correction 1 —
+closes: nothing an anonymous submitter types can reach anybody's certification record any more. The
+declaration that remains comes from a bearer-token page addressed to one booking. And the collection
+gap that amendment called "the honest state" (no card number at the sale, so verification has
+nothing to work from) is answered rather than deferred: `/ready` asks for the agency and number
+together, which is what "verified asynchronously before the dive date" needs.
+
+**Unchanged, and load-bearing:** nothing self-asserted clears a boarding decision. `calculateReadiness`
+still clears on `validVerifiedCertification` and nothing else.

@@ -8,6 +8,7 @@ import {
   gearAssignmentNeeds,
   gearKindRank,
   gearServiceState,
+  groupUnitsForSize,
   pickDisplayReservation,
   rankUnitsForSize,
   reservationPhase,
@@ -355,6 +356,44 @@ describe("rankUnitsForSize", () => {
   it("never mutates its input", () => {
     const before = [...units];
     rankUnitsForSize(units, "M");
+    expect(units).toEqual(before);
+  });
+});
+
+describe("groupUnitsForSize", () => {
+  const units = [
+    { label: "BCD #3", size: "L" },
+    { label: "BCD #1", size: "M" },
+    { label: "BCD #2", size: "m" },
+    { label: "BCD #4", size: null },
+  ];
+
+  it("cuts the ranked list where the exact matches stop", () => {
+    // The boundary a flat ranked list could only imply: at a counter, reading
+    // down sixteen free BCDs, "L" and "M" are one character apart.
+    const { exact, rest } = groupUnitsForSize(units, "M");
+    expect(exact.map((unit) => unit.label)).toEqual(["BCD #1", "BCD #2"]);
+    expect(rest.map((unit) => unit.label)).toEqual(["BCD #4", "BCD #3"]);
+  });
+
+  it("holds no exact band when nothing was asked for", () => {
+    // Nothing to match, so nothing can match it — every free unit is equally a
+    // candidate, and saying otherwise would invent a fit nobody stated.
+    const { exact, rest } = groupUnitsForSize(units, null);
+    expect(exact).toEqual([]);
+    expect(rest.map((unit) => unit.label)).toEqual(["BCD #4", "BCD #1", "BCD #2", "BCD #3"]);
+  });
+
+  it("holds no exact band when the size asked for is free in no unit", () => {
+    const { exact, rest } = groupUnitsForSize(units, "XS");
+    expect(exact).toEqual([]);
+    expect(rest).toHaveLength(units.length);
+  });
+
+  it("loses nothing between the two bands, and never mutates its input", () => {
+    const before = [...units];
+    const { exact, rest } = groupUnitsForSize(units, "l");
+    expect(exact.length + rest.length).toBe(units.length);
     expect(units).toEqual(before);
   });
 });

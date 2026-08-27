@@ -10,6 +10,17 @@ export interface RentalUnitOption {
   label: string;
 }
 
+/**
+ * One labelled band of the list — "Exactly what they asked for" and the rest
+ * — rendered as an `<optgroup>`. A group with no options is dropped by the
+ * caller, so a heading never stands over nothing.
+ */
+export interface RentalUnitGroup {
+  key: string;
+  label: string;
+  options: RentalUnitOption[];
+}
+
 export interface RentalUnitPickerCopy {
   /** The empty option, shown until a unit is picked. */
   pickUnit: string;
@@ -46,7 +57,7 @@ export function RentalUnitPicker({
   id,
   tripId,
   bookingId,
-  options,
+  groups,
   defaultValue,
   assign,
   copy,
@@ -54,7 +65,8 @@ export function RentalUnitPicker({
   id: string;
   tripId: string;
   bookingId: string;
-  options: RentalUnitOption[];
+  /** The candidate units, already banded by size match. Worst case one band. */
+  groups: RentalUnitGroup[];
   /** Preselected only for an exact size match; otherwise the placeholder. */
   defaultValue: string;
   assign: (input: {
@@ -104,10 +116,21 @@ export function RentalUnitPicker({
             {copy.pickUnit}
           </option>
         )}
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
+        {/* **Two headings, not one ranked list.** The exact-size units used to
+            be sorted to the top of a flat list, which put the boundary between
+            "this is their size" and "this is what else is free" nowhere on
+            screen — a staffer at a counter reading down sixteen free BCDs had
+            to spot where L stopped and XL started. `<optgroup>`, so the native
+            picker draws the split on every platform including a phone's
+            wheel. */}
+        {groups.map((group) => (
+          <optgroup key={group.key} label={group.label}>
+            {group.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
       {isPending ? (

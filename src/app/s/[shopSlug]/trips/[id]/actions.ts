@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { type BookingDeclaration, createBookingParty, getBookingForTrip } from "@/db/bookings";
+import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
@@ -26,9 +26,7 @@ import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
-  type DiveDeclaration,
   diveDeclarationInput,
-  diveDeclarationInputAt,
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
@@ -110,36 +108,6 @@ const bookSchema = z.object({
 });
 
 const emailField = diverEmailSchema;
-
-/**
- * One diver's parsed answer, narrowed to what a booking may carry: the rung
- * they named — with the agency and card number, if they gave them — or the
- * statement that they hold no card at all. A declaration with neither is
- * dropped to `undefined`, the same as "Rather not say", so an empty select
- * never writes a row.
- *
- * **Narrowed by listing, which is why it is worth a function.** It drops the
- * nitrox tick, which no public form renders and which a hand-crafted post must
- * not smuggle through. The cost of that shape is that a field added upstream is
- * silently *not* carried until it is named here: the agency and number were
- * added to the declaration on 2026-08-21 and reached the writer only once this
- * function was told about them.
- */
-function declarationFor(declared: DiveDeclaration | null): BookingDeclaration | undefined {
-  if (declared?.level) {
-    return {
-      level: declared.level,
-      noCertification: declared.noCertification,
-      // The card the diver described, which travels only with a level — an
-      // agency and a number are facts *about* a rung, and `toDiveDeclaration`
-      // has already dropped both if there is no rung to describe.
-      agency: declared.agency,
-      identifier: declared.identifier,
-    };
-  }
-  if (declared?.noCertification) return { noCertification: true };
-  return undefined;
-}
 
 export async function bookSpot(
   { shopSlug, tripId, embed }: TripRef,
@@ -274,58 +242,22 @@ export async function bookSpot(
     }
   }
 
-  // **What each diver said about their own diving**, read for this decision and
-  // written only if the booking completes (`persistDeclaration`). One answer
-  // per seat, because a party booking is several people and the question used
-  // to be asked once — leaving every seat but the lead's screened by nothing.
+  // **This form asks nothing about anybody's diving, so nothing here reads a
+  // claim from it.** It asked each diver for a rung, an agency and a number
+  // between 2026-08-20 and 2026-08-27; `/ready/<token>` asks the diver whose
+  // booking it is instead (product owner). The parse is gone with the fields
+  // rather than left standing, for the reason the nitrox tick was taken out of
+  // this action: an action that accepts what no form renders is a route a
+  // hand-crafted POST has and an honest diver does not — here, one that writes
+  // a self-declared certification onto a named person's record from an
+  // anonymous page. The two public wait lists still ask their own joiner, in
+  // their own actions, through `diveDeclarationInput`.
   //
-  // A slot whose answer is unparseable or absent contributes `undefined`, which
-  // is the same as "Rather not say": a malformed value must never be read as a
-  // claim, and must never fail the booking for the other five people either.
-  const declaredByIndex = validParty.map((_, index) => {
-    const parsed = diveDeclarationSchema.safeParse(diveDeclarationInputAt(formData, index));
-    return parsed.success ? toDiveDeclaration(parsed.data) : null;
-  });
-
-  // One POST is one batched declaration write. Charge the IP bucket once for
-  // every declaration the transaction may persist, so a six-person party
-  // consumes six units rather than getting six writes for the price of one.
-  // A declaration-free booking still costs one unit, preserving the existing
-  // protection for repeated empty submissions. The loop is intentionally
-  // sequential: each `checkRateLimit` call is an atomic token-bucket take,
-  // and stopping on the first refusal avoids starting the database write.
-  const declarationCount = declaredByIndex.reduce(
-    (count, declaration) => count + (declarationFor(declaration) ? 1 : 0),
-    0,
-  );
-  const bookingCost = Math.max(1, declarationCount);
-  for (let unit = 0; unit < bookingCost; unit++) {
-    if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
-      return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
-    }
-  }
-
-  // **The narrow net, beside the count-scaled per-IP one above.** A completed
-  // booking writes each diver's answer onto that diver's record, and
-  // `RATE_LIMITS.booking` is keyed by IP — which on its own lets anyone who
-  // knows a name and an email address spray claims onto that person's record
-  // from a rotating set of addresses. Keyed to the address the declaration is
-  // *about*, never to the lead booker: a party names up to six people, so a
-  // bucket on the submitter would be cleared by putting the victim in seat two.
-  //
-  // Spent only for a seat that actually answered — "Rather not say" writes
-  // nothing, so there is no record for it to protect — and only where there is
-  // an email to key on, since a seat booked with no address is the walk-in path
-  // and reaches no inbox and no pre-existing record.
-  //
-  // Checked here rather than around `persistDeclaration` so a refusal is a
-  // booking outcome the form can word, not an exception out of the transaction.
-  for (const [index, entry] of validParty.entries()) {
-    if (!entry.email || !declarationFor(declaredByIndex[index] ?? null)) continue;
-    const personKey = rateLimitKey("declaration", shopNow.id, entry.email.toLowerCase());
-    if (!(await checkRateLimit(personKey, RATE_LIMITS.declarationByPerson)).allowed) {
-      return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
-    }
+  // One POST is one unit. The count-scaled charge that stood here existed to
+  // price the declaration writes this booking could make; with no declarations
+  // to write, an empty submission's protection is what is left of it.
+  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
+    return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
   }
 
   const outcome = await createBookingParty(
@@ -335,19 +267,11 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
-      // Only what the form actually renders. The nitrox tick appears on no
-      // public form, so `diveDeclarationInputAt` never reads one — honouring a
-      // hand-crafted `nitroxCertified=on` would clear a nitrox-gated sale by a
-      // route no honest diver on this page has, and plant an enriched-air claim
-      // on their record besides. Same discipline the gear checkboxes are held
-      // to. The level is the whole question here.
-      declared: declarationFor(declaredByIndex[index] ?? null),
-      // The one caller that advises rather than refuses: this form asks each
-      // diver what they hold and warns them, as they answer, when it is below
-      // what the departure asks for — so the stop earned nothing and only ever
-      // caught the diver who answered honestly and short. Readiness still
-      // decides who boards. See `BookingRequest.admissionGate`.
-      admissionGate: "advise" as const,
+      // No `declared`, and so no `admissionGate: "advise"` either: advising
+      // rather than refusing was earned by the form warning a diver as they
+      // answered, and there is no answer to warn about now. The sale-time gate
+      // judges this booking on the shop's own record alone — which is what it
+      // did before 2026-08-20, and it is still not a boarding decision.
       // Empty for any non-lead diver who left the field to the "use the main
       // contact's email" checkbox — never the lead's own address (see the
       // comment above the loop that builds `validParty`).

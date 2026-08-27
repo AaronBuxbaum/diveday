@@ -554,14 +554,70 @@ textarea {
     break-inside: avoid;
   }
 
+  /*
+   * **A heading never ends a page.** A section title stranded at the foot of
+   * one sheet with its table starting on the next reads, on the boat, as a
+   * heading with nothing under it — which is exactly how a crew concludes
+   * there is nothing to pull.
+   */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+  }
+
+  /*
+   * **A long table repeats its own column names.** `<thead>` is a header group
+   * by default, but only a table the UA can fragment reprints it — and every
+   * table here sits in the two nested `overflow` boxes the on-screen scroll
+   * strategy needs (`Table`), which stop the fragmentation and take the
+   * header with it. Stated rather than inherited, beside the rule that opens
+   * those boxes.
+   */
+  thead {
+    display: table-header-group;
+  }
+
+  /*
+   * **Nothing in the packet clips at a page boundary.** A clipped overflow box
+   * is not a scroll region on paper — it is a box whose second half does not
+   * exist, and a page break inside one is where a manifest row or half a
+   * packing table silently disappears. Screen chrome (rounded card corners, a
+   * sideways-scrolling table) is what those boxes buy, and paper wants neither.
+   * `Table` already opens its own two; a card, a divided list and a summary
+   * panel each carry one too, and there is no naming them all.
+   */
+  .trip-print-bundle,
+  .trip-print-bundle * {
+    /* biome-ignore lint/complexity/noImportantStyles: a clipped box on paper is content that does not exist */
+    overflow: visible !important;
+  }
+
   /* The packet is four screen tabs in one document. Give each tab a clean
-     start without forcing a page break inside a long roster or manifest. */
+     start without forcing a page break inside a long roster or manifest, and
+     the same gutter under the sheet's own first heading — `@page` owns the
+     paper margin, and a section that starts a page brought whatever margin
+     its on-screen position happened to give it. */
   .trip-print-bundle .print-bundle-page {
     break-before: page;
+    padding-top: 0;
   }
 
   .trip-print-bundle .print-bundle-page:first-of-type {
     break-before: auto;
+  }
+
+  /*
+   * One rhythm down every sheet. On screen these sections are spaced by
+   * whatever each composed page chose for itself (`mt-6`, `mt-8`, `space-y-10`
+   * — the packet renders three pages' worth of independently-tuned spacing),
+   * which on paper reads as a document that changes its mind twice. A single
+   * gap above each block, stated once.
+   */
+  .trip-print-bundle section + section,
+  .trip-print-bundle section > * + section {
+    margin-top: 1.25rem;
   }
 }
 

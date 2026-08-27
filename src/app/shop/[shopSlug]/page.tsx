@@ -580,8 +580,6 @@ async function TodayBody({
         copy={{
           crewingBadge: t("shared.today.departureBoard.crewingBadge"),
           courseSession: t.raw("shared.today.departureBoard.courseSession"),
-          bookedOfCapacityOne: t.raw("shared.today.departureBoard.bookedOfCapacityOne"),
-          bookedOfCapacityOther: t.raw("shared.today.departureBoard.bookedOfCapacityOther"),
           boarding: t("shared.today.departureBoard.boarding"),
           openGuests: t("shared.today.departureBoard.openGuests"),
           assignCrewMemberAria: t.raw("shared.today.departureBoard.assignCrewMemberAria"),

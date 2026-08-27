@@ -43,7 +43,9 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
   ).toBeVisible();
   // Today leads with the boat that sails today, not a generic trip list.
   await expect(page.getByRole("heading", { name: "Sailing today" })).toBeVisible();
-  await expect(page.getByText("9 of 12 booked")).toBeVisible();
+  // The departure card's own count line — one seat count, not two. The header
+  // used to repeat the start time and a "9 of 12 booked" row underneath it.
+  await expect(page.getByText(/\d+ clear to board/)).toBeVisible();
 
   await signOut(page);
   await page.goto("/shop");

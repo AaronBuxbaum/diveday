@@ -22,9 +22,9 @@ const COPY = {
   refusalFallback: "That pick didn't take — try another unit.",
 };
 
-const OPTIONS = [
-  { id: "unit-1", label: "BCD #1 · M" },
-  { id: "unit-2", label: "BCD #2 · L" },
+const GROUPS = [
+  { key: "exact", label: "Size L", options: [{ id: "unit-2", label: "BCD #2 · L" }] },
+  { key: "rest", label: "Other sizes free", options: [{ id: "unit-1", label: "BCD #1 · M" }] },
 ];
 
 function renderPicker(assign: Assign, defaultValue = "") {
@@ -35,7 +35,7 @@ function renderPicker(assign: Assign, defaultValue = "") {
         id="assign-1"
         tripId="trip-1"
         bookingId="booking-1"
-        options={OPTIONS}
+        groups={GROUPS}
         defaultValue={defaultValue}
         assign={assign}
         copy={COPY}
@@ -56,6 +56,21 @@ function renderPicker(assign: Assign, defaultValue = "") {
  * the write, and a select that has already moved has to move back.
  */
 describe("RentalUnitPicker", () => {
+  it("draws the boundary between this diver's size and everything else free", () => {
+    // A flat ranked list put the right answers at the top and the boundary
+    // nowhere on screen — at a counter, reading down sixteen free BCDs, "L"
+    // and "M" are one character apart. `<optgroup>` so the native picker draws
+    // the split on every platform, a phone's wheel included.
+    const select = renderPicker(vi.fn(async () => ({ ok: true }) as const));
+    const groups = Array.from(select.querySelectorAll("optgroup"));
+    expect(groups.map((group) => group.label)).toEqual(["Size L", "Other sizes free"]);
+    expect(Array.from(groups[0]?.querySelectorAll("option") ?? [], (o) => o.value)).toEqual([
+      "unit-2",
+    ]);
+    // Every unit is still reachable — this is a heading, not a filter.
+    expect(select.querySelectorAll("option[value]:not([value=''])")).toHaveLength(2);
+  });
+
   it("commits the pick without a second tap", async () => {
     const assign = vi.fn(async () => ({ ok: true }) as const);
     const select = renderPicker(assign);

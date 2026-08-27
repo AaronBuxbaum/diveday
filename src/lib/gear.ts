@@ -410,3 +410,33 @@ export function rankUnitsForSize<T extends { label: string; size: string | null 
   };
   return [...units].sort((a, b) => band(a) - band(b) || a.label.localeCompare(b.label));
 }
+
+/**
+ * The same ordering, **cut into the two groups a picker renders as its own
+ * headings**: the units that are exactly the size this diver asked for, and
+ * everything else that is free.
+ *
+ * A flat sorted list was ranking the right answer to the top and then asking a
+ * staffer to work out where the right answers stopped — on a rack of sixteen
+ * free BCDs, "XL" and "L" are one character apart in a dropdown at a counter
+ * on the morning of a departure. The split states the boundary the sort was
+ * only implying.
+ *
+ * `exact` is empty when the fit records no size at all, which is the honest
+ * answer: with nothing asked for, nothing can match it, and every free unit is
+ * equally a candidate. Ranking, never a fit check — staff always pick (H-06).
+ */
+export function groupUnitsForSize<T extends { label: string; size: string | null }>(
+  units: readonly T[],
+  wantedSize: string | null,
+): { exact: T[]; rest: T[] } {
+  const wanted = wantedSize?.trim().toLowerCase() ?? null;
+  const ranked = rankUnitsForSize(units, wantedSize);
+  if (!wanted) return { exact: [], rest: ranked };
+  const exact: T[] = [];
+  const rest: T[] = [];
+  for (const unit of ranked) {
+    (unit.size?.trim().toLowerCase() === wanted ? exact : rest).push(unit);
+  }
+  return { exact, rest };
+}
