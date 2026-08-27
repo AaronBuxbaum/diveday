@@ -108,6 +108,46 @@ describe("disconnect and reconnect", () => {
     expect(after?.integrationId).toBe(second.id);
   });
 
+  /**
+   * `(integration_id, event_id)` is unique, so adoption has to skip an event the
+   * reconnected row already carries rather than throw on it. The partial unique
+   * index makes two *live* rows impossible, so this stages the collision
+   * directly: it is a guard on an unreachable state, and the cost of getting it
+   * wrong is a re-auth that throws instead of adopting.
+   */
+  it("skips an event the reconnected integration already carries", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await connectQuickBooks(db, shop.id);
+    await disconnectShopIntegration(db, shop.id, "quickbooks");
+    const second = await connectQuickBooks(db, shop.id, "access-2");
+    const event = await enqueueIntegrationEvent(db, {
+      shopId: shop.id,
+      eventType: "order.paid",
+      entityType: "order",
+      entityId: "order-4",
+      idempotencyKey: "order:order-4:paid",
+      payload: { orderId: "order-4" },
+    });
+    // The same event, owed by the connection that was disconnected.
+    await db.insert(integrationDeliveries).values({
+      shopId: shop.id,
+      integrationId: first.id,
+      eventId: event?.id ?? "",
+      status: "pending",
+    });
+
+    // A re-auth of the live connection runs adoption again.
+    await expect(connectQuickBooks(db, shop.id, "access-3")).resolves.toBeDefined();
+
+    const rows = await db
+      .select()
+      .from(integrationDeliveries)
+      .where(eq(integrationDeliveries.eventId, event?.id ?? ""));
+    expect(rows).toHaveLength(2);
+    // The stranded one stays where it is rather than colliding.
+    expect(rows.map((row) => row.integrationId).sort()).toEqual([first.id, second.id].sort());
+  });
+
   // The record of a send stays where it was sent from; only work still owed moves.
   it("leaves an already-delivered row on the connection that sent it", async () => {
     const { db, shop } = await seededShopContext();

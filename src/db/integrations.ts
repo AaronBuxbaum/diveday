@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, eq, gt, inArray, isNull, ne, notExists } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, ne, notInArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
@@ -180,11 +180,15 @@ async function adoptUndeliveredDeliveries(
       ),
     );
   if (predecessors.length === 0) return;
-  const already = db
+  // `(integration_id, event_id)` is unique, so an event this connection already
+  // carries would make the update *throw* rather than skip it. Read the ids
+  // first rather than correlating a subquery against the same table the UPDATE
+  // is walking: the set is one connection's deliveries, and a plain
+  // `not in (...)` says what it means at a glance.
+  const alreadyHere = await db
     .select({ eventId: integrationDeliveries.eventId })
     .from(integrationDeliveries)
-    .where(eq(integrationDeliveries.integrationId, integration.id))
-    .as("already_here");
+    .where(eq(integrationDeliveries.integrationId, integration.id));
   await db
     .update(integrationDeliveries)
     .set({ integrationId: integration.id, updatedAt: now() })
@@ -195,14 +199,14 @@ async function adoptUndeliveredDeliveries(
           predecessors.map((row) => row.id),
         ),
         inArray(integrationDeliveries.status, ["pending", "failed"]),
-        // `(integration_id, event_id)` is unique, so an event this connection
-        // already carries would make the update throw rather than skip.
-        notExists(
-          db
-            .select({ eventId: already.eventId })
-            .from(already)
-            .where(eq(already.eventId, integrationDeliveries.eventId)),
-        ),
+        ...(alreadyHere.length > 0
+          ? [
+              notInArray(
+                integrationDeliveries.eventId,
+                alreadyHere.map((row) => row.eventId),
+              ),
+            ]
+          : []),
       ),
     );
 }
