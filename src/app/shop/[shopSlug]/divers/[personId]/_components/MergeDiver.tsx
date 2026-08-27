@@ -11,14 +11,12 @@ function contactLine(email: string | null, phone: string | null, missing: string
 }
 
 export function MergeDiver({
-  diver,
   candidates,
   shopSlug,
   personId,
   locale,
   status,
 }: {
-  diver: { person: { id: string; fullName: string; email: string | null; phone: string | null } };
   candidates: DiverMergeCandidate[];
   shopSlug: string;
   personId: string;
@@ -29,20 +27,20 @@ export function MergeDiver({
   if (candidates.length === 0) {
     return <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-6" />;
   }
-  const options = [
-    {
-      id: diver.person.id,
-      name: diver.person.fullName,
-      contact: contactLine(diver.person.email, diver.person.phone, t("divers.merge.noContact")),
-      reasons: [] as DiverMergeCandidate["reasons"],
-    },
-    ...candidates.map((candidate) => ({
-      id: candidate.id,
-      name: candidate.fullName,
-      contact: contactLine(candidate.email, candidate.phone, t("divers.merge.noContact")),
-      reasons: candidate.reasons,
-    })),
-  ];
+  /**
+   * Candidates only. The record being viewed used to head this list, checked by
+   * default -- but the form posts one id and the action always merges the
+   * route's diver *into* it, so choosing "keep this record" posted
+   * `survivorId === personId`, which `mergeDiverRecords` refuses outright. The
+   * default option was the one option that could never work, and the refusal
+   * told the staffer to choose, which is what they had done.
+   */
+  const options = candidates.map((candidate) => ({
+    id: candidate.id,
+    name: candidate.fullName,
+    contact: contactLine(candidate.email, candidate.phone, t("divers.merge.noContact")),
+    reasons: candidate.reasons,
+  }));
 
   return (
     <section
@@ -77,9 +75,7 @@ export function MergeDiver({
               />
               <span className="min-w-0">
                 <span className="block font-medium">
-                  {option.id === diver.person.id
-                    ? t("divers.merge.keepThis", { name: option.name })
-                    : t("divers.merge.keepCandidate", { name: option.name })}
+                  {t("divers.merge.keepCandidate", { name: option.name })}
                 </span>
                 <span className="mt-0.5 block text-sm text-muted">{option.contact}</span>
                 {option.reasons.length > 0 ? (
