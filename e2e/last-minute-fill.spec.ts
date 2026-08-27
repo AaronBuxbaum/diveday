@@ -333,18 +333,17 @@ test("the certification hint opens beside the mark, not beside its tap target", 
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/s/blue-mantis");
-  // **Make the centring real.** `scrollIntoView({block: "center"})` below is
-  // best-effort: it clamps at the end of the document, and this trigger sits
-  // near the foot of the page — so "centred" silently becomes "as low as the
-  // page will go", and how much room is left under it is whatever the content
-  // above happens to add up to. That is not a pin, it is a coincidence, and it
-  // broke on CI with a gap of -105 (the panel correctly flipping *above*,
-  // having no room below) while passing here with 370px to spare.
+  // **Make the centring possible at all.** This trigger sits near the foot of
+  // the page, so without trailing room no amount of scrolling puts it
+  // mid-viewport: the scroll clamps at the end of the document and how much
+  // space is left under it is whatever the content above happens to add up to.
+  // That is not a pin, it is a coincidence, and it broke on CI with a gap of
+  // -105 (the panel correctly flipping *above*, having no room below) while
+  // passing here with 370px to spare.
   //
-  // A viewport's worth of trailing room means the scroll is no longer clamped,
-  // so the trigger really does land mid-viewport on any runner. It changes
-  // nothing the code under test reads: `place()` measures the trigger's own
-  // viewport rect, not the document's height.
+  // A viewport's worth of trailing room means the scroll below is no longer
+  // clamped. It changes nothing the code under test reads: `place()` measures
+  // the trigger's own viewport rect, not the document's height.
   await page.addStyleTag({ content: "body { padding-bottom: 100vh; }" });
   const dealList = page.locator("#last-minute-list");
   await dealList.locator("summary").click();
@@ -352,7 +351,34 @@ test("the certification hint opens beside the mark, not beside its tap target", 
   // `<summary>` and an `EditDisclosure` wear the same attributes.
   const trigger = dealList.getByRole("button", { name: "Why we ask about certification" });
   await trigger.waitFor();
-  await trigger.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  // **Settle the page, then scroll — in that order.** Placing the trigger is a
+  // measurement, and a measurement taken while the page is still growing above
+  // it is worth nothing: a web font swapping in or a deal card's image
+  // arriving slides the trigger back down after the scroll, and the hover then
+  // happens wherever it landed. On CI that was the very foot of the viewport —
+  // `spaceBelow` of **-0.28** (run 33108101290), which reads as a placement bug
+  // and is nothing of the sort. Waiting for the fonts and the images is waiting
+  // for the two things that actually move it, rather than for a duration.
+  await trigger.evaluate(async (el) => {
+    await document.fonts.ready;
+    await Promise.all(
+      Array.from(document.images)
+        .filter((img) => !img.complete)
+        .map(
+          (img) =>
+            new Promise((resolve) => {
+              img.addEventListener("load", resolve, { once: true });
+              img.addEventListener("error", resolve, { once: true });
+            }),
+        ),
+    );
+    // Only now is the rect worth reading, so one scroll is enough — and it is
+    // `scrollBy` off the measured rect rather than `scrollIntoView`, which
+    // clamps at the end of the document and would put the trigger wherever the
+    // page happened to end.
+    window.scrollBy(0, el.getBoundingClientRect().top - 300);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
   // Read the id *before* the hover. The panel is placed by measurement and is
   // dismissed by any scroll, so a locator action after the hover could scroll
   // the page to reach its own target and leave this measuring a gap nobody
