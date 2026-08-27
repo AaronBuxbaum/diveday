@@ -147,7 +147,13 @@ export function InfoHint({
       id={id}
       role="note"
       style={position ? { left: position.left, top: position.top } : undefined}
-      className={`pointer-events-none fixed top-0 left-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed font-normal text-muted shadow-lg transition-opacity ${
+      // `z-50`, the tier every other floating surface in the app uses (Toast,
+      // Modal, CommandPalette). It was `z-30` while the panel lived inside the
+      // page's own stacking context; on `document.body` it shares the root one
+      // with the sticky headers, which are `z-40` — and the panel flips
+      // *above* its trigger whenever it would not fit below, which is exactly
+      // where it would have gone behind a header.
+      className={`pointer-events-none fixed top-0 left-0 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed font-normal text-muted shadow-lg transition-opacity ${
         open && position ? "visible opacity-100" : "invisible opacity-0"
       }`}
     >
