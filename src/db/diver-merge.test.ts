@@ -1,16 +1,22 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import {
+  DIVER_HISTORY_TABLES,
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
+  PERSON_TABLES_DELIBERATELY_UNMOVED,
+  STAFF_HISTORY_TABLES,
+  STAFF_PERSON_ONLY_TABLES,
 } from "./diver-merge";
 import {
   activityEvents,
   bookings,
   certifications,
+  gearItems,
+  gearReservations,
   internalNotes,
   people,
   personRoles,
@@ -223,5 +229,77 @@ describe("diver record merge", () => {
         actorPersonId: source.id,
       }),
     ).toEqual({ ok: false, reason: "not_authorized" });
+  });
+});
+
+/**
+ * The merge moves history table by table from a hard-coded list, so a table
+ * added tomorrow with a `person_id` is silently forgotten: no error, no failing
+ * test, just a row left pointing at a diver the shop just removed. That is how
+ * `gear_reservations` was missed. This holds the four answers exhaustive
+ * against the live schema, which is the only place the truth is.
+ */
+describe("every person_id column in the schema has a merge answer", () => {
+  it("classifies each one as moved, refused, or deliberately left alone", async () => {
+    const { db } = await seededShopContext();
+    const result = await db.execute(sql`
+      select table_name
+      from information_schema.columns
+      where table_schema = 'public' and column_name = 'person_id'
+      order by table_name
+    `);
+    const inSchema = result.rows.map((row) => String((row as { table_name: string }).table_name));
+    expect(inSchema.length).toBeGreaterThan(20);
+
+    const classified = new Set<string>([
+      ...DIVER_HISTORY_TABLES,
+      ...STAFF_HISTORY_TABLES,
+      ...STAFF_PERSON_ONLY_TABLES,
+      ...Object.keys(PERSON_TABLES_DELIBERATELY_UNMOVED),
+    ]);
+    expect(inSchema.filter((table) => !classified.has(table))).toEqual([]);
+    // And nothing is classified that the schema no longer has.
+    expect([...classified].filter((table) => !inSchema.includes(table)).sort()).toEqual([]);
+  });
+
+  it("moves a bookingless counter rental onto the survivor", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const [item] = await db
+      .insert(gearItems)
+      .values({
+        shopId: shop.id,
+        kind: "bcd",
+        label: "BCD-07",
+        size: "M",
+      })
+      .returning();
+    if (!item) throw new Error("gear fixture insert failed");
+    const [reservation] = await db
+      .insert(gearReservations)
+      .values({
+        shopId: shop.id,
+        gearItemId: item.id,
+        personId: source.id,
+        reservedFrom: "2026-09-01",
+        reservedUntil: "2026-09-02",
+      })
+      .returning();
+    if (!reservation) throw new Error("gear reservation fixture insert failed");
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    const [moved] = await db
+      .select({ personId: gearReservations.personId })
+      .from(gearReservations)
+      .where(eq(gearReservations.id, reservation.id));
+    expect(moved?.personId).toBe(survivor.id);
   });
 });

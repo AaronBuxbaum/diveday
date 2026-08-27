@@ -31,7 +31,7 @@ export type DiverMergeResult =
   | { ok: true; survivorId: string; mergedPersonId: string }
   | { ok: false; reason: DiverMergeRefusal };
 
-const DIVER_HISTORY_TABLES = [
+export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
   "bookings",
   "internal_notes",
@@ -48,6 +48,11 @@ const DIVER_HISTORY_TABLES = [
   "prior_visits",
   "imported_payment_history",
   "rental_fit_profiles",
+  // A bookingless counter rental names the diver directly (the other shape
+  // names a booking, which this merge moves anyway). Leaving it behind put the
+  // unit on a removed diver's record: the survivor's prep page showed no gear
+  // and the reservation still held the window.
+  "gear_reservations",
   "prior_gear_assignments",
   "nitrox_certifications",
   "trip_reviews",
@@ -55,14 +60,34 @@ const DIVER_HISTORY_TABLES = [
 ] as const;
 
 /** These rows identify a staff account or crew assignment, not a diver history. */
-const STAFF_HISTORY_TABLES = [
+export const STAFF_HISTORY_TABLES = [
   "staff_shifts",
+  "staff_credentials",
   "account_sessions",
   "calendar_feeds",
   "roll_call_crew_events",
   "push_subscriptions",
 ] as const;
-const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
+export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
+
+/**
+ * The rest of the `person_id` columns in the schema, each left where it is on
+ * purpose. Stated rather than merely absent so `diver-merge.test.ts` can hold
+ * the three lists above exhaustive against the live database: a table added
+ * tomorrow with a `person_id` fails that test until somebody decides which of
+ * these four answers it deserves.
+ */
+export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>> = {
+  // Each identity keeps its own roles. The source row survives soft-deleted
+  // and still reads as a diver, which is what lets the pointer resolve.
+  person_roles: "a role belongs to the identity, not to its history",
+  // Minted seconds before an OAuth callback consumes it, and staff-only.
+  integration_oauth_states: "ephemeral staff OAuth state, consumed within minutes",
+  // Names an already-anonymized person as provenance for an erasure that is
+  // still owed. `mergeDiverRecords` refuses an anonymized person outright, so
+  // no row here can ever belong to either side of a merge.
+  processor_erasure_obligations: "provenance for an erasure, and anonymized rows never merge",
+};
 
 function quotedTable(tableName: string) {
   // The only callers pass the two static lists above; quoting here keeps the
