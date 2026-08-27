@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -19,8 +20,8 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. A hundred and fifty-seven key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 628 screenshots per run (see
+ * Visual regression coverage. A hundred and sixty key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 640 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
@@ -36,8 +37,13 @@ import { E2E_FROZEN_CLOCK } from "./servers";
  * trip-packet, and departure-log pages as they render for the printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
- * once, at a US-Letter width, via `capturePrint()`. That brings the run to 632
- * screenshots.
+ * once, at a US-Letter width, via `capturePrint()`.
+ *
+ * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
+ * and `TABLET_SURFACES` adds 10: five staff surfaces get a third, portrait
+ * tablet width, at one screenshot per scheme rather than the usual two. That
+ * brings the run to 658 screenshots — the tablet width is a 1.6% addition, not
+ * the 50% a third viewport applied to every surface would have cost.
  *
  * ## One surface, one `test()`
  *
@@ -120,6 +126,80 @@ const VIEWPORTS = [
   { width: 390, height: 844 }, // phone
   { width: 1280, height: 800 }, // desktop
 ] as const;
+
+/**
+ * **A portrait tablet — the device the shop is actually holding.**
+ *
+ * `VIEWPORTS` above is the standard responsive pair, and it is the right
+ * default for a marketing page, a booking page and a diver's `/ready`. It is
+ * the wrong device for the surfaces a dive shop works from: `/check-in` calls
+ * itself "Counter mode", and a counter device is an iPad on a stand; the
+ * manifest is read at the rail, often through a dry case, which is the whole
+ * reason `glare-mode` exists in `globals.css` with its >=16px text and >=44px
+ * targets.
+ *
+ * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
+ * layout's *shape* — where a two-column `FieldGrid` collapses, and where
+ * `StaffTabBar`'s six-slot phone dock gives way to the header nav. Every one
+ * of those transitions was unphotographed, so a regression there reached a
+ * shop before it reached CI.
+ *
+ * Portrait rather than landscape because portrait is the harder layout and the
+ * posture a stand holds. A crew member holding a phone sideways at the rail is
+ * a real posture too; it is not photographed here, and should not be until
+ * something other than a hunch says it needs to be.
+ */
+const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
+
+/**
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **five, not
+ * every surface in this file.**
+ *
+ * A third width applied everywhere is another 320 screenshots and the baseline
+ * churn to match, and most routes have nothing new to say at 820px. So the
+ * list is a constant rather than a global width: the cost is bounded, and
+ * which surfaces earn it is a decision a reviewer can argue with in one place
+ * instead of inferring from a diff.
+ *
+ * Why each one:
+ *
+ * - `check-in` — "Counter mode" by its own heading. The front desk is a
+ *   tablet on a stand and nothing else.
+ * - `manifest` — worked at the rail in a dry case; `glare-mode`'s whole
+ *   premise is this device in this light.
+ * - `schedule-builder` — a dense two-column board a shop keeps open on
+ *   whatever is on the desk.
+ * - `prep` — the same, the day before.
+ * - `departure-log` — written up at the end of the day, on the device that
+ *   was already out.
+ *
+ * Adding a name here costs two screenshots per run (one per scheme). Adding
+ * one that no `capture()` call uses costs nothing and silently photographs
+ * nothing, which is why `tabletSurfacesAreReal` below refuses it.
+ */
+const TABLET_SURFACES: ReadonlySet<string> = new Set([
+  "check-in",
+  "manifest",
+  "schedule-builder",
+  "prep",
+  "departure-log",
+]);
+
+/**
+ * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
+ * nothing and fails nothing: the surface simply never gets its third width,
+ * and reg-suit reports one fewer new item than anyone was counting. Reading
+ * this file back is the cheapest thing that can tell a typo from a decision.
+ * Once per worker process, against a file already on the page cache.
+ */
+for (const name of TABLET_SURFACES) {
+  if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
+    throw new Error(
+      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
+        "silently photograph nothing. Fix the name or drop it from the set.",
+    );
+  }
+}
 
 /**
  * Force Chromium to paint the whole document, then settle fonts, before a
@@ -796,7 +876,12 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
       timeout: 15_000,
     },
   );
-  for (const viewport of VIEWPORTS) {
+  // The standard pair, plus the portrait tablet for the five staff surfaces a
+  // shop runs on one. Widest last is deliberate: the base viewport is restored
+  // below either way, but a capture that fails mid-loop leaves the page at a
+  // width a trace viewer can make sense of.
+  const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
+  for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await paintWholeDocument(page);
     await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);

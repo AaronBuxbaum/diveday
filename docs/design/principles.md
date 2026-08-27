@@ -494,6 +494,35 @@ done for you. `text-success`/`text-warning` on `--surface-sunken` want the `-str
 same reason, and dimming a row with `opacity-*` dims its contrast ratio with it — quiet ink is
 `text-muted`, which is a measured token.
 
+### Viewports — which devices are photographed
+
+`e2e/visual.spec.ts` captures every surface at a phone (390x844) and a desktop (1280x800), and
+`scripts/screenshot.mjs` defaults to the same pair on purpose, so a design review looks at the two
+widths CI checks. That pair is the standard responsive pair and it is right for a marketing page, a
+booking page and a diver's `/ready`.
+
+It is the wrong device for the surfaces a dive shop actually works from. `/check-in` calls itself
+"Counter mode", and a counter device is an iPad on a stand; the manifest is read at the rail,
+frequently through a dry case, which is the entire premise of `boat-mode` above. So five staff
+surfaces — the counter check-in, the live manifest, the schedule board, the trip prep list and the
+departure log — are captured at a **third, portrait-tablet width of 820x1180**, named in
+`TABLET_SURFACES` in that spec. `node scripts/screenshot.mjs <path> --tablet` gives a design review
+the same width.
+
+Five, not sixty-nine: a third width everywhere would be another 320 screenshots and the baseline
+churn to match, and most routes have nothing new to say at 820px. The list being a constant with a
+comment is what keeps the cost bounded and the choice arguable.
+
+What that width is there to catch is the **shape change**, not the pixels. 768-1024px is where
+Tailwind's `sm:`/`md:` breakpoints collapse a two-column `FieldGrid`, and where `StaffTabBar`'s
+six-slot phone dock gives way to the header nav. Those two swap at `lg` (1024px) and they swap
+together — the dock is `lg:hidden`, the header strip is `hidden lg:flex` — so a portrait tablet
+correctly gets the touch dock with the wide content layout, and now there is a baseline that would
+notice if one half of that pair ever moved without the other.
+
+Landscape phone is a real posture at the rail and is deliberately **not** photographed. Add it when
+something other than a hunch says it needs to be.
+
 ### Writing direction
 
 DiveDay's layout is written to be **direction-agnostic**: logical properties (`ms-`/`me-`, `ps-`/`pe-`,

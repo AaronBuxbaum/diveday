@@ -21,6 +21,11 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
  * - Captures every path at phone (390px) and desktop (1280px) widths, in
  *   light and dark (`prefers-color-scheme` emulation) — the same matrix the
  *   visual spec uses. Narrow with --light/--dark/--width <px>.
+ * - --tablet swaps in the portrait tablet the spec's TABLET_SURFACES use
+ *   (820x1180): the counter, the manifest, the board, the prep list and the
+ *   departure log. The two staying in step is why the default pair is
+ *   documented as matched — a design review of those surfaces should be
+ *   looking at the width CI checks them at.
  * - `/shop/**` paths sign in automatically through the seeded dev credentials
  *   (see src/db/dev-credentials.ts); pick a role with --as <owner|instructor|
  *   divemaster|captain>.
@@ -52,7 +57,12 @@ const paths = [];
 let base = "http://localhost:3000";
 let out = "screenshots";
 let schemes = ["light", "dark"];
-let widths = [390, 1280];
+// Height matters at the tablet width and not at the other two: 820x1180 is a
+// portrait iPad, and a `md:` layout photographed at a landscape height is a
+// different picture. Carried as a pair rather than a bare width for that
+// reason; the two defaults keep the height rule below.
+const TABLET_VIEWPORT = { width: 820, height: 1180 };
+let viewports = [{ width: 390 }, { width: 1280 }];
 const DEFAULT_ROLE = "owner";
 let role = DEFAULT_ROLE;
 
@@ -62,7 +72,8 @@ for (let index = 0; index < args.length; index += 1) {
   else if (arg === "--out") out = args[++index];
   else if (arg === "--light") schemes = ["light"];
   else if (arg === "--dark") schemes = ["dark"];
-  else if (arg === "--width") widths = [Number(args[++index])];
+  else if (arg === "--width") viewports = [{ width: Number(args[++index]) }];
+  else if (arg === "--tablet") viewports = [TABLET_VIEWPORT];
   else if (arg === "--as") role = args[++index];
   else if (arg.startsWith("--")) {
     console.error(`Unknown flag ${arg}`);
@@ -70,7 +81,11 @@ for (let index = 0; index < args.length; index += 1) {
   } else paths.push(arg);
 }
 
-if (paths.length === 0 || !DEV_STAFF_LOGINS[role] || widths.some(Number.isNaN)) {
+if (
+  paths.length === 0 ||
+  !DEV_STAFF_LOGINS[role] ||
+  viewports.some((viewport) => Number.isNaN(viewport.width))
+) {
   console.error(
     "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark] [--width <px>] [--as owner|instructor|divemaster|captain]\n" +
       "Writes <out>/<path>[-<role>]-<scheme>-<width>.png; the role appears only when it is not the default owner.",
@@ -212,10 +227,10 @@ async function waitPastTheSkeleton(page, target) {
 
 try {
   for (const colorScheme of schemes) {
-    for (const width of widths) {
+    for (const { width, height } of viewports) {
       const context = await browser.newContext({
         colorScheme,
-        viewport: { width, height: width < 800 ? 844 : 900 },
+        viewport: { width, height: height ?? (width < 800 ? 844 : 900) },
       });
       const page = await context.newPage();
 
