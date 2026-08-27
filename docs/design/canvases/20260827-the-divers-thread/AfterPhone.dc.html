@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --accent: #ff6f61; --accent-tint: #fff1ef; --accent-fg: #3d1410;
+      --success: #15803d;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 11px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .door { display: flex; align-items: center; gap: 11px; min-height: 52px; border-top: 1px solid var(--border); }
+    .kv { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; min-height: 26px; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 1180px; background: var(--bg); overflow: hidden; box-sizing: border-box;">
+
+  <div style="padding: 28px 20px 0; box-sizing: border-box;">
+
+    <p class="eyebrow" style="margin: 0;">Blue Mantis Divers</p>
+    <h1 style="margin: 8px 0 0; font-size: 25px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.14;">What a day, Yara.</h1>
+    <p class="tnum" style="margin: 7px 0 0; font-size: 14.5px; color: var(--muted);">Two-Tank — French Reef &middot; Sat, Aug 29</p>
+
+    <!-- The keepsake: the day's facts, once -->
+    <div style="margin-top: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 18px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 26px; height: 26px; border-radius: 7px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">BM</div>
+        <span style="font-size: 13px; font-weight: 650; letter-spacing: .02em;">DIVE RECORD</span>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 650; background: var(--accent-tint); border: 1px solid rgba(255,111,97,.4); color: var(--accent-fg);">Your 3rd day with us</span>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <div class="kv"><span style="color: var(--muted); width: 74px;">Boat</span><span style="font-weight: 600;">Mantis II &middot; Keiko Tanaka, Sal Moretti</span></div>
+        <div class="kv"><span style="color: var(--muted); width: 74px;">Dive 1</span><span style="font-weight: 600;">French Reef swim-throughs</span><span class="tnum" style="margin-left: auto; color: var(--muted);">to 12 m</span></div>
+        <div class="kv"><span style="color: var(--muted); width: 74px;">Dive 2</span><span style="font-weight: 600;">White Sand Bottom Cave</span><span class="tnum" style="margin-left: auto; color: var(--muted);">to 14 m</span></div>
+        <div class="kv"><span style="color: var(--muted); width: 74px;">Water</span><span class="tnum" style="font-weight: 600;">27&deg;C &middot; 24 m vis &middot; calm</span></div>
+      </div>
+
+      <div style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; display: flex; align-items: center; gap: 10px;">
+        <p style="margin: 0; flex: 1; font-size: 12.5px; color: var(--muted);">A verified record of your day on the water.</p>
+        <span style="font-size: 13px; font-weight: 600; color: var(--primary); white-space: nowrap;">Print it</span>
+      </div>
+    </div>
+
+    <!-- The crew's word -->
+    <p style="margin: 22px 0 0; font-size: 16.5px; line-height: 1.5;">&#8220;Yara found the eagle ray before I did — come back for the wreck next time.&#8221;</p>
+    <p style="margin: 6px 0 0; font-size: 13px; color: var(--muted);">Keiko, your divemaster</p>
+
+    <!-- The one ask -->
+    <div style="margin-top: 26px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 18px; box-sizing: border-box;">
+      <p style="margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.012em;">How was it?</p>
+      <div style="margin-top: 12px; display: flex; gap: 6px;">
+        <svg width="30" height="30" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        <svg width="30" height="30" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        <svg width="30" height="30" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        <svg width="30" height="30" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        <svg width="30" height="30" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+      </div>
+      <div style="margin-top: 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); min-height: 74px; padding: 10px 12px; font-size: 14.5px; color: var(--ink);">Vis was unreal and the crew found us a turtle on the second tank.</div>
+      <p style="margin: 8px 0 0; font-size: 12px; color: var(--muted);">Your words may appear on the shop&#8217;s page once they&#8217;ve read them.</p>
+      <div style="margin-top: 12px; display: flex; align-items: center; justify-content: center; min-height: 46px; border-radius: 11px; background: var(--primary); color: #ffffff; font-size: 15px; font-weight: 600;">Share your day</div>
+    </div>
+
+    <!-- The quiet doors -->
+    <div style="margin-top: 24px;">
+      <div class="door">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="4.4" width="14.8" height="11.4" rx="2.4"></rect><circle cx="10" cy="10" r="3"></circle><path d="M6.2 4.4l1.2-1.8h5.2l1.2 1.8"></path></svg>
+        <span style="flex: 1; font-size: 14.5px; font-weight: 600;">Add your photos</span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="door">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.4"></circle><path d="M10 6.2v7.6M12.6 8.1c-.5-.9-1.5-1.4-2.6-1.4-1.4 0-2.5.8-2.5 1.9 0 2.6 5.2 1.2 5.2 3.7 0 1.1-1.2 1.9-2.7 1.9-1.2 0-2.2-.5-2.7-1.4"></path></svg>
+        <span style="flex: 1; font-size: 14.5px; font-weight: 600;">Tip the crew</span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="door" style="border-bottom: 1px solid var(--border);">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6.5L10 3 6.5 6.5M10 3v9.5"></path><path d="M4 11.5v4a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-4"></path></svg>
+        <span style="flex: 1; font-size: 14.5px; font-weight: 600;">Take your review to Google</span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <!-- What's next -->
+    <div style="margin-top: 24px; border-top: 1px solid var(--border); padding: 16px 0 30px; display: flex; align-items: center; gap: 10px;">
+      <span style="flex: 1; font-size: 14px; color: var(--muted);">The wreck Keiko mentioned runs Fridays.</span>
+      <span style="font-size: 13.5px; font-weight: 600; color: var(--primary); white-space: nowrap;">See what&#8217;s next</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

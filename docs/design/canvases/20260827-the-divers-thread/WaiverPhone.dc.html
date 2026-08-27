@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d; --success-tint: #e8f2ec;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .railstep { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; }
+    .field { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); min-height: 46px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 980px; background: var(--bg); overflow: hidden; box-sizing: border-box;">
+
+  <div style="padding: 28px 20px 0; box-sizing: border-box;">
+
+    <p class="eyebrow" style="margin: 0;">Blue Mantis Divers</p>
+    <h1 style="margin: 8px 0 0; font-size: 25px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.14;">A quick step before the dock</h1>
+    <p class="tnum" style="margin: 7px 0 0; font-size: 14px; color: var(--muted);">Two-Tank — French Reef &middot; Sat, Aug 29 &middot; 11:00 AM</p>
+
+    <!-- The step rail: where you are, in one quiet line -->
+    <div style="margin-top: 18px; display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); min-height: 46px;">
+      <span class="railstep" style="color: var(--success);">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+        Release
+      </span>
+      <span class="railstep" style="color: var(--success);">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+        Medical
+      </span>
+      <span class="railstep" style="color: var(--primary);">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="#0e7490" stroke-width="2.2"></circle></svg>
+        Sign
+      </span>
+      <span class="tnum" style="margin-left: auto; font-size: 12px; color: var(--muted);">2 of 3 done</span>
+    </div>
+
+    <!-- The release, fully present, already read -->
+    <p style="margin: 20px 0 0; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;">Blue Mantis Diving Release &middot; version 4</p>
+    <p style="margin: 12px 0 0; font-size: 14.5px; line-height: 1.65; color: var(--muted);">&hellip;acknowledge that scuba diving carries inherent risks, including but not limited to decompression sickness, embolism, and the hazards of boat travel. I confirm that the information I provide about my health and certification is accurate, and that I will follow the crew&#8217;s instructions and dive within the limits of my training.</p>
+
+    <!-- Medical: settled to a line -->
+    <div style="margin-top: 18px; display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); min-height: 50px;">
+      <svg width="18" height="18" viewBox="0 0 26 26" fill="none" style="flex-shrink: 0;"><circle cx="13" cy="13" r="11" fill="#15803d"></circle><path d="M8.4 13.4l3 3 6-6.6" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="flex: 1; font-size: 14.5px; font-weight: 600;">Medical questions</span>
+      <span class="tnum" style="font-size: 12.5px; color: var(--muted);">11 of 11 answered &middot; all clear</span>
+    </div>
+    <div style="margin-top: 0; display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); min-height: 50px;">
+      <svg width="18" height="18" viewBox="0 0 26 26" fill="none" style="flex-shrink: 0;"><circle cx="13" cy="13" r="11" fill="#15803d"></circle><path d="M8.4 13.4l3 3 6-6.6" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="flex: 1; font-size: 14.5px; font-weight: 600;">Emergency contact</span>
+      <span style="font-size: 12.5px; color: var(--muted);">Samir Halabi &middot; on file</span>
+    </div>
+
+    <!-- The one worked-in card: sign -->
+    <div style="margin-top: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 18px; box-sizing: border-box;">
+      <p style="margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.012em;">Sign it</p>
+      <p style="margin: 12px 0 5px; font-size: 13px; font-weight: 600;">Type your full name</p>
+      <div class="field">Yara Halabi<span style="display: inline-block; width: 1.5px; height: 17px; background: var(--primary); vertical-align: -3px; margin-left: 1px;"></span></div>
+      <p style="margin: 5px 0 0; font-size: 12px; color: var(--muted);">As booked: Yara Halabi</p>
+      <label style="display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; font-size: 13.5px; line-height: 1.45;">
+        <span style="width: 19px; height: 19px; border-radius: 5px; background: var(--primary); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+          <svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+        </span>
+        I have read the release and I agree to it.
+      </label>
+      <div style="margin-top: 16px; display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 11px; background: var(--primary); color: #ffffff; font-size: 15.5px; font-weight: 600;">Sign waiver</div>
+      <p style="margin: 12px 0 0; font-size: 13px; text-align: center;"><span style="font-weight: 600; color: var(--muted);">Save and finish later</span><span style="color: var(--muted);"> &middot; this link works until Sep 10</span></p>
+    </div>
+
+    <p style="margin: 18px 0 0; font-size: 12.5px; color: var(--muted); text-align: center; padding-bottom: 28px;">Questions? hello@demo.invalid &middot; <span class="tnum">+1 305 555 0142</span></p>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

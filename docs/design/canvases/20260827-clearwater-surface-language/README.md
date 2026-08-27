@@ -44,7 +44,7 @@ the ADR carries the decisions, these are the pictures drawn to argue them.
 ## The fiction every board holds to
 
 One shop, one day, one week. **Blue Mantis Divers**, Key Largo (100 Ocean Drive · +1 305 555 0142
-· hello@demo.invalid), ★4.3 across 83 reviews, boats *Mantis II* and *Skiff*, default crew Keiko
+· hello@demo.invalid), ★4.3 across 83 reviews, boats *Mantis II* and *Skiff*, online payments connected, default crew Keiko
 Tanaka and Sal Moretti; Marcus Webb teaches the courses; Dana Reyes owns the desk. The day is **Thursday, August 27, 2026**:
 
 - **7:00–10:30 AM · Two-Tank Reef — Molasses & French** · Molasses Reef · Mantis II · $95 ·

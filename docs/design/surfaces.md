@@ -167,6 +167,48 @@ pass.
 - **Composition:** a shopfront — identity, then the week as a shelf, then courses and reviews —
   because a diver is choosing a shop before they are choosing a time slot.
 
+### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Redesign proposed** — ADR
+[20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md) (Proposed),
+drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion surface.
+
+- **One idea:** this boat is worth your Saturday — and here is the one place to say yes.
+- **The question it arrives with:** "what will I see, and can I get on?" — answered by the pitch
+  and the scarcity word before any scrolling.
+- **Controls that dissolved:** the boxed requirement note (one sentence), the boxed gear fieldsets
+  (hairline steps of one sheet), the five-piece money story (one block), the sticky pill's
+  duplicate seat count (verb only).
+- **Remove first:** the packing section — it is preparation, not pitch, and moves to the thread.
+- **Composition:** sell then close — the form is the page's terminal word, so the primary is where
+  a decided diver already is.
+
+### The thread — `/ready/[token]` (and every state after booking)
+
+**Redesign proposed** — same ADR and canvas. Extends ADR 20260820-one-page-after-booking.
+
+- **One idea:** the one link that answers "am I ready, and what's next?" for this trip — before,
+  during, and after.
+- **The question it arrives with:** "what do I still have to do?" — answered by one figure and the
+  named next step, first.
+- **Controls that dissolved:** the receipt panel, the emails line and the per-row Done chips (the
+  steps' settled lines say it once); the four inline forms at rest (one open step at a time).
+- **Remove first:** nothing after the fold — the after-state already absorbed the recap page.
+- **Composition:** a step spine, because getting ready is a sequence, and the same spine grammar
+  the staff home speaks makes the product one product.
+
+### The waiver — `/waivers/[token]`
+
+**Redesign proposed** — same ADR and canvas. Legal surface: wording and presentation floor are
+H-01/H-03's.
+
+- **One idea:** two minutes of paperwork, paced so it feels like two minutes.
+- **The question it arrives with:** "how much is left?" — answered by the step rail's count.
+- **Controls that dissolved:** the second submit's button chrome (save-later is a link beside the
+  expiry line); three bespoke banners (one notice grammar).
+- **Remove first:** nothing — the release must stay fully presented.
+- **Composition:** three steps under a quiet rail; the sign card is the page's one worked-in card.
+
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
 **Unanswered, and known to be.** Its honest answer to "what is this surface's one idea?" is

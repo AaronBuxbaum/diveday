@@ -186,6 +186,35 @@ The canvas carries [an implementation spec](../../design/canvases/20260827-clear
 — journeys, acceptance tests, and interface contracts per slice — written for a session with none
 of this context. Start any slice from the canvas README's "Implementing a slice" prompt.
 
+### 7. The diver's thread (design complete)
+
+One link from booking to afterglow, in the Clearwater grammar — argued in the Proposed ADR
+[20260827-the-divers-thread](../../architecture/decisions/20260827-the-divers-thread.md), drawn in
+[its canvas](../../design/canvases/20260827-the-divers-thread/README.md), specified in
+[its SPEC](../../design/canvases/20260827-the-divers-thread/SPEC.md). Extends items 5 and 6;
+unranked against them. The regression floor is the existing booking/readiness/waiver/recap e2e
+suite — every slice keeps it green.
+
+- **7a. The thread shell and measure.** One shell (shop eyebrow, title, state slot) and one
+  `max-w-xl` measure for every page a booked diver walks; `EntryDone`/`ExpiredLinkCard` restyle
+  flat inside it. Chrome only, no behavior. *Pins:* shell renders shop-name eyebrow + one h1.
+- **7b. The trip page sells, then closes.** Hero (price once) → pitch → one-line requirement →
+  the terminal form with the money as one block; packing moves to the thread; briefings collapse
+  into the pitch. *Pins:* one due-now figure; the form is the last section; packing absent.
+  `conversion-reviewer` pass.
+- **7c. The thread page's step spine.** Five steps, one open at rest, one status statement; the
+  progress figure counts only finishable steps; the cancellation window lands in the Pay step
+  (closing ADR 20260820's dead `cancellationOnly`). *Pins:* one status statement; the figure can
+  always fill.
+- **7d. The after-state and the recap fold.** After endsAt + the standing buffer, the same link
+  renders the keepsake, one review ask, and quiet doors; `/recap/[token]` renders the same surface
+  (links and emails keep working); the duplicate facts delete (H-49). Closes the concept-model
+  row's "folding recap into the same link" half; the second booking-time email stays an owner
+  call. *Pins:* the day's facts render once; prep-vs-after switches on the buffer rule.
+- **7e. The waiver paces itself.** Step rail, one notice grammar, one primary; the release stays
+  fully presented; signature/medical semantics untouched (H-01/H-03). *Pins:* one primary;
+  banners through one component.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
