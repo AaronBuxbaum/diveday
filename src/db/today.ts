@@ -45,7 +45,13 @@ import {
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
 import type { Role } from "@/lib/authz";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import {
+  calendarDateInTimezone,
+  calendarDateToUtcMidnight,
+  formatCalendarDate,
+  isCalendarDateExpired,
+  isValidCalendarDate,
+} from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
@@ -1835,10 +1841,16 @@ export async function getTodayWork(
 
   const credentialHorizon = now.getTime() + 30 * 24 * HOUR_MS;
   for (const row of credentialRows) {
-    if (!row.credential.renewsAt) continue;
-    const dueAt = new Date(`${row.credential.renewsAt}T00:00:00.000Z`);
-    if (Number.isNaN(dueAt.getTime()) || dueAt.getTime() > credentialHorizon) continue;
-    const overdue = dueAt.getTime() < now.getTime();
+    const renewsAt = row.credential.renewsAt;
+    if (!renewsAt || !isValidCalendarDate(renewsAt)) continue;
+    const dueAt = calendarDateToUtcMidnight(renewsAt);
+    if (dueAt.getTime() > credentialHorizon) continue;
+    // A renewal date is a calendar date, not an instant. Comparing its UTC
+    // midnight against `now` marked a credential overdue for the whole of the
+    // day it actually renews in every shop west of Greenwich -- in Cancun, from
+    // 19:00 the evening before. CR-009: a date-only expiry is good through the
+    // end of its own local day.
+    const overdue = isCalendarDateExpired(renewsAt, todayLocal);
     actions.push({
       id: `staff-credential:${row.credential.id}`,
       kind: "staff_credential_due",
@@ -1847,7 +1859,7 @@ export async function getTodayWork(
       context: null,
       detail: staffCredentialDueDetailText(t, {
         credential: row.credential.name,
-        dueOn: formatCalendarDate(row.credential.renewsAt, locale),
+        dueOn: formatCalendarDate(renewsAt, locale),
         overdue,
       }),
       actionLabel: openStaffingActionText(t),

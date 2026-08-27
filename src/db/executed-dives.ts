@@ -112,28 +112,23 @@ export async function upsertExecutedDive(db: AppDb, input: ExecutedDiveInput) {
       recordedByPersonId: recorder.id,
       updatedAt: nowDate(),
     };
-    const [existing] = await tx
-      .select({ id: executedDives.id })
-      .from(executedDives)
-      .where(
-        and(
-          eq(executedDives.shopId, input.shopId),
-          eq(executedDives.tripId, input.tripId),
-          eq(executedDives.diveNumber, input.diveNumber),
-          isNull(executedDives.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (existing) {
-      const [updated] = await tx
-        .update(executedDives)
-        .set(values)
-        .where(eq(executedDives.id, existing.id))
-        .returning();
-      return updated ?? null;
-    }
-    const [created] = await tx.insert(executedDives).values(values).returning();
-    return created ?? null;
+    // One statement, not select-then-insert. Two divemasters writing the same
+    // dive number at the rail is a real sequence, and the select this replaced
+    // was not a lock: the loser hit `executed_dives_trip_number_live_unique`
+    // and escaped as a 500 on the manifest. `on conflict` targets that partial
+    // index directly, so the second write lands on the first one's row instead
+    // of racing it -- and needs no savepoint, which catching the violation
+    // inside this transaction would have (see `rewindowTripGearReservations`).
+    const [row] = await tx
+      .insert(executedDives)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [executedDives.tripId, executedDives.diveNumber],
+        targetWhere: isNull(executedDives.deletedAt),
+        set: values,
+      })
+      .returning();
+    return row ?? null;
   });
 }
 
