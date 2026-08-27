@@ -3,14 +3,48 @@ import {
   RollCallButton,
   type RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
+import { RollCallMark, type RollCallMarkState } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type RollCallCheckpoint, type RollCallRecord, rollCallRowState } from "@/lib/manifests";
+import {
+  type RollCallCheckpoint,
+  type RollCallRecord,
+  type RollCallRowState,
+  rollCallRowState,
+} from "@/lib/manifests";
 
 /**
- * Shared structure for every roll-call button below: the dock target
- * (design/forms-and-controls.md), coloured per row state at the call sites.
+ * **The manifest's two roll-call gestures, and why they are two components.**
+ *
+ * ADR 20260827-the-departure-is-two-working-surfaces, decision 3 —
+ * *consequence decides the gesture*:
+ *
+ * - **Aboard is a plain tap**, on the row's trailing edge, undone by tapping it
+ *   again. It is the high-frequency act — ten of them per checkpoint per
+ *   departure — and getting it wrong costs one more tap.
+ * - **Not back is a deliberate two-step**, recorded from the person's own
+ *   panel. It is the highest-consequence claim this app can make, it happens a
+ *   handful of times a year, and it must be impossible to brush past with a wet
+ *   thumb on a moving boat.
+ *
+ * The two used to sit side by side in one cluster, two 56px targets a
+ * thumb-width apart, and the destructive one was the *wider* of the pair on a
+ * 390px phone. Splitting them is the whole point: `RollCallMarkButton` is what
+ * a row carries at rest, `RollCallExceptionControl` and
+ * `RollCallBackAboardControl` may only be rendered inside a person's opened
+ * panel, and `DiverRollCall.test.tsx` / `CrewRollCall.test.tsx` fail if either
+ * becomes reachable in one tap from the list again.
+ *
+ * Everything that is *safety* behaviour still lives in one place — the shared
+ * `RollCallButton` underneath both: the instant pending state, the
+ * server-authoritative confirm, the `role="alert"` refusal, the note draft that
+ * rides whichever result lands, and the remount-on-checkpoint key contract.
+ */
+
+/**
+ * Shared structure for the exception control below: the dock target
+ * (design/forms-and-controls.md), coloured per row state at the call site.
  *
  * It used to be a literal class string, and its own comment named the API it
  * was bypassing — `buttonClass({ size: "boat" })`. Three other surfaces had
@@ -29,21 +63,15 @@ export const BOAT_TARGET_CLASS = buttonClass({
 });
 
 /**
- * The same dock target at `px-4` instead of the boat size's `px-6` — for the
- * exception control while it sits *beside* an on-offer board button. The pair
- * shares one row, and on a 390px phone the eight horizontal-padding pixels per
- * side are exactly what decides whether "Mark not boarded" fits next to "Mark
- * boarded" or wraps the pair into a stack. Same 56px height, same 16px label;
- * only the box around the words narrows. `flush` + an explicit `px-4` because
- * a `px-4` passed on top of the size's `px-6` is silently inert — spacing
- * utilities resolve by emitted order, not call-site order (see button.ts).
+ * The affirmative tap itself: a bare 56px circle, no box, no label text. The
+ * `RollCallMark` inside it is the drawn state and the button's accessible name
+ * is the words, so nothing is carried by colour alone (decision 5).
  */
-const BOAT_TARGET_COMPACT_CLASS = buttonClass({
+const MARK_BUTTON_CLASS = buttonClass({
   variant: "bare",
-  size: "boat",
+  size: "mark",
   busy: true,
-  flush: true,
-  className: "w-full px-4",
+  className: "rounded-full",
 });
 
 /**
@@ -77,15 +105,15 @@ export { ROLL_CALL_ROW_TONE };
  * The scroll margin every roll-call row wears, diver and crew alike.
  *
  * Both lists are jump targets — the summary panel's chips link to any uncalled
- * person — and both sit under the same sticky checkpoint panel, so the margin
- * that keeps a name clear of it is one fact, not two. It lived in `DiverRollCall`
+ * person — and both sit under the same sticky count panel, so the margin that
+ * keeps a name clear of it is one fact, not two. It lived in `DiverRollCall`
  * alone until crew rows became jump targets too (FU-20260810); duplicating the
  * two magic numbers would mean a future change to the panel's height silently
  * fixing one list and not the other.
  *
  * Sized to the panel at its tallest for the checkpoint kind: after a dive it can
  * carry up to three pinned danger lines. A jump that buries the name under the
- * panel is what invites a tap on the *next* visible row's button, for the wrong
+ * panel is what invites a tap on the *next* visible row's mark, for the wrong
  * person (dive-domain review 20260810) — which is why this is bounded by the
  * panel rather than by taste.
  */
@@ -94,82 +122,85 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
 }
 
 /**
- * The one quiet-disclosure grammar every roll-call row's rare path wears —
- * a diver's "Contact & gear" / "Add a private note" pair and a crew member's
- * single "Emergency contact" line. Shared here rather than left for
- * `CrewRollCall.tsx` to retype: the two lists used to carry two copies of
- * this exact class string (a Sourcery review on PR #607 caught the second),
- * and a future retouch — the caret's rotation, the panel's tint — now has one
- * place to land rather than two that can quietly drift apart.
+ * The person row's disclosure: the whole name column is the summary, and one
+ * tap opens everything the rail does not need this second — contact, gear,
+ * medical, notes, the readiness blockers and their fix, and the exception
+ * control (ADR 20260827-the-departure-is-two-working-surfaces, decision 2's
+ * "one tap away" tier).
  *
- * Only the summary and panel treatment live here. The *grid* that pairs a
- * diver's two disclosures side by side (`sm:grid-cols-2`) stays put in
- * `DiverRollCall.tsx` — crew get one disclosure, not two, so there is no
- * grid to share.
+ * `list-none` and the webkit marker reset because the row draws its own caret
+ * at the trailing edge; `min-h-19` is the 76px row the canvas measures, which
+ * keeps a 56px mark centred beside it with room above and below.
+ *
+ * **A real gap separates it from the mark**, and it belongs to the mark's own
+ * container (`ps-3` at the call sites) rather than to this padding — padding is
+ * *inside* a hit box, so `pe-*` here would still be summary-clickable and buy
+ * nothing. The two targets are adjacent and do opposite things: one opens a
+ * person, one records a result. With their boxes touching, a tap that lands a
+ * few pixels off the mark opens the panel instead — which grows the row and
+ * moves every name below it, so the crew member's *next* tap, aimed by memory
+ * at where a name was, is now over somebody else's mark (a design review of
+ * slice 5a called this the worst mis-tap on the surface).
+ *
+ * Everything else on the line is measured against what is left for the name at
+ * 390px: `gap-2.5` and a `size-7` index, because "Kiona Blackfeather" at 18px
+ * semibold wants 165px and the column has 176 to give it. A name that wraps
+ * pushes its own audit line down and makes every row a different height, which
+ * is the one thing a list read at a glance cannot afford.
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 py-3 ps-4 pe-2 select-none [&::-webkit-details-marker]:hidden";
 export const ROW_DISCLOSURE_PANEL_CLASS =
-  "mb-1 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
+  "mx-4 mb-4 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 
 /**
- * Where each control sits in the cluster's flex-wrap row, and how wide it
- * claims — the "which slot, how wide" half of the layout `RollCallControls`
- * draws below. Named here rather than left as a bare literal at each call
- * site (a Sourcery review on PR #607 asked for exactly this): the cluster's
- * three shapes — the affirmative, the exception paired beside it, the
- * exception alone as the row's only control — are one thing to read and one
- * thing to change together, not three picked apart from memory at three
- * scattered `formClassName` props.
- *
- * This is a *within-this-file* consolidation, not a cross-surface one:
- * `src/components/OfflineManifestView.tsx` hand-rolls its own equivalent
- * buttons rather than importing `RollCallControls` itself, because
- * `src/components` may not import from `src/app`
- * (`pnpm check:architecture`) — the same boundary that makes `BOAT_TARGET_CLASS`
- * above a re-derivation, not a shared import, in that file. Moving the
- * cluster's layout (not just its fill) out to a location both sides can
- * reach is a real architectural change, not a rename, and stays a follow-up
- * rather than riding in in a review-response pass.
+ * Which drawn mark a row wears, from the same row state every other reader
+ * derives. `held` is dock-only by construction: readiness gates boarding at
+ * the dock and never after a dive, so a blocked diver mid-count is an ordinary
+ * "to call" like anyone else.
  */
-const AFFIRMATIVE_FORM_CLASS = "w-full md:order-2 md:w-48";
-const EXCEPTION_FORM_CLASS_PAIRED = "w-full md:order-1 md:w-auto";
-const EXCEPTION_FORM_CLASS_ALONE = "w-full md:w-auto md:min-w-48";
+export function rollCallMarkState(
+  state: RollCallRowState,
+  { blockedAtDock = false }: { blockedAtDock?: boolean } = {},
+): RollCallMarkState {
+  if (state.notBackAboard) return "notBack";
+  if (state.boarded) return "aboard";
+  if (state.recordedNotBoarded || state.impliedNotBoarded) return "ashore";
+  return blockedAtDock ? "held" : "toCall";
+}
 
 /**
- * The control cluster a roll-call row carries: one line, the affirmative
- * ("aboard") at the row's end and the exception ("not boarded" / "not back
- * aboard") beside it.
+ * The one tap a roll-call row carries at rest.
  *
- * It was a vertical stack of two full-width controls — which, times ten rows,
- * made the page's dominant visual element the buttons rather than the people,
- * and spent a filled-primary rectangle on every awaiting row (ten primaries on
- * one screen, against principle 8's one). The affirmative now wears a
- * primary-bordered quiet face until it is tapped; the moment it records, the
- * row's own green fill and the settled "Boarded ☑️" carry the state. The
- * exception keeps exactly the demotion logic it had — boxless beside an
- * on-offer board control, bordered when settled or alone, danger ink after a
- * dive — just sitting beside the affirmative instead of under it.
+ * **The glyph is the state; the tap is the act.** A row already aboard undoes
+ * itself on a re-tap (the app's one undo model for a high-frequency toggle,
+ * design/principles.md §7); an untouched or ashore row moves to aboard.
  *
- * **One component for divers and crew.** The two lists differ only in the
- * subject they name (a booking vs. a `people.id`), the words on the buttons,
- * and whether the boarding control is shown at all — everything that is
- * *safety* behaviour is the same, and used to be written twice: the
- * checkpoint-dependent "not back aboard" wording (DOM-H3), the fill per
- * recorded state, the remount-on-checkpoint `key` contract, and the rule that
- * a not-back-aboard result never settles into a done-check. Two copies is how
- * a green-checked "Not boarded ✓" appeared beside a diver who had not come
- * back from dive one; this is the one place it can be fixed.
+ * **Two rows carry no tap at all**, and both are deliberate:
+ *
+ * - a diver blocked at the dock, whose row shows a static held ring, because
+ *   the act that clears them is ashore on the Trip tab (`showBoardControl` at
+ *   the call sites);
+ * - a person recorded **not back aboard**, whose acts both live in their panel.
+ *   ADR 20260815-offline-can-unsay-a-missing-diver is Accepted and governs this
+ *   exact transition: asserting somebody is aboard over a stated missing-diver
+ *   mark is "the one tap on this surface that turns the loudest row the product
+ *   has into green", and **retracting a mark may never be harder than making
+ *   one**. That record left the live manifest out on the stated grounds that
+ *   "live already has the honest undo one tap away" — which stopped being true
+ *   the moment slice 5a moved the exception control into the person's panel. So
+ *   both directions cost the same two deliberate gestures now: open the person,
+ *   then either "Mark back aboard" or a re-tap that retracts the mark. A
+ *   dive-domain review of this slice caught the inversion.
  */
-export function RollCallControls({
+export function RollCallMarkButton({
   kind,
   subjectId,
   checkpoint,
-  isDeparture,
   rollCall,
   action,
   copy,
-  showBoardControl,
+  markState,
   noteDraftFor,
   t,
 }: {
@@ -178,115 +209,162 @@ export function RollCallControls({
   /** A `bookings.id` for a diver, a `people.id` for a crew member. */
   subjectId: string;
   checkpoint: RollCallCheckpoint;
-  isDeparture: boolean;
   rollCall: RollCallRecord | undefined;
   action: RollCallAction;
   copy: RollCallButtonCopy;
+  markState: RollCallMarkState;
   /**
-   * Divers only board at departure once readiness clears them (`ready ||
-   * !isDeparture`); crew carry no readiness, so their control is always shown.
-   */
-  showBoardControl: boolean;
-  /**
-   * The row whose unsaved note draft both buttons should carry, so a note
-   * typed before anybody was called rides whichever result lands — boarded or
-   * not. Divers only; crew rows take no note.
+   * The row whose unsaved note draft this submit should carry, so a note typed
+   * before anybody was called rides the result that creates it. Divers only;
+   * crew rows take no note.
    */
   noteDraftFor?: { bookingId: string; checkpoint: string };
   t: StaffTranslator;
 }) {
-  const { boarded, recordedNotBoarded, notBackAboard, recordedHere } = rollCallRowState(
+  const { boarded } = rollCallRowState(checkpoint, rollCall);
+  const isCrew = kind === "crew";
+  return (
+    <RollCallButton
+      // Forces a remount — and a fresh `useActionState` `result` — on every
+      // checkpoint switch (see the component's own doc comment); this route/key
+      // is otherwise identical across checkpoints, so without it a refusal from
+      // one checkpoint can survive into another and misattribute.
+      key={isCrew ? `crew-aboard-${checkpoint}` : `board-${checkpoint}`}
+      action={action}
+      subject={
+        isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
+      }
+      status={boarded ? "cleared" : "boarded"}
+      label={
+        isCrew
+          ? boarded
+            ? t("manifest.crewAboardCheckAriaLabel")
+            : t("manifest.crewMarkAboard")
+          : boarded
+            ? t("manifest.boardedCheckAriaLabel")
+            : t("manifest.markBoarded")
+      }
+      pendingLabel={
+        isCrew ? t("manifest.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
+      }
+      mark={<RollCallMark state={markState} />}
+      className={MARK_BUTTON_CLASS}
+      formClassName="shrink-0"
+      noteDraftFor={noteDraftFor}
+      copy={copy}
+      observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
+    />
+  );
+}
+
+/**
+ * The exception — "not boarded" at the dock, "not back aboard" after a dive.
+ *
+ * **Only ever rendered inside an opened person panel.** That placement is the
+ * second half of decision 3 and is not a styling choice: reaching it costs a
+ * deliberate tap on the name first, which is what keeps the app's
+ * highest-consequence claim out of thumb range of the nine ordinary taps
+ * beside it.
+ *
+ * At rest it is a plain bordered control at every checkpoint — **no danger ink
+ * until a human has recorded something** (decision 4: an alarm is earned by a
+ * recorded fact, never by the absence of one). It used to render in danger tone
+ * the moment the checkpoint was after a dive, which meant the ordinary opening
+ * of every surface-interval count was red.
+ *
+ * The recorded states keep the words they had: at the dock a settled "Not
+ * boarded ☑️", after a dive a danger-toned "Not back aboard" that never carries
+ * a done-check — the worst string this surface ever produced was a green-checked
+ * "Not boarded ✓" beside a diver who had not come back from dive one (DOM-H3).
+ */
+/**
+ * "Mark back aboard" — the affirmative for a person a human has recorded **not
+ * back aboard**, and the only place it can be made.
+ *
+ * It lives in the panel rather than on the row for the reason
+ * ADR 20260815-offline-can-unsay-a-missing-diver spells out: this is the tap
+ * that turns the loudest row the product has into green, and it must not sit
+ * under a thumb running down a list of names on a rolling deck. Its cost is
+ * deliberately the same as the retraction rendered beside it — neither
+ * direction is the easy one.
+ */
+export function RollCallBackAboardControl({
+  kind,
+  subjectId,
+  checkpoint,
+  subjectName,
+  action,
+  copy,
+  t,
+}: {
+  kind: "diver" | "crew";
+  subjectId: string;
+  checkpoint: RollCallCheckpoint;
+  /** Named on the control, never a generic "Confirm" — see the ADR above. */
+  subjectName: string;
+  action: RollCallAction;
+  copy: RollCallButtonCopy;
+  t: StaffTranslator;
+}) {
+  const isCrew = kind === "crew";
+  return (
+    <div className="mt-3 print:hidden">
+      <RollCallButton
+        key={isCrew ? `crew-back-aboard-${checkpoint}` : `back-aboard-${checkpoint}`}
+        action={action}
+        subject={
+          isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
+        }
+        status="boarded"
+        label={isCrew ? t("manifest.crewMarkBackAboard") : t("manifest.markBackAboard")}
+        // The person by name, for a reader who arrives at this control from the
+        // count panel's chips rather than by reading down the list.
+        ariaLabel={`${isCrew ? t("manifest.crewMarkBackAboard") : t("manifest.markBackAboard")} — ${subjectName}`}
+        pendingLabel={t("manifest.boarding")}
+        className={`${BOAT_TARGET_CLASS} border border-success bg-success/15 text-success-strong`}
+        copy={copy}
+        observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
+      />
+    </div>
+  );
+}
+
+export function RollCallExceptionControl({
+  kind,
+  subjectId,
+  checkpoint,
+  isDeparture,
+  rollCall,
+  action,
+  copy,
+  noteDraftFor,
+  t,
+}: {
+  kind: "diver" | "crew";
+  subjectId: string;
+  checkpoint: RollCallCheckpoint;
+  isDeparture: boolean;
+  rollCall: RollCallRecord | undefined;
+  action: RollCallAction;
+  copy: RollCallButtonCopy;
+  noteDraftFor?: { bookingId: string; checkpoint: string };
+  t: StaffTranslator;
+}) {
+  const { recordedNotBoarded, notBackAboard, recordedHere } = rollCallRowState(
     checkpoint,
     rollCall,
   );
   const isCrew = kind === "crew";
-  // On a phone the pair stacks full-width, affirmative on top — the biggest
-  // possible wet-hands targets, in the order of the acts. From `md` the pair
-  // sits on one line beside the name, the affirmative at the row's end where
-  // every settled row's state lands (`md:order-*` swaps them visually; the
-  // affirmative stays first in the DOM so keyboard and reader order lead with
-  // the act the row is for). Deliberately not one line on the phone: the es-ES
-  // labels are wider than half a 390px row, so a shared line either wraps a
-  // label mid-word or squeezes the board button below its own text. The
-  // refusal/undo lines carry `basis-full order-3` and drop below the pair.
   return (
-    <div className="flex w-full shrink-0 flex-wrap items-stretch gap-2 print:hidden md:w-auto md:justify-end">
-      {showBoardControl ? (
-        <RollCallButton
-          // Forces a remount — and a fresh `useActionState` `result` — on
-          // every checkpoint switch (see the component's own doc comment);
-          // this route/key is otherwise identical across checkpoints, so
-          // without it a refusal from one checkpoint can survive into
-          // another and misattribute.
-          key={isCrew ? `crew-aboard-${checkpoint}` : `board-${checkpoint}`}
-          action={action}
-          subject={
-            isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
-          }
-          status={boarded ? "cleared" : "boarded"}
-          label={
-            isCrew
-              ? boarded
-                ? t("manifest.crewAboardCheck")
-                : t("manifest.crewMarkAboard")
-              : boarded
-                ? t("manifest.boardedCheck")
-                : t("manifest.markBoarded")
-          }
-          // Once boarded, the visible ☑️ and the row's own green fill are the
-          // re-tap affordance for a sighted user — neither reaches a screen
-          // reader, so the accessible name says the same thing in words
-          // (CodeRabbit review, PR #607). Unset while unrecorded: "Mark
-          // boarded"/"Mark aboard" already read as an action, not a state.
-          ariaLabel={
-            boarded
-              ? isCrew
-                ? t("manifest.crewAboardCheckAriaLabel")
-                : t("manifest.boardedCheckAriaLabel")
-              : undefined
-          }
-          pendingLabel={
-            isCrew ? t("manifest.saving") : boarded ? t("manifest.undoing") : t("manifest.boarding")
-          }
-          // Unrecorded wears the primary *border*, not the primary fill: the
-          // fill spent the page's one primary weight ten times over, and the
-          // real celebration is the row turning green when the tap lands.
-          className={`${BOAT_TARGET_CLASS} ${
-            boarded
-              ? "border border-success bg-success/15 text-success"
-              : "border border-primary bg-surface text-primary hover:bg-primary-tint"
-          }`}
-          formClassName={AFFIRMATIVE_FORM_CLASS}
-          noteDraftFor={noteDraftFor}
-          copy={copy}
-          observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
-        />
-      ) : null}
-      {/* The exception control. Most people board, so while nothing has been
-          recorded and the board button is on offer, this drops the border and
-          fill — the exception at less than equal weight (design principle 8),
-          still a full dock-test target. Foreground ink, not muted: marking a
-          no-show is a routine dock act on the surface with the harshest
-          viewing conditions, so it demotes by losing its box, never its
-          legibility (dive-domain review 20260810). It takes the bordered
-          treatment back the moment it matters: when it is the only control on
-          the row (a blocked diver at departure), or when it carries the
-          recorded state (the settled "Not boarded ☑️", the danger-tinted
-          "Not back aboard"). After a dive the unrecorded label keeps danger
-          ink — it is the control that reports a person missing, and it must
-          be findable at the rail without reading every word. */}
+    <div className="mt-3 print:hidden">
       <RollCallButton
-        // Same remount-on-checkpoint reasoning as the board button above.
+        // Same remount-on-checkpoint reasoning as the mark button above.
         key={isCrew ? `crew-not-aboard-${checkpoint}` : `not-boarded-${checkpoint}`}
         action={action}
         subject={
           isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
         }
         status={recordedNotBoarded ? "cleared" : "not_boarded"}
-        // The worst string in the change was a green-checked "Not
-        // boarded ✓" beside a diver who had not come back from dive
-        // one. After a dive this control is "not back aboard" and
-        // its recorded state never carries a done-check (DOM-H3).
         label={
           recordedNotBoarded
             ? isDeparture
@@ -306,9 +384,9 @@ export function RollCallControls({
         }
         // Only the departure ☑️ states get a words-say-it-too accessible name.
         // "Not back aboard" is principle 7's one *visible* exception — it
-        // already carries its own on-screen undo sentence just below the
-        // pair, which a screen reader reaches in the same forward read, so
-        // duplicating it into the accessible name would say it twice.
+        // already carries its own on-screen undo sentence just below, which a
+        // screen reader reaches in the same forward read, so duplicating it
+        // into the accessible name would say it twice.
         ariaLabel={
           recordedNotBoarded && isDeparture
             ? isCrew
@@ -318,41 +396,24 @@ export function RollCallControls({
         }
         pendingLabel={t("manifest.saving")}
         noteDraftFor={noteDraftFor}
-        className={
+        className={`${BOAT_TARGET_CLASS} ${
           notBackAboard
-            ? `${showBoardControl ? BOAT_TARGET_COMPACT_CLASS : BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
+            ? "border border-danger bg-danger/15 text-danger"
             : recordedNotBoarded
-              ? `${showBoardControl ? BOAT_TARGET_COMPACT_CLASS : BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
-              : showBoardControl
-                ? isDeparture
-                  ? `${BOAT_TARGET_COMPACT_CLASS} hover:bg-surface-sunken`
-                  : `${BOAT_TARGET_COMPACT_CLASS} text-danger hover:bg-danger-tint`
-                : `${BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
-        }
-        formClassName={showBoardControl ? EXCEPTION_FORM_CLASS_PAIRED : EXCEPTION_FORM_CLASS_ALONE}
+              ? "border border-border-strong bg-surface-sunken"
+              : "border border-border-strong bg-surface hover:bg-surface-sunken"
+        }`}
         copy={copy}
         observabilityAction={isCrew ? "roll-call-crew" : "roll-call-diver"}
       />
       {/* One row state still says how to take it back, and only one.
-          Everywhere else the settled control speaks for itself: a button
-          reading "Boarded ☑️" that you just tapped into that state is its own
-          affordance, and the sentence under it was a line of chrome per
-          settled row teaching a grammar the deck already has.
-          "Not back aboard" is the exception, and stays. It carries no
-          done-check — nothing about it reads as a toggle — and it is the
-          highest-consequence state on the page to leave wrong: a crew member
-          who spots that row 4 is wrong after rattling through nine names must
-          not read a danger-toned button as a claim they cannot undo. Several
-          at once is an emergency, not repetitive chrome (dive-domain review
-          20260811).
-          Crew rows get it on the same terms — re-tap is the app's one undo
-          model for a high-frequency toggle (design/principles.md §7), and
-          hiding it for crew taught the deck that a mis-tap on a divemaster
-          was permanent. */}
+          Everywhere else the settled control speaks for itself. "Not back
+          aboard" is the exception: it carries no done-check — nothing about it
+          reads as a toggle — and it is the highest-consequence state on the
+          page to leave wrong. Crew rows get it on the same terms; hiding it for
+          crew taught the deck that a mis-tap on a divemaster was permanent. */}
       {recordedHere && notBackAboard ? (
-        <p className="order-3 basis-full text-sm text-muted md:text-right">
-          {t("manifest.tapToUndoNotBackAboard")}
-        </p>
+        <p className="mt-2 text-sm text-muted">{t("manifest.tapToUndoNotBackAboard")}</p>
       ) : null}
     </div>
   );

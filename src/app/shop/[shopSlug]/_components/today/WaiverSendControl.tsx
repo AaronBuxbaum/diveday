@@ -252,6 +252,25 @@ export function WaiverSendControl({
     sendWaiversAction.bind(null, shopSlug, surface, tripId),
     IDLE_WAIVER_SEND_STATE,
   );
+  // **The tap answered "there is nothing to send", so the button goes.**
+  //
+  // A row saying a diver's waiver link could not be delivered after five
+  // attempts, whose fix button reports that they already have a signed waiver,
+  // is offering work that cannot exist: `issueWaiverRequest` refuses this
+  // person outright (`already_completed`), so every further tap returns the
+  // same sentence. The queue row itself is stale until the page is re-read —
+  // that is the nature of a list rendered before the tap — but a control that
+  // has just been told its own errand is finished must not keep inviting it.
+  //
+  // Only when there is nothing else to act on: a send that partly landed, a
+  // link to hand over, or an outright failure all leave a real reason to tap
+  // again, and those keep the button.
+  const nothingLeftToSend =
+    state.status === "done" &&
+    state.alreadyDone.length > 0 &&
+    state.sent.length === 0 &&
+    state.links.length === 0 &&
+    state.errors.length === 0;
   const buttonClassName =
     className ?? buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" });
   const labelContent = (
@@ -270,29 +289,31 @@ export function WaiverSendControl({
 
   return (
     <div className={wrapperClassName ?? "sm:text-right"}>
-      <form action={formAction} className="flex sm:inline-flex">
-        {bookingIds.map((id) => (
-          <input key={id} type="hidden" name="bookingId" value={id} />
-        ))}
-        {personId ? <input type="hidden" name="personId" value={personId} /> : null}
-        {/* Resending is a send, not a reversible edit (principle 7,
-            docs/design/principles.md) — a resend to someone who already got
-            one guards with a real confirm, not an undo. */}
-        {confirmMessage ? (
-          <InlineConfirm
-            triggerLabel={labelContent}
-            triggerClassName={buttonClassName}
-            message={confirmMessage}
-            confirmLabel={copy.confirmResend}
-            cancelLabel={copy.neverMind}
-            pendingLabel={pendingLabel ?? copy.sending}
-          />
-        ) : (
-          <SubmitButton pendingLabel={pendingLabel ?? copy.sending} className={buttonClassName}>
-            {labelContent}
-          </SubmitButton>
-        )}
-      </form>
+      {nothingLeftToSend ? null : (
+        <form action={formAction} className="flex sm:inline-flex">
+          {bookingIds.map((id) => (
+            <input key={id} type="hidden" name="bookingId" value={id} />
+          ))}
+          {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+          {/* Resending is a send, not a reversible edit (principle 7,
+              docs/design/principles.md) — a resend to someone who already got
+              one guards with a real confirm, not an undo. */}
+          {confirmMessage ? (
+            <InlineConfirm
+              triggerLabel={labelContent}
+              triggerClassName={buttonClassName}
+              message={confirmMessage}
+              confirmLabel={copy.confirmResend}
+              cancelLabel={copy.neverMind}
+              pendingLabel={pendingLabel ?? copy.sending}
+            />
+          ) : (
+            <SubmitButton pendingLabel={pendingLabel ?? copy.sending} className={buttonClassName}>
+              {labelContent}
+            </SubmitButton>
+          )}
+        </form>
+      )}
       <ResultNotice state={state} copy={copy} />
     </div>
   );

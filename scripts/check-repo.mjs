@@ -42,6 +42,7 @@ const checks = [
   ["design-canvases", "check-design-canvases.mjs"],
   ["docs", "check-doc-links.mjs"],
   ["agents", "check-agents.mjs"],
+  ["context-budget", "check-context-budget.mjs"],
   ["follow-ups", "check-follow-ups.mjs"],
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
@@ -66,6 +67,7 @@ const checks = [
   ["migration-graph", "check-migration-graph.mjs"],
   ["open-graph", "check-open-graph.mjs"],
   ["critical-text", "check-critical-text.mjs"],
+  ["stack-ci-skip", "check-stack-ci-skip.mjs"],
 ];
 
 function runCheck(label, scriptFile) {

@@ -12,10 +12,13 @@ import {
   addCertificationAction,
   clearNoCertificationAction,
   deleteCertificationAction,
+  markCertifiedAction,
   reviewAction,
 } from "../actions";
 import { CardSightingForm } from "./CardSightingForm";
 import { CardStatusMark } from "./CardStatusMark";
+import { MarkCertifiedControl } from "./MarkCertifiedControl";
+import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
@@ -58,6 +61,8 @@ export async function CertificationCards({
   // staff, and not yet refuted by a card. `listCertificationSummaries` decides
   // the same thing for the send lists; here the list of cards below *is* the
   // refutation, so the third condition is read off it directly.
+  const markCertified = markCertifiedCopy(t);
+  const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   const noCertificationDeclared =
     Boolean(diver.person.noCertificationDeclaredAt) &&
     !diver.person.noCertificationClearedAt &&
@@ -321,23 +326,24 @@ export async function CertificationCards({
                       claimedLevel={card.level}
                       numberError={numberError}
                     />
-                  ) : card.status === "pending" || needsImportConfirm(card) ? (
-                    <form action={reviewAction.bind(null, shopSlug, personId)}>
-                      <input type="hidden" name="certificationId" value={card.id} />
-                      <SubmitButton
-                        pendingLabel={
-                          needsImportConfirm(card)
-                            ? t("divers.certifications.confirming")
-                            : t("divers.certifications.markingCertified")
-                        }
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {needsImportConfirm(card)
-                          ? t("divers.certifications.confirmCard")
-                          : t("divers.certifications.markCertified")}
-                      </SubmitButton>
-                    </form>
-                  ) : null}
+                  ) : (
+                    /* Rendered for a settled card too, where it draws no
+                       button: the toast lives inside it, so it has to outlive
+                       the re-render that takes its own button away. */
+                    <MarkCertifiedControl
+                      action={markCertify}
+                      certificationId={card.id}
+                      cardType="level"
+                      state={
+                        needsImportConfirm(card)
+                          ? "confirm"
+                          : card.status === "pending"
+                            ? "pending"
+                            : "settled"
+                      }
+                      copy={markCertified}
+                    />
+                  )}
                   <form action={deleteCertificationAction.bind(null, shopSlug, personId)}>
                     <input type="hidden" name="certificationId" value={card.id} />
                     {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}

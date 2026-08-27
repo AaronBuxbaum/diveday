@@ -75,23 +75,27 @@ composition. The shipped code governs until that slice ships.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
-**Designed, not yet built** — same ADR and canvas. The design's whole argument is that this surface
-is worked *on a boat*, one-handed and wet, so its content is tiered by when it is needed at the rail.
+**Built** — same ADR and canvas, slice 5a, delivered 2026-08-27
+([shipped.md](../product/shipped.md#the-boat-manifest-becomes-an-instrument-delivered-2026-08-27)).
+The design's whole argument is that this surface is worked *on a boat*, one-handed and wet, so its
+content is tiered by when it is needed at the rail.
 
 - **One idea:** the head count. Names, one big tap each, and how many are still to call.
 - **The question it arrives with:** "who is not aboard yet?" — answered by the count and the
   still-to-call chips above the list, before any scrolling.
 - **Controls that dissolved:** the two-button cluster per row (one circle whose fill *is* the state),
-  the standalone emergency band and the checklist card (both one line now), and the device
-  housekeeping card (a footer line, then a `⋯` menu on the phone).
+  the per-row pair of disclosures (one person panel), the checklist card and the device housekeeping
+  card (one line each). The emergency band is the one piece still standing — it moved below the roll
+  call rather than behind a `⋯`, which is slice 5c's.
 - **Remove first:** nothing on the phone — it is already down to names, taps, and the count. On
   desktop, the audit line per row, if a dockside reader turns out not to want it.
 - **Composition:** an instrument, not a console — a count that leads at 44px, a list that is mostly
   names and circles, and everything rare deliberately one tap away or ashore.
 
-Two rules here are load-bearing and get pinned beside the code when they ship: a destructive
-roll-call claim is never a single tap, and no danger tone renders at a checkpoint where nothing has
-been recorded.
+Two rules here are load-bearing, and both are now pinned beside the code: a destructive roll-call
+claim is never a single tap, and no danger tone renders at a checkpoint where nothing has been
+recorded. `RollCallControls.tsx` defers to the ADR by name and `DiverRollCall.test.tsx` fails on
+either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 

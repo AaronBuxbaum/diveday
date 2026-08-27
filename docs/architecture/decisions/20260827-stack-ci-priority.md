@@ -1,7 +1,16 @@
 # 20260827-stack-ci-priority — A stack's CI runs bottom first, top next, middles last
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260827-stack-ci-skips-the-middle-layers](20260827-stack-ci-skips-the-middle-layers.md)
 - **Date:** 2026-08-27
+
+> **Superseded the same day (2026-08-27).** The diagnosis below stands; the mechanism does not. The
+> `stack-priority` job held a runner idle for up to forty minutes to buy the deferral, which on a
+> five-layer stack is four concurrent slots spent permanently by a mechanism meant to free them. It
+> was also unnecessary: GitHub puts the layer's position in the event payload
+> (`github.event.pull_request.stack`), a job skipped by an `if:` reports as *successful* to branch
+> protection rather than blocking a merge, and this repository has no required status checks at all
+> — so the "a layer whose gate never ran cannot merge" reasoning below is false in both halves. A
+> middle layer now simply skips.
 
 ## Context
 

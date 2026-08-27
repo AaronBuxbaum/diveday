@@ -18,7 +18,8 @@
     "total": "{count, plural, one {# entrada} other {# entradas}}"
   },
   "upcoming": {
-    "heading": "Próximas salidas"
+    "heading": "Próximas salidas",
+    "empty": "No hay próximas salidas — reserva una arriba."
   },
   "shared": {
     "agencies": {
@@ -198,7 +199,6 @@
     "showOlderPayments": "{count, plural, one {Mostrar # pago anterior} other {Mostrar # pagos anteriores}}"
   },
   "remove": {
-    "heading": "Eliminar",
     "removePersonSummary": "Eliminar a {name}",
     "removing": "Eliminando…",
     "removeDiver": "Eliminar buceador"
@@ -288,12 +288,11 @@
   },
   "specialty": {
     "heading": "Certificaciones de especialidad",
-    "description": "Se necesita certificación de nitrox verificada antes de un llenado de EANx.",
     "addSpecialty": "Añadir especialidad",
     "specialtyLabel": "Especialidad",
     "nitroxOption": "Nitrox",
     "captureForReview": "Capturar especialidad para revisión",
-    "emptyState": "Aún no hay certificaciones de especialidad o nitrox — añade una arriba cuando la obtengan.",
+    "emptyState": "Aún no hay certificaciones de especialidad — añade una arriba cuando la obtengan.",
     "nitroxAgencyLine": "{agency} · Nitrox",
     "nitroxLine": "Nitrox"
   },
@@ -331,7 +330,9 @@
     "bookings": "Reservas"
   },
   "notices": {
-    "verified": "Certificación marcada como verificada. Ahora cuenta para la disposición.",
+    "cardCertifiedToast": "Marcada como certificada.",
+    "cardConfirmedToast": "Certificación confirmada.",
+    "cardUndoFailed": "No se pudo deshacer — esta certificación ha cambiado desde entonces.",
     "cardDeleted": "Certificación eliminada.",
     "cardRestored": "Certificación restaurada. Vuelve a contar para la disposición.",
     "cardRestoreConflict": "No se pudo restaurar esa certificación — otro registro ahora usa su número. Vuelve a añadirla si aún la necesitas.",
@@ -396,7 +397,7 @@
   },
   "export": {
     "downloadButton": {
-      "idle": "Descargar el registro de este buceador",
+      "idle": "Descargar registro",
       "acknowledged": "En camino — revisa tus descargas"
     }
   }

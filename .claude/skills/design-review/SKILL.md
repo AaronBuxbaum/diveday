@@ -21,8 +21,17 @@ or an action the screen could have carried.
 2. Capture every changed route. The visual spec asserts nothing — it writes PNGs — so a filtered
    run of it is the fastest way to get review images:
    ```bash
-   pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'about page'
+   pnpm e2e:build
    ```
+
+   ```bash
+   pnpm e2e:run e2e/visual.spec.ts -g 'about page' --reporter=line
+   ```
+
+   Build **once** and re-run the second command as often as you iterate: `e2e:run` checks the
+   build is still current (`scripts/check-e2e-build.mjs`) rather than producing another one, which
+   is the difference between a design loop measured in seconds and one measured in minutes.
+
    Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored) — every capture is written at
    both the phone and desktop widths in `VIEWPORTS`. A surface with no capture group can't be
    reviewed this way until you add one (see `e2e-and-visual`); for a first look at such a surface,

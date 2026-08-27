@@ -68,7 +68,10 @@
     "label": "Cumpleaños",
     "today": "hoy",
     "soon": "en {days, plural, one {# día} other {# días}}",
-    "recent": "hace {days, plural, one {# día} other {# días}}"
+    "recent": "hace {days, plural, one {# día} other {# días}}",
+    "calloutToday": "Cumpleaños hoy",
+    "calloutSoon": "Cumpleaños en {days, plural, one {# día} other {# días}}",
+    "calloutRecent": "Cumpleaños hace {days, plural, one {# día} other {# días}}"
   },
   "printButton": {
     "label": "Imprimir / guardar PDF",
@@ -708,5 +711,18 @@
     "oneToFiveYears": "hace entre uno y cinco años",
     "overFiveYears": "hace más de cinco años",
     "never": "nunca"
+  },
+  "supportNeeds": {
+    "label": "Apoyo en la inmersión",
+    "supportDiversFromShop": "{count, plural, one {# buceador de apoyo en el agua — lo organiza el centro} other {# buceadores de apoyo en el agua — los organiza el centro}}",
+    "supportDiversOwn": "{count, plural, one {# buceador de apoyo en el agua — lo trae el buceador} other {# buceadores de apoyo en el agua — los trae el buceador}}",
+    "boardingAssistance": "Ayuda para subir a bordo",
+    "waterLift": "Grúa para entrar y salir del agua",
+    "briefingSign": "Briefing en lengua de signos",
+    "briefingWritten": "Briefing por escrito",
+    "briefingAloud": "Briefing descrito en voz alta",
+    "briefingSignals": "Señales acordadas",
+    "equipment": "Equipo: {note}",
+    "divesWith": "Bucea con {name}"
   }
 }

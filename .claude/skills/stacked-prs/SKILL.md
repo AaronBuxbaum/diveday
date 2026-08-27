@@ -171,26 +171,28 @@ commit, then the `POST .../stacks` above.
 
 ## What our pipeline does with it
 
-- **CI runs in full on every layer, but not all at once: the bottom goes first, the top next, the
-  middles last.** `.github/workflows/ci.yml` triggers on a bare `pull_request:` with no branch
-  filter, so a base of `claude/<slug>-1-schema` still gets the identical gate — what changed on
-  2026-08-27 is the *order*. A `stack-priority` job reads this layer's place in the stack and, for a
-  middle layer, holds its lint, typecheck, unit and Playwright jobs until the bottom and the top
-  have finished theirs (ADR
-  [20260827-stack-ci-priority](../../../docs/architecture/decisions/20260827-stack-ci-priority.md)).
-  Three things follow, and only the first is something to do:
+- **Only the bottom and the top layer run the expensive gate; the middles skip it.**
+  `.github/workflows/ci.yml` triggers on a bare `pull_request:` with no branch filter, so a base of
+  `claude/<slug>-1-schema` gets the identical gate offered to it — but a middle layer skips
+  `check:repo`, lint, typecheck, the unit shards and the Playwright shards, on a condition read
+  straight out of `github.event.pull_request.stack` (ADR
+  [20260827-stack-ci-skips-the-middle-layers](../../../docs/architecture/decisions/20260827-stack-ci-skips-the-middle-layers.md),
+  superseding 20260827-stack-ci-priority's runner-holding yield). Three things follow, and only the
+  first is something to do:
 
-  1. **A middle layer's checks can sit "Expected" for a while.** That is the gate working, not a
-     stuck run — the job log says which layers it is waiting for. It is capped at 40 minutes, after
-     which the layer runs regardless, and it is a *yield*: every layer still runs its full gate,
-     because branch protection evaluates checks per pull request and a layer that never ran cannot
-     merge.
-  2. **The visual path never yields.** `build`, `visual` and `visual-report` run at once on every
-     layer, because the layer above is keyed to this one's snapshot — deferring them would deadlock
-     the top against the middle beneath it. So everything under *Rebase a layer before you read its
-     visual report* below is unchanged.
-  3. **Nothing about it can redden or remove a check.** A 404 from the stacks preview, a fork's
-     read-only token, its own deadline: the gate opens and CI behaves as it did before.
+  1. **A middle layer's checks read "Skipped", and GitHub counts a skip as success.** So a green
+     middle layer means *nothing ran*, never *nothing is wrong* — read the bottom's and the top's
+     runs instead. Every layer does get its own full gate eventually, at the moment it becomes the
+     bottom: the cascading rebase force-pushes it, which fires `synchronize`. That only happens if
+     you **merge a layer at a time**; one atomic `gh stack merge` from the top lands the middles
+     ungated.
+  2. **The visual path never skips.** `build`, `visual` and `visual-report` run on every layer,
+     because the layer above is keyed to this one's published snapshot — skipping them would leave
+     the top with no baseline, reporting every surface as new. So everything under *Rebase a layer
+     before you read its visual report* below is unchanged.
+  3. **A fork's pull request always runs in full.** `stack` is populated only for a pull request
+     somebody with write access registered in a stack, so an unregistered one reads `null` — which
+     is the *run* branch. Every shape the condition does not recognise fails open into the gate.
 - **`pnpm test:changed` and the destructive-migration guard** anchor on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —

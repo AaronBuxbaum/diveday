@@ -536,7 +536,10 @@
     "pickupTimeColumn": "Hora de recogida",
     "pickupHotelColumn": "Hotel / Alojamiento",
     "pickupDiverColumn": "Buceador",
-    "pickupTimeUnset": "Sin programar"
+    "pickupTimeUnset": "Sin programar",
+    "supportHeading": "Apoyo en la inmersión",
+    "supportToArrange": "{count, plural, one {# buceador de apoyo por organizar} other {# buceadores de apoyo por organizar}}",
+    "supportOnTheManifest": "Toda persona que entre al agua va en la lista de embarque, la organice quien la organice."
   },
   "guests": {
     "cancelledBadge": "Cancelada",
@@ -571,6 +574,7 @@
     "checkedBy": "Comprobado por {name} · {date}",
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — No comprobado",
-    "errorRefusal": "Eso no se guardó — inténtalo de nuevo."
+    "errorRefusal": "Eso no se guardó — inténtalo de nuevo.",
+    "summary": "Antes de salir del muelle — {checked} de {total, plural, one {# comprobado} other {# comprobados}}"
   }
 }

@@ -18,6 +18,7 @@ import {
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
   REQUIRABLE_CERTIFICATION_LEVELS,
+  unreviewedCardState,
 } from "./readiness";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
@@ -893,5 +894,51 @@ describe("groupAboardBlockers", () => {
   it("drops a diver with nothing against them rather than inventing a group", () => {
     expect(groupAboardBlockers([diver("Clear")])).toEqual([]);
     expect(groupAboardBlockers([])).toEqual([]);
+  });
+});
+
+/**
+ * The inverse of the one-tap "Mark certified", behind the undo toast that
+ * replaced the "Certification marked verified" banner. Two of its three answers
+ * are refusals, and the interesting one is the third.
+ */
+describe("unreviewedCardState", () => {
+  it("returns a staff-captured card to pending and drops the review stamp", () => {
+    expect(unreviewedCardState({ status: "verified", reviewedAt: now })).toEqual({
+      ok: true,
+      status: "pending",
+    });
+  });
+
+  it("leaves an imported card verified, because the tap only confirmed it", () => {
+    // An imported card is valid on arrival (ADR 20260724-import-verified-cards)
+    // and the confirm is a nudge, not the thing that cleared it — so undoing
+    // the confirm must not take away a certification the import established.
+    expect(unreviewedCardState({ status: "verified", reviewedAt: now, importedAt: now })).toEqual({
+      ok: true,
+      status: "verified",
+    });
+  });
+
+  it("refuses a card whose review was a sighting", () => {
+    // Certifying a self-declaration or a shop-issued specialty rewrites the row
+    // from the card in the staffer's hand — agency, number, and for a level
+    // card the rung. Those values are gone, so a status-only revert would leave
+    // a pending row wearing a sighted number with none of the marks saying a
+    // diver typed it: the laundering `selfDeclaredAt` exists to prevent. Those
+    // are taken back by deleting the card instead.
+    expect(
+      unreviewedCardState({ status: "verified", reviewedAt: now, selfDeclaredAt: now }),
+    ).toEqual({ ok: false, reason: "sighted_card" });
+    expect(
+      unreviewedCardState({ status: "verified", reviewedAt: now, issuedByShopAt: now }),
+    ).toEqual({ ok: false, reason: "sighted_card" });
+  });
+
+  it("refuses a card nobody has reviewed, so a replayed undo cannot un-verify one", () => {
+    expect(unreviewedCardState({ status: "pending", reviewedAt: null })).toEqual({
+      ok: false,
+      reason: "not_reviewed",
+    });
   });
 });

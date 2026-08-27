@@ -84,7 +84,7 @@
   "addNoteSummary": "Añadir una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",
   "rollCallRecordedByWithNote": "{label} {date} por {name} · {note}",
-  "carriedForwardFromDock": "Arrastrado — este buceador nunca salió del muelle. Márcalo como embarcado para volver a incluirlo.",
+  "carriedForwardFromDock": "En tierra desde el muelle",
   "buddyHeading": "Equipos de buceo",
   "buddyTeamLabel": "Equipo {number, number, ::00}",
   "buddyCancelledName": "{name} (plaza cancelada)",
@@ -120,7 +120,6 @@
   "markNotBoarded": "Marcar no embarcado",
   "notBackAboardActive": "Sin regresar a bordo",
   "markNotBackAboard": "Marcar sin regresar a bordo",
-  "notBackAboardDescription": "Después de una inmersión, “sin regresar a bordo” significa que el buceador no ha vuelto al barco. Mantiene el recuento abierto.",
   "saving": "Guardando…",
   "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer.",
   "diverFactsSummary": "Contacto y equipo",
@@ -130,5 +129,11 @@
   "noDiversLine": "No hay buceadores reservados en esta salida.",
   "diverFactsSummaryWithMedical": "Contacto, equipo y ficha médica",
   "sharedDepthApplies": "Se aplica a {names}.",
-  "depthChip": "Aviso de profundidad"
+  "depthChip": "Aviso de profundidad",
+  "personDetails": "Detalles",
+  "rollCallRecordedShort": "{label} · {time} · {name}",
+  "rollCallRecordedShortWithNote": "{label} · {time} · {name} · {note}",
+  "markBackAboard": "Marcar de vuelta a bordo",
+  "crewMarkBackAboard": "Marcar de vuelta a bordo",
+  "supportNeedsLabel": "Apoyo en la inmersión"
 }

@@ -40,7 +40,14 @@
       "Bash(rg:*)",
       "Bash(find:*)",
       "mcp__github",
-      "Bash(node scripts/unfinished-promises.mjs:*)"
+      "Bash(node scripts/unfinished-promises.mjs:*)",
+      "Bash(node scripts/check-context-budget.mjs:*)",
+      "Bash(node scripts/agent-health.mjs:*)",
+      "Bash(node scripts/check-all.mjs:*)",
+      "Bash(pnpm agent:health)",
+      "Bash(pnpm exec vitest run *)",
+      "Bash(pnpm exec biome check *)",
+      "Bash(pnpm exec tsc *)"
     ]
   },
   "hooks": {
@@ -74,6 +81,30 @@
           {
             "type": "command",
             "command": "DIVEDAY_STRAY_PROCESS_MINUTES=0 node \"$CLAUDE_PROJECT_DIR/scripts/stray-processes.mjs\" --kill"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/guard-bash.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/format-touched.mjs\"",
+            "timeout": 45
           }
         ]
       }

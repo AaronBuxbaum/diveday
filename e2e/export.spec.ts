@@ -117,7 +117,7 @@ test.describe("one diver's own record export", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("link", { name: "Download this diver's record" }).click();
+    await page.getByRole("link", { name: "Download record" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(
       /^diveday-diver-export-blue-mantis-[0-9a-f]{8}-\d{4}-\d{2}-\d{2}\.zip$/,

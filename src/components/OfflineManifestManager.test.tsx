@@ -38,6 +38,7 @@ const copy: OfflineManifestManagerCopy = {
   savedSummary: "Saved {date} · {pending} waiting to send · {rejected} need a look",
   refreshingLabel: "Refreshing…",
   refreshNowLabel: "Refresh now",
+  groupHeading: "On this phone",
   openOfflineRollCall: "Open offline roll call",
 };
 

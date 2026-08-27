@@ -10,6 +10,10 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   daysFromNow,
+  manifestRow,
+  offlineCopySaved,
+  openManifestPerson,
+  openOnThisPhone,
   openRosterNotes,
   openSettingsRow,
   openTripFromBoard,
@@ -185,6 +189,7 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "schedule-builder",
   "prep",
   "departure-log",
+  "departure-log-every-checkpoint",
 ]);
 
 /**
@@ -987,6 +992,29 @@ async function openReefTrip(page: Page) {
 }
 
 /**
+ * The staff departure-log path for the seeded four-dive Deep Diver session —
+ * the only departure in the demo that runs the maximum number of dives, and so
+ * the only one whose roll-call tables reach eight columns.
+ *
+ * Reached through the course's own public page rather than the schedule board,
+ * which is a keyset-paged stream: that session sails twenty days out, behind an
+ * unknown number of pages of departures that other seed scenarios are free to
+ * add to. The course page lists every upcoming session of one course and links
+ * each to its trip, so this resolves in one navigation and stays resolved when
+ * the board's contents change.
+ */
+async function deepDiverLogPath(page: Page): Promise<string> {
+  await page.goto("/s/blue-mantis/courses/deep-diver");
+  const href = await page.locator('#dates a[href*="/trips/"]').first().getAttribute("href");
+  const tripId = href?.split("/trips/")[1];
+  // Not a soft assertion: a null here would otherwise navigate to
+  // `/shop/blue-mantis/trips/undefined/log`, which `uuidParam` answers with a
+  // 404 — and a capture of a 404 is a baseline nobody reads twice.
+  expect(tripId, "the Deep Diver course page lists its seeded session").toBeTruthy();
+  return `/shop/blue-mantis/trips/${tripId}/log`;
+}
+
+/**
  * Wait until this page is *controlled* by the offline service worker, before
  * navigating into a shell surface that photographs it.
  *
@@ -1286,7 +1314,7 @@ const IDENTITY_ROUTE = "**/api/offline-manifests/identity*";
 async function savedOfflineRecordFor(page: Page): Promise<string> {
   await openReefTrip(page);
   await openTripTab(page, "Manifest");
-  await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+  await offlineCopySaved(page);
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error(`could not read a trip id from ${page.url()}`);
   await page.route(IDENTITY_ROUTE, (route) => route.abort());
@@ -3010,16 +3038,14 @@ for (const scheme of ["light", "dark"] as const) {
         // The offline safety copy now saves itself in the background on
         // mount; wait for that to settle (the offline-roll-call link only
         // renders once saved) so the capture isn't racing that async write.
-        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
-        // The Web Push opt-in (ADR 20260804-manifest-web-push) sits in the same
-        // card and decides what to render *after* mount — it reads
-        // navigator/window for platform support, so the server render is empty.
-        // Waiting for it keeps the capture from racing that resolution and
-        // banking a baseline with the section half-present.
-        await page.getByRole("heading", { name: "Wake this phone" }).waitFor();
-        // Boat Mode is manifest-only and lives at the foot of the page, so wait
-        // for its client control before capturing the new manifest composition.
-        await page.getByRole("group", { name: "Boat mode" }).waitFor();
+        await offlineCopySaved(page);
+        // The push opt-in and the boat-mode control both decide what to render
+        // *after* mount, and both now live inside the collapsed "On this phone"
+        // group (ADR 20260827-the-departure-is-two-working-surfaces, decision
+        // 2) — so neither can change this capture's picture, and waiting on
+        // them would only be waiting. The freshness pill above is the one piece
+        // of that group's state on the summary line, and it is what this shot
+        // must not race.
         await capture(page, "manifest", scheme);
       });
 
@@ -3035,6 +3061,22 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`${tripPath}/log`);
         await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
         await capture(page, "departure-log", scheme);
+      });
+
+      // The same document at its widest. The roster and crew tables are three
+      // columns plus one per roll-call checkpoint, and a checkpoint is a dive,
+      // so the reef trip's two dives photograph six columns and nothing in this
+      // suite had ever looked at more. Four dives is the ceiling the schedule
+      // form and the `trips_planned_dives_range` check constraint both enforce,
+      // and it is eight columns — the case issue #1052 widened the floor for.
+      // Captured at the portrait tablet as well (`TABLET_SURFACES`), because
+      // that width is where issue #1035 found the crush this inherits.
+      test(`a departure log at every checkpoint renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto(await deepDiverLogPath(page));
+        await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+        await capture(page, "departure-log-every-checkpoint", scheme);
       });
 
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
@@ -3097,7 +3139,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
-        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await offlineCopySaved(page);
         await settleOfflineShellWorker(page);
         await page.goto("/offline-manifest");
         await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
@@ -3149,6 +3191,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
         await settleOfflineShellWorker(page);
+        await openOnThisPhone(page);
         await page.getByRole("link", { name: "Open offline roll call" }).click();
         await page.waitForURL(/offline-manifest/);
         // The roster is what proves the record was read back and decrypted —
@@ -3897,72 +3940,114 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Manifest");
         // Same background-save settle the departure capture waits on, so this
         // isn't racing that async write either.
-        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await offlineCopySaved(page);
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
         // Scoped to the diver list: the crew section above it carries controls
         // with the same words, for a crew member rather than a diver.
-        const markNotBack = page
-          .locator("#roll-call-list")
-          .getByRole("button", { name: "Mark not back aboard" })
-          .first();
+        // Two deliberate steps, the way a crew records it (ADR
+        // 20260827-the-departure-is-two-working-surfaces, decision 3): the
+        // claim lives in the person's own panel, never on the row.
+        const missingRow = page.locator("#roll-call-list > ul > li").first();
+        await openManifestPerson(missingRow);
+        const markNotBack = missingRow.getByRole("button", { name: "Mark not back aboard" });
         await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await markNotBack.click();
         await expect(
-          page
-            .locator("#roll-call-list")
-            .getByRole("button", { name: "Not back aboard", exact: true })
-            .first(),
+          missingRow.getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
+        // Closed again for the shot: the alarm this capture is about is what
+        // the *list* shows — the pinned danger line and the one red row — and a
+        // panel left open would photograph a person's contact card instead.
+        await missingRow.locator("summary").first().click();
+        await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
       });
 
       /**
-       * A diver row with both of its disclosures open — "Contact & gear" and
-       * "Add a note". The `manifest` capture above photographs nine rows at
-       * rest, which proves nothing about what a tap reveals, and this is where
-       * the row's geometry is: the two summaries share one line and each panel
-       * opens down its own grid column, so an open panel must not move its
-       * neighbour, and neither summary may shift under the finger that opened
-       * it. It is also the only baseline carrying the emergency contact, the
-       * rental list, and the note field's save line.
+      /**
+       * **What one diver arranged, on the surface a crew reads it from.**
+       *
+       * The accessible-dive support-needs record (ADR
+       * 20260827-support-needs-are-a-record-about-the-dive). The `prep` capture
+       * above carries its panel; this is the manifest half, and it needs a
+       * baseline of its own because the marker is inside the person panel —
+       * `manifest` photographs the roster at rest and proves nothing about what
+       * the tap reveals, and `manifest-person-panel` opens whichever row is
+       * first rather than the one with a record on it.
+       *
+       * The tone is what this baseline is actually for. It has to sit in the
+       * same muted voice as the rental fit and the pickup beside it: a fact to
+       * plan around, never a warning. A diver who arranged a lift is a diver
+       * this shop is ready for, and a surface that renders that as an alert is
+       * telling the crew the opposite of what the record exists to say.
+       *
+       * Diego Alvarez by name, because he is the seeded diver who arranged
+       * something (`src/db/seed-support-needs.ts`) and his position on the
+       * roster is not this test's to depend on.
        */
-      test(`a diver row's open disclosures render true to the design (${scheme})`, async ({
+      test(`a diver's dive-support record renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
-        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
-        const row = page.locator("#roll-call-list li").first();
-        // By position, not by label: the facts summary reads "Contact & gear"
-        // or "Contact, gear & medical" depending on what that diver has on
-        // file, and "Contact" also matches the "Emergency contact" heading the
-        // panel reveals (twice — the print-only copy is in the DOM too).
-        const summaries = row.locator("summary");
-        await summaries.nth(0).click();
-        await summaries.nth(1).click();
-        // Both panels painted before the shot: the facts grid renders its
-        // emergency-contact heading, the note panel its input.
-        // Scoped to the disclosure: the print-only copy of the same facts is
-        // in the DOM on every row, carrying the identical heading.
+        await offlineCopySaved(page);
+        const row = page.locator("#roll-call-list > ul > li").filter({ hasText: "Diego Alvarez" });
+        await openManifestPerson(row);
+        await expect(row.getByText("Dive support")).toBeVisible();
+        // The click leaves the pointer on the summary, which would bank a
+        // hover-underlined name into the baseline.
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-dive-support", scheme);
+      });
+
+      /**
+       * **One person's panel, open** — the "one tap away" tier of ADR
+       * 20260827-the-departure-is-two-working-surfaces, decision 2. The
+       * `manifest` capture above photographs ten rows at rest, which proves
+       * nothing about what the tap reveals, and everything the row now tucks
+       * away is in here: the emergency contact as reference text, the rental
+       * line, the buddy team, the note field, and — the reason the panel
+       * exists at all — the deliberate second step that records "not back
+       * aboard" (decision 3).
+       *
+       * It replaced a capture of two side-by-side disclosures ("Contact &
+       * gear" / "Add a note") that the row no longer has.
+       */
+      test(`a diver row's person panel renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        const row = page.locator("#roll-call-list > ul > li").first();
+        await openManifestPerson(row);
+        // Painted before the shot: the facts grid renders its emergency-contact
+        // heading and the note field its input. Scoped to the disclosure — the
+        // print-only copy of the same facts is in the DOM on every row,
+        // carrying the identical heading.
         await expect(row.locator("details").first().getByText("Emergency contact")).toBeVisible();
         await expect(row.getByRole("textbox", { name: "Note" })).toBeVisible();
         // The pointer is left on the summary by the click above, which would
-        // bank a hover-underlined label into the baseline.
+        // bank a hover-underlined name into the baseline.
         await page.mouse.move(0, 0);
-        await capture(page, "manifest-row-disclosures", scheme);
+        await capture(page, "manifest-person-panel", scheme);
       });
 
       /**
        * A split buddy team after a dive (ADR 20260804-buddy-teams): Tom is
-       * recorded back aboard and his seeded teammate Lena has no result yet, so
-       * his row carries the danger chip and the checkpoint panel adds the
-       * "1 buddy team is split" line. The seed carries the teams but no
-       * roll-call events (they would open head-count gaps on Today), so the
-       * divergent state is driven here and the per-test DB reset puts it
-       * back — the same pattern as the missing-diver capture above.
+       * recorded back aboard and a human has recorded his seeded teammate Lena
+       * **not back**, so his row carries the danger capsule and the count panel
+       * adds the "1 buddy team is split" line. Both halves are needed now —
+       * Tom aboard while Lena is merely uncalled is the ordinary mid-count
+       * state and is deliberately calm (ADR
+       * 20260827-the-departure-is-two-working-surfaces, decision 4). The seed
+       * carries the teams but no roll-call events (they would open head-count
+       * gaps on Today), so the divergent state is driven here and the per-test
+       * DB reset puts it back — the same pattern as the missing-diver capture
+       * above.
        */
       test(`the manifest's split buddy team renders true to the design (${scheme})`, async ({
         page,
@@ -3972,23 +4057,33 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
-        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await offlineCopySaved(page);
         await page
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
-        // Anchored on the row's own <h3>: a bare `li hasText "Tom Okafor"`
-        // also matches Lena's row via her "Buddy team: Tom Okafor" chip (see
-        // the same note in e2e/buddy-pairs.spec.ts).
-        const tomRow = page
-          .locator("#roll-call-list li")
-          .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) });
+        // `manifestRow` anchors on the row's own summary — the name column the
+        // person's panel opens from. A bare `hasText` also matches whichever
+        // *other* row carries the name in a printed buddy label, which is what
+        // the old `<h3>` anchor was guarding against before the name became the
+        // row's own summary.
+        const tomRow = manifestRow(page, "Tom Okafor");
+        const lenaRow = manifestRow(page, "Lena Fischer");
         const boardTom = tomRow.getByRole("button", { name: "Mark boarded" });
         await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await boardTom.click();
+        await openManifestPerson(lenaRow);
+        const lenaNotBack = lenaRow.getByRole("button", { name: "Mark not back aboard" });
+        await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await lenaNotBack.click();
         await expect(
-          tomRow.getByText("Buddy team: Lena Fischer · Someone unaccounted for"),
+          lenaRow.getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
+        // Closed again: this capture is about what the list says, not what a
+        // panel holds — that is `manifest-person-panel`'s job.
+        await lenaRow.locator("summary").first().click();
+        await expect(tomRow.getByText("Someone unaccounted for")).toBeVisible();
+        await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);
       });
 

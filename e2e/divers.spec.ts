@@ -4,6 +4,8 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  manifestRow,
+  openManifestPerson,
   openRosterDetails,
   openTripFromBoard,
   openTripTab,
@@ -122,7 +124,10 @@ test("a diver note is shared with the live boat manifest", async ({ page }) => {
 
   await page.getByRole("region", { name: "Upcoming trips" }).getByRole("link").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
-  const row = page.locator("#roll-call-list li").filter({ hasText: "Priya Sharma" });
+  // The desk's note reads in the person's own panel, one tap from the row
+  // (ADR 20260827-the-departure-is-two-working-surfaces, decision 2).
+  const row = manifestRow(page, "Priya Sharma");
+  await openManifestPerson(row);
   await expect(row.getByText("Diver notes", { exact: true })).toBeVisible();
   await expect(row).toContainText(note);
 });
@@ -200,15 +205,14 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.getByRole("button", { name: "Save details" }).click();
   await expect(page.getByRole("status")).toContainText("Diver details updated");
 
-  // Reads on the manifest — behind the row's own "Contact & gear" disclosure
-  // on screen (the print copy always carries it).
+  // Reads on the manifest — behind the row's own person panel on screen (the
+  // print copy always carries it). Reference text, never a `tel:` link: there
+  // are no call buttons anywhere on the boat (decision 3).
   await page.goto(`${tripPath}/manifest`);
-  await page
-    .locator("#roll-call-list li")
-    .filter({ has: page.getByRole("heading", { name: diverName }) })
-    .getByText("Contact & gear")
-    .click();
-  await expect(page.getByText("Casey Diver · +1 305 555 0166")).toBeVisible();
+  const manifestDiverRow = manifestRow(page, diverName);
+  await openManifestPerson(manifestDiverRow);
+  await expect(manifestDiverRow.getByText("Casey Diver ·")).toBeVisible();
+  await expect(manifestDiverRow.locator('a[href^="tel:"]')).toHaveCount(0);
 });
 
 /**

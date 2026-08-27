@@ -10,6 +10,17 @@ export default defineConfig({
     // a `// @vitest-environment jsdom` docblock. Booting jsdom for every pure
     // domain-logic file was measurable dead weight.
     environment: "node",
+    // Passing tests keep their console output to themselves; a failing test still prints
+    // every line it wrote. `src/lib/log.ts` writes a structured JSON line per event on the
+    // money and cron paths, and the suite exercises those paths hard — so a green run used
+    // to interleave hundreds of `{"time":...,"event":"checkout.retired_stale_quote",...}`
+    // lines and their `stdout | file > test name` banners through the dot reporter, which
+    // is output nobody reads and everybody pays for (AGENTS.md, "Context economy":
+    // successful tooling should be quiet). This is a reporter setting, not a mute: Vitest
+    // intercepts `globalThis.console`, so the handful of tests that `vi.spyOn(console, ...)`
+    // still observe every call. Pass `--silent=false` to watch a passing test's logs while
+    // debugging one.
+    silent: "passed-only",
     setupFiles: ["./src/test/setup.ts"],
     // Builds the shared PGlite template snapshot the db tests hydrate from.
     globalSetup: ["./src/test/global-setup.ts"],

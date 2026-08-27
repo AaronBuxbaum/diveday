@@ -1,0 +1,118 @@
+diff --git a/dist/server/index.d.mts b/dist/server/index.d.mts
+index 2ea4a048a8b22b412aa7462f1b8fa1cdd34ac313..27eea093f3a6f344aef35d02a0a90ac4c956271e 100644
+--- a/dist/server/index.d.mts
++++ b/dist/server/index.d.mts
+@@ -26,6 +26,8 @@ type FlagsDataInput = (string | PlainFlags)[] | PlainFlags;
+ type HeadersObject = Record<string, string | string[] | undefined>;
+ type AllowedHeaders = Headers | HeadersObject;
+ interface Options {
++    /** A middleware function to modify the event before it is sent. Should return the event object or `null` to cancel the event. */
++    beforeSend?: BeforeSend;
+     flags?: FlagsDataInput;
+     headers?: AllowedHeaders;
+     request?: {
+@@ -35,3 +37,4 @@ interface Options {
+ declare function track(eventName: string, properties?: Record<string, AllowedPropertyValues>, options?: Options): Promise<void>;
+ 
+ export { track };
++export type { BeforeSend, BeforeSendEvent };
+diff --git a/dist/server/index.d.ts b/dist/server/index.d.ts
+index 2ea4a048a8b22b412aa7462f1b8fa1cdd34ac313..27eea093f3a6f344aef35d02a0a90ac4c956271e 100644
+--- a/dist/server/index.d.ts
++++ b/dist/server/index.d.ts
+@@ -26,6 +26,8 @@ type FlagsDataInput = (string | PlainFlags)[] | PlainFlags;
+ type HeadersObject = Record<string, string | string[] | undefined>;
+ type AllowedHeaders = Headers | HeadersObject;
+ interface Options {
++    /** A middleware function to modify the event before it is sent. Should return the event object or `null` to cancel the event. */
++    beforeSend?: BeforeSend;
+     flags?: FlagsDataInput;
+     headers?: AllowedHeaders;
+     request?: {
+@@ -35,3 +37,4 @@ interface Options {
+ declare function track(eventName: string, properties?: Record<string, AllowedPropertyValues>, options?: Options): Promise<void>;
+ 
+ export { track };
++export type { BeforeSend, BeforeSendEvent };
+diff --git a/dist/server/index.js b/dist/server/index.js
+index 9634b0483ff132a66c14c70bba4ecab863f19e33..17337de693f34bd8d654060be0ac8394aa8558a1 100644
+--- a/dist/server/index.js
++++ b/dist/server/index.js
+@@ -129,8 +129,22 @@ async function track(eventName, properties, options) {
+       tmp = headers;
+     }
+     const url = ENDPOINT.startsWith("http") ? ENDPOINT : new URL("/_vercel/insights/event", `https://${ENDPOINT}`).toString();
++    const hasHeaders = Boolean(headers);
++    if (!hasHeaders) {
++      throw new Error(
++        "No session context found. Pass `request` or `headers` to the `track` function."
++      );
++    }
++    let pageUrl = (requestContext == null ? void 0 : requestContext.url) || tmp.referer || new URL(url).origin;
++    if (options == null ? void 0 : options.beforeSend) {
++      const beforeSendEvent = options.beforeSend({ type: "event", url: pageUrl });
++      if (!beforeSendEvent) {
++        return;
++      }
++      pageUrl = beforeSendEvent.url;
++    }
+     const body = {
+-      o: (requestContext == null ? void 0 : requestContext.url) || tmp.referer || new URL(url).origin,
++      o: pageUrl,
+       ts: Date.now(),
+       sdkn: `${name}/server`,
+       sdkv: version,
+@@ -139,12 +153,6 @@ async function track(eventName, properties, options) {
+       ed: props,
+       f: safeGetFlags(options == null ? void 0 : options.flags, requestContext)
+     };
+-    const hasHeaders = Boolean(headers);
+-    if (!hasHeaders) {
+-      throw new Error(
+-        "No session context found. Pass `request` or `headers` to the `track` function."
+-      );
+-    }
+     const promise = fetch(url, {
+       headers: {
+         "content-type": "application/json",
+diff --git a/dist/server/index.mjs b/dist/server/index.mjs
+index 660a7958716b08e31465749f68b1e7d912141696..e646acc6474d16f9870b7d07a1a6b06388201985 100644
+--- a/dist/server/index.mjs
++++ b/dist/server/index.mjs
+@@ -103,8 +103,22 @@ async function track(eventName, properties, options) {
+       tmp = headers;
+     }
+     const url = ENDPOINT.startsWith("http") ? ENDPOINT : new URL("/_vercel/insights/event", `https://${ENDPOINT}`).toString();
++    const hasHeaders = Boolean(headers);
++    if (!hasHeaders) {
++      throw new Error(
++        "No session context found. Pass `request` or `headers` to the `track` function."
++      );
++    }
++    let pageUrl = (requestContext == null ? void 0 : requestContext.url) || tmp.referer || new URL(url).origin;
++    if (options == null ? void 0 : options.beforeSend) {
++      const beforeSendEvent = options.beforeSend({ type: "event", url: pageUrl });
++      if (!beforeSendEvent) {
++        return;
++      }
++      pageUrl = beforeSendEvent.url;
++    }
+     const body = {
+-      o: (requestContext == null ? void 0 : requestContext.url) || tmp.referer || new URL(url).origin,
++      o: pageUrl,
+       ts: Date.now(),
+       sdkn: `${name}/server`,
+       sdkv: version,
+@@ -113,12 +127,6 @@ async function track(eventName, properties, options) {
+       ed: props,
+       f: safeGetFlags(options == null ? void 0 : options.flags, requestContext)
+     };
+-    const hasHeaders = Boolean(headers);
+-    if (!hasHeaders) {
+-      throw new Error(
+-        "No session context found. Pass `request` or `headers` to the `track` function."
+-      );
+-    }
+     const promise = fetch(url, {
+       headers: {
+         "content-type": "application/json",

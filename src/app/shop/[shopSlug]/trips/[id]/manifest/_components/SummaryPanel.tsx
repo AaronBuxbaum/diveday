@@ -222,7 +222,13 @@ export function SummaryPanel({
                 : rollCallCheckpointText(t, checkpoint)}
             </h2>
           </div>
-          <p className="text-base font-bold tabular-nums">
+          {/* **The count leads the boat screen** (ADR
+              20260827-the-departure-is-two-working-surfaces, decision 2). It is
+              the one number a crew is holding in their head at the rail, so it
+              is the biggest thing on the panel and always tabular — figures
+              that hold their columns as they tick, rather than jumping a pixel
+              left every time a 1 becomes a 2. */}
+          <p className="text-2xl font-bold tabular-nums">
             {t("manifest.recordedOfTotal", {
               recorded: summary.totalDivers - summary.awaiting,
               total: summary.totalDivers,
@@ -370,9 +376,20 @@ export function SummaryPanel({
             `staff-destinations.ts` (the nav's blocked badge) both already say
             danger; this is the third caller falling in behind them. Danger also
             clears AA at this size on a plain surface, which is what
-            `text-warning-strong` was reaching for. */}
+            `text-warning-strong` was reaching for.
+
+            **At the dock only.** After a dive this same sentence says the
+            readiness follow-up happens ashore and never holds the count open —
+            calm information about work for later, at a checkpoint where nothing
+            has been recorded about anybody. Rendering it in danger there put
+            red on the screen with no fact behind it, which is exactly what an
+            alarm has to be earned against (ADR
+            20260827-the-departure-is-two-working-surfaces, decision 4), and it
+            competed with the one red that means somebody is in the water. */}
         {summary.blocked > 0 ? (
-          <p className="mt-1 text-base font-semibold text-danger">
+          <p
+            className={`mt-1 text-base font-semibold ${isDeparture ? "text-danger" : "text-muted"}`}
+          >
             {isDeparture
               ? t("manifest.blockedDeparture", { count: summary.blocked })
               : t("manifest.blockedAfterDive", { count: summary.blocked })}

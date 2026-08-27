@@ -100,7 +100,11 @@ export function WaiverSection({
 
   return (
     <SectionCard
-      className={`mt-8 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
+      // `mt-3`, matching `StatsSummary`'s own `gap-3`: this card reads as the
+      // fourth tile of the row above it, and `mt-8` set it nearly three times
+      // further from those tiles than they sit from each other — a gap that
+      // said "new section" about the one card that is a continuation of it.
+      className={`mt-3 ${statusToneClass(diver.waiver.state, diver.waiverRequest)}`}
       title={t("divers.stats.waiver")}
     >
       <p className="text-lg font-semibold">{state.label}</p>
