@@ -124,7 +124,7 @@ function isIssueReference(source, index, match) {
   // Digits only. A reference is never `#a1b2c3`, and a colour that happens to
   // be all digits is still a colour unless a citing word precedes it.
   if (!/^#\d+$/.test(match)) return false;
-  return ISSUE_REFERENCE.test(source.slice(Math.max(0, index - 40), index + 1));
+  return ISSUE_REFERENCE.test(source.slice(0, index + 1));
 }
 
 const colorPrefixes = [
