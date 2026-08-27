@@ -1,0 +1,305 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    /* Boat mode, light scheme: contrast-boosted ink. Desktop is the dockside reading — audit detail stays visible. */
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #edf2f1; --border: #e3e0d7; --hairline: #dfe3dd;
+      --ink: #062631; --muted: #294851; --faint: #5f7780;
+      --primary: #075985; --primary-tint: #e6eef3;
+      --success: #166534; --success-tint: #e7f0e9;
+      --warning: #92400e; --warning-tint: #f7ede2;
+      --danger: #991b1b; --danger-tint: #f7e8e8;
+      --shadow-sm: 0 1px 2px rgba(6,38,49,.06);
+      --shadow-pill: 0 1px 3px rgba(6,38,49,.10);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    a { color: var(--primary); text-decoration: none; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .navlink { padding: 7px 11px; border-radius: 10px; color: #5b6f77; font-weight: 500; }
+    .navlink-active { padding: 7px 11px; border-radius: 10px; background: #f1efe9; color: #0e7490; font-weight: 600; }
+    .tab { flex: 1; display: flex; align-items: center; justify-content: center; height: 40px; border-radius: 12px; font-size: 14px; font-weight: 500; color: var(--faint); white-space: nowrap; }
+    .tab-active { flex: 1; display: flex; align-items: center; justify-content: center; height: 40px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--primary); background: var(--surface); box-shadow: var(--shadow-pill); white-space: nowrap; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .chip { display: inline-flex; align-items: center; height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+    .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .num { width: 26px; font-size: 13px; font-weight: 600; color: var(--faint); flex-shrink: 0; }
+    .rname { font-size: 17px; font-weight: 600; line-height: 1.25; }
+    .audit { font-size: 13px; color: var(--faint); white-space: nowrap; }
+    .cap { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .cap-danger { background: var(--danger-tint); color: var(--danger); }
+    .cap-warning { background: var(--warning-tint); color: var(--warning); }
+    .circle-on { width: 48px; height: 48px; border-radius: 999px; background: var(--success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .circle-off { width: 48px; height: 48px; border-radius: 999px; border: 2px solid rgba(6,38,49,.32); background: var(--surface); box-sizing: border-box; flex-shrink: 0; }
+    .circle-hold { width: 48px; height: 48px; border-radius: 999px; border: 2px dashed rgba(6,38,49,.22); background: var(--surface); box-sizing: border-box; flex-shrink: 0; }
+    .circle-ashore { width: 48px; height: 48px; border-radius: 999px; border: 2px solid var(--warning); background: var(--warning-tint); display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
+    .rrow { display: flex; align-items: center; gap: 14px; padding: 8px 20px; min-height: 64px; box-sizing: border-box; }
+    .rline { border-top: 1px solid var(--hairline); margin-left: 60px; }
+    .microhead { padding: 8px 20px; background: #f6f4ee; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+    .checkdot-on { width: 14px; height: 14px; border-radius: 999px; background: var(--success); display: inline-flex; align-items: center; justify-content: center; }
+    .checkdot-off { width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid rgba(6,38,49,.3); box-sizing: border-box; display: inline-block; }
+    .ghost { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--faint); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1620px; background: var(--bg); box-sizing: border-box;">
+
+  <!-- App header (standard palette — boat mode wraps only the page body) -->
+  <header style="background: #ffffff; border-bottom: 1px solid #e3e0d7;">
+    <div style="max-width: 1216px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 18px;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-right: 6px;">
+        <div style="width: 30px; height: 30px; border-radius: 10px; background: #0e7490; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+        <span style="font-size: 15px; font-weight: 600; color: #0c2a35;">Blue Mantis Divers</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </div>
+      <nav style="display: flex; align-items: center; gap: 2px; font-size: 14px;">
+        <span class="navlink">Today</span>
+        <span class="navlink">Check-in</span>
+        <span class="navlink">Divers</span>
+        <span class="navlink-active">Board</span>
+        <span class="navlink">Close-out</span>
+      </nav>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 14px;">
+        <span class="navlink" style="display: inline-flex; align-items: center; gap: 5px;">More
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+        </span>
+        <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid #e3e0d7; border-radius: 10px; color: #5b6f77; font-size: 13px;">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+          Search
+          <span style="border: 1px solid #e3e0d7; border-radius: 5px; padding: 1px 5px; font-size: 11px;">⌘K</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1028px; margin: 0 auto; padding: 34px 24px 56px; box-sizing: border-box;">
+
+    <!-- Masthead -->
+    <a href="#" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;">
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#075985" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5L4 6l3.5 3.5"></path></svg>
+      Board
+    </a>
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; margin-top: 10px;">
+      <div style="min-width: 0;">
+        <h1 style="margin: 0; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.12;">Sunrise Two-Tank — Molasses Reef</h1>
+        <p style="margin: 10px 0 0; font-size: 15px; color: var(--muted);">Fri, Sep 11 · 7:00 – 10:30 AM · Mantis II</p>
+      </div>
+      <div style="text-align: right; flex-shrink: 0; padding-top: 4px;">
+        <div class="tnum" style="font-size: 22px; font-weight: 700;">12 souls</div>
+        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">10 divers · 2 crew</div>
+      </div>
+    </div>
+
+    <!-- Trip tabs -->
+    <nav style="display: flex; gap: 4px; background: #f1efe9; border-radius: 16px; padding: 4px; margin-top: 26px;">
+      <span class="tab">Trip</span>
+      <span class="tab-active">Manifest</span>
+      <span class="tab">Prep</span>
+    </nav>
+
+    <!-- The instrument: count, checkpoint, who's left, boat checks -->
+    <section class="card" style="margin-top: 18px; padding: 20px 24px 16px;">
+      <div style="display: flex; align-items: center; gap: 22px;">
+        <svg width="84" height="84" viewBox="0 0 84 84" style="flex-shrink: 0;">
+          <circle cx="42" cy="42" r="34" fill="none" stroke="#e4e9e3" stroke-width="7"></circle>
+          <circle cx="42" cy="42" r="34" fill="none" stroke="#075985" stroke-width="7" stroke-linecap="round" stroke-dasharray="149.5 213.6" transform="rotate(-90 42 42)"></circle>
+          <text x="42" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#062631" style="font-variant-numeric: tabular-nums;">7/10</text>
+          <text x="42" y="56" text-anchor="middle" font-size="10" font-weight="500" fill="#5f7780">recorded</text>
+        </svg>
+        <div style="flex: 1; min-width: 0;">
+          <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--primary);">Roll call · before departure</p>
+          <div style="display: flex; align-items: center; gap: 18px; margin-top: 8px; font-size: 15px; font-weight: 600;">
+            <span style="display: inline-flex; align-items: center; gap: 7px;"><span class="dot" style="background: var(--success);"></span><span class="tnum">6 aboard</span></span>
+            <span style="display: inline-flex; align-items: center; gap: 7px;"><span class="dot" style="background: var(--warning);"></span><span class="tnum">1 ashore</span></span>
+            <span style="display: inline-flex; align-items: center; gap: 7px;"><span class="dot" style="border: 1.5px solid rgba(6,38,49,.35); box-sizing: border-box; background: transparent;"></span><span class="tnum">3 divers to call</span></span>
+          </div>
+          <p style="margin: 8px 0 0; font-size: 13px; color: var(--muted);">All 3 uncalled divers are blocked — clear them on the Trip tab before they board.</p>
+        </div>
+        <div style="display: inline-flex; gap: 3px; background: var(--sunken); border-radius: 12px; padding: 3px; flex-shrink: 0;">
+          <span style="display: inline-flex; align-items: center; height: 38px; padding: 0 15px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-pill); font-size: 13px; font-weight: 600; color: var(--primary); white-space: nowrap;">Before departure</span>
+          <span style="display: inline-flex; align-items: center; height: 38px; padding: 0 15px; border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--faint); white-space: nowrap;">After dive 1</span>
+          <span style="display: inline-flex; align-items: center; height: 38px; padding: 0 15px; border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--faint); white-space: nowrap;">After dive 2</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hairline);">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint);">Still to call</span>
+        <span class="chip">Amara Osei</span>
+        <span class="chip">Felix Grant</span>
+        <span class="chip">Mateo Duarte</span>
+        <span class="chip">Sal Moretti <span style="margin-left: 6px; font-size: 12px; color: var(--faint); font-weight: 500;">crew</span></span>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 600; color: var(--muted);">Boat checks</span>
+          <span style="display: inline-flex; gap: 5px; align-items: center;">
+            <span class="checkdot-on"><svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.2l2 2 4-4.5"></path></svg></span>
+            <span class="checkdot-on"><svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.2l2 2 4-4.5"></path></svg></span>
+            <span class="checkdot-on"><svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.2l2 2 4-4.5"></path></svg></span>
+            <span class="checkdot-off"></span>
+            <span class="checkdot-off"></span>
+          </span>
+          <span class="tnum" style="font-size: 13px; font-weight: 600; color: var(--muted);">3 of 5</span>
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#5f7780" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+        </span>
+      </div>
+    </section>
+
+    <!-- Roll call -->
+    <section class="card" style="margin-top: 20px; overflow: hidden;">
+
+      <!-- Buddy team -->
+      <div style="margin: 12px 12px 0; background: #f3f6f1; border-radius: 12px; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 8px 16px 0; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#5f7780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8.5a3 3 0 004.2.3l2-1.8a3 3 0 00-4-4.4l-1 .9"></path><path d="M8.5 5.5a3 3 0 00-4.2-.3l-2 1.8a3 3 0 004 4.4l1-.9"></path></svg>
+          Buddy team
+        </div>
+        <div class="rrow" style="padding-left: 16px; padding-right: 16px;">
+          <span class="num tnum">01</span>
+          <span class="rname" style="flex: 1;">Kiona Blackfeather</span>
+          <span class="audit">Aboard 6:48 · Keiko</span>
+          <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+        </div>
+        <div style="border-top: 1px solid #e1e6dc; margin-left: 56px;"></div>
+        <div class="rrow" style="padding-left: 16px; padding-right: 16px;">
+          <span class="num tnum">02</span>
+          <span class="rname" style="flex: 1;">Anders Lindgren</span>
+          <span class="audit">Aboard 6:48 · Keiko</span>
+          <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+        </div>
+      </div>
+
+      <!-- Buddy team, one member ashore -->
+      <div style="margin: 12px 12px 0; background: #f3f6f1; border-radius: 12px; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 8px 16px 0; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#5f7780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8.5a3 3 0 004.2.3l2-1.8a3 3 0 00-4-4.4l-1 .9"></path><path d="M8.5 5.5a3 3 0 00-4.2-.3l-2 1.8a3 3 0 004 4.4l1-.9"></path></svg>
+          Buddy team
+        </div>
+        <div class="rrow" style="padding-left: 16px; padding-right: 16px;">
+          <span class="num tnum">03</span>
+          <span class="rname" style="flex: 1;">Meera Iyer</span>
+          <span class="audit">Aboard 6:51 · Dana</span>
+          <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+        </div>
+        <div style="border-top: 1px solid #e1e6dc; margin-left: 56px;"></div>
+        <div class="rrow" style="padding-left: 16px; padding-right: 16px; background: #fbf3e9;">
+          <span class="num tnum">04</span>
+          <div style="flex: 1; min-width: 0;">
+            <div class="rname">Georg Fischer</div>
+            <div style="margin-top: 2px; font-size: 13px; color: var(--warning); font-weight: 500;">Ashore 6:58 · Sal — overslept, rebooking Sunday</div>
+          </div>
+          <span class="cap cap-warning">Not boarded</span>
+          <div class="circle-ashore"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#92400e" stroke-width="2.4" stroke-linecap="round"><path d="M3.5 8h9"></path></svg></div>
+        </div>
+        <div style="border-top: 1px solid #e1e6dc; margin-left: 56px;"></div>
+        <div class="rrow" style="padding-left: 16px; padding-right: 16px;">
+          <span class="num tnum">05</span>
+          <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;">
+            <span class="rname">Chinwe Obi</span>
+            <span class="cap cap-warning">Minor · 13</span>
+          </div>
+          <span class="audit">Aboard 6:51 · Dana</span>
+          <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+        </div>
+      </div>
+
+      <!-- Unteamed -->
+      <div class="rrow" style="margin-top: 6px;">
+        <span class="num tnum">06</span>
+        <span class="rname" style="flex: 1;">Sana Malik</span>
+        <span class="audit">Aboard 6:53 · Dana</span>
+        <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+      </div>
+      <div class="rline"></div>
+      <div class="rrow">
+        <span class="num tnum">07</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="rname">Amara Osei</span>
+            <span class="cap cap-danger">Blocked</span>
+          </div>
+          <div style="margin-top: 2px; font-size: 13px; color: var(--muted);">No certification on file · <a href="#" style="font-weight: 600;">Resolve on Trip</a></div>
+        </div>
+        <div class="circle-hold"></div>
+      </div>
+      <div class="rline"></div>
+      <div class="rrow">
+        <span class="num tnum">08</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="rname">Felix Grant</span>
+            <span class="cap cap-danger">Blocked</span>
+          </div>
+          <div style="margin-top: 2px; font-size: 13px; color: var(--muted);">No certification · no emergency contact · <a href="#" style="font-weight: 600;">Resolve on Trip</a></div>
+        </div>
+        <div class="circle-hold"></div>
+      </div>
+      <div class="rline"></div>
+      <div class="rrow">
+        <span class="num tnum">09</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="rname">Mateo Duarte</span>
+            <span class="cap cap-danger">Blocked</span>
+          </div>
+          <div style="margin-top: 2px; font-size: 13px; color: var(--muted);">Certification awaiting staff verification · <a href="#" style="font-weight: 600;">Resolve on Trip</a></div>
+        </div>
+        <div class="circle-hold"></div>
+      </div>
+      <div class="rline"></div>
+      <div class="rrow">
+        <span class="num tnum">10</span>
+        <span class="rname" style="flex: 1;">Zoe Bennett</span>
+        <span class="audit">Aboard 6:56 · Dana</span>
+        <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+      </div>
+
+      <!-- Crew -->
+      <div class="microhead" style="margin-top: 6px;">Crew</div>
+      <div class="rrow">
+        <span class="num"></span>
+        <div style="flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px;">
+          <span class="rname">Keiko Tanaka</span>
+          <span style="font-size: 13px; color: var(--faint);">divemaster</span>
+        </div>
+        <span class="audit">Aboard 6:45 · Sal</span>
+        <div class="circle-on"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+      </div>
+      <div class="rline"></div>
+      <div class="rrow">
+        <span class="num"></span>
+        <div style="flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px;">
+          <span class="rname">Sal Moretti</span>
+          <span style="font-size: 13px; color: var(--faint);">captain</span>
+        </div>
+        <div class="circle-off"></div>
+      </div>
+
+      <div style="border-top: 1px solid var(--hairline); padding: 12px 20px; display: flex; gap: 24px;">
+        <span class="ghost" style="color: var(--primary); font-weight: 600;">Edit buddy teams</span>
+        <span class="ghost" style="color: var(--primary); font-weight: 600;">Manage this trip's crew</span>
+      </div>
+    </section>
+
+    <!-- The rare doors, one quiet line: device state, and the once-a-year reference -->
+    <div style="margin-top: 18px; padding: 0 20px; display: flex; align-items: center; gap: 16px; min-height: 44px;">
+      <span style="width: 7px; height: 7px; border-radius: 999px; background: var(--success); flex-shrink: 0;"></span>
+      <span style="font-size: 13.5px; color: var(--muted); flex: 1;">Offline copy saved 5 min ago — roll call keeps working with no signal.</span>
+      <span class="ghost" style="color: var(--primary); font-weight: 600;">Refresh</span>
+      <span class="ghost">Device settings
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="#5f7780" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+      </span>
+      <span class="ghost">Emergency numbers &amp; response plan
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="#5f7780" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+      </span>
+    </div>
+
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

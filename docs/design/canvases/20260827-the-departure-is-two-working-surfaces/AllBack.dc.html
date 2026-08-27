@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #edf2f1; --hairline: #dfe3dd; --border: #e3e0d7;
+      --ink: #062631; --muted: #294851; --faint: #5f7780;
+      --primary: #075985;
+      --success: #166534;
+      --warning: #92400e; --warning-tint: #f7ede2;
+      --danger: #991b1b;
+      --accent: #ff6f61;
+      --shadow-sm: 0 1px 2px rgba(6,38,49,.06);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .rrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 72px; box-sizing: border-box; }
+    .rline { border-top: 1px solid var(--hairline); margin-left: 44px; }
+    .rname { font-size: 18px; font-weight: 600; line-height: 1.2; }
+    .num { width: 22px; font-size: 12.5px; font-weight: 600; color: var(--faint); flex-shrink: 0; }
+    .circle-on { width: 52px; height: 52px; border-radius: 999px; background: var(--success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .circle-ashore { width: 52px; height: 52px; border-radius: 999px; border: 2.5px solid var(--warning); background: var(--warning-tint); display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
+    .dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; }
+    .nextrow { display: flex; align-items: center; gap: 11px; height: 50px; padding: 0 16px; border-radius: 13px; border: 1px solid var(--border); background: var(--surface); box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: var(--bg); position: relative; overflow: hidden; box-sizing: border-box;">
+
+  <div style="padding: 12px 16px 0;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="#075985" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9 2.5L4.5 7 9 11.5"></path></svg>
+      <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sunrise Two-Tank — Molasses Reef</span>
+      <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--warning); white-space: nowrap;">
+        <span class="dot" style="background: var(--warning); width: 6px; height: 6px;"></span>
+        No signal — saved
+      </span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); flex-shrink: 0;">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="#5f7780"><circle cx="3.2" cy="8" r="1.5"></circle><circle cx="8" cy="8" r="1.5"></circle><circle cx="12.8" cy="8" r="1.5"></circle></svg>
+      </span>
+    </div>
+    <p style="margin: 3px 0 0 25px; font-size: 12px; color: var(--faint);">Fri · after dive 1 · Mantis II · 11 souls</p>
+  </div>
+
+  <!-- The moment: everyone is back -->
+  <div style="margin: 14px 16px 0; border: 1px solid rgba(255,111,97,.45); background: #fdf1ef; border-radius: 16px; padding: 16px; position: relative; overflow: hidden;">
+    <svg width="120" height="120" viewBox="0 0 120 120" style="position: absolute; right: -34px; top: -34px; opacity: .35;"><circle cx="60" cy="60" r="34" fill="none" stroke="#ff6f61" stroke-width="2"></circle><circle cx="60" cy="60" r="48" fill="none" stroke="#ff6f61" stroke-width="1.5" opacity=".6"></circle><circle cx="60" cy="60" r="58" fill="none" stroke="#ff6f61" stroke-width="1" opacity=".35"></circle></svg>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <svg width="46" height="46" viewBox="0 0 46 46" style="flex-shrink: 0;">
+        <circle cx="23" cy="23" r="21.5" fill="none" stroke="#ff6f61" stroke-width="1.8" opacity="0.55"></circle>
+        <circle cx="23" cy="23" r="18" fill="none" stroke="#166534" stroke-width="5" stroke-linecap="round"></circle>
+        <path d="M15.5 23.5l5 5 10-11" fill="none" stroke="#166534" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <div style="flex: 1; min-width: 0;">
+        <p style="margin: 0; font-size: 19px; font-weight: 700;">Everyone's back aboard</p>
+        <p style="margin: 3px 0 0; font-size: 13px; color: var(--muted);">9 divers · 2 crew accounted for</p>
+      </div>
+      <span class="tnum" style="font-size: 12px; color: var(--faint);">Closed 8:33</span>
+    </div>
+  </div>
+
+  <!-- Counts, settled -->
+  <div style="display: flex; align-items: center; gap: 13px; margin: 13px 18px 0; font-size: 13px; font-weight: 600;">
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><span class="dot" style="background: var(--success);"></span><span class="tnum">9 aboard</span></span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><span class="dot" style="background: var(--warning);"></span><span class="tnum">1 ashore</span></span>
+    <span style="margin-left: auto; font-size: 12px; color: var(--faint);">After dive 1 · 9/9</span>
+  </div>
+
+  <!-- What's next, offered -->
+  <div style="display: flex; flex-direction: column; gap: 8px; margin: 12px 16px 0;">
+    <div class="nextrow" style="border: 1.5px solid var(--primary);">
+      <span style="flex: 1; font-size: 15px; font-weight: 600; color: var(--primary);">Count again after dive 2 · Winch Hole</span>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#075985" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+    </div>
+    <div class="nextrow">
+      <span style="flex: 1; font-size: 14px; font-weight: 500; color: var(--muted);">Log dive 1 — site, depth, time</span>
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#5f7780" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+    </div>
+  </div>
+
+  <!-- The list, settled; the late one carries her story -->
+  <section class="card" style="margin: 13px 16px 0; overflow: hidden;">
+    <div class="rrow">
+      <span class="num tnum">03</span>
+      <div style="flex: 1; min-width: 0;">
+        <div class="rname">Meera Iyer</div>
+        <div style="margin-top: 2px; font-size: 12.5px; color: var(--faint);">Back aboard 8:33 · Keiko</div>
+      </div>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">01</span>
+      <span class="rname" style="flex: 1;">Kiona Blackfeather</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">02</span>
+      <span class="rname" style="flex: 1;">Anders Lindgren</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow" style="opacity: .75;">
+      <span class="num tnum">04</span>
+      <div style="flex: 1; min-width: 0;">
+        <div class="rname">Georg Fischer</div>
+        <div style="margin-top: 2px; font-size: 12.5px; color: var(--warning); font-weight: 500;">Ashore since the dock</div>
+      </div>
+      <div class="circle-ashore"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="#92400e" stroke-width="2.4" stroke-linecap="round"><path d="M3.5 8h9"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">05</span>
+      <span class="rname" style="flex: 1;">Chinwe Obi</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">06</span>
+      <span class="rname" style="flex: 1;">Sana Malik</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">07</span>
+      <span class="rname" style="flex: 1;">Amara Osei</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">08</span>
+      <span class="rname" style="flex: 1;">Felix Grant</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">09</span>
+      <span class="rname" style="flex: 1;">Mateo Duarte</span>
+      <div class="circle-on"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>

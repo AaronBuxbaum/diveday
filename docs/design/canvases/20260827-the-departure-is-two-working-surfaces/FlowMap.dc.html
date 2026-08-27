@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d; --success-tint: #e8f3ec;
+      --warning-strong: #a94e08; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e9e9;
+      --accent: #ff6f61;
+      --shadow-sm: 0 1px 2px rgba(12,42,53,.06);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .stage { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); padding: 16px 18px; min-width: 0; }
+    .stagenum { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: var(--ink); color: #ffffff; font-size: 12.5px; font-weight: 700; }
+    .stagetitle { margin: 10px 0 0; font-size: 16px; font-weight: 700; }
+    .stagesub { margin: 2px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+    .stageul { margin: 10px 0 0; padding-left: 15px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 5px; }
+    .arrow { display: flex; align-items: center; flex-shrink: 0; padding: 0 2px; }
+    .rule { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; }
+    .edge { flex: 1; min-width: 0; background: #fbfaf6; border: 1px solid var(--border); border-radius: 13px; padding: 13px 15px; }
+    .edgetitle { margin: 0; font-size: 13px; font-weight: 700; }
+    .edgebody { margin: 5px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+    h2 { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--primary); }
+  </style>
+</helmet>
+
+<div style="width: 1360px; min-height: 1360px; background: var(--bg); box-sizing: border-box; padding: 42px 48px 52px;">
+
+  <h1 style="margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -0.02em;">A day on the boat</h1>
+  <p style="margin: 9px 0 0; max-width: 860px; font-size: 15px; color: var(--muted);">The manifest's whole life, dock to dock. The crew moves the flow forward — nothing advances itself — and every beat keeps the same three promises: the count is huge, the alarm is earned, and nothing on screen can start a phone call by accident.</p>
+
+  <!-- The five stages -->
+  <div style="display: flex; align-items: stretch; gap: 8px; margin-top: 28px;">
+    <div class="stage">
+      <span class="stagenum">1</span>
+      <p class="stagetitle">At the dock</p>
+      <p class="stagesub" style="color: var(--warning-strong);">Clear, then count</p>
+      <ul class="stageul">
+        <li>Blockers cleared on the Trip tab — held circles can't board</li>
+        <li>One tap per person as they step on; crew close the count</li>
+        <li>Boat checks tick down to zero</li>
+        <li>"Everyone's aboard" — the earned moment, then cast off</li>
+      </ul>
+    </div>
+    <div class="arrow"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#b9b4a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h13M12 5.5L17.5 11 12 16.5"></path></svg></div>
+    <div class="stage" style="background: #f4f8f9;">
+      <span class="stagenum">2</span>
+      <p class="stagetitle">Dive 1</p>
+      <p class="stagesub" style="color: var(--primary);">The screen rests</p>
+      <ul class="stageul">
+        <li>No timers, no auto-advance — the boat decides when to count</li>
+        <li>Offline copy holds the whole manifest; no signal needed from here on</li>
+        <li>The next checkpoint is offered, never forced</li>
+      </ul>
+    </div>
+    <div class="arrow"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#b9b4a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h13M12 5.5L17.5 11 12 16.5"></path></svg></div>
+    <div class="stage">
+      <span class="stagenum">3</span>
+      <p class="stagetitle">Back on the ladder</p>
+      <p class="stagesub" style="color: var(--primary);">Count as they climb</p>
+      <ul class="stageul">
+        <li>Fresh circles for everyone who sailed; the dock's ashore carries over, dimmed</li>
+        <li>Tap = back aboard, with who-and-when kept</li>
+        <li>An open circle stays calm — mid-count it only means "not yet"</li>
+        <li>Count stalled? Mark the missing from their row's sheet, deliberately</li>
+      </ul>
+    </div>
+    <div class="arrow"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#b9b4a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h13M12 5.5L17.5 11 12 16.5"></path></svg></div>
+    <div class="stage" style="border: 1.5px solid rgba(185,28,28,.4); background: #fdf7f7;">
+      <span class="stagenum" style="background: var(--danger);">4</span>
+      <p class="stagetitle" style="color: var(--danger);">If someone's not back</p>
+      <p class="stagesub" style="color: var(--danger);">The alarm pins</p>
+      <ul class="stageul">
+        <li>The alarm exists only once a human records it — never before</li>
+        <li>The name goes to the top in red; the checkpoint stays open</li>
+        <li>Their buddy team is named — who to ask, first</li>
+        <li>The person sheet: the contact's number, today's trail, undo a mis-tap</li>
+        <li>The numbers (DAN, the chamber) wait behind ⋯ — the radio and O2 lead a real response</li>
+      </ul>
+      <p style="margin: 10px 0 0; font-size: 12px; font-weight: 600; color: var(--success); display: flex; align-items: center; gap: 6px;">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#15803d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M11.5 4.5H5a2.5 2.5 0 000 5h1.5"></path><path d="M8.5 2.5l3 2-3 2"></path></svg>
+        <span>Found — re-tap settles it, back to stage 3's calm</span>
+      </p>
+    </div>
+    <div class="arrow"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#b9b4a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h13M12 5.5L17.5 11 12 16.5"></path></svg></div>
+    <div class="stage">
+      <span class="stagenum">5</span>
+      <p class="stagetitle">Home</p>
+      <p class="stagesub" style="color: var(--success);">Close the day</p>
+      <ul class="stageul">
+        <li>Dive 2 at Winch Hole repeats stage 3, then the final count closes</li>
+        <li>Log the dives — one quiet door, surface-interval or evening work</li>
+        <li>Close-out happens ashore; the boat screen's job is done</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Invariants -->
+  <section class="card" style="margin-top: 26px; padding: 20px 26px;">
+    <h2>The promises every beat keeps</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; margin-top: 12px;">
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Nothing is optimistic.</strong> A tap settles only once it's saved — a ghost count is how a boat sails wrong.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Checkpoints never advance themselves.</strong> The crew opens each count; the app only offers the next.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Only the dock's "ashore" carries forward.</strong> Every later checkpoint is a fresh physical head count.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Readiness gates only at the dock.</strong> After a dive, paperwork never stands between a person and being counted.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Re-tap undoes; the trail stays.</strong> Corrections are new events with who-and-when — never deletions.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Crew count too.</strong> A checkpoint closes only when divers <em>and</em> crew are all accounted for.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Works with no signal.</strong> The offline copy counts on its own and reconciles when the boat is back in service.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Emergencies are managed, not tapped.</strong> The radio and O2 kit lead a real response; the app's numbers (DAN, the chamber) sit behind ⋯ — reached maybe once a year, never in seconds — and the printed sheet keeps them all.</span></div>
+      <div class="rule"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#137839" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg><span><strong>Consequence decides the gesture.</strong> Aboard is a tap and undoable; not-back is a deliberate two-step from the person's sheet; and there are no call buttons anywhere on the boat — phone numbers render as reference, safe from a wet thumb on a rocking deck.</span></div>
+    </div>
+  </section>
+
+  <!-- Edge cases + buildability -->
+  <div style="display: flex; gap: 22px; margin-top: 22px; align-items: stretch;">
+    <section class="card" style="flex: 2.4; padding: 20px 26px;">
+      <h2>Edges the flow already absorbs</h2>
+      <div style="display: flex; gap: 12px; margin-top: 12px;">
+        <div class="edge">
+          <p class="edgetitle">Walk-in at the dock</p>
+          <p class="edgebody">Seated on the Trip tab; their row and a fresh circle appear in the count instantly.</p>
+        </div>
+        <div class="edge">
+          <p class="edgetitle">Still blocked at cast-off</p>
+          <p class="edgebody">The held circle never opens; they stay ashore and carry forward like Georg.</p>
+        </div>
+        <div class="edge">
+          <p class="edgetitle">Two phones counting</p>
+          <p class="edgebody">Both write the same trail; every result names its recorder, so a double-tap reads as two events, not a mystery.</p>
+        </div>
+        <div class="edge">
+          <p class="edgetitle">Mis-tap mid-count</p>
+          <p class="edgebody">Re-tap reverses it on the spot; the audit keeps both acts.</p>
+        </div>
+        <div class="edge">
+          <p class="edgetitle">Divemaster leads a group</p>
+          <p class="edgebody">Crew rows sit under the divers and the checkpoint won't close without them.</p>
+        </div>
+      </div>
+    </section>
+    <section class="card" style="flex: 1; padding: 20px 26px; background: #fdfcf9;">
+      <h2 style="color: var(--muted);">Buildable as drawn</h2>
+      <p style="margin: 10px 0 0; font-size: 13px; color: var(--muted); line-height: 1.55;">Every state here already exists in the domain layer — checkpoints, carried-forward ashore, not-back semantics, split-team detection, divers-and-crew completeness, and the completion moment. The person sheet reads only data the app already holds. This flow is surface work, not schema work.</p>
+    </section>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

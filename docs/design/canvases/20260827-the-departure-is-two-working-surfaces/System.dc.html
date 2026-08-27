@@ -1,0 +1,233 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d; --success-tint: #e8f3ec;
+      --warning: #b45309; --warning-strong: #a94e08; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e9e9;
+      --accent: #ff6f61;
+      --shadow-sm: 0 1px 2px rgba(12,42,53,.06);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    h2 { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--primary); }
+    .note { font-size: 13px; color: var(--muted); margin: 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .cap { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .swatch { width: 42px; height: 42px; border-radius: 12px; border: 1px solid rgba(12,42,53,.08); }
+    .swlabel { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.3; }
+    .callout { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+    .callnum { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 999px; background: var(--ink); color: #ffffff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+    .tierhead { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .tierlist { margin: 6px 0 0; padding-left: 16px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 1620px; background: var(--bg); box-sizing: border-box; padding: 44px 48px 56px;">
+
+  <h1 style="margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -0.02em;">One person, one grammar</h1>
+  <p style="margin: 10px 0 0; max-width: 780px; font-size: 15px; color: var(--muted);">Four tabs become three: Overview folds into a Details panel on the trip page, so the departure has two working surfaces — the <strong style="color: var(--ink); font-weight: 600;">Trip</strong> page (sell it, clear it) and the <strong style="color: var(--ink); font-weight: 600;">Manifest</strong> (count it, on the boat). Every count is said once, rows at rest are a name and a mark, and what the rail doesn't need right now lives one tap away — or ashore.</p>
+
+  <div style="display: flex; gap: 24px; margin-top: 30px;">
+
+    <!-- Left column -->
+    <div style="flex: 1.25; display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- Tiers -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>The boat rule: three tiers</h2>
+        <p class="note">The manifest is worked one-handed at the rail. What earns the screen is what the count needs this second; everything else steps back.</p>
+        <div style="display: flex; gap: 22px; margin-top: 16px;">
+          <div style="flex: 1;">
+            <p class="tierhead" style="color: var(--success);">Always on screen</p>
+            <ul class="tierlist">
+              <li>Names, in manifest order</li>
+              <li>One 48–56 px tap per person</li>
+              <li>The count and who's left</li>
+              <li>The checkpoint</li>
+            </ul>
+          </div>
+          <div style="flex: 1;">
+            <p class="tierhead" style="color: var(--warning-strong);">One tap away</p>
+            <ul class="tierlist">
+              <li>A person: contact, medical, notes, audit trail</li>
+              <li>Emergency numbers and the response plan — behind ⋯, reached maybe once a year, never in seconds</li>
+              <li>Boat-check items</li>
+              <li>Buddy team editing</li>
+            </ul>
+          </div>
+          <div style="flex: 1;">
+            <p class="tierhead" style="color: var(--muted);">Ashore, not here</p>
+            <ul class="tierlist">
+              <li>Clearing blockers — the Trip tab</li>
+              <li>Device settings, offline detail</li>
+              <li>The dive log — evening work</li>
+              <li>Anything that edits the departure</li>
+            </ul>
+          </div>
+        </div>
+        <p class="note" style="margin-top: 14px;">Paper keeps everything: the printed manifest still carries every contact, number, and advisory in full — screens hide, the sheet that goes ashore never does.</p>
+      </section>
+
+      <!-- Row anatomy -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>The person row, at rest</h2>
+        <p class="note">Every roster, waitlist, and roll call is this one object — a name and a mark.</p>
+        <div style="margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; position: relative;">
+          <span class="callnum" style="position: absolute; top: -9px; left: 22px;">1</span>
+          <span class="callnum" style="position: absolute; top: -9px; right: 150px;">2</span>
+          <span class="callnum" style="position: absolute; top: -9px; right: 24px;">3</span>
+          <span style="flex: 1; font-size: 16px; font-weight: 600;">Chinwe Obi</span>
+          <span class="cap" style="background: var(--warning-tint); color: var(--warning-strong);">Minor · 13</span>
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#8fa39b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; margin-top: 16px;">
+          <div class="callout"><span class="callnum">1</span><span><strong>Name only.</strong> Cert, gear, history wait behind the tap.</span></div>
+          <div class="callout"><span class="callnum">2</span><span><strong>One capsule, exceptions only</strong> — safety or the blocker.</span></div>
+          <div class="callout"><span class="callnum">3</span><span><strong>The mark.</strong> The group header carries the word.</span></div>
+        </div>
+        <p class="note" style="margin-top: 14px;">Open work expands into an inset panel: one line per blocker, its one fix beside it. No monograms — initials restate the name (principle 9), and the calm buys more than the anchor.</p>
+      </section>
+
+      <!-- Roll-call control -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>The roll-call tap</h2>
+        <p class="note">One circle at a fixed edge. Fill + mark + words carry the state — never color alone. Re-tap undoes; the audit trail lives in the person sheet and on paper. Consequence decides the gesture: aboard is a tap; not-back is recorded from the person's sheet, deliberately; and there are no call buttons on the boat — a real response starts with the radio and the O2 kit, so numbers render as reference.</p>
+        <div style="display: flex; gap: 34px; margin-top: 18px;">
+          <div style="text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 999px; border: 2px solid rgba(12,42,53,.32); box-sizing: border-box; margin: 0 auto;"></div>
+            <p style="margin: 8px 0 0; font-size: 12.5px; font-weight: 600;">To call</p>
+            <p class="swlabel">tap = aboard</p>
+          </div>
+          <div style="text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 999px; background: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto;"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+            <p style="margin: 8px 0 0; font-size: 12.5px; font-weight: 600;">Aboard</p>
+            <p class="swlabel">audit: "6:51 · Dana"</p>
+          </div>
+          <div style="text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 999px; border: 2px solid #92400e; background: #f7ede2; display: flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0 auto;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#92400e" stroke-width="2.4" stroke-linecap="round"><path d="M3.5 8h9"></path></svg></div>
+            <p style="margin: 8px 0 0; font-size: 12.5px; font-weight: 600;">Ashore</p>
+            <p class="swlabel">dock only · amber</p>
+          </div>
+          <div style="text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 999px; border: 2px solid #991b1b; background: #f7e8e8; display: flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0 auto;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#991b1b" stroke-width="2.2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg></div>
+            <p style="margin: 8px 0 0; font-size: 12.5px; font-weight: 600;">Not back</p>
+            <p class="swlabel">after a dive · never checks</p>
+          </div>
+          <div style="text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 999px; border: 2px dashed rgba(12,42,53,.22); box-sizing: border-box; margin: 0 auto;"></div>
+            <p style="margin: 8px 0 0; font-size: 12.5px; font-weight: 600;">Held</p>
+            <p class="swlabel">blocked at dock —<br>still counts as to call</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Type -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>Type — Geist</h2>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em;">Trip masthead</span><span class="swlabel">34 / 600 / −2%</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span class="tnum" style="font-size: 30px; font-weight: 700;">7/10</span><span class="swlabel">the count leads the boat screen · always tabular</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-size: 16px; font-weight: 600;">Person name</span><span class="swlabel">16–18 / 600 · critical text ≥ 16 at the rail</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-size: 13px; color: var(--muted);">Support, audit, insight lines</span><span class="swlabel">13 / 400–500 muted</span></div>
+          <div style="display: flex; align-items: baseline; gap: 16px;"><span style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);">Eyebrow / group header</span><span class="swlabel">11 / 700 / +12%</span></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right column -->
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- Where things went -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>Where everything went</h2>
+        <div style="display: flex; flex-direction: column; gap: 9px; margin-top: 12px; font-size: 13.5px;">
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Overview's five cards</span><span style="font-weight: 600;">→ the Details panel</span></div>
+          <div style="border-top: 1px solid var(--border);"></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Add a diver (was a footer form)</span><span style="font-weight: 600;">→ the masthead's one primary</span></div>
+          <div style="border-top: 1px solid var(--border);"></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Waitlist section</span><span style="font-weight: 600;">→ a ledger group</span></div>
+          <div style="border-top: 1px solid var(--border);"></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Filters, per-row bios, monograms</span><span style="font-weight: 600;">→ gone; groups carry it</span></div>
+          <div style="border-top: 1px solid var(--border);"></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Emergency numbers on the boat</span><span style="font-weight: 600;">→ pinned SOS</span></div>
+          <div style="border-top: 1px solid var(--border);"></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Checklist, device housekeeping</span><span style="font-weight: 600;">→ one line each</span></div>
+          <div style="border-top: 1px solid var(--border);"></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px;"><span style="color: var(--muted);">Activity, promotion</span><span style="font-weight: 600;">→ quiet footer rows</span></div>
+        </div>
+      </section>
+
+      <!-- Status vocabulary -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>Status vocabulary</h2>
+        <p class="note">Capsules mark exceptions only; the expected state is quiet.</p>
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; margin-top: 14px; align-items: center;">
+          <span class="cap" style="background: var(--danger-tint); color: var(--danger);">No certification</span>
+          <span class="swlabel">blocker — names the gap, on the Trip ledger</span>
+          <span class="cap" style="background: var(--danger-tint); color: var(--danger);">Blocked</span>
+          <span class="swlabel">manifest rows — the fix lives on Trip</span>
+          <span class="cap" style="background: var(--warning-tint); color: var(--warning-strong);">Verify card</span>
+          <span class="swlabel">work for staff, not the diver</span>
+          <span class="cap" style="background: var(--warning-tint); color: var(--warning-strong);">Minor · 13</span>
+          <span class="swlabel">rides the row everywhere the crew reads it</span>
+          <span class="cap" style="background: var(--warning-tint); color: var(--warning-strong);">Not boarded</span>
+          <span class="swlabel">settled ashore — calm, accounted for</span>
+          <span class="cap" style="background: var(--primary-tint); color: var(--primary);">Birthday Friday</span>
+          <span class="swlabel">earned warmth, rationed to one</span>
+        </div>
+      </section>
+
+      <!-- Color -->
+      <section class="card" style="padding: 20px 24px;">
+        <h2>Color</h2>
+        <p class="note">The app's tokens, unchanged. Boat mode swaps in contrast-boosted ink; dark mode ships from the same variables.</p>
+        <div style="display: flex; gap: 12px; margin-top: 14px;">
+          <div><div class="swatch" style="background: #faf9f6;"></div><p class="swlabel">sand<br>#FAF9F6</p></div>
+          <div><div class="swatch" style="background: #f1efe9;"></div><p class="swlabel">sunken<br>#F1EFE9</p></div>
+          <div><div class="swatch" style="background: #0c2a35;"></div><p class="swlabel">ink<br>#0C2A35</p></div>
+          <div><div class="swatch" style="background: #0e7490;"></div><p class="swlabel">lagoon<br>#0E7490</p></div>
+          <div><div class="swatch" style="background: #ff6f61;"></div><p class="swlabel">coral<br>#FF6F61</p></div>
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 12px;">
+          <div><div class="swatch" style="background: #166534;"></div><p class="swlabel">aboard · boat<br>#166534</p></div>
+          <div><div class="swatch" style="background: #92400e;"></div><p class="swlabel">ashore · boat<br>#92400E</p></div>
+          <div><div class="swatch" style="background: #991b1b;"></div><p class="swlabel">not back · boat<br>#991B1B</p></div>
+          <div><div class="swatch" style="background: #062631;"></div><p class="swlabel">boat ink<br>#062631</p></div>
+          <div><div class="swatch" style="background: #075985;"></div><p class="swlabel">boat lagoon<br>#075985</p></div>
+        </div>
+      </section>
+
+      <!-- What stays -->
+      <section class="card" style="padding: 20px 24px; background: #fdfcf9;">
+        <h2 style="color: var(--muted);">Deliberately kept</h2>
+        <ul style="margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); display: flex; flex-direction: column; gap: 7px;">
+          <li>Roll call is never optimistic; every result keeps its who-and-when.</li>
+          <li>Readiness gates boarding at the dock only — after a dive it's a head count.</li>
+          <li>The printed sheet keeps every fact the screen tucks away.</li>
+          <li>Blocked divers resolve on Trip, never mid-count on the boat.</li>
+          <li>The screen worries only with reason: an open circle mid-count is "not yet" — red appears once a human records not-back.</li>
+          <li>Emergency numbers are buried on purpose — behind ⋯ on the boat, one quiet line at the desk, always on the printed sheet. Reached maybe once a year, never in seconds; nothing on screen can start a call by accident.</li>
+          <li>Held for review: folding Overview and Prep's homes (one-home-per-action), and hiding the dock in boat mode.</li>
+        </ul>
+      </section>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

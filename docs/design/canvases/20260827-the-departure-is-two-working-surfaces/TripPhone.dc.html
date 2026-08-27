@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d;
+      --warning-strong: #a94e08; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e9e9;
+      --shadow-sm: 0 1px 2px rgba(12,42,53,.06);
+      --shadow-pill: 0 1px 3px rgba(12,42,53,.10);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .row { display: flex; align-items: center; gap: 12px; padding: 8px 16px; min-height: 52px; box-sizing: border-box; }
+    .rowline { border-top: 1px solid var(--border); margin-left: 16px; }
+    .name { font-size: 16px; font-weight: 600; line-height: 1.25; }
+    .cap { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .cap-danger { background: var(--danger-tint); color: var(--danger); }
+    .cap-warning { background: var(--warning-tint); color: var(--warning-strong); }
+    .microhead { display: flex; align-items: baseline; justify-content: space-between; padding: 7px 16px; background: #f7f5ef; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .dockitem { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--muted); }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: var(--bg); position: relative; overflow: hidden; box-sizing: border-box;">
+
+  <!-- Top bar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 0;">
+    <a href="#" style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); text-decoration: none;">
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5L4 6l3.5 3.5"></path></svg>
+      Board
+    </a>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 7px;">
+        <svg width="32" height="32" viewBox="0 0 32 32">
+          <circle cx="16" cy="16" r="13" fill="none" stroke="#e3e0d7" stroke-width="4"></circle>
+          <circle cx="16" cy="16" r="13" fill="none" stroke="#0e7490" stroke-width="4" stroke-linecap="round" stroke-dasharray="68.1 81.7" transform="rotate(-90 16 16)"></circle>
+          <text x="16" y="20" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0c2a35" style="font-variant-numeric: tabular-nums;">10</text>
+        </svg>
+        <span style="font-size: 11px; color: var(--muted); line-height: 1.3;">of 12<br>2 open</span>
+      </div>
+      <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 36px; padding: 0 13px; border-radius: 999px; background: var(--primary); color: #ffffff; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-sm);">
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round"><path d="M7 2.5v9M2.5 7h9"></path></svg>
+        Add
+      </div>
+    </div>
+  </div>
+
+  <!-- Masthead -->
+  <div style="padding: 8px 16px 0;">
+    <h1 style="margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.15;">Sunrise Two-Tank — Molasses Reef</h1>
+    <p style="margin: 6px 0 0; font-size: 13px; color: var(--muted);">Fri, Sep 11 · 7:00 – 10:30 AM · $95</p>
+    <nav style="display: flex; gap: 3px; background: var(--sunken); border-radius: 13px; padding: 3px; margin-top: 14px;">
+      <span style="flex: 1; display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-pill); font-size: 13px; font-weight: 600; color: var(--primary);">Trip</span>
+      <span style="flex: 1; display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--muted);">Manifest</span>
+      <span style="flex: 1; display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--muted);">Prep</span>
+    </nav>
+  </div>
+
+  <!-- About, one line -->
+  <div class="card" style="margin: 14px 16px 0; display: flex; align-items: center; gap: 11px; padding: 11px 14px;">
+    <svg width="17" height="17" viewBox="0 0 22 22" fill="none" stroke="#5b6f77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="11" cy="11" r="8.2"></circle><path d="M13.8 8.2l-1.7 4-4 1.7 1.7-4z"></path></svg>
+    <span style="flex: 1; min-width: 0; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Molasses Reef + Winch Hole · Mantis II · Keiko + Sal</span>
+    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#b9b4a5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+  </div>
+
+  <!-- The ledger -->
+  <section class="card" style="margin: 12px 16px 0; overflow: hidden;">
+    <div class="microhead" style="color: var(--warning-strong);">
+      <span>Still to clear · 3</span>
+      <span style="font-size: 10.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted);">Certifications are the holdup</span>
+    </div>
+
+    <!-- Expanded blocked row -->
+    <div style="padding: 8px 16px 14px;">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 38px;">
+        <span class="name" style="flex: 1;">Amara Osei</span>
+        <span class="cap cap-danger">No certification</span>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#b9b4a5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5L7 9l3.5-4"></path></svg>
+      </div>
+      <div style="margin-top: 7px; background: #f8f7f1; border-radius: 11px; padding: 11px 12px;">
+        <div style="display: flex; align-items: flex-start; gap: 9px;">
+          <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 1px;"><path d="M9 2.4l7 12.2H2z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r="0.5" fill="#b91c1c" stroke="none"></circle></svg>
+          <span style="font-size: 13px; line-height: 1.35;">No certification on file for this trip.</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: center; height: 44px; margin-top: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 600;">Review certifications</div>
+      </div>
+      <p style="margin: 8px 0 0; font-size: 12px; color: var(--muted);">Waiver signed Aug 30 · Paid $95 online</p>
+    </div>
+    <div class="rowline"></div>
+
+    <div class="row">
+      <span class="name" style="flex: 1;">Felix Grant</span>
+      <span class="cap cap-danger">2 to clear</span>
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#b9b4a5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+    </div>
+    <div class="rowline"></div>
+    <div class="row">
+      <span class="name" style="flex: 1;">Mateo Duarte</span>
+      <span class="cap cap-warning">Verify card</span>
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="#b9b4a5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L9 7l-4 3.5"></path></svg>
+    </div>
+
+    <div class="microhead" style="color: var(--muted);">
+      <span>Ready · 7</span>
+    </div>
+
+    <div class="row">
+      <span class="name" style="flex: 1;">Kiona Blackfeather</span>
+      <span class="cap" style="background: var(--primary-tint); color: var(--primary);">Birthday Friday</span>
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#8fa39b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+    </div>
+    <div class="rowline"></div>
+    <div class="row">
+      <span class="name" style="flex: 1;">Anders Lindgren</span>
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#8fa39b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+    </div>
+    <div class="rowline"></div>
+    <div class="row">
+      <span class="name" style="flex: 1;">Meera Iyer</span>
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#8fa39b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+    </div>
+    <div class="rowline"></div>
+    <div class="row">
+      <span class="name" style="flex: 1;">Georg Fischer</span>
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#8fa39b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+    </div>
+    <div class="rowline"></div>
+    <div class="row">
+      <span class="name" style="flex: 1;">Chinwe Obi</span>
+      <span class="cap cap-warning">Minor · 13</span>
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#8fa39b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+    </div>
+  </section>
+
+  <!-- Dock -->
+  <nav style="position: absolute; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.88); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border-top: 1px solid var(--border); display: flex; align-items: flex-start; padding: 10px 8px 22px;">
+    <span class="dockitem">
+      <span style="position: relative; display: inline-flex;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+        <span class="tnum" style="position: absolute; top: -4px; right: -8px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--danger); color: #ffffff; font-size: 9.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">7</span>
+      </span>
+      Today
+    </span>
+    <span class="dockitem">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l2.5-6h11L20 12v6.5H4z"></path><path d="M4 12h5l1.5 2h3L15 12h5"></path></svg>
+      Check-in
+    </span>
+    <span class="dockitem">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19.5c0-3.2 3.1-5 7-5s7 1.8 7 5"></path><circle cx="12" cy="8.5" r="3.8"></circle></svg>
+      Divers
+    </span>
+    <span class="dockitem" style="color: var(--primary); font-weight: 600;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15.5" rx="2.5"></rect><path d="M4 10h16M8.5 3.5v3M15.5 3.5v3"></path></svg>
+      Board
+    </span>
+    <span class="dockitem">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      Close-out
+    </span>
+    <span class="dockitem">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#5b6f77"><circle cx="6" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="18" cy="12" r="1.7"></circle></svg>
+      More
+    </span>
+  </nav>
+
+</div>
+</x-dc>
+</body>
+</html>

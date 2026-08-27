@@ -48,6 +48,45 @@ So an entry here is the index; the constraint lives beside the code it constrain
 Enforced beside the code: `RoleOrientationCard.tsx` defers to it by name, and
 `RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the queue.
 
+### The trip page — `/shop/[shopSlug]/trips/[id]`
+
+**Designed, not yet built** — ADR
+[20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
+(Proposed), drawn in
+[its canvas](canvases/20260827-the-departure-is-two-working-surfaces/README.md).
+
+- **One idea:** everyone who is coming, and whether they can. The roster *is* the page; what the
+  dive is drops to a one-line summary that opens on request.
+- **The question it arrives with:** "who still needs something before this boat sails?" — answered by
+  the first group in the ledger, which is the only group carrying open work.
+- **Controls that dissolved:** the filter chips (the groups do the filtering), the per-row Details
+  caret (a row at rest is a name and a mark; open work is simply open), and the Overview tab itself
+  (a disclosure on this page).
+- **Remove first:** the Activity and Promote footer rows — kept only because a trip's history has no
+  other home yet.
+- **Composition:** one grouped ledger under a masthead, not a card stack — a roster is a list of
+  people in states, and the state belongs to the group rather than repeated down every row.
+
+### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
+
+**Designed, not yet built** — same ADR and canvas. The design's whole argument is that this surface
+is worked *on a boat*, one-handed and wet, so its content is tiered by when it is needed at the rail.
+
+- **One idea:** the head count. Names, one big tap each, and how many are still to call.
+- **The question it arrives with:** "who is not aboard yet?" — answered by the count and the
+  still-to-call chips above the list, before any scrolling.
+- **Controls that dissolved:** the two-button cluster per row (one circle whose fill *is* the state),
+  the standalone emergency band and the checklist card (both one line now), and the device
+  housekeeping card (a footer line, then a `⋯` menu on the phone).
+- **Remove first:** nothing on the phone — it is already down to names, taps, and the count. On
+  desktop, the audit line per row, if a dockside reader turns out not to want it.
+- **Composition:** an instrument, not a console — a count that leads at 44px, a list that is mostly
+  names and circles, and everything rare deliberately one tap away or ashore.
+
+Two rules here are load-bearing and get pinned beside the code when they ship: a destructive
+roll-call claim is never a single tap, and no danger tone renders at a checkpoint where nothing has
+been recorded.
+
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
 **Unanswered, and known to be.** Its honest answer to "what is this surface's one idea?" is
