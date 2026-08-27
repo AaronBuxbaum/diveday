@@ -216,18 +216,48 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   // Clearing the last waiting review also takes the "Publish selected" button
   // off the page, which is exactly the case that used to swallow this sentence
   // whole — the header row survives that, the button does not.
-  const overview = await page.getByRole("region", { name: "Rating overview" }).boundingBox();
-  const outcomeBox = await outcome.boundingBox();
+  // **Measured after the reveal lands, and all three in one frame.**
+  //
+  // `useRevealPublished` answers a publish from the "waiting" tab with a
+  // `router.replace` onto the unfiltered list — same shell, no document
+  // teardown, but the rows underneath change and the page re-lays-out. Three
+  // separate `boundingBox()` calls straddled that: the overview was measured on
+  // one render and the outcome on the next, so the assertion compared
+  // coordinates from two different pages and reported the sentence 92px *above*
+  // a block it sits below in the DOM. It went red on `main` the day the reveal
+  // landed and is not a flake — it fails every run.
+  //
+  // Waiting for the URL to lose its filter is the deterministic gate for that
+  // (`pnpm check:e2e-hygiene` refuses the timing guess), and reading the three
+  // rects inside one `evaluate` is what makes them comparable: nothing can
+  // scroll or re-render between them. Document-relative, so a scroll before the
+  // measurement cannot skew it either.
+  await expect(page).toHaveURL(/\/reviews$/);
+  const overviewEl = await page.getByRole("region", { name: "Rating overview" }).elementHandle();
+  const outcomeEl = await outcome.elementHandle();
   // A known review row, not "the first `<li>` on the page" — the staff nav is
   // a list too, and its items sit above everything here.
-  const reviewRow = await page
+  const reviewRowEl = await page
     .locator("li")
     .filter({ hasText: comment })
     .filter({ visible: true })
     .first()
-    .boundingBox();
-  expect(outcomeBox?.y).toBeGreaterThan((overview?.y ?? 0) + (overview?.height ?? 0));
-  expect(outcomeBox?.y).toBeLessThan(reviewRow?.y ?? 0);
+    .elementHandle();
+  const layout = await page.evaluate(
+    (nodes) => {
+      const [overviewNode, outcomeNode, rowNode] = nodes;
+      const top = (node: Element) => node.getBoundingClientRect().top + window.scrollY;
+      const bottom = (node: Element) => node.getBoundingClientRect().bottom + window.scrollY;
+      return {
+        overviewBottom: bottom(overviewNode),
+        outcomeTop: top(outcomeNode),
+        rowTop: top(rowNode),
+      };
+    },
+    [overviewEl, outcomeEl, reviewRowEl],
+  );
+  expect(layout.outcomeTop).toBeGreaterThan(layout.overviewBottom);
+  expect(layout.outcomeTop).toBeLessThan(layout.rowTop);
 
   await page.context().clearCookies();
   await page.goto("/s/blue-mantis");
