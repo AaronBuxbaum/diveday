@@ -454,7 +454,7 @@
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
       "rolesInvalid": "Check at least one role before saving.",
       "inviteAlreadyOnTeam": "That person already has an account here.",
-      "inviteEmailTaken": "That email is already registered to a different shop.",
+      "inviteEmailTaken": "That email isn’t available here. Invite this teammate at a different address.",
       "inviteEmailReserved": "That email address is reserved and can't receive mail. Invite this teammate at an address they can read.",
       "lastOwner": "Can't do that — the shop needs at least one owner. Make someone else an owner first.",
       "notFound": "That person isn't on this shop's team.",

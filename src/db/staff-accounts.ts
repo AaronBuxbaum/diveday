@@ -309,6 +309,31 @@ export async function inviteStaffMember(
       // A different shop's account already owns this email — user_accounts.email
       // is globally unique, so this must be refused before the insert throws a
       // raw constraint error.
+      //
+      // **The words for this refusal say what to do, not what was found.** The
+      // condition is a fact about *another tenant*, and until 2026-08-27 the
+      // message stated it outright ("That email is already registered to a
+      // different shop"). It is a narrow oracle — the caller must already be
+      // authenticated staff and already know the address — but it is a fact
+      // about a shop this one has no relationship with, crossing a boundary the
+      // rest of this codebase defends carefully, and it bought the inviting
+      // shop nothing: what they need is a different address, and that is now
+      // all they are told (issue #721).
+      //
+      // Deliberately **not** collapsed into `already_on_team`. The two are
+      // different conditions and only one is about this tenant: "that person
+      // already has an account here" is a fact about the caller's own team,
+      // which they can read off the page behind the form, and telling a shop
+      // that about somebody who is *not* on their team would be a lie that also
+      // gives them the wrong instruction. Same-message-for-both closes nothing
+      // extra either: any refusal at all already says the address is
+      // unavailable, because the unique index leaves no version of this that
+      // succeeds. What was worth removing was the sentence naming another
+      // shop's existence, and that is gone.
+      //
+      // Whether one human may hold accounts at two shops at all is the open
+      // question behind this refusal, not something to settle here — see H-60
+      // in docs/product/human-decisions.md.
       const [crossShopAccount] = await tx
         .select({ id: userAccounts.id })
         .from(userAccounts)
