@@ -32,15 +32,22 @@ import { courses } from "./schema";
  */
 const DISPLAY_TITLE_BY_SLUG = new Map<string, string>();
 {
+  // **Claimed by slug, not by title.** The uniqueness this protects is
+  // `courses_shop_slug_unique`, and `courseSlug` normalises — it lowercases and
+  // collapses every run of non-alphanumerics to one `-`. So two titles that
+  // merely *look* different can still land on one slug ("Photo & Video" and
+  // "Photo Video" both give `photo-video`), and comparing the titles would wave
+  // that through into a constraint violation at seed time. No pair in the tree
+  // collides today, which is exactly why this is worth pinning rather than
+  // noticing later: `seed-catalog.test.ts` asserts the whole set is distinct.
   const claimed = new Set<string>();
   for (const template of COURSE_TEMPLATES) {
+    const key = courseSlug(template.title);
     DISPLAY_TITLE_BY_SLUG.set(
       template.slug,
-      claimed.has(template.title)
-        ? `${template.agency.toUpperCase()} ${template.title}`
-        : template.title,
+      claimed.has(key) ? `${template.agency.toUpperCase()} ${template.title}` : template.title,
     );
-    claimed.add(template.title);
+    claimed.add(key);
   }
 }
 

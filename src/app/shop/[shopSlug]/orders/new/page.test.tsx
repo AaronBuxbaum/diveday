@@ -100,7 +100,11 @@ describe("the prefill ids", () => {
 
 describe("the tax location form", () => {
   it("keeps billing location fields off when tax is disabled", async () => {
-    await shopThatCanBill();
+    // Turned off explicitly. The seeded demo now ships with Stripe Tax **on**
+    // (src/db/seed.ts), so leaning on the fixture's default made this test
+    // assert the opposite of its own name.
+    const { db, shop } = await shopThatCanBill();
+    await setShopTaxEnabled(db, shop.id, false);
     expect(inputNamesIn(await renderWith())).not.toContain("customerAddressLine1");
   });
 

@@ -114,6 +114,12 @@ export default async function NewOrderPage({
   const locale = await requestLocale();
   const t = staffTranslator(locale);
   const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
+  /**
+   * The billing address the tax fieldset below opens with — **only on a demo
+   * shop**, and only its own address. See the note beside that fieldset for why
+   * a real shop is deliberately left to type it.
+   */
+  const demoAddress = shop.isDemo ? shop : null;
   const [customers, bookingContext] = await Promise.all([
     listOrderableCustomers(db, shop.id),
     prefillBookingId ? getBookingContext(db, shop.id, prefillBookingId) : null,
@@ -218,6 +224,18 @@ export default async function NewOrderPage({
             </Field>
           </FieldGrid>
 
+          {/* **The demo shop's form arrives filled in.**
+              Turning Stripe Tax on makes these six fields required, and a demo
+              is meant to be walked through rather than typed into — so the
+              canonical demo prefills them with its own address, which for the
+              counter sale this form mostly raises is also the honest answer to
+              "where did this sale happen?".
+
+              `isDemo` only. On a real shop this is a *customer's* billing
+              address and Stripe Tax calculates from it, so defaulting it to the
+              shop's own would quietly compute the wrong jurisdiction's tax on
+              every invoice — a worse failure than an empty field, because it
+              looks answered. A real shop still types it. */}
           {shop.taxEnabled ? (
             <fieldset className="rounded-lg border border-border p-4">
               <legend className="px-1 text-sm font-medium">
@@ -229,6 +247,7 @@ export default async function NewOrderPage({
                   <input
                     type="text"
                     name="customerAddressLine1"
+                    defaultValue={demoAddress?.addressStreet ?? ""}
                     required
                     autoComplete="billing address-line1"
                     maxLength={200}
@@ -248,6 +267,7 @@ export default async function NewOrderPage({
                   <input
                     type="text"
                     name="customerAddressCity"
+                    defaultValue={demoAddress?.addressLocality ?? ""}
                     required
                     autoComplete="billing address-level2"
                     maxLength={100}
@@ -258,6 +278,7 @@ export default async function NewOrderPage({
                   <input
                     type="text"
                     name="customerAddressRegion"
+                    defaultValue={demoAddress?.addressRegion ?? ""}
                     autoComplete="billing address-level1"
                     maxLength={100}
                     className={controlClass}
@@ -267,6 +288,7 @@ export default async function NewOrderPage({
                   <input
                     type="text"
                     name="customerAddressPostalCode"
+                    defaultValue={demoAddress?.addressPostalCode ?? ""}
                     required
                     autoComplete="billing postal-code"
                     maxLength={30}
@@ -277,6 +299,7 @@ export default async function NewOrderPage({
                   <input
                     type="text"
                     name="customerAddressCountry"
+                    defaultValue={demoAddress?.addressCountry ?? ""}
                     required
                     autoComplete="billing country"
                     maxLength={2}

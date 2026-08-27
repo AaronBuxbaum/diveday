@@ -254,7 +254,10 @@ export default async function ReviewsPage({
         <div className="mb-6" />
       )}
 
-      <ReviewSelectionProvider showingWaitingOnly={onlyWaiting}>
+      <ReviewSelectionProvider
+        showingWaitingOnly={onlyWaiting}
+        scope={`${onlyWaiting ? "waiting" : "all"}:${reviewPage.page}`}
+      >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           {/* A filter is a view of the list, not the page's action — these
               used to be two buttons with the active one wearing primary

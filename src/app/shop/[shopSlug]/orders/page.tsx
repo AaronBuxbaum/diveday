@@ -590,8 +590,19 @@ export default async function OrdersIndexPage({
                 exceptional), so Date and Amount stay on screen at 390px.
                 `width` above that: under fixed layout an unnamed column takes
                 an equal share, so a column holding one short pill was claiming
-                as much room as the diver's name. */}
-            <Th hideBelow="sm" width="8rem">
+                as much room as the diver's name.
+
+                **`12rem`, not `8rem`, and the pill is allowed to wrap.** The
+                English words this column holds are one short one — but Spanish
+                spells `partly_refunded` "Reembolsado en parte", 20 characters
+                plus a tone glyph, which does not fit 8rem and, against `Td`'s
+                `overflow-hidden` and a `whitespace-nowrap` pill, was *clipped*
+                rather than wrapped. A status a shop cannot read is a worse
+                outcome than the two-line pill this change was tidying up, so
+                the floor is set by the longest localized label and wrapping
+                stays available underneath it as the thing that never truncates
+                (CodeRabbit on PR #1024). */}
+            <Th hideBelow="sm" width="12rem">
               {t("orders.index.table.status")}
             </Th>
             <Th>{t("orders.index.table.date")}</Th>
@@ -607,10 +618,7 @@ export default async function OrdersIndexPage({
               // there instead of absent here.
               const statusBadge =
                 row.order.status === "paid" ? null : (
-                  <Badge
-                    tone={ORDER_STATUS_TONES[row.order.status] ?? "neutral"}
-                    className="whitespace-nowrap"
-                  >
+                  <Badge tone={ORDER_STATUS_TONES[row.order.status] ?? "neutral"}>
                     {ORDER_STATUS_KEYS[row.order.status]
                       ? t(ORDER_STATUS_KEYS[row.order.status])
                       : row.order.status}

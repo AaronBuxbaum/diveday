@@ -33,6 +33,7 @@ import {
 } from "./schema";
 import {
   canAcceptPayments,
+  demoShopBillingAddress,
   getShopCurrency,
   getShopStripeAccount,
   getShopTaxEnabled,
@@ -166,7 +167,22 @@ export async function createOrder(
   // what was billed and must survive a later change to the shop setting.
   const currency = await getShopCurrency(db, input.shopId);
   const taxEnabled = await getShopTaxEnabled(db, input.shopId);
-  if (taxEnabled && !isUsableInvoiceCustomerAddress(input.customerAddress)) {
+  // A demo shop with no usable address bills itself; a real one is still
+  // refused, because guessing a customer's location computes the wrong
+  // jurisdiction's tax and presents it as fact (`demoShopBillingAddress`).
+  //
+  // Keyed on *usable*, not on merely present: the staff form posts all six
+  // fields on every submit, so an untouched tax fieldset arrives here as an
+  // object full of empty strings rather than as `undefined`. A presence check
+  // would see that object, skip the fallback, and refuse the demo's own
+  // invoice — which is exactly what it did.
+  const supplied = isUsableInvoiceCustomerAddress(input.customerAddress)
+    ? input.customerAddress
+    : undefined;
+  const customerAddress =
+    supplied ??
+    (taxEnabled ? ((await demoShopBillingAddress(db, input.shopId)) ?? undefined) : undefined);
+  if (taxEnabled && !isUsableInvoiceCustomerAddress(customerAddress)) {
     return { ok: false, reason: "tax_location_required" };
   }
   const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
@@ -220,7 +236,7 @@ export async function createOrder(
     customerName: customer.fullName,
     currency,
     taxEnabled,
-    customerAddress: input.customerAddress,
+    customerAddress,
     lineItems: input.lineItems.map((item) => ({
       description: item.description,
       quantity: item.quantity,

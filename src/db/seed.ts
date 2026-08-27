@@ -259,6 +259,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         shoreContact: "Front desk, +1 305 555 0142",
         plan: "Give O2, call the chamber first, then the Coast Guard on 16.",
       },
+      // **The canonical demo collects sales tax.** Every other shop starts with
+      // this off (the column's default, and what a minted demo keeps) — but the
+      // demo is a shop that has been running for a quarter, and its own report
+      // has a "Tax collected" tile that would otherwise be a permanent $0.00.
+      // Its seeded invoices carry the matching `tax_cents` (seed-history.ts).
+      //
+      // Turning it on is what makes the staff invoice form ask for a customer
+      // billing address, so `orders/new` prefills the demo's own address for
+      // it — see that page. `e2e/tax.spec.ts` drives freshly minted shops
+      // precisely so it never depends on this one's setting, and the "a shop
+      // starts with tax off" case still has a fixture: a minted demo.
+      taxEnabled: true,
       // A real street exercises the address end to end (structured data,
       // settings form) without publishing anything a search engine could act
       // on for a demo fixture.
