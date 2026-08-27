@@ -167,13 +167,18 @@ describe("saving the shop's Stripe Tax setting", () => {
   it("refuses a captain's tax change", async () => {
     const { db, shop, captain } = await context();
     signIn(shop, captain);
+    const taxBefore = (await getShopById(db, shop.id))?.taxEnabled;
     const form = new FormData();
     form.set("taxEnabled", "on");
 
     const to = await redirectedTo(() => saveTaxAction(form));
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
+    // Unchanged, rather than literally `false`: the canonical demo ships with
+    // Stripe Tax **on** (src/db/seed.ts), so a hard-coded `false` here was
+    // asserting the fixture's default rather than that the captain's write was
+    // refused. Read before and after and compare.
+    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(taxBefore);
   });
 
   it("lets an owner enable and disable Stripe Tax", async () => {

@@ -110,10 +110,17 @@ export async function createOrderAction(formData: FormData) {
       postalCode: String(formData.get("customerAddressPostalCode") ?? ""),
       country: String(formData.get("customerAddressCountry") ?? ""),
     });
-    if (!parsedAddress.success || !isUsableInvoiceCustomerAddress(parsedAddress.data)) {
-      redirect(noticeUrl(newOrder, "tax-location-required"));
-    }
-    customerAddress = parsedAddress.data;
+    // Parsed, but **not refused here**. `createOrder` runs the identical check
+    // as its first gate and answers `tax_location_required`, which `noticeUrl`
+    // normalises to the same notice this used to redirect with — so the second
+    // copy bought nothing and cost the one case that is not a plain refusal: a
+    // demo shop, which bills itself when no usable address is supplied
+    // (`demoShopBillingAddress`). Refusing up here meant that fallback could
+    // never be reached from the form it exists for.
+    customerAddress =
+      parsedAddress.success && isUsableInvoiceCustomerAddress(parsedAddress.data)
+        ? parsedAddress.data
+        : undefined;
   }
 
   const lineItems: NewOrderLineItem[] = [];

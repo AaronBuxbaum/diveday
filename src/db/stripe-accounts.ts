@@ -2,6 +2,10 @@ import { and, eq, isNull, lte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import type { AccountStatusResult } from "@/lib/payments/connect";
+import {
+  type InvoiceCustomerAddress,
+  isUsableInvoiceCustomerAddress,
+} from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
 import type { ShopStripeAccount } from "./schema";
 import { shopStripeAccounts, shops } from "./schema";
@@ -36,6 +40,52 @@ export async function getShopTaxEnabled(db: DbExecutor, shopId: string): Promise
     .where(eq(shops.id, shopId))
     .limit(1);
   return row?.taxEnabled ?? false;
+}
+
+/**
+ * **The billing address a demo shop bills itself at, or null.**
+ *
+ * Stripe Tax cannot calculate without a customer location, so turning the
+ * opt-in on makes one mandatory on every invoice. That is right for a real
+ * shop — the location decides the jurisdiction, and guessing it would compute
+ * somebody else's tax and present it as fact.
+ *
+ * The canonical demo is the one shop where there is nobody to ask. It has tax
+ * on so its report has something to report and its settings row shows the
+ * feature at all (src/db/seed.ts), and the invoices it raises are counter sales
+ * whose location genuinely *is* the shop. So it falls back to its own address
+ * rather than refusing, and `orders/new` prefills the same fields for the same
+ * reason.
+ *
+ * `is_demo` is the whole gate. A real shop with tax on and no address supplied
+ * is still refused with `tax_location_required`, which is what
+ * `createOrder`'s caller renders as a field error.
+ */
+export async function demoShopBillingAddress(
+  db: DbExecutor,
+  shopId: string,
+): Promise<InvoiceCustomerAddress | null> {
+  const [row] = await db
+    .select({
+      isDemo: shops.isDemo,
+      line1: shops.addressStreet,
+      city: shops.addressLocality,
+      state: shops.addressRegion,
+      postalCode: shops.addressPostalCode,
+      country: shops.addressCountry,
+    })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!row?.isDemo) return null;
+  const address = {
+    line1: row.line1 ?? "",
+    city: row.city ?? "",
+    state: row.state ?? undefined,
+    postalCode: row.postalCode ?? "",
+    country: row.country ?? "",
+  };
+  return isUsableInvoiceCustomerAddress(address) ? address : null;
 }
 
 /**

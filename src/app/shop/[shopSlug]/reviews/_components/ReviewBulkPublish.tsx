@@ -41,10 +41,23 @@ const SelectionContext = createContext<{
 export function ReviewSelectionProvider({
   children,
   showingWaitingOnly,
+  scope,
 }: {
   children: React.ReactNode;
   /** Whether the list under this is narrowed to reviews still waiting. */
   showingWaitingOnly: boolean;
+  /**
+   * Which slice of the queue is on screen — the filter and page, from the
+   * server. Changing it empties the selection.
+   *
+   * `usePathname()` alone was not enough and never had been: it excludes the
+   * query string, and this list's filter and page live entirely in the query.
+   * So ticking three reviews on page 1 and paging to page 2 left three
+   * invisible rows selected, under a "Publish selected" button that would
+   * cheerfully publish them (CodeRabbit on PR #1024). A tick box you cannot
+   * see is not a selection anybody made.
+   */
+  scope: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [result, publish] = useActionState(publishReviewsAction, null);
@@ -52,8 +65,11 @@ export function ReviewSelectionProvider({
   // A pass that published from the waiting tab drops the filter, so the rows it
   // released are still on screen underneath the confirmation.
   useRevealPublished(Boolean(result?.ok), showingWaitingOnly);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change clears the selection, which is the point.
-  useEffect(() => setSelected(new Set()), [pathname]);
+  // Route and query as one value, so the effect below depends on "which list is
+  // on screen" rather than on two things that each half-answer it.
+  const listKey = `${pathname}?${scope}`;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `listKey` is a trigger, not a value the effect body reads — any change clears the selection, which is the point.
+  useEffect(() => setSelected(new Set()), [listKey]);
   // A pass that landed clears the ticks it acted on. It used to come for free
   // from the redirect this action no longer makes — the rows lose their boxes
   // on the re-render either way, but leaving their ids in the set would carry

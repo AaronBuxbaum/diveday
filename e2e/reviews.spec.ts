@@ -88,12 +88,18 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   // and the scroll offset is read only after it has rendered.
   await page.keyboard.press("End");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  const scrolledTo = await page.evaluate(() => window.scrollY);
-
   await card.scrollIntoViewIfNeeded();
+  // Read **after** the row is scrolled into view: `scrollIntoViewIfNeeded` is
+  // itself a scroll, so an offset captured before it is not where the page
+  // stands when the tap lands. Captured here, the assertion can be equality —
+  // which fails on a partial jump as well as on a reset to the top, where a
+  // bare `> 0` would only have caught the reset.
+  const scrolledTo = await page.evaluate(() => window.scrollY);
+  expect(scrolledTo).toBeGreaterThan(0);
+
   await card.getByRole("button", { name: "Publish" }).click();
   await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolledTo);
   // And the outcome is not smuggled onto the URL either, which is the other
   // half of what the redirect used to do.
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/reviews$/);
@@ -101,10 +107,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await expect(card.getByRole("button", { name: "Mark as standout" })).toBeVisible();
   await card.getByRole("button", { name: "Mark as standout" }).click();
   await expect(page.getByText("Review marked as standout.")).toBeVisible();
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  // The offset the list was actually at, so a page too short to scroll would
-  // fail here rather than passing two vacuous assertions above.
-  expect(scrolledTo).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolledTo);
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();

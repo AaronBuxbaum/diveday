@@ -36,7 +36,7 @@ import {
 } from "./orders";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { orders, paymentOperationIntents } from "./schema";
+import { orders, paymentOperationIntents, shops } from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -181,6 +181,13 @@ describe("orders", () => {
     const { db, shop, entry, staff } = await orderContext();
     await connectedShop(db, shop.id);
     await setShopTaxEnabled(db, shop.id, true);
+    // **A real shop.** The fixture is the canonical demo, and a demo with tax
+    // on and no address supplied bills itself rather than refusing
+    // (`demoShopBillingAddress`) — which is a deliberate affordance for the one
+    // shop nobody can be asked, and the opposite of the rule this test is
+    // about. Clearing the flag puts the real-shop rule back under the
+    // assertion; the demo's own path is the test below.
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     const seen: CreateInvoiceRequest[] = [];
     const invoicing = fakeInvoicing({
       async createInvoice(request) {
@@ -224,6 +231,44 @@ describe("orders", () => {
     expect(result.ok).toBe(true);
     expect(seen[0]?.taxEnabled).toBe(true);
     expect(seen[0]?.customerAddress).toEqual(customerAddress);
+  });
+
+  it("bills a demo shop to its own address when tax is on and none was given", async () => {
+    // The affordance the test above clears `is_demo` to get out of the way of.
+    // The canonical demo ships with Stripe Tax on so its report has something
+    // to report (src/db/seed.ts), and there is no diver to ask for a billing
+    // address on a counter sale — so it uses the shop's own, which for a sale
+    // made at the shop is also the honest answer.
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    await setShopTaxEnabled(db, shop.id, true);
+    const seen: CreateInvoiceRequest[] = [];
+    const invoicing = fakeInvoicing({
+      async createInvoice(request) {
+        seen.push(request);
+        return fakeInvoicing().createInvoice(request);
+      },
+    });
+
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        lineItems,
+      },
+      invoicing,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(seen[0]?.customerAddress).toEqual({
+      line1: "100 Ocean Drive",
+      city: "Key Largo",
+      state: "FL",
+      postalCode: "33037",
+      country: "US",
+    });
   });
 
   it("preserves recorded tax when a paid webhook has no tax evidence", async () => {

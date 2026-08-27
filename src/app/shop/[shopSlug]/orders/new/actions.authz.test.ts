@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { orders } from "@/db/schema";
+import { orders, shops } from "@/db/schema";
 import { setShopTaxEnabled } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import { seededShopContext } from "@/test/db";
@@ -157,6 +157,11 @@ describe("raising an invoice", () => {
     const { db, shop, owner } = await context();
     const customer = await seededCustomer(db, shop.id);
     await setShopTaxEnabled(db, shop.id, true);
+    // **A real shop.** The fixture is the canonical demo, and a demo with tax
+    // on and no address supplied bills itself rather than refusing
+    // (`demoShopBillingAddress`) — deliberate, for the one shop with nobody to
+    // ask, and the opposite of the rule under test here.
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
     signIn(shop, owner);
     const before = await orderCount(db, shop.id);
 
