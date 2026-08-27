@@ -51,6 +51,11 @@ mirror.
 groups own their shared facts; chrome recedes; elevation is earned.** Ten decisions, the first
 three mechanical and app-wide, the rest recompositions of specific surfaces.
 
+Over all ten stands a direction Aaron set on 2026-08-27 (H-62): **fewer surfaces, each with one
+obvious next action.** Where a destination exists only to re-render another surface's content in a
+different order, the default is to fold it, not to restyle it — and every surface that remains must
+answer "what do I do here?" without the reader hunting.
+
 ### 1. Elevation is earned
 
 A panel at rest is **flat**: `bg-surface`, a 1px `--border` hairline, `rounded-2xl`, **no shadow**.
@@ -95,11 +100,20 @@ rows ranked by severity, each with its one fix beside it. Work bound to no boat 
 "At the desk" group. Tomorrow and the rest of the week collapse to single count-carrying rows. The
 day's facts are said once, at the station, instead of once per card.
 
-In the evening the same spine **closes**: stations show their head-count result, recap and log
-state; still-open work becomes the leftovers group; the one act is closing the day. This is
-Close-out's content as the home's evening reading — the roadmap's "home becomes the shop's day"
-row, drawn. Whether Close-out's route folds away is an **owner call** recorded there and in the
-Consequences; nothing in this ADR forecloses it.
+In the evening the same spine **closes** — and this is a state, never a mode: there is no phase
+control and no second view, the stations simply settle one by one as head counts close, and the
+closing block appears beneath the spine once every departure of the shop day has ended (with the
+standing one-hour late-arrival buffer) or closed its count. The closing block is the leftovers
+group — each row carrying its own **Dismiss**, saved immediately with Undo, per H-57, so closing
+never owns those decisions — then the one closing act. Recaps and the log ride their stations. On a
+day with no departures the page collapses to its one-line quiet state (principles.md's
+whole-page-empty rule) rather than rendering empty groups.
+
+**Close-out's route folds away (H-62, decided 2026-08-27).** `/shop/[shopSlug]/close-out` becomes a
+308 to the home, its `?notice=` codes re-home, the `closeOut` destination leaves the registry (the
+phone dock drops to four destinations plus More), and `day_closeouts`, the close action, and the
+departure-log door are unchanged underneath. This is the concept-model table's "home becomes the
+shop's day" row, first half, delivered by design; the Check-in fold remains a separate, open call.
 
 The queue's ranking rules, row kinds, and the two good-news moments (principles.md §3) are
 unchanged — this reshapes where the work renders, not what counts as work.
@@ -108,9 +122,9 @@ unchanged — this reshapes where the work renders, not what counts as work.
 
 At desktop the schedule board composes as a **seven-column week**: one column per day, departures
 as compact time-led entries, a multi-day course as a spanning bar, the current day marked, past
-days dimmed. Paging is by week. The existing vertical stream remains the phone composition (a
-seven-column grid has no honest 390px form), and the board's cursor-paged "stream with no end"
-contract is unchanged underneath.
+days dimmed. Paging is by week. **The width floor is `xl` (1280px), decided 2026-08-27 (H-63):**
+seven columns are too squeezed on a portrait tablet, so tablets and phones keep the vertical day
+stream, and the board's cursor-paged "stream with no end" contract is unchanged underneath.
 
 ### 6. Settings is a rail and a pane
 
@@ -172,7 +186,14 @@ needs a new fact (a CSS-only mechanism), not a fresh opinion.
 
 **A `[phase]` or `?view=` control on the home** (morning/evening as tabs). Rejected: the clock
 already knows. A control asking the shop which part of the day it is would be chrome doing the
-content's job.
+content's job. The fold (decision 4, H-62) sharpens this into the load-bearing reading: the evening
+is not even a *state the page switches into* — the stations settle individually, so the page never
+has two renderings of one moment, and there is nothing for a control to choose between.
+
+**An acknowledgement gate on the closing act** (the current close-out's "close with things still
+open" checkbox). Rejected — H-57 already decided that leftovers carry forward by default and are
+dismissed per row, immediately, with Undo; closing the day does not own those decisions, so a gate
+re-asking them at the close is a confirm on a reversible act (principle 7).
 
 **Retiring the week board idea in favor of the stream at all widths.** Considered because the
 stream is honest and already good. Rejected at desktop only: a week of departures at ~2,700px of
@@ -189,10 +210,17 @@ collisions (two boats, one boat, none) are the board's whole question.
   and pane; (h) the counter instrument; (i) the storefront. Each ships with the standing
   obligations: the component names this ADR in a doc comment, a test pins the rule (never pixels),
   the slice table updates, screenshots in light and dark.
-- **Two owner calls are surfaced, not settled**: whether Close-out's route folds into the home once
-  the evening reading ships (the concept-model table's first row — slice (d) builds the reading
-  without removing the route), and whether the week board should eventually replace the stream on
-  tablet as well as desktop. Both want a `dive-domain-expert` pass on dock-day ergonomics.
+- **Both owner calls this record originally surfaced are now decided** — the fold (H-62, decision
+  4) and the week board's width floor (H-63, decision 5) — so slice (d) removes the Close-out route
+  in the same change that ships the evening reading, and slice (e) carries no per-device judgment.
+  One related call stays open and is deliberately not this ADR's: folding the counter Check-in into
+  the home (the concept-model table's second half), which depends on the arrived-vs-aboard data
+  question. The counter's design in decision 9 stands whether or not its route later folds.
+- **The canvas carries an implementation spec** (`SPEC.md` beside the artboards, per
+  [design/design-artifacts.md](../../design/design-artifacts.md)): the user journeys, acceptance
+  tests, and interface contracts for slices (a)–(i), written so a session with none of this
+  context — or a smaller model — can implement a slice to spec. The spec's authority expires per
+  slice exactly as the canvas's does; this record outranks it.
 - **Supersedes the composition half** of
   [20260720-today-work-queue](20260720-today-work-queue.md) (the ranked queue's row kinds, ranking
   and empty/good-news states survive; the two-view rendering does not) and, if slice (d) leads to

@@ -103,6 +103,15 @@
       "y": 0,
       "w": 390,
       "h": 844
+    },
+    {
+      "file": "QuietDay.dc.html",
+      "title": "The home \u2014 a quiet day",
+      "page": "page-staff",
+      "x": 4410,
+      "y": 0,
+      "w": 1440,
+      "h": 540
     }
   ],
   "annotations": [
@@ -120,7 +129,7 @@
       "x": 0,
       "y": -190,
       "w": 440,
-      "text": "The home stops being twelve boxes that name one departure eight times. The day is a spine: each boat is a station carrying its own work, ranked by severity, with its one fix beside it; desk work pools below; tomorrow collapses to a count. In the evening the same spine closes \u2014 head counts, recaps, leftovers, one act \u2014 which is Close-out's content as the home's evening reading (owner call recorded in the ADR)."
+      "text": "The home stops being twelve boxes that name one departure eight times. The day is a spine: each boat is a station carrying its own work, ranked by severity, with its one fix beside it; desk work pools below; tomorrow collapses to a count. In the evening the same spine settles station by station \u2014 a state, never a mode \u2014 and the closing block appears: leftovers with their own Dismiss (H-57), then the one closing act. Close-out's route folds away entirely (H-62, decided 2026-08-27): the dock drops to four destinations plus More. On a day with no boats the page collapses to a heading, one sentence, and one act (the QuietDay board)."
     },
     {
       "id": "staff-week",

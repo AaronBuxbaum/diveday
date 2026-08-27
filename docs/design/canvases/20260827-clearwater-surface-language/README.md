@@ -30,6 +30,7 @@ the ADR carries the decisions, these are the pictures drawn to argue them.
 | `Orders.dc.html` | Orders as a day ledger: group headers own the date and subtotal, toolbar filters, imported history as one disclosure |
 | `Settings.dc.html` | Settings as rail and pane: the whole map on the left, the selected destination as inset groups on the right |
 | `Counter.dc.html` | The counter as a boarding instrument at portrait-tablet width: the count leads, blocked rows carry their fix, settled rows sink |
+| `QuietDay.dc.html` | The home on a day with no departures: the whole-page collapse — a heading, one sentence, one act, and the dock at four destinations plus More after the fold |
 
 **Page 3 — The shopfront**
 
@@ -68,7 +69,7 @@ $148.00 (Amara Osei, counter sale), $120.00 open (Diego Alvarez, night dive), $1
 Watanabe); Wednesday's eight total $916.43 (Bjorn Aasen, Marisol Vega, Priscilla Adeyemi, Lars
 Petersen $41.93, Yara Halabi, Sofia Marchetti, Dominic Rossi at $139.75 each; June Park's nitrox
 fills $36.00); Tuesday's one is Felix Grant's open $340.00 course balance. Review quotes are the
-seed's own (Grace H.'s turtle, Lars P.'s unhurried briefing).
+seed's own (Grace H.'s turtle, Lars P.'s unhurried briefing). Tuesday, September 1 has no departures — the quiet-day board — and the next departure on the board after it is Saturday, September 5's 7:00 AM Morning Two-Tank — Molasses Reef (2 of 12 booked).
 
 Every name, number and time here is demo-seed fiction. Nothing in this directory is real customer
 data, and nothing in a future canvas may be either.
@@ -86,7 +87,7 @@ bodies, with their pins and owner-call dependencies, are in
 | 6a — the language mechanics | open | — | — |
 | 6b — one chrome spec | open | — | — |
 | 6c — the home as the day's spine | open | — | — |
-| 6d — the home's evening reading | open | — | — |
+| 6d — the home's evening reading and the fold (H-62) | open | — | — |
 | 6e — the week board | open | — | — |
 | 6f — the orders day ledger | open | — | — |
 | 6g — settings rail and pane | open | — | — |
@@ -108,7 +109,9 @@ Start by loading the `design-implementation` skill, then read, in this order:
   2. the slice's entry in docs/product/features/roadmap.md (section 6)
   3. the slice table in docs/design/canvases/20260827-clearwater-surface-language/README.md
   4. the code for every surface the slice touches, as it exists today
-  5. the artboards in that canvas directory, last — they argue, they do not decide
+  5. the slice's section of SPEC.md in that canvas directory — journeys, acceptance tests,
+     interface contracts; below the ADR, above the artboards
+  6. the artboards, last — they argue, they do not decide
 
 Non-negotiable, from the ADR:
   - Shipped code outranks the canvas; the ADR outranks both. The trip/manifest surfaces belong to

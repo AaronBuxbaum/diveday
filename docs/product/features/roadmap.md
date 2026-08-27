@@ -162,11 +162,15 @@ test pins the rule (never a pixel snapshot).
 - **6c. The home as the day's spine** (morning reading). Stations in clock order carrying their own
   work rows; the desk group; collapsed horizons; the view switch dissolves. *Pins:* a test that a
   departure's facts render once — no queue row repeats a station's title at equal weight.
-- **6d. The home's evening reading.** The spine closes: head-count results, recap/log state,
-  leftovers, the close act. **Blocked on the owner call** (concept-model row 1) for whether
-  Close-out's route then folds; this slice builds the reading without removing the route.
-- **6e. The week board.** Seven columns at desktop, spans for multi-day courses, the stream stays
-  on phone. *Pins:* a test that the phone width keeps the stream.
+- **6d. The home's evening reading, and the fold (H-62).** The spine settles station by station —
+  a state, never a mode — and the closing block (leftovers with per-row Dismiss per H-57, then the
+  one closing act) appears once the day's departures have ended, with the standing one-hour buffer.
+  The same slice removes the destination: `/close-out` 308s to the home, its notices re-home, the
+  `closeOut` registry entry goes, and the dock drops to four destinations plus More. *Pins:* a test
+  that no acknowledgement gate stands on the closing act, and one that the closing block never
+  renders while a departure is still out.
+- **6e. The week board (H-63).** Seven columns from `xl` (1280px) up, spans for multi-day courses;
+  tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
 - **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
   history as one disclosure. *Pins:* a test that no row repeats its group's date.
 - **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
@@ -176,9 +180,11 @@ test pins the rule (never a pixel snapshot).
 - **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
   shelves. Conversion surface: `conversion-reviewer` pass.
 
-**Two owner calls before 6d/6e ship their second halves** (both recorded in the ADR's
-Consequences): whether Close-out's route folds into the home, and whether the week board reaches
-tablet. Neither blocks 6a–6c or 6f–6i.
+**Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
+in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.
+The canvas carries [an implementation spec](../../design/canvases/20260827-clearwater-surface-language/SPEC.md)
+— journeys, acceptance tests, and interface contracts per slice — written for a session with none
+of this context. Start any slice from the canvas README's "Implementing a slice" prompt.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
@@ -192,7 +198,7 @@ not decisions.
 
 | Proposal | What it merges or cuts | Recommendation | Cost |
 | --- | --- | --- | --- |
-| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | Do it, in two slices: Close-out-as-evening-view first (M), the Check-in fold second (L) | Route 308s, `?view=` contract, large e2e/visual churn |
+| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | **First half decided 2026-08-27 (H-62)** — Close-out folds into the home's evening, designed as Clearwater slice 6d. The Check-in fold remains the open second half, still gated on the arrived-vs-aboard data question below | Route 308s, `?view=` contract, large e2e/visual churn |
 | **Check-in = boarding's first rung** | `bookings.status = checked_in` and the manifest's "boarded" are two staff-recorded arrival facts that can disagree; make arrival a two-rung state (arrived → aboard) on the departure's first checkpoint | Do it *with* the Check-in fold above, not before — it is the data half of the same merge | Schema migration, counter surface, Today rows, reports |
 | **One "your trip" link per diver** | Promote `/ready/[token]` to the single capability page (waiver step, prep, recap as states over time); retire the trip page's `?booking=` confirmation branch and the second booking-time email | **Part shipped 2026-08-20** — the owner called the shape and the confirmation branch is gone: booking and Stripe both land on `/ready`, the three duplicate server actions are deleted, and the `confirm` capability is now read-only and embed-only (ADR [20260820-one-page-after-booking](../../architecture/decisions/20260820-one-page-after-booking.md)). **Still open:** folding recap into the same link as a post-trip state, and the second booking-time email | Recap-token reconciliation, email templates |
 | **One "Bill" per booking** | Order / invoice / checkout / payment stay as Stripe mechanisms but surface as one money story per booking — quoted, deposit, paid, owed, refunded | Do after the diver-link work; touches every money surface | Orders index re-homing, back-office panels, reports |
