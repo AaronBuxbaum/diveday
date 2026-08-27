@@ -180,6 +180,43 @@ the offline manifest, checking the named support diver against the roster and sh
 buddy-team builder, a staff-side write path for arrangements taken over the phone, and an activity
 trail entry so an overwritten arrangement is diagnosable.
 
+## Amended 2026-08-27: staff may write the record too, and it is not marked when they do
+
+The build gave the record exactly one writer — the diver's own `/ready/[token]`
+page — and the ADR's reason for that stands: a record about somebody's own body
+and how their dive has to be set up is theirs to state. But "the diver is the
+author" and "the diver is the only one who can type it" are different claims,
+and the second one was costing the thing this record exists for.
+
+**Adaptive divers frequently book by phone**, precisely because they want to talk
+to a human about arrangements before committing. A shop would take the whole
+conversation — two support divers, a hoist, a briefing in writing — and have
+nowhere to put it; the best it could offer was "go and find the link in your
+email and type it in again". Walk-ups without a smartphone had the same problem.
+And the prep panel already linked each diver's name to their staff record, where
+the thing the staffer had just been reading was invisible, beside an editable
+rental fit.
+
+So there is a second door (issue #1069): a Dive support panel on the diver
+record, beside the fit, writing through the same `saveSupportNeeds`. The
+question stays on `/ready`. This is a second door, not a replacement.
+
+It gates like the fit and for the same reason: recording arrangements nobody has
+stated yet is data entry, open to whoever took the call, and overwriting what
+the diver stated is the judgement call, on the same permission as overriding
+their stated gear.
+
+**A staff entry is not distinguishable from the diver's own, and that is a
+decision rather than an oversight.** No `stated_by` column. A crew reading "needs
+a lift in and out of the water" acts identically whether the diver typed it or
+the shop typed it after speaking to them, and a badge saying "the shop wrote this
+down" invites a crew to discount the arrangement — which is the failure this
+record exists to prevent. The question such a badge would answer is already
+answered better: every write leaves an activity-trail entry naming its author
+(issue #1070), so "did this come from the diver's own link or from the shop" is a
+fact on the record rather than a qualifier on the screen a crew works from. The
+rental fit beside it makes the same choice.
+
 ## Amended 2026-08-27: the record does reach the offline manifest
 
 The build shipped without it, as the conservative default rather than a considered answer, and the

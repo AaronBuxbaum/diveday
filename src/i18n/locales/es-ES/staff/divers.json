@@ -10,7 +10,8 @@
     "bookActivity": "Reservar actividad",
     "trips": "Salidas",
     "history": "Historial",
-    "activity": "Actividad"
+    "activity": "Actividad",
+    "support": "Apoyo"
   },
   "activity": {
     "heading": "Actividad",
@@ -264,6 +265,29 @@
     "flagging": "Marcando…",
     "flagForStaffFit": "Marcar para ajuste del personal"
   },
+  "support": {
+    "heading": "Apoyo en la inmersión",
+    "description": "Lo que hay que preparar para las inmersiones de este buceador. Lo responde en su propia página de preparación; anótalo aquí cuando te lo diga por teléfono.",
+    "supportDiversLegend": "Buceadores de apoyo en el agua",
+    "supportDiversNone": "Ninguno",
+    "supportDiversFromShop": "Los organiza el centro",
+    "supportDiversOwn": "Los trae el buceador",
+    "countLabel": "¿Cuántos?",
+    "countHint": "Hasta 4 aquí; para más, hablad.",
+    "boardingLegend": "Subir a bordo y entrar al agua",
+    "boardingAssistance": "Una mano o un traslado para subir a bordo",
+    "waterLift": "Una grúa para entrar y salir del agua",
+    "briefingLegend": "Cómo le llega el briefing",
+    "briefingSign": "En lengua de signos",
+    "briefingWriting": "Por escrito",
+    "briefingAloud": "Descrito en voz alta",
+    "briefingSignals": "Señales acordadas de antemano",
+    "equipmentLabel": "Equipo que adaptar o traer",
+    "divesWithLabel": "Alguien que deba ir en el mismo barco y equipo",
+    "save": "Guardar apoyo",
+    "saving": "Guardando…",
+    "changeRestricted": "Cambiar lo que indicó el buceador está limitado a propietarios, gerentes, instructores y divemasters."
+  },
   "history": {
     "heading": "Historial en el centro",
     "importedVisitsText": "{count, plural, one {# visita} other {# visitas}} llegaron de tu sistema anterior. Esas líneas son registros de reserva, no de inmersión.",
@@ -393,7 +417,9 @@
     "mergeAlreadyRemoved": "Uno de estos registros está eliminado. Restáuralo antes de fusionar.",
     "mergeStaffRecord": "Los registros de personal o tripulación no se pueden fusionar con un registro de buceador.",
     "mergeBookingConflict": "Ambos registros tienen una reserva en la misma salida. Resuelve primero esa reserva; no se movió nada.",
-    "mergeRecordConflict": "Estos registros tienen un historial en conflicto que no se puede combinar con seguridad. No se movió nada."
+    "mergeRecordConflict": "Estos registros tienen un historial en conflicto que no se puede combinar con seguridad. No se movió nada.",
+    "supportSaved": "Apoyo en la inmersión guardado.",
+    "notAuthorizedSupport": "Cambiar lo que indicó el buceador sobre su apoyo en la inmersión está limitado a propietarios, gerentes, instructores y divemasters."
   },
   "export": {
     "downloadButton": {

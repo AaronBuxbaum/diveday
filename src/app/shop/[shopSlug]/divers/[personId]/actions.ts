@@ -50,6 +50,7 @@ import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getShopById } from "@/db/shops";
+import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { trackEvent } from "@/lib/analytics";
@@ -183,6 +184,7 @@ const FORM_ANCHORS: Record<string, string> = {
   cards: "#cards",
   "specialty-cards": "#cards",
   fit: "#fit",
+  support: "#support",
   payments: "#payments",
   notes: "#notes",
   "book-activity": "#trips",
@@ -921,6 +923,108 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     weightPreference: parsed.data.weightPreference,
   });
   revalidateAndRedirect(base, backTo(base, saved ? "profile-saved" : "invalid", "fit"));
+}
+
+/**
+ * The same eight facts `/ready` asks for, taken over the phone.
+ *
+ * Mirrors `supportNeedsSchema` in `src/app/ready/[token]/actions.ts` field for
+ * field — one record, one shape, whichever door it came through. The count is
+ * the one value that can be refused, and it is refused the same way there.
+ */
+const supportNeedsSchema = z.object({
+  supportDiversProvidedBy: z.enum(["shop", "diver"]).or(z.literal("")),
+  supportDiversNeeded: z
+    .string()
+    .trim()
+    .max(2)
+    .regex(/^\d*$/)
+    .transform((value) => (value === "" ? null : Number(value)))
+    .refine((value) => value === null || (value >= 0 && value <= 4)),
+  needsBoardingAssistance: z.literal("on").optional(),
+  needsWaterLift: z.literal("on").optional(),
+  briefingInSign: z.literal("on").optional(),
+  briefingInWriting: z.literal("on").optional(),
+  briefingAloud: z.literal("on").optional(),
+  briefingBySignals: z.literal("on").optional(),
+  equipmentAdaptation: z.string().trim().max(300),
+  divesWithName: z.string().trim().max(120),
+});
+
+/**
+ * **The second door onto the support-needs record, for arrangements taken over
+ * the phone** (issue #1069).
+ *
+ * The ADR makes the diver the author, and that stands: the question stays on
+ * `/ready/[token]`, after the sale, on their own page. But "the diver is the
+ * author" and "the diver is the only one who can type it" are different claims,
+ * and the second one had a cost the first never asked for. **Adaptive divers
+ * frequently book by phone**, precisely because they want to talk to a human
+ * about arrangements before committing; the shop took the whole conversation --
+ * two support divers, a hoist, a briefing in writing -- and had nowhere to put
+ * it, and the best it could offer was "go find the link in your email". Walk-ups
+ * without a smartphone had the same problem. Staff already edit the rental fit
+ * beside it, free-text note included.
+ *
+ * **A staff entry is not marked as one, and that is the decision** (the issue
+ * asks for it to be made explicitly). No `stated_by` column. Two reasons. A
+ * crew reading "needs a lift in and out of the water" acts identically whether
+ * the diver typed it or the shop typed it after speaking to them -- and a badge
+ * saying "the shop wrote this down" invites a crew to discount the arrangement,
+ * which is the failure this record exists to stop. And the question a badge
+ * would answer is already answered better: every write leaves an activity-trail
+ * entry naming its author (issue #1070), so "did this come from the diver's own
+ * link or from the shop" is a fact on the record rather than a qualifier on the
+ * screen a crew works from. The rental fit beside it makes the same choice.
+ *
+ * Gated like the fit, and for the same reason: recording a record nobody has
+ * stated yet is data entry, open to any staff member taking the call.
+ * Overwriting one the diver already stated is the judgement call, and takes the
+ * same permission as overriding their stated gear -- it is the same act on a
+ * neighbouring record.
+ */
+export async function saveSupportNeedsAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-support",
+    "support",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const existing = await getSupportNeeds(db, staff.user.shopId, personId);
+  if (
+    existing &&
+    !(await canPersonOverrideGearRequest(db, staff.user.shopId, staff.user.personId))
+  ) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-support", "support"));
+    return;
+  }
+  const parsed = supportNeedsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(backTo(base, "invalid", "support"));
+  const providedBy = parsed.data.supportDiversProvidedBy;
+  const saved = await saveSupportNeeds(db, {
+    shopId: staff.user.shopId,
+    personId,
+    actor: { kind: "staff", personId: staff.user.personId },
+    // "No" means no support divers, whatever number is left in the box — the
+    // same normalisation `/ready` does, so the two doors cannot disagree.
+    supportDiversNeeded: providedBy === "" ? null : parsed.data.supportDiversNeeded,
+    supportDiversProvidedBy: providedBy === "" ? null : providedBy,
+    needsBoardingAssistance: parsed.data.needsBoardingAssistance === "on",
+    needsWaterLift: parsed.data.needsWaterLift === "on",
+    briefingInSign: parsed.data.briefingInSign === "on",
+    briefingInWriting: parsed.data.briefingInWriting === "on",
+    briefingAloud: parsed.data.briefingAloud === "on",
+    briefingBySignals: parsed.data.briefingBySignals === "on",
+    equipmentAdaptation: parsed.data.equipmentAdaptation,
+    divesWithName: parsed.data.divesWithName,
+  });
+  revalidateAndRedirect(base, backTo(base, saved ? "support-saved" : "invalid", "support"));
 }
 
 /**
