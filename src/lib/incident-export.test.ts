@@ -842,3 +842,67 @@ describe("buildIncidentExport", () => {
     });
   });
 });
+
+/**
+ * The surface-interval column of a SHA-256-sealed document that goes to an
+ * investigator or a treating physician. It used to measure from the previous
+ * *recorded* dive rather than the dive numbered one lower, so a day where dive
+ * 2 was never written up reported dive 3's interval as the whole gap since
+ * dive 1 -- a longer, more conservative-looking profile than the diver's day
+ * actually was, which is the one direction this document must never err.
+ */
+describe("buildIncidentExport surface intervals", () => {
+  const dive = (diveNumber: number, enteredAt: string | null, exitedAt: string | null) => ({
+    id: `d${diveNumber}`,
+    diveNumber,
+    actualSiteName: null,
+    enteredAt: enteredAt ? new Date(enteredAt) : null,
+    exitedAt: exitedAt ? new Date(exitedAt) : null,
+    maxDepthMeters: null,
+    observedConditions: null,
+    notRecorded: [],
+    recordedByName: "Captain Sol",
+  });
+
+  const intervals = (executedDives: ReturnType<typeof dive>[]) =>
+    buildIncidentExport(
+      baseInput({ executedDives } as Partial<IncidentExportInput>),
+    ).executedDives.map((entry) => entry.surfaceIntervalMinutes);
+
+  it("states the interval between two consecutive recorded dives", () => {
+    expect(
+      intervals([
+        dive(1, "2026-08-04T13:00:00.000Z", "2026-08-04T13:40:00.000Z"),
+        dive(2, "2026-08-04T15:10:00.000Z", "2026-08-04T15:45:00.000Z"),
+      ]),
+    ).toEqual([null, 90]);
+  });
+
+  it("states nothing when the dive before it was never recorded", () => {
+    expect(
+      intervals([
+        dive(1, "2026-08-04T13:00:00.000Z", "2026-08-04T13:40:00.000Z"),
+        dive(3, "2026-08-04T18:10:00.000Z", "2026-08-04T18:45:00.000Z"),
+      ]),
+    ).toEqual([null, null]);
+  });
+
+  /** Overlapping profiles are bad data, not a measured zero. */
+  it("states nothing when two recorded dives overlap in time", () => {
+    expect(
+      intervals([
+        dive(1, "2026-08-04T13:00:00.000Z", "2026-08-04T14:00:00.000Z"),
+        dive(2, "2026-08-04T13:30:00.000Z", "2026-08-04T14:20:00.000Z"),
+      ]),
+    ).toEqual([null, null]);
+  });
+
+  it("states nothing when either end of the interval is unrecorded", () => {
+    expect(
+      intervals([
+        dive(1, "2026-08-04T13:00:00.000Z", null),
+        dive(2, "2026-08-04T15:10:00.000Z", "2026-08-04T15:45:00.000Z"),
+      ]),
+    ).toEqual([null, null]);
+  });
+});
