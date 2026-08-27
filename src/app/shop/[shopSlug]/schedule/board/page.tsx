@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
@@ -650,9 +651,31 @@ export default async function ScheduleBoardPage({
         actions={
           hasUpcoming ? (
             <>
+              {/* Below `sm` the header stacks to full width and three actions
+                is more than 390px holds in either shipped locale (issue
+                #954) — Spanish runs ~25% longer than English on all three
+                labels, so a fix measured against English alone would have
+                shipped a Spanish regression. This is the one door of the
+                three that is not an operational act (`/shop/[shopSlug]`
+                and the embed settings page both carry it too), so it is the
+                one that drops its label rather than crowding the row: the
+                `globe` mark from the shared `DiveDayIcon` family stands in
+                for it, and the translated label survives as the accessible
+                name. */}
               <Link
                 href={publicSchedulePath(shopSlug)}
-                className={buttonClass({ variant: "secondary" })}
+                aria-label={st("schedule.viewPublicPage")}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "icon",
+                  className: "sm:hidden",
+                })}
+              >
+                <DiveDayIcon name="globe" />
+              </Link>
+              <Link
+                href={publicSchedulePath(shopSlug)}
+                className={buttonClass({ variant: "secondary", className: "max-sm:hidden" })}
               >
                 {st("schedule.viewPublicPage")}
               </Link>
