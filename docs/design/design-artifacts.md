@@ -65,8 +65,8 @@ every disagreement a decidable answer without anyone having to judge how stale a
 | ADR vs. code | Real drift, or an unshipped slice | Say which, in the PR |
 
 Shipped code outranks the canvas; the ADR outranks both. And the read order — ADR, roadmap slice,
-slice table, **current code**, artboards last — exists so a session reaches the pictures already
-knowing which of them still apply.
+slice table, **current code**, the spec's slice section where one exists, artboards last — exists
+so a session reaches the pictures already knowing which of them still apply.
 
 ## The slice table is the sync mechanism
 

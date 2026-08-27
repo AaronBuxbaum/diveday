@@ -22,7 +22,10 @@ faithfully unless the procedure stops it — so the procedure, not judgment, is 
    — what this slice is, what it depends on, and whether an owner call still blocks it.
 3. **The canvas README's slice table** — which slices already shipped, and where they landed.
 4. **The code as it exists now**, for every surface the slice touches.
-5. **The artboards, last**, and only for the slice you are building.
+5. **The slice's section of `SPEC.md`**, where the canvas carries one — the journeys, acceptance
+   tests and interface contracts (below the ADR, above the artboards; its authority also expires
+   per slice — [design-artifacts.md](../../../docs/design/design-artifacts.md)).
+6. **The artboards, last**, and only for the slice you are building.
 
 Reading the pictures first is how a session ends up re-implementing a surface that already
 shipped, or "restoring" something a later decision deliberately removed.
