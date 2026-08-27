@@ -31,6 +31,7 @@ import {
   weekdayNames,
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { fetchAutomatedMarineForecast, shouldShowAutomatedForecast } from "@/lib/marine-forecast";
 import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
@@ -293,6 +294,7 @@ export default async function ScheduleBoardPage({
     dayCountLabelOther: st.raw("schedule.builder.dayCountLabelOther"),
     crewLabel: st("schedule.builder.crewLabel"),
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
+    windLabel: st("schedule.builder.windLabel"),
     // `.raw`, like `noPriceSetAria` below: the {names} are the client
     // component's to interpolate, and `st()` would format the ICU here and
     // throw on the missing variable.
@@ -501,6 +503,7 @@ export default async function ScheduleBoardPage({
       diveSiteName: string | null;
       diveMode?: "boat" | "shore" | "pool";
       boatId?: string | null;
+      windSummary?: string | null;
     },
     rollCallOpen: { diveNumber: number; uncounted: number } | null,
   ) {
@@ -535,6 +538,7 @@ export default async function ScheduleBoardPage({
       diveMode: trip.diveMode ?? "boat",
       boatId: trip.boatId ?? null,
       boatName: trip.boatId ? (boatMap.get(trip.boatId) ?? null) : null,
+      windSummary: trip.windSummary ?? null,
     });
   }
 
@@ -566,6 +570,36 @@ export default async function ScheduleBoardPage({
   const firstUpcomingDateIso = upcoming[0]
     ? toDateInputValue(utcToWallTime(upcoming[0].startsAt, tz))
     : null;
+  // The board's own staff wind numbers (issue #722's remaining gap — the trip
+  // page and Today already read this forecast; the board did not). Same
+  // gating as both: a site with forecast coordinates, within the provider's
+  // window. Sequential awaits, matching src/db/today.ts's own high-wind
+  // scan — `fetchAutomatedMarineForecast`'s in-process cache (keyed by
+  // site/hour, 5-minute TTL) is what keeps one page of departures from
+  // costing a live request per row, not a batched fetch here.
+  const windSummaryByTripId = new Map<string, string>();
+  for (const trip of upcoming) {
+    const site = trip.diveSite;
+    const forecastPoint =
+      site && site.forecastLatitude !== null && site.forecastLongitude !== null
+        ? { latitude: site.forecastLatitude, longitude: site.forecastLongitude }
+        : null;
+    if (!forecastPoint || !shouldShowAutomatedForecast(trip.startsAt, now)) continue;
+    const forecast = await fetchAutomatedMarineForecast(forecastPoint, trip.startsAt);
+    if (!forecast?.wind) continue;
+    windSummaryByTripId.set(
+      trip.id,
+      st("trips.conditions.automatedWind", {
+        speed: forecast.wind.speedKnots,
+        direction: forecast.wind.direction ? forecast.wind.direction.toUpperCase() : "",
+        gusts: forecast.wind.gustsKnots ?? 0,
+        hasGusts:
+          forecast.wind.gustsKnots !== null && forecast.wind.gustsKnots > forecast.wind.speedKnots
+            ? "yes"
+            : "no",
+      }),
+    );
+  }
   for (const trip of upcoming) {
     pushBuilderTrip(
       {
@@ -580,6 +614,7 @@ export default async function ScheduleBoardPage({
         diveSiteName: trip.diveSite?.name ?? null,
         diveMode: trip.diveMode,
         boatId: trip.boatId,
+        windSummary: windSummaryByTripId.get(trip.id) ?? null,
       },
       null,
     );

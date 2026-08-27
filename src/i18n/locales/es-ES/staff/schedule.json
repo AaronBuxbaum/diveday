@@ -33,6 +33,7 @@
     "crewLabel": "Tripulación:",
     "crewNobodyYet": "nadie todavía",
     "crewMostlyAll": "Tripulación: {names}, salvo que una salida diga otra cosa.",
+    "windLabel": "Viento:",
     "noPriceSet": "Sin precio definido",
     "noPriceSetAria": "Definir un precio para {ref}",
     "noPriceSetAll": "Ninguna de estas salidas tiene precio todavía — los buceadores ya las ven en el calendario. Abre una salida para ponerlo.",
