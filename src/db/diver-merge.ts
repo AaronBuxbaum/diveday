@@ -31,6 +31,21 @@ export type DiverMergeResult =
   | { ok: true; survivorId: string; mergedPersonId: string }
   | { ok: false; reason: DiverMergeRefusal };
 
+/**
+ * One row per person by construction, so the blanket repoint below cannot move
+ * them: a diver fitted at the counter under each of their two records -- an
+ * ordinary way to end up with duplicates in the first place -- made
+ * `update ... set person_id = survivor` raise 23505 and rolled the whole merge
+ * back to `record_conflict`. The merge was then permanently impossible through
+ * the UI, with nothing telling the staffer which row to delete to unblock it.
+ *
+ * The survivor is the record the shop chose to keep, so the survivor's row
+ * wins and the source's is dropped. Both are current-state rows a staffer can
+ * re-enter, not history: a fit profile is the diver's sizes today, and a
+ * last-minute-list entry is a standing "tell me when a seat frees".
+ */
+const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
+
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
   "bookings",
@@ -410,6 +425,17 @@ export async function mergeDiverRecords(input: {
           ),
         })
         .where(eq(people.id, survivor.id));
+
+      // Drop the source's singleton where the survivor already holds one, so
+      // the repoint below has room. Sequential, never a fan-out: this is one
+      // checked-out client (`scripts/check-db-concurrency.mjs`).
+      for (const tableName of SINGLETON_PER_PERSON_TABLES) {
+        if (await hasPersonRow(tx, tableName, input.shopId, survivor.id)) {
+          await tx.execute(
+            sql`delete from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}`,
+          );
+        }
+      }
 
       for (const tableName of DIVER_HISTORY_TABLES) {
         await tx.execute(

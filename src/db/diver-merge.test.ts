@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -449,5 +449,64 @@ describe("merge tenant isolation", () => {
 
     const candidates = await listDiverMergeCandidates(db, shop.id, source.id);
     expect(candidates.map((candidate) => candidate.id)).not.toContain(foreign.id);
+  });
+});
+
+/**
+ * `rental_fit_profiles` and `last_minute_list_entries` are one row per person
+ * by construction. A diver fitted at the counter under each of their two
+ * records made the blanket repoint raise 23505, which rolled the whole merge
+ * back to `record_conflict` -- so the merge became permanently impossible
+ * through the UI, with nothing saying which row to delete to unblock it.
+ */
+describe("merging a one-row-per-person record", () => {
+  it("completes when both records carry a rental fit profile", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db.insert(rentalFitProfiles).values([
+      { shopId: shop.id, personId: survivor.id, wetsuitSize: "M" },
+      { shopId: shop.id, personId: source.id, wetsuitSize: "L" },
+    ]);
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    // The survivor is the record the shop chose to keep, so its sizes stand.
+    const profiles = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(inArray(rentalFitProfiles.personId, [source.id, survivor.id]));
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0]?.personId).toBe(survivor.id);
+    expect(profiles[0]?.wetsuitSize).toBe("M");
+  });
+
+  it("moves the source's profile when the survivor has none", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .insert(rentalFitProfiles)
+      .values({ shopId: shop.id, personId: source.id, wetsuitSize: "L" });
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const profiles = await db
+      .select()
+      .from(rentalFitProfiles)
+      .where(inArray(rentalFitProfiles.personId, [source.id, survivor.id]));
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0]?.personId).toBe(survivor.id);
+    expect(profiles[0]?.wetsuitSize).toBe("L");
   });
 });
