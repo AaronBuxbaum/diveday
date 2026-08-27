@@ -114,12 +114,16 @@ describe("BookSpotSection rental gear at checkout", () => {
     expect(screen.getByText("Rental gear")).toBeInTheDocument();
     // Nothing is added until the diver asks for gear, so the running total
     // stays out of the way rather than announcing a charge nobody chose.
-    expect(screen.queryByText(/Total due at checkout, gear and third-party charges included/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Total due at checkout, gear and third-party charges included/),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Need rental gear?"));
     fireEvent.click(screen.getByLabelText(/^BCD/));
     // $120 seat + $15 BCD.
-    expect(screen.getByText(/Total due at checkout, gear and third-party charges included: \$135\.00/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Total due at checkout, gear and third-party charges included: \$135\.00/),
+    ).toBeInTheDocument();
   });
 
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {
