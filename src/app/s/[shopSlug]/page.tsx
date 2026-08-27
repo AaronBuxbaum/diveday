@@ -13,6 +13,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { DisclosureRowList } from "@/components/ui/disclosure";
 import { type AppDb, getDb } from "@/db/client";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
@@ -857,56 +858,79 @@ export default async function SchedulePage({
           />
         </Suspense>
       ) : null}
-      {/* The two Client Components on this page that read copy, under one
-          provider — the diver bundle then crosses to the browser once, for the
-          namespaces those two need and no more.
+      {/* **The three asks under the board, as one object.**
 
-          The date request is the answer to the question this page raises and
-          could not previously answer: the schedule shows the dates that exist
-          and stops, so a diver who wants a two-tank on the Saturday nobody
-          scheduled had nowhere to go. It is deliberately *not* the wait list
-          above it — that one says "tell me when a seat frees on a departure
-          that exists", and this one says "please create a departure". Full page
-          only, like every other non-booking surface here: the embed stays a
-          compact booking widget (docs ADR 20260726-schedule-embed). */}
+          Everything here answers the same question — "the schedule above did
+          not have what I need" — so they are one group of rows rather than
+          three cards stacked down the page. They had drifted into three: three
+          top margins, three heading sizes (one of them as loud as this page's
+          `h1`, one not a heading element at all), and no chevron on any of
+          them, since `display: flex` on a `<summary>` suppresses the UA's own
+          triangle. A reader arriving at the bottom of the schedule saw three
+          unrelated boxes of empty space and no sign that any of them opened.
+
+          Ordered by how close each one is to the schedule the reader has just
+          read past: ask for a date that is not on the board, then be told when
+          a seat goes cheap, then — a different errand entirely — recover the
+          link to a booking already made.
+
+          The Client Components on this page that read copy sit under one
+          provider, so the diver bundle crosses to the browser once, for the
+          namespaces those components need and no more. */}
       {!isEmbed ? (
-        <DiverIntlProvider
-          locale={locale}
-          timeZone={tz}
-          // `course` is where the diver-facing certification-level words live
-          // (`DIVER_CERTIFICATION_LEVEL_KEYS`), shared with the public course
-          // pages — `DiveDeclarationFields` inside the deal-list form reads them.
-          namespaces={["lastMinute", "findMyBooking", "inquiry", "common", "course"]}
-        >
-          {/* The deal list stands down for a shop that has never had a
-              departure. It asks a diver to be told when a boat needs to fill
-              seats at a discount, and points them at "that trip's own page" —
-              on a shop with no boats it collects addresses it will never mail,
-              about trips that do not exist (issue #710). `everHadDeparture`,
-              not `hasUpcoming`: see above. */}
-          {everHadDeparture ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
-          {/* Same gate, same reason: a shop that has never had a departure
-              cannot have a real booking to recover (issue #723). */}
-          {everHadDeparture ? <FindMyBookingForm shopSlug={shopSlug} /> : null}
-          {/* Not gated on `contactEmail`. The request lands in
-              `course_inquiries` and staff read it at /shop/<slug>/requests, so
-              the shop's email is only needed for the notification — which
-              `submitInquiryAction` already skips when there is none. Guarding
-              the form on it switched off the one conversion a shop with
-              nothing on the books can still make (issue #710). */}
-          {/* On the public schedule, the footer four rows below already
-              carries the shop's email and phone, so omitting them here prevents
-              duplicate contact lines on the same screen (issue #777). */}
-          <DateRequestForm
-            submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
-            askInterest
-            sectionId="request-a-date"
-            contactEmail={null}
-            contactPhone={null}
-            collapsible
-            copy={dateRequestCopy(t, "dive")}
-          />
-        </DiverIntlProvider>
+        <section aria-labelledby="more-ways-heading" className="mt-12">
+          <h2 id="more-ways-heading" className="text-lg font-semibold tracking-tight">
+            {t("schedule.moreWaysHeading")}
+          </h2>
+          <DiverIntlProvider
+            locale={locale}
+            timeZone={tz}
+            // `course` is where the diver-facing certification-level words live
+            // (`DIVER_CERTIFICATION_LEVEL_KEYS`), shared with the public course
+            // pages — `DiveDeclarationFields` inside the deal-list form reads them.
+            namespaces={["lastMinute", "findMyBooking", "inquiry", "common", "course"]}
+          >
+            <DisclosureRowList className="mt-4">
+              {/* The date request is the answer to the question this page
+                  raises and could not previously answer: the schedule shows the
+                  dates that exist and stops, so a diver who wants a two-tank on
+                  the Saturday nobody scheduled had nowhere to go. It is
+                  deliberately *not* the deal list below it — that one says "tell
+                  me when a seat frees on a departure that exists", and this one
+                  says "please create a departure".
+
+                  Not gated on `contactEmail`. The request lands in
+                  `course_inquiries` and staff read it at /shop/<slug>/requests,
+                  so the shop's email is only needed for the notification — which
+                  `submitInquiryAction` already skips when there is none.
+                  Guarding the form on it switched off the one conversion a shop
+                  with nothing on the books can still make (issue #710).
+
+                  The footer four rows below already carries the shop's email and
+                  phone, so omitting them here prevents duplicate contact lines
+                  on the same screen (issue #777). */}
+              <DateRequestForm
+                submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
+                askInterest
+                sectionId="request-a-date"
+                contactEmail={null}
+                contactPhone={null}
+                collapsible
+                copy={dateRequestCopy(t, "dive")}
+              />
+              {/* The deal list stands down for a shop that has never had a
+                  departure. It asks a diver to be told when a boat needs to fill
+                  seats at a discount, and points them at "that trip's own page"
+                  — on a shop with no boats it collects addresses it will never
+                  mail, about trips that do not exist (issue #710).
+                  `everHadDeparture`, not `hasUpcoming`: see above. */}
+              {everHadDeparture ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
+              {/* Same gate, same reason: a shop that has never had a departure
+                  cannot have a real booking to recover (issue #723). */}
+              {everHadDeparture ? <FindMyBookingForm shopSlug={shopSlug} /> : null}
+            </DisclosureRowList>
+          </DiverIntlProvider>
+        </section>
       ) : null}
       {/* Human-discovery footer, embed mode only — a single small line, not a
           banner, so the widget stays compact and booking-focused (docs ADR

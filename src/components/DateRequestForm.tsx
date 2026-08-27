@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
+import { DisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { telHref } from "@/lib/contact-links";
 import {
@@ -100,13 +100,8 @@ export function DateRequestForm({
   const [experienceMissing, setExperienceMissing] = useState(false);
   const [contactMissing, setContactMissing] = useState(false);
   const [interestMissing, setInterestMissing] = useState(false);
-  const [open, setOpen] = useState(false);
 
   const headingId = `${sectionId}-heading`;
-
-  useEffect(() => {
-    if (collapsible && window.location.hash === `#${sectionId}`) setOpen(true);
-  }, [collapsible, sectionId]);
 
   /**
    * What a submission requires before it is worth sending.
@@ -390,21 +385,15 @@ export function DateRequestForm({
     </>
   );
 
+  // Collapsed, this is one row of a group of asks rather than a section of its
+  // own — the schedule page's tail, where it sits beside the deal list and the
+  // "can't find your link" door. The row owns the heading (an `h3`, the group's
+  // level) and the chevron, so nothing here spells either.
   if (collapsible) {
     return (
-      <details
-        id={sectionId}
-        open={open}
-        onToggle={(event) => setOpen(event.currentTarget.open)}
-        className={sectionCardClass({ padding: "lg", className: "mt-12 scroll-mt-8" })}
-      >
-        <summary className="flex cursor-pointer items-center font-semibold">
-          <h2 id={headingId} className="text-2xl tracking-tight">
-            {copy.heading}
-          </h2>
-        </summary>
-        <div className="mt-4">{body}</div>
-      </details>
+      <DisclosureRow id={sectionId} heading={copy.heading}>
+        {body}
+      </DisclosureRow>
     );
   }
 

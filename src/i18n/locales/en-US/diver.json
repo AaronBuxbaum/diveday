@@ -123,7 +123,8 @@
       "eyebrow": "Next boat out",
       "title": "{when} — {trip}"
     },
-    "poweredByDiveDay": "Powered by DiveDay"
+    "poweredByDiveDay": "Powered by DiveDay",
+    "moreWaysHeading": "Other ways we can help"
   },
   "trip": {
     "courseSession": "Course session",

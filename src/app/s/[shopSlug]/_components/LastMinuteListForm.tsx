@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState } from "react";
 import { DiveCertificationField } from "@/components/DiveDeclarationFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { joinLastMinuteListAction, type LastMinuteListFormState } from "../actions";
 
@@ -15,7 +15,9 @@ const INITIAL_STATE: LastMinuteListFormState = {};
  * The shop-wide "tell me about last-minute deals" opt-in — separate from the
  * per-trip wait list, which only appears on a full trip's own page (docs ADR
  * 20260727-last-minute-fill-promos). Lives on the schedule list, not any one
- * trip, since it isn't about a specific departure.
+ * trip, since it isn't about a specific departure: one row of the group of
+ * asks under the board (`DisclosureRowList`), which is also what opens it when
+ * a trip page deep-links to `#last-minute-list`.
  */
 export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   const t = useTranslations();
@@ -23,35 +25,18 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
     joinLastMinuteListAction.bind(null, shopSlug),
     INITIAL_STATE,
   );
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (window.location.hash === "#last-minute-list") setOpen(true);
-  }, []);
 
   if (state.success) {
     return (
-      <SectionCard
-        id="last-minute-list"
-        padding="lg"
-        className="rise-in mt-10"
-        title={t("lastMinute.joinedHeading")}
-        description={t("lastMinute.joinedBody")}
-      />
+      <DisclosureRowMessage id="last-minute-list" heading={t("lastMinute.joinedHeading")}>
+        {t("lastMinute.joinedBody")}
+      </DisclosureRowMessage>
     );
   }
 
   return (
-    <details
-      id="last-minute-list"
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-      className={sectionCardClass({ padding: "lg", className: "mt-6" })}
-    >
-      <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
-        <h2 className="text-lg font-semibold">{t("lastMinute.heading")}</h2>
-      </summary>
-      <p className="mt-2 text-sm text-muted">{t("lastMinute.body")}</p>
+    <DisclosureRow id="last-minute-list" heading={t("lastMinute.heading")}>
+      <p className="text-sm text-muted">{t("lastMinute.body")}</p>
       <p className="mt-1 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
@@ -104,6 +89,6 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
           <FormStatus tone="danger">{state.error}</FormStatus>
         </div>
       </form>
-    </details>
+    </DisclosureRow>
   );
 }

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, Field } from "@/components/ui/form";
 import { type FindMyBookingFormState, requestFindMyBookingAction } from "../actions";
 
@@ -13,7 +13,8 @@ const INITIAL_STATE: FindMyBookingFormState = {};
 /**
  * "Can't find your link?" (issue #723) — the way back for a diver whose
  * confirmation email went to spam, was mistyped, or was never read before
- * checking out of the hotel. Collapsed by default: it exists for the diver
+ * checking out of the hotel. One row of the schedule's group of asks
+ * (`DisclosureRowList`), collapsed like its siblings: it exists for the diver
  * who needs it, not as a competing call to action for the diver who does not.
  *
  * `requestFindMyBookingAction` answers with the identical `{ success: true }`
@@ -29,22 +30,15 @@ export function FindMyBookingForm({ shopSlug }: { shopSlug: string }) {
 
   if (state.success) {
     return (
-      <SectionCard
-        id="find-my-booking"
-        padding="lg"
-        className="rise-in mt-6"
-        title={t("findMyBooking.sentHeading")}
-        description={t("findMyBooking.sentBody")}
-      />
+      <DisclosureRowMessage id="find-my-booking" heading={t("findMyBooking.sentHeading")}>
+        {t("findMyBooking.sentBody")}
+      </DisclosureRowMessage>
     );
   }
 
   return (
-    <SectionCard id="find-my-booking" as="details" padding="lg" className="mt-6">
-      <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
-        {t("findMyBooking.heading")}
-      </summary>
-      <p className="mt-2 text-sm text-muted">{t("findMyBooking.body")}</p>
+    <DisclosureRow id="find-my-booking" heading={t("findMyBooking.heading")}>
+      <p className="text-sm text-muted">{t("findMyBooking.body")}</p>
       <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3">
         <Field label={t("common.email")} className="min-w-64 flex-1">
           <input
@@ -64,6 +58,6 @@ export function FindMyBookingForm({ shopSlug }: { shopSlug: string }) {
           {t("findMyBooking.submit")}
         </SubmitButton>
       </form>
-    </SectionCard>
+    </DisclosureRow>
   );
 }

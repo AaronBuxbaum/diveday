@@ -123,7 +123,8 @@
       "eyebrow": "Próxima salida",
       "title": "{when} — {trip}"
     },
-    "poweredByDiveDay": "Con la tecnología de DiveDay"
+    "poweredByDiveDay": "Con la tecnología de DiveDay",
+    "moreWaysHeading": "Otras formas de ayudarte"
   },
   "trip": {
     "courseSession": "Sesión de curso",
