@@ -151,9 +151,13 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "Reg #1", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Reg #1" })).toBeVisible();
 
+    // Scoped to the Service region: the register also has a "Notes" section
+    // (an unrelated field whose own label happens to contain "note" too), so
+    // an unscoped getByLabel("Note") is ambiguous between the two.
+    const service = page.getByRole("region", { name: "Service" });
     // Substring on purpose: the accessible name is "Note (optional)" — the
     // Field hint rides inside the label element.
-    await page.getByLabel("Note").fill("Second stage rebuilt on the bench");
+    await service.getByLabel("Note").fill("Second stage rebuilt on the bench");
     await page.getByRole("button", { name: "Log it" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();
     // The paper trail folds under the Service card at rest — open it.
@@ -279,8 +283,13 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "BCD #6", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "BCD #6" })).toBeVisible();
 
-    await page.getByLabel("Why it's coming off the wall").fill("Dump valve leaks");
+    // "Pull for service" opens a dialog rather than submitting inline —
+    // scoped there for the fill and the submit, since the trigger behind it
+    // shares the same accessible name.
     await page.getByRole("button", { name: "Pull for service" }).click();
+    const dialog = page.getByRole("dialog", { name: "Pull for service" });
+    await dialog.getByLabel("Why it's coming off the wall").fill("Dump valve leaks");
+    await dialog.getByRole("button", { name: "Pull for service" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
     await expect(page.getByText("Needs service").first()).toBeVisible();
 
@@ -289,5 +298,30 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/gear?kind=bcd");
     const pulledRow = page.locator("tr", { hasText: "BCD #6" });
     await expect(pulledRow.getByText("Needs service")).toBeVisible();
+  });
+
+  test("adds a note to a unit's record without touching the service log", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/gear");
+    await page.getByRole("link", { name: "Reg #1", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Reg #1" })).toBeVisible();
+
+    const notes = page.getByRole("region", { name: "Notes" });
+    await notes.getByLabel("Add a note").fill("Diver mentioned the mouthpiece tastes off");
+    await notes.getByRole("button", { name: "Add note" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();
+    await expect(page.getByText("Diver mentioned the mouthpiece tastes off")).toBeVisible();
+  });
+
+  test("moved: gear history import lives under Settings, gated to owners and managers", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear");
+    await expect(page.getByRole("heading", { name: "Import gear history" })).toHaveCount(0);
+
+    await page.goto("/shop/blue-mantis/settings/gear-import");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Import gear history" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download gear CSV template" })).toBeVisible();
   });
 });

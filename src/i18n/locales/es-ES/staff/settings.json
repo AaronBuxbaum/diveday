@@ -400,6 +400,9 @@
     "dataImport": {
       "description": "Trae contactos desde un CSV — se emparejan con buceadores existentes, nunca se duplican."
     },
+    "gearImport": {
+      "description": "Trae tu flota y sus registros de mantenimiento desde un CSV."
+    },
     "dataExport": {
       "description": "Llévate todo lo que guarda tu centro en un ZIP de CSV."
     },
@@ -631,7 +634,7 @@
       },
       "serviceHistory": {
         "what": "Historial de mantenimiento de equipo",
-        "detail": "Se importa mediante el CSV del registro de equipo; las unidades coinciden por etiqueta o número de serie y conservan sus registros fechados."
+        "detail": "Se importa aparte, desde Ajustes → Importar historial del equipo; las unidades coinciden por etiqueta o número de serie y conservan sus registros fechados."
       },
       "diverNotes": {
         "what": "Notas internas y del buceador",

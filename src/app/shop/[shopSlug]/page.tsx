@@ -83,6 +83,7 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   // reason survives.
   "team-not-authorized": "shopHome.notice.teamNotAuthorized",
   "import-not-authorized": "shopHome.notice.importNotAuthorized",
+  "gear-import-not-authorized": "shopHome.notice.gearImportNotAuthorized",
   "backup-not-authorized": "shopHome.notice.backupNotAuthorized",
   "whatsapp-not-authorized": "shopHome.notice.whatsappNotAuthorized",
   "promos-not-authorized": "shopHome.notice.promosNotAuthorized",

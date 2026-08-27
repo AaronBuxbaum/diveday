@@ -34,6 +34,8 @@ import { uuidParam } from "@/lib/uuid";
 // The register's restore, not a second one: one act, one code path, and a tag
 // collision on the way back answers on the page that holds the fleet it hit.
 import { restoreGearItemAction } from "../actions";
+import { GearItemNotes } from "./_components/GearItemNotes";
+import { PullForServiceButton } from "./_components/PullForServiceButton";
 import {
   checkOutGearReservationFromUnitAction,
   deleteGearItemAction,
@@ -92,6 +94,10 @@ export default async function GearUnitPage({
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
   const { item, clocks, history, reservations, priorAssignments } = detail;
+  // A dated condition note carries no clock and isn't service work — it reads
+  // in its own Notes section below, never twice.
+  const serviceHistory = history.filter((event) => event.kind !== "note");
+  const notes = history.filter((event) => event.kind === "note");
   const state = gearServiceState(clocks, todayLocal);
   const banner = noticeFromParam(notice, NOTICES);
   /**
@@ -260,14 +266,27 @@ export default async function GearUnitPage({
           </SectionCard>
         )}
 
+        {/* A deleted unit with no notes ever written has an empty card and no
+            form to fill it, so it gets no card at all. */}
+        {deletedAt && notes.length === 0 ? null : (
+          <GearItemNotes
+            gearItemId={item.id}
+            notes={notes}
+            todayLocal={todayLocal}
+            locale={locale}
+            t={t}
+            readOnly={deletedAt !== null}
+          />
+        )}
+
         {/* A deleted unit that was never serviced has an empty card and no
             form to fill it, so it gets no card at all. */}
-        {deletedAt && clocks.length === 0 && history.length === 0 ? null : (
+        {deletedAt && clocks.length === 0 && serviceHistory.length === 0 ? null : (
           <ServiceCard
             item={item}
             clocks={clocks}
             state={state}
-            history={history}
+            history={serviceHistory}
             t={t}
             locale={locale}
             todayLocal={todayLocal}
@@ -527,9 +546,10 @@ function ServiceCard({
             />
           </Field>
           <Field label={t("gear.unit.service.note")} hint={t("gear.form.optionalHint")}>
-            <input
+            <textarea
               name="note"
               maxLength={500}
+              rows={3}
               placeholder={t("gear.unit.service.notePlaceholder")}
               className={controlClass}
             />
@@ -556,7 +576,7 @@ function ServiceCard({
         // Open on a deleted unit: the history is the whole reason that record
         // is reachable, so folding it would hide what the reader came for.
         <details open={readOnly} className="mt-6 border-t border-border pt-4">
-          <summary className="min-h-11 cursor-pointer text-sm font-medium">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
             {t("gear.unit.history.title", { count: history.length })}
           </summary>
           <ul className="mt-2 divide-y divide-border">
@@ -660,26 +680,18 @@ function StatusCard({
     >
       <div className="flex flex-col gap-4">
         {item.status === "in_service" ? (
-          <FieldGrid as="form" action={setGearItemStatusAction} columns={2}>
-            <input type="hidden" name="gearItemId" value={item.id} />
-            <input type="hidden" name="status" value="needs_service" />
-            <Field label={t("gear.unit.status.pullNote")} hint={t("gear.form.optionalHint")}>
-              <input
-                name="serviceNote"
-                maxLength={300}
-                placeholder={t("gear.unit.status.pullNotePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("gear.unit.status.pulling")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("gear.unit.status.pull")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
+          <PullForServiceButton
+            gearItemId={item.id}
+            action={setGearItemStatusAction}
+            copy={{
+              trigger: t("gear.unit.status.pull"),
+              noteLabel: t("gear.unit.status.pullNote"),
+              noteHint: t("gear.form.optionalHint"),
+              notePlaceholder: t("gear.unit.status.pullNotePlaceholder"),
+              cancel: t("gear.unit.status.pullCancel"),
+              pending: t("gear.unit.status.pulling"),
+            }}
+          />
         ) : (
           <form action={setGearItemStatusAction}>
             <input type="hidden" name="gearItemId" value={item.id} />

@@ -142,6 +142,7 @@
     "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios."
   },
   "import": {
+    "eyebrow": "Ajustes",
     "title": "Importar historial del equipo",
     "description": "Trae tu flota y sus registros de mantenimiento desde otro sistema.",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
@@ -186,6 +187,15 @@
       "nextDue": "vence el {dueOn}",
       "recordedBy": "Registrado por {name}"
     },
+    "notes": {
+      "title": "Notas",
+      "empty": "Aún no hay notas.",
+      "addLabel": "Agregar una nota",
+      "placeholder": "La correa de la aleta está floja, cambiarla en la próxima visita",
+      "add": "Agregar nota",
+      "adding": "Agregando…",
+      "writtenBy": "{name} · {date}"
+    },
     "rentals": {
       "title": "Historial de alquiler",
       "importedAssignment": "Asignación histórica a {name}"
@@ -202,6 +212,7 @@
       "pulling": "Enviando…",
       "pullNote": "Por qué sale de la pared",
       "pullNotePlaceholder": "El inflador se atasca",
+      "pullCancel": "Cancelar",
       "reinstate": "Devolver al servicio",
       "reinstating": "Devolviendo…",
       "delete": "Eliminar unidad",

@@ -400,6 +400,9 @@
     "dataImport": {
       "description": "Bring contacts in from a CSV — matched to existing divers, never duplicated."
     },
+    "gearImport": {
+      "description": "Bring your fleet and its dated service records in from a CSV."
+    },
     "dataExport": {
       "description": "Take everything your shop holds back out as a ZIP of CSVs."
     },
@@ -631,7 +634,7 @@
       },
       "serviceHistory": {
         "what": "Gear service history",
-        "detail": "Imported through the gear register's gear-history CSV. Units match by tag or serial number, and dated service records stay attached to the unit."
+        "detail": "Imported separately, through Settings → Import gear history. Units match by tag or serial number, and dated service records stay attached to the unit."
       },
       "diverNotes": {
         "what": "Internal & diver notes",

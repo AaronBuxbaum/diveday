@@ -33,6 +33,7 @@
     "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
     "teamNotAuthorized": "Team management is limited to owners and managers.",
     "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+    "gearImportNotAuthorized": "Importing gear service history is limited to owners and managers.",
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
