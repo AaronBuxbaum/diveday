@@ -46,7 +46,10 @@ collateral — recommended after drafting or editing a marketing page, switching
 - When a workflow changes (new CI job, renamed script, new harness), update the affected skill in
   the same commit.
 - Keep frontmatter `description` fields specific about triggers — they are how sessions decide to
-  load the skill.
+  load the skill. They are also the only part of a skill that **every** session pays for, whether or
+  not it opens the file, which is why `pnpm check:context-budget` counts them alongside AGENTS.md
+  and refuses a silent rise. Specific about the trigger, then short; the body is where the length
+  belongs, because the body is loaded on purpose.
 - `pnpm check:agents` (part of `check:repo`/`check`) fails on drift: a skill missing from this
   index, an index entry with no skill, frontmatter whose name doesn't match its directory or with
   no description, an unmentioned reviewer agent, or a `task:context` area pointing at a doc that

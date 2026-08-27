@@ -113,6 +113,15 @@ export const SUBPROCESS_TIMEOUTS = {
    * the rule has no exception, not because it is expected to fire first.
    */
   build: 2_700_000,
+  /**
+   * One Biome pass over one file, from the `PostToolUse` hook in
+   * `scripts/format-touched.mjs`. Measured at about half a second; the ceiling
+   * is thirty because this runs after *every* edit a session makes, so a wedge
+   * here stalls a whole inner loop rather than one command -- and because the
+   * hook carries a bound of its own from the harness, which this needs to fire
+   * inside if it is to name the file that did it rather than time out anonymously.
+   */
+  biomeFile: 30_000,
 };
 
 /** Whether a `spawnSync` result or a caught `execFileSync` error is a timeout kill. */

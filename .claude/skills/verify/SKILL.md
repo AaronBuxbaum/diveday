@@ -11,8 +11,13 @@ working, not when checks pass.
 ## 1. Always: static + unit
 
 ```bash
-pnpm check        # biome lint + tsc + vitest
+pnpm check        # repo guards + biome lint + tsc + vitest
 ```
+
+The four phases run concurrently and **fail slow**: one run reports every failure, not the
+first. So read the whole tail before fixing anything — the list at the bottom is complete, and
+fixing all of it in one pass is the point. A phase that passed prints one line; the failures
+print in full, last.
 
 ## 2. Flows changed: e2e
 

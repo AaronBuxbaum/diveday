@@ -147,6 +147,10 @@ describe("scripts/", () => {
         "already bounded, and by a stronger mechanism: an async detached process group SIGKILLed as a whole, which spawnSync cannot do",
       ],
       [
+        "check-all.mjs",
+        "the gate one level above check-repo.mjs, and bounded the same way: each phase is an async detached process group SIGKILLed as a whole on its own deadline, which is what a vitest run needs -- a spawnSync timeout kills the parent and leaves its pool of forks holding databases",
+      ],
+      [
         "e2e-server.mjs",
         "an intentionally long-lived async supervisor; its detached process group is the bound and its signal/exit handlers reap the whole group",
       ],
