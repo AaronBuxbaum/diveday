@@ -885,8 +885,10 @@ exports.handler = async (event) => {
     // that write to and restore from both.
     //
     // Deliberately NOT the VisualRegressionBucket above: that one is
-    // publicReadAccess, RemovalPolicy.DESTROY, and expires everything after 7
-    // days - the exact opposite of every property a backup needs. This bucket
+    // publicReadAccess, RemovalPolicy.DESTROY, and expires everything after 30
+    // days - the exact opposite of every property a backup needs. (That ceiling
+    // is a backstop; the daily pruner in section 21 is what actually reclaims,
+    // and it is the only one of the two that knows which baselines are live.) This bucket
     // is the one resource in the stack that must survive a `cdk destroy`, so it
     // carries RETAIN; deleting production backups should require someone to go
     // do it deliberately, by hand, in the console.

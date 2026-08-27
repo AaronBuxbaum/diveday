@@ -37,6 +37,8 @@ Conversely, while active, PR branches and superseded snapshots lingered for 7 da
 
 ## Consequences
 
-- **Main baseline preservation:** The active main baseline is guaranteed to persist in S3 regardless of how many days pass between commits to `main`.
-- **Zero storage bloat:** Stale PR snapshots and obsolete historical baselines are reclaimed daily, reducing S3 storage from hundreds of GBs to the single active baseline (~300 MB).
+- **Main baseline preservation:** The active main baseline is guaranteed to persist in S3 regardless of how many days pass between commits to `main` — *by the pruner*. The bucket's own `expire-old-visual-snapshots` lifecycle rule still deletes every object at 30 days and cannot tell a live baseline from a dead one, so a gap longer than that is still the failure this ADR set out to fix. The rule is a cost backstop, not part of the guarantee.
+- **More than one baseline is kept, deliberately.** reg-suit's expected key is the *parent* commit on a push to main and the *fork point* on a pull request (`scripts/reg-suit-keys.mjs`), and for a stacked pull request it is the layer below's head, which is on no branch the main-history walk can enumerate. Keeping only the newest main baseline therefore deleted the baseline of every open branch overnight, and a run with no baseline reports that nothing changed. The pruner keeps the last 10 verified main baselines plus every prefix published in the last 7 days.
+- **No verified baseline means no pruning.** If nothing on recent `main` has a published snapshot, the pruner deletes nothing and says so. That state is far more likely to mean the probe cannot read the bucket than that every baseline is genuinely gone, and the earlier behaviour — nominate an unverified HEAD and prune against it — emptied the bucket in one scheduled run.
+- **Zero storage bloat:** Stale PR snapshots and obsolete historical baselines are reclaimed daily.
 - **Observability:** Pruning runs emit structured JSON logs (`visual_pruner.summary`) to CloudWatch Logs with bounded 1-month retention.

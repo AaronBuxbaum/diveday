@@ -234,6 +234,32 @@ export async function listDiverMergeDuplicateIds(db: AppDb, shopId: string): Pro
   return [...duplicateIds].sort();
 }
 
+type NoCertificationStamp = {
+  noCertificationDeclaredAt: Date | null;
+  noCertificationClearedAt: Date | null;
+  noCertificationClearedByPersonId: string | null;
+};
+
+/** Whichever record declared more recently, with that record's own clear. */
+function noCertificationStamp(
+  survivor: NoCertificationStamp,
+  source: NoCertificationStamp,
+): NoCertificationStamp {
+  const pick =
+    survivor.noCertificationDeclaredAt && source.noCertificationDeclaredAt
+      ? survivor.noCertificationDeclaredAt >= source.noCertificationDeclaredAt
+        ? survivor
+        : source
+      : survivor.noCertificationDeclaredAt
+        ? survivor
+        : source;
+  return {
+    noCertificationDeclaredAt: pick.noCertificationDeclaredAt,
+    noCertificationClearedAt: pick.noCertificationClearedAt,
+    noCertificationClearedByPersonId: pick.noCertificationClearedByPersonId,
+  };
+}
+
 function newestDate(left: Date | null, right: Date | null): Date | null {
   if (!left) return right;
   if (!right) return left;
@@ -374,16 +400,16 @@ export async function mergeDiverRecords(input: {
           diveInsurance: survivor.diveInsurance ?? source.diveInsurance,
           locale: survivor.locale ?? source.locale,
           spokenLanguages: mergedSpokenLanguages,
-          noCertificationDeclaredAt: newestDate(
-            survivor.noCertificationDeclaredAt,
-            source.noCertificationDeclaredAt,
-          ),
-          noCertificationClearedAt: newestDate(
-            survivor.noCertificationClearedAt,
-            source.noCertificationClearedAt,
-          ),
-          noCertificationClearedByPersonId:
-            survivor.noCertificationClearedByPersonId ?? source.noCertificationClearedByPersonId,
+          // Carried as a unit, never column by column. Readers ask this pair
+          // structurally -- `declared is not null and cleared is null` means
+          // the diver's "I hold no card" stamp still stands -- and
+          // `recordNoCertification` keeps that true by nulling `cleared_at`
+          // whenever a fresh declaration arrives. Maxing the two columns
+          // separately could pair a survivor's live declaration with the
+          // *other* record's older clear, which reads as no declaration at
+          // all: the stamp vanishes from the record, the certification send
+          // lists and the export, with nothing saying so.
+          ...noCertificationStamp(survivor, source),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,

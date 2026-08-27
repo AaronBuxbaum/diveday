@@ -441,15 +441,18 @@ bundles are what happened after it.
 Photos are still the gap §3 describes: the dump carries the blob *URLs*, not the bytes. The bundles'
 `photos/` directories are the only copy.
 
-## 3. Vercel Blob posture
+## 3. Media object storage posture
 
-Vercel Blob is where every uploaded image and imported waiver document lives, written through the
-seam in `src/lib/storage/` and recognised by `isManagedBlobUrl` (`src/lib/storage/blob-host.ts`).
+The `diveday-media` S3 bucket is where every uploaded image and imported waiver document lives,
+written through the seam in `src/lib/storage/` and recognised by `isManagedStorageUrl`
+(`src/lib/storage/blob-host.ts`), which matches the configured bucket's own origins and nothing
+else. It replaced Vercel Blob on 2026-08-26 (AWS-8).
 
-**There is no provider-side backup.** Vercel Blob offers no point-in-time recovery and no object
-versioning. A deleted or overwritten object is gone. The only copy DiveDay holds is the `photos/`
-directory inside each export bundle — which is exactly why the silent-drop gap above matters more
-than it looks.
+**There is still no provider-side backup.** The bucket is `S3_MANAGED` encrypted and `RETAIN` on
+stack destroy, but **versioning is not enabled** — so a deleted or overwritten object is gone, the
+same posture Vercel Blob had. The only copy DiveDay holds is the `photos/` directory inside each
+export bundle, which is exactly why the silent-drop gap above matters more than it looks. Enabling
+versioning on that bucket is the one change that would close it.
 
 The app already does the *deletion* side carefully: orphan-media cleanup is queued and retried
 through `retryPendingMediaDeletions` on the daily cron rather than deleted inline, so a transient

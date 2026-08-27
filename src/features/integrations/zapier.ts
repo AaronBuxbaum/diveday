@@ -5,6 +5,17 @@ import type { IntegrationEventType } from "./registry";
 
 export const ZAPIER_HOOK_HOST = "hooks.zapier.com";
 
+/**
+ * A per-request ceiling on every outbound call.
+ *
+ * The dispatcher drains up to 50 deliveries in one sequential pass inside a
+ * 300-second cron, and `fetch` has no default timeout: one hook that accepts a
+ * connection and never answers holds the whole outbox until the function is
+ * killed, and every delivery behind it stays due. A hung request is a failure
+ * that retries, not a queue that stops.
+ */
+const DELIVERY_TIMEOUT_MS = 15_000;
+
 export type ZapierCredentials = { webhookUrl: string };
 
 export function normalizeZapierWebhookUrl(value: string): string | null {
@@ -54,6 +65,7 @@ export async function deliverZapierEvent(
   if (!credentials) return { status: "failed", code: "zapier_invalid_webhook", retryable: false };
   const response = await fetchImpl(credentials.webhookUrl, {
     method: "POST",
+    signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
     headers: {
       "content-type": "application/json",
       "x-diveday-event": event.eventType,
@@ -90,6 +102,7 @@ export async function sendZapierTest(
   if (!normalized) return { status: "failed", code: "zapier_invalid_webhook" };
   const response = await fetchImpl(normalized, {
     method: "POST",
+    signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
     headers: { "content-type": "application/json", "x-diveday-event": "integration.test" },
     body: JSON.stringify({
       eventId: `test-${shopId}`,

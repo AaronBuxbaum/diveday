@@ -303,3 +303,78 @@ describe("every person_id column in the schema has a merge answer", () => {
     expect(moved?.personId).toBe(survivor.id);
   });
 });
+
+/**
+ * `no_certification_declared_at` and `no_certification_cleared_at` are read as
+ * a pair -- declared-and-not-cleared is the diver's standing "I hold no card"
+ * stamp -- so merging them column by column could pair a live declaration with
+ * the other record's older clear and erase the stamp everywhere at once.
+ */
+describe("merging the no-certification stamp", () => {
+  it("keeps a live declaration rather than pairing it with the other record's clear", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-20T00:00:00.000Z"),
+        noCertificationClearedAt: null,
+        noCertificationClearedByPersonId: null,
+      })
+      .where(eq(people.id, survivor.id));
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-01T00:00:00.000Z"),
+        noCertificationClearedAt: new Date("2026-08-05T00:00:00.000Z"),
+        noCertificationClearedByPersonId: owner.id,
+      })
+      .where(eq(people.id, source.id));
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: true, survivorId: survivor.id, mergedPersonId: source.id });
+
+    const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
+    expect(merged?.noCertificationDeclaredAt).toEqual(new Date("2026-08-20T00:00:00.000Z"));
+    expect(merged?.noCertificationClearedAt).toBeNull();
+    expect(merged?.noCertificationClearedByPersonId).toBeNull();
+  });
+
+  it("takes the newer declaration's own clear when that is the source's", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-01T00:00:00.000Z"),
+        noCertificationClearedAt: null,
+      })
+      .where(eq(people.id, survivor.id));
+    await db
+      .update(people)
+      .set({
+        noCertificationDeclaredAt: new Date("2026-08-20T00:00:00.000Z"),
+        noCertificationClearedAt: new Date("2026-08-22T00:00:00.000Z"),
+        noCertificationClearedByPersonId: owner.id,
+      })
+      .where(eq(people.id, source.id));
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
+    expect(merged?.noCertificationDeclaredAt).toEqual(new Date("2026-08-20T00:00:00.000Z"));
+    expect(merged?.noCertificationClearedAt).toEqual(new Date("2026-08-22T00:00:00.000Z"));
+    expect(merged?.noCertificationClearedByPersonId).toBe(owner.id);
+  });
+});

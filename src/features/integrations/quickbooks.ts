@@ -12,6 +12,17 @@ import { minorToMajor } from "@/lib/money";
 
 export const QUICKBOOKS_AUTHORIZATION_URL = "https://appcenter.intuit.com/connect/oauth2";
 export const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
+
+/**
+ * A per-request ceiling on every outbound call.
+ *
+ * The dispatcher drains up to 50 deliveries in one sequential pass inside a
+ * 300-second cron, and `fetch` has no default timeout: one endpoint that
+ * accepts a connection and never answers holds the whole outbox until the
+ * function is killed, and every delivery behind it stays due. A hung request
+ * is a failure that retries, not a queue that stops.
+ */
+const REQUEST_TIMEOUT_MS = 15_000;
 export const QUICKBOOKS_SCOPE = "com.intuit.quickbooks.accounting";
 
 export type QuickBooksEnvironment = "sandbox" | "production";
@@ -86,6 +97,7 @@ export async function exchangeQuickBooksCode(
     redirect_uri: input.redirectUri,
   });
   const response = await fetchImpl(QUICKBOOKS_TOKEN_URL, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     method: "POST",
     headers: {
       authorization: `Basic ${basic}`,
@@ -185,6 +197,7 @@ async function refreshQuickBooksCredentials(
 ): Promise<QuickBooksCredentials | null> {
   const basic = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64");
   const response = await fetchImpl(QUICKBOOKS_TOKEN_URL, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     method: "POST",
     headers: {
       authorization: `Basic ${basic}`,
@@ -260,6 +273,7 @@ async function quickBooksRequest(
     fetchImpl(
       `${quickBooksApiOrigin(config.environment)}/v3/company/${encodeURIComponent(integration.externalAccountId as string)}/${input.resource}?minorversion=75&requestid=${encodeURIComponent(input.requestId)}`,
       {
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         method: input.method,
         headers: {
           authorization: `Bearer ${token}`,
