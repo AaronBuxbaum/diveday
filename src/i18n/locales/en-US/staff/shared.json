@@ -711,5 +711,18 @@
     "oneToFiveYears": "one to five years ago",
     "overFiveYears": "over five years ago",
     "never": "never"
+  },
+  "supportNeeds": {
+    "label": "Dive support",
+    "supportDiversFromShop": "{count, plural, one {# support diver in the water — the shop arranges} other {# support divers in the water — the shop arranges}}",
+    "supportDiversOwn": "{count, plural, one {# support diver in the water — the diver brings their own} other {# support divers in the water — the diver brings their own}}",
+    "boardingAssistance": "Help getting aboard",
+    "waterLift": "Lift in and out of the water",
+    "briefingSign": "Briefing in sign language",
+    "briefingWritten": "Briefing in writing",
+    "briefingAloud": "Briefing described aloud",
+    "briefingSignals": "Agreed signals",
+    "equipment": "Equipment: {note}",
+    "divesWith": "Dives with {name}"
   }
 }

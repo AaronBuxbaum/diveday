@@ -536,7 +536,10 @@
     "pickupTimeColumn": "Hora de recogida",
     "pickupHotelColumn": "Hotel / Alojamiento",
     "pickupDiverColumn": "Buceador",
-    "pickupTimeUnset": "Sin programar"
+    "pickupTimeUnset": "Sin programar",
+    "supportHeading": "Apoyo en la inmersión",
+    "supportToArrange": "{count, plural, one {# buceador de apoyo por organizar} other {# buceadores de apoyo por organizar}}",
+    "supportOnTheManifest": "Toda persona que entre al agua va en la lista de embarque, la organice quien la organice."
   },
   "guests": {
     "cancelledBadge": "Cancelada",

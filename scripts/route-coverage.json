@@ -460,7 +460,7 @@
   },
   "/shop/[shopSlug]/trips/[id]/log": {
     "e2e": ["a11y.spec.ts", "departure-log.spec.ts"],
-    "visual": ["departure-log"]
+    "visual": ["departure-log", "departure-log-every-checkpoint"]
   },
   "/shop/[shopSlug]/trips/[id]/manifest": {
     "e2e": [
@@ -469,18 +469,26 @@
       "buddy-pairs.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
-      "manifest.spec.ts"
+      "manifest.spec.ts",
+      "support-needs.spec.ts"
     ],
     "visual": [
       "manifest",
       "manifest-buddy-divergence",
+      "manifest-dive-support",
       "manifest-buddy-teams-panel",
       "manifest-not-back-aboard",
       "manifest-person-panel"
     ]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
-    "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "gear.spec.ts", "nitrox.spec.ts"],
+    "e2e": [
+      "boat-loop.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "gear.spec.ts",
+      "nitrox.spec.ts",
+      "support-needs.spec.ts"
+    ],
     "visual": ["prep", "prep-assignments", "prep-by-diver", "prep-no-nitrox"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {

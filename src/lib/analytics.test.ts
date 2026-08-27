@@ -1,10 +1,25 @@
+import type { BeforeSend } from "@vercel/analytics/server";
 import { track as vercelTrack } from "@vercel/analytics/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type AnalyticsEvent, type Tracker, trackEvent } from "./analytics";
 
 // The default tracker is the only path that touches the network; stubbing it
 // lets the provider-skip rule be asserted without making a real request.
 vi.mock("@vercel/analytics/server", () => ({ track: vi.fn() }));
+
+/**
+ * Every forwarded call carries the redaction hook as its third argument — see
+ * the `beforeSend` block at the foot of this file for what the hook does. It is
+ * matched loosely here because these cases are about the event *mapping*; a
+ * case that cared about the hook would assert on the hook.
+ */
+const redaction = { beforeSend: expect.any(Function) };
+
+/** Pull the `beforeSend` a tracker was handed, so a test can run it. */
+function hookFrom(tracker: { mock: { calls: unknown[][] } }): BeforeSend {
+  const options = tracker.mock.calls[0]?.[2] as { beforeSend: BeforeSend };
+  return options.beforeSend;
+}
 
 describe("trackEvent", () => {
   beforeEach(() => {
@@ -43,7 +58,7 @@ describe("trackEvent", () => {
     await expect(
       trackEvent({ name: "checkout_abandoned", isDeposit: true }, rejecting),
     ).resolves.toBeUndefined();
-    expect(rejecting).toHaveBeenCalledWith("checkout_abandoned", { isDeposit: true });
+    expect(rejecting).toHaveBeenCalledWith("checkout_abandoned", { isDeposit: true }, redaction);
   });
 
   it("skips the default provider when external HTTP is disabled", async () => {
@@ -67,59 +82,72 @@ describe("trackEvent", () => {
     vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
     const tracker = vi.fn();
     await trackEvent({ name: "demo_entered", source: "home-hero", role: "owner" }, tracker);
-    expect(tracker).toHaveBeenCalledWith("demo_entered", { source: "home-hero", role: "owner" });
+    expect(tracker).toHaveBeenCalledWith(
+      "demo_entered",
+      { source: "home-hero", role: "owner" },
+      redaction,
+    );
     vi.unstubAllEnvs();
   });
 
   /**
-   * The capability-URL redaction is installed from in here, and installing it
-   * used to throw on Vercel, where the request-context slot is read-only. That
-   * broke the contract every caller leans on: `authorize()` in `src/lib/auth.ts`
-   * calls this as a bare `void trackEvent(...)` *because* it swallows its own
-   * errors, so the TypeError surfaced as an unhandled rejection on the sign-in
-   * path and as an error out of every `after()` callback that tracks an event.
+   * **The capability-URL redaction.**
+   *
+   * `@vercel/analytics/server` composes an event's page URL itself, and DiveDay
+   * fires server-side events while rendering pages where that URL *is* the
+   * credential. The SDK now takes a `beforeSend` hook — added by
+   * `patches/@vercel__analytics@2.0.1.patch`, which carries vercel/analytics#208
+   * until it is released — and `trackEvent` passes one on every call.
+   *
+   * These cases run the hook the way the SDK does rather than reading the SDK's
+   * source: what matters is what a bearer-token route's event carries, not how
+   * the library is written.
    */
-  describe("with the request-context global Vercel actually provides", () => {
-    const REQUEST_CONTEXT_SYMBOL = Symbol.for("@vercel/request-context");
-
-    /** Read-only like the real one, but configurable so the test can clean up. */
-    function installReadOnlyContext(holder: unknown) {
-      Object.defineProperty(globalThis, REQUEST_CONTEXT_SYMBOL, {
-        value: holder,
-        writable: false,
-        configurable: true,
-        enumerable: false,
+  describe("the beforeSend hook it hands the SDK", () => {
+    it("redacts a capability URL down to its route", async () => {
+      const tracker = vi.fn();
+      await trackEvent({ name: "waiver_signed" }, tracker);
+      expect(hookFrom(tracker)({ type: "event", url: "https://dive.day/waivers/tok" })).toEqual({
+        type: "event",
+        url: "/waivers/[token]",
       });
-    }
-
-    afterEach(() => {
-      delete (globalThis as Record<PropertyKey, unknown>)[REQUEST_CONTEXT_SYMBOL];
     });
 
-    it("still sends the event instead of throwing out of telemetry", async () => {
-      installReadOnlyContext({ get: () => ({ url: "https://dive.day/waivers/tok" }) });
-      await expect(trackEvent({ name: "waiver_signed" })).resolves.toBeUndefined();
-      expect(vercelTrack).toHaveBeenCalledWith("waiver_signed", {});
+    it("redacts a capability URL that arrives as a query parameter", async () => {
+      // The `?booking=<token>` confirmation URL is not path-shaped, and the
+      // SDK's own fallback is the `Referer` header — which the old
+      // request-context shim could not see at all.
+      const tracker = vi.fn();
+      await trackEvent({ name: "booking_cancelled", source: "diver" }, tracker);
+      expect(
+        hookFrom(tracker)({ type: "event", url: "https://dive.day/s/blue-mantis?booking=tok" }),
+      ).toEqual({ type: "event", url: "/s/blue-mantis?booking=%5Btoken%5D" });
     });
 
-    it("redacts the capability URL the SDK will read for itself", async () => {
-      installReadOnlyContext({ get: () => ({ url: "https://dive.day/waivers/tok" }) });
-      await trackEvent({ name: "waiver_signed" });
-      const holder = (globalThis as Record<PropertyKey, unknown>)[REQUEST_CONTEXT_SYMBOL] as {
-        get: () => { url: string };
+    it("leaves an ordinary page URL alone", async () => {
+      const tracker = vi.fn();
+      await trackEvent({ name: "trial_started", source: "pricing" }, tracker);
+      expect(hookFrom(tracker)({ type: "event", url: "https://dive.day/pricing" })).toEqual({
+        type: "event",
+        url: "https://dive.day/pricing",
+      });
+    });
+
+    it("withholds the event rather than send a URL it could not redact", async () => {
+      // Fail closed, and prove it against the contract rather than the
+      // implementation: `null` is how the hook says "send nothing", and losing
+      // a count is cheaper than shipping a live waiver token to an ad platform.
+      // `redactCapabilityUrl` does not throw today, so this is forced.
+      const tracker = vi.fn();
+      await trackEvent({ name: "waiver_signed" }, tracker);
+      const hook = hookFrom(tracker);
+      const hostile = {
+        type: "event" as const,
+        get url(): string {
+          throw new Error("unreadable");
+        },
       };
-      expect(holder.get().url).toBe("/waivers/[token]");
-    });
-
-    it("drops the event rather than send it unredacted when nothing can be wrapped", async () => {
-      // Fail closed. The SDK composes the page URL from this context itself and
-      // offers no override, so an un-wrappable context means the only way not to
-      // ship a live waiver token to Vercel Analytics is not to ship the event.
-      installReadOnlyContext(
-        Object.freeze({ get: () => ({ url: "https://dive.day/waivers/tok" }) }),
-      );
-      await expect(trackEvent({ name: "waiver_signed" })).resolves.toBeUndefined();
-      expect(vercelTrack).not.toHaveBeenCalled();
+      expect(hook(hostile)).toBeNull();
     });
   });
 
@@ -128,8 +156,8 @@ describe("trackEvent", () => {
     await trackEvent({ name: "demo_entered", source: "pricing", role: "captain" }, tracker);
     await trackEvent({ name: "trial_started", source: "pricing" }, tracker);
     expect(tracker.mock.calls).toEqual([
-      ["demo_entered", { source: "pricing", role: "captain" }],
-      ["trial_started", { source: "pricing" }],
+      ["demo_entered", { source: "pricing", role: "captain" }, redaction],
+      ["trial_started", { source: "pricing" }, redaction],
     ]);
   });
 
@@ -139,10 +167,11 @@ describe("trackEvent", () => {
       { name: "booking_blocked", source: "diver", reason: "course_prerequisite" },
       tracker,
     );
-    expect(tracker).toHaveBeenCalledWith("booking_blocked", {
-      source: "diver",
-      reason: "course_prerequisite",
-    });
+    expect(tracker).toHaveBeenCalledWith(
+      "booking_blocked",
+      { source: "diver", reason: "course_prerequisite" },
+      redaction,
+    );
   });
 
   it("carries which schedule builder mutation ran and how it landed", async () => {
@@ -151,10 +180,11 @@ describe("trackEvent", () => {
       { name: "schedule_builder_action", action: "move", outcome: "already_sailed" },
       tracker,
     );
-    expect(tracker).toHaveBeenCalledWith("schedule_builder_action", {
-      action: "move",
-      outcome: "already_sailed",
-    });
+    expect(tracker).toHaveBeenCalledWith(
+      "schedule_builder_action",
+      { action: "move", outcome: "already_sailed" },
+      redaction,
+    );
   });
 
   it("distinguishes an automatic cancellation refund from a staff-run one", async () => {
@@ -162,16 +192,18 @@ describe("trackEvent", () => {
     await trackEvent({ name: "refund_issued", auto: true, status: "refunded" }, tracker);
     await trackEvent({ name: "refund_issued", auto: false, status: "manual" }, tracker);
     expect(tracker.mock.calls).toEqual([
-      ["refund_issued", { auto: true, status: "refunded" }],
-      ["refund_issued", { auto: false, status: "manual" }],
+      ["refund_issued", { auto: true, status: "refunded" }, redaction],
+      ["refund_issued", { auto: false, status: "manual" }, redaction],
     ]);
   });
 
   it("records the trip packet button from the Overview surface", async () => {
     const tracker = vi.fn();
     await trackEvent({ name: "trip_print_pdf_clicked", surface: "trip_overview" }, tracker);
-    expect(tracker).toHaveBeenCalledWith("trip_print_pdf_clicked", {
-      surface: "trip_overview",
-    });
+    expect(tracker).toHaveBeenCalledWith(
+      "trip_print_pdf_clicked",
+      { surface: "trip_overview" },
+      redaction,
+    );
   });
 });

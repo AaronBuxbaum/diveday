@@ -194,26 +194,39 @@ with no parameter a caller can pass a redacted value through. `trackEvent` runs 
 `/waivers/[token]` (`waiver_signed`), from `/ready/[token]`'s actions, and from `/claim/[token]`'s
 seat-claim path, so those raw capability URLs were reaching Vercel Analytics in the clear.
 
-It is closed. `src/lib/analytics-request-context.ts` wraps the request-context global with a
-delegating shim whose `get()` returns the same context with `url` passed through the same
-`redactCapabilityUrl` the browser SDKs use. Read that file before changing anything here — in
-particular, it is a permanent wrapper rather than a per-call swap **on purpose**, because a
-save-call-restore around one `await` would hand a neighbouring request the wrong context, and that
-neighbour is another diver's page load.
+It is closed, and since 2026-08-27 it is closed through a **supported hook rather than an
+undocumented global**. `trackEvent` (`src/lib/analytics.ts`) passes the SDK a `beforeSend` that runs
+the page URL through the same `redactCapabilityUrl` the browser SDKs use, and returns `null` —
+withholding the event entirely — if it ever cannot. That option does not exist in any published
+`@vercel/analytics`: it is `patches/@vercel__analytics@2.0.1.patch`, carrying
+[vercel/analytics#208](https://github.com/vercel/analytics/pull/208) verbatim until it is released
+(issue #622).
 
-Two consequences worth carrying forward:
+What it replaced was a delegating shim over `globalThis[Symbol.for("@vercel/request-context")]`,
+which depended on three undocumented details of Vercel's runtime — the symbol, the `{ get(): { url } }`
+shape, and the writability of the slot. The last of those cost a day of thrown errors and one 504
+before anyone noticed, found in a log drain rather than by a check. That is the argument for the
+patch over the shim: a wrong guess about the SDK's *own* source fails when the patch stops applying,
+which is an install-time error, where a wrong guess about the runtime's private globals fails
+silently by quietly resuming the leak.
 
-- **The definition of a capability URL now lives in `src/lib/capability-urls.ts`**, re-exported by
+Three consequences worth carrying forward:
+
+- **The definition of a capability URL lives in `src/lib/capability-urls.ts`**, re-exported by
   `src/app/observability.ts`. Both halves of the app redact through one function, which is the only
-  way they can be relied on to agree. `src/lib` may not import `src/app`, which is why it moved.
-- **The shim depends on an undocumented internal symbol.** `analytics-request-context.test.ts`
-  asserts the SDK's own source still behaves the way the shim assumes, so an upgrade that changes it
-  fails a test rather than silently resuming the leak. A supported override has been asked for
-  upstream (FU-20260814-vercel-analytics-url-override); when it lands, prefer it and delete the shim.
+  way they can be relied on to agree. `src/lib` may not import `src/app`, which is why it lives there.
+- **The hook covers more than the shim did.** The shim edited `requestContext.url`; `beforeSend`
+  receives whatever the SDK actually resolved, which includes the `Referer` fallback the shim could
+  not reach.
+- **The patch is pinned to `@vercel/analytics@2.0.1` on purpose.** Bumping the dependency makes the
+  patch key stop matching and `pnpm install` say so, which is the intended alarm: whoever bumps it
+  checks whether the release carries `beforeSend` natively, and if it does, deletes the patch and
+  changes nothing else. `src/lib/analytics.test.ts` proves the redaction against the hook's contract
+  rather than against the SDK's source, so it keeps working either way.
 
 The rule that follows, and the one to apply to the next such sender: **any server-to-server
 transmission to a third party must either omit the request URL or redact it before it leaves**,
-because unlike a browser SDK there is no `beforeSend` to add afterwards. That covers a Meta
+because unlike a browser SDK it will not come with a `beforeSend` to add afterwards. That covers a Meta
 Conversions API call, Google Enhanced Conversions, and any offline-import job.
 
 ### Why there is no check script for this

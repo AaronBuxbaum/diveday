@@ -536,7 +536,10 @@
     "pickupTimeColumn": "Pickup time",
     "pickupHotelColumn": "Hotel / Lodging",
     "pickupDiverColumn": "Diver",
-    "pickupTimeUnset": "Unscheduled"
+    "pickupTimeUnset": "Unscheduled",
+    "supportHeading": "Dive support",
+    "supportToArrange": "{count, plural, one {# support diver to arrange} other {# support divers to arrange}}",
+    "supportOnTheManifest": "Anyone in the water goes on the manifest, whoever arranged them."
   },
   "guests": {
     "cancelledBadge": "Cancelled",

@@ -3,7 +3,8 @@ import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
-import { bookings, people, rentalFitProfiles } from "./schema";
+import { bookings, diveSupportNeeds, people, rentalFitProfiles } from "./schema";
+import { SUPPORT_NEEDS_COLUMNS } from "./support-needs";
 
 export type RentalFitInput = {
   shopId: string;
@@ -232,7 +233,18 @@ export async function listTripPrepDivers(
   tripId: string,
 ): Promise<PrepDiver[]> {
   const rows = await db
-    .select({ booking: bookings, person: people, fit: rentalFitProfiles })
+    .select({
+      booking: bookings,
+      person: people,
+      fit: rentalFitProfiles,
+      // The projection, never the row. `PrepDiver.supportNeeds` is the eight
+      // stated facts; the row also carries `id`, `shop_id`, `person_id` and two
+      // housekeeping timestamps, and TypeScript's excess-property check does not
+      // fire on a variable — so selecting the table would put internal ids on
+      // every `PrepDiver` and one `"use client"` away from a browser payload
+      // (`security-reviewer`, 2026-08-27).
+      supportNeeds: SUPPORT_NEEDS_COLUMNS,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(
@@ -240,6 +252,18 @@ export async function listTripPrepDivers(
       and(
         eq(rentalFitProfiles.personId, bookings.personId),
         eq(rentalFitProfiles.shopId, bookings.shopId),
+      ),
+    )
+    // Joined here rather than read separately: this function already takes one
+    // round trip per roster and `getTripManifests` beside it fans out under a
+    // strict no-`Promise.all`-on-a-transaction rule, so the cheapest place for
+    // an optional one-row-per-person record is the join that is already
+    // walking the roster.
+    .leftJoin(
+      diveSupportNeeds,
+      and(
+        eq(diveSupportNeeds.personId, bookings.personId),
+        eq(diveSupportNeeds.shopId, bookings.shopId),
       ),
     )
     .where(
@@ -262,6 +286,9 @@ export async function listTripPrepDivers(
     lastDivedBand: row.booking.lastDivedBand,
     hotelPickupLocation: row.booking.hotelPickupLocation,
     pickupTime: row.booking.pickupTime,
+    // Every column of the projection is null when the outer join found no row,
+    // so `statedAt` is the honest discriminator for "does this record exist".
+    supportNeeds: row.supportNeeds?.statedAt ? row.supportNeeds : null,
   }));
 }
 
