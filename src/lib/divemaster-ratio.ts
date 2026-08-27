@@ -99,12 +99,22 @@ export type DivemasterRatioGap =
  *
  * A departure with nobody booked is never short: the target describes divers
  * in the water, and an empty boat has none.
+ *
+ * Neither is one the shop has marked **self-guided** (`trips.self_guided`).
+ * The exemption lives here rather than at each caller for the reason the
+ * paragraph above gives: the trip page, the Today queue and whatever reads
+ * this next must not be able to disagree about whether one departure is short.
+ * It reaches this target only — an agency training ratio is a safety cap and
+ * has its own module, which nothing here can loosen.
  */
 export function divemasterRatioGap(input: {
   divers: number;
   divemasterCount: number;
   diversPerDivemaster: number;
+  /** The shop has said this departure runs without an in-water guide. */
+  selfGuided?: boolean;
 }): DivemasterRatioGap {
+  if (input.selfGuided) return { code: "none" };
   const needed = divemastersNeeded(input.divers, input.diversPerDivemaster);
   const shortBy = needed - input.divemasterCount;
   if (shortBy <= 0) return { code: "none" };

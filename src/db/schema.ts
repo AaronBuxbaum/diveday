@@ -1643,6 +1643,34 @@ export const trips = pgTable(
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
     isPrivate: boolean("is_private").notNull().default(false),
+    /**
+     * **This departure is meant to run without an in-water guide, and the shop
+     * says so.**
+     *
+     * The shop's divemaster target (`src/lib/divemaster-ratio.ts`) applies to
+     * every dive it runs and binds nothing — but the Today queue's
+     * `uncrewed_departure` row is warning-toned and sits near the top, and a
+     * shop whose ordinary product *is* self-guided buddy-pair charters had no
+     * way to say so. It would have seen that row on every departure, forever,
+     * with no way to silence it short of rostering a divemaster it did not
+     * want — which is the habituation the ratio's own ADR
+     * (20260820-shop-divemaster-ratio) was written to avoid, arriving as "staff
+     * learn to skip this row" rather than as a refusal. The cost lands on the
+     * row's credibility for the case it exists to catch: an instructor pulled
+     * off a fully-booked DSD trip at the last minute.
+     *
+     * Per departure rather than per shop, deliberately. A shop-wide switch
+     * would silence the row for the fully-booked course session too, and the
+     * shape of this fact is genuinely per-sailing: the same shop runs a guided
+     * reef charter on Saturday and an unguided shore dive on Sunday.
+     *
+     * **It reaches the shop's own advisory target and nothing else.** Agency
+     * training ratios (`src/lib/course-ratios.ts`) are safety caps that really
+     * do refuse a seat, and no shop may switch one off by ticking a box: a
+     * course session short of its instructor still raises `instructor_missing`
+     * with this set. Readiness, admission and capacity are all untouched.
+     */
+    selfGuided: boolean("self_guided").notNull().default(false),
     diveMode: diveMode("dive_mode").notNull().default("boat"),
     boatId: uuid("boat_id").references(() => boats.id, { onDelete: "set null" }),
     conditionsSummary: text("conditions_summary"),

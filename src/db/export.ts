@@ -1181,6 +1181,9 @@ export async function loadShopExportBundleInput(
             "meeting_point_label",
             "meeting_point_address",
             "is_private",
+            // The shop's own answer about this departure, not a derived fact,
+            // so it leaves with the shop (issue #973).
+            "self_guided",
             // The bundle carries deleted departures (they are still the shop's
             // rows), so it has to carry the stamp that says which — a file that
             // hands back a deleted departure looking live is worse than one
@@ -1220,6 +1223,7 @@ export async function loadShopExportBundleInput(
             row.meetingPointLabel,
             row.meetingPointAddress,
             row.isPrivate,
+            row.selfGuided,
             row.deletedAt,
             row.createdAt,
           ]),

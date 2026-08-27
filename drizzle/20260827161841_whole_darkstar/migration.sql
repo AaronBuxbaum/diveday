@@ -1,0 +1,1 @@
+ALTER TABLE "trips" ADD COLUMN "self_guided" boolean DEFAULT false NOT NULL;

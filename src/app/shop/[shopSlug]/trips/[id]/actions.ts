@@ -120,6 +120,10 @@ const detailsSchema = z.object({
   diveMode: z.enum(["boat", "shore", "pool"]).optional(),
   boatId: z.preprocess((value) => (value === "" ? undefined : value), z.uuid().optional()),
   isPrivate: z.preprocess((value) => value === "on", z.boolean()),
+  // The shop's own divemaster target stops applying to this departure. Nothing
+  // else moves: an agency training ratio still refuses a seat, and readiness,
+  // admission and capacity never see this (issue #973).
+  selfGuided: z.preprocess((value) => value === "on", z.boolean()),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -383,6 +387,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     diveMode,
     boatId,
     isPrivate,
+    selfGuided,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
@@ -461,6 +466,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
     isPrivate,
+    selfGuided,
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,

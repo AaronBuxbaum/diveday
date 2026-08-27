@@ -188,6 +188,9 @@ export async function getTripOverview(
     divers: trip.booked,
     divemasterCount: inWaterDivemasterCount(inWaterCrew),
     diversPerDivemaster: shop.diversPerDivemaster,
+    // A departure the shop has marked self-guided is never short of its own
+    // target — the whole point of the mark (issue #973).
+    selfGuided: trip.selfGuided,
   });
   // Same stance as ratioGap above: informs, refuses nothing (issue #708).
   // Diver languages come only from a first-hand signal (`bookedDiverLanguages`

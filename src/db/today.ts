@@ -1358,6 +1358,10 @@ export async function getTodayWork(
             divers: trip.booked,
             divemasterCount: inWaterDivemasterCount(counts),
             diversPerDivemaster,
+            // A departure the shop has marked self-guided raises neither of the
+            // two rows below. Read here rather than branched on afterwards, so
+            // this queue and the trip page cannot disagree (issue #973).
+            selfGuided: trip.selfGuided,
           })
         : { code: "none" as const };
     if (ratioGap.code === "under_target") {

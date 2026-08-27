@@ -238,6 +238,8 @@ export type TripPatch = {
   diveMode?: TripDiveMode;
   boatId?: string | null;
   isPrivate?: boolean;
+  /** The shop's own divemaster target stops applying to this departure (issue #973). */
+  selfGuided?: boolean;
 };
 
 export type UpdateTripOutcome =
@@ -340,6 +342,7 @@ export async function updateTrip(
         ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
         ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
+        ...(patch.selfGuided === undefined ? {} : { selfGuided: patch.selfGuided }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),

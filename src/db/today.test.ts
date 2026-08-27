@@ -1069,6 +1069,89 @@ describe("uncrewed and below-target departures (issue #732)", () => {
       ),
     ).toBe(false);
   });
+
+  /**
+   * **A shop whose ordinary product is an unguided buddy-pair dive can say so,
+   * once, per departure** (issue #973).
+   *
+   * The row above is warning-toned and sits near the top of Today. Without a
+   * way to mark a departure self-guided, a shop that runs self-guided charters
+   * would see it on every sailing forever, with no way to silence it short of
+   * rostering a divemaster it did not want — which is the habituation ADR
+   * 20260820-shop-divemaster-ratio was written to avoid, arriving as "staff
+   * learn to skip this row" rather than as a refusal.
+   */
+  it("raises neither row for a departure the shop marked self-guided", async () => {
+    const { db, shop } = await seededShopContext();
+    const reef = await reefTrip(db, shop.id);
+    // The same trip the first test in this block proves *does* raise the row,
+    // so the only thing that changed is the mark.
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(before.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(true);
+
+    await db.update(tripsTable).set({ selfGuided: true }).where(eq(tripsTable.id, reef.id));
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(
+      work.actions.some(
+        (action) => action.id === `uncrewed:${reef.id}` || action.id === `crew-target:${reef.id}`,
+      ),
+    ).toBe(false);
+  });
+
+  /**
+   * The boundary the mark must never cross. An agency training ratio is a
+   * safety cap that really does refuse a seat (`src/lib/course-ratios.ts`), and
+   * no shop may switch one off by ticking a box on the departure.
+   */
+  it("still flags a course session's missing instructor when the departure is self-guided", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    if (!course) throw new Error("seeded course missing");
+    const startsAt = new Date(nowMs() + 3 * 60 * 60 * 1000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Self-guided marked Open Water session",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    // Staffed at booking time, then reassigned — the same shape as the
+    // double-fire test above, and the realistic way the gap actually arises.
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: instructor.person.id });
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Self Guided Course Diver",
+        email: "self-guided-course-diver@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    await db
+      .update(tripAssignments)
+      .set({ tripRole: "crew" })
+      .where(
+        and(
+          eq(tripAssignments.tripId, trip.id),
+          eq(tripAssignments.personId, instructor.person.id),
+        ),
+      );
+    await db.update(tripsTable).set({ selfGuided: true }).where(eq(tripsTable.id, trip.id));
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(work.actions.some((action) => action.id === `instructor:${trip.id}`)).toBe(true);
+  });
 });
 
 describe("role lens raw material", () => {
