@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 37 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 38 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site and infra-ASCII safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII and stack-CI-skip safeguards.
 
 ## The guards worth reading about
 

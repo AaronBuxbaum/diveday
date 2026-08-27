@@ -44,67 +44,54 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Priority, for a stack. A stacked pull request is an ordered chain, every
-  # layer pays the whole gate below, and a five-layer stack therefore asks for
-  # eighty-odd concurrent jobs the moment it is pushed — none of them ordered by
-  # what a human is waiting on. The bottom is the layer that merges next and the
-  # only one whose red can block the stack; the top contains every layer beneath
-  # it, so its green is the closest thing to a statement about the merged
-  # result; a middle layer is neither, and merges only inside a group one of
-  # those two has already spoken for.
+  # CI optimization, for a stack. A stacked pull request is an ordered chain and
+  # every layer pays the whole gate below, so a five-layer stack asks for
+  # eighty-odd concurrent jobs the moment it is pushed. Most of them answer a
+  # question nobody has. Merging is bottom-up, so a middle layer only ever lands
+  # inside a group the bottom's run (if the group stops there) or the top's (if
+  # it does not) has already spoken for — and when it *becomes* the bottom, the
+  # cascading rebase force-pushes it and it runs the whole gate then, before it
+  # is the layer next to merge.
   #
-  # So a middle layer yields. This job resolves the layer's position from the
-  # stacks API and, for a top or middle layer, waits for the layers ahead of it
-  # in that order (bottom, then top) before the jobs that `needs:` it start —
-  # freeing eleven concurrent slots for the two layers somebody is reading. It
-  # is a yield and never a skip: branch protection evaluates each layer's checks
-  # at merge time, so a layer that never ran cannot merge on its own
-  # (ADR 20260827-stack-ci-priority).
+  # So a middle layer's expensive jobs simply do not run. The condition below is
+  # repeated verbatim on each of them, and it is GitHub's own recommendation for
+  # stacked pull requests: `github.event.pull_request.stack` arrives in the event
+  # payload, so the layer's position costs no API call, no script and no runner
+  # (ADR 20260827-stack-ci-skips-the-middle-layers, superseding
+  # 20260827-stack-ci-priority — whose gate job bought the same thing by holding
+  # a runner idle for up to 40 minutes).
   #
-  # It cannot make anything red or missing. Every path in the script exits 0 —
-  # a 404 from the preview endpoint, a fork PR's read-only token, an
-  # unrecognised payload, its own deadline — and the gate opens.
+  #   stack == null                  not stacked, or a push to `main`  -> run
+  #   stack.base.ref == base.ref     the lowest unmerged layer         -> run
+  #   stack.position == stack.size   the top layer                     -> run
+  #   otherwise                      a middle layer                    -> skip
   #
-  # Bare `node`, before `setup` installs anything: the script imports node
-  # builtins only, and a job whose whole purpose is to spend less runner time
-  # must not spend four minutes on `pnpm install` to do it.
-  stack-priority:
-    name: Stack CI priority
-    # Same guard as every other per-commit job. A nightly runs `real-postgres`,
-    # which does not `needs:` this one.
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    # The script's own 40-minute deadline is what actually bounds the wait; this
-    # is the backstop above it.
-    timeout-minutes: 45
-    permissions:
-      # Reads only: the stack this pull request belongs to, and the status of
-      # the other layers' workflow runs. This job writes nothing back.
-      actions: read
-      pull-requests: read
-    outputs:
-      position: ${{ steps.position.outputs.position }}
-    steps:
-      # No checkout of the pull request's own code: this runs a script from the
-      # repository, so take the repository and nothing else.
-      - uses: actions/checkout@v7
-        with:
-          sparse-checkout: scripts/stack-ci-priority.mjs
-          sparse-checkout-cone-mode: false
-      - name: Resolve this layer's position in its stack, and yield to the ones ahead
-        id: position
-        run: node scripts/stack-ci-priority.mjs
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+  # `stack` is populated only for a pull request somebody with write access
+  # registered in a stack, so a fork's is `null` — which is the *run* branch.
+  # Every shape this does not recognise fails open, into the full gate.
+  #
+  # `build`, `visual` and `visual-report` are deliberately outside it and run on
+  # every layer. A stacked layer's reg-suit baseline is the head commit of the
+  # layer directly below it (`scripts/reg-suit-keys.mjs`) and its report polls S3
+  # for that snapshot (`scripts/wait-for-baseline.mjs`), so a middle layer that
+  # never published one would leave the top timing out and reporting every
+  # surface as new — the pipeline's documented worst failure.
+  #
+  # `scripts/check-stack-ci-skip.mjs` (in `pnpm check:repo`) pins both halves:
+  # the condition is byte-identical on every job that carries it, and the three
+  # visual jobs do not carry it.
 
   repo-safeguards:
     name: Repository safeguards
-    needs: stack-priority
     # Per-commit signal, so it has nothing to say on a nightly re-run of a commit
     # that already passed it. See the `schedule:` trigger above — this guard is
-    # what keeps that trigger scoped to `real-postgres`.
-    if: github.event_name != 'schedule'
+    # what keeps that trigger scoped to `real-postgres`. A stack's middle layer
+    # skips it too (`jobs:` above).
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -122,8 +109,12 @@ jobs:
 
   lint:
     name: Lint
-    needs: stack-priority
-    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    # Nightly runs `real-postgres` only; a stack's middle layer skips (`jobs:` above).
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -135,8 +126,12 @@ jobs:
 
   typecheck:
     name: Typecheck
-    needs: stack-priority
-    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    # Nightly runs `real-postgres` only; a stack's middle layer skips (`jobs:` above).
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -148,13 +143,17 @@ jobs:
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/4
-    needs: stack-priority
     # These four shards are where the `*.postgres.test.ts` files land in the
     # ordinary run, and they skip there by design: no `DIVEDAY_TEST_POSTGRES_URL`
     # is set for this job, so `describePostgres` registers a skipped suite and
     # nothing tries to open a connection. `real-postgres` below is the only job
     # that sets it.
-    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    # Nightly runs `real-postgres` only; a stack's middle layer skips (`jobs:` above).
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -236,8 +235,13 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/4
-    needs: [build, stack-priority]
-    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    needs: build
+    # Nightly runs `real-postgres` only; a stack's middle layer skips (`jobs:` above).
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -641,7 +645,6 @@ jobs:
 
   db-surface-changes:
     name: Detect database-surface changes
-    needs: stack-priority
     # Cheap gate in front of `real-postgres`: a checkout and a `git diff`, so the
     # ~90% of pull requests that touch no schema surface never pay for a service
     # container. Written as a job rather than a workflow-level `paths:` filter
@@ -652,7 +655,15 @@ jobs:
     # Also written as a `git diff` rather than a third-party filter action: the
     # comparison is four lines of shell, and this repo would rather read those
     # than take a new supply-chain dependency into every CI run to save them.
-    if: github.event_name != 'schedule'
+    #
+    # A stack's middle layer skips it, and `real-postgres` below follows on its
+    # own: a skipped dependency leaves `outputs.changed` empty, which is not
+    # `'true'` (`jobs:` above).
+    if: >-
+      github.event_name != 'schedule'
+      && (github.event.pull_request.stack == null
+      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
+      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
