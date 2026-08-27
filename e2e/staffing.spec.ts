@@ -65,22 +65,17 @@ test("an owner schedules a shift, narrows the window past it, and takes it back 
   // The seeded shift is today, so it is inside the default window.
   await expect(keiko.getByText("Demo schedule")).toBeVisible();
 
-  // Every field reached through the form's own region, not the page.
-  //
-  // "Staff member" was already scoped this way, because the staff-credentials
-  // card further down the page carries that label too. The rest of the form
-  // then broke the same way once that card grew "Issue date" and "Renewal
-  // date": `getByLabel` matches a *substring*, case-insensitively, so a
-  // page-wide `getByLabel("Date")` resolves to three controls and fails strict
-  // mode. Scoping the whole form fixes the field that broke and keeps
-  // "Starts", "Ends" and "Note" from breaking the next time this page grows one.
-  const addShift = page.getByRole("region", { name: "Add a working shift" });
-  await addShift.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-  await addShift.getByLabel("Date").fill(shiftDay);
-  await addShift.getByLabel("Starts").fill("06:30");
-  await addShift.getByLabel("Ends").fill("14:45");
-  await addShift.getByLabel("Note").fill(note);
-  await addShift.getByRole("button", { name: "Add shift" }).click();
+  // Scoped to the form itself: "Date" alone also matches the credentials
+  // form's "Issue date" and "Renewal date" fields further down the page
+  // (Playwright's getByLabel is a case-insensitive substring match), and
+  // "Staff member" is the person field on both this form and that one.
+  const addShiftForm = page.getByRole("region", { name: "Add a working shift" });
+  await addShiftForm.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  await addShiftForm.getByLabel("Date").fill(shiftDay);
+  await addShiftForm.getByLabel("Starts").fill("06:30");
+  await addShiftForm.getByLabel("Ends").fill("14:45");
+  await addShiftForm.getByLabel("Note").fill(note);
+  await addShiftForm.getByRole("button", { name: "Add shift" }).click();
 
   await expect(page.getByText("Shift saved.")).toBeVisible();
   // The stored range read back through the shop's own timezone
